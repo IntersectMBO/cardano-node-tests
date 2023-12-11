@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from cardano_node_tests.cluster_management import cluster_management
-from cardano_node_tests.tests.tests_conway import gov_common
+from cardano_node_tests.utils import governance_setup
 
 LOGGER = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture
 def cluster_use_governance(
     cluster_manager: cluster_management.ClusterManager,
-) -> gov_common.GovClusterT:
+) -> governance_setup.GovClusterT:
     """Mark governance as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[
@@ -20,7 +20,7 @@ def cluster_use_governance(
             *cluster_management.Resources.ALL_POOLS,
         ]
     )
-    governance_data = gov_common.get_default_governance(
+    governance_data = governance_setup.get_default_governance(
         cluster_manager=cluster_manager, cluster_obj=cluster_obj
     )
     return cluster_obj, governance_data
@@ -29,13 +29,13 @@ def cluster_use_governance(
 @pytest.fixture
 def cluster_lock_governance(
     cluster_manager: cluster_management.ClusterManager,
-) -> gov_common.GovClusterT:
+) -> governance_setup.GovClusterT:
     """Mark governance as "locked" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=cluster_management.Resources.ALL_POOLS,
         lock_resources=[cluster_management.Resources.COMMITTEE, cluster_management.Resources.DREPS],
     )
-    governance_data = gov_common.get_default_governance(
+    governance_data = governance_setup.get_default_governance(
         cluster_manager=cluster_manager, cluster_obj=cluster_obj
     )
     return cluster_obj, governance_data

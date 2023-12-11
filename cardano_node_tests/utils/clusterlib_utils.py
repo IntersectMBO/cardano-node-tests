@@ -42,20 +42,6 @@ class TxMetadata(tp.NamedTuple):
     aux_data: list
 
 
-class DRepRegistration(tp.NamedTuple):
-    registration_cert: pl.Path
-    key_pair: clusterlib.KeyPair
-    drep_id: str
-    deposit: int
-
-
-class CCMemberRegistration(tp.NamedTuple):
-    registration_cert: pl.Path
-    cold_key_pair: clusterlib.KeyPair
-    hot_key_pair: clusterlib.KeyPair
-    key_hash: str
-
-
 def build_and_submit_tx(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
@@ -572,6 +558,18 @@ def check_updated_params(update_proposals: tp.List[UpdateProposal], protocol_par
         raise AssertionError(f"Update proposal failed!\n{failures_str}")
 
 
+def get_pparams_update_args(
+    update_proposals: tp.List[UpdateProposal],
+) -> tp.List[str]:
+    """Get cli arguments for pparams update action."""
+    if not update_proposals:
+        return []
+
+    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
+    cli_args = list(itertools.chain.from_iterable(_cli_args))
+    return cli_args
+
+
 def update_params(
     cluster_obj: clusterlib.ClusterLib,
     src_addr_record: clusterlib.AddressRecord,
@@ -581,8 +579,7 @@ def update_params(
     if not update_proposals:
         return
 
-    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
-    cli_args = list(itertools.chain.from_iterable(_cli_args))
+    cli_args = get_pparams_update_args(update_proposals=update_proposals)
 
     cluster_obj.g_governance.submit_update_proposal(
         cli_args=cli_args,
@@ -1458,71 +1455,3 @@ def get_snapshot_delegations(ledger_snapshot: dict) -> tp.Dict[str, tp.List[str]
             delegations[r_pool_id] = [r_hash]
 
     return delegations
-
-
-def get_drep_reg_record(
-    cluster_obj: clusterlib.ClusterLib,
-    name_template: str,
-    deposit_amt: int = -1,
-    drep_metadata_url: str = "",
-    drep_metadata_hash: str = "",
-    destination_dir: ttypes.FileType = ".",
-) -> DRepRegistration:
-    """Get DRep registration record."""
-    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
-    drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(
-        key_name=name_template, destination_dir=destination_dir
-    )
-    reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
-        cert_name=name_template,
-        deposit_amt=deposit_amt,
-        drep_vkey_file=drep_keys.vkey_file,
-        drep_metadata_url=drep_metadata_url,
-        drep_metadata_hash=drep_metadata_hash,
-        destination_dir=destination_dir,
-    )
-    drep_id = cluster_obj.g_conway_governance.drep.gen_id(
-        id_name=name_template,
-        drep_vkey_file=drep_keys.vkey_file,
-        out_format="hex",
-        destination_dir=destination_dir,
-    )
-
-    return DRepRegistration(
-        registration_cert=reg_cert,
-        key_pair=drep_keys,
-        drep_id=drep_id,
-        deposit=deposit_amt,
-    )
-
-
-def get_cc_member_reg_record(
-    cluster_obj: clusterlib.ClusterLib,
-    name_template: str,
-    destination_dir: ttypes.FileType = ".",
-) -> CCMemberRegistration:
-    """Get Constitutional Committee Members registration record."""
-    committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
-        key_name=name_template,
-        destination_dir=destination_dir,
-    )
-    committee_hot_keys = cluster_obj.g_conway_governance.committee.gen_hot_key_pair(
-        key_name=name_template,
-        destination_dir=destination_dir,
-    )
-    reg_cert = cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
-        key_name=name_template,
-        cold_vkey_file=committee_cold_keys.vkey_file,
-        hot_key_file=committee_hot_keys.vkey_file,
-        destination_dir=destination_dir,
-    )
-    key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
-        vkey_file=committee_cold_keys.vkey_file,
-    )
-
-    return CCMemberRegistration(
-        registration_cert=reg_cert,
-        cold_key_pair=committee_cold_keys,
-        hot_key_pair=committee_hot_keys,
-        key_hash=key_hash,
-    )

@@ -1,23 +1,26 @@
+"""Utilities for Conway governance."""
 import enum
-import itertools
 import logging
 import pathlib as pl
-import pickle
 import typing as tp
 
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.cluster_management import cluster_management
-from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import governance_setup
-from cardano_node_tests.utils import locking
-
 LOGGER = logging.getLogger(__name__)
 
-GOV_DATA_STORE = "governance_data.pickle"
 
-GovClusterT = tp.Tuple[clusterlib.ClusterLib, governance_setup.DefaultGovernance]
+class DRepRegistration(tp.NamedTuple):
+    registration_cert: pl.Path
+    key_pair: clusterlib.KeyPair
+    drep_id: str
+    deposit: int
+
+
+class CCMemberRegistration(tp.NamedTuple):
+    registration_cert: pl.Path
+    cold_key_pair: clusterlib.KeyPair
+    hot_key_pair: clusterlib.KeyPair
+    key_hash: str
 
 
 class PrevActionRec(tp.NamedTuple):
@@ -86,61 +89,72 @@ def lookup_proposal(
     return prop
 
 
-def get_default_governance(
-    cluster_manager: cluster_management.ClusterManager,
+def get_drep_reg_record(
     cluster_obj: clusterlib.ClusterLib,
-) -> governance_setup.DefaultGovernance:
-    with cluster_manager.cache_fixture(key="default_governance") as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
+    name_template: str,
+    deposit_amt: int = -1,
+    drep_metadata_url: str = "",
+    drep_metadata_hash: str = "",
+    destination_dir: clusterlib.FileType = ".",
+) -> DRepRegistration:
+    """Get DRep registration record."""
+    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
+    drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(
+        key_name=name_template, destination_dir=destination_dir
+    )
+    reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
+        cert_name=name_template,
+        deposit_amt=deposit_amt,
+        drep_vkey_file=drep_keys.vkey_file,
+        drep_metadata_url=drep_metadata_url,
+        drep_metadata_hash=drep_metadata_hash,
+        destination_dir=destination_dir,
+    )
+    drep_id = cluster_obj.g_conway_governance.drep.gen_id(
+        id_name=name_template,
+        drep_vkey_file=drep_keys.vkey_file,
+        out_format="hex",
+        destination_dir=destination_dir,
+    )
 
-        cluster_env = cluster_nodes.get_cluster_env()
-        gov_data_dir = cluster_env.state_dir / governance_setup.GOV_DATA_DIR
-        gov_data_store = gov_data_dir / GOV_DATA_STORE
-
-        if gov_data_store.exists():
-            with open(gov_data_store, "rb") as in_data:
-                loaded_gov_data = pickle.load(in_data)
-            fixture_cache.value = loaded_gov_data
-            return loaded_gov_data  # type: ignore
-
-        with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
-            gov_data_dir.mkdir(exist_ok=True, parents=True)
-
-            governance_data = governance_setup.setup(
-                cluster_obj=cluster_obj,
-                cluster_manager=cluster_manager,
-                destination_dir=gov_data_dir,
-            )
-
-            # Check delegation to DReps
-            deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster_obj)
-            drep_id = governance_data.dreps_reg[0].drep_id
-            stake_addr_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
-                stake_vkey_file=governance_data.drep_delegators[0].stake.vkey_file
-            )
-            check_drep_delegation(
-                deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
-            )
-
-            fixture_cache.value = governance_data
-
-            with open(gov_data_store, "wb") as out_data:
-                pickle.dump(governance_data, out_data)
-
-    return governance_data
+    return DRepRegistration(
+        registration_cert=reg_cert,
+        key_pair=drep_keys,
+        drep_id=drep_id,
+        deposit=deposit_amt,
+    )
 
 
-def get_pparams_update_args(
-    update_proposals: tp.List[clusterlib_utils.UpdateProposal],
-) -> tp.List[str]:
-    """Get cli arguments for pparams update action."""
-    if not update_proposals:
-        return []
+def get_cc_member_reg_record(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    destination_dir: clusterlib.FileType = ".",
+) -> CCMemberRegistration:
+    """Get Constitutional Committee Members registration record."""
+    committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
+        key_name=name_template,
+        destination_dir=destination_dir,
+    )
+    committee_hot_keys = cluster_obj.g_conway_governance.committee.gen_hot_key_pair(
+        key_name=name_template,
+        destination_dir=destination_dir,
+    )
+    reg_cert = cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
+        key_name=name_template,
+        cold_vkey_file=committee_cold_keys.vkey_file,
+        hot_key_file=committee_hot_keys.vkey_file,
+        destination_dir=destination_dir,
+    )
+    key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+        vkey_file=committee_cold_keys.vkey_file,
+    )
 
-    _cli_args = [(u.arg, str(u.value)) for u in update_proposals]
-    cli_args = list(itertools.chain.from_iterable(_cli_args))
-    return cli_args
+    return CCMemberRegistration(
+        registration_cert=reg_cert,
+        cold_key_pair=committee_cold_keys,
+        hot_key_pair=committee_hot_keys,
+        key_hash=key_hash,
+    )
 
 
 def check_action_view(

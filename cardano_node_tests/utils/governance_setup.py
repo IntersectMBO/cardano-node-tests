@@ -1,31 +1,38 @@
 import logging
+import pickle
 import typing as tp
 
 from cardano_clusterlib import clusterlib
 
-import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_utils
+from cardano_node_tests.utils import locking
 
 LOGGER = logging.getLogger(__name__)
 
 GOV_DATA_DIR = "governance_data"
+GOV_DATA_STORE = "governance_data.pickle"
 
 DREPS_NUM = 4
 CC_SIZE = 3
 
 
 class DefaultGovernance(tp.NamedTuple):
-    dreps_reg: tp.List[clusterlib_utils.DRepRegistration]
+    dreps_reg: tp.List[governance_utils.DRepRegistration]
     drep_delegators: tp.List[clusterlib.PoolUser]
     cc_members: tp.List[clusterlib.CCMember]
     pools_cold: tp.List[clusterlib.ColdKeyPair]
 
 
+GovClusterT = tp.Tuple[clusterlib.ClusterLib, DefaultGovernance]
+
+
 def create_vote_stake(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: clusterlib.FileType = ".",
 ) -> tp.List[clusterlib.PoolUser]:
     name_template = "vote_stake"
 
@@ -52,8 +59,8 @@ def create_dreps(
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     pool_users: tp.List[clusterlib.PoolUser],
-    destination_dir: ttypes.FileType = ".",
-) -> tp.Tuple[tp.List[clusterlib_utils.DRepRegistration], tp.List[clusterlib.PoolUser]]:
+    destination_dir: clusterlib.FileType = ".",
+) -> tp.Tuple[tp.List[governance_utils.DRepRegistration], tp.List[clusterlib.PoolUser]]:
     no_of_addrs = len(pool_users)
 
     if no_of_addrs < DREPS_NUM:
@@ -65,7 +72,7 @@ def create_dreps(
 
     # Create DRep registration certs
     drep_reg_records = [
-        clusterlib_utils.get_drep_reg_record(
+        governance_utils.get_drep_reg_record(
             cluster_obj=cluster_obj,
             name_template=f"{name_template}_{i}",
             destination_dir=destination_dir,
@@ -158,7 +165,7 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[clusterlib.CCM
 def setup(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: clusterlib.FileType = ".",
 ) -> DefaultGovernance:
     cc_members = load_committee(cluster_obj=cluster_obj)
     vote_stake = create_vote_stake(
@@ -185,3 +192,48 @@ def setup(
         cc_members=cc_members,
         pools_cold=node_cold_records,
     )
+
+
+def get_default_governance(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+) -> DefaultGovernance:
+    with cluster_manager.cache_fixture(key="default_governance") as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        cluster_env = cluster_nodes.get_cluster_env()
+        gov_data_dir = cluster_env.state_dir / GOV_DATA_DIR
+        gov_data_store = gov_data_dir / GOV_DATA_STORE
+
+        if gov_data_store.exists():
+            with open(gov_data_store, "rb") as in_data:
+                loaded_gov_data = pickle.load(in_data)
+            fixture_cache.value = loaded_gov_data
+            return loaded_gov_data  # type: ignore
+
+        with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
+            gov_data_dir.mkdir(exist_ok=True, parents=True)
+
+            governance_data = setup(
+                cluster_obj=cluster_obj,
+                cluster_manager=cluster_manager,
+                destination_dir=gov_data_dir,
+            )
+
+            # Check delegation to DReps
+            deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster_obj)
+            drep_id = governance_data.dreps_reg[0].drep_id
+            stake_addr_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+                stake_vkey_file=governance_data.drep_delegators[0].stake.vkey_file
+            )
+            governance_utils.check_drep_delegation(
+                deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
+            )
+
+            fixture_cache.value = governance_data
+
+            with open(gov_data_store, "wb") as out_data:
+                pickle.dump(governance_data, out_data)
+
+    return governance_data
