@@ -152,15 +152,17 @@ class TestNodeReconnect:
             )
         )
 
-        with cluster_manager.respin_on_failure():
-            # Check that the Tx number 1 exists on both node1 and node2
-            assert self.node_query_utxo(
-                cluster_obj=cluster, node=node1, tx_raw_output=tx_outputs[-1]
-            ), "The Tx number 1 doesn't exist on node 1"
-            assert self.node_query_utxo(
-                cluster_obj=cluster, node=node2, tx_raw_output=tx_outputs[-1]
-            ), "The Tx number 1 doesn't exist on node 2"
+        cluster.wait_for_new_block(new_blocks=3)
 
+        # Check that the Tx number 1 exists on both node1 and node2
+        assert self.node_query_utxo(
+            cluster_obj=cluster, node=node1, tx_raw_output=tx_outputs[-1]
+        ), "The Tx number 1 doesn't exist on node1"
+        assert self.node_query_utxo(
+            cluster_obj=cluster, node=node2, tx_raw_output=tx_outputs[-1]
+        ), "The Tx number 1 doesn't exist on node2"
+
+        with cluster_manager.respin_on_failure():
             # Stop the node2
             cluster_nodes.stop_nodes([node2])
             time.sleep(10)
@@ -196,10 +198,12 @@ class TestNodeReconnect:
                 )
             )
 
-            # Check that the Tx number 3 exists on both node 1 and node2
+            cluster.wait_for_new_block(new_blocks=3)
+
+            # Check that the Tx number 3 exists on both node1 and node2
             assert self.node_query_utxo(
                 cluster_obj=cluster, node=node1, tx_raw_output=tx_outputs[-1]
-            ), "The Tx number 3 does exist on node1"
+            ), "The Tx number 3 doesn't exist on node1"
             assert self.node_query_utxo(
                 cluster_obj=cluster, node=node2, tx_raw_output=tx_outputs[-1]
             ), "The Tx number 3 doesn't exist on node2"
