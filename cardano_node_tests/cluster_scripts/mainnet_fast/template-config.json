@@ -46,6 +46,7 @@
     "TraceInboundGovernorCounters": true,
     "TraceInboundGovernorTransitions": true,
     "DebugPeerSelectionInitiator": true,
+    "DebugPeerSelectionInitiatorOnly": true,
     "DebugPeerSelectionInitiatorResponder": true,
     "TracingVerbosity": "NormalVerbosity",
     "TurnOnLogMetrics": true,

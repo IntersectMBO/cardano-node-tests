@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 #
 # Run reconnect tests.
+#
+# You must set either TEST_RECONNECT or TEST_METRICS_RECONNECT to 1 to run.
 
 set -euo pipefail
 
 TOP_DIR="$(readlink -m "${0%/*}/..")"
 
 export \
-  TEST_RECONNECT=1 \
   CLUSTERS_COUNT=1 \
   TEST_THREADS=0 \
   ENABLE_P2P=1 \
