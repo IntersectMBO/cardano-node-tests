@@ -110,11 +110,9 @@ def get_drep_reg_record(
         drep_metadata_hash=drep_metadata_hash,
         destination_dir=destination_dir,
     )
-    drep_id = cluster_obj.g_conway_governance.drep.gen_id(
-        id_name=name_template,
+    drep_id = cluster_obj.g_conway_governance.drep.get_id(
         drep_vkey_file=drep_keys.vkey_file,
         out_format="hex",
-        destination_dir=destination_dir,
     )
 
     return DRepRegistration(

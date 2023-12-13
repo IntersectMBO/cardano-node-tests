@@ -2,7 +2,6 @@
 import logging
 import pathlib as pl
 import random
-import typing as tp
 
 import allure
 import pytest
@@ -158,29 +157,32 @@ class TestVoting:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        vote_files_cc = [
-            cluster.g_conway_governance.vote.create(
+        votes_cc = [
+            cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 cc_hot_vkey_file=m.hot_vkey_file,
             )
             for i, m in enumerate(governance_data.cc_members, start=1)
         ]
-        vote_files_drep = [
-            cluster.g_conway_governance.vote.create(
+        votes_drep = [
+            cluster.g_conway_governance.vote.create_drep(
                 vote_name=f"{temp_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 drep_vkey_file=d.key_pair.vkey_file,
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
 
         tx_files_vote = clusterlib.TxFiles(
-            vote_files=[*vote_files_cc, *vote_files_drep],
+            vote_files=[
+                *[r.vote_file for r in votes_cc],
+                *[r.vote_file for r in votes_drep],
+            ],
             signing_key_files=[
                 pool_user_lg.payment.skey_file,
                 *[r.hot_skey_file for r in governance_data.cc_members],
@@ -321,29 +323,32 @@ class TestVoting:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        vote_files_drep = [
-            cluster.g_conway_governance.vote.create(
+        votes_drep = [
+            cluster.g_conway_governance.vote.create_drep(
                 vote_name=f"{temp_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 drep_vkey_file=d.key_pair.vkey_file,
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
-        vote_files_pool = [
-            cluster.g_conway_governance.vote.create(
+        votes_spo = [
+            cluster.g_conway_governance.vote.create_spo(
                 vote_name=f"{temp_template}_pool{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 cold_vkey_file=p.vkey_file,
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
         ]
 
         tx_files_vote = clusterlib.TxFiles(
-            vote_files=[*vote_files_drep, *vote_files_pool],
+            vote_files=[
+                *[r.vote_file for r in votes_drep],
+                *[r.vote_file for r in votes_spo],
+            ],
             signing_key_files=[
                 pool_user_lg.payment.skey_file,
                 *[r.skey_file for r in governance_data.pools_cold],
@@ -509,29 +514,32 @@ class TestVoting:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        vote_files_cc = [
-            cluster.g_conway_governance.vote.create(
+        votes_cc = [
+            cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 cc_hot_vkey_file=m.hot_vkey_file,
             )
             for i, m in enumerate(governance_data.cc_members, start=1)
         ]
-        vote_files_drep = [
-            cluster.g_conway_governance.vote.create(
+        votes_drep = [
+            cluster.g_conway_governance.vote.create_drep(
                 vote_name=f"{temp_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 drep_vkey_file=d.key_pair.vkey_file,
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
 
         tx_files_vote = clusterlib.TxFiles(
-            vote_files=[*vote_files_cc, *vote_files_drep],
+            vote_files=[
+                *[r.vote_file for r in votes_cc],
+                *[r.vote_file for r in votes_drep],
+            ],
             signing_key_files=[
                 pool_user_lg.payment.skey_file,
                 *[r.hot_skey_file for r in governance_data.cc_members],
@@ -669,29 +677,32 @@ class TestVoting:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        vote_files_cc = [
-            cluster.g_conway_governance.vote.create(
+        votes_cc = [
+            cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 cc_hot_vkey_file=m.hot_vkey_file,
             )
             for i, m in enumerate(governance_data.cc_members, start=1)
         ]
-        vote_files_drep = [
-            cluster.g_conway_governance.vote.create(
+        votes_drep = [
+            cluster.g_conway_governance.vote.create_drep(
                 vote_name=f"{temp_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=True,
+                vote=clusterlib.Votes.YES,
                 drep_vkey_file=d.key_pair.vkey_file,
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
 
         tx_files_vote = clusterlib.TxFiles(
-            vote_files=[*vote_files_cc, *vote_files_drep],
+            vote_files=[
+                *[r.vote_file for r in votes_cc],
+                *[r.vote_file for r in votes_drep],
+            ],
             signing_key_files=[
                 pool_user_ug.payment.skey_file,
                 *[r.hot_skey_file for r in governance_data.cc_members],
@@ -820,52 +831,50 @@ class TestVoting:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        def _get_votes(idx: int) -> tp.Tuple[bool, bool, bool]:
+        def _get_vote(idx: int) -> clusterlib.Votes:
             if idx % 3 == 0:
-                return (False, False, True)
+                return clusterlib.Votes.ABSTAIN
             if idx % 2 == 0:
-                return (True, False, False)
-            return (False, True, False)
+                return clusterlib.Votes.YES
+            return clusterlib.Votes.NO
 
-        vote_files_cc = [
-            cluster.g_conway_governance.vote.create(
+        votes_cc = [
+            cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=_get_votes(i)[0],
-                vote_no=_get_votes(i)[1],
-                vote_abstain=_get_votes(i)[2],
+                vote=_get_vote(i),
                 cc_hot_vkey_file=m.hot_vkey_file,
             )
             for i, m in enumerate(governance_data.cc_members, start=1)
         ]
-        vote_files_drep = [
-            cluster.g_conway_governance.vote.create(
+        votes_drep = [
+            cluster.g_conway_governance.vote.create_drep(
                 vote_name=f"{temp_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=_get_votes(i)[0],
-                vote_no=_get_votes(i)[1],
-                vote_abstain=_get_votes(i)[2],
+                vote=_get_vote(i),
                 drep_vkey_file=d.key_pair.vkey_file,
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
-        vote_files_pool = [
-            cluster.g_conway_governance.vote.create(
+        votes_spo = [
+            cluster.g_conway_governance.vote.create_spo(
                 vote_name=f"{temp_template}_pool{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote_yes=_get_votes(i)[0],
-                vote_no=_get_votes(i)[1],
-                vote_abstain=_get_votes(i)[2],
+                vote=_get_vote(i),
                 cold_vkey_file=p.vkey_file,
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
         ]
 
         tx_files_vote = clusterlib.TxFiles(
-            vote_files=[*vote_files_cc, *vote_files_drep, *vote_files_pool],
+            vote_files=[
+                *[r.vote_file for r in votes_cc],
+                *[r.vote_file for r in votes_drep],
+                *[r.vote_file for r in votes_spo],
+            ],
             signing_key_files=[
                 pool_user_ug.payment.skey_file,
                 *[r.hot_skey_file for r in governance_data.cc_members],
