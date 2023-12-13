@@ -237,7 +237,7 @@ class TestRollback:
             self.node_submit_tx(
                 cluster_obj=cluster,
                 node="pool1",
-                temp_template=temp_template,
+                temp_template=f"{temp_template}_tx1",
                 src_addr=payment_addrs[0],
                 dst_addr=payment_addrs[0],
             )
@@ -271,7 +271,7 @@ class TestRollback:
                 self.node_submit_tx(
                     cluster_obj=cluster,
                     node="pool1",
-                    temp_template=temp_template,
+                    temp_template=f"{temp_template}_tx2",
                     src_addr=payment_addrs[1],
                     dst_addr=payment_addrs[1],
                 )
@@ -290,7 +290,7 @@ class TestRollback:
                 self.node_submit_tx(
                     cluster_obj=cluster,
                     node=LAST_POOL_NAME,
-                    temp_template=temp_template,
+                    temp_template=f"{temp_template}_tx3",
                     src_addr=payment_addrs[2],
                     dst_addr=payment_addrs[2],
                 )
@@ -392,7 +392,7 @@ class TestRollback:
             self.node_submit_tx(
                 cluster_obj=cluster,
                 node="pool1",
-                temp_template=temp_template,
+                temp_template=f"{temp_template}_tx1",
                 src_addr=payment_addrs[0],
                 dst_addr=payment_addrs[0],
             )
@@ -417,7 +417,7 @@ class TestRollback:
             self.node_submit_tx(
                 cluster_obj=cluster,
                 node="pool1",
-                temp_template=temp_template,
+                temp_template=f"{temp_template}_tx2",
                 src_addr=payment_addrs[1],
                 dst_addr=payment_addrs[1],
             )
@@ -428,7 +428,7 @@ class TestRollback:
             self.node_submit_tx(
                 cluster_obj=cluster,
                 node=LAST_POOL_NAME,
-                temp_template=temp_template,
+                temp_template=f"{temp_template}_tx3",
                 src_addr=payment_addrs[2],
                 dst_addr=payment_addrs[2],
             )
