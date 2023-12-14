@@ -119,7 +119,7 @@ class TestVoting:
         )
 
         tx_files_action = clusterlib.TxFiles(
-            proposal_files=[constitution_action],
+            proposal_files=[constitution_action.action_file],
             signing_key_files=[pool_user_lg.payment.skey_file],
         )
 
@@ -282,7 +282,7 @@ class TestVoting:
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[cc_reg_record.registration_cert],
-            proposal_files=[update_action],
+            proposal_files=[update_action.action_file],
             signing_key_files=[
                 pool_user_lg.payment.skey_file,
                 cc_reg_record.cold_key_pair.skey_file,
@@ -476,7 +476,7 @@ class TestVoting:
         )
 
         tx_files_action = clusterlib.TxFiles(
-            proposal_files=[pparams_action],
+            proposal_files=[pparams_action.action_file],
             signing_key_files=[pool_user_lg.payment.skey_file],
         )
 
@@ -634,7 +634,7 @@ class TestVoting:
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
-            proposal_files=[withdrawal_action],
+            proposal_files=[withdrawal_action.action_file],
             signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
         )
 
@@ -753,7 +753,7 @@ class TestVoting:
         governance_utils.check_action_view(
             cluster_obj=cluster,
             action_tag=governance_utils.ActionTags.TREASURY_WITHDRAWALS,
-            action_file=withdrawal_action,
+            action_file=withdrawal_action.action_file,
             anchor_url=anchor_url,
             anchor_data_hash=anchor_data_hash,
             deposit_amt=action_deposit_amt,
@@ -793,7 +793,7 @@ class TestVoting:
         )
 
         tx_files_action = clusterlib.TxFiles(
-            proposal_files=[info_action],
+            proposal_files=[info_action.action_file],
             signing_key_files=[pool_user_ug.payment.skey_file],
         )
 
@@ -911,7 +911,7 @@ class TestVoting:
         governance_utils.check_action_view(
             cluster_obj=cluster,
             action_tag=governance_utils.ActionTags.INFO_ACTION,
-            action_file=info_action,
+            action_file=info_action.action_file,
             anchor_url=anchor_url,
             anchor_data_hash=anchor_data_hash,
             deposit_amt=action_deposit_amt,

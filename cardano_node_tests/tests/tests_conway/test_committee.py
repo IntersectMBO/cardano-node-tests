@@ -221,7 +221,7 @@ class TestCommittee:
 
         tx_files = clusterlib.TxFiles(
             certificate_files=[r.registration_cert for r in cc_reg_records],
-            proposal_files=[update_action],
+            proposal_files=[update_action.action_file],
             signing_key_files=[
                 pool_user.payment.skey_file,
                 *[r.cold_key_pair.skey_file for r in cc_reg_records],
