@@ -1,4 +1,5 @@
 """Tests for checking staking scenarios where no rewards are expected."""
+import dataclasses
 import logging
 import pathlib as pl
 import typing as tp
@@ -84,8 +85,8 @@ class TestNoRewards:
         loaded_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
         )
-        pool_data_updated = loaded_data._replace(  # pylint: disable=no-member
-            pool_pledge=loaded_data.pool_pledge * 9
+        pool_data_updated = dataclasses.replace(
+            loaded_data, pool_pledge=loaded_data.pool_pledge * 9
         )
 
         # increase the needed pledge amount - update the pool parameters by resubmitting the pool

@@ -1,5 +1,6 @@
 """Utilities for `cardano-submit-api` REST service."""
 import binascii
+import dataclasses
 import json
 import logging
 import pathlib as pl
@@ -9,7 +10,6 @@ import typing as tp
 import requests
 from cardano_clusterlib import clusterlib
 
-import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_nodes
 
 LOGGER = logging.getLogger(__name__)
@@ -19,7 +19,8 @@ class SubmitApiError(Exception):
     pass
 
 
-class SubmitApiOut(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class SubmitApiOut:
     txid: str
     response: requests.Response
 
@@ -36,7 +37,7 @@ def is_running() -> bool:
     return True
 
 
-def tx2cbor(tx_file: ttypes.FileType, destination_dir: ttypes.FileType = ".") -> pl.Path:
+def tx2cbor(tx_file: clusterlib.FileType, destination_dir: clusterlib.FileType = ".") -> pl.Path:
     """Convert signed Tx to binary CBOR."""
     tx_file = pl.Path(tx_file)
     out_file = pl.Path(destination_dir).expanduser() / f"{tx_file.name}.cbor"
@@ -52,7 +53,7 @@ def tx2cbor(tx_file: ttypes.FileType, destination_dir: ttypes.FileType = ".") ->
     return out_file
 
 
-def post_cbor(cbor_file: ttypes.FileType, url: str) -> requests.Response:
+def post_cbor(cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     """Post binary CBOR representation of Tx to `cardano-submit-api` service on `url`."""
     headers = {"Content-Type": "application/cbor"}
     with open(cbor_file, "rb") as in_fp:
@@ -61,7 +62,7 @@ def post_cbor(cbor_file: ttypes.FileType, url: str) -> requests.Response:
     return response
 
 
-def submit_tx_bare(tx_file: ttypes.FileType) -> SubmitApiOut:
+def submit_tx_bare(tx_file: clusterlib.FileType) -> SubmitApiOut:
     """Submit a signed Tx using `cardano-submit-api` service."""
     cbor_file = tx2cbor(tx_file=tx_file)
 
@@ -89,7 +90,7 @@ def submit_tx_bare(tx_file: ttypes.FileType) -> SubmitApiOut:
 
 def submit_tx(
     cluster_obj: clusterlib.ClusterLib,
-    tx_file: ttypes.FileType,
+    tx_file: clusterlib.FileType,
     txins: tp.List[clusterlib.UTXOData],
     wait_blocks: int = 2,
 ) -> None:

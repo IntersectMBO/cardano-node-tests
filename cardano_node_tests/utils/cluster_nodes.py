@@ -1,4 +1,5 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
+import dataclasses
 import json
 import logging
 import os
@@ -22,7 +23,8 @@ ADDRS_DATA = "addrs_data.pickle"
 STATE_CLUSTER = "state-cluster"
 
 
-class ClusterEnv(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class ClusterEnv:
     socket_path: pl.Path
     state_dir: pl.Path
     work_dir: pl.Path
@@ -32,7 +34,8 @@ class ClusterEnv(tp.NamedTuple):
     command_era: str
 
 
-class ServiceStatus(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class ServiceStatus:
     name: str
     status: str
     pid: tp.Optional[int]

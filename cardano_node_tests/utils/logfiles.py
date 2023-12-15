@@ -1,5 +1,6 @@
 # pylint: disable=abstract-class-instantiated
 import contextlib
+import dataclasses
 import fnmatch
 import itertools
 import logging
@@ -72,7 +73,8 @@ ERRORS_LOOK_BACK_RE = (
 SUPERVISORD_ERRORS_RE = re.compile("not expected|FATAL", re.IGNORECASE)
 
 
-class RotableLog(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class RotableLog:
     logfile: pl.Path
     seek: int
     timestamp: float
@@ -125,7 +127,7 @@ def _get_rotated_logs(
         return []
 
     # The `seek` value belongs to the log file with modification time furthest in the past
-    logfile_records[0] = logfile_records[0]._replace(seek=seek)
+    logfile_records[0] = dataclasses.replace(logfile_records[0], seek=seek)
 
     return logfile_records
 

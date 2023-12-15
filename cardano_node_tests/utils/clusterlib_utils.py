@@ -2,6 +2,7 @@
 # pylint: disable=abstract-class-instantiated
 import base64
 import contextlib
+import dataclasses
 import itertools
 import json
 import logging
@@ -24,13 +25,15 @@ from cardano_node_tests.utils.faucet import fund_from_faucet  # noqa: F401 # for
 LOGGER = logging.getLogger(__name__)
 
 
-class UpdateProposal(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class UpdateProposal:
     arg: str
     value: tp.Any
     name: str = ""
 
 
-class TokenRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class TokenRecord:
     token: str
     amount: int
     issuers_addrs: tp.List[clusterlib.AddressRecord]
@@ -38,7 +41,8 @@ class TokenRecord(tp.NamedTuple):
     script: pl.Path
 
 
-class TxMetadata(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class TxMetadata:
     metadata: dict
     aux_data: list
 

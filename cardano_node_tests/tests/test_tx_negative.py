@@ -2,6 +2,7 @@
 
 Tests like duplicated transaction, sending funds to wrong addresses, wrong fee, wrong ttl.
 """
+import dataclasses
 import logging
 import pathlib as pl
 import re
@@ -1186,7 +1187,7 @@ class TestNegative:
         temp_template = common.get_test_id(cluster)
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
-        utxo_copy = utxo._replace(utxo_ix=5)
+        utxo_copy = dataclasses.replace(utxo, utxo_ix=5)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
             pool_users=pool_users,
@@ -1219,7 +1220,7 @@ class TestNegative:
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         new_hash = f"{utxo.utxo_hash[:-4]}fd42"
-        utxo_copy = utxo._replace(utxo_hash=new_hash)
+        utxo_copy = dataclasses.replace(utxo, utxo_hash=new_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
             pool_users=pool_users,
@@ -1252,7 +1253,7 @@ class TestNegative:
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
-        utxo_copy = utxo._replace(utxo_hash=utxo_hash)
+        utxo_copy = dataclasses.replace(utxo, utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
         )
@@ -1281,7 +1282,7 @@ class TestNegative:
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
-        utxo_copy = utxo._replace(utxo_hash=utxo_hash)
+        utxo_copy = dataclasses.replace(utxo, utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
             pool_users=pool_users,

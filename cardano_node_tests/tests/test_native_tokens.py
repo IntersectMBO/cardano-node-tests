@@ -5,6 +5,7 @@
 * locking
 * transactions
 """
+import dataclasses
 import itertools
 import json
 import logging
@@ -195,7 +196,7 @@ class TestMinting:
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
-        token_burn = token_mint._replace(amount=-amount)  # pylint: disable=E1101
+        token_burn = dataclasses.replace(token_mint, amount=-amount)
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_burn],
@@ -293,7 +294,7 @@ class TestMinting:
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
-        token_burn = token_mint._replace(amount=-amount)  # pylint: disable=E1101
+        token_burn = dataclasses.replace(token_mint, amount=-amount)
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_burn],
@@ -406,7 +407,7 @@ class TestMinting:
             ), f"The {t.token} token was not minted"
 
         # token burning
-        tokens_burn = [t._replace(amount=-amount) for t in tokens_mint]
+        tokens_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=tokens_burn,
@@ -504,7 +505,7 @@ class TestMinting:
         assert token1_mint_utxo and token1_mint_utxo[0].amount == amount, "The token was not minted"
 
         # second token minting and first token burning in single TX
-        token_burn1 = tokens_mint[0]._replace(amount=-amount)
+        token_burn1 = dataclasses.replace(tokens_mint[0], amount=-amount)
         tx_out_mint_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_burn1, tokens_mint[1]],
@@ -525,7 +526,7 @@ class TestMinting:
         assert token2_mint_utxo and token2_mint_utxo[0].amount == amount, "The token was not minted"
 
         # second token burning
-        token_burn2 = tokens_mint[1]._replace(amount=-amount)
+        token_burn2 = dataclasses.replace(tokens_mint[1], amount=-amount)
         tx_out_burn2 = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_burn2],
@@ -784,7 +785,7 @@ class TestMinting:
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # Token burning
-        tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
+        tokens_to_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
@@ -931,7 +932,7 @@ class TestMinting:
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # Token burning
-        tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
+        tokens_to_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
@@ -1020,7 +1021,7 @@ class TestMinting:
         # the `transaction build` command doesn't balance MAs, so use the `build-raw` with
         # clusterlib magic for this partial burning
         burn_amount = amount - 10
-        token_burn = token_mint._replace(amount=-burn_amount)  # pylint: disable=E1101
+        token_burn = dataclasses.replace(token_mint, amount=-burn_amount)
         tx_out_burn1 = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_burn],
@@ -1035,7 +1036,7 @@ class TestMinting:
         ), "The token was not burned"
 
         # burn the rest of tokens
-        final_burn = token_mint._replace(amount=-10)  # pylint: disable=E1101
+        final_burn = dataclasses.replace(token_mint, amount=-10)
         tx_out_burn2 = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[final_burn],
@@ -1118,7 +1119,7 @@ class TestMinting:
         ), "The token was not minted or expected chars are not present in the asset name"
 
         # token burning
-        token_burn = token_mint._replace(amount=-amount)  # pylint: disable=E1101
+        token_burn = dataclasses.replace(token_mint, amount=-amount)
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_burn],
@@ -1210,7 +1211,7 @@ class TestPolicies:
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
-        tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
+        tokens_to_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
@@ -1302,7 +1303,7 @@ class TestPolicies:
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
         # token burning
-        tokens_to_burn = [t._replace(amount=-amount) for t in tokens_to_mint]
+        tokens_to_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_burn,
@@ -2387,7 +2388,7 @@ class TestCLITxOutSyntax:
             tx_name=f"{temp_template}_mint_burn",
         )
 
-        tx_raw_output = tx_raw_blueprint._replace(out_file=out_file)
+        tx_raw_output = dataclasses.replace(tx_raw_blueprint, out_file=out_file)
 
         # submit signed transaction
         cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)

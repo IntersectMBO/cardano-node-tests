@@ -1,4 +1,5 @@
 """Negative tests for spending with Plutus using `transaction build`."""
+import dataclasses
 import json
 import logging
 import pathlib as pl
@@ -82,8 +83,8 @@ class TestNegative:
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
             execution_cost=plutus_common.GUESSING_GAME[plutus_version].execution_cost,
         )
-        plutus_op2 = plutus_op._replace(  # pylint: disable=no-member
-            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
+        plutus_op2 = dataclasses.replace(
+            plutus_op, script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
         )
 
         script_utxos, collateral_utxos, __ = spend_build._build_fund_script(
@@ -136,7 +137,7 @@ class TestNegative:
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
             execution_cost=plutus_common.GUESSING_GAME[plutus_version].execution_cost,
         )
-        plutus_op2 = plutus_op._replace(script_file="")  # pylint: disable=no-member
+        plutus_op2 = dataclasses.replace(plutus_op, script_file="")
 
         script_utxos, collateral_utxos, __ = spend_build._build_fund_script(
             temp_template=temp_template,

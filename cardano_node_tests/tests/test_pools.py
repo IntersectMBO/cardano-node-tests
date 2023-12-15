@@ -7,6 +7,7 @@
 * pool reregistration
 """
 # pylint: disable=abstract-class-instantiated
+import dataclasses
 import json
 import logging
 import pathlib as pl
@@ -1324,7 +1325,8 @@ class TestStakePool:
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
-        pool_data_updated = pool_data._replace(  # pylint: disable=no-member
+        pool_data_updated = dataclasses.replace(
+            pool_data,
             pool_metadata_url="https://www.updated_location.com",
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(
                 pool_metadata_updated_file
@@ -1442,8 +1444,8 @@ class TestStakePool:
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
-        pool_data_updated = pool_data._replace(  # pylint: disable=no-member
-            pool_pledge=1, pool_cost=min_pool_cost + 1_000_000, pool_margin=0.9
+        pool_data_updated = dataclasses.replace(
+            pool_data, pool_pledge=1, pool_cost=min_pool_cost + 1_000_000, pool_margin=0.9
         )
 
         # create pool owners

@@ -1,4 +1,5 @@
 """Tests of effect of pool saturation on rewards and blocks production."""
+import dataclasses
 import logging
 import pickle
 import typing as tp
@@ -17,14 +18,16 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-class RewardRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class RewardRecord:
     epoch_no: int
     reward_total: int
     reward_per_epoch: int
     stake_total: int
 
 
-class PoolRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PoolRecord:
     # pylint: disable=invalid-name
     name: str
     id: str

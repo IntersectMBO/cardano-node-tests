@@ -1,13 +1,14 @@
+import dataclasses
 import logging
 import os
 import pathlib as pl
 import re
-import typing as tp
 
 LOGGER = logging.getLogger(__name__)
 
 
-class PytestTest(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PytestTest:
     test_function: str
     test_file: pl.Path
     full: str

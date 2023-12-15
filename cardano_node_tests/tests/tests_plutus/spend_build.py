@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import typing as tp
 
@@ -67,9 +68,7 @@ def _build_fund_script(
     ]
 
     for token in stokens:
-        txouts.append(
-            script_txout._replace(amount=token.amount, coin=token.coin)  # pylint: disable=no-member
-        )
+        txouts.append(dataclasses.replace(script_txout, amount=token.amount, coin=token.coin))
 
     for token in ctokens:
         txouts.append(
@@ -176,7 +175,8 @@ def _build_spend_locked_txin(  # noqa: C901
             redeemer_value=plutus_op.redeemer_value if plutus_op.redeemer_value else "",
         )
     ]
-    tx_files = tx_files._replace(
+    tx_files = dataclasses.replace(
+        tx_files,
         signing_key_files=list({*tx_files.signing_key_files, dst_addr.skey_file}),
     )
     txouts = [

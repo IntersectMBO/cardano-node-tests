@@ -1,4 +1,5 @@
 """Types used in db-sync related functions."""
+import dataclasses
 import typing as tp
 
 from cardano_clusterlib import clusterlib
@@ -6,30 +7,35 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import dbsync_queries
 
 
-class MetadataRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class MetadataRecord:
     key: int
     json: tp.Any
     bytes: memoryview
 
 
-class ADAStashRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class ADAStashRecord:
     address: str
     cert_index: int
     amount: int
 
 
-class PotTransferRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PotTransferRecord:
     treasury: int
     reserves: int
 
 
-class DelegationRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class DelegationRecord:
     address: str
     pool_id: str
     active_epoch_no: int
 
 
-class RewardEpochRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class RewardEpochRecord:
     amount: int
     earned_epoch: int
     spendable_epoch: int
@@ -37,7 +43,8 @@ class RewardEpochRecord(tp.NamedTuple):
     pool_id: str
 
 
-class RewardRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class RewardRecord:
     address: str
     rewards: tp.List[RewardEpochRecord]
     reward_sum: int
@@ -46,7 +53,8 @@ class RewardRecord(tp.NamedTuple):
         return self.reward_sum > 0
 
 
-class UTxORecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class UTxORecord:
     utxo_hash: str
     utxo_ix: int
     amount: int
@@ -60,7 +68,8 @@ class UTxORecord(tp.NamedTuple):
     reference_script_hash: str = ""
 
 
-class GetUTxORecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class GetUTxORecord:
     utxo_hash: str
     utxo_ix: int
     has_script: bool
@@ -68,7 +77,8 @@ class GetUTxORecord(tp.NamedTuple):
     data_hash: str
 
 
-class PaymentAddrRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PaymentAddrRecord:
     payment_address: str
     stake_address: tp.Optional[str]
     amount_sum: int
@@ -78,7 +88,9 @@ class PaymentAddrRecord(tp.NamedTuple):
         return self.amount_sum > 0
 
 
-class PoolDataRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PoolDataRecord:
+    # pylint: disable-next=invalid-name
     id: int
     hash: str
     view: str
@@ -100,13 +112,15 @@ class PoolDataRecord(tp.NamedTuple):
     retiring_epoch: int
 
 
-class ScriptRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class ScriptRecord:
     hash: str
     type: str
     serialised_size: int
 
 
-class RedeemerRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class RedeemerRecord:
     unit_mem: int
     unit_steps: int
     fee: int
@@ -115,7 +129,9 @@ class RedeemerRecord(tp.NamedTuple):
     value: dict
 
 
-class TxRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class TxRecord:
+    # pylint: disable=too-many-instance-attributes
     tx_id: int
     tx_hash: str
     block_id: int
@@ -150,14 +166,17 @@ class TxRecord(tp.NamedTuple):
         return metadata
 
 
-class TxPrelimRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class TxPrelimRecord:
     utxo_out: tp.List[UTxORecord]
     ma_utxo_out: tp.List[UTxORecord]
     mint_utxo_out: tp.List[UTxORecord]
     last_row: dbsync_queries.TxDBRow
 
 
-class CommitteeRegistrationRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class CommitteeRegistrationRecord:
+    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int
@@ -165,7 +184,9 @@ class CommitteeRegistrationRecord(tp.NamedTuple):
     hot_key: str
 
 
-class CommitteeDeregistrationRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class CommitteeDeregistrationRecord:
+    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int

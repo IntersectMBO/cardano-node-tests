@@ -1,4 +1,5 @@
 """Tests for basic transactions."""
+import dataclasses
 import itertools
 import logging
 import re
@@ -899,9 +900,7 @@ class TestBasicTransactions:
         txins, txouts = tx_common.get_txins_txouts(
             txins=tx_raw_template.txins, txouts=tx_raw_template.txouts
         )
-        tx_raw_output = tx_raw_template._replace(  # pylint: disable=no-member
-            invalid_hereafter=None
-        )
+        tx_raw_output = dataclasses.replace(tx_raw_template, invalid_hereafter=None)
 
         cluster.cli(
             [

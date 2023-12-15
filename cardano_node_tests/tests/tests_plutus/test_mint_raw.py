@@ -1,4 +1,5 @@
 """Tests for minting with Plutus using `transaction build-raw`."""
+import dataclasses
 import datetime
 import logging
 import pathlib as pl
@@ -1121,9 +1122,7 @@ class TestMinting:
         )
 
         plutus_mint_data = [
-            plutus_mint_data_dummy[0]._replace(  # pylint: disable=no-member
-                redeemer_file=redeemer_file
-            )
+            dataclasses.replace(plutus_mint_data_dummy[0], redeemer_file=redeemer_file)
         ]
 
         tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
