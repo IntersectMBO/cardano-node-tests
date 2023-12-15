@@ -155,3 +155,19 @@ class TxPrelimRecord(tp.NamedTuple):
     ma_utxo_out: tp.List[UTxORecord]
     mint_utxo_out: tp.List[UTxORecord]
     last_row: dbsync_queries.TxDBRow
+
+
+class CommitteeRegistrationRecord(tp.NamedTuple):
+    id: int
+    tx_id: int
+    cert_index: int
+    cold_key: str
+    hot_key: str
+
+
+class CommitteeDeregistrationRecord(tp.NamedTuple):
+    id: int
+    tx_id: int
+    cert_index: int
+    voting_anchor_id: int
+    cold_key: str

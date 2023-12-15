@@ -8,6 +8,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
@@ -80,6 +81,7 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_register_and_resign_committee_member(
@@ -167,6 +169,12 @@ class TestCommittee:
             clusterlib.filter_utxos(utxos=res_out_utxos, address=payment_addr.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output_res.txins) - tx_output_res.fee
         ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        # Check CC member in db-sync
+        dbsync_utils.check_committee_member_registration(
+            cc_member_cold_key=reg_cc.key_hash, committee_state=reg_committee_state
+        )
+        dbsync_utils.check_committee_member_deregistration(cc_member_cold_key=reg_cc.key_hash)
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD

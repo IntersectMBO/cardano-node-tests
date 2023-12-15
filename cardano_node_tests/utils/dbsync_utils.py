@@ -823,3 +823,80 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
         raise AssertionError(f"Unexpected parameter proposal values in db-sync:\n{failures_str}")
 
     return param_proposal_db
+
+
+def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
+    """Get committee member data from db-sync."""
+    cc_members = list(dbsync_queries.query_committee_registration(cold_key=cold_key))
+    if not cc_members:
+        return None
+
+    # TODO: handle multiple records for the same CC member
+    cc_member = cc_members[-1]
+    cc_member_data = dbsync_types.CommitteeRegistrationRecord(
+        id=cc_member.id,
+        tx_id=cc_member.tx_id,
+        cert_index=cc_member.cert_index,
+        cold_key=cc_member.cold_key.hex(),
+        hot_key=cc_member.hot_key.hex(),
+    )
+
+    return cc_member_data
+
+
+def check_committee_member_registration(
+    cc_member_cold_key: str, committee_state: tp.Dict[str, tp.Any]
+) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
+    """Check committee member registration in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    cc_member_data = get_committee_member(cold_key=cc_member_cold_key)
+    member_key = f"keyHash-{cc_member_cold_key}"
+
+    assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"
+    assert (
+        committee_state["committee"][member_key]["hotCredsAuthStatus"]["contents"]["keyHash"]
+        == cc_member_data.hot_key
+    ), "CC Member not present in registration table in db-sync"
+
+    return cc_member_data
+
+
+def get_deregistered_committee_member(
+    cold_key: str,
+) -> tp.Optional[dbsync_types.CommitteeDeregistrationRecord]:
+    """Get deregistered committee member data from db-sync."""
+    deregistered_cc_members = list(dbsync_queries.query_committee_deregistration(cold_key=cold_key))
+    if not deregistered_cc_members:
+        return None
+
+    # TODO: handle multiple records for the same CC member
+    deregistered_cc_member = deregistered_cc_members[-1]
+    deregistered_cc_member_data = dbsync_types.CommitteeDeregistrationRecord(
+        id=deregistered_cc_member.id,
+        tx_id=deregistered_cc_member.tx_id,
+        cert_index=deregistered_cc_member.cert_index,
+        voting_anchor_id=deregistered_cc_member.voting_anchor_id,
+        cold_key=deregistered_cc_member.cold_key.hex(),
+    )
+
+    return deregistered_cc_member_data
+
+
+def check_committee_member_deregistration(
+    cc_member_cold_key: str,
+) -> tp.Optional[dbsync_types.CommitteeDeregistrationRecord]:
+    """Check committee member deregistration in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    cc_member_data = get_deregistered_committee_member(cold_key=cc_member_cold_key)
+    member_key = f"keyHash-{cc_member_cold_key}"
+
+    assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"
+    assert (
+        cc_member_cold_key == cc_member_data.cold_key
+    ), "CC Member not present in deregistration table in db-sync"
+
+    return cc_member_data
