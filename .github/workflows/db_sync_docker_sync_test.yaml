@@ -131,7 +131,7 @@ jobs:
           if grep -i "Option disable-epoch: True" "db_sync_flags_logs.txt"; then echo "Flag disable-epoch set to True"; else echo "disable-epoch = False !" && exit 1; fi
 
       - name: Upload Logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.env }}-db-sync-logs
           path: |
