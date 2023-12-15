@@ -56,8 +56,13 @@ case "${DBSYNC_REV:-""}" in
     ;;
 esac
 
+git stash
 git checkout "$DBSYNC_REV"
 git rev-parse HEAD
+
+if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
+  rm -f schema/migration-4-000*
+fi
 
 # build db-sync
 nix build --accept-flake-config .#cardano-db-sync -o db-sync-node \
