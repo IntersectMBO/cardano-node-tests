@@ -11,8 +11,8 @@ from cardano_clusterlib import clusterlib
 
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_scripts
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import slots_offset
 
@@ -194,7 +194,7 @@ class LocalCluster(ClusterType):
         # fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
         to_fund = [d["payment"] for d in new_addrs_data.values()]
-        clusterlib_utils.fund_from_faucet(
+        faucet.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
             faucet_data=faucet_addrs_data["faucet"],
