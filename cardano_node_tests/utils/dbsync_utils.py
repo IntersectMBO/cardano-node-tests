@@ -827,12 +827,11 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
 
 def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
     """Get committee member data from db-sync."""
-    if not configuration.HAS_DBSYNC:
-        return None
-    cc_members = list(dbsync_queries.query_committee_registration(cold_key))
+    cc_members = list(dbsync_queries.query_committee_registration(cold_key=cold_key))
     if not cc_members:
         return None
 
+    # TODO: handle multiple records for the same CC member
     cc_member = cc_members[-1]
     cc_member_data = dbsync_types.CommitteeRegistrationRecord(
         id=cc_member.id,
@@ -852,7 +851,7 @@ def check_committee_member_registration(
     if not configuration.HAS_DBSYNC:
         return None
 
-    cc_member_data = get_committee_member(cc_member_cold_key)
+    cc_member_data = get_committee_member(cold_key=cc_member_cold_key)
     member_key = f"keyHash-{cc_member_cold_key}"
 
     assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"
@@ -868,12 +867,11 @@ def get_deregistered_committee_member(
     cold_key: str,
 ) -> tp.Optional[dbsync_types.CommitteeDeregistrationRecord]:
     """Get deregistered committee member data from db-sync."""
-    if not configuration.HAS_DBSYNC:
-        return None
-    deregistered_cc_members = list(dbsync_queries.query_committee_deregistration(cold_key))
+    deregistered_cc_members = list(dbsync_queries.query_committee_deregistration(cold_key=cold_key))
     if not deregistered_cc_members:
         return None
 
+    # TODO: handle multiple records for the same CC member
     deregistered_cc_member = deregistered_cc_members[-1]
     deregistered_cc_member_data = dbsync_types.CommitteeDeregistrationRecord(
         id=deregistered_cc_member.id,
@@ -893,7 +891,7 @@ def check_committee_member_deregistration(
     if not configuration.HAS_DBSYNC:
         return None
 
-    cc_member_data = get_deregistered_committee_member(cc_member_cold_key)
+    cc_member_data = get_deregistered_committee_member(cold_key=cc_member_cold_key)
     member_key = f"keyHash-{cc_member_cold_key}"
 
     assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"

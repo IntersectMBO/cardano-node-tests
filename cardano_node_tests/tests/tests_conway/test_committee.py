@@ -81,6 +81,7 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_register_and_resign_committee_member(
@@ -133,16 +134,6 @@ class TestCommittee:
             == "MemberAuthorized"
         ), "CC Member was not registered"
 
-        # dbsync_utils.check_committee_member_registration(reg_cc.key_hash, reg_committee_state)
-        cc_member_db = dbsync_utils.get_committee_member(reg_cc.key_hash)
-        assert cc_member_db, f"No data returned from db-sync for CC Member {member_key}"
-        assert (
-            reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["contents"][
-                "keyHash"
-            ]
-            == cc_member_db.hot_key
-        ), "CC Member not present in registration table in db-sync"
-
         # Resignation of CC Member
 
         res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
@@ -173,18 +164,17 @@ class TestCommittee:
                 == "MemberResigned"
             ), "CC Member not resigned"
 
-        # dbsync_utils.check_committee_member_deregistration(reg_cc.key_hash)
-        res_cc_member_db = dbsync_utils.get_deregistered_committee_member(reg_cc.key_hash)
-        assert res_cc_member_db, f"No data returned from db-sync for CC Member {member_key}"
-        assert (
-            reg_cc.key_hash == res_cc_member_db.cold_key
-        ), "CC Member not present in deregistration table in db-sync"
-
         res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
         assert (
             clusterlib.filter_utxos(utxos=res_out_utxos, address=payment_addr.address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_output_res.txins) - tx_output_res.fee
         ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        # Check CC member in db-sync
+        dbsync_utils.check_committee_member_registration(
+            cc_member_cold_key=reg_cc.key_hash, committee_state=reg_committee_state
+        )
+        dbsync_utils.check_committee_member_deregistration(cc_member_cold_key=reg_cc.key_hash)
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
