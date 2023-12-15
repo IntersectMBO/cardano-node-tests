@@ -13,6 +13,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -488,7 +489,7 @@ class TestPoolSaturation:
                             return_to_addrs.append(pool_rec.delegation_out.pool_user.payment)
                             return_amounts.append(deleg_payment_balance - initial_balance)
 
-                    clusterlib_utils.return_funds_to_faucet(
+                    faucet.return_funds_to_faucet(
                         *return_to_addrs,
                         cluster_obj=cluster,
                         faucet_addr=faucet_rec["payment"].address,

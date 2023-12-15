@@ -1,7 +1,5 @@
 """Utilities that extends the functionality of `cardano-clusterlib`."""
-# pylint: disable=abstract-class-instantiated
 import base64
-import contextlib
 import dataclasses
 import itertools
 import json
@@ -11,11 +9,11 @@ import pathlib as pl
 import time
 import typing as tp
 
+import cardano_clusterlib.types as cl_types
 import cbor2
 from cardano_clusterlib import clusterlib
 from cardano_clusterlib import txtools as cl_txtools
 
-import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import submit_utils
@@ -64,7 +62,7 @@ def build_and_submit_tx(
     complex_certs: clusterlib.OptionalScriptCerts = (),
     change_address: str = "",
     fee_buffer: tp.Optional[int] = None,
-    required_signers: ttypes.OptionalFiles = (),
+    required_signers: cl_types.OptionalFiles = (),
     required_signer_hashes: tp.Optional[tp.List[str]] = None,
     withdrawals: clusterlib.OptionalTxOuts = (),
     script_withdrawals: clusterlib.OptionalScriptWithdrawals = (),
@@ -74,9 +72,9 @@ def build_and_submit_tx(
     witness_override: tp.Optional[int] = None,
     witness_count_add: int = 0,
     script_valid: bool = True,
-    calc_script_cost_file: tp.Optional[ttypes.FileType] = None,
+    calc_script_cost_file: tp.Optional[cl_types.FileType] = None,
     join_txouts: bool = True,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: cl_types.FileType = ".",
     skip_asset_balancing: bool = False,
 ) -> clusterlib.TxRawOutput:
     """
@@ -265,7 +263,7 @@ def fund_from_genesis(
     cluster_obj: clusterlib.ClusterLib,
     amount: int = 2_000_000,
     tx_name: tp.Optional[str] = None,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: cl_types.FileType = ".",
 ) -> None:
     """Send `amount` from genesis addr to all `dst_addrs`."""
     fund_dst = [
@@ -297,47 +295,11 @@ def fund_from_genesis(
         )
 
 
-def return_funds_to_faucet(
-    *src_addrs: clusterlib.AddressRecord,
-    cluster_obj: clusterlib.ClusterLib,
-    faucet_addr: str,
-    amount: tp.Union[int, tp.List[int]] = -1,
-    tx_name: tp.Optional[str] = None,
-    destination_dir: ttypes.FileType = ".",
-) -> None:
-    """Send `amount` from all `src_addrs` to `faucet_addr`.
-
-    The amount of "-1" means all available funds.
-    """
-    tx_name = tx_name or helpers.get_timestamped_rand_str()
-    tx_name = f"{tx_name}_return_funds"
-    if isinstance(amount, int):
-        amount = [amount] * len(src_addrs)
-
-    with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{faucet_addr}.lock"):
-        try:
-            logging.disable(logging.ERROR)
-            for addr, amount_rec in zip(src_addrs, amount):
-                fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount_rec)]
-                fund_tx_files = clusterlib.TxFiles(signing_key_files=[addr.skey_file])
-                # try to return funds; don't mind if there's not enough funds for fees etc.
-                with contextlib.suppress(Exception):
-                    cluster_obj.g_transaction.send_funds(
-                        src_address=addr.address,
-                        destinations=fund_dst,
-                        tx_name=tx_name,
-                        tx_files=fund_tx_files,
-                        destination_dir=destination_dir,
-                    )
-        finally:
-            logging.disable(logging.NOTSET)
-
-
 def create_payment_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
-    stake_vkey_file: tp.Optional[ttypes.FileType] = None,
-    destination_dir: ttypes.FileType = ".",
+    stake_vkey_file: tp.Optional[cl_types.FileType] = None,
+    destination_dir: cl_types.FileType = ".",
 ) -> tp.List[clusterlib.AddressRecord]:
     """Create new payment address(es)."""
     addrs = [
@@ -356,7 +318,7 @@ def create_payment_addr_records(
 def create_stake_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: cl_types.FileType = ".",
 ) -> tp.List[clusterlib.AddressRecord]:
     """Create new stake address(es)."""
     addrs = [
@@ -374,7 +336,7 @@ def create_pool_users(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     no_of_addr: int = 1,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: cl_types.FileType = ".",
 ) -> tp.List[clusterlib.PoolUser]:
     """Create PoolUsers."""
     pool_users = []
@@ -832,7 +794,7 @@ def withdraw_reward_w_build(
     dst_addr_record: clusterlib.AddressRecord,
     tx_name: str,
     verify: bool = True,
-    destination_dir: clusterlib.FileType = ".",
+    destination_dir: cl_types.FileType = ".",
 ) -> clusterlib.TxRawOutput:
     """Withdraw reward to payment address.
 
@@ -1034,7 +996,7 @@ def save_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
     state_name: str,
     ledger_state: tp.Optional[dict] = None,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: cl_types.FileType = ".",
 ) -> pl.Path:
     """Save ledger state to file.
 
@@ -1314,7 +1276,7 @@ def get_utxo_ix_offset(
 def gen_byron_addr(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
-    destination_dir: ttypes.FileType = ".",
+    destination_dir: cl_types.FileType = ".",
 ) -> clusterlib.AddressRecord:
     """Generate a Byron address and keys."""
     destination_dir = pl.Path(destination_dir).expanduser().resolve()
@@ -1360,7 +1322,7 @@ def gen_byron_addr(
     return clusterlib.AddressRecord(address=address, vkey_file=vkey_file, skey_file=skey_file)
 
 
-def get_plutus_b64(script_file: ttypes.FileType) -> str:
+def get_plutus_b64(script_file: cl_types.FileType) -> str:
     """Get base64 encoded binary version of Plutus script from file."""
     with open(script_file, encoding="utf-8") as fp_in:
         script_str = json.load(fp_in)
