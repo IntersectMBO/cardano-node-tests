@@ -6,7 +6,6 @@ import typing as tp
 import pytest
 from cardano_clusterlib import clusterlib
 
-import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -171,7 +170,7 @@ MINTING_PLUTUS = {
 
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusOp:
-    script_file: ttypes.FileType
+    script_file: clusterlib.FileType
     datum_file: tp.Optional[pl.Path] = None
     datum_cbor_file: tp.Optional[pl.Path] = None
     datum_value: tp.Optional[str] = None
@@ -265,14 +264,14 @@ def txout_factory(
     inline_datum: bool = False,
 ) -> clusterlib.TxOut:
     """Create `TxOut` object."""
-    datum_hash_file: ttypes.FileType = ""
-    datum_hash_cbor_file: ttypes.FileType = ""
+    datum_hash_file: clusterlib.FileType = ""
+    datum_hash_cbor_file: clusterlib.FileType = ""
     datum_hash_value = ""
-    datum_embed_file: ttypes.FileType = ""
-    datum_embed_cbor_file: ttypes.FileType = ""
+    datum_embed_file: clusterlib.FileType = ""
+    datum_embed_cbor_file: clusterlib.FileType = ""
     datum_embed_value = ""
-    inline_datum_file: ttypes.FileType = ""
-    inline_datum_cbor_file: ttypes.FileType = ""
+    inline_datum_file: clusterlib.FileType = ""
+    inline_datum_cbor_file: clusterlib.FileType = ""
     inline_datum_value = ""
 
     if embed_datum:
