@@ -32,7 +32,8 @@ disable=
     format,
     # TODO: temporary workaround for python 3.9
     unsubscriptable-object,
-    inherit-non-class
+    inherit-non-class,
+    unused-import
 
 
 [FORMAT]
