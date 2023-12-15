@@ -1,4 +1,5 @@
 """Tests for staking, rewards, blocks production on real block-producing pools."""
+import dataclasses
 import logging
 import typing as tp
 
@@ -23,7 +24,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-class RewardRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class RewardRecord:
     epoch_no: int
     reward_total: int
     reward_per_epoch: int
@@ -566,7 +568,7 @@ class TestRewards:
 
         if native_tokens:
             # burn native tokens
-            tokens_to_burn = [t._replace(amount=-token_amount) for t in native_tokens]
+            tokens_to_burn = [dataclasses.replace(t, amount=-token_amount) for t in native_tokens]
             clusterlib_utils.mint_or_burn_sign(
                 cluster_obj=cluster,
                 new_tokens=tokens_to_burn,

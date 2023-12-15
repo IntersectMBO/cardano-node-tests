@@ -1,4 +1,5 @@
 """Negative tests for minting with Plutus using `transaction build-raw`."""
+import dataclasses
 import datetime
 import logging
 import typing as tp
@@ -434,7 +435,7 @@ class TestMintingNegative:
             per_time=per_time, per_space=per_space, fixed_cost=fixed_cost
         )
 
-        plutus_op = plutus_op._replace(execution_cost=high_execution_cost)
+        plutus_op = dataclasses.replace(plutus_op, execution_cost=high_execution_cost)
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=high_execution_cost,
@@ -719,7 +720,7 @@ class TestNegativeCollateral:
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
         # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
-        execution_cost = plutus_v_record.execution_cost._replace(fixed_cost=2_000_000)
+        execution_cost = dataclasses.replace(plutus_v_record.execution_cost, fixed_cost=2_000_000)
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=execution_cost, protocol_params=cluster.g_query.get_protocol_params()

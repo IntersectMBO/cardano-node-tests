@@ -2,6 +2,7 @@
 # pylint: disable=abstract-class-instantiated
 import base64
 import contextlib
+import dataclasses
 import itertools
 import json
 import logging
@@ -19,17 +20,20 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import temptools
+from cardano_node_tests.utils.faucet import fund_from_faucet  # noqa: F401 # for compatibility
 
 LOGGER = logging.getLogger(__name__)
 
 
-class UpdateProposal(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class UpdateProposal:
     arg: str
     value: tp.Any
     name: str = ""
 
 
-class TokenRecord(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class TokenRecord:
     token: str
     amount: int
     issuers_addrs: tp.List[clusterlib.AddressRecord]
@@ -37,7 +41,8 @@ class TokenRecord(tp.NamedTuple):
     script: pl.Path
 
 
-class TxMetadata(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class TxMetadata:
     metadata: dict
     aux_data: list
 
@@ -326,48 +331,6 @@ def return_funds_to_faucet(
                     )
         finally:
             logging.disable(logging.NOTSET)
-
-
-def fund_from_faucet(
-    *dst_addrs: tp.Union[clusterlib.AddressRecord, clusterlib.PoolUser],
-    cluster_obj: clusterlib.ClusterLib,
-    faucet_data: dict,
-    amount: tp.Union[int, tp.List[int]] = 1000_000_000,
-    tx_name: tp.Optional[str] = None,
-    destination_dir: ttypes.FileType = ".",
-    force: bool = False,
-) -> tp.Optional[clusterlib.TxRawOutput]:
-    """Send `amount` from faucet addr to all `dst_addrs`."""
-    # get payment AddressRecord out of PoolUser
-    dst_addr_records: tp.List[clusterlib.AddressRecord] = [
-        (r.payment if hasattr(r, "payment") else r) for r in dst_addrs  # type: ignore
-    ]
-    if isinstance(amount, int):
-        amount = [amount] * len(dst_addr_records)
-
-    fund_dst = [
-        clusterlib.TxOut(address=d.address, amount=a)
-        for d, a in zip(dst_addr_records, amount)
-        if force or cluster_obj.g_query.get_address_balance(d.address) < a
-    ]
-    if not fund_dst:
-        return None
-
-    src_address = faucet_data["payment"].address
-    with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{src_address}.lock"):
-        tx_name = tx_name or helpers.get_timestamped_rand_str()
-        tx_name = f"{tx_name}_funding"
-        fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_data["payment"].skey_file])
-
-        tx_raw_output = cluster_obj.g_transaction.send_funds(
-            src_address=src_address,
-            destinations=fund_dst,
-            tx_name=tx_name,
-            tx_files=fund_tx_files,
-            destination_dir=destination_dir,
-        )
-
-    return tx_raw_output
 
 
 def create_payment_addr_records(

@@ -5,6 +5,7 @@
 """
 # pylint: disable=abstract-method
 import contextlib
+import dataclasses
 import itertools
 import pathlib as pl
 import random
@@ -20,27 +21,31 @@ LOCAL_HOSTNAME = "node.local.gd"
 STOP_SCRIPT = "supervisord_stop"
 
 
-class InstanceFiles(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class InstanceFiles:
     start_script: pl.Path
     stop_script: pl.Path
     start_script_args: tp.List[str]
     dir: pl.Path
 
 
-class StartupFiles(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class StartupFiles:
     start_script: pl.Path
     genesis_spec: pl.Path
     config_glob: str
 
 
-class NodePorts(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class NodePorts:
     num: int
     node: int
     ekg: int
     prometheus: int
 
 
-class InstancePorts(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class InstancePorts:
     base: int
     webserver: int
     metrics_submit_api: int

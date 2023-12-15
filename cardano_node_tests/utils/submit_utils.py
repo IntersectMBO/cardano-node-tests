@@ -4,7 +4,6 @@ import typing as tp
 import pytest
 from cardano_clusterlib import clusterlib
 
-import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import submit_api
 
 
@@ -39,7 +38,7 @@ def is_submit_api_available() -> bool:
 def submit_tx(
     submit_method: str,
     cluster_obj: clusterlib.ClusterLib,
-    tx_file: ttypes.FileType,
+    tx_file: clusterlib.FileType,
     txins: tp.List[clusterlib.UTXOData],
     wait_blocks: int = 2,
 ) -> None:

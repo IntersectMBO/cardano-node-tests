@@ -1,4 +1,5 @@
 """Functions for working with SPO polls."""
+import dataclasses
 import json
 import logging
 import pathlib as pl
@@ -12,7 +13,8 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-class PollFiles(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PollFiles:
     poll: pl.Path
     metadata: pl.Path
 

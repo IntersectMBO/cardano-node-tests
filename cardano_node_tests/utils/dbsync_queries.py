@@ -1,5 +1,6 @@
 """SQL queries to db-sync database."""
 import contextlib
+import dataclasses
 import decimal
 import typing as tp
 
@@ -8,7 +9,9 @@ import psycopg2
 from cardano_node_tests.utils import dbsync_conn
 
 
-class PoolDataDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class PoolDataDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     hash: memoryview
     view: str
@@ -35,7 +38,9 @@ class PoolDataDBRow(tp.NamedTuple):
     retiring_epoch: int
 
 
-class PoolOffChainDataDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class PoolOffChainDataDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     ticker_name: str
     hash: memoryview
@@ -44,14 +49,18 @@ class PoolOffChainDataDBRow(tp.NamedTuple):
     pmr_id: int
 
 
-class PoolOffChainFetchErrorDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class PoolOffChainFetchErrorDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     pmr_id: int
     fetch_error: str
     retry_count: int
 
 
-class EpochStakeDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class EpochStakeDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     hash: memoryview
     view: str
@@ -59,7 +68,9 @@ class EpochStakeDBRow(tp.NamedTuple):
     epoch_number: int
 
 
-class TxDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class TxDBRow:
+    # pylint: disable=too-many-instance-attributes
     tx_id: int
     tx_hash: memoryview
     block_id: int
@@ -103,7 +114,9 @@ class TxDBRow(tp.NamedTuple):
     ma_tx_mint_quantity: tp.Optional[decimal.Decimal]
 
 
-class MetadataDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class MetadataDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     key: decimal.Decimal
     json: tp.Any
@@ -111,7 +124,9 @@ class MetadataDBRow(tp.NamedTuple):
     tx_id: int
 
 
-class ADAStashDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class ADAStashDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     addr_view: str
     cert_index: int
@@ -119,7 +134,9 @@ class ADAStashDBRow(tp.NamedTuple):
     tx_id: int
 
 
-class PotTransferDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class PotTransferDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     cert_index: int
     treasury: decimal.Decimal
@@ -127,26 +144,31 @@ class PotTransferDBRow(tp.NamedTuple):
     tx_id: int
 
 
-class StakeAddrDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class StakeAddrDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     view: str
     tx_id: int
 
 
-class StakeDelegDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class StakeDelegDBRow:
     tx_id: int
     active_epoch_no: tp.Optional[int]
     pool_id: tp.Optional[str]
     address: tp.Optional[str]
 
 
-class WithdrawalDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class WithdrawalDBRow:
     tx_id: int
     address: str
     amount: int
 
 
-class TxInDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class TxInDBRow:
     tx_out_id: int
     utxo_ix: int
     address: str
@@ -162,7 +184,8 @@ class TxInDBRow(tp.NamedTuple):
     ma_tx_out_quantity: tp.Optional[decimal.Decimal]
 
 
-class TxInNoMADBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class TxInNoMADBRow:
     tx_out_id: int
     utxo_ix: int
     address: str
@@ -174,7 +197,8 @@ class TxInNoMADBRow(tp.NamedTuple):
     reference_script_type: tp.Optional[str]
 
 
-class CollateralTxOutDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class CollateralTxOutDBRow:
     tx_out_id: int
     utxo_ix: int
     address: str
@@ -182,7 +206,9 @@ class CollateralTxOutDBRow(tp.NamedTuple):
     tx_hash: memoryview
 
 
-class ScriptDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class ScriptDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     hash: memoryview
@@ -190,7 +216,9 @@ class ScriptDBRow(tp.NamedTuple):
     serialised_size: tp.Optional[int]
 
 
-class RedeemerDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class RedeemerDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     unit_mem: int
@@ -201,7 +229,9 @@ class RedeemerDBRow(tp.NamedTuple):
     value: dict
 
 
-class ADAPotsDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class ADAPotsDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     slot_no: int
     epoch_no: int
@@ -214,7 +244,8 @@ class ADAPotsDBRow(tp.NamedTuple):
     block_id: int
 
 
-class RewardDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class RewardDBRow:
     address: str
     type: str
     amount: decimal.Decimal
@@ -223,7 +254,8 @@ class RewardDBRow(tp.NamedTuple):
     pool_id: str
 
 
-class UTxODBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class UTxODBRow:
     tx_hash: memoryview
     utxo_ix: int
     payment_address: str
@@ -233,7 +265,9 @@ class UTxODBRow(tp.NamedTuple):
     data_hash: tp.Optional[memoryview]
 
 
-class BlockDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class BlockDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     epoch_no: tp.Optional[int]
     slot_no: tp.Optional[int]
@@ -246,7 +280,9 @@ class BlockDBRow(tp.NamedTuple):
     pool_id: tp.Optional[str]
 
 
-class DatumDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class DatumDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     datum_hash: memoryview
     tx_id: int
@@ -254,13 +290,16 @@ class DatumDBRow(tp.NamedTuple):
     bytes: memoryview
 
 
-class SchemaVersionStages(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class SchemaVersionStages:
     one: int
     two: int
     three: int
 
 
-class ParamProposalDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class ParamProposalDBRow:
+    # pylint: disable=too-many-instance-attributes disable-next=invalid-name
     id: int
     epoch_no: int
     key: memoryview
@@ -296,7 +335,9 @@ class ParamProposalDBRow(tp.NamedTuple):
     registered_tx_id: int
 
 
-class EpochDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class EpochDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     out_sum: int
     fees: int
@@ -305,7 +346,9 @@ class EpochDBRow(tp.NamedTuple):
     epoch_number: int
 
 
-class CommitteeRegistrationDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class CommitteeRegistrationDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int
@@ -313,7 +356,9 @@ class CommitteeRegistrationDBRow(tp.NamedTuple):
     hot_key: memoryview
 
 
-class CommitteeDeregistrationDBRow(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class CommitteeDeregistrationDBRow:
+    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int

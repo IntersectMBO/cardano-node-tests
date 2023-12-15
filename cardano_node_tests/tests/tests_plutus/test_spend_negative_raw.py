@@ -1,4 +1,5 @@
 """Negative tests for spending with Plutus using `transaction build-raw`."""
+import dataclasses
 import json
 import logging
 import pathlib as pl
@@ -194,8 +195,8 @@ class TestNegative:
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
             execution_cost=plutus_common.GUESSING_GAME[plutus_version].execution_cost,
         )
-        plutus_op2 = plutus_op._replace(  # pylint: disable=no-member
-            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
+        plutus_op2 = dataclasses.replace(
+            plutus_op, script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
         )
 
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
@@ -250,7 +251,7 @@ class TestNegative:
             redeemer_cbor_file=plutus_common.REDEEMER_42_TYPED_CBOR,
             execution_cost=plutus_common.GUESSING_GAME[plutus_version].execution_cost,
         )
-        plutus_op2 = plutus_op._replace(script_file="")  # pylint: disable=no-member
+        plutus_op2 = dataclasses.replace(plutus_op, script_file="")
 
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
             temp_template=temp_template,
@@ -416,7 +417,7 @@ class TestNegative:
 
         # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
         execution_cost = plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost
-        execution_cost_increased = execution_cost._replace(fixed_cost=2_000_000)
+        execution_cost_increased = dataclasses.replace(execution_cost, fixed_cost=2_000_000)
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
@@ -665,7 +666,7 @@ class TestNegative:
             per_time=per_time, per_space=per_space, fixed_cost=fixed_cost
         )
 
-        plutus_op = plutus_op._replace(execution_cost=high_execution_cost)
+        plutus_op = dataclasses.replace(plutus_op, execution_cost=high_execution_cost)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             spend_raw._spend_locked_txin(

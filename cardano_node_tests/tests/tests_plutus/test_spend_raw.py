@@ -1,4 +1,5 @@
 """Tests for spending with Plutus using `transaction build-raw`."""
+import dataclasses
 import itertools
 import logging
 import pathlib as pl
@@ -271,7 +272,7 @@ class TestLocking:
             tx_file=tx_output_dummy.out_file,
         )
 
-        plutus_op = plutus_op_dummy._replace(redeemer_file=redeemer_file)  # pylint: disable=E1101
+        plutus_op = dataclasses.replace(plutus_op_dummy, redeemer_file=redeemer_file)
 
         spend_raw._spend_locked_txin(
             temp_template=temp_template,

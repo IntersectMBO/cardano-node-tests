@@ -1,4 +1,5 @@
 """Functionality for stake address delegation used in multiple tests modules."""
+import dataclasses
 import logging
 import pathlib as pl
 import typing as tp
@@ -16,17 +17,20 @@ from cardano_node_tests.utils import dbsync_types
 LOGGER = logging.getLogger(__name__)
 
 
-class AddressRecordScript(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class AddressRecordScript:
     address: str
     script_file: pl.Path
 
 
-class PoolUserScript(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PoolUserScript:
     payment: clusterlib.AddressRecord
     stake: AddressRecordScript
 
 
-class DelegationOut(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class DelegationOut:
     pool_user: clusterlib.PoolUser
     pool_id: str
     tx_raw_output: clusterlib.TxRawOutput

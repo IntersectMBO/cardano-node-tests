@@ -1,4 +1,5 @@
 """Utilities for Conway governance."""
+import dataclasses
 import enum
 import logging
 import pathlib as pl
@@ -9,22 +10,26 @@ from cardano_clusterlib import clusterlib
 LOGGER = logging.getLogger(__name__)
 
 
-class DRepRegistration(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class DRepRegistration:
     registration_cert: pl.Path
     key_pair: clusterlib.KeyPair
     drep_id: str
     deposit: int
 
 
-class CCMemberRegistration(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class CCMemberRegistration:
     registration_cert: pl.Path
     cold_key_pair: clusterlib.KeyPair
     hot_key_pair: clusterlib.KeyPair
     key_hash: str
 
 
-class PrevActionRec(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PrevActionRec:
     txid: str
+    # pylint: disable-next=invalid-name
     ix: int
 
     def __bool__(self) -> bool:

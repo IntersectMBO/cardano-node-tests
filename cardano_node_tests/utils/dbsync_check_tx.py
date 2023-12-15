@@ -1,4 +1,5 @@
 """Function for checking a transaction in db-sync."""
+import dataclasses
 import functools
 import itertools
 import json
@@ -29,11 +30,11 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> tp.List[clusterlib.Tx
     for mt in txouts:
         if mt.coin in mint_txouts:
             mt_stored = mint_txouts[mt.coin]
-            mint_txouts[mt.coin] = mt_stored._replace(
-                address="", amount=mt_stored.amount + mt.amount, datum_hash=""
+            mint_txouts[mt.coin] = dataclasses.replace(
+                mt_stored, address="", amount=mt_stored.amount + mt.amount, datum_hash=""
             )
         else:
-            mint_txouts[mt.coin] = mt._replace(address="", datum_hash="")
+            mint_txouts[mt.coin] = dataclasses.replace(mt, address="", datum_hash="")
 
     return list(mint_txouts.values())
 
@@ -164,7 +165,8 @@ def _sanitize_txout(
     """Transform txout so it can be compared to data from db-sync."""
     datum_hash = clusterlib_utils.datum_hash_from_txout(cluster_obj=cluster_obj, txout=txout)
 
-    new_txout = txout._replace(
+    new_txout = dataclasses.replace(
+        txout,
         datum_hash=datum_hash,
         datum_hash_file="",
         datum_hash_cbor_file="",

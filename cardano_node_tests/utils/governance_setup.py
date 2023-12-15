@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import pickle
 import typing as tp
@@ -19,7 +20,8 @@ DREPS_NUM = 4
 CC_SIZE = 3
 
 
-class DefaultGovernance(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class DefaultGovernance:
     dreps_reg: tp.List[governance_utils.DRepRegistration]
     drep_delegators: tp.List[clusterlib.PoolUser]
     cc_members: tp.List[clusterlib.CCMember]

@@ -1,3 +1,4 @@
+import dataclasses
 import itertools
 import pathlib as pl
 import typing as tp
@@ -69,7 +70,8 @@ SIGNING_KEY_GOLDEN = DATA_DIR / "golden_normal.skey"
 SIGNING_KEY_GOLDEN_EXTENDED = DATA_DIR / "golden_extended.skey"
 
 
-class ExecutionCost(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class ExecutionCost:
     per_time: int
     per_space: int
     fixed_cost: int
@@ -125,7 +127,8 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
 )
 
 
-class PlutusScriptData(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PlutusScriptData:
     script_file: pl.Path
     execution_cost: ExecutionCost
 
@@ -166,7 +169,8 @@ MINTING_PLUTUS = {
 }
 
 
-class PlutusOp(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class PlutusOp:
     script_file: ttypes.FileType
     datum_file: tp.Optional[pl.Path] = None
     datum_cbor_file: tp.Optional[pl.Path] = None
@@ -177,12 +181,14 @@ class PlutusOp(tp.NamedTuple):
     execution_cost: tp.Optional[ExecutionCost] = None
 
 
-class Token(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class Token:
     coin: str
     amount: int
 
 
-class ScriptCost(tp.NamedTuple):
+@dataclasses.dataclass(frozen=True, order=True)
+class ScriptCost:
     fee: int
     collateral: int  # Lovelace amount > minimum UTxO value
     min_collateral: int  # minimum needed collateral
