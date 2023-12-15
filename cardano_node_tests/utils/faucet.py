@@ -1,6 +1,8 @@
+import contextlib
 import logging
 import typing as tp
 
+import cardano_clusterlib.types as cl_types
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import helpers
@@ -50,3 +52,39 @@ def fund_from_faucet(
         )
 
     return tx_raw_output
+
+
+def return_funds_to_faucet(
+    *src_addrs: clusterlib.AddressRecord,
+    cluster_obj: clusterlib.ClusterLib,
+    faucet_addr: str,
+    amount: tp.Union[int, tp.List[int]] = -1,
+    tx_name: tp.Optional[str] = None,
+    destination_dir: cl_types.FileType = ".",
+) -> None:
+    """Send `amount` from all `src_addrs` to `faucet_addr`.
+
+    The amount of "-1" means all available funds.
+    """
+    tx_name = tx_name or helpers.get_timestamped_rand_str()
+    tx_name = f"{tx_name}_return_funds"
+    if isinstance(amount, int):
+        amount = [amount] * len(src_addrs)
+
+    with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{faucet_addr}.lock"):
+        try:
+            logging.disable(logging.ERROR)
+            for addr, amount_rec in zip(src_addrs, amount):
+                fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount_rec)]
+                fund_tx_files = clusterlib.TxFiles(signing_key_files=[addr.skey_file])
+                # try to return funds; don't mind if there's not enough funds for fees etc.
+                with contextlib.suppress(Exception):
+                    cluster_obj.g_transaction.send_funds(
+                        src_address=addr.address,
+                        destinations=fund_dst,
+                        tx_name=tx_name,
+                        tx_files=fund_tx_files,
+                        destination_dir=destination_dir,
+                    )
+        finally:
+            logging.disable(logging.NOTSET)

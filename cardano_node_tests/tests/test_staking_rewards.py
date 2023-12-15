@@ -17,6 +17,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -1071,7 +1072,7 @@ class TestRewards:
         )
 
         # transfer all funds from payment address back to faucet, so no funds are staked
-        clusterlib_utils.return_funds_to_faucet(
+        faucet.return_funds_to_faucet(
             delegation_out.pool_user.payment,
             cluster_obj=cluster,
             faucet_addr=cluster_manager.cache.addrs_data["user1"]["payment"].address,
