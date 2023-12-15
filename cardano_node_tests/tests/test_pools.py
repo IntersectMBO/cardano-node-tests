@@ -698,7 +698,7 @@ class TestStakePool:
             ).pool_params
 
             def _query_func():
-                dbsync_utils.check_pool_offline_data(
+                dbsync_utils.check_pool_off_chain_data(
                     ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
                 )
 
@@ -766,17 +766,17 @@ class TestStakePool:
             use_build_cmd=use_build_cmd,
         )
 
-        # check dbsync `PoolOfflineFetchError` table
+        # check dbsync `PoolOffChainFetchError` table
         # since the metadata url is invalid the dbsync dedicated thread will not fetch the data
         # and will insert an error on the specific table
-        # https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/pool-offline-data.md
+        # https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/pool-offchain-data.md
         if configuration.HAS_DBSYNC:
             pool_params = cluster.g_query.get_pool_params(
                 stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params
 
             def _query_func():
-                dbsync_utils.check_pool_offline_fetch_error(
+                dbsync_utils.check_pool_off_chain_fetch_error(
                     ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
                 )
 

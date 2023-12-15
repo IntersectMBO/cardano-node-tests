@@ -35,7 +35,7 @@ class PoolDataDBRow(tp.NamedTuple):
     retiring_epoch: int
 
 
-class PoolOfflineDataDBRow(tp.NamedTuple):
+class PoolOffChainDataDBRow(tp.NamedTuple):
     id: int
     ticker_name: str
     hash: memoryview
@@ -44,7 +44,7 @@ class PoolOfflineDataDBRow(tp.NamedTuple):
     pmr_id: int
 
 
-class PoolOfflineFetchErrorDBRow(tp.NamedTuple):
+class PoolOffChainFetchErrorDBRow(tp.NamedTuple):
     id: int
     pmr_id: int
     fetch_error: str
@@ -721,38 +721,40 @@ def query_pool_data(pool_id_bech32: str) -> tp.Generator[PoolDataDBRow, None, No
             yield PoolDataDBRow(*result)
 
 
-def query_pool_offline_data(pool_id_bech32: str) -> tp.Generator[PoolOfflineDataDBRow, None, None]:
-    """Query `PoolOfflineData` record in db-sync."""
-    query = (
-        "SELECT"
-        " pool_offline_data.pool_id, pool_offline_data.ticker_name, pool_offline_data.hash,"
-        " pool_offline_data.json, pool_offline_data.bytes, pool_offline_data.pmr_id "
-        "FROM pool_offline_data "
-        "INNER JOIN pool_hash ON pool_hash.id = pool_offline_data.pool_id "
-        "WHERE pool_hash.view = %s;"
-    )
-
-    with execute(query=query, vars=(pool_id_bech32,)) as cur:
-        while (result := cur.fetchone()) is not None:
-            yield PoolOfflineDataDBRow(*result)
-
-
-def query_pool_offline_fetch_error(
+def query_off_chain_pool_data(
     pool_id_bech32: str,
-) -> tp.Generator[PoolOfflineFetchErrorDBRow, None, None]:
-    """Query `PoolOfflineFetchError` record in db-sync."""
+) -> tp.Generator[PoolOffChainDataDBRow, None, None]:
+    """Query `Off_Chain_Pool_Data` record in db-sync."""
     query = (
         "SELECT"
-        " pool_offline_fetch_error.pool_id, pool_offline_fetch_error.pmr_id,"
-        " pool_offline_fetch_error.fetch_error, pool_offline_fetch_error.retry_count "
-        "FROM pool_offline_fetch_error "
-        "INNER JOIN pool_hash ON pool_hash.id = pool_offline_fetch_error.pool_id "
+        " off_chain_pool_data.pool_id, off_chain_pool_data.ticker_name, off_chain_pool_data.hash,"
+        " off_chain_pool_data.json, off_chain_pool_data.bytes, off_chain_pool_data.pmr_id "
+        "FROM off_chain_pool_data "
+        "INNER JOIN pool_hash ON pool_hash.id = off_chain_pool_data.pool_id "
         "WHERE pool_hash.view = %s;"
     )
 
     with execute(query=query, vars=(pool_id_bech32,)) as cur:
         while (result := cur.fetchone()) is not None:
-            yield PoolOfflineFetchErrorDBRow(*result)
+            yield PoolOffChainDataDBRow(*result)
+
+
+def query_off_chain_pool_fetch_error(
+    pool_id_bech32: str,
+) -> tp.Generator[PoolOffChainFetchErrorDBRow, None, None]:
+    """Query `Off_Chain_Pool_Fetch_Error` record in db-sync."""
+    query = (
+        "SELECT"
+        " off_chain_pool_fetch_error.pool_id, off_chain_pool_fetch_error.pmr_id,"
+        " off_chain_pool_fetch_error.fetch_error, off_chain_pool_fetch_error.retry_count "
+        "FROM off_chain_pool_fetch_error "
+        "INNER JOIN pool_hash ON pool_hash.id = off_chain_pool_fetch_error.pool_id "
+        "WHERE pool_hash.view = %s;"
+    )
+
+    with execute(query=query, vars=(pool_id_bech32,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield PoolOffChainFetchErrorDBRow(*result)
 
 
 def query_epoch_stake(
