@@ -8,7 +8,7 @@ Check this [documentation](https://input-output-hk.github.io/cardano-node-tests)
 
 ## Running tests using Github Actions
 
-The easiest way to run the tests is by using Github Actions.
+The easiest way to run the tests is by using Github Actions. 
 
 1. fork this repository
 1. enable Github Actions in your fork ("Settings" / "Actions" / "General" / "Actions permissions", check "Allow all actions and reusable workflows")
