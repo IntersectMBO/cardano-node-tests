@@ -1,18 +1,18 @@
 8.6.0-pre
 =========
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/8.6.0-pre>
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.6.0-pre>
 * tag PR -
-* tag commits - <https://github.com/input-output-hk/cardano-node/compare/8.1.2...8.6.0-pre>
+* tag commits - <https://github.com/IntersectMBO/cardano-node/compare/8.1.2...8.6.0-pre>
 
 
 Changelogs
 ----------
 
-* cardano-api: <https://github.com/input-output-hk/cardano-node/blob/8.6.0-pre/cardano-api/ChangeLog.md>
-* cardano-cli: <https://github.com/input-output-hk/cardano-node/blob/8.6.0-pre/cardano-cli/ChangeLog.md>
-* cardano-node: <https://github.com/input-output-hk/cardano-node/blob/8.6.0-pre/cardano-node/ChangeLog.md>
-* submit-api: <https://github.com/input-output-hk/cardano-node/blob/8.6.0-pre/cardano-submit-api/CHANGELOG.md>
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/8.6.0-pre/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/8.6.0-pre/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/8.6.0-pre/cardano-node/ChangeLog.md>
+* submit-api: <https://github.com/IntersectMBO/cardano-node/blob/8.6.0-pre/cardano-submit-api/CHANGELOG.md>
 
 
 Regression testing on a local cluster
@@ -78,13 +78,13 @@ New functionalities in this tag
 Known issues
 ------------
 
-`Up-to-date list of existing issues <https://github.com/input-output-hk/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
+`Up-to-date list of existing issues <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
 
 
 New issues
 ----------
 
-`Cannot delegate Plutus stake address <https://github.com/input-output-hk/cardano-cli/issues/297>`__
+`Cannot delegate Plutus stake address <https://github.com/IntersectMBO/cardano-cli/issues/297>`__
 
 
 Breaking changes

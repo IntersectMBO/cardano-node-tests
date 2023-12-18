@@ -3,7 +3,7 @@
 
   inputs = {
     cardano-node = {
-      url = "github:input-output-hk/cardano-node";
+      url = "github:IntersectMBO/cardano-node";
       inputs = {
         node-measured.follows = "cardano-node";
         membench.follows = "/";

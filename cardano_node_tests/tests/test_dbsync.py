@@ -338,7 +338,7 @@ class TestDBSync:
         if blocks_data_blk_count == epoch_data_blk_count + 1:
             blockers.GH(
                 issue=1363,
-                repo="input-output-hk/cardano-db-sync",
+                repo="IntersectMBO/cardano-db-sync",
                 message="Blocks count don't match between tables",
             ).finish_test()
 

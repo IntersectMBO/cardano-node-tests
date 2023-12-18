@@ -1,18 +1,18 @@
 1.35.5
 ======
 
-* release page - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.5>
+* release page - <https://github.com/IntersectMBO/cardano-node/releases/tag/1.35.5>
 * tag link -
-* tag PR - <https://github.com/input-output-hk/cardano-node/compare/1.35.4...1.35.5>
+* tag PR - <https://github.com/IntersectMBO/cardano-node/compare/1.35.4...1.35.5>
 
 
 Changelogs
 ----------
 
-* cardano-api: <https://github.com/input-output-hk/cardano-node/blob/1.35.5/cardano-api/ChangeLog.md>
-* cardano-cli: <https://github.com/input-output-hk/cardano-node/blob/1.35.5/cardano-cli/ChangeLog.md>
-* cardano-node: <https://github.com/input-output-hk/cardano-node/blob/1.35.5/cardano-node/ChangeLog.md>
-* submit-api: <https://github.com/input-output-hk/cardano-node/blob/1.35.5/cardano-submit-api/CHANGELOG.md>
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/1.35.5/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/1.35.5/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/1.35.5/cardano-node/ChangeLog.md>
+* submit-api: <https://github.com/IntersectMBO/cardano-node/blob/1.35.5/cardano-submit-api/CHANGELOG.md>
 
 
 Regression testing on a local cluster

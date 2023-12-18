@@ -1,8 +1,8 @@
 8.7.2
 =====
 
-* Release notes - <https://github.com/input-output-hk/cardano-node/releases/tag/8.7.2>
-* Tag commits - <https://github.com/input-output-hk/cardano-node/compare/8.1.2...8.7.2>
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.2>
+* Tag commits - <https://github.com/IntersectMBO/cardano-node/compare/8.1.2...8.7.2>
 
 
 Regression testing on a local cluster
@@ -70,7 +70,7 @@ New functionalities in this tag
 Known issues
 ------------
 
-`Up-to-date list of existing issues <https://github.com/input-output-hk/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
+`Up-to-date list of existing issues <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
 
 
 New issues

@@ -448,16 +448,16 @@ def create_script_context_w_blockers(
     except AssertionError as err:
         if "DeserialiseFailure" in str(err):
             blockers.GH(
-                issue=583, repo="input-output-hk/plutus-apps", message="DeserialiseFailure"
+                issue=583, repo="IntersectMBO/plutus-apps", message="DeserialiseFailure"
             ).finish_test()
         if "TextEnvelopeTypeError" in str(err):
             blockers.GH(
-                issue=1078, repo="input-output-hk/plutus-apps", message="TextEnvelopeTypeError"
+                issue=1078, repo="IntersectMBO/plutus-apps", message="TextEnvelopeTypeError"
             ).finish_test()
         if "PlutusScriptV1 custom redeemer not wired up" in str(err):
             blockers.GH(
                 issue=1107,
-                repo="input-output-hk/plutus-apps",
+                repo="IntersectMBO/plutus-apps",
                 message="PlutusScriptV1 custom redeemer",
             ).finish_test()
         raise

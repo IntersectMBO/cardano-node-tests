@@ -1,4 +1,4 @@
-#! /usr/bin/env -S nix develop --accept-flake-config github:input-output-hk/cardano-node-tests#postgres -i -k CARDANO_NODE_SOCKET_PATH -k PGHOST -k PGPORT -k PGUSER --no-write-lock-file -c bash
+#! /usr/bin/env -S nix develop --accept-flake-config github:IntersectMBO/cardano-node-tests#postgres -i -k CARDANO_NODE_SOCKET_PATH -k PGHOST -k PGPORT -k PGUSER --no-write-lock-file -c bash
 # shellcheck shell=bash
 
 set -euo pipefail

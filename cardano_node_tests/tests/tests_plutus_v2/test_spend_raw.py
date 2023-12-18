@@ -250,8 +250,8 @@ class TestLockingV2:
             orig_cbor_bin = in_fp.read()
             orig_cbor_hex = orig_cbor_bin.hex()
 
-        # see https://github.com/input-output-hk/cardano-db-sync/issues/1214
-        # and https://github.com/input-output-hk/cardano-node/issues/4433
+        # see https://github.com/IntersectMBO/cardano-db-sync/issues/1214
+        # and https://github.com/IntersectMBO/cardano-node/issues/4433
         if db_cbor_hex != orig_cbor_hex:
             blockers.GH(
                 issue=4433,

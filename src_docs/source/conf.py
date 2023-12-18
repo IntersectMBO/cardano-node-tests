@@ -170,6 +170,6 @@ def linkcode_resolve(domain, info):
         # print(f"EXC: {filename}")
 
     return (
-        f"https://github.com/input-output-hk/cardano-node-tests/blob/"
+        f"https://github.com/IntersectMBO/cardano-node-tests/blob/"
         f"{cardano_node_tests._git_rev}/{filename}"
     )

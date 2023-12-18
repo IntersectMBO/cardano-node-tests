@@ -34,12 +34,12 @@ pytestmark = [
 
 ISSUE_297 = blockers.GH(
     issue=297,
-    repo="input-output-hk/cardano-cli",
+    repo="IntersectMBO/cardano-cli",
     message="Cannot delegate Plutus stake address",
 )
 ISSUE_299 = blockers.GH(
     issue=299,
-    repo="input-output-hk/cardano-cli",
+    repo="IntersectMBO/cardano-cli",
     message="Cannot de-register Plutus stake address",
 )
 

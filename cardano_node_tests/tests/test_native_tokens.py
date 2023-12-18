@@ -631,7 +631,7 @@ class TestMinting:
                 txouts=txouts,
                 mint=mint,
                 tx_files=tx_files,
-                # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+                # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
                 witness_count_add=len(tx_files.signing_key_files),
             )
             tx_output = cluster.g_transaction.build_raw_tx(
@@ -1069,7 +1069,7 @@ class TestMinting:
     ):
         """Test minting and burning of token with unicode non-ascii chars in its asset name.
 
-        Tests https://github.com/input-output-hk/cardano-node/issues/2337
+        Tests https://github.com/IntersectMBO/cardano-node/issues/2337
 
         * mint a token that has non-ascii characters in its asset name
         * burn the minted token
@@ -2343,7 +2343,7 @@ class TestCLITxOutSyntax:
         assert tx_raw_blueprint.mint
 
         # test syntax for multi-asset values and txouts, see
-        # https://github.com/input-output-hk/cardano-node/pull/2072
+        # https://github.com/IntersectMBO/cardano-node/pull/2072
         coin_txouts = [f"{t.amount} {t.coin}" for t in tx_raw_blueprint.txouts]
         txout_parts = [
             "-7000",
@@ -2537,7 +2537,7 @@ class TestReferenceUTxO:
                 tx_files=tx_files,
                 invalid_hereafter=invalid_hereafter,
                 invalid_before=invalid_before,
-                # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+                # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
                 witness_count_add=2,
             )
             tx_raw_output = cluster.g_transaction.build_raw_tx(

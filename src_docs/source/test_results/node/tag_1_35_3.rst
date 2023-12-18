@@ -1,17 +1,17 @@
 1.35.3
 ======
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.3-rc1>
-* tag PR - <https://github.com/input-output-hk/cardano-node/pull/4269>
-* tag scope - <https://github.com/input-output-hk/cardano-node/issues/4257>
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/1.35.3-rc1>
+* tag PR - <https://github.com/IntersectMBO/cardano-node/pull/4269>
+* tag scope - <https://github.com/IntersectMBO/cardano-node/issues/4257>
 
 
 Changelogs
 ----------
 
-* cardano-api: <https://github.com/input-output-hk/cardano-node/blob/release/1.35/cardano-api/ChangeLog.md>
-* cardano-cli: <https://github.com/input-output-hk/cardano-node/blob/release/1.35/cardano-cli/ChangeLog.md>
-* cardano-node: <https://github.com/input-output-hk/cardano-node/blob/release/1.35/cardano-node/ChangeLog.md>
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/release/1.35/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/release/1.35/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/release/1.35/cardano-node/ChangeLog.md>
 * submit-api:
 
 
@@ -62,7 +62,7 @@ Regression testing on a local cluster
 
    * - upgrade job (1.34.1 to 1.35.3)
      - |:heavy_check_mark:|
-   * - sanity check `submit-api REST service <https://github.com/input-output-hk/cardano-node/tree/master/cardano-submit-api>`__
+   * - sanity check `submit-api REST service <https://github.com/IntersectMBO/cardano-node/tree/master/cardano-submit-api>`__
      - |:heavy_check_mark:|
 
 
@@ -95,25 +95,25 @@ Release testing checklist
 New functionalities in this tag
 -------------------------------
 
-* Protocol in header to announce 7.2 (`#4260 <https://github.com/input-output-hk/cardano-node/pull/4260>`__) |:heavy_check_mark:|
-* `build` and `build-raw` commands to accept simple reference minting scripts (`#4087 <https://github.com/input-output-hk/cardano-node/pull/4087>`__) |:heavy_check_mark:|
-* Fix `protocol-state` (`#4102 <https://github.com/input-output-hk/cardano-node/pull/4102>`__) |:heavy_check_mark:|
-* Render reference script hashes when using `--calculate-plutus-script-cost` (`#4204 <https://github.com/input-output-hk/cardano-node/pull/4204>`__) |:heavy_check_mark:|
-* Building Alonzo transactions from Babbage era (`#4135 <https://github.com/input-output-hk/cardano-node/pull/4135>`__) |:heavy_check_mark:|
-* Fix building of Alonzo transaction in Babbage (`#4166 <https://github.com/input-output-hk/cardano-node/pull/4166>`__) |:heavy_check_mark:|
-* Fix `kes-period-info` (`#3945 <https://github.com/input-output-hk/cardano-node/pull/3945>`__) |:heavy_check_mark:|
-* Fix leadership schedule for current on Babbage (`#4106 <https://github.com/input-output-hk/cardano-node/pull/4106>`__) |:heavy_check_mark:|
-* `build` to allow all invalid scripts (`#4088 <https://github.com/input-output-hk/cardano-node/pull/4088>`__) |:heavy_check_mark:|
-* Add utxoCostPerByte protocol parameter (`#4141 <https://github.com/input-output-hk/cardano-node/pull/4141>`__) |:heavy_check_mark:|
-* Fix the Alonzo UTXO rule to use Alonzo minfee function (`#2938 <https://github.com/input-output-hk/cardano-ledger/pull/2938>`__) |:heavy_check_mark:|
-* Condition SECP256k1 to the protocol version 8 (`#4795 <https://github.com/input-output-hk/plutus/pull/4795>`__) |:heavy_check_mark:|
+* Protocol in header to announce 7.2 (`#4260 <https://github.com/IntersectMBO/cardano-node/pull/4260>`__) |:heavy_check_mark:|
+* `build` and `build-raw` commands to accept simple reference minting scripts (`#4087 <https://github.com/IntersectMBO/cardano-node/pull/4087>`__) |:heavy_check_mark:|
+* Fix `protocol-state` (`#4102 <https://github.com/IntersectMBO/cardano-node/pull/4102>`__) |:heavy_check_mark:|
+* Render reference script hashes when using `--calculate-plutus-script-cost` (`#4204 <https://github.com/IntersectMBO/cardano-node/pull/4204>`__) |:heavy_check_mark:|
+* Building Alonzo transactions from Babbage era (`#4135 <https://github.com/IntersectMBO/cardano-node/pull/4135>`__) |:heavy_check_mark:|
+* Fix building of Alonzo transaction in Babbage (`#4166 <https://github.com/IntersectMBO/cardano-node/pull/4166>`__) |:heavy_check_mark:|
+* Fix `kes-period-info` (`#3945 <https://github.com/IntersectMBO/cardano-node/pull/3945>`__) |:heavy_check_mark:|
+* Fix leadership schedule for current on Babbage (`#4106 <https://github.com/IntersectMBO/cardano-node/pull/4106>`__) |:heavy_check_mark:|
+* `build` to allow all invalid scripts (`#4088 <https://github.com/IntersectMBO/cardano-node/pull/4088>`__) |:heavy_check_mark:|
+* Add utxoCostPerByte protocol parameter (`#4141 <https://github.com/IntersectMBO/cardano-node/pull/4141>`__) |:heavy_check_mark:|
+* Fix the Alonzo UTXO rule to use Alonzo minfee function (`#2938 <https://github.com/IntersectMBO/cardano-ledger/pull/2938>`__) |:heavy_check_mark:|
+* Condition SECP256k1 to the protocol version 8 (`#4795 <https://github.com/IntersectMBO/plutus/pull/4795>`__) |:heavy_check_mark:|
 
 
 New issues
 ----------
 
-* `[BUG] - cannot use transaction build command to build Shelley/Allegra era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4286>`__
-* `[BUG] - cannot use transaction build command to build Mary era Tx in Babbage <https://github.com/input-output-hk/cardano-node/issues/4287>`__
+* `[BUG] - cannot use transaction build command to build Shelley/Allegra era Tx in Babbage <https://github.com/IntersectMBO/cardano-node/issues/4286>`__
+* `[BUG] - cannot use transaction build command to build Mary era Tx in Babbage <https://github.com/IntersectMBO/cardano-node/issues/4287>`__
 * (not reported before and) already discussed in <https://input-output-rnd.slack.com/archives/CCRB7BU8Y/p1658835200064609>
 
 
@@ -128,4 +128,4 @@ Breaking changes
 Relevant existing issues
 ------------------------
 
-* `[BUG] - Shelley era Tx body in CDDL format is not supported by some CLI commands <https://github.com/input-output-hk/cardano-node/issues/3688>`__ - not a regression in 1.35.3
+* `[BUG] - Shelley era Tx body in CDDL format is not supported by some CLI commands <https://github.com/IntersectMBO/cardano-node/issues/3688>`__ - not a regression in 1.35.3

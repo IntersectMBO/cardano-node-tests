@@ -14,7 +14,7 @@ case "${PLUTUS_APPS_REV:-""}" in
     export PLUTUS_APPS_REV="main"
 
     if [ ! -e plutus-apps ]; then
-      git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/input-output-hk/plutus-apps.git
+      git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/IntersectMBO/plutus-apps.git
     fi
 
     pushd plutus-apps || exit 1
@@ -23,7 +23,7 @@ case "${PLUTUS_APPS_REV:-""}" in
 
   * )
     if [ ! -e plutus-apps ]; then
-      git clone --recurse-submodules https://github.com/input-output-hk/plutus-apps.git
+      git clone --recurse-submodules https://github.com/IntersectMBO/plutus-apps.git
     fi
 
     pushd plutus-apps || exit 1

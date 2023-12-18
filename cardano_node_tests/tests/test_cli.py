@@ -1303,7 +1303,7 @@ class TestPing:
         out_str = cli_out.stdout.rstrip().decode("utf-8")
         if not (out_str and out_str[0] == "{"):
             blockers.GH(
-                issue=49, repo="input-output-hk/cardano-cli", message="Not sending pings"
+                issue=49, repo="IntersectMBO/cardano-cli", message="Not sending pings"
             ).finish_test()
 
         ping_data = json.loads(out_str)

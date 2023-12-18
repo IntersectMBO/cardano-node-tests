@@ -960,7 +960,7 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Tests bug https://github.com/input-output-hk/cardano-db-sync/issues/750
+        Tests bug https://github.com/IntersectMBO/cardano-db-sync/issues/750
 
         * create a Tx output with a datum hash at the script address and a collateral UTxO
         * check that the expected amount was locked at the script address

@@ -39,7 +39,7 @@ case "${DBSYNC_REV:-""}" in
     export DBSYNC_REV="master"
 
     if [ ! -e cardano-db-sync ]; then
-      git clone --depth 1 https://github.com/input-output-hk/cardano-db-sync.git
+      git clone --depth 1 https://github.com/IntersectMBO/cardano-db-sync.git
     fi
 
     pushd cardano-db-sync || exit 1
@@ -48,7 +48,7 @@ case "${DBSYNC_REV:-""}" in
 
   * )
     if [ ! -e cardano-db-sync ]; then
-      git clone https://github.com/input-output-hk/cardano-db-sync.git
+      git clone https://github.com/IntersectMBO/cardano-db-sync.git
     fi
 
     pushd cardano-db-sync || exit 1

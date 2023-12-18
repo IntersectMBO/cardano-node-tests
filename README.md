@@ -19,7 +19,7 @@ The easiest way to run the tests is by using Github Actions.
 
 ## Running tests using Nix
 
-1. install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md)
+1. install and configure nix, follow [cardano-node documentation](https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md)
 
 1. clone this repo
 
@@ -88,7 +88,7 @@ For example:
 
 ## Local usage for tests development
 
-Install and configure nix, follow [cardano-node documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
+Install and configure nix, follow [cardano-node documentation](https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
 Install and configure poetry, follow [Poetry documentation](https://python-poetry.org/docs/#installation).
 
 ### Preparing Python virtual environment
@@ -239,7 +239,7 @@ It is sufficient to activate the Python virtual environment before running linte
 
 ### Installing `cardano-clusterlib` in development mode
 
-Sometimes it is useful to test local changes made to [cardano-clusterlib](https://github.com/input-output-hk/cardano-clusterlib-py).
+Sometimes it is useful to test local changes made to [cardano-clusterlib](https://github.com/IntersectMBO/cardano-clusterlib-py).
 To install cardano-clusterlib in development mode:
 
 1. activate virtual env
@@ -308,4 +308,4 @@ Run `pre-commit install` to set up the Git hook scripts that will check your cha
 
 Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html), with the exception that formatting is handled automatically by [Black](https://github.com/psf/black) (through the `pre-commit` command).
 
-See the [CONTRIBUTING](https://github.com/input-output-hk/cardano-node-tests/blob/master/CONTRIBUTING.md) document for more details.
+See the [CONTRIBUTING](https://github.com/IntersectMBO/cardano-node-tests/blob/master/CONTRIBUTING.md) document for more details.

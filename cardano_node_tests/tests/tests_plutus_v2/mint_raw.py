@@ -100,7 +100,7 @@ def _fund_issuer(
         tx_name=f"{temp_template}_step1",
         txouts=txouts,
         tx_files=tx_files,
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
         witness_count_add=2,
         # don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,

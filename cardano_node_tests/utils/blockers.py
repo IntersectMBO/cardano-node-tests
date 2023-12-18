@@ -21,7 +21,7 @@ class GH:
 
     Attributes:
         issue: A GitHub issue number.
-        repo: A repository where the issue belongs to. Default: `input-output-hk/cardano-node`.
+        repo: A repository where the issue belongs to. Default: `IntersectMBO/cardano-node`.
         fixed_in: A version of the project where the issue is fixed. Ignored on unknown projects.
         message: A message to be added to blocking outcome.
         check_on_devel: A boolean flag indicating if the issue should be checked on devel versions
@@ -31,7 +31,7 @@ class GH:
     def __init__(
         self,
         issue: int,
-        repo: str = "input-output-hk/cardano-node",
+        repo: str = "IntersectMBO/cardano-node",
         fixed_in: str = "",
         message: str = "",
         check_on_devel: bool = True,
@@ -45,9 +45,9 @@ class GH:
         self.gh_issue = gh_issue.GHIssue(number=self.issue, repo=self.repo)
 
         self._project = None
-        if self.repo == "input-output-hk/cardano-node":
+        if self.repo == "IntersectMBO/cardano-node":
             self._project = "node"
-        elif self.repo == "input-output-hk/cardano-db-sync":
+        elif self.repo == "IntersectMBO/cardano-db-sync":
             self._project = "dbsync"
 
     def is_blocked(self) -> bool:

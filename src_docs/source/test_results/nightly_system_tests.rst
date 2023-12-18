@@ -18,7 +18,7 @@ Test statuses
 Nightly results
 ---------------
 
-`Results on Github Actions <https://github.com/input-output-hk/cardano-node-tests/actions?query=workflow%3A%22Nightly+tests%22+event%3Aschedule+branch%3Amaster++>`__
+`Results on Github Actions <https://github.com/IntersectMBO/cardano-node-tests/actions?query=workflow%3A%22Nightly+tests%22+event%3Aschedule+branch%3Amaster++>`__
 
 * `nightly <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly/>`__:  |nightly-badge|
    * network in Babbage era
@@ -58,7 +58,7 @@ Nightly upgrade testing
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 * `Step 1 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step1/>`__:  |nightly-upgrade-step1-badge|
-   * use the `latest cardano-node release <https://github.com/input-output-hk/cardano-node-tests/blob/master/.github/env_nightly_upgrade>`__ for Mainnet
+   * use the `latest cardano-node release <https://github.com/IntersectMBO/cardano-node-tests/blob/master/.github/env_nightly_upgrade>`__ for Mainnet
    * network in Babbage era
    * Babbage transaction era
    * default (legacy) network topology

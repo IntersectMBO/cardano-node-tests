@@ -625,7 +625,7 @@ def mint_or_burn_witness(
             tx_name=temp_template,
             txouts=txouts,
             mint=mint,
-            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
             witness_count_add=len(signing_key_files),
         )
         tx_output = cluster_obj.g_transaction.build_raw_tx(
@@ -745,7 +745,7 @@ def mint_or_burn_sign(
             tx_name=temp_template,
             txouts=txouts,
             mint=mint,
-            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
             witness_count_add=len(signing_key_files),
         )
         tx_output = cluster_obj.g_transaction.build_raw_tx(
@@ -1239,7 +1239,7 @@ def create_reference_utxo(
         tx_name=f"{temp_template}_reference_utxo",
         txouts=txouts,
         tx_files=tx_files,
-        # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+        # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
         witness_count_add=2,
         join_txouts=False,
     )

@@ -1,18 +1,18 @@
 8.1.1
 =====
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/8.1.1>
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.1.1>
 * tag PR -
-* tag commits - <https://github.com/input-output-hk/cardano-node/compare/8.0.0...8.1.1>
+* tag commits - <https://github.com/IntersectMBO/cardano-node/compare/8.0.0...8.1.1>
 
 
 Changelogs
 ----------
 
-* cardano-api: <https://github.com/input-output-hk/cardano-node/blob/8.1.1/cardano-api/ChangeLog.md>
-* cardano-cli: <https://github.com/input-output-hk/cardano-node/blob/8.1.1/cardano-cli/ChangeLog.md>
-* cardano-node: <https://github.com/input-output-hk/cardano-node/blob/8.1.1/cardano-node/ChangeLog.md>
-* submit-api: <https://github.com/input-output-hk/cardano-node/blob/8.1.1/cardano-submit-api/CHANGELOG.md>
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-node/ChangeLog.md>
+* submit-api: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-submit-api/CHANGELOG.md>
 
 
 Regression testing on a local cluster
@@ -86,7 +86,7 @@ The Ping command now takes a new parameter, query.  |:hourglass_flowing_sand:|
 Known issues
 ------------
 
-`Up-to-date list of existing issues <https://github.com/input-output-hk/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
+`Up-to-date list of existing issues <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
 
 
 New issues
