@@ -106,6 +106,8 @@ html_favicon = (
     "223086153-522289f3-9902-4f63-ad7b-a7d9c5789db0.png"
 )
 
+html_extra_path = ["CNAME"]
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
