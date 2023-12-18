@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -207,7 +208,7 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
-        assert prop_vote["committeeVotes"], "No committee votes"
+        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
@@ -564,7 +565,7 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
-        assert prop_vote["committeeVotes"], "No committee votes"
+        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
@@ -727,7 +728,7 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
-        assert prop_vote["committeeVotes"], "No committee votes"
+        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
@@ -900,7 +901,7 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
-        assert prop_vote["committeeVotes"], "No committee votes"
+        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
 
