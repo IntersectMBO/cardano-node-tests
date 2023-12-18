@@ -5,6 +5,7 @@
 # ENABLE_P2P - if set, local cluster will use P2P
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # DB_BACKEND - 'mem' or 'lmdb', default is 'mem' (or legacy) if unset
+# NO_CC - if set, will not create committee
 # DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
@@ -221,31 +222,34 @@ rm -f "$STATE_CLUSTER/shelley/genesis.json_jq"
 
 # Create committee keys
 mkdir -p "$STATE_CLUSTER/governance_data"
-for i in {1..3}; do
-  cardano_cli_log conway governance committee key-gen-cold \
-    --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
-    --cold-signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.skey"
-  cardano_cli_log conway governance committee key-gen-hot \
-    --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
-    --signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.skey"
-  cardano_cli_log conway governance committee create-hot-key-authorization-certificate \
-    --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
-    --hot-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
-    --out-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot_auth.cert"
-  cardano_cli_log conway governance committee key-hash \
-    --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
-    > "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.hash"
-done
+if [ -z "${NO_CC:-""}" ]; then
+  for i in {1..3}; do
+    cardano_cli_log conway governance committee key-gen-cold \
+      --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+      --cold-signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.skey"
+    cardano_cli_log conway governance committee key-gen-hot \
+      --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
+      --signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.skey"
+    cardano_cli_log conway governance committee create-hot-key-authorization-certificate \
+      --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+      --hot-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
+      --out-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot_auth.cert"
+    cardano_cli_log conway governance committee key-hash \
+      --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+      > "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.hash"
+  done
 
-# Pre-register committee in genesis
-KEY_HASH_JSON=$(jq -nR '[inputs | {("keyHash-" + .): 10000}] | add' \
-  "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.hash)
-jq \
-  --argjson keyHashJson "$KEY_HASH_JSON" \
-  '.committee.members = $keyHashJson' \
-  "$STATE_CLUSTER/shelley/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json_jq"
-cat "$STATE_CLUSTER/shelley/genesis.conway.json_jq" > "$STATE_CLUSTER/shelley/genesis.conway.json"
-rm -f "$STATE_CLUSTER/shelley/genesis.conway.json_jq"
+  # Pre-register committee in genesis
+  KEY_HASH_JSON=$(jq -nR '[inputs | {("keyHash-" + .): 10000}] | add' \
+    "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.hash)
+  jq \
+    --argjson keyHashJson "$KEY_HASH_JSON" \
+    '.committee.members = $keyHashJson
+    | .committee.quorum = 0.6' \
+    "$STATE_CLUSTER/shelley/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json_jq"
+  cat "$STATE_CLUSTER/shelley/genesis.conway.json_jq" > "$STATE_CLUSTER/shelley/genesis.conway.json"
+  rm -f "$STATE_CLUSTER/shelley/genesis.conway.json_jq"
+fi
 
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "$STATE_CLUSTER/byron/genesis.json")"
@@ -1124,7 +1128,7 @@ sleep "$NEXT_EPOCH_SLEEP"
 
 wait_for_era "Conway"
 
-cardano_cli_log query protocol-parameters \
+cardano_cli_log conway query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
@@ -1132,57 +1136,56 @@ PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")
 
 [ "$PROTOCOL_VERSION" = 9 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
 
-cardano_cli_log conway query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --out-file "$STATE_CLUSTER/pparams.json"
+# Register committee members
+if [ -z "${NO_CC:-""}" ]; then
+  STOP_TXIN_AMOUNT=$FEE
 
-STOP_TXIN_AMOUNT=$FEE
+  TXINS=()
+  TXIN_COUNT=0
+  TXIN_AMOUNT=0
+  while read -r txhash txix amount _; do
+    TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+    TXIN_COUNT="$((TXIN_COUNT + 1))"
+    TXINS+=("--tx-in" "${txhash}#${txix}")
+    if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+      break
+    fi
+  done <<< "$(cardano_cli_log conway query utxo --testnet-magic \
+              "$NETWORK_MAGIC" \
+              --address "$FAUCET_ADDR" |
+              grep -E "lovelace \+ TxOutDatumNone$")"
 
-TXINS=()
-TXIN_COUNT=0
-TXIN_AMOUNT=0
-while read -r txhash txix amount _; do
-  TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
-  TXIN_COUNT="$((TXIN_COUNT + 1))"
-  TXINS+=("--tx-in" "${txhash}#${txix}")
-  if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
-    break
-  fi
-done <<< "$(cardano_cli_log conway query utxo --testnet-magic \
-            "$NETWORK_MAGIC" \
-            --address "$FAUCET_ADDR" |
-            grep -E "lovelace \+ TxOutDatumNone$")"
+  TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
-TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
+  V9_TX_NAME="reg_cc_members"
 
-V9_TX_NAME="reg_cc_members"
+  CC_ARGS=()
+  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
+    CC_ARGS+=( "--certificate-file" "$f" )
+  done
 
-CC_ARGS=()
-for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
-  CC_ARGS+=( "--certificate-file" "$f" )
-done
+  CC_SIGNING=()
+  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
+    CC_SIGNING+=( "--signing-key-file" "$f" )
+  done
 
-CC_SIGNING=()
-for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
-  CC_SIGNING+=( "--signing-key-file" "$f" )
-done
+  cardano_cli_log conway transaction build-raw \
+    --fee    "$FEE" \
+    "${TXINS[@]}" \
+    "${CC_ARGS[@]}" \
+    --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+    --out-file "${V9_TX_NAME}-tx.txbody"
 
-cardano_cli_log conway transaction build-raw \
-  --fee    "$FEE" \
-  "${TXINS[@]}" \
-  "${CC_ARGS[@]}" \
-  --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
-  --out-file "${V9_TX_NAME}-tx.txbody"
+  cardano_cli_log transaction sign \
+    --signing-key-file "$FAUCET_SKEY" \
+    "${CC_SIGNING[@]}" \
+    --testnet-magic    "$NETWORK_MAGIC" \
+    --tx-body-file     "${V9_TX_NAME}-tx.txbody" \
+    --out-file         "${V9_TX_NAME}-tx.tx"
 
-cardano_cli_log transaction sign \
-  --signing-key-file "$FAUCET_SKEY" \
-  "${CC_SIGNING[@]}" \
-  --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${V9_TX_NAME}-tx.txbody" \
-  --out-file         "${V9_TX_NAME}-tx.tx"
-
-cardano_cli_log transaction submit \
-  --tx-file "${V9_TX_NAME}-tx.tx" \
-  --testnet-magic "$NETWORK_MAGIC"
+  cardano_cli_log transaction submit \
+    --tx-file "${V9_TX_NAME}-tx.tx" \
+    --testnet-magic "$NETWORK_MAGIC"
+fi
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"

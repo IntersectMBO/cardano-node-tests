@@ -83,6 +83,7 @@ def pytest_configure(config: tp.Any) -> None:
     config.stash[metadata_key]["MIXED_P2P"] = str(configuration.MIXED_P2P)
     config.stash[metadata_key]["NUM_POOLS"] = str(configuration.NUM_POOLS)
     config.stash[metadata_key]["DB_BACKEND"] = configuration.DB_BACKEND
+    config.stash[metadata_key]["HAS_CC"] = str(configuration.HAS_CC)
     config.stash[metadata_key]["cardano-node-tests rev"] = helpers.get_current_commit()
     config.stash[metadata_key][
         "cardano-node-tests url"

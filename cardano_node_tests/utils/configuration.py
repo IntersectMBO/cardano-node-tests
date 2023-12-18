@@ -35,6 +35,9 @@ ENABLE_P2P = (os.environ.get("ENABLE_P2P") or "") != ""
 # used also in startup scripts as `if [ -n "$VAR" ]...`
 MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
 
+# used also in startup scripts as `if [ -n "$VAR" ]...`
+HAS_CC = (os.environ.get("NO_CC") or "") == ""
+
 # used also in startup scripts
 DB_BACKEND = os.environ.get("DB_BACKEND") or ""
 if DB_BACKEND not in ("", "mem", "lmdb"):

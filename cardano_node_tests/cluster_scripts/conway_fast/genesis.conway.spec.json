@@ -32,6 +32,6 @@
   "committee": {
     "members": {
     },
-    "quorum": 0.6
+    "quorum": 0.0
   }
 }
