@@ -13,5 +13,5 @@ node_override() {
     ref=""
   fi
 
-  echo --override-input cardano-node "github:input-output-hk/cardano-node$ref"
+  echo --override-input cardano-node "github:IntersectMBO/cardano-node$ref"
 }

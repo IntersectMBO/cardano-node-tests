@@ -648,7 +648,7 @@ class TestStakePool:
             "name": "test_stake_pool_metadata",
             "description": "cardano-node-tests E2E tests",
             "ticker": "IOG1",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
@@ -770,7 +770,7 @@ class TestStakePool:
         # check dbsync `PoolOffChainFetchError` table
         # since the metadata url is invalid the dbsync dedicated thread will not fetch the data
         # and will insert an error on the specific table
-        # https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/pool-offchain-data.md
+        # https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/pool-offchain-data.md
         if configuration.HAS_DBSYNC:
             pool_params = cluster.g_query.get_pool_params(
                 stake_pool_id=pool_creation_out.stake_pool_id
@@ -1946,7 +1946,7 @@ class TestNegative:
             "name": pool_name,
             "description": "cardano-node-tests E2E tests",
             "ticker": f"IO{rand_str}",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file="hypothesis_metadata_registration_metadata.json", content=pool_metadata
@@ -2175,7 +2175,7 @@ class TestNegative:
         pool_metadata = {
             "description": "cardano-node-tests E2E tests",
             "ticker": "IOG1",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
@@ -2199,7 +2199,7 @@ class TestNegative:
         pool_metadata = {
             "name": "cardano-node-tests",
             "ticker": "IOG1",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
@@ -2223,7 +2223,7 @@ class TestNegative:
         pool_metadata = {
             "name": "cardano-node-tests",
             "description": "cardano-node-tests E2E tests",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
@@ -2275,7 +2275,7 @@ class TestNegative:
             "name": pool_name,
             "description": "cardano-node-tests E2E tests",
             "ticker": "IOG1",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
@@ -2307,7 +2307,7 @@ class TestNegative:
             "name": "cardano-node-tests",
             "description": pool_description,
             "ticker": "IOG1",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata
@@ -2341,7 +2341,7 @@ class TestNegative:
             "name": "cardano-node-tests",
             "description": "cardano-node-tests E2E tests",
             "ticker": pool_ticker,
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
+            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{temp_template}_registration_metadata.json", content=pool_metadata

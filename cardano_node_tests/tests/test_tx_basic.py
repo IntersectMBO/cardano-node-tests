@@ -370,7 +370,7 @@ class TestBasicTransactions:
         * (optional) check transactions in db-sync
         """
         # The test checks the following issues:
-        #  - https://github.com/input-output-hk/cardano-node/issues/3041
+        #  - https://github.com/IntersectMBO/cardano-node/issues/3041
 
         temp_template = common.get_test_id(cluster)
 

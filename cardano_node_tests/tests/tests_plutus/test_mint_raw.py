@@ -567,7 +567,7 @@ class TestMinting:
             tx_name=f"{temp_template}_step1",
             txouts=txouts_step1,
             tx_files=tx_files_step1,
-            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
             witness_count_add=2,
             # don't join 'change' and 'collateral' txouts, we need separate UTxOs
             join_txouts=False,
@@ -1322,7 +1322,7 @@ class TestCollateralOutput:
     ):
         """Test minting a token with a Plutus script while using the same collateral input twice.
 
-        Tests https://github.com/input-output-hk/cardano-node/issues/4744
+        Tests https://github.com/IntersectMBO/cardano-node/issues/4744
 
         * fund the token issuer and create a UTxO for collateral and possibly reference script
         * check that the expected amount was transferred to token issuer's address

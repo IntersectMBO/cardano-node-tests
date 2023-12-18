@@ -22,7 +22,7 @@ jobs:
       - name: Checkout cardano-db-sync Repository
         uses: actions/checkout@v4
         with:
-          repository: input-output-hk/cardano-db-sync
+          repository: IntersectMBO/cardano-db-sync
           path: cardano-db-sync
           ref: ${{ github.event.inputs.db_sync_branch }}
 

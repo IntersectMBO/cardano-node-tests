@@ -1,18 +1,18 @@
 1.35.7
 ======
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/1.35.7>
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/1.35.7>
 * tag PR -
-* tag commits - <https://github.com/input-output-hk/cardano-node/compare/1.35.6...1.35.7>
+* tag commits - <https://github.com/IntersectMBO/cardano-node/compare/1.35.6...1.35.7>
 
 
 Changelogs
 ----------
 
-* cardano-api: https://github.com/input-output-hk/cardano-node/blob/1.35.7/cardano-api/ChangeLog.md
-* cardano-cli: https://github.com/input-output-hk/cardano-node/blob/1.35.7/cardano-cli/ChangeLog.md
-* cardano-node: https://github.com/input-output-hk/cardano-node/blob/1.35.7/cardano-node/ChangeLog.md
-* submit-api: https://github.com/input-output-hk/cardano-node/blob/1.35.7/cardano-submit-api/CHANGELOG.md
+* cardano-api: https://github.com/IntersectMBO/cardano-node/blob/1.35.7/cardano-api/ChangeLog.md
+* cardano-cli: https://github.com/IntersectMBO/cardano-node/blob/1.35.7/cardano-cli/ChangeLog.md
+* cardano-node: https://github.com/IntersectMBO/cardano-node/blob/1.35.7/cardano-node/ChangeLog.md
+* submit-api: https://github.com/IntersectMBO/cardano-node/blob/1.35.7/cardano-submit-api/CHANGELOG.md
 
 
 Regression testing on a local cluster
@@ -116,22 +116,22 @@ Component Level Test Tracking
       - Alexey Kuleshevich
      - |:heavy_check_mark:|
      -
-       - `Ledger <https://github.com/input-output-hk/cardano-ledger/blob/master/CONTRIBUTING.md>`__
-       - `Consensus <https://github.com/input-output-hk/ouroboros-network/blob/master/CONTRIBUTING.md>`__
-       - `Network <https://github.com/input-output-hk/ouroboros-network/blob/master/CONTRIBUTING.md>`__
-       - `Crypto <https://github.com/input-output-hk/cardano-base>`__
-       - `Plutus Core <https://github.com/input-output-hk/plutus/blob/master/CONTRIBUTING.adoc>`__
-       - `Base <https://github.com/input-output-hk/cardano-base>`__
+       - `Ledger <https://github.com/IntersectMBO/cardano-ledger/blob/master/CONTRIBUTING.md>`__
+       - `Consensus <https://github.com/IntersectMBO/ouroboros-network/blob/master/CONTRIBUTING.md>`__
+       - `Network <https://github.com/IntersectMBO/ouroboros-network/blob/master/CONTRIBUTING.md>`__
+       - `Crypto <https://github.com/IntersectMBO/cardano-base>`__
+       - `Plutus Core <https://github.com/IntersectMBO/plutus/blob/master/CONTRIBUTING.adoc>`__
+       - `Base <https://github.com/IntersectMBO/cardano-base>`__
      - Each component version that is integrated in Cardano Node is tested separately, as detailed in the component repository.
    * - Integration level tests (cardano-node)
      - Jordan Millar
      - |:heavy_check_mark:|
-     - `Cardano Node <https://github.com/input-output-hk/cardano-node>`__
+     - `Cardano Node <https://github.com/IntersectMBO/cardano-node>`__
      - The quality control performed when any component is integrated into the cardano-node is described in the cardano-node repository.
    * - System level tests (cardano-node-tests)
      - Martin Kourim
      - |:heavy_check_mark:|
-     - `link to tests <https://github.com/input-output-hk/cardano-node-tests>`__
+     - `link to tests <https://github.com/IntersectMBO/cardano-node-tests>`__
      - The System-level tests executed for any node version can be found on the cardano-node-tests webpage (this page)
    * - UAT (community)
      - Samuel Leathers

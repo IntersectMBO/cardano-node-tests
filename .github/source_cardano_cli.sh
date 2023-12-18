@@ -14,7 +14,7 @@ case "${CARDANO_CLI_REV:-""}" in
     export CARDANO_CLI_REV="main"
 
     if [ ! -e cardano-cli ]; then
-      git clone --depth 1 https://github.com/input-output-hk/cardano-cli.git
+      git clone --depth 1 https://github.com/IntersectMBO/cardano-cli.git
     fi
 
     pushd cardano-cli || exit 1
@@ -23,7 +23,7 @@ case "${CARDANO_CLI_REV:-""}" in
 
   * )
     if [ ! -e cardano-cli ]; then
-      git clone https://github.com/input-output-hk/cardano-cli.git
+      git clone https://github.com/IntersectMBO/cardano-cli.git
     fi
 
     pushd cardano-cli || exit 1

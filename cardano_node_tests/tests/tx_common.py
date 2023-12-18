@@ -9,7 +9,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 # Old value, new fixed value
-# See https://github.com/input-output-hk/cardano-node/issues/4061
+# See https://github.com/IntersectMBO/cardano-node/issues/4061
 MIN_UTXO_VALUE = (857_690, 849_070)
 
 

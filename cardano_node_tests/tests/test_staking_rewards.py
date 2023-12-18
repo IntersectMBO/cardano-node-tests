@@ -619,7 +619,7 @@ class TestRewards:
     ):
         """Check that the rewards address can be delegated and receive rewards.
 
-        Tests https://github.com/input-output-hk/cardano-node/issues/1964
+        Tests https://github.com/IntersectMBO/cardano-node/issues/1964
 
         The pool has a reward address that is different from pool owner's stake address.
 

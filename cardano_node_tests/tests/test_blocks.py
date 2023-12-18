@@ -128,7 +128,7 @@ class TestLeadershipSchedule:
             # Xfail if cardano-api GH-269 is still open
             issue_269 = blockers.GH(
                 issue=269,
-                repo="input-output-hk/cardano-api",
+                repo="IntersectMBO/cardano-api",
                 message="Broken `nextEpochEligibleLeadershipSlots`",
                 check_on_devel=False,
             )

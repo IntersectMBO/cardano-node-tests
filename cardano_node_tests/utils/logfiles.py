@@ -49,11 +49,11 @@ ERRORS_IGNORED = [
     "PeerMonitoringError .* MuxError",
     # Harmless when whole network is shutting down
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
-    # TODO: see node issue https://github.com/input-output-hk/cardano-node/issues/5312
+    # TODO: see node issue https://github.com/IntersectMBO/cardano-node/issues/5312
     "DiffusionError thread killed",
 ]
 # Already removed from the list above:
-# * Workaround for node issue https://github.com/input-output-hk/cardano-node/issues/4369
+# * Workaround for node issue https://github.com/IntersectMBO/cardano-node/issues/4369
 #   "MAIN THREAD FAILED"
 
 if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":

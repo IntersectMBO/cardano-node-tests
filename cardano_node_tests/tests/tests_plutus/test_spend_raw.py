@@ -523,7 +523,7 @@ class TestLocking:
             tx_name=f"{temp_template}_step1",
             txouts=txouts_fund,
             tx_files=tx_files_fund,
-            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
             witness_count_add=2,
             join_txouts=False,
         )

@@ -1128,7 +1128,7 @@ class TestCollateralOutput:
     ):
         """Test minting a token with a Plutus script while using the same collateral input twice.
 
-        Tests https://github.com/input-output-hk/cardano-node/issues/4744
+        Tests https://github.com/IntersectMBO/cardano-node/issues/4744
 
         Uses `cardano-cli transaction build` command for building the transactions.
 

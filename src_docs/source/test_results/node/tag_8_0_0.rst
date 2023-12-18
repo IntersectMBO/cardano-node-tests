@@ -1,18 +1,18 @@
 8.0.0
 =====
 
-* tag link - <https://github.com/input-output-hk/cardano-node/releases/tag/8.0.0>
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.0.0>
 * tag PR -
-* tag commits - <https://github.com/input-output-hk/cardano-node/compare/1.35.7...8.0.0>
+* tag commits - <https://github.com/IntersectMBO/cardano-node/compare/1.35.7...8.0.0>
 
 
 Changelogs
 ----------
 
-* cardano-api: <https://github.com/input-output-hk/cardano-node/blob/8.0.0/cardano-api/ChangeLog.md>
-* cardano-cli: <https://github.com/input-output-hk/cardano-node/blob/8.0.0/cardano-cli/ChangeLog.md>
-* cardano-node: <https://github.com/input-output-hk/cardano-node/blob/8.0.0/cardano-node/ChangeLog.md>
-* submit-api: <https://github.com/input-output-hk/cardano-node/blob/8.0.0/cardano-submit-api/CHANGELOG.md>
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-node/ChangeLog.md>
+* submit-api: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-submit-api/CHANGELOG.md>
 
 
 Regression testing on a local cluster
@@ -86,22 +86,22 @@ New functionalities in this tag
 * Versioned serialization formats for ledger.  |:arrow_right:| (nothing to test on node/CLI side)
 * A ledger API.  |:arrow_right:| (nothing to test on node/CLI side)
 * Changed deposit tracking.  |:hourglass_flowing_sand:|
-* Possibility for socket to be defined via '--socket-path' CLI option instead of 'CARDANO_NODE_SOCKET_PATH' env var.  |:x:| (`issue #5199 <https://github.com/input-output-hk/cardano-node/issues/5199>`__)
+* Possibility for socket to be defined via '--socket-path' CLI option instead of 'CARDANO_NODE_SOCKET_PATH' env var.  |:x:| (`issue #5199 <https://github.com/IntersectMBO/cardano-node/issues/5199>`__)
 
 
 New issues
 ----------
 
-`Up-to-date list <https://github.com/input-output-hk/cardano-node/issues?q=label%3A8.0.0+>`__
+`Up-to-date list <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+>`__
 
-* `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/input-output-hk/cardano-node/issues/5109>`__
+* `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/IntersectMBO/cardano-node/issues/5109>`__
 * `[BUG] - Unclear / inconsistent error message from 'governance answer-poll' <Unclear / inconsistent error message from governance answer-poll>`__
-* `[BUG] - Unclear '--signed-tx-file' argument to 'governance verify-poll' <https://github.com/input-output-hk/cardano-node/issues/5183>`__  (fixed in final 8.0.0)
-* `[BUG] - 'CARDANO_NODE_SOCKET_PATH' env var needed even when '--socket-path' is used with 'transaction build' <https://github.com/input-output-hk/cardano-node/issues/5199>`__
-* `[FR] - Allow usage of delegate keys for '--required-signers' <https://github.com/input-output-hk/cardano-node/issues/5203>`__  (fixed in final 8.0.0)
+* `[BUG] - Unclear '--signed-tx-file' argument to 'governance verify-poll' <https://github.com/IntersectMBO/cardano-node/issues/5183>`__  (fixed in final 8.0.0)
+* `[BUG] - 'CARDANO_NODE_SOCKET_PATH' env var needed even when '--socket-path' is used with 'transaction build' <https://github.com/IntersectMBO/cardano-node/issues/5199>`__
+* `[FR] - Allow usage of delegate keys for '--required-signers' <https://github.com/IntersectMBO/cardano-node/issues/5203>`__  (fixed in final 8.0.0)
 
 
 Breaking changes
 ----------------
 
-* `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/input-output-hk/cardano-node/issues/5109>`__
+* `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/IntersectMBO/cardano-node/issues/5109>`__

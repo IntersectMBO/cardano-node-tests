@@ -251,7 +251,7 @@ class TestUnbalanced:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(out_file_signed)
         exc_val = str(excinfo.value)
-        # TODO: see https://github.com/input-output-hk/cardano-node/issues/2555
+        # TODO: see https://github.com/IntersectMBO/cardano-node/issues/2555
         assert "ValueNotConservedUTxO" in exc_val or "DeserialiseFailure" in exc_val, exc_val
 
     @allure.link(helpers.get_vcs_link())
@@ -295,7 +295,7 @@ class TestUnbalanced:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    # See https://github.com/input-output-hk/cardano-node/issues/4061
+    # See https://github.com/IntersectMBO/cardano-node/issues/4061
     @hypothesis.given(
         amount=st.integers(min_value=0, max_value=tx_common.MIN_UTXO_VALUE[1] - 1_000)
     )
@@ -355,7 +355,7 @@ class TestUnbalanced:
         )
 
     @allure.link(helpers.get_vcs_link())
-    # See https://github.com/input-output-hk/cardano-node/issues/4061
+    # See https://github.com/IntersectMBO/cardano-node/issues/4061
     @hypothesis.given(
         amount=st.integers(min_value=0, max_value=tx_common.MIN_UTXO_VALUE[1] - 1_000)
     )

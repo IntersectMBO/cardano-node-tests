@@ -283,7 +283,7 @@ def match_blocker(func: tp.Callable) -> tp.Any:
             and "--certificate-file" in str_exc
         ):
             blockers.GH(
-                issue=268, repo="input-output-hk/cardano-cli", message="internal query mismatch"
+                issue=268, repo="IntersectMBO/cardano-cli", message="internal query mismatch"
             ).finish_test()
 
         raise

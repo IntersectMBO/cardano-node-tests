@@ -534,7 +534,7 @@ class TestNegative:
             tx_name=f"{temp_template}_step1",
             txouts=txouts_fund,
             tx_files=tx_files_fund,
-            # TODO: workaround for https://github.com/input-output-hk/cardano-node/issues/1892
+            # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
             witness_count_add=2,
             join_txouts=False,
         )
@@ -609,7 +609,7 @@ class TestNegative:
             assert rf"script failed:\n\"{script2_base64}\"" in err_str, err_str
             blockers.GH(
                 issue=3731,
-                repo="input-output-hk/cardano-ledger",
+                repo="IntersectMBO/cardano-ledger",
                 message="base64 encoded binary script",
             ).finish_test()
 
