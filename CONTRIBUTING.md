@@ -10,7 +10,7 @@ Note that these are guidelines and tips rather than rules. Use your best judgmen
 
 Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
 
-Before creating a bug report, please check [this list of existing issues](https://github.com/input-output-hk/cardano-node-tests/issues) to see if a similar report already exists. When creating a bug report, [include as many details as possible](#How do I submit a (good) issue report).
+Before creating a bug report, please check [this list of existing issues](https://github.com/IntersectMBO/cardano-node-tests/issues) to see if a similar report already exists. When creating a bug report, [include as many details as possible](#How do I submit a (good) issue report).
 
 > **Note:** if you find a **closed** issue, which addresses the problems you're experiencing, open a new issue and include a link to the closed one.
 
@@ -61,4 +61,4 @@ Follow the Google Python style guide but note that formatting is handled automat
 
 ## Roles and Responsibilities
 
-We maintain a [CODEOWNERS file](https://github.com/input-output-hk/cardano-node-tests/blob/master/.github/CODEOWNERS) which provides information who should review your code if it touches given projects.  Note that you need to get approvals from all code owners (even though GitHub doesn't give a way to enforce it).
+We maintain a [CODEOWNERS file](https://github.com/IntersectMBO/cardano-node-tests/blob/master/.github/CODEOWNERS) which provides information who should review your code if it touches given projects.  Note that you need to get approvals from all code owners (even though GitHub doesn't give a way to enforce it).

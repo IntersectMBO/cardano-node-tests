@@ -9,12 +9,12 @@ It works with all blockchain networks including local testnets.
 
 The stake credential history tool is located in the `cardano-node` repository.
 
-Full documentation for building, running, and description of event types is [in its description](https://github.com/input-output-hk/cardano-node/blob/master/cardano-client-demo/Stake-Credential-History.md).
+Full documentation for building, running, and description of event types is [in its description](https://github.com/IntersectMBO/cardano-node/blob/master/cardano-client-demo/Stake-Credential-History.md).
 
 
 ## Example of usage
 
-We will use a [local test cluster](https://github.com/input-output-hk/cardano-node-tests/blob/master/doc/running_local_cluster.md) to show the stake credential history tool in action.
+We will use a [local test cluster](https://github.com/IntersectMBO/cardano-node-tests/blob/master/doc/running_local_cluster.md) to show the stake credential history tool in action.
 
 
 First, let's place a breakpoint
@@ -46,7 +46,7 @@ Here is a step-by-step example:
 platform linux -- Python 3.8.10, pytest-6.2.5, py-1.11.0, pluggy-1.0.0 -- /home/artur/Playground/test_framework/cardano-node-tests/.env/bin/python3
 cachedir: .pytest_cache
 hypothesis profile 'default' -> database=DirectoryBasedExampleDatabase('/home/artur/Playground/test_framework/cardano-node-tests/.hypothesis/examples')
-metadata: {'Python': '3.8.10', 'Platform': 'Linux-5.4.0-91-generic-x86_64-with-glibc2.29', 'Packages': {'pytest': '6.2.5', 'py': '1.11.0', 'pluggy': '1.0.0'}, 'Plugins': {'hypothesis': '6.31.6', 'xdist': '2.5.0', 'forked': '1.4.0', 'allure-pytest': '2.9.45', 'html': '3.1.1', 'order': '1.0.0', 'metadata': '1.11.0'}, 'cardano-node': '1.31.0', 'cardano-node rev': '2cbe363874d0261bc62f52185cf23ed492cf4859', 'ghc': 'ghc-8.10', 'cardano-node-tests rev': '950bcf9c5417388cc50aeff09b5cb078c8dd1df7', 'cardano-node-tests url': 'https://github.com/input-output-hk/cardano-node-tests/tree/950bcf9c5417388cc50aeff09b5cb078c8dd1df7', 'CARDANO_NODE_SOCKET_PATH': '/home/artur/Playground/test_framework/cardano-node/state-cluster0/bft1.socket', 'cardano-cli exe': '/nix/store/k07rnxyzyka72678qjjpnnng9z0hwcak-cardano-cli-exe-cardano-cli-1.31.0/bin/cardano-cli', 'HAS_DBSYNC': 'True', 'db-sync': '12.0.0', 'db-sync rev': '9d0180571482ee4c6acb6fbc6bf55b5a4e2ee833', 'db-sync ghc': 'ghc-8.10', 'db-sync exe': '/nix/store/ykfw353myymhmv8v70x61kb37n5pm4ps-cardano-db-sync-exe-cardano-db-sync-12.0.0/bin/cardano-db-sync'}
+metadata: {'Python': '3.8.10', 'Platform': 'Linux-5.4.0-91-generic-x86_64-with-glibc2.29', 'Packages': {'pytest': '6.2.5', 'py': '1.11.0', 'pluggy': '1.0.0'}, 'Plugins': {'hypothesis': '6.31.6', 'xdist': '2.5.0', 'forked': '1.4.0', 'allure-pytest': '2.9.45', 'html': '3.1.1', 'order': '1.0.0', 'metadata': '1.11.0'}, 'cardano-node': '1.31.0', 'cardano-node rev': '2cbe363874d0261bc62f52185cf23ed492cf4859', 'ghc': 'ghc-8.10', 'cardano-node-tests rev': '950bcf9c5417388cc50aeff09b5cb078c8dd1df7', 'cardano-node-tests url': 'https://github.com/IntersectMBO/cardano-node-tests/tree/950bcf9c5417388cc50aeff09b5cb078c8dd1df7', 'CARDANO_NODE_SOCKET_PATH': '/home/artur/Playground/test_framework/cardano-node/state-cluster0/bft1.socket', 'cardano-cli exe': '/nix/store/k07rnxyzyka72678qjjpnnng9z0hwcak-cardano-cli-exe-cardano-cli-1.31.0/bin/cardano-cli', 'HAS_DBSYNC': 'True', 'db-sync': '12.0.0', 'db-sync rev': '9d0180571482ee4c6acb6fbc6bf55b5a4e2ee833', 'db-sync ghc': 'ghc-8.10', 'db-sync exe': '/nix/store/ykfw353myymhmv8v70x61kb37n5pm4ps-cardano-db-sync-exe-cardano-db-sync-12.0.0/bin/cardano-db-sync'}
 rootdir: /home/artur/Playground/test_framework/cardano-node-tests, configfile: pytest.ini
 plugins: hypothesis-6.31.6, xdist-2.5.0, forked-1.4.0, allure-pytest-2.9.45, html-3.1.1, order-1.0.0, metadata-1.11.0
 collected 16 items / 15 deselected / 1 selected

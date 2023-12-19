@@ -57,7 +57,7 @@ Release testing checklist
      - |:hourglass_flowing_sand:|
    * - Regression testing against `preview`
      - |:hourglass_flowing_sand:|
-   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
      - |:heavy_check_mark:|
    * - DB re-validation testing (ledger snapshots compatibility)
      - |:heavy_check_mark:|

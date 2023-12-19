@@ -7,7 +7,7 @@ Below is an example of running a manual test for checking the MIR certificate tr
 
 This assumes that you have a running local cluster.
 Instructions on how to start a local cluster can be found here:
-<https://input-output-hk.github.io/cardano-node-tests/how-tos/300_running_local_cluster.html>
+<https://tests.cardano.intersectmbo.org/how-tos/300_running_local_cluster.html>
 
 ## Creating key pairs
 

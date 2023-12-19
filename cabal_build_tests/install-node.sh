@@ -113,7 +113,7 @@ echo "Install Libsodium"
 
 mkdir -p ~/src || exit 1
 cd ~/src || exit 1
-git clone https://github.com/input-output-hk/libsodium
+git clone https://github.com/IntersectMBO/libsodium
 cd libsodium || exit 1
 git checkout "$LIBSODIUM_VERSION"
 ./autogen.sh
@@ -142,7 +142,7 @@ echo "Download the source code for cardano-node"
 
 mkdir -p ~/src || exit 1
 cd ~/src || exit 1
-git clone https://github.com/input-output-hk/cardano-node.git
+git clone https://github.com/IntersectMBO/cardano-node.git
 cd cardano-node || exit 1
 git fetch --all --recurse-submodules --tags
 
