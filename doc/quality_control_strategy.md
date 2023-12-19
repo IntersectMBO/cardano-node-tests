@@ -6,7 +6,7 @@ The purpose of this document is to explain the steps that happen during the qual
 
 This document also clarifies QC activities, roles, responsibilities, processes, and practices to be used within the Cardano project.
 
-![img.png](https://input-output-hk.github.io/cardano-node-tests/_static/images/qa_process.png)
+![img.png](https://tests.cardano.intersectmbo.org/_static/images/qa_process.png)
 
 ## Key principles
 

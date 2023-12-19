@@ -63,7 +63,7 @@ Release testing checklist
      - |:heavy_check_mark:|
    * - Grafana metrics OK
      - |:hourglass_flowing_sand:|
-   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
      - |:heavy_check_mark:|
    * - Check build instructions changes
      - |:heavy_check_mark:|

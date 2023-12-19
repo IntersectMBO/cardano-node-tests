@@ -94,7 +94,7 @@ html_logo = "_static/images/Cardano-Crypto-Logo-128.png"
 
 html_context = {
     "display_github": True,  # Add 'Edit on Github' link instead of 'View page source'
-    "github_user": "input-output-hk",
+    "github_user": "IntersectMBO",
     "github_repo": "cardano-node-tests",
     "github_version": "master",
     "conf_py_path": "/src_docs/source/",

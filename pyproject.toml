@@ -10,9 +10,9 @@ authors = [
     "Dorin Solomon <dorin.solomon@iohk.io>",
 ]
 readme = "README.md"
-homepage = "https://input-output-hk.github.io/cardano-node-tests/"
-repository = "https://github.com/input-output-hk/cardano-node-tests"
-documentation = "https://input-output-hk.github.io/cardano-node-tests/"
+homepage = "https://tests.cardano.intersectmbo.org/"
+repository = "https://github.com/IntersectMBO/cardano-node-tests"
+documentation = "https://tests.cardano.intersectmbo.org/"
 keywords = ["cardano", "cardano-node", "cardano-cli", "cardano-node-tests"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -69,7 +69,7 @@ split-topology = "cardano_node_tests.split_topology:main"
 cardano-cli-coverage = "cardano_node_tests.cardano_cli_coverage:main"
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/input-output-hk/cardano-node-tests/issues"
+"Bug Tracker" = "https://github.com/IntersectMBO/cardano-node-tests/issues"
 
 [build-system]
 requires = ["poetry-core"]

@@ -17,7 +17,7 @@ Using a local cluster, you can test/play/interact with all the Cardano blockchai
 - Python 3.8 or newer
 - python3-pip
 - virtualenv
-- nix For instructions on how to install `nix` and how to add IOHK binary cache, see <https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md>
+- nix For instructions on how to install `nix` and how to add IOHK binary cache, see <https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md>
 
 ## Initial setup for all Cardano components
 
@@ -32,15 +32,15 @@ Clone the Cardano projects:
 
 **cardano-node**:
 
-`git clone git@github.com:input-output-hk/cardano-node.git`
+`git clone git@github.com:IntersectMBO/cardano-node.git`
 
 **cardano-db-sync**:
 
-`git clone git@github.com:input-output-hk/cardano-db-sync.git`
+`git clone git@github.com:IntersectMBO/cardano-db-sync.git`
 
 **cardano-node-tests**:
 
-`git clone git@github.com:input-output-hk/cardano-node-tests.git`
+`git clone git@github.com:IntersectMBO/cardano-node-tests.git`
 
 Checkout the `db-sync` version that you want to use. `cardano-node-tests` requires the `db-sync` executable file so we need to build db-sync.
 
@@ -421,7 +421,7 @@ cardano-cli transaction build \
 --alonzo-era
 ```
 
-where `payment.addr` is the Shelley address created manually by the user and `--witness-override 2` is used because of [this issue](https://github.com/input-output-hk/cardano-node/issues/3294).
+where `payment.addr` is the Shelley address created manually by the user and `--witness-override 2` is used because of [this issue](https://github.com/IntersectMBO/cardano-node/issues/3294).
 
 Sign tx:
 
@@ -569,11 +569,11 @@ and `\q` for leaving the database.
 
 ### Useful queries
 
-For interesting db-sync queries, see <https://github.com/input-output-hk/cardano-db-sync/blob/master/doc/interesting-queries.md>.
+For interesting db-sync queries, see <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/interesting-queries.md>.
 
 
 ## Additional resources
 
-For more info on **cardano-node**, see <https://github.com/input-output-hk/cardano-node/tree/master/doc/getting-started>.
+For more info on **cardano-node**, see <https://github.com/IntersectMBO/cardano-node/tree/master/doc/getting-started>.
 
-For more info on **cardano-db-sync**, see <https://github.com/input-output-hk/cardano-db-sync/tree/master/doc>.
+For more info on **cardano-db-sync**, see <https://github.com/IntersectMBO/cardano-db-sync/tree/master/doc>.

@@ -67,9 +67,9 @@ Release testing checklist
      - |:heavy_check_mark:|
    * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/1.35.4-rc1/>`__
      - |:heavy_check_mark:|
-   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
      - |:heavy_check_mark:|
-   * - `DB re-validation testing (ledger snapshots compatibility) <https://input-output-hk.github.io/cardano-node-tests/test_results/sync_tests.html>`__
+   * - `DB re-validation testing (ledger snapshots compatibility) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
      - |:heavy_check_mark:|
    * - Backward compatibility testing (Node with version N-1)
      - |:heavy_check_mark:|

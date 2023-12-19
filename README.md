@@ -4,7 +4,7 @@
 
 System and end-to-end (E2E) tests for cardano-node.
 
-Check this [documentation](https://input-output-hk.github.io/cardano-node-tests) for more details.
+Check this [documentation](https://tests.cardano.intersectmbo.org) for more details.
 
 ## Running tests using Github Actions
 
