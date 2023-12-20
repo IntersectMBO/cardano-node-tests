@@ -14,6 +14,7 @@ import random
 import signal
 import string
 import subprocess
+import types as tt
 import typing as tp
 
 import cardano_node_tests.utils.types as ttypes
@@ -178,13 +179,30 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     return f"{timestamp}{rand_str_component}"
 
 
+def get_line_str_from_frame(frame: tt.FrameType) -> str:
+    lineno = frame.f_lineno
+    fpath = frame.f_globals["__file__"]
+    line_str = f"{fpath}#L{lineno}"
+    return line_str
+
+
+def get_current_line_str() -> str:
+    """Get `filename#lineno` of current line.
+
+    NOTE: this will not work correctly if called from context manager.
+    """
+    calling_frame = inspect.currentframe().f_back  # type: ignore
+    assert calling_frame
+    return get_line_str_from_frame(frame=calling_frame)
+
+
 def get_vcs_link() -> str:
     """Return link to the current line in GitHub."""
     calling_frame = inspect.currentframe().f_back  # type: ignore
-    lineno = calling_frame.f_lineno  # type: ignore
-    fpath = calling_frame.f_globals["__file__"]  # type: ignore
-    fpart = fpath[fpath.find("cardano_node_tests") :]
-    url = f"{GITHUB_URL}/blob/{get_current_commit()}/{fpart}#L{lineno}"
+    assert calling_frame
+    line_str = get_line_str_from_frame(frame=calling_frame)
+    loc_part = line_str[line_str.find("cardano_node_tests") :]
+    url = f"{GITHUB_URL}/blob/{get_current_commit()}/{loc_part}"
     return url
 
 

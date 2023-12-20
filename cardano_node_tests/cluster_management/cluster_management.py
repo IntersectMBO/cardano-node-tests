@@ -2,5 +2,4 @@
 # flake8: noqa
 from cardano_node_tests.cluster_management.common import CLUSTER_LOCK
 from cardano_node_tests.cluster_management.manager import ClusterManager
-from cardano_node_tests.cluster_management.manager import get_fixture_line_str
 from cardano_node_tests.cluster_management.resources import Resources
