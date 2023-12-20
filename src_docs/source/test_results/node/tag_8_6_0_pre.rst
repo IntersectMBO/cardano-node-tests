@@ -27,6 +27,8 @@ Regression testing on a local cluster
      - |:heavy_check_mark:|
    * - Mix P2P and Legacy - Babbage with default (Babbage) TX
      - |:heavy_check_mark:|
+   * - Plutus Functionality using `Antaeus <https://github.com/input-output-hk/antaeus/tree/cardano-node_8-6-0>`__ - `Multi-era (without V3 scripts) <https://cardano-tests-reports-3-74-115-22.nip.io/antaeus/8.6.0/>`__
+     - |:heavy_check_mark:|
 
 .. list-table:: Other Testing
    :header-rows: 0
