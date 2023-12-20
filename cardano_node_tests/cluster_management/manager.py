@@ -32,14 +32,12 @@ if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
     raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
 
 
-def get_fixture_line_str() -> str:
-    """Get `filename#lineno` of current fixture."""
+def _get_manager_fixture_line_str() -> str:
+    """Get `filename#lineno` of current fixture, called from contextmanager."""
     # get past `cache_fixture` and `contextmanager` to the fixture
     calling_frame = inspect.currentframe().f_back.f_back.f_back  # type: ignore
-    lineno = calling_frame.f_lineno  # type: ignore
-    fpath = calling_frame.f_globals["__file__"]  # type: ignore
-    line_str = f"{fpath}#L{lineno}"
-    return line_str
+    assert calling_frame
+    return helpers.get_line_str_from_frame(frame=calling_frame)
 
 
 @dataclasses.dataclass
@@ -219,7 +217,7 @@ class ClusterManager:
     @contextlib.contextmanager
     def cache_fixture(self, key: str = "") -> tp.Iterator[FixtureCache]:
         """Cache fixture value - context manager."""
-        key_str = key or get_fixture_line_str()
+        key_str = key or _get_manager_fixture_line_str()
         key_hash = int(hashlib.sha1(key_str.encode("utf-8")).hexdigest(), 16)
         cached_value = self.cache.test_data.get(key_hash)
         container = FixtureCache(value=cached_value)

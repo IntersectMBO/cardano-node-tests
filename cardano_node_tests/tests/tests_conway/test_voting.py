@@ -59,7 +59,7 @@ def pool_user_lg(
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
-    key = cluster_management.get_fixture_line_str()
+    key = helpers.get_current_line_str()
     return get_pool_user(cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key)
 
 
@@ -70,7 +70,7 @@ def pool_user_ug(
 ) -> clusterlib.PoolUser:
     """Create a pool user for "use governance"."""
     cluster, __ = cluster_use_governance
-    key = cluster_management.get_fixture_line_str()
+    key = helpers.get_current_line_str()
     return get_pool_user(cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key)
 
 
