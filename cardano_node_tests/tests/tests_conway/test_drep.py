@@ -1,6 +1,7 @@
 """Tests for Conway governance DRep functionality."""
 import logging
 import pathlib as pl
+import typing as tp
 
 import allure
 import pytest
@@ -9,6 +10,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import delegation
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
@@ -24,72 +26,79 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
-def payment_addr(
+def get_payment_addr(
+    name_template: str,
     cluster_manager: cluster_management.ClusterManager,
-    cluster: clusterlib.ClusterLib,
+    cluster_obj: clusterlib.ClusterLib,
+    caching_key: str,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
-    with cluster_manager.cache_fixture() as fixture_cache:
+    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
         addr = clusterlib_utils.create_payment_addr_records(
-            f"drep_addr_ci{cluster_manager.cluster_instance_num}",
-            cluster_obj=cluster,
+            f"drep_addr_{name_template}",
+            cluster_obj=cluster_obj,
         )[0]
         fixture_cache.value = addr
 
     # Fund source address
     clusterlib_utils.fund_from_faucet(
         addr,
-        cluster_obj=cluster,
+        cluster_obj=cluster_obj,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
     )
 
     return addr
 
 
-@pytest.fixture
-def pool_user(
+def get_pool_user(
+    name_template: str,
     cluster_manager: cluster_management.ClusterManager,
-    cluster: clusterlib.ClusterLib,
+    cluster_obj: clusterlib.ClusterLib,
+    caching_key: str,
 ) -> clusterlib.PoolUser:
     """Create a pool user."""
-    test_id = common.get_test_id(cluster)
-    pool_user = clusterlib_utils.create_pool_users(
-        cluster_obj=cluster,
-        name_template=f"{test_id}_pool_user",
-        no_of_addr=1,
-    )[0]
+    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        pool_user = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster_obj,
+            name_template=f"{name_template}_pool_user",
+            no_of_addr=1,
+        )[0]
+        fixture_cache.value = pool_user
 
     # Fund the payment address with some ADA
     clusterlib_utils.fund_from_faucet(
         pool_user.payment,
-        cluster_obj=cluster,
+        cluster_obj=cluster_obj,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
         amount=1_500_000,
     )
     return pool_user
 
 
-@pytest.fixture
-def custom_drep(
+def get_custom_drep(
+    name_template: str,
     cluster_manager: cluster_management.ClusterManager,
-    cluster: clusterlib.ClusterLib,
+    cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
+    caching_key: str,
 ) -> governance_utils.DRepRegistration:
     """Create a custom DRep."""
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
         pytest.skip("runs only on local cluster")
 
-    with cluster_manager.cache_fixture() as fixture_cache:
+    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
         reg_drep = governance_utils.get_drep_reg_record(
-            cluster_obj=cluster,
-            name_template="drep_custom",
+            cluster_obj=cluster_obj,
+            name_template=f"drep_custom_{name_template}",
         )
 
         tx_files_reg = clusterlib.TxFiles(
@@ -98,8 +107,8 @@ def custom_drep(
         )
 
         clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template="drep_custom_reg",
+            cluster_obj=cluster_obj,
+            name_template=f"drep_custom_reg{name_template}",
             src_address=payment_addr.address,
             submit_method=submit_utils.SubmitMethods.CLI,
             use_build_cmd=True,
@@ -109,6 +118,98 @@ def custom_drep(
         fixture_cache.value = reg_drep
 
     return reg_drep
+
+
+@pytest.fixture
+def cluster_and_pool(
+    cluster_manager: cluster_management.ClusterManager,
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
+    return delegation.cluster_and_pool(cluster_manager=cluster_manager)
+
+
+@pytest.fixture
+def payment_addr(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> clusterlib.AddressRecord:
+    test_id = common.get_test_id(cluster)
+    key = helpers.get_current_line_str()
+    return get_payment_addr(
+        name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    )
+
+
+@pytest.fixture
+def pool_user(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> clusterlib.PoolUser:
+    test_id = common.get_test_id(cluster)
+    key = helpers.get_current_line_str()
+    return get_pool_user(
+        name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    )
+
+
+@pytest.fixture
+def custom_drep(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
+) -> governance_utils.DRepRegistration:
+    test_id = common.get_test_id(cluster)
+    key = helpers.get_current_line_str()
+    return get_custom_drep(
+        name_template=test_id,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        payment_addr=payment_addr,
+        caching_key=key,
+    )
+
+
+@pytest.fixture
+def payment_addr_wp(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+) -> clusterlib.AddressRecord:
+    cluster, __ = cluster_and_pool
+    test_id = common.get_test_id(cluster)
+    key = helpers.get_current_line_str()
+    return get_payment_addr(
+        name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    )
+
+
+@pytest.fixture
+def pool_user_wp(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+) -> clusterlib.PoolUser:
+    cluster, __ = cluster_and_pool
+    test_id = common.get_test_id(cluster)
+    key = helpers.get_current_line_str()
+    return get_pool_user(
+        name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    )
+
+
+@pytest.fixture
+def custom_drep_wp(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+    payment_addr_wp: clusterlib.AddressRecord,
+) -> governance_utils.DRepRegistration:
+    cluster, __ = cluster_and_pool
+    test_id = common.get_test_id(cluster)
+    key = helpers.get_current_line_str()
+    return get_custom_drep(
+        name_template=test_id,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        payment_addr=payment_addr_wp,
+        caching_key=key,
+    )
 
 
 class TestDReps:
@@ -371,7 +472,7 @@ class TestDelegDReps:
             - always-no-confidence
             - custom DRep
 
-        * check that stake address is registered
+        * check that the stake address is registered
         """
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
@@ -464,6 +565,135 @@ class TestDelegDReps:
             drep_id = custom_drep.drep_id if drep == "custom" else drep
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user.stake.vkey_file
+            )
+            governance_utils.check_drep_delegation(
+                deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
+            )
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("drep", ("always_abstain", "always_no_confidence", "custom"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_dreps_and_spo_delegation(
+        self,
+        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        payment_addr_wp: clusterlib.AddressRecord,
+        pool_user_wp: clusterlib.PoolUser,
+        custom_drep_wp: governance_utils.DRepRegistration,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
+        use_build_cmd: bool,
+        submit_method: str,
+        drep: str,
+    ):
+        """Test delegating to DRep and SPO using single certificate.
+
+        * register stake address
+        * delegate stake to a stake pool and to following DReps:
+
+            - always-abstain
+            - always-no-confidence
+            - custom DRep
+
+        * check that the stake address is registered and delegated
+        """
+        cluster, pool_id = cluster_and_pool
+        temp_template = common.get_test_id(cluster)
+        deposit_amt = cluster.g_query.get_address_deposit()
+
+        # Create stake address registration cert
+        reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=deposit_amt,
+            stake_vkey_file=pool_user_wp.stake.vkey_file,
+        )
+
+        # Create stake and vote delegation cert
+        deleg_cert = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=pool_user_wp.stake.vkey_file,
+            stake_pool_id=pool_id,
+            drep_key_hash=custom_drep_wp.drep_id if drep == "custom" else "",
+            always_abstain=drep == "always_abstain",
+            always_no_confidence=drep == "always_no_confidence",
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[reg_cert, deleg_cert],
+            signing_key_files=[payment_addr_wp.skey_file, pool_user_wp.stake.skey_file],
+        )
+
+        # Make sure we have enough time to finish the registration/delegation in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+        )
+
+        tx_output = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            src_address=payment_addr_wp.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files,
+            deposit=deposit_amt,
+        )
+
+        # Deregister stake address so it doesn't affect stake distribution
+        def _deregister():
+            with helpers.change_cwd(testfile_temp_dir):
+                # Deregister stake address
+                stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+                    addr_name=f"{temp_template}_addr0",
+                    deposit_amt=deposit_amt,
+                    stake_vkey_file=pool_user_wp.stake.vkey_file,
+                )
+                tx_files_dereg = clusterlib.TxFiles(
+                    certificate_files=[stake_addr_dereg_cert],
+                    signing_key_files=[
+                        payment_addr_wp.skey_file,
+                        pool_user_wp.stake.skey_file,
+                    ],
+                )
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_dereg",
+                    src_address=payment_addr_wp.address,
+                    use_build_cmd=use_build_cmd,
+                    tx_files=tx_files_dereg,
+                    deposit=-deposit_amt,
+                )
+
+        request.addfinalizer(_deregister)
+
+        # Check that the stake address was registered and delegated
+        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_wp.stake.address)
+        assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
+        assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
+
+        # Check the expected balance
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr_wp.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+        ), f"Incorrect balance for source address `{payment_addr_wp.address}`"
+
+        # Check that stake address is delegated to the correct DRep.
+        # This takes one epoch, so test this only for selected combinations of build command
+        # and submit method, only when we are running on local testnet, and only if we are not
+        # running smoke tests.
+        if (
+            use_build_cmd
+            and submit_method == submit_utils.SubmitMethods.CLI
+            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+            and "smoke" not in request.config.getoption("-m")
+        ):
+            cluster.wait_for_new_epoch(padding_seconds=5)
+            deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
+            drep_id = custom_drep_wp.drep_id if drep == "custom" else drep
+            stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
+                stake_vkey_file=pool_user_wp.stake.vkey_file
             )
             governance_utils.check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
