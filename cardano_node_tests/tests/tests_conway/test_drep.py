@@ -316,7 +316,7 @@ class TestNegativeDReps:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.testnets
     @pytest.mark.smoke
-    def test_no_witness_register_and_retire(
+    def test_no_witness_register_and_retire(  # noqa: C901
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
@@ -437,6 +437,10 @@ class TestNegativeDReps:
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert not ret_drep_state, "DRep was not retired"
+
+        # Known ledger issue
+        if len(errors_final) == 1 and reg_missing_success:
+            pytest.xfail(errors_final[0])
 
         if errors_final:
             raise AssertionError("\n".join(errors_final))
