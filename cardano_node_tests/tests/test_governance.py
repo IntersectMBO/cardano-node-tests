@@ -352,7 +352,9 @@ class TestPoll:
         assert "Poll answer out of bounds" in err_str or "negative index" in err_str, err_str
 
         if "Prelude.!!" in err_str:
-            blockers.GH(issue=5182, message="'Prelude.!!' in error message").finish_test()
+            blockers.GH(
+                issue=5182, fixed_in="8.7.0", message="'Prelude.!!' in error message"
+            ).finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
