@@ -23,7 +23,11 @@ DATA_DIR = pl.Path(__file__).parent / "data"
 @pytest.mark.order(8)
 @pytest.mark.skipif(
     VERSIONS.cluster_era != VERSIONS.transaction_era,
-    reason="must run with same cluster and Tx era",
+    reason="Must run with same cluster and Tx era",
+)
+@pytest.mark.skipif(
+    VERSIONS.cluster_era >= VERSIONS.CONWAY,
+    reason="Doesn't run on cluster era >= Conway",
 )
 @pytest.mark.long
 class TestUpdateProposals:
