@@ -4,6 +4,7 @@ import pytest
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.utils import governance_setup
+from cardano_node_tests.utils import governance_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ def cluster_use_governance(
     governance_data = governance_setup.get_default_governance(
         cluster_manager=cluster_manager, cluster_obj=cluster_obj
     )
+    governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
     return cluster_obj, governance_data
 
 
@@ -38,4 +40,5 @@ def cluster_lock_governance(
     governance_data = governance_setup.get_default_governance(
         cluster_manager=cluster_manager, cluster_obj=cluster_obj
     )
+    governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
     return cluster_obj, governance_data
