@@ -212,3 +212,16 @@ def check_action_view(
     }
 
     assert action_view_out == expected_action_out, f"{action_view_out} != {expected_action_out}"
+
+
+def wait_delayed_ratification(
+    cluster_obj: clusterlib.ClusterLib,
+) -> None:
+    """Wait until ratification is no longer delayed."""
+    for __ in range(3):
+        next_rat_state = cluster_obj.g_conway_governance.query.gov_state()["nextRatifyState"]
+        if not next_rat_state["ratificationDelayed"]:
+            break
+        cluster_obj.wait_for_new_epoch(padding_seconds=5)
+    else:
+        raise AssertionError("Ratification is still delayed")
