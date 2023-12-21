@@ -648,7 +648,7 @@ class TestStakePool:
             "name": "test_stake_pool_metadata",
             "description": "cardano-node-tests E2E tests",
             "ticker": "IOG1",
-            "homepage": "https://github.com/IntersectMBO/cardano-node-tests",
+            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
         }
         pool_metadata_file = helpers.write_json(
             out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
