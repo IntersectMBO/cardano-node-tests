@@ -1,4 +1,4 @@
-n-ame: Nightly tests Governance CC
+name: Nightly tests Governance CC
 
 on:
   schedule:
