@@ -8,11 +8,13 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -573,6 +575,9 @@ class TestExpectedFees:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.node < version.parse("8.7.0"), reason="Doesn't run on node < 8.7.0"
+    )
     @pytest.mark.parametrize(
         "amount_expected",
         [(1, 1_200_000), (100, 1_210_000), (11_000, 1_220_000), (100_000, 1_250_000)],
