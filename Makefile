@@ -27,6 +27,7 @@ doc:
 
 # run tests
 
+TESTS_DIR ?= cardano_node_tests/
 ARTIFACTS_DIR ?= .artifacts
 COVERAGE_DIR ?= .cli_coverage
 REPORTS_DIR ?= .reports
@@ -79,7 +80,7 @@ ifeq ($(RUN_SKIPS),yes)
 endif
 
 # run tests for real and produce Allure results
-	pytest cardano_node_tests $(PYTEST_ARGS) $(CI_ARGS) $(MARKEXPR) $(DESELECT_FROM_FILE_ARGS) -n $(TEST_THREADS) $(ARTIFACTS_ARGS) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(REPORTS_DIR) $(TESTRUN_REPORT_ARGS)
+	pytest $(TESTS_DIR) $(PYTEST_ARGS) $(CI_ARGS) $(MARKEXPR) $(DESELECT_FROM_FILE_ARGS) -n $(TEST_THREADS) $(ARTIFACTS_ARGS) --cli-coverage-dir=$(COVERAGE_DIR) --alluredir=$(REPORTS_DIR) $(TESTRUN_REPORT_ARGS)
 
 
 # run all tests

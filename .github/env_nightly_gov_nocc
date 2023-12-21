@@ -1,0 +1,7 @@
+CLUSTER_ERA=conway
+COMMAND_ERA=conway
+NO_CC=true
+TESTS_DIR=cardano_node_tests/tests/tests_conway
+ENABLE_P2P=true
+CI_FAST_CLUSTER=true
+CLUSTERS_COUNT=3
