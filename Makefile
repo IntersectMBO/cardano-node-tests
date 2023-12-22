@@ -76,7 +76,7 @@ endif
 
 # first just skip all tests so Allure has a list of all tests that were supposed to run
 ifeq ($(RUN_SKIPS),yes)
-	pytest -s cardano_node_tests $(MARKEXPR) --skipall --alluredir=$(REPORTS_DIR) >/dev/null
+	pytest -s $(TESTS_DIR) $(MARKEXPR) --skipall --alluredir=$(REPORTS_DIR) >/dev/null
 endif
 
 # run tests for real and produce Allure results
