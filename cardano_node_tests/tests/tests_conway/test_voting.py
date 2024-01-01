@@ -1,7 +1,9 @@
 """Tests for Conway governance voting functionality."""
+import json
 import logging
 import pathlib as pl
 import random
+import typing as tp
 
 import allure
 import pytest
@@ -23,6 +25,12 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
     reason="runs only with Tx era >= Conway",
 )
+
+
+def _save_gov_state(gov_state: tp.Dict[str, tp.Any], name_template: str) -> None:
+    """Save governance state to a file."""
+    with open(f"{name_template}_gov_state.json", "w", encoding="utf-8") as out_fp:
+        json.dump(gov_state, out_fp, indent=2)
 
 
 def get_pool_user(
@@ -219,15 +227,18 @@ class TestVoting:
 
         # Check ratification
         cluster.wait_for_new_epoch(padding_seconds=5)
-        next_rat_state = cluster.g_conway_governance.query.gov_state()["nextRatifyState"]
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
         assert next_rat_state["removedGovActions"], "No removed actions"
 
         # Check enactment
         cluster.wait_for_new_epoch(padding_seconds=5)
-        enact_state = cluster.g_conway_governance.query.gov_state()["enactState"]
-        _check_state(enact_state)
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=enact_gov_state, name_template=f"{temp_template}_enact")
+        _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
     def test_add_new_committee_member(
@@ -413,15 +424,18 @@ class TestVoting:
 
         # Check ratification
         cluster.wait_for_new_epoch(padding_seconds=5)
-        next_rat_state = cluster.g_conway_governance.query.gov_state()["nextRatifyState"]
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
         assert next_rat_state["removedGovActions"], "No removed actions"
 
         # Check enactment
         cluster.wait_for_new_epoch(padding_seconds=5)
-        enact_state = cluster.g_conway_governance.query.gov_state()["enactState"]
-        _check_state(enact_state)
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=enact_gov_state, name_template=f"{temp_template}_enact")
+        _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
     def test_enact_pparam_update(
@@ -577,15 +591,18 @@ class TestVoting:
 
         # Check ratification
         cluster.wait_for_new_epoch(padding_seconds=5)
-        next_rat_state = cluster.g_conway_governance.query.gov_state()["nextRatifyState"]
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
         assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
         assert next_rat_state["removedGovActions"], "No removed actions"
 
         # Check enactment
         cluster.wait_for_new_epoch(padding_seconds=5)
-        enact_state = cluster.g_conway_governance.query.gov_state()["enactState"]
-        _check_state(enact_state)
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=enact_gov_state, name_template=f"{temp_template}_enact")
+        _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
     def test_enact_treasury_withdrawal(
@@ -734,8 +751,9 @@ class TestVoting:
 
         # Check ratification
         cluster.wait_for_new_epoch(padding_seconds=5)
-        next_rat_state = cluster.g_conway_governance.query.gov_state()["nextRatifyState"]
-        assert next_rat_state["removedGovActions"], "No removed actions"
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        assert rat_gov_state["nextRatifyState"]["removedGovActions"], "No removed actions"
 
         # Check enactment
         cluster.wait_for_new_epoch(padding_seconds=5)
