@@ -207,6 +207,11 @@ class TestEnactment:
             ],
         )
 
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_vote",
@@ -392,6 +397,11 @@ class TestEnactment:
                 *[r.skey_file for r in governance_data.pools_cold],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
             ],
+        )
+
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
@@ -605,6 +615,11 @@ class TestEnactment:
                 *[r.hot_skey_file for r in governance_data.cc_members],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
             ],
+        )
+
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
@@ -982,6 +997,11 @@ class TestExpiration:
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
                 *[r.skey_file for r in governance_data.pools_cold],
             ],
+        )
+
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
