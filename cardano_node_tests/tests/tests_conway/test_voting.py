@@ -908,25 +908,7 @@ class TestEnactment:
         ), "Incorrect reward account balance"
 
         # Check action view
-        recv_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
-            stake_vkey_file=recv_stake_addr_rec.vkey_file
-        )
-        return_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
-            stake_vkey_file=pool_user_ug.stake.vkey_file
-        )
-
-        action_to_check = withdrawal_actions[0]
-        governance_utils.check_action_view(
-            cluster_obj=cluster,
-            action_tag=governance_utils.ActionTags.TREASURY_WITHDRAWALS,
-            action_file=action_to_check.action_file,
-            anchor_url=action_to_check.anchor_url,
-            anchor_data_hash=action_to_check.anchor_data_hash,
-            deposit_amt=action_to_check.deposit_amt,
-            return_addr_vkey_hash=return_addr_vkey_hash,
-            recv_addr_vkey_hash=recv_addr_vkey_hash,
-            transfer_amt=action_to_check.transfer_amt,
-        )
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=withdrawal_actions[0])
 
 
 class TestExpiration:
@@ -1094,18 +1076,7 @@ class TestExpiration:
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
 
         # Check action view
-        return_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
-            stake_vkey_file=pool_user_ug.stake.vkey_file
-        )
-        governance_utils.check_action_view(
-            cluster_obj=cluster,
-            action_tag=governance_utils.ActionTags.INFO_ACTION,
-            action_file=info_action.action_file,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
-            deposit_amt=action_deposit_amt,
-            return_addr_vkey_hash=return_addr_vkey_hash,
-        )
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
 
     @allure.link(helpers.get_vcs_link())
     def test_expire_treasury_withdrawals(
