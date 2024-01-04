@@ -9,6 +9,15 @@ from cardano_clusterlib import clusterlib
 
 LOGGER = logging.getLogger(__name__)
 
+ActionsAllT = tp.Union[  # pylint: disable=invalid-name
+    clusterlib.ActionConstitution,
+    clusterlib.ActionInfo,
+    clusterlib.ActionNoConfidence,
+    clusterlib.ActionPParamsUpdate,
+    clusterlib.ActionUpdateCommittee,
+    clusterlib.ActionTreasuryWithdrawal,
+]
+
 
 @dataclasses.dataclass(frozen=True, order=True)
 class DRepRegistration:
@@ -174,22 +183,42 @@ def get_cc_member_reg_record(
     )
 
 
-def check_action_view(
+def check_action_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
-    action_tag: ActionTags,
-    action_file: pl.Path,
-    anchor_url: str,
-    anchor_data_hash: str,
-    deposit_amt: int,
-    return_addr_vkey_hash: str,
+    action_data: ActionsAllT,
+    return_addr_vkey_hash: str = "",
     recv_addr_vkey_hash: str = "",
-    transfer_amt: int = -1,
 ) -> None:
-    if action_tag == ActionTags.TREASURY_WITHDRAWALS:
-        if transfer_amt == -1:
-            raise ValueError("`transfer_amt` must be specified for treasury withdrawals")
+    """Check `governance action view` output."""
+    # pylint: disable=too-many-branches
+    if not return_addr_vkey_hash:
+        if action_data.deposit_return_stake_vkey_file:
+            return_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+                stake_vkey_file=action_data.deposit_return_stake_vkey_file
+            )
+        elif action_data.deposit_return_stake_vkey:
+            return_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+                stake_vkey=action_data.deposit_return_stake_vkey
+            )
+        elif action_data.deposit_return_stake_key_hash:
+            return_addr_vkey_hash = action_data.deposit_return_stake_key_hash
+        else:
+            raise ValueError("No return stake key hash was specified")
+
+    if isinstance(action_data, clusterlib.ActionTreasuryWithdrawal):
         if not recv_addr_vkey_hash:
-            raise ValueError("`recv_addr_vkey_hash` must be specified for treasury withdrawals")
+            if action_data.funds_receiving_stake_vkey_file:
+                recv_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+                    stake_vkey_file=action_data.funds_receiving_stake_vkey_file
+                )
+            elif action_data.funds_receiving_stake_vkey:
+                recv_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+                    stake_vkey=action_data.funds_receiving_stake_vkey
+                )
+            elif action_data.funds_receiving_stake_key_hash:
+                recv_addr_vkey_hash = action_data.funds_receiving_stake_key_hash
+            else:
+                raise ValueError("No funds receiving stake key hash was specified")
 
         gov_action = {
             "contents": [
@@ -198,32 +227,34 @@ def check_action_view(
                         "credential": {"keyHash": recv_addr_vkey_hash},
                         "network": "Testnet",
                     },
-                    transfer_amt,
+                    action_data.transfer_amt,
                 ]
             ],
-            "tag": action_tag.value,
+            "tag": ActionTags.TREASURY_WITHDRAWALS.value,
         }
-    elif action_tag == ActionTags.INFO_ACTION:
+    elif isinstance(action_data, clusterlib.ActionInfo):
         gov_action = {
-            "tag": action_tag.value,
+            "tag": ActionTags.INFO_ACTION.value,
         }
     else:
-        raise NotImplementedError(f"Not implemented for action tag `{action_tag}`")
-
-    action_view_out = cluster_obj.g_conway_governance.action.view(action_file=action_file)
+        raise NotImplementedError(f"Not implemented for action `{action_data}`")
 
     expected_action_out = {
         "anchor": {
-            "dataHash": anchor_data_hash,
-            "url": anchor_url,
+            "dataHash": action_data.anchor_data_hash,
+            "url": action_data.anchor_url,
         },
-        "deposit": deposit_amt,
+        "deposit": action_data.deposit_amt,
         "governance action": gov_action,
         "return address": {
             "credential": {"keyHash": return_addr_vkey_hash},
             "network": "Testnet",
         },
     }
+
+    action_view_out = cluster_obj.g_conway_governance.action.view(
+        action_file=action_data.action_file
+    )
 
     assert action_view_out == expected_action_out, f"{action_view_out} != {expected_action_out}"
 
