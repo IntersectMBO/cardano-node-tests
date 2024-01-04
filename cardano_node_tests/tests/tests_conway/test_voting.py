@@ -28,6 +28,35 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def _possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
+    """Check if the unexpected removed action situation can be result of known ledger issue.
+
+    When the issue manifests, only single expired action gets removed and all other expired or
+    ratified actions are ignored int the given epoch.
+    """
+    removed_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
+        "removedGovActions"
+    ]
+    proposals: tp.List[tp.Dict[str, tp.Any]] = gov_state["proposals"]
+
+    if len(removed_actions) != 1 or len(proposals) == 1:
+        return False
+
+    action_txid = removed_actions[0]["txId"]
+    action_ix = removed_actions[0]["govActionIx"]
+
+    for _p in proposals:
+        _p_action_id = _p["actionId"]
+        if (
+            _p["expiresAfter"] < epoch
+            and _p_action_id["txId"] == action_txid
+            and _p_action_id["govActionIx"] == action_ix
+        ):
+            return True
+
+    return False
+
+
 def _save_gov_state(gov_state: tp.Dict[str, tp.Any], name_template: str) -> None:
     """Save governance state to a file."""
     with open(f"{name_template}_gov_state.json", "w", encoding="utf-8") as out_fp:
@@ -895,10 +924,15 @@ class TestEnactment:
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
         _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
-        assert rat_gov_state["nextRatifyState"]["removedGovActions"], "No removed actions"
-        assert governance_utils.lookup_removed_actions(
+        rem_action = governance_utils.lookup_removed_actions(
             gov_state=rat_gov_state, action_txid=action_txid
-        ), "Action not found in removed actions"
+        )
+
+        # Known ledger issue where only one expired action gets removed in one epoch
+        if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
+            pytest.xfail("Only single expired action got removed")
+
+        assert rem_action, "Action not found in removed actions"
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -1315,8 +1349,10 @@ class TestExpiration:
         ).reward_account_balance
 
         # Known ledger issue where only one expired action gets removed in one epoch
-        if rem_deposit_returned == init_return_account_balance + action_deposit_amt:
-            pytest.xfail("Only one out of many expired actions got removed")
+        if (
+            rem_deposit_returned < init_return_account_balance + actions_deposit_combined
+        ) and _possible_rem_issue(gov_state=rem_gov_state, epoch=_cur_epoch):
+            pytest.xfail("Only single expired action got removed")
 
         assert (
             rem_deposit_returned == init_return_account_balance + actions_deposit_combined
