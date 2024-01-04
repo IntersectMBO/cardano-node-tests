@@ -17,6 +17,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -681,16 +682,20 @@ class TestEnactment:
         cluster_use_governance: governance_setup.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
     ):
-        """Test enactment of treasury withdrawal.
+        """Test enactment of multiple treasury withdrawals in single epoch.
 
-        * submit a "treasury withdrawal" action
-        * vote to approve the action
-        * check that the action is ratified
-        * check that the action is enacted
+        Use `transaction build` for building the transactions.
+        When available, use cardano-submit-api for votes submission.
+
+        * submit multiple "treasury withdrawal" actions
+        * vote to approve the actions
+        * check that the actions are ratified
+        * check that the action are enacted
         """
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
+        actions_num = 3
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -712,23 +717,30 @@ class TestEnactment:
         anchor_url = "http://www.withdrawal-action.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        withdrawal_action = cluster.g_conway_governance.action.create_treasury_withdrawal(
-            action_name=temp_template,
-            transfer_amt=transfer_amt,
-            deposit_amt=action_deposit_amt,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
-            funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
-            deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
-        )
+        withdrawal_actions = []
+        for a in range(actions_num):
+            anchor_url = f"http://www.withdrawal-action{a}.com"
+            anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+
+            withdrawal_actions.append(
+                cluster.g_conway_governance.action.create_treasury_withdrawal(
+                    action_name=f"{temp_template}_{a}",
+                    transfer_amt=transfer_amt,
+                    deposit_amt=action_deposit_amt,
+                    anchor_url=anchor_url,
+                    anchor_data_hash=anchor_data_hash,
+                    funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
+                    deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
+                )
+            )
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
-            proposal_files=[withdrawal_action.action_file],
+            proposal_files=[w.action_file for w in withdrawal_actions],
             signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
         )
 
-        # Make sure we have enough time to submit the proposal in one epoch
+        # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
@@ -737,6 +749,9 @@ class TestEnactment:
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
             src_address=pool_user_ug.payment.address,
+            submit_method=submit_utils.SubmitMethods.API
+            if submit_utils.is_submit_api_available()
+            else submit_utils.SubmitMethods.CLI,
             use_build_cmd=True,
             tx_files=tx_files_action,
         )
@@ -745,6 +760,8 @@ class TestEnactment:
             recv_stake_addr_rec.address
         ).address, f"Stake address is not registered: {recv_stake_addr_rec.address}"
 
+        actions_deposit_combined = action_deposit_amt * actions_num
+
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_ug.payment.address)[
@@ -752,7 +769,7 @@ class TestEnactment:
             ].amount
             == clusterlib.calculate_utxos_balance(tx_output_action.txins)
             - tx_output_action.fee
-            - action_deposit_amt
+            - actions_deposit_combined
             - stake_deposit_amt
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
@@ -762,38 +779,45 @@ class TestEnactment:
         _save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
         )
-        prop_action = governance_utils.lookup_proposal(
-            gov_state=action_gov_state, action_txid=action_txid
-        )
-        assert prop_action, "Treasury withdrawals action not found"
-        assert (
-            prop_action["action"]["tag"] == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
-        ), "Incorrect action tag"
 
-        # Vote & approve the action
-
-        action_ix = prop_action["actionId"]["govActionIx"]
-
-        votes_cc = [
-            cluster.g_conway_governance.vote.create_committee(
-                vote_name=f"{temp_template}_cc{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=clusterlib.Votes.YES,
-                cc_hot_vkey_file=m.hot_vkey_file,
+        votes_cc = []
+        votes_drep = []
+        for action_ix in range(actions_num):
+            prop_action = governance_utils.lookup_proposal(
+                gov_state=action_gov_state, action_txid=action_txid, action_ix=action_ix
             )
-            for i, m in enumerate(governance_data.cc_members, start=1)
-        ]
-        votes_drep = [
-            cluster.g_conway_governance.vote.create_drep(
-                vote_name=f"{temp_template}_drep{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=clusterlib.Votes.YES,
-                drep_vkey_file=d.key_pair.vkey_file,
+            assert prop_action, "Treasury withdrawals action not found"
+            assert (
+                prop_action["action"]["tag"]
+                == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
+            ), "Incorrect action tag"
+
+            # Vote & approve the actions
+
+            votes_cc.extend(
+                [
+                    cluster.g_conway_governance.vote.create_committee(
+                        vote_name=f"{temp_template}_{action_ix}_cc{i}",
+                        action_txid=action_txid,
+                        action_ix=action_ix,
+                        vote=clusterlib.Votes.YES,
+                        cc_hot_vkey_file=m.hot_vkey_file,
+                    )
+                    for i, m in enumerate(governance_data.cc_members, start=1)
+                ]
             )
-            for i, d in enumerate(governance_data.dreps_reg, start=1)
-        ]
+            votes_drep.extend(
+                [
+                    cluster.g_conway_governance.vote.create_drep(
+                        vote_name=f"{temp_template}_{action_ix}_drep{i}",
+                        action_txid=action_txid,
+                        action_ix=action_ix,
+                        vote=clusterlib.Votes.YES,
+                        drep_vkey_file=d.key_pair.vkey_file,
+                    )
+                    for i, d in enumerate(governance_data.dreps_reg, start=1)
+                ]
+            )
 
         tx_files_vote = clusterlib.TxFiles(
             vote_files=[
@@ -805,6 +829,11 @@ class TestEnactment:
                 *[r.hot_skey_file for r in governance_data.cc_members],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
             ],
+        )
+
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
@@ -828,24 +857,29 @@ class TestEnactment:
         _save_gov_state(
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
         )
-        prop_vote = governance_utils.lookup_proposal(
-            gov_state=vote_gov_state, action_txid=action_txid
-        )
-        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
-        assert prop_vote["dRepVotes"], "No DRep votes"
-        assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+
+        for action_ix in range(actions_num):
+            prop_vote = governance_utils.lookup_proposal(
+                gov_state=vote_gov_state, action_txid=action_txid, action_ix=action_ix
+            )
+            assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
+            assert prop_vote["dRepVotes"], "No DRep votes"
+            assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
         # Check ratification
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
         assert rat_gov_state["nextRatifyState"]["removedGovActions"], "No removed actions"
+        assert governance_utils.lookup_removed_actions(
+            gov_state=rat_gov_state, action_txid=action_txid
+        ), "Action not found in removed actions"
 
         # Check enactment
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
-            == transfer_amt
+            == transfer_amt * actions_num
         ), "Incorrect reward account balance"
 
         # Check action view
@@ -855,16 +889,18 @@ class TestEnactment:
         return_addr_vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
             stake_vkey_file=pool_user_ug.stake.vkey_file
         )
+
+        action_to_check = withdrawal_actions[0]
         governance_utils.check_action_view(
             cluster_obj=cluster,
             action_tag=governance_utils.ActionTags.TREASURY_WITHDRAWALS,
-            action_file=withdrawal_action.action_file,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
-            deposit_amt=action_deposit_amt,
+            action_file=action_to_check.action_file,
+            anchor_url=action_to_check.anchor_url,
+            anchor_data_hash=action_to_check.anchor_data_hash,
+            deposit_amt=action_to_check.deposit_amt,
             return_addr_vkey_hash=return_addr_vkey_hash,
             recv_addr_vkey_hash=recv_addr_vkey_hash,
-            transfer_amt=transfer_amt,
+            transfer_amt=action_to_check.transfer_amt,
         )
 
 
