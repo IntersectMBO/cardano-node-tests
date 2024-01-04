@@ -82,11 +82,11 @@ def pool_user_ug(
     return get_pool_user(cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key)
 
 
-class TestVoting:
-    """Tests for voting."""
+class TestEnactment:
+    """Tests for actions enactment."""
 
     @allure.link(helpers.get_vcs_link())
-    def test_enact_constitution(
+    def test_constitution(
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -475,7 +475,7 @@ class TestVoting:
         _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
-    def test_enact_pparam_update(
+    def test_pparam_update(
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -661,7 +661,7 @@ class TestVoting:
         _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
-    def test_enact_treasury_withdrawal(
+    def test_treasury_withdrawals(
         self,
         cluster_use_governance: governance_setup.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
@@ -851,6 +851,10 @@ class TestVoting:
             recv_addr_vkey_hash=recv_addr_vkey_hash,
             transfer_amt=transfer_amt,
         )
+
+
+class TestExpiration:
+    """Tests for actions that expire."""
 
     @allure.link(helpers.get_vcs_link())
     def test_vote_info(
