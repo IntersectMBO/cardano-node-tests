@@ -58,6 +58,31 @@ def get_pool_user(
         cluster_obj=cluster_obj,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
     )
+
+    # Register the stake address
+    stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
+    stake_addr_reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
+        addr_name=f"{test_id}_pool_user",
+        deposit_amt=stake_deposit_amt,
+        stake_vkey_file=pool_user.stake.vkey_file,
+    )
+    tx_files_action = clusterlib.TxFiles(
+        certificate_files=[stake_addr_reg_cert],
+        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+    )
+
+    clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{test_id}_pool_user",
+        src_address=pool_user.payment.address,
+        use_build_cmd=True,
+        tx_files=tx_files_action,
+    )
+
+    assert cluster_obj.g_query.get_stake_addr_info(
+        pool_user.stake.address
+    ).address, f"Stake address is not registered: {pool_user.stake.address}"
+
     return pool_user
 
 
@@ -1081,3 +1106,259 @@ class TestExpiration:
             deposit_amt=action_deposit_amt,
             return_addr_vkey_hash=return_addr_vkey_hash,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    def test_expire_treasury_withdrawals(
+        self,
+        cluster_use_governance: governance_setup.GovClusterT,
+        pool_user_ug: clusterlib.PoolUser,
+    ):
+        """Test expiration of treasury withdrawal.
+
+        Use `transaction build-raw` for building the transactions.
+        When available, use cardano-submit-api for proposal submission.
+
+        * submit a "treasury withdrawal" action
+        * vote in a way that the actions is not approved
+        * check that the action is not ratified
+        * check that the action expires and action deposit is returned
+        """
+        # pylint: disable=too-many-locals,too-many-statements
+        cluster, governance_data = cluster_use_governance
+        temp_template = common.get_test_id(cluster)
+
+        # Create stake address and registration certificate
+        stake_deposit_amt = cluster.g_query.get_address_deposit()
+
+        recv_stake_addr_rec = cluster.g_stake_address.gen_stake_addr_and_keys(
+            name=f"{temp_template}_receive"
+        )
+        recv_stake_addr_reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_receive",
+            deposit_amt=stake_deposit_amt,
+            stake_vkey_file=recv_stake_addr_rec.vkey_file,
+        )
+
+        # Create an action and register stake address
+
+        action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        transfer_amt = 5_000_000_000
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
+
+        withdrawal_actions = []
+        for a in range(5):
+            anchor_url = f"http://www.withdrawal-expire{a}.com"
+            anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+
+            withdrawal_actions.append(
+                cluster.g_conway_governance.action.create_treasury_withdrawal(
+                    action_name=f"{temp_template}_{a}",
+                    transfer_amt=transfer_amt + a,
+                    deposit_amt=action_deposit_amt,
+                    anchor_url=anchor_url,
+                    anchor_data_hash=anchor_data_hash,
+                    funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
+                    deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
+                )
+            )
+
+        tx_files_action = clusterlib.TxFiles(
+            certificate_files=[recv_stake_addr_reg_cert],
+            proposal_files=[w.action_file for w in withdrawal_actions],
+            signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
+        )
+
+        # Make sure we have enough time to submit the proposals in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+        action_prop_epoch = cluster.g_query.get_epoch()
+
+        actions_deposit_combined = action_deposit_amt * len(withdrawal_actions)
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_action",
+            src_address=pool_user_ug.payment.address,
+            tx_files=tx_files_action,
+            deposit=actions_deposit_combined + stake_deposit_amt,
+        )
+
+        assert cluster.g_query.get_stake_addr_info(
+            recv_stake_addr_rec.address
+        ).address, f"Stake address is not registered: {recv_stake_addr_rec.address}"
+
+        out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_ug.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+            - tx_output_action.fee
+            - actions_deposit_combined
+            - stake_deposit_amt
+        ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
+
+        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
+        assert prop_action, "Treasury withdrawals action not found"
+        assert (
+            prop_action["action"]["tag"] == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
+        ), "Incorrect action tag"
+
+        # Vote on the action
+
+        action_ix = prop_action["actionId"]["govActionIx"]
+
+        def _get_vote(idx: int) -> clusterlib.Votes:
+            if idx % 3 == 0:
+                return clusterlib.Votes.ABSTAIN
+            if idx % 2 == 0:
+                return clusterlib.Votes.NO
+            return clusterlib.Votes.YES
+
+        votes_cc = [
+            cluster.g_conway_governance.vote.create_committee(
+                vote_name=f"{temp_template}_cc{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote=clusterlib.Votes.YES,
+                cc_hot_vkey_file=m.hot_vkey_file,
+            )
+            for i, m in enumerate(governance_data.cc_members, start=1)
+        ]
+        votes_drep = [
+            cluster.g_conway_governance.vote.create_drep(
+                vote_name=f"{temp_template}_drep{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote=_get_vote(i),
+                drep_vkey_file=d.key_pair.vkey_file,
+            )
+            for i, d in enumerate(governance_data.dreps_reg, start=1)
+        ]
+
+        tx_files_vote = clusterlib.TxFiles(
+            vote_files=[
+                *[r.vote_file for r in votes_cc],
+                *[r.vote_file for r in votes_drep],
+            ],
+            signing_key_files=[
+                pool_user_ug.payment.skey_file,
+                *[r.hot_skey_file for r in governance_data.cc_members],
+                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+            ],
+        )
+
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        tx_output_vote = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_vote",
+            src_address=pool_user_ug.payment.address,
+            submit_method=submit_utils.SubmitMethods.API
+            if submit_utils.is_submit_api_available()
+            else submit_utils.SubmitMethods.CLI,
+            tx_files=tx_files_vote,
+        )
+
+        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_ug.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
+        ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
+
+        vote_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+        )
+        prop_vote = governance_utils.lookup_proposal(
+            gov_state=vote_gov_state, action_txid=action_txid
+        )
+        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
+        assert prop_vote["dRepVotes"], "No DRep votes"
+        assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+
+        # Check that the actions are not ratified
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        nonrat_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(
+            gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{_cur_epoch}"
+        )
+
+        # Check that the actions are not enacted
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        nonenacted_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(
+            gov_state=nonenacted_gov_state, name_template=f"{temp_template}_nonenact_{_cur_epoch}"
+        )
+        assert (
+            cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
+            == 0
+        ), "Incorrect reward account balance"
+
+        # Check that the actions expired
+        epochs_to_expiration = (
+            cluster.conway_genesis["govActionLifetime"]
+            + 1
+            + action_prop_epoch
+            - cluster.g_query.get_epoch()
+        )
+        _cur_epoch = cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
+        expire_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(
+            gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{_cur_epoch}"
+        )
+        assert (
+            cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
+            == 0
+        ), "Incorrect reward account balance"
+        expire_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
+        assert (
+            expire_return_account_balance == init_return_account_balance
+        ), f"Incorrect return account balance {expire_return_account_balance}"
+
+        # Check that the proposals were removed and the actions deposits were returned
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        rem_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{_cur_epoch}")
+        rem_deposit_returned = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
+
+        # Known ledger issue where only one expired action gets removed in one epoch
+        if rem_deposit_returned == init_return_account_balance + action_deposit_amt:
+            pytest.xfail("Only one out of many expired actions got removed")
+
+        assert (
+            rem_deposit_returned == init_return_account_balance + actions_deposit_combined
+        ), "Incorrect return account balance"
+
+        # Additional checks of governance state output
+        assert governance_utils.lookup_removed_actions(
+            gov_state=expire_gov_state, action_txid=action_txid
+        ), "Action not found in removed actions"
+        assert governance_utils.lookup_proposal(
+            gov_state=expire_gov_state, action_txid=action_txid
+        ), "Action no longer found in proposals"
+
+        assert not governance_utils.lookup_proposal(
+            gov_state=rem_gov_state, action_txid=action_txid
+        ), "Action was not removed from proposals"
