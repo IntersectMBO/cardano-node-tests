@@ -82,9 +82,9 @@ def get_prev_action(
 
 
 def lookup_proposal(
-    cluster_obj: clusterlib.ClusterLib, action_txid: str, action_ix: int = 0
+    gov_state: tp.Dict[str, tp.Any], action_txid: str, action_ix: int = 0
 ) -> tp.Dict[str, tp.Any]:
-    proposals = cluster_obj.g_conway_governance.query.gov_state()["proposals"]
+    proposals: tp.List[tp.Dict[str, tp.Any]] = gov_state["proposals"]
     prop: tp.Dict[str, tp.Any] = {}
     for _p in proposals:
         _p_action_id = _p["actionId"]
@@ -92,6 +92,20 @@ def lookup_proposal(
             prop = _p
             break
     return prop
+
+
+def lookup_removed_actions(
+    gov_state: tp.Dict[str, tp.Any], action_txid: str, action_ix: int = 0
+) -> tp.Dict[str, tp.Any]:
+    removed_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
+        "removedGovActions"
+    ]
+    raction: tp.Dict[str, tp.Any] = {}
+    for _r in removed_actions:
+        if _r["txId"] == action_txid and _r["govActionIx"] == action_ix:
+            raction = _r
+            break
+    return raction
 
 
 def get_drep_reg_record(

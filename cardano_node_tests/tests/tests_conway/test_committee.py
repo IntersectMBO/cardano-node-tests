@@ -253,6 +253,7 @@ class TestCommittee:
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-        prop = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=txid)
+        gov_state = cluster.g_conway_governance.query.gov_state()
+        prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
         assert prop, "Update committee action not found"
         assert prop["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"

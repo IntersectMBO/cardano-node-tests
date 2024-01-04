@@ -98,6 +98,7 @@ class TestVoting:
         * check that the action is ratified
         * check that the action is enacted
         """
+        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
@@ -156,7 +157,14 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
         assert prop_action, "Create constitution action not found"
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.NEW_CONSTITUTION.value
@@ -215,7 +223,14 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        vote_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+        )
+        prop_vote = governance_utils.lookup_proposal(
+            gov_state=vote_gov_state, action_txid=action_txid
+        )
         assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
@@ -226,18 +241,22 @@ class TestVoting:
             assert anchor["url"] == constitution_url, "Incorrect constitution anchor URL"
 
         # Check ratification
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
         next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
-        assert next_rat_state["removedGovActions"], "No removed actions"
+        assert governance_utils.lookup_removed_actions(
+            gov_state=rat_gov_state, action_txid=action_txid
+        ), "Action not found in removed actions"
 
         # Check enactment
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=enact_gov_state, name_template=f"{temp_template}_enact")
+        _save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+        )
         _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
@@ -255,7 +274,7 @@ class TestVoting:
         * check that the action is ratified
         * check that the action is enacted
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
@@ -325,7 +344,14 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
         assert prop_action, "Update committee action not found"
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.UPDATE_COMMITTEE.value
@@ -412,7 +438,14 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        vote_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+        )
+        prop_vote = governance_utils.lookup_proposal(
+            gov_state=vote_gov_state, action_txid=action_txid
+        )
         assert not prop_vote["committeeVotes"], "Unexpected committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
@@ -423,18 +456,22 @@ class TestVoting:
             assert cc_member_val == cc_member.epoch
 
         # Check ratification
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
         next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
-        assert next_rat_state["removedGovActions"], "No removed actions"
+        assert governance_utils.lookup_removed_actions(
+            gov_state=rat_gov_state, action_txid=action_txid
+        ), "Action not found in removed actions"
 
         # Check enactment
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=enact_gov_state, name_template=f"{temp_template}_enact")
+        _save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+        )
         _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
@@ -450,6 +487,7 @@ class TestVoting:
         * check that the action is ratified
         * check that the action is enacted
         """
+        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
@@ -519,7 +557,14 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
         assert prop_action, "Param update action not found"
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.PARAMETER_CHANGE.value
@@ -578,7 +623,14 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        vote_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+        )
+        prop_vote = governance_utils.lookup_proposal(
+            gov_state=vote_gov_state, action_txid=action_txid
+        )
         assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
@@ -590,18 +642,22 @@ class TestVoting:
             )
 
         # Check ratification
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat")
+        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
         next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
         assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
-        assert next_rat_state["removedGovActions"], "No removed actions"
+        assert governance_utils.lookup_removed_actions(
+            gov_state=rat_gov_state, action_txid=action_txid
+        ), "Action not found in removed actions"
 
         # Check enactment
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=enact_gov_state, name_template=f"{temp_template}_enact")
+        _save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+        )
         _check_state(enact_gov_state["enactState"])
 
     @allure.link(helpers.get_vcs_link())
@@ -617,6 +673,7 @@ class TestVoting:
         * check that the action is ratified
         * check that the action is enacted
         """
+        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
 
@@ -685,7 +742,14 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
         assert prop_action, "Treasury withdrawals action not found"
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
@@ -744,7 +808,14 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
-        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        vote_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+        )
+        prop_vote = governance_utils.lookup_proposal(
+            gov_state=vote_gov_state, action_txid=action_txid
+        )
         assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
@@ -840,7 +911,14 @@ class TestVoting:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        prop_action = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
         assert prop_action, "Info action not found"
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.INFO_ACTION.value
@@ -918,7 +996,14 @@ class TestVoting:
             == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
-        prop_vote = governance_utils.lookup_proposal(cluster_obj=cluster, action_txid=action_txid)
+        vote_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        _save_gov_state(
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+        )
+        prop_vote = governance_utils.lookup_proposal(
+            gov_state=vote_gov_state, action_txid=action_txid
+        )
         assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
