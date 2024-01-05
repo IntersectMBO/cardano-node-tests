@@ -205,6 +205,9 @@ def check_action_view(  # noqa: C901
         else:
             raise ValueError("No return stake key was specified")
 
+    prev_action_txid = getattr(action_data, "prev_action_txid", None)
+    prev_action_ix = getattr(action_data, "prev_action_ix", None)
+
     gov_action: tp.Dict[str, tp.Any]
 
     if isinstance(action_data, clusterlib.ActionTreasuryWithdrawal):
@@ -241,7 +244,9 @@ def check_action_view(  # noqa: C901
     elif isinstance(action_data, clusterlib.ActionConstitution):
         gov_action = {
             "contents": [
-                None,  # TODO: what is this field?
+                {"govActionIx": prev_action_ix, "txId": prev_action_txid}
+                if prev_action_txid
+                else None,
                 {
                     "anchor": {
                         "dataHash": action_data.constitution_hash,
@@ -270,7 +275,9 @@ def check_action_view(  # noqa: C901
 
         gov_action = {
             "contents": [
-                None,  # TODO: what is this field?
+                {"govActionIx": prev_action_ix, "txId": prev_action_txid}
+                if prev_action_txid
+                else None,
                 [],  # TODO: removed members?
                 *added_members,
                 float(action_data.quorum),
