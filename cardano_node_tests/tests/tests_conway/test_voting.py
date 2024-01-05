@@ -325,6 +325,9 @@ class TestEnactment:
         )
         _check_state(enact_gov_state["enactState"])
 
+        # Check action view
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=constitution_action)
+
     @allure.link(helpers.get_vcs_link())
     def test_add_new_committee_member(
         self,
@@ -551,6 +554,9 @@ class TestEnactment:
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
         _check_state(enact_gov_state["enactState"])
+
+        # Check action view
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=update_action)
 
     @allure.link(helpers.get_vcs_link())
     def test_pparam_update(

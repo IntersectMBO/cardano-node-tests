@@ -203,7 +203,9 @@ def check_action_view(  # noqa: C901
         elif action_data.deposit_return_stake_key_hash:
             return_addr_vkey_hash = action_data.deposit_return_stake_key_hash
         else:
-            raise ValueError("No return stake key hash was specified")
+            raise ValueError("No return stake key was specified")
+
+    gov_action: tp.Dict[str, tp.Any]
 
     if isinstance(action_data, clusterlib.ActionTreasuryWithdrawal):
         if not recv_addr_vkey_hash:
@@ -218,7 +220,7 @@ def check_action_view(  # noqa: C901
             elif action_data.funds_receiving_stake_key_hash:
                 recv_addr_vkey_hash = action_data.funds_receiving_stake_key_hash
             else:
-                raise ValueError("No funds receiving stake key hash was specified")
+                raise ValueError("No funds receiving stake key was specified")
 
         gov_action = {
             "contents": [
@@ -235,6 +237,45 @@ def check_action_view(  # noqa: C901
     elif isinstance(action_data, clusterlib.ActionInfo):
         gov_action = {
             "tag": ActionTags.INFO_ACTION.value,
+        }
+    elif isinstance(action_data, clusterlib.ActionConstitution):
+        gov_action = {
+            "contents": [
+                None,  # TODO: what is this field?
+                {
+                    "anchor": {
+                        "dataHash": action_data.constitution_hash,
+                        "url": action_data.constitution_url,
+                    }
+                },
+            ],
+            "tag": ActionTags.NEW_CONSTITUTION.value,
+        }
+    elif isinstance(action_data, clusterlib.ActionUpdateCommittee):
+        added_members = []
+        for _m in action_data.add_cc_members:
+            if _m.cold_vkey_file:
+                cvkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+                    vkey_file=_m.cold_vkey_file
+                )
+            elif _m.cold_vkey:
+                cvkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+                    vkey=_m.cold_vkey
+                )
+            elif _m.cold_vkey_hash:
+                cvkey_hash = _m.cold_vkey_hash
+            else:
+                raise ValueError("No cold key was specified")
+            added_members.append({f"keyHash-{cvkey_hash}": _m.epoch})
+
+        gov_action = {
+            "contents": [
+                None,  # TODO: what is this field?
+                [],  # TODO: removed members?
+                *added_members,
+                float(action_data.quorum),
+            ],
+            "tag": ActionTags.UPDATE_COMMITTEE.value,
         }
     else:
         raise NotImplementedError(f"Not implemented for action `{action_data}`")
