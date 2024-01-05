@@ -149,6 +149,7 @@ class TestEnactment:
         """Test enactment of change of constitution.
 
         * submit a "create constitution" action
+        * vote to disapprove the action
         * vote to approve the action
         * check that the action is ratified
         * check that the action is enacted
@@ -225,75 +226,81 @@ class TestEnactment:
             prop_action["action"]["tag"] == governance_utils.ActionTags.NEW_CONSTITUTION.value
         ), "Incorrect action tag"
 
-        # Vote & approve the action
-
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        votes_cc = [
-            cluster.g_conway_governance.vote.create_committee(
-                vote_name=f"{temp_template}_cc{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=clusterlib.Votes.YES,
-                cc_hot_vkey_file=m.hot_vkey_file,
+        def _cast_vote(approve: bool, vote_id: str) -> None:
+            votes_cc = [
+                cluster.g_conway_governance.vote.create_committee(
+                    vote_name=f"{temp_template}_{vote_id}_cc{i}",
+                    action_txid=action_txid,
+                    action_ix=action_ix,
+                    vote=clusterlib.Votes.YES if approve else clusterlib.Votes.NO,
+                    cc_hot_vkey_file=m.hot_vkey_file,
+                )
+                for i, m in enumerate(governance_data.cc_members, start=1)
+            ]
+            votes_drep = [
+                cluster.g_conway_governance.vote.create_drep(
+                    vote_name=f"{temp_template}_{vote_id}_drep{i}",
+                    action_txid=action_txid,
+                    action_ix=action_ix,
+                    vote=clusterlib.Votes.YES if approve else clusterlib.Votes.NO,
+                    drep_vkey_file=d.key_pair.vkey_file,
+                )
+                for i, d in enumerate(governance_data.dreps_reg, start=1)
+            ]
+
+            tx_files_vote = clusterlib.TxFiles(
+                vote_files=[
+                    *[r.vote_file for r in votes_cc],
+                    *[r.vote_file for r in votes_drep],
+                ],
+                signing_key_files=[
+                    pool_user_lg.payment.skey_file,
+                    *[r.hot_skey_file for r in governance_data.cc_members],
+                    *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+                ],
             )
-            for i, m in enumerate(governance_data.cc_members, start=1)
-        ]
-        votes_drep = [
-            cluster.g_conway_governance.vote.create_drep(
-                vote_name=f"{temp_template}_drep{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=clusterlib.Votes.YES,
-                drep_vkey_file=d.key_pair.vkey_file,
+
+            # Make sure we have enough time to submit the votes in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
             )
-            for i, d in enumerate(governance_data.dreps_reg, start=1)
-        ]
 
-        tx_files_vote = clusterlib.TxFiles(
-            vote_files=[
-                *[r.vote_file for r in votes_cc],
-                *[r.vote_file for r in votes_drep],
-            ],
-            signing_key_files=[
-                pool_user_lg.payment.skey_file,
-                *[r.hot_skey_file for r in governance_data.cc_members],
-                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
-            ],
-        )
+            tx_output_vote = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_vote_{vote_id}",
+                src_address=pool_user_lg.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files_vote,
+            )
 
-        # Make sure we have enough time to submit the votes in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
+            out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
+            assert (
+                clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
+                    0
+                ].amount
+                == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
+            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        tx_output_vote = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_vote",
-            src_address=pool_user_lg.payment.address,
-            use_build_cmd=True,
-            tx_files=tx_files_vote,
-        )
+            vote_gov_state = cluster.g_conway_governance.query.gov_state()
+            _cur_epoch = cluster.g_query.get_epoch()
+            _save_gov_state(
+                gov_state=vote_gov_state,
+                name_template=f"{temp_template}_vote_{vote_id}_{_cur_epoch}",
+            )
+            prop_vote = governance_utils.lookup_proposal(
+                gov_state=vote_gov_state, action_txid=action_txid
+            )
+            assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
+            assert prop_vote["dRepVotes"], "No DRep votes"
+            assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
-        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+        # Vote & disapprove the action
+        _cast_vote(approve=False, vote_id="no")
 
-        vote_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
-        _save_gov_state(
-            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
-        )
-        prop_vote = governance_utils.lookup_proposal(
-            gov_state=vote_gov_state, action_txid=action_txid
-        )
-        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
-        assert prop_vote["dRepVotes"], "No DRep votes"
-        assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+        # Vote & approve the action
+        _cast_vote(approve=True, vote_id="yes")
 
         def _check_state(state: dict):
             anchor = state["constitution"]["anchor"]
@@ -339,6 +346,7 @@ class TestEnactment:
         """Test adding new CC member.
 
         * create an "update committee" action
+        * vote to disapprove the action
         * vote to approve the action
         * check that the action is ratified
         * check that the action is enacted
@@ -426,55 +434,7 @@ class TestEnactment:
             prop_action["action"]["tag"] == governance_utils.ActionTags.UPDATE_COMMITTEE.value
         ), "Incorrect action tag"
 
-        # Vote & approve the action
-
         action_ix = prop_action["actionId"]["govActionIx"]
-
-        votes_drep = [
-            cluster.g_conway_governance.vote.create_drep(
-                vote_name=f"{temp_template}_drep{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=clusterlib.Votes.YES,
-                drep_vkey_file=d.key_pair.vkey_file,
-            )
-            for i, d in enumerate(governance_data.dreps_reg, start=1)
-        ]
-        votes_spo = [
-            cluster.g_conway_governance.vote.create_spo(
-                vote_name=f"{temp_template}_pool{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=clusterlib.Votes.YES,
-                cold_vkey_file=p.vkey_file,
-            )
-            for i, p in enumerate(governance_data.pools_cold, start=1)
-        ]
-
-        tx_files_vote = clusterlib.TxFiles(
-            vote_files=[
-                *[r.vote_file for r in votes_drep],
-                *[r.vote_file for r in votes_spo],
-            ],
-            signing_key_files=[
-                pool_user_lg.payment.skey_file,
-                *[r.skey_file for r in governance_data.pools_cold],
-                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
-            ],
-        )
-
-        # Make sure we have enough time to submit the votes in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
-
-        tx_output_vote = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_vote",
-            src_address=pool_user_lg.payment.address,
-            use_build_cmd=True,
-            tx_files=tx_files_vote,
-        )
 
         # Resign the CC member so it doesn't affect voting
         def _resign():
@@ -502,27 +462,82 @@ class TestEnactment:
                     tx_files=tx_files_res,
                 )
 
-        request.addfinalizer(_resign)
+        def _cast_vote(approve: bool, vote_id: str) -> None:
+            votes_drep = [
+                cluster.g_conway_governance.vote.create_drep(
+                    vote_name=f"{temp_template}_{vote_id}_drep{i}",
+                    action_txid=action_txid,
+                    action_ix=action_ix,
+                    vote=clusterlib.Votes.YES,
+                    drep_vkey_file=d.key_pair.vkey_file,
+                )
+                for i, d in enumerate(governance_data.dreps_reg, start=1)
+            ]
+            votes_spo = [
+                cluster.g_conway_governance.vote.create_spo(
+                    vote_name=f"{temp_template}_{vote_id}_pool{i}",
+                    action_txid=action_txid,
+                    action_ix=action_ix,
+                    vote=clusterlib.Votes.YES,
+                    cold_vkey_file=p.vkey_file,
+                )
+                for i, p in enumerate(governance_data.pools_cold, start=1)
+            ]
 
-        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+            tx_files_vote = clusterlib.TxFiles(
+                vote_files=[
+                    *[r.vote_file for r in votes_drep],
+                    *[r.vote_file for r in votes_spo],
+                ],
+                signing_key_files=[
+                    pool_user_lg.payment.skey_file,
+                    *[r.skey_file for r in governance_data.pools_cold],
+                    *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+                ],
+            )
 
-        vote_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
-        _save_gov_state(
-            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
-        )
-        prop_vote = governance_utils.lookup_proposal(
-            gov_state=vote_gov_state, action_txid=action_txid
-        )
-        assert not prop_vote["committeeVotes"], "Unexpected committee votes"
-        assert prop_vote["dRepVotes"], "No DRep votes"
-        assert prop_vote["stakePoolVotes"], "No stake pool votes"
+            # Make sure we have enough time to submit the votes in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            )
+
+            tx_output_vote = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_vote_{vote_id}",
+                src_address=pool_user_lg.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files_vote,
+            )
+
+            if approve:
+                request.addfinalizer(_resign)
+
+            out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
+            assert (
+                clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
+                    0
+                ].amount
+                == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
+            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+
+            vote_gov_state = cluster.g_conway_governance.query.gov_state()
+            _cur_epoch = cluster.g_query.get_epoch()
+            _save_gov_state(
+                gov_state=vote_gov_state,
+                name_template=f"{temp_template}_vote_{vote_id}_{_cur_epoch}",
+            )
+            prop_vote = governance_utils.lookup_proposal(
+                gov_state=vote_gov_state, action_txid=action_txid
+            )
+            assert not prop_vote["committeeVotes"], "Unexpected committee votes"
+            assert prop_vote["dRepVotes"], "No DRep votes"
+            assert prop_vote["stakePoolVotes"], "No stake pool votes"
+
+        # Vote & disapprove the action
+        _cast_vote(approve=False, vote_id="no")
+
+        # Vote & approve the action
+        _cast_vote(approve=True, vote_id="yes")
 
         def _check_state(state: dict):
             cc_member_val = state["committee"]["members"].get(f"keyHash-{cc_reg_record.key_hash}")
