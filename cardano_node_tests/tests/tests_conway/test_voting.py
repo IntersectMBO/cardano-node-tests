@@ -1154,24 +1154,30 @@ class TestExpiration:
         governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
 
     @allure.link(helpers.get_vcs_link())
-    def test_expire_treasury_withdrawals(
+    def test_expire_treasury_withdrawals(  # noqa: C901
         self,
         cluster_use_governance: governance_setup.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
     ):
-        """Test expiration of treasury withdrawal.
+        """Test expiration of treasury withdrawals.
 
         Use `transaction build-raw` for building the transactions.
         When available, use cardano-submit-api for proposal submission.
 
-        * submit a "treasury withdrawal" action
-        * vote in a way that the actions is not approved
-        * check that the action is not ratified
-        * check that the action expires and action deposit is returned
+        * submit multiple "treasury withdrawal" actions
+        * vote in a way that the actions are not approved
+
+          - first action is approved by CC and disapproved by DReps
+          - second action is disapproved by CC and approved by DReps
+          - third action is disapproved by both CC and DReps
+
+        * check that the actions are not ratified
+        * check that the actions expire and action deposits are returned
         """
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
+        actions_num = 3
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -1194,7 +1200,7 @@ class TestExpiration:
         ).reward_account_balance
 
         withdrawal_actions = []
-        for a in range(5):
+        for a in range(actions_num):
             anchor_url = f"http://www.withdrawal-expire{a}.com"
             anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
@@ -1253,17 +1259,6 @@ class TestExpiration:
         _save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
         )
-        prop_action = governance_utils.lookup_proposal(
-            gov_state=action_gov_state, action_txid=action_txid
-        )
-        assert prop_action, "Treasury withdrawals action not found"
-        assert (
-            prop_action["action"]["tag"] == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
-        ), "Incorrect action tag"
-
-        # Vote on the action
-
-        action_ix = prop_action["actionId"]["govActionIx"]
 
         def _get_vote(idx: int) -> clusterlib.Votes:
             if idx % 3 == 0:
@@ -1272,26 +1267,49 @@ class TestExpiration:
                 return clusterlib.Votes.NO
             return clusterlib.Votes.YES
 
-        votes_cc = [
-            cluster.g_conway_governance.vote.create_committee(
-                vote_name=f"{temp_template}_cc{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=clusterlib.Votes.YES,
-                cc_hot_vkey_file=m.hot_vkey_file,
+        votes_cc = []
+        votes_drep = []
+        for action_ix in range(actions_num):
+            prop_action = governance_utils.lookup_proposal(
+                gov_state=action_gov_state, action_txid=action_txid, action_ix=action_ix
             )
-            for i, m in enumerate(governance_data.cc_members, start=1)
-        ]
-        votes_drep = [
-            cluster.g_conway_governance.vote.create_drep(
-                vote_name=f"{temp_template}_drep{i}",
-                action_txid=action_txid,
-                action_ix=action_ix,
-                vote=_get_vote(i),
-                drep_vkey_file=d.key_pair.vkey_file,
+            assert prop_action, "Treasury withdrawals action not found"
+            assert (
+                prop_action["action"]["tag"]
+                == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
+            ), "Incorrect action tag"
+
+            approve_cc = False
+            approve_dreps = False
+            if action_ix == 0:
+                approve_cc = True
+            elif action_ix == 1:
+                approve_dreps = True
+
+            votes_cc.extend(
+                [
+                    cluster.g_conway_governance.vote.create_committee(
+                        vote_name=f"{temp_template}_{action_ix}_cc{i}",
+                        action_txid=action_txid,
+                        action_ix=action_ix,
+                        vote=clusterlib.Votes.YES if approve_cc else _get_vote(i),
+                        cc_hot_vkey_file=m.hot_vkey_file,
+                    )
+                    for i, m in enumerate(governance_data.cc_members, start=1)
+                ]
             )
-            for i, d in enumerate(governance_data.dreps_reg, start=1)
-        ]
+            votes_drep.extend(
+                [
+                    cluster.g_conway_governance.vote.create_drep(
+                        vote_name=f"{temp_template}_{action_ix}_drep{i}",
+                        action_txid=action_txid,
+                        action_ix=action_ix,
+                        vote=clusterlib.Votes.YES if approve_dreps else _get_vote(i),
+                        drep_vkey_file=d.key_pair.vkey_file,
+                    )
+                    for i, d in enumerate(governance_data.dreps_reg, start=1)
+                ]
+            )
 
         tx_files_vote = clusterlib.TxFiles(
             vote_files=[
@@ -1333,12 +1351,14 @@ class TestExpiration:
         _save_gov_state(
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
         )
-        prop_vote = governance_utils.lookup_proposal(
-            gov_state=vote_gov_state, action_txid=action_txid
-        )
-        assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
-        assert prop_vote["dRepVotes"], "No DRep votes"
-        assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+
+        for action_ix in range(actions_num):
+            prop_vote = governance_utils.lookup_proposal(
+                gov_state=vote_gov_state, action_txid=action_txid, action_ix=action_ix
+            )
+            assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
+            assert prop_vote["dRepVotes"], "No DRep votes"
+            assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
         # Check that the actions are not ratified
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -1346,6 +1366,10 @@ class TestExpiration:
         _save_gov_state(
             gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{_cur_epoch}"
         )
+        for action_ix in range(actions_num):
+            assert not governance_utils.lookup_removed_actions(
+                gov_state=nonrat_gov_state, action_txid=action_txid, action_ix=action_ix
+            )
 
         # Check that the actions are not enacted
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
