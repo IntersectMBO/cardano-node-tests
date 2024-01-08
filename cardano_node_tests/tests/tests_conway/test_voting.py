@@ -1283,7 +1283,7 @@ class TestExpiration:
             approve_dreps = False
             if action_ix == 0:
                 approve_cc = True
-            elif action_ix == 1:
+            elif action_ix == 1 and configuration.HAS_CC:
                 approve_dreps = True
 
             votes_cc.extend(
