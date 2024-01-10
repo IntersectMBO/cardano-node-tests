@@ -165,10 +165,24 @@ class TestEnactment:
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         anchor_url = "http://www.const-action.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data_hash = cluster.g_conway_governance.get_hash(text=anchor_url)
+
+        constitution_file = f"{temp_template}_constitution.txt"
+        constitution_text = (
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
+            "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi "
+            "ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit "
+            "in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
+            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia "
+            "deserunt mollit anim id est laborum. "
+            f"{clusterlib.get_rand_str(8)}"
+        )
+        with open(constitution_file, "w", encoding="utf-8") as out_fp:
+            out_fp.write(constitution_text)
 
         constitution_url = "http://www.const-new.com"
-        constitution_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        constitution_hash = cluster.g_conway_governance.get_hash(file_text=constitution_file)
 
         prev_action_rec = governance_utils.get_prev_action(
             cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.CONSTITUTION
