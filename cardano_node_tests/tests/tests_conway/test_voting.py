@@ -931,9 +931,6 @@ class TestEnactment:
 
         withdrawal_actions = []
         for a in range(actions_num):
-            anchor_url = f"http://www.withdrawal-action{a}.com"
-            anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-
             withdrawal_actions.append(
                 cluster.g_conway_governance.action.create_treasury_withdrawal(
                     action_name=f"{temp_template}_{a}",
