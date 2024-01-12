@@ -18,7 +18,7 @@ Chang HF User Stories Coverage
 |[![Status Badge][CLI09-badge]][CLI09-link]| **As** a DRep, **I want** to generate a DRep Id, **so that** Ada holder can use it to delegate their votes to me and my voting record can be tracked. |
 |[![Status Badge][CLI10-badge]][CLI10-link]| **As** a DRep, **I want** to generate a DRep registration certificate, **so that** I can submit it on a transaction and the Ada holders can delegate their votes to me. |
 |[![Status Badge][CLI11-badge]][CLI11-link]| **As** a DRep, **I want** to generate a DRep retirement (unregistration) certificate, **so that** I can submit it on a transaction and can get my DRep deposit back. |
-|[![Status Badge][CLI12-badge]][CLI12-link]| **As** a DRep, **I want** to generate the hash of my DRep metAdata, **so that** I can supply it when registering as DRep. |
+|[![Status Badge][CLI12-badge]][CLI12-link]| **As** a DRep, **I want** to generate the hash of my DRep metadata, **so that** I can supply it when registering as DRep. |
 |[![Status Badge][CLI13-badge]][CLI13-link]| **As** an Ada holder, **I want** to create a governance action that updates the constitution, **so that** it can be submitted to the chain and be voted by the governance bodies. |
 |[![Status Badge][CLI14-badge]][CLI14-link]| **As** an Ada holder, **I want** to create a governance action that updates the Constitutional Committee, **so that** it can be submitted to the chain and be voted by the governance bodies. |
 |[![Status Badge][CLI15-badge]][CLI15-link]| **As** an Ada holder, **I want** to create a governance action to withdraw funds from the treasury, **so that** it can be submitted to the chain and be voted by the governance bodies. Command: `cardano-cli conway governance action create-treasury-withdrawal`. |
@@ -41,7 +41,7 @@ Chang HF User Stories Coverage
 |[![Status Badge][CLI32-badge]][CLI32-link]| **As** a CC member, **I want** to query the Constitutional Committee state, **so that** I can find my expiration term and whether my hot key authorization certificate has been recorded on chain. |
 |[![Status Badge][CLI33-badge]][CLI33-link]| **As** an Ada holder, **I want** to query the DRep state, **so that** I can find detailed information about registered DReps. |
 |[![Status Badge][CLI34-badge]][CLI34-link]| **As** an Ada holder and DRep, **I want** to query the DRep stake distribution, **so that** I can find the weight (of the votes) of each DRep. |
-|[![Status Badge][CLI35-badge]][CLI35-link]| **As** an Ada holder, **I want** to query my stake address information so that I can learn to which pool and DRep Im delegating to and the value in lovelace of my deposits for delegating and for submitting governance actions. |
+|[![Status Badge][CLI35-badge]][CLI35-link]| **As** an Ada holder, **I want** to query my stake address information so that I can learn to which pool and DRep I'm delegating to and the value in lovelace of my deposits for delegating and for submitting governance actions. |
 |[![Status Badge][CLI36-badge]][CLI36-link]| Script as a DRep. |
 
 [success-badge]: https://img.shields.io/badge/success-green
