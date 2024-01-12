@@ -1,4 +1,5 @@
 """Tests for Conway governance DRep functionality."""
+# pylint: disable=expression-not-assigned
 import logging
 import pathlib as pl
 import typing as tp
@@ -15,6 +16,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -237,12 +239,22 @@ class TestDReps:
         """
         temp_template = common.get_test_id(cluster)
 
+        # Linked user stories
+        req_cli8 = requirements.Req(id="CLI08", group=requirements.GroupsKnown.CHANG_US)
+        req_cli9 = requirements.Req(id="CLI09", group=requirements.GroupsKnown.CHANG_US)
+        req_cli10 = requirements.Req(id="CLI10", group=requirements.GroupsKnown.CHANG_US)
+        req_cli11 = requirements.Req(id="CLI11", group=requirements.GroupsKnown.CHANG_US)
+        req_cli33 = requirements.Req(id="CLI33", group=requirements.GroupsKnown.CHANG_US)
+
         # Register DRep
 
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli8, req_cli9, req_cli10)]
         reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
+        [r.success() for r in (req_cli8, req_cli9, req_cli10)]
 
         tx_files_reg = clusterlib.TxFiles(
             certificate_files=[reg_drep.registration_cert],
@@ -267,18 +279,22 @@ class TestDReps:
             - reg_drep.deposit
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
+        req_cli33.start(url=helpers.get_vcs_link())
         reg_drep_state = cluster.g_conway_governance.query.drep_state(
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
+        req_cli33.success()
 
         # Retire DRep
 
+        req_cli11.start(url=helpers.get_vcs_link())
         ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
             cert_name=temp_template,
             deposit_amt=reg_drep.deposit,
             drep_vkey_file=reg_drep.key_pair.vkey_file,
         )
+        req_cli11.success()
 
         tx_files_ret = clusterlib.TxFiles(
             certificate_files=[ret_cert],
@@ -481,14 +497,21 @@ class TestDelegDReps:
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
 
+        # Linked user stories
+        req_cli27 = requirements.Req(id="CLI27", group=requirements.GroupsKnown.CHANG_US)
+        req_cli29 = requirements.Req(id="CLI29", group=requirements.GroupsKnown.CHANG_US)
+
         # Create stake address registration cert
+        req_cli27.start(url=helpers.get_vcs_link())
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=deposit_amt,
             stake_vkey_file=pool_user.stake.vkey_file,
         )
+        req_cli27.success()
 
         # Create vote delegation cert
+        req_cli29.start(url=helpers.get_vcs_link())
         deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=pool_user.stake.vkey_file,
@@ -496,6 +519,7 @@ class TestDelegDReps:
             always_abstain=drep == "always_abstain",
             always_no_confidence=drep == "always_no_confidence",
         )
+        req_cli29.success()
 
         tx_files = clusterlib.TxFiles(
             certificate_files=[reg_cert, deleg_cert],
@@ -607,6 +631,9 @@ class TestDelegDReps:
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
 
+        # Linked user stories
+        req_cli30 = requirements.Req(id="CLI30", group=requirements.GroupsKnown.CHANG_US)
+
         # Create stake address registration cert
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -615,6 +642,7 @@ class TestDelegDReps:
         )
 
         # Create stake and vote delegation cert
+        req_cli30.start(url=helpers.get_vcs_link())
         deleg_cert = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=pool_user_wp.stake.vkey_file,
@@ -623,6 +651,7 @@ class TestDelegDReps:
             always_abstain=drep == "always_abstain",
             always_no_confidence=drep == "always_no_confidence",
         )
+        req_cli30.success()
 
         tx_files = clusterlib.TxFiles(
             certificate_files=[reg_cert, deleg_cert],

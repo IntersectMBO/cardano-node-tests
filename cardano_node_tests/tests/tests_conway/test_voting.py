@@ -17,6 +17,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -160,6 +161,12 @@ class TestEnactment:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
+        # Linked user stories
+        req_cli1 = requirements.Req(id="CLI01", group=requirements.GroupsKnown.CHANG_US)
+        req_cli2 = requirements.Req(id="CLI02", group=requirements.GroupsKnown.CHANG_US)
+        req_cli13 = requirements.Req(id="CLI13", group=requirements.GroupsKnown.CHANG_US)
+        req_cli20 = requirements.Req(id="CLI20", group=requirements.GroupsKnown.CHANG_US)
+
         # Create an action
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
@@ -182,12 +189,15 @@ class TestEnactment:
             out_fp.write(constitution_text)
 
         constitution_url = "http://www.const-new.com"
+        req_cli2.start(url=helpers.get_vcs_link())
         constitution_hash = cluster.g_conway_governance.get_hash(file_text=constitution_file)
+        req_cli2.success()
 
         prev_action_rec = governance_utils.get_prev_action(
             cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.CONSTITUTION
         )
 
+        req_cli13.start(url=helpers.get_vcs_link())
         constitution_action = cluster.g_conway_governance.action.create_constitution(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -199,6 +209,7 @@ class TestEnactment:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
+        req_cli13.success()
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[constitution_action.action_file],
@@ -360,7 +371,9 @@ class TestEnactment:
 
         assert rem_action, "Action not found in removed actions"
         next_rat_state = rat_gov_state["nextRatifyState"]
+        req_cli1.start(url=helpers.get_vcs_link())
         _check_state(next_rat_state["nextEnactState"])
+        req_cli1.success()
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check enactment
@@ -379,7 +392,9 @@ class TestEnactment:
                 raise
 
         # Check action view
+        req_cli20.start(url=helpers.get_vcs_link())
         governance_utils.check_action_view(cluster_obj=cluster, action_data=constitution_action)
+        req_cli20.success()
 
     @allure.link(helpers.get_vcs_link())
     def test_add_new_committee_member(
@@ -403,6 +418,9 @@ class TestEnactment:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
+        # Linked user stories
+        req_cli14 = requirements.Req(id="CLI14", group=requirements.GroupsKnown.CHANG_US)
+
         # Create an action
 
         cc_reg_record = governance_utils.get_cc_member_reg_record(
@@ -424,6 +442,7 @@ class TestEnactment:
             cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.COMMITTEE
         )
 
+        req_cli14.start(url=helpers.get_vcs_link())
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -435,6 +454,7 @@ class TestEnactment:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
+        req_cli14.success()
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[cc_reg_record.registration_cert],
@@ -670,6 +690,9 @@ class TestEnactment:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
+        # Linked user stories
+        req_cli17 = requirements.Req(id="CLI17", group=requirements.GroupsKnown.CHANG_US)
+
         # Create an action
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
@@ -696,6 +719,7 @@ class TestEnactment:
         ]
         update_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
 
+        req_cli17.start(url=helpers.get_vcs_link())
         pparams_action = cluster.g_conway_governance.action.create_pparams_update(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -706,6 +730,7 @@ class TestEnactment:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
+        req_cli17.success()
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[pparams_action.action_file],
@@ -909,6 +934,9 @@ class TestEnactment:
         temp_template = common.get_test_id(cluster)
         actions_num = 3
 
+        # Linked user stories
+        req_cli15 = requirements.Req(id="CLI15", group=requirements.GroupsKnown.CHANG_US)
+
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
 
@@ -929,6 +957,7 @@ class TestEnactment:
         anchor_url = "http://www.withdrawal-action.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
+        req_cli15.start(url=helpers.get_vcs_link())
         withdrawal_actions = []
         for a in range(actions_num):
             withdrawal_actions.append(
@@ -942,6 +971,7 @@ class TestEnactment:
                     deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
                 )
             )
+        req_cli15.success()
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
@@ -1153,9 +1183,17 @@ class TestExpiration:
         * vote on the the action
         * check the votes
         """
+        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
         action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
+
+        # Linked user stories
+        req_cli16 = requirements.Req(id="CLI16", group=requirements.GroupsKnown.CHANG_US)
+        req_cli21 = requirements.Req(id="CLI21", group=requirements.GroupsKnown.CHANG_US)
+        req_cli23 = requirements.Req(id="CLI23", group=requirements.GroupsKnown.CHANG_US)
+        req_cli24 = requirements.Req(id="CLI24", group=requirements.GroupsKnown.CHANG_US)
+        req_cli31 = requirements.Req(id="CLI31", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -1163,6 +1201,7 @@ class TestExpiration:
         anchor_url = f"http://www.info-action-{rand_str}.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
+        req_cli16.start(url=helpers.get_vcs_link())
         info_action = cluster.g_conway_governance.action.create_info(
             action_name=temp_template,
             deposit_amt=action_deposit_amt,
@@ -1170,6 +1209,7 @@ class TestExpiration:
             anchor_data_hash=anchor_data_hash,
             deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
         )
+        req_cli16.success()
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[info_action.action_file],
@@ -1181,6 +1221,7 @@ class TestExpiration:
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
+        req_cli23.start(url=helpers.get_vcs_link())
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
@@ -1188,6 +1229,7 @@ class TestExpiration:
             use_build_cmd=True,
             tx_files=tx_files_action,
         )
+        req_cli23.success()
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
@@ -1200,6 +1242,7 @@ class TestExpiration:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        req_cli31.start(url=helpers.get_vcs_link())
         action_gov_state = cluster.g_conway_governance.query.gov_state()
         _cur_epoch = cluster.g_query.get_epoch()
         _save_gov_state(
@@ -1208,6 +1251,7 @@ class TestExpiration:
         prop_action = governance_utils.lookup_proposal(
             gov_state=action_gov_state, action_txid=action_txid
         )
+        req_cli31.success()
         assert prop_action, "Info action not found"
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.INFO_ACTION.value
@@ -1224,6 +1268,7 @@ class TestExpiration:
                 return clusterlib.Votes.YES
             return clusterlib.Votes.NO
 
+        req_cli21.start(url=helpers.get_vcs_link())
         votes_cc = [
             cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
@@ -1254,6 +1299,7 @@ class TestExpiration:
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
         ]
+        req_cli21.success()
 
         tx_files_vote = clusterlib.TxFiles(
             vote_files=[
@@ -1274,6 +1320,7 @@ class TestExpiration:
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
+        req_cli24.start(url=helpers.get_vcs_link())
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_vote",
@@ -1281,6 +1328,7 @@ class TestExpiration:
             use_build_cmd=True,
             tx_files=tx_files_vote,
         )
+        req_cli24.success()
 
         out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
         assert (
@@ -1330,6 +1378,10 @@ class TestExpiration:
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
         actions_num = 3
+
+        # Linked user stories
+        req_cli25 = requirements.Req(id="CLI25", group=requirements.GroupsKnown.CHANG_US)
+        req_cli26 = requirements.Req(id="CLI26", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -1382,6 +1434,7 @@ class TestExpiration:
 
         actions_deposit_combined = action_deposit_amt * len(withdrawal_actions)
 
+        req_cli25.start(url=helpers.get_vcs_link())
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
@@ -1389,6 +1442,7 @@ class TestExpiration:
             tx_files=tx_files_action,
             deposit=actions_deposit_combined + stake_deposit_amt,
         )
+        req_cli25.success()
 
         assert cluster.g_query.get_stake_addr_info(
             recv_stake_addr_rec.address
@@ -1480,6 +1534,7 @@ class TestExpiration:
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
+        req_cli26.start(url=helpers.get_vcs_link())
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_vote",
@@ -1489,6 +1544,7 @@ class TestExpiration:
             else submit_utils.SubmitMethods.CLI,
             tx_files=tx_files_vote,
         )
+        req_cli26.success()
 
         out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
         assert (
