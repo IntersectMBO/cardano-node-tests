@@ -1,4 +1,5 @@
 """Tests for Conway governance Constitutional Committee functionality."""
+# pylint: disable=expression-not-assigned
 import logging
 
 import allure
@@ -11,6 +12,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -93,19 +95,30 @@ class TestCommittee:
     ):
         """Test Constitutional Committee Member registration and resignation.
 
-        * register CC Member
+        * register a potential CC Member
         * check that CC Member was registered
         * resign from CC Member position
         * check that CC Member resigned
         """
         temp_template = common.get_test_id(cluster)
 
-        # Register CC Member
+        # Linked user stories
+        req_cli3 = requirements.Req(id="CLI03", group=requirements.GroupsKnown.CHANG_US)
+        req_cli4 = requirements.Req(id="CLI04", group=requirements.GroupsKnown.CHANG_US)
+        req_cli5 = requirements.Req(id="CLI05", group=requirements.GroupsKnown.CHANG_US)
+        req_cli6 = requirements.Req(id="CLI06", group=requirements.GroupsKnown.CHANG_US)
+        req_cli7 = requirements.Req(id="CLI07", group=requirements.GroupsKnown.CHANG_US)
+        req_cli32 = requirements.Req(id="CLI32", group=requirements.GroupsKnown.CHANG_US)
 
+        # Register a potential CC Member
+
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli3, req_cli4, req_cli5, req_cli6)]
         reg_cc = governance_utils.get_cc_member_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
+        [r.success() for r in (req_cli3, req_cli4, req_cli5, req_cli6)]
 
         tx_files_reg = clusterlib.TxFiles(
             certificate_files=[reg_cc.registration_cert],
@@ -127,21 +140,25 @@ class TestCommittee:
             == clusterlib.calculate_utxos_balance(tx_output_reg.txins) - tx_output_reg.fee
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
+        req_cli32.start(url=helpers.get_vcs_link())
         reg_committee_state = cluster.g_conway_governance.query.committee_state()
         member_key = f"keyHash-{reg_cc.key_hash}"
         assert (
             reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
             == "MemberAuthorized"
         ), "CC Member was not registered"
+        req_cli32.success()
 
         # Resignation of CC Member
 
+        req_cli7.start(url=helpers.get_vcs_link())
         res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
             key_name=temp_template,
             cold_vkey_file=reg_cc.cold_key_pair.vkey_file,
             resignation_metadata_url="http://www.cc-resign.com",
             resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
         )
+        req_cli7.success()
 
         tx_files_res = clusterlib.TxFiles(
             certificate_files=[res_cert],
