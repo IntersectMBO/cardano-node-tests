@@ -516,11 +516,13 @@ class TestDelegDReps:
         """
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
+        drep_id = custom_drep.drep_id if drep == "custom" else drep
 
         # Linked user stories
         req_cli27 = requirements.Req(id="CLI27", group=requirements.GroupsKnown.CHANG_US)
         req_cli28 = requirements.Req(id="CLI28", group=requirements.GroupsKnown.CHANG_US)
         req_cli29 = requirements.Req(id="CLI29", group=requirements.GroupsKnown.CHANG_US)
+        req_cli35 = requirements.Req(id="CLI35", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address registration cert
         req_cli27.start(url=helpers.get_vcs_link())
@@ -606,9 +608,15 @@ class TestDelegDReps:
 
         request.addfinalizer(_deregister)
 
-        assert cluster.g_query.get_stake_addr_info(
-            pool_user.stake.address
-        ).address, f"Stake address is NOT registered: {pool_user.stake.address}"
+        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+        assert (
+            stake_addr_info.address
+        ), f"Stake address is NOT registered: {pool_user.stake.address}"
+        req_cli35.start(url=helpers.get_vcs_link())
+        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+            drep_id=drep_id
+        ), "Votes are NOT delegated to the correct DRep"
+        req_cli35.success()
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
@@ -628,7 +636,6 @@ class TestDelegDReps:
         ):
             cluster.wait_for_new_epoch(padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
-            drep_id = custom_drep.drep_id if drep == "custom" else drep
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user.stake.vkey_file
             )
@@ -668,6 +675,7 @@ class TestDelegDReps:
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
+        drep_id = custom_drep_wp.drep_id if drep == "custom" else drep
 
         # Linked user stories
         req_cli30 = requirements.Req(id="CLI30", group=requirements.GroupsKnown.CHANG_US)
@@ -714,6 +722,10 @@ class TestDelegDReps:
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
             with helpers.change_cwd(testfile_temp_dir):
+                stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_wp.stake.address)
+                if not stake_addr_info:
+                    return
+
                 # Deregister stake address
                 stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
                     addr_name=f"{temp_template}_addr0",
@@ -727,12 +739,23 @@ class TestDelegDReps:
                         pool_user_wp.stake.skey_file,
                     ],
                 )
+                withdrawals = (
+                    [
+                        clusterlib.TxOut(
+                            address=pool_user_wp.stake.address,
+                            amount=stake_addr_info.reward_account_balance,
+                        )
+                    ]
+                    if stake_addr_info.reward_account_balance
+                    else []
+                )
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_dereg",
                     src_address=payment_addr_wp.address,
                     use_build_cmd=use_build_cmd,
                     tx_files=tx_files_dereg,
+                    withdrawals=withdrawals,
                     deposit=-deposit_amt,
                 )
 
@@ -742,6 +765,9 @@ class TestDelegDReps:
         stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_wp.stake.address)
         assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
         assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
+        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+            drep_id=drep_id
+        ), "Votes are NOT delegated to the correct DRep"
 
         # Check the expected balance
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
@@ -762,7 +788,6 @@ class TestDelegDReps:
         ):
             cluster.wait_for_new_epoch(padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
-            drep_id = custom_drep_wp.drep_id if drep == "custom" else drep
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user_wp.stake.vkey_file
             )
