@@ -244,15 +244,27 @@ class TestDReps:
         req_cli9 = requirements.Req(id="CLI09", group=requirements.GroupsKnown.CHANG_US)
         req_cli10 = requirements.Req(id="CLI10", group=requirements.GroupsKnown.CHANG_US)
         req_cli11 = requirements.Req(id="CLI11", group=requirements.GroupsKnown.CHANG_US)
+        req_cli12 = requirements.Req(id="CLI12", group=requirements.GroupsKnown.CHANG_US)
         req_cli33 = requirements.Req(id="CLI33", group=requirements.GroupsKnown.CHANG_US)
 
         # Register DRep
+
+        drep_metadata_url = "https://www.the-drep.com"
+        drep_metadata_file = f"{temp_template}_drep_metadata.json"
+        drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
+        helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
+        req_cli12.start(url=helpers.get_vcs_link())
+        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+            drep_metadata_file=drep_metadata_file
+        )
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (req_cli8, req_cli9, req_cli10)]
         reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
+            drep_metadata_url=drep_metadata_url,
+            drep_metadata_hash=drep_metadata_hash,
         )
         [r.success() for r in (req_cli8, req_cli9, req_cli10)]
 
@@ -285,6 +297,14 @@ class TestDReps:
         )
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
         req_cli33.success()
+
+        metadata_anchor = reg_drep_state[0][1]["anchor"]
+        assert (
+            metadata_anchor["dataHash"]
+            == "592e53f74765c8c6c97dfda2fd6038236ffc7ad55800592118d9e36ad1c8140d"
+        ), "Unexpected metadata hash"
+        assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
+        req_cli12.success()
 
         # Retire DRep
 
