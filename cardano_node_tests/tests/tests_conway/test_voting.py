@@ -182,8 +182,7 @@ class TestEnactment:
             "ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit "
             "in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
             "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia "
-            "deserunt mollit anim id est laborum. "
-            f"{clusterlib.get_rand_str(8)}"
+            "deserunt mollit anim id est laborum."
         )
         with open(constitution_file, "w", encoding="utf-8") as out_fp:
             out_fp.write(constitution_text)
@@ -354,7 +353,11 @@ class TestEnactment:
 
         def _check_state(state: dict):
             anchor = state["constitution"]["anchor"]
-            assert anchor["dataHash"] == constitution_hash, "Incorrect constitution anchor hash"
+            assert (
+                anchor["dataHash"]
+                == constitution_hash
+                == "d6d9034f61e2f7ada6e58c252e15684c8df7f0b197a95d80f42ca0a3685de26e"
+            ), "Incorrect constitution anchor hash"
             assert anchor["url"] == constitution_url, "Incorrect constitution anchor URL"
 
         # Check ratification
