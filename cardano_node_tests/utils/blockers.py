@@ -17,7 +17,7 @@ if os.environ.get("GITHUB_TOKEN"):
 
 
 class GH:
-    """Methods for working with cardano cluster using `cardano-cli`..
+    """Methods for working with GitHub issues.
 
     Attributes:
         issue: A GitHub issue number.
