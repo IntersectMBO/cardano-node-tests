@@ -60,17 +60,24 @@ class ActionTags(enum.Enum):
     INFO_ACTION = "InfoAction"
 
 
+def get_drep_cred_name(drep_id: str) -> str:
+    cred_name = f"keyHash-{drep_id}"
+    if drep_id == "always_abstain":
+        cred_name = "alwaysAbstain"
+    elif drep_id == "always_no_confidence":
+        cred_name = "alwaysNoConfidence"
+
+    return cred_name
+
+
 def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
     drep_records = deleg_state["dstate"]["unified"]["credentials"]
 
     stake_addr_key = f"keyHash-{stake_addr_hash}"
     stake_addr_val = drep_records.get(stake_addr_key) or {}
 
-    expected_drep = f"drep-keyHash-{drep_id}"
-    if drep_id == "always_abstain":
-        expected_drep = "drep-alwaysAbstain"
-    elif drep_id == "always_no_confidence":
-        expected_drep = "drep-alwaysNoConfidence"
+    cred_name = get_drep_cred_name(drep_id=drep_id)
+    expected_drep = f"drep-{cred_name}"
 
     assert stake_addr_val.get("drep") == expected_drep
 
