@@ -301,6 +301,7 @@ class TestDReps:
         metadata_anchor = reg_drep_state[0][1]["anchor"]
         assert (
             metadata_anchor["dataHash"]
+            == drep_metadata_hash
             == "592e53f74765c8c6c97dfda2fd6038236ffc7ad55800592118d9e36ad1c8140d"
         ), "Unexpected metadata hash"
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
