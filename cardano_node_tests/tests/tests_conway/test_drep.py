@@ -519,6 +519,7 @@ class TestDelegDReps:
 
         # Linked user stories
         req_cli27 = requirements.Req(id="CLI27", group=requirements.GroupsKnown.CHANG_US)
+        req_cli28 = requirements.Req(id="CLI28", group=requirements.GroupsKnown.CHANG_US)
         req_cli29 = requirements.Req(id="CLI29", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address registration cert
@@ -564,7 +565,12 @@ class TestDelegDReps:
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
             with helpers.change_cwd(testfile_temp_dir):
+                stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+                if not stake_addr_info:
+                    return
+
                 # Deregister stake address
+                req_cli28.start(url=helpers.get_vcs_link())
                 stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
                     addr_name=f"{temp_template}_addr0",
                     deposit_amt=deposit_amt,
@@ -577,14 +583,26 @@ class TestDelegDReps:
                         pool_user.stake.skey_file,
                     ],
                 )
+                withdrawals = (
+                    [
+                        clusterlib.TxOut(
+                            address=pool_user.stake.address,
+                            amount=stake_addr_info.reward_account_balance,
+                        )
+                    ]
+                    if stake_addr_info.reward_account_balance
+                    else []
+                )
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_dereg",
                     src_address=payment_addr.address,
                     use_build_cmd=use_build_cmd,
                     tx_files=tx_files_dereg,
+                    withdrawals=withdrawals,
                     deposit=-deposit_amt,
                 )
+                req_cli28.success()
 
         request.addfinalizer(_deregister)
 
