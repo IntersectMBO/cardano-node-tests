@@ -954,12 +954,12 @@ class TestEnactment:
         action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
         transfer_amt = 10_000_000_000
 
-        anchor_url = "http://www.withdrawal-action.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         req_cli15.start(url=helpers.get_vcs_link())
         withdrawal_actions = []
         for a in range(actions_num):
+            anchor_url = f"http://www.withdrawal-action{a}.com"
             withdrawal_actions.append(
                 cluster.g_conway_governance.action.create_treasury_withdrawal(
                     action_name=f"{temp_template}_{a}",
@@ -1403,11 +1403,11 @@ class TestExpiration:
             pool_user_ug.stake.address
         ).reward_account_balance
 
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+
         withdrawal_actions = []
         for a in range(actions_num):
             anchor_url = f"http://www.withdrawal-expire{a}.com"
-            anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-
             withdrawal_actions.append(
                 cluster.g_conway_governance.action.create_treasury_withdrawal(
                     action_name=f"{temp_template}_{a}",
