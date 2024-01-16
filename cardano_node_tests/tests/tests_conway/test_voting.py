@@ -1174,6 +1174,8 @@ class TestEnactment:
         governance_utils.check_action_view(cluster_obj=cluster, action_data=withdrawal_actions[0])
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
+    @pytest.mark.long
     def test_no_confidence(
         self,
         cluster_manager: cluster_management.ClusterManager,
