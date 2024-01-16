@@ -239,3 +239,194 @@ def get_default_governance(
                 pickle.dump(governance_data, out_data)
 
     return governance_data
+
+
+def reinstate_committee(
+    cluster_obj: clusterlib.ClusterLib,
+    governance_data: DefaultGovernance,
+    name_template: str,
+    pool_user: clusterlib.PoolUser,
+) -> None:
+    """Reinstate the original CC members."""
+    # pylint: disable=too-many-statements
+    # Create an "update committee" action
+
+    deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
+    anchor_url = "http://www.cc-reinstate.com"
+    anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+    prev_action_rec = governance_utils.get_prev_action(
+        action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+        gov_state=cluster_obj.g_conway_governance.query.gov_state(),
+    )
+
+    update_action = cluster_obj.g_conway_governance.action.update_committee(
+        action_name=name_template,
+        deposit_amt=deposit_amt,
+        anchor_url=anchor_url,
+        anchor_data_hash=anchor_data_hash,
+        quorum=str(cluster_obj.conway_genesis["committee"]["quorum"]),
+        add_cc_members=governance_data.cc_members,
+        prev_action_txid=prev_action_rec.txid,
+        prev_action_ix=prev_action_rec.ix,
+        deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
+    )
+
+    tx_files_action = clusterlib.TxFiles(
+        proposal_files=[update_action.action_file],
+        signing_key_files=[pool_user.payment.skey_file],
+    )
+
+    # Make sure we have enough time to submit the proposal in one epoch
+    clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=1, stop=-40)
+
+    tx_output_action = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_action",
+        src_address=pool_user.payment.address,
+        use_build_cmd=True,
+        tx_files=tx_files_action,
+    )
+
+    out_utxos_action = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_action)
+    assert (
+        clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[0].amount
+        == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+        - tx_output_action.fee
+        - deposit_amt
+    ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+    action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+    action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    _cur_epoch = cluster_obj.g_query.get_epoch()
+    prop_action = governance_utils.lookup_proposal(
+        gov_state=action_gov_state, action_txid=action_txid
+    )
+    assert prop_action, "Update committee action not found"
+    assert (
+        prop_action["action"]["tag"] == governance_utils.ActionTags.UPDATE_COMMITTEE.value
+    ), "Incorrect action tag"
+
+    action_ix = prop_action["actionId"]["govActionIx"]
+
+    def _cast_vote() -> None:
+        votes_drep = [
+            cluster_obj.g_conway_governance.vote.create_drep(
+                vote_name=f"{name_template}_drep{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote=clusterlib.Votes.YES,
+                drep_vkey_file=d.key_pair.vkey_file,
+            )
+            for i, d in enumerate(governance_data.dreps_reg, start=1)
+        ]
+        votes_spo = [
+            cluster_obj.g_conway_governance.vote.create_spo(
+                vote_name=f"{name_template}_pool{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote=clusterlib.Votes.YES,
+                cold_vkey_file=p.vkey_file,
+            )
+            for i, p in enumerate(governance_data.pools_cold, start=1)
+        ]
+
+        tx_files_vote = clusterlib.TxFiles(
+            vote_files=[
+                *[r.vote_file for r in votes_drep],
+                *[r.vote_file for r in votes_spo],
+            ],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                *[r.skey_file for r in governance_data.pools_cold],
+                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+            ],
+        )
+
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=1, stop=-40)
+
+        tx_output_vote = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster_obj,
+            name_template=f"{name_template}_vote",
+            src_address=pool_user.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_vote,
+        )
+
+        out_utxos_vote = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_vote)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user.payment.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
+        ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+        vote_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster_obj.g_query.get_epoch()
+        prop_vote = governance_utils.lookup_proposal(
+            gov_state=vote_gov_state, action_txid=action_txid
+        )
+        assert not prop_vote["committeeVotes"], "Unexpected committee votes"
+        assert prop_vote["dRepVotes"], "No DRep votes"
+        assert prop_vote["stakePoolVotes"], "No stake pool votes"
+
+    # Vote & approve the action
+    _cast_vote()
+
+    def _check_state(state: dict) -> None:
+        cc_member = governance_data.cc_members[0]
+        cc_member_val = state["committee"]["members"].get(f"keyHash-{cc_member.cold_vkey_hash}")
+        assert cc_member_val, "New committee member not found"
+        assert cc_member_val == cc_member.epoch
+
+    # Check ratification
+    _cur_epoch = cluster_obj.wait_for_new_epoch(padding_seconds=5)
+    rat_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    rem_action = governance_utils.lookup_removed_actions(
+        gov_state=rat_gov_state, action_txid=action_txid
+    )
+    assert rem_action, "Action not found in removed actions"
+
+    next_rat_state = rat_gov_state["nextRatifyState"]
+    _check_state(next_rat_state["nextEnactState"])
+    assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
+
+    # Check enactment
+    _cur_epoch = cluster_obj.wait_for_new_epoch(padding_seconds=5)
+    enact_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    _check_state(enact_gov_state["enactState"])
+
+    # Authorize CC members
+
+    gov_data_dir = cluster_nodes.get_cluster_env().state_dir / GOV_DATA_DIR
+    hot_auth_certs = list(gov_data_dir.glob("cc_member*_committee_hot_auth.cert"))
+    assert hot_auth_certs, "No certs found"
+
+    tx_files_auth = clusterlib.TxFiles(
+        certificate_files=hot_auth_certs,
+        signing_key_files=[
+            pool_user.payment.skey_file,
+            *[r.cold_skey_file for r in governance_data.cc_members],
+        ],
+    )
+
+    tx_output_auth = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_cc_auth",
+        src_address=pool_user.payment.address,
+        use_build_cmd=True,
+        tx_files=tx_files_auth,
+    )
+
+    reg_out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_auth)
+    assert (
+        clusterlib.filter_utxos(utxos=reg_out_utxos, address=pool_user.payment.address)[0].amount
+        == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
+    ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+    reg_committee_state = cluster_obj.g_conway_governance.query.committee_state()
+    member_key = f"keyHash-{governance_data.cc_members[0].cold_vkey_hash}"
+    assert (
+        reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
+        == "MemberAuthorized"
+    ), "CC Member was not authorized"
