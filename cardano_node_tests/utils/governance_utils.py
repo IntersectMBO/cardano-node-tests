@@ -58,6 +58,7 @@ class ActionTags(enum.Enum):
     PARAMETER_CHANGE = "ParameterChange"
     TREASURY_WITHDRAWALS = "TreasuryWithdrawals"
     INFO_ACTION = "InfoAction"
+    NO_CONFIDENCE = "NoConfidence"
 
 
 def get_drep_cred_name(drep_id: str) -> str:
@@ -288,6 +289,13 @@ def check_action_view(  # noqa: C901
                 float(action_data.quorum),
             ],
             "tag": ActionTags.UPDATE_COMMITTEE.value,
+        }
+    elif isinstance(action_data, clusterlib.ActionNoConfidence):
+        gov_action = {
+            "contents": {"govActionIx": prev_action_ix, "txId": prev_action_txid}
+            if prev_action_txid
+            else None,
+            "tag": ActionTags.NO_CONFIDENCE.value,
         }
     else:
         raise NotImplementedError(f"Not implemented for action `{action_data}`")
