@@ -193,7 +193,8 @@ class TestEnactment:
         req_cli2.success()
 
         prev_action_rec = governance_utils.get_prev_action(
-            cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.CONSTITUTION
+            action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
         req_cli13.start(url=helpers.get_vcs_link())
@@ -442,7 +443,8 @@ class TestEnactment:
         anchor_url = "http://www.cc-update.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
         prev_action_rec = governance_utils.get_prev_action(
-            cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.COMMITTEE
+            action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
         req_cli14.start(url=helpers.get_vcs_link())
@@ -704,7 +706,8 @@ class TestEnactment:
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         prev_action_rec = governance_utils.get_prev_action(
-            cluster_obj=cluster, action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE
+            action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
         # Picked parameters and values that can stay changed even for other tests
