@@ -83,13 +83,11 @@ def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str)
 
 
 def get_prev_action(
-    cluster_obj: clusterlib.ClusterLib, action_type: PrevGovActionIds
+    action_type: PrevGovActionIds,
+    gov_state: tp.Dict[str, tp.Any],
 ) -> PrevActionRec:
     prev_action_rec = (
-        cluster_obj.g_conway_governance.query.gov_state()["nextRatifyState"]["nextEnactState"][
-            "prevGovActionIds"
-        ][action_type.value]
-        or {}
+        gov_state["nextRatifyState"]["nextEnactState"]["prevGovActionIds"][action_type.value] or {}
     )
     txid = prev_action_rec.get("txId") or ""
     _ix = prev_action_rec.get("govActionIx", None)
