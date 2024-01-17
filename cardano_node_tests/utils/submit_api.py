@@ -115,7 +115,7 @@ def submit_tx(
                 submit_tx_bare(tx_file)
             except SubmitApiError as exc:
                 # Check if resubmitting failed because an input UTxO was already spent
-                if "(BadInputsUTxO" not in str(exc):
+                if "BadInputsUTxO" not in str(exc):
                     raise
                 err = exc
                 # If here, the TX is likely still in mempool and we need to wait
