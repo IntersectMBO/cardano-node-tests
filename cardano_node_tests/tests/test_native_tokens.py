@@ -756,7 +756,7 @@ class TestMinting:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
-                    "(OutputTooBigUTxO" in err_msg  # For `build-raw` command
+                    "OutputTooBigUTxO" in err_msg  # For `build-raw` command
                     or "balance of the transaction is negative" in err_msg  # For `build` command
                 ), "Unexpected error message"
             finally:
@@ -903,7 +903,7 @@ class TestMinting:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
-                    "(OutputTooBigUTxO" in err_msg  # For `build-raw` command
+                    "OutputTooBigUTxO" in err_msg  # For `build-raw` command
                     or "balance of the transaction is negative" in err_msg  # For `build` command
                 ), "Unexpected error message"
             finally:

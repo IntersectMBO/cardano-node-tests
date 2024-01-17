@@ -345,7 +345,7 @@ class TestBasicTransactions:
                 txins=tx_output.txins,
             )
         except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
-            if "(FeeTooSmallUTxO" not in str(exc):
+            if "FeeTooSmallUTxO" not in str(exc):
                 raise
             blockers.GH(issue=4752, message="FeeTooSmallUTxO").finish_test()
 
@@ -1769,7 +1769,7 @@ class TestIncrementalSigning:
                 txins=tx_output.txins,
             )
         err_str = str(excinfo.value)
-        assert "(MissingVKeyWitnessesUTXOW" in err_str, err_str
+        assert "MissingVKeyWitnessesUTXOW" in err_str, err_str
 
         # Incrementally sign the already signed Tx with the required skey
         tx_signed = cluster.g_transaction.sign_tx(
