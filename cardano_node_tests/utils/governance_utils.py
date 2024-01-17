@@ -7,6 +7,8 @@ import typing as tp
 
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import helpers
+
 LOGGER = logging.getLogger(__name__)
 
 ActionsAllT = tp.Union[  # pylint: disable=invalid-name
@@ -16,6 +18,12 @@ ActionsAllT = tp.Union[  # pylint: disable=invalid-name
     clusterlib.ActionPParamsUpdate,
     clusterlib.ActionUpdateCommittee,
     clusterlib.ActionTreasuryWithdrawal,
+]
+
+VotesAllT = tp.Union[  # pylint: disable=invalid-name
+    clusterlib.VoteCC,
+    clusterlib.VoteDrep,
+    clusterlib.VoteSPO,
 ]
 
 
@@ -69,6 +77,16 @@ def get_drep_cred_name(drep_id: str) -> str:
         cred_name = "alwaysNoConfidence"
 
     return cred_name
+
+
+def get_vote_str(vote: clusterlib.Votes) -> str:
+    if vote == vote.YES:
+        return "VoteYes"
+    if vote == vote.NO:
+        return "VoteNo"
+    if vote == vote.ABSTAIN:
+        return "VoteAbstain"
+    raise ValueError(f"Invalid vote `{vote}`")
 
 
 def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
@@ -318,6 +336,89 @@ def check_action_view(  # noqa: C901
     )
 
     assert action_view_out == expected_action_out, f"{action_view_out} != {expected_action_out}"
+
+
+def check_vote_view(  # noqa: C901
+    cluster_obj: clusterlib.ClusterLib,
+    vote_data: VotesAllT,
+) -> None:
+    """Check `governance vote view` output."""
+    # pylint: disable=too-many-branches
+    vote_key = ""
+
+    if isinstance(vote_data, clusterlib.VoteCC):
+        if vote_data.cc_hot_vkey_file:
+            cc_key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+                vkey_file=vote_data.cc_hot_vkey_file
+            )
+        elif vote_data.cc_hot_vkey:
+            cc_key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+                vkey=vote_data.cc_hot_vkey
+            )
+        elif vote_data.cc_hot_key_hash:
+            cc_key_hash = vote_data.cc_hot_key_hash
+        else:
+            raise ValueError("No hot key was specified")
+
+        vote_key = f"committee-keyHash-{cc_key_hash}"
+    elif isinstance(vote_data, clusterlib.VoteDrep):
+        if vote_data.drep_vkey_file:
+            drep_id = cluster_obj.g_conway_governance.drep.get_id(
+                drep_vkey_file=vote_data.drep_vkey_file, out_format="hex"
+            )
+        elif vote_data.drep_vkey:
+            drep_id = cluster_obj.g_conway_governance.drep.get_id(
+                drep_vkey=vote_data.drep_vkey, out_format="hex"
+            )
+        elif vote_data.drep_key_hash:
+            drep_id = vote_data.drep_key_hash
+        else:
+            raise ValueError("No drep key was specified")
+
+        if drep_id.startswith("drep1"):
+            drep_id = helpers.decode_bech32(bech32=drep_id)
+
+        vote_key = f"drep-keyHash-{drep_id}"
+    elif isinstance(vote_data, clusterlib.VoteSPO):
+        if vote_data.cold_vkey_file:
+            pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(
+                cold_vkey_file=vote_data.cold_vkey_file
+            )
+        elif vote_data.stake_pool_vkey:
+            pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(
+                stake_pool_vkey=vote_data.stake_pool_vkey
+            )
+        elif vote_data.stake_pool_id:
+            pool_id = vote_data.stake_pool_id
+        else:
+            raise ValueError("No stake pool key was specified")
+
+        if pool_id.startswith("pool1"):
+            pool_id = helpers.decode_bech32(bech32=pool_id)
+
+        vote_key = f"stakepool-keyHash-{pool_id}"
+    else:
+        raise NotImplementedError(f"Not implemented for vote `{vote_data}`")
+
+    assert vote_key, "No vote key was specified"
+
+    anchor = (
+        {"dataHash": vote_data.anchor_data_hash, "url": vote_data.anchor_url}
+        if vote_data.anchor_data_hash
+        else None
+    )
+    expected_vote_out = {
+        vote_key: {
+            f"{vote_data.action_txid}#{vote_data.action_ix}": {
+                "anchor": anchor,
+                "decision": get_vote_str(vote=vote_data.vote),
+            }
+        }
+    }
+
+    action_view_out = cluster_obj.g_conway_governance.vote.view(vote_file=vote_data.vote_file)
+
+    assert action_view_out == expected_vote_out, f"{action_view_out} != {expected_vote_out}"
 
 
 def wait_delayed_ratification(

@@ -1,4 +1,5 @@
 """Tests for Conway governance voting functionality."""
+import dataclasses
 import json
 import logging
 import pathlib as pl
@@ -27,6 +28,13 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
     reason="runs only with Tx era >= Conway",
 )
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class VotedVotes:
+    cc: tp.List[clusterlib.VoteCC]  # pylint: disable=invalid-name
+    drep: tp.List[clusterlib.VoteDrep]
+    spo: tp.List[clusterlib.VoteSPO]
 
 
 def _possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
@@ -255,7 +263,7 @@ class TestEnactment:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        def _cast_vote(approve: bool, vote_id: str, add_spo_votes: bool = False) -> None:
+        def _cast_vote(approve: bool, vote_id: str, add_spo_votes: bool = False) -> VotedVotes:
             votes_cc = [
                 cluster.g_conway_governance.vote.create_committee(
                     vote_name=f"{temp_template}_{vote_id}_cc{i}",
@@ -339,6 +347,8 @@ class TestEnactment:
             assert prop_vote["dRepVotes"], "No DRep votes"
             assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
+            return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+
         # Check that SPOs cannot vote on change of constitution action
         try:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
@@ -350,7 +360,7 @@ class TestEnactment:
         _cast_vote(approve=False, vote_id="no")
 
         # Vote & approve the action
-        _cast_vote(approve=True, vote_id="yes")
+        voted_votes = _cast_vote(approve=True, vote_id="yes")
 
         def _check_state(state: dict):
             anchor = state["constitution"]["anchor"]
@@ -399,6 +409,10 @@ class TestEnactment:
         req_cli20.start(url=helpers.get_vcs_link())
         governance_utils.check_action_view(cluster_obj=cluster, action_data=constitution_action)
         req_cli20.success()
+
+        # Check vote view
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
     @allure.link(helpers.get_vcs_link())
     def test_add_new_committee_member(
@@ -537,7 +551,7 @@ class TestEnactment:
 
         resign_requested = [False]
 
-        def _cast_vote(approve: bool, vote_id: str, add_cc_votes: bool = False) -> None:
+        def _cast_vote(approve: bool, vote_id: str, add_cc_votes: bool = False) -> VotedVotes:
             votes_drep = [
                 cluster.g_conway_governance.vote.create_drep(
                     vote_name=f"{temp_template}_{vote_id}_drep{i}",
@@ -568,6 +582,8 @@ class TestEnactment:
                         action_ix=action_ix,
                         vote=clusterlib.Votes.NO,
                         cc_hot_vkey_file=m.hot_vkey_file,
+                        anchor_url="http://www.cc-vote.com",
+                        anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
                     )
                     for i, m in enumerate(governance_data.cc_members, start=1)
                 ]
@@ -626,6 +642,8 @@ class TestEnactment:
             assert prop_vote["dRepVotes"], "No DRep votes"
             assert prop_vote["stakePoolVotes"], "No stake pool votes"
 
+            return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+
         # Vote & disapprove the action
         _cast_vote(approve=False, vote_id="no")
 
@@ -633,7 +651,7 @@ class TestEnactment:
         _cast_vote(approve=True, vote_id="yes")
 
         # Check that CC members votes on "update committee" action are ignored
-        _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
+        voted_votes = _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
 
         def _check_state(state: dict):
             cc_member_val = state["committee"]["members"].get(f"keyHash-{cc_reg_record.key_hash}")
@@ -675,6 +693,11 @@ class TestEnactment:
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=update_action)
+
+        # Check vote view
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
 
     @allure.link(helpers.get_vcs_link())
     def test_pparam_update(
@@ -782,7 +805,7 @@ class TestEnactment:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        def _cast_vote(approve: bool, vote_id: str, add_spo_votes: bool = False) -> None:
+        def _cast_vote(approve: bool, vote_id: str, add_spo_votes: bool = False) -> VotedVotes:
             votes_cc = [
                 cluster.g_conway_governance.vote.create_committee(
                     vote_name=f"{temp_template}_{vote_id}_cc{i}",
@@ -865,6 +888,8 @@ class TestEnactment:
             assert prop_vote["dRepVotes"], "No DRep votes"
             assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
+            return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+
         # Check that SPOs cannot vote on change of constitution action
         try:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
@@ -876,7 +901,7 @@ class TestEnactment:
         _cast_vote(approve=False, vote_id="no")
 
         # Vote & approve the action
-        _cast_vote(approve=True, vote_id="yes")
+        voted_votes = _cast_vote(approve=True, vote_id="yes")
 
         def _check_state(state: dict):
             pparams = state["curPParams"]
@@ -916,6 +941,10 @@ class TestEnactment:
         except clusterlib.CLIError as err:
             if "(GovActionsDoNotExist" not in str(err):
                 raise
+
+        # Check vote view
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
     @allure.link(helpers.get_vcs_link())
     def test_treasury_withdrawals(  # noqa: C901
@@ -1035,7 +1064,7 @@ class TestEnactment:
                 == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
             ), "Incorrect action tag"
 
-        def _cast_vote(approve: bool, vote_id: str, add_spo_votes: bool = False) -> None:
+        def _cast_vote(approve: bool, vote_id: str, add_spo_votes: bool = False) -> VotedVotes:
             votes_cc = []
             votes_drep = []
             votes_spo = []
@@ -1129,6 +1158,8 @@ class TestEnactment:
                 assert prop_vote["dRepVotes"], "No DRep votes"
                 assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
+            return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+
         # Check that SPOs cannot vote on change of constitution action
         try:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
@@ -1140,7 +1171,7 @@ class TestEnactment:
         _cast_vote(approve=False, vote_id="no")
 
         # Vote & approve the action
-        _cast_vote(approve=True, vote_id="yes")
+        voted_votes = _cast_vote(approve=True, vote_id="yes")
 
         # Check ratification
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -1172,6 +1203,10 @@ class TestEnactment:
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=withdrawal_actions[0])
+
+        # Check vote view
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
@@ -1280,7 +1315,7 @@ class TestEnactment:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        def _cast_vote(approve: bool, vote_id: str, add_cc_votes: bool = False) -> None:
+        def _cast_vote(approve: bool, vote_id: str, add_cc_votes: bool = False) -> VotedVotes:
             votes_drep = [
                 cluster.g_conway_governance.vote.create_drep(
                     vote_name=f"{temp_template}_{vote_id}_drep{i}",
@@ -1365,6 +1400,8 @@ class TestEnactment:
             assert prop_vote["dRepVotes"], "No DRep votes"
             assert prop_vote["stakePoolVotes"], "No stake pool votes"
 
+            return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+
         # Vote & disapprove the action
         _cast_vote(approve=False, vote_id="no")
 
@@ -1374,7 +1411,7 @@ class TestEnactment:
         # Testnet will be in state of no confidence, respin is needed
         with cluster_manager.respin_on_failure():
             # Check that CC members votes on "no confidence" action are ignored
-            _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
+            voted_votes = _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
 
             # Check ratification
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -1427,6 +1464,11 @@ class TestEnactment:
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=no_confidence_action)
 
+        # Check vote view
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
+
 
 class TestExpiration:
     """Tests for actions that expire."""
@@ -1451,6 +1493,7 @@ class TestExpiration:
         # Linked user stories
         req_cli16 = requirements.Req(id="CLI16", group=requirements.GroupsKnown.CHANG_US)
         req_cli21 = requirements.Req(id="CLI21", group=requirements.GroupsKnown.CHANG_US)
+        req_cli22 = requirements.Req(id="CLI22", group=requirements.GroupsKnown.CHANG_US)
         req_cli23 = requirements.Req(id="CLI23", group=requirements.GroupsKnown.CHANG_US)
         req_cli24 = requirements.Req(id="CLI24", group=requirements.GroupsKnown.CHANG_US)
         req_cli31 = requirements.Req(id="CLI31", group=requirements.GroupsKnown.CHANG_US)
@@ -1612,6 +1655,13 @@ class TestExpiration:
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
+
+        # Check vote view
+        req_cli22.start(url=helpers.get_vcs_link())
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_drep[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_spo[0])
+        req_cli22.success()
 
     @allure.link(helpers.get_vcs_link())
     def test_expire_treasury_withdrawals(  # noqa: C901
