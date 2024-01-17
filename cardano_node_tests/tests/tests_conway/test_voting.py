@@ -992,20 +992,18 @@ class TestEnactment:
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         req_cli15.start(url=helpers.get_vcs_link())
-        withdrawal_actions = []
-        for a in range(actions_num):
-            anchor_url = f"http://www.withdrawal-action{a}.com"
-            withdrawal_actions.append(
-                cluster.g_conway_governance.action.create_treasury_withdrawal(
-                    action_name=f"{temp_template}_{a}",
-                    transfer_amt=transfer_amt,
-                    deposit_amt=action_deposit_amt,
-                    anchor_url=anchor_url,
-                    anchor_data_hash=anchor_data_hash,
-                    funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
-                    deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
-                )
+        withdrawal_actions = [
+            cluster.g_conway_governance.action.create_treasury_withdrawal(
+                action_name=f"{temp_template}_{a}",
+                transfer_amt=transfer_amt,
+                deposit_amt=action_deposit_amt,
+                anchor_url=f"http://www.withdrawal-action{a}.com",
+                anchor_data_hash=anchor_data_hash,
+                funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
+                deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
             )
+            for a in range(actions_num)
+        ]
         req_cli15.success()
 
         tx_files_action = clusterlib.TxFiles(
@@ -1664,7 +1662,7 @@ class TestExpiration:
         req_cli22.success()
 
     @allure.link(helpers.get_vcs_link())
-    def test_expire_treasury_withdrawals(  # noqa: C901
+    def test_expire_treasury_withdrawals(
         self,
         cluster_use_governance: governance_setup.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
@@ -1715,20 +1713,18 @@ class TestExpiration:
 
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        withdrawal_actions = []
-        for a in range(actions_num):
-            anchor_url = f"http://www.withdrawal-expire{a}.com"
-            withdrawal_actions.append(
-                cluster.g_conway_governance.action.create_treasury_withdrawal(
-                    action_name=f"{temp_template}_{a}",
-                    transfer_amt=transfer_amt + a,
-                    deposit_amt=action_deposit_amt,
-                    anchor_url=anchor_url,
-                    anchor_data_hash=anchor_data_hash,
-                    funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
-                    deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
-                )
+        withdrawal_actions = [
+            cluster.g_conway_governance.action.create_treasury_withdrawal(
+                action_name=f"{temp_template}_{a}",
+                transfer_amt=transfer_amt + a,
+                deposit_amt=action_deposit_amt,
+                anchor_url=f"http://www.withdrawal-expire{a}.com",
+                anchor_data_hash=anchor_data_hash,
+                funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
+                deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
             )
+            for a in range(actions_num)
+        ]
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
