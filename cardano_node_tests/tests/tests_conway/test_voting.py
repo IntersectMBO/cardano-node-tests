@@ -411,11 +411,12 @@ class TestEnactment:
         req_cli20.success()
 
         # Check vote view
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        if voted_votes.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
     @allure.link(helpers.get_vcs_link())
-    def test_add_new_committee_member(
+    def test_add_new_committee_member(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -695,7 +696,8 @@ class TestEnactment:
         governance_utils.check_action_view(cluster_obj=cluster, action_data=update_action)
 
         # Check vote view
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        if voted_votes.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
 
@@ -943,7 +945,8 @@ class TestEnactment:
                 raise
 
         # Check vote view
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        if voted_votes.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
     @allure.link(helpers.get_vcs_link())
@@ -1203,7 +1206,8 @@ class TestEnactment:
         governance_utils.check_action_view(cluster_obj=cluster, action_data=withdrawal_actions[0])
 
         # Check vote view
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        if voted_votes.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
     @allure.link(helpers.get_vcs_link())
@@ -1656,7 +1660,8 @@ class TestExpiration:
 
         # Check vote view
         req_cli22.start(url=helpers.get_vcs_link())
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_cc[0])
+        if votes_cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_spo[0])
         req_cli22.success()
