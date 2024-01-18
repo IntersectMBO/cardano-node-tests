@@ -515,6 +515,7 @@ class TestDelegDReps:
 
         * check that the stake address is registered
         """
+        # pylint: disable=too-many-statements
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
         drep_id = custom_drep.drep_id if drep == "custom" else drep
@@ -523,6 +524,7 @@ class TestDelegDReps:
         req_cli27 = requirements.Req(id="CLI27", group=requirements.GroupsKnown.CHANG_US)
         req_cli28 = requirements.Req(id="CLI28", group=requirements.GroupsKnown.CHANG_US)
         req_cli29 = requirements.Req(id="CLI29", group=requirements.GroupsKnown.CHANG_US)
+        req_cli34 = requirements.Req(id="CLI34", group=requirements.GroupsKnown.CHANG_US)
         req_cli35 = requirements.Req(id="CLI35", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address registration cert
@@ -643,6 +645,35 @@ class TestDelegDReps:
             governance_utils.check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )
+
+            req_cli34.start(url=helpers.get_vcs_link())
+            if drep == "custom":
+                stake_distrib = cluster.g_conway_governance.query.drep_stake_distribution(
+                    drep_key_hash=custom_drep.drep_id
+                )
+                stake_distrib_vkey = cluster.g_conway_governance.query.drep_stake_distribution(
+                    drep_vkey_file=custom_drep.key_pair.vkey_file
+                )
+                assert (
+                    stake_distrib == stake_distrib_vkey
+                ), "DRep stake distribution output mismatch"
+                assert (
+                    len(stake_distrib_vkey) == 1
+                ), "Unexpected number of DRep stake distribution records"
+
+                assert (
+                    stake_distrib_vkey[0][0] == f"drep-keyHash-{custom_drep.drep_id}"
+                ), f"The DRep distribution record doesn't match the DRep ID '{custom_drep.drep_id}'"
+            else:
+                stake_distrib = cluster.g_conway_governance.query.drep_stake_distribution()
+
+            deleg_amount = cluster.g_query.get_address_balance(pool_user.payment.address)
+            governance_utils.check_drep_stake_distribution(
+                distrib_state=stake_distrib,
+                drep_id=drep_id,
+                min_amount=deleg_amount,
+            )
+            req_cli34.success()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
