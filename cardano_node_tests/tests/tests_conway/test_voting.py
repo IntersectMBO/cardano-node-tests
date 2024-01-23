@@ -189,7 +189,7 @@ class TestEnactment:
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         anchor_url = "http://www.const-action.com"
-        anchor_data_hash = cluster.g_conway_governance.get_hash(text=anchor_url)
+        anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
 
         constitution_file = f"{temp_template}_constitution.txt"
         constitution_text = (
@@ -206,7 +206,9 @@ class TestEnactment:
 
         constitution_url = "http://www.const-new.com"
         req_cli2.start(url=helpers.get_vcs_link())
-        constitution_hash = cluster.g_conway_governance.get_hash(file_text=constitution_file)
+        constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
+            file_text=constitution_file
+        )
         req_cli2.success()
 
         prev_action_rec = governance_utils.get_prev_action(
