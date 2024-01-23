@@ -143,10 +143,12 @@ class TestCommittee:
         req_cli32.start(url=helpers.get_vcs_link())
         reg_committee_state = cluster.g_conway_governance.query.committee_state()
         member_key = f"keyHash-{reg_cc.key_hash}"
+        member_rec = reg_committee_state["committee"][member_key]
         assert (
-            reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
-            == "MemberAuthorized"
+            member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
         ), "CC Member was not registered"
+        assert not member_rec["expiration"], "CC Member should not be elected"
+        assert member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
         req_cli32.success()
 
         # Resignation of CC Member
