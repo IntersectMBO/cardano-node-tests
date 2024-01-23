@@ -114,39 +114,39 @@ class TestCommittee:
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (req_cli3, req_cli4, req_cli5, req_cli6)]
-        reg_cc = governance_utils.get_cc_member_reg_record(
+        cc_auth_record = governance_utils.get_cc_member_auth_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
         [r.success() for r in (req_cli3, req_cli4, req_cli5, req_cli6)]
 
-        tx_files_reg = clusterlib.TxFiles(
-            certificate_files=[reg_cc.registration_cert],
-            signing_key_files=[payment_addr.skey_file, reg_cc.cold_key_pair.skey_file],
+        tx_files_auth = clusterlib.TxFiles(
+            certificate_files=[cc_auth_record.auth_cert],
+            signing_key_files=[payment_addr.skey_file, cc_auth_record.cold_key_pair.skey_file],
         )
 
-        tx_output_reg = clusterlib_utils.build_and_submit_tx(
+        tx_output_auth = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            name_template=f"{temp_template}_reg",
+            name_template=f"{temp_template}_auth",
             src_address=payment_addr.address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
-            tx_files=tx_files_reg,
+            tx_files=tx_files_auth,
         )
 
-        reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_reg)
+        auth_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
         assert (
-            clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
-            == clusterlib.calculate_utxos_balance(tx_output_reg.txins) - tx_output_reg.fee
+            clusterlib.filter_utxos(utxos=auth_out_utxos, address=payment_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
         req_cli32.start(url=helpers.get_vcs_link())
-        reg_committee_state = cluster.g_conway_governance.query.committee_state()
-        member_key = f"keyHash-{reg_cc.key_hash}"
-        member_rec = reg_committee_state["committee"][member_key]
+        auth_committee_state = cluster.g_conway_governance.query.committee_state()
+        member_key = f"keyHash-{cc_auth_record.key_hash}"
+        member_rec = auth_committee_state["committee"][member_key]
         assert (
             member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
-        ), "CC Member was not registered"
+        ), "CC Member was NOT authorized"
         assert not member_rec["expiration"], "CC Member should not be elected"
         assert member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
         req_cli32.success()
@@ -156,7 +156,7 @@ class TestCommittee:
         req_cli7.start(url=helpers.get_vcs_link())
         res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
             key_name=temp_template,
-            cold_vkey_file=reg_cc.cold_key_pair.vkey_file,
+            cold_vkey_file=cc_auth_record.cold_key_pair.vkey_file,
             resignation_metadata_url="http://www.cc-resign.com",
             resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
         )
@@ -164,7 +164,7 @@ class TestCommittee:
 
         tx_files_res = clusterlib.TxFiles(
             certificate_files=[res_cert],
-            signing_key_files=[payment_addr.skey_file, reg_cc.cold_key_pair.skey_file],
+            signing_key_files=[payment_addr.skey_file, cc_auth_record.cold_key_pair.skey_file],
         )
 
         tx_output_res = clusterlib_utils.build_and_submit_tx(
@@ -191,9 +191,11 @@ class TestCommittee:
 
         # Check CC member in db-sync
         dbsync_utils.check_committee_member_registration(
-            cc_member_cold_key=reg_cc.key_hash, committee_state=reg_committee_state
+            cc_member_cold_key=cc_auth_record.key_hash, committee_state=auth_committee_state
         )
-        dbsync_utils.check_committee_member_deregistration(cc_member_cold_key=reg_cc.key_hash)
+        dbsync_utils.check_committee_member_deregistration(
+            cc_member_cold_key=cc_auth_record.key_hash
+        )
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -209,8 +211,8 @@ class TestCommittee:
         temp_template = common.get_test_id(cluster)
         cc_size = 3
 
-        cc_reg_records = [
-            governance_utils.get_cc_member_reg_record(
+        cc_auth_records = [
+            governance_utils.get_cc_member_auth_record(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_{i}",
             )
@@ -224,7 +226,7 @@ class TestCommittee:
                 hot_vkey_file=r.hot_key_pair.vkey_file,
                 hot_skey_file=r.hot_key_pair.skey_file,
             )
-            for r in cc_reg_records
+            for r in cc_auth_records
         ]
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
@@ -248,11 +250,11 @@ class TestCommittee:
         )
 
         tx_files = clusterlib.TxFiles(
-            certificate_files=[r.registration_cert for r in cc_reg_records],
+            certificate_files=[r.auth_cert for r in cc_auth_records],
             proposal_files=[update_action.action_file],
             signing_key_files=[
                 pool_user.payment.skey_file,
-                *[r.cold_key_pair.skey_file for r in cc_reg_records],
+                *[r.cold_key_pair.skey_file for r in cc_auth_records],
             ],
         )
 
