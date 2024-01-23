@@ -36,8 +36,8 @@ class DRepRegistration:
 
 
 @dataclasses.dataclass(frozen=True, order=True)
-class CCMemberRegistration:
-    registration_cert: pl.Path
+class CCMemberAuth:
+    auth_cert: pl.Path
     cold_key_pair: clusterlib.KeyPair
     hot_key_pair: clusterlib.KeyPair
     key_hash: str
@@ -192,12 +192,12 @@ def get_drep_reg_record(
     )
 
 
-def get_cc_member_reg_record(
+def get_cc_member_auth_record(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     destination_dir: clusterlib.FileType = ".",
-) -> CCMemberRegistration:
-    """Get Constitutional Committee Members registration record."""
+) -> CCMemberAuth:
+    """Get Constitutional Committee Members key authorization record."""
     committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
         key_name=name_template,
         destination_dir=destination_dir,
@@ -206,7 +206,7 @@ def get_cc_member_reg_record(
         key_name=name_template,
         destination_dir=destination_dir,
     )
-    reg_cert = cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
+    auth_cert = cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
         key_name=name_template,
         cold_vkey_file=committee_cold_keys.vkey_file,
         hot_key_file=committee_hot_keys.vkey_file,
@@ -216,8 +216,8 @@ def get_cc_member_reg_record(
         vkey_file=committee_cold_keys.vkey_file,
     )
 
-    return CCMemberRegistration(
-        registration_cert=reg_cert,
+    return CCMemberAuth(
+        auth_cert=auth_cert,
         cold_key_pair=committee_cold_keys,
         hot_key_pair=committee_hot_keys,
         key_hash=key_hash,

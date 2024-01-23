@@ -452,13 +452,13 @@ class TestEnactment:
 
         # Authorize the hot keys
 
-        cc_auth_record1 = governance_utils.get_cc_member_reg_record(
+        cc_auth_record1 = governance_utils.get_cc_member_auth_record(
             cluster_obj=cluster,
             name_template=f"{temp_template}_member1",
         )
         cc_member1_key = f"keyHash-{cc_auth_record1.key_hash}"
 
-        cc_auth_record2 = governance_utils.get_cc_member_reg_record(
+        cc_auth_record2 = governance_utils.get_cc_member_auth_record(
             cluster_obj=cluster,
             name_template=f"{temp_template}_member2",
         )
@@ -466,8 +466,8 @@ class TestEnactment:
 
         tx_files_auth = clusterlib.TxFiles(
             certificate_files=[
-                cc_auth_record1.registration_cert,
-                cc_auth_record2.registration_cert,
+                cc_auth_record1.auth_cert,
+                cc_auth_record2.auth_cert,
             ],
             signing_key_files=[
                 pool_user_lg.payment.skey_file,
