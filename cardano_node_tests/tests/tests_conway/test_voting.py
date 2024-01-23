@@ -1,4 +1,5 @@
 """Tests for Conway governance voting functionality."""
+# pylint: disable=expression-not-assigned
 import dataclasses
 import json
 import logging
@@ -181,6 +182,7 @@ class TestEnactment:
         req_cli2 = requirements.Req(id="CLI02", group=requirements.GroupsKnown.CHANG_US)
         req_cli13 = requirements.Req(id="CLI13", group=requirements.GroupsKnown.CHANG_US)
         req_cli20 = requirements.Req(id="CLI20", group=requirements.GroupsKnown.CHANG_US)
+        req_cip1 = requirements.Req(id="CIP.001", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -392,9 +394,10 @@ class TestEnactment:
 
         assert rem_action, "Action not found in removed actions"
         next_rat_state = rat_gov_state["nextRatifyState"]
-        req_cli1.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli1, req_cip1)]
         _check_state(next_rat_state["nextEnactState"])
-        req_cli1.success()
+        [r.success() for r in (req_cli1, req_cip1)]
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check enactment
