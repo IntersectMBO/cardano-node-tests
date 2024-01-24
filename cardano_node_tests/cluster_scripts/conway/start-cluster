@@ -24,6 +24,7 @@ fi
 
 NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
+NUM_CC=5
 PROPOSAL_DELAY=5
 POOL_PLEDGE=1000000000000
 
@@ -223,7 +224,7 @@ rm -f "$STATE_CLUSTER/shelley/genesis.json_jq"
 # Create committee keys
 mkdir -p "$STATE_CLUSTER/governance_data"
 if [ -z "${NO_CC:-""}" ]; then
-  for i in {1..3}; do
+  for i in $(seq 1 "$NUM_CC"); do
     cardano_cli_log conway governance committee key-gen-cold \
       --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
       --cold-signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.skey"

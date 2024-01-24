@@ -16,8 +16,7 @@ LOGGER = logging.getLogger(__name__)
 GOV_DATA_DIR = "governance_data"
 GOV_DATA_STORE = "governance_data.pickle"
 
-DREPS_NUM = 4
-CC_SIZE = 3
+DREPS_NUM = 5
 
 
 @dataclasses.dataclass(frozen=True, order=True)
