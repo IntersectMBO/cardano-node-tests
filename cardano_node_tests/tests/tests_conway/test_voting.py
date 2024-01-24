@@ -44,6 +44,8 @@ def _possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
 
     When the issue manifests, only single expired action gets removed and all other expired or
     ratified actions are ignored int the given epoch.
+
+    See https://github.com/IntersectMBO/cardano-ledger/issues/3979
     """
     removed_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
         "removedGovActions"
@@ -158,7 +160,7 @@ class TestEnactment:
     """Tests for actions enactment."""
 
     @allure.link(helpers.get_vcs_link())
-    def test_constitution(
+    def test_constitution(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -383,18 +385,27 @@ class TestEnactment:
             assert anchor["url"] == constitution_url, "Incorrect constitution anchor URL"
 
         # Check ratification
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-        rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
-        rem_action = governance_utils.lookup_removed_actions(
-            gov_state=rat_gov_state, action_txid=action_txid
-        )
+        xfails_ledger_3979 = set()
+        for __ in range(3):
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            _save_gov_state(
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+            )
+            rem_action = governance_utils.lookup_removed_actions(
+                gov_state=rat_gov_state, action_txid=action_txid
+            )
+            if rem_action:
+                break
 
-        # Known ledger issue where only one expired action gets removed in one epoch
-        if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
-            pytest.xfail("Only single expired action got removed")
+            # Known ledger issue where only one expired action gets removed in one epoch.
+            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
+            if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
+                xfails_ledger_3979.add("Only single expired action got removed")
+                continue
 
-        assert rem_action, "Action not found in removed actions"
+            raise AssertionError("Action not found in removed actions")
+
         next_rat_state = rat_gov_state["nextRatifyState"]
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (req_cli1, req_cip1)]
@@ -426,6 +437,14 @@ class TestEnactment:
         if voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
+
+        if xfails_ledger_3979:
+            blockers.GH(
+                issue=3979,
+                repo="IntersectMBO/cardano-ledger",
+                message="; ".join(xfails_ledger_3979),
+                check_on_devel=False,
+            ).finish_test()
 
     @allure.link(helpers.get_vcs_link())
     def test_add_new_committee_member(  # noqa: C901
@@ -722,18 +741,26 @@ class TestEnactment:
             assert cc_member_val == cc_member.epoch
 
         # Check ratification
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-        rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
-        rem_action = governance_utils.lookup_removed_actions(
-            gov_state=rat_gov_state, action_txid=action_txid
-        )
+        xfails_ledger_3979 = set()
+        for __ in range(3):
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            _save_gov_state(
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+            )
+            rem_action = governance_utils.lookup_removed_actions(
+                gov_state=rat_gov_state, action_txid=action_txid
+            )
+            if rem_action:
+                break
 
-        # Known ledger issue where only one expired action gets removed in one epoch
-        if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
-            pytest.xfail("Only single expired action got removed")
+            # Known ledger issue where only one expired action gets removed in one epoch.
+            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
+            if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
+                xfails_ledger_3979.add("Only single expired action got removed")
+                continue
 
-        assert rem_action, "Action not found in removed actions"
+            raise AssertionError("Action not found in removed actions")
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
@@ -797,15 +824,30 @@ class TestEnactment:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
 
+        known_issues = []
+        if xfails_ledger_3979:
+            known_issues.append(
+                blockers.GH(
+                    issue=3979,
+                    repo="IntersectMBO/cardano-ledger",
+                    message="; ".join(xfails_ledger_3979),
+                    check_on_devel=False,
+                )
+            )
         if has_ledger_issue_4001:
-            blockers.GH(
-                issue=4001,
-                repo="IntersectMBO/cardano-ledger",
-                message="Newly elected CC members are removed during ratification",
-            ).finish_test()
+            known_issues.append(
+                blockers.GH(
+                    issue=4001,
+                    repo="IntersectMBO/cardano-ledger",
+                    message="Newly elected CC members are removed during ratification",
+                    check_on_devel=False,
+                )
+            )
+        if known_issues:
+            blockers.finish_test(issues=known_issues)
 
     @allure.link(helpers.get_vcs_link())
-    def test_pparam_update(
+    def test_pparam_update(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -1015,18 +1057,26 @@ class TestEnactment:
             )
 
         # Check ratification
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-        rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
-        rem_action = governance_utils.lookup_removed_actions(
-            gov_state=rat_gov_state, action_txid=action_txid
-        )
+        xfails_ledger_3979 = set()
+        for __ in range(3):
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            _save_gov_state(
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+            )
+            rem_action = governance_utils.lookup_removed_actions(
+                gov_state=rat_gov_state, action_txid=action_txid
+            )
+            if rem_action:
+                break
 
-        # Known ledger issue where only one expired action gets removed in one epoch
-        if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
-            pytest.xfail("Only single expired action got removed")
+            # Known ledger issue where only one expired action gets removed in one epoch.
+            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
+            if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
+                xfails_ledger_3979.add("Only single expired action got removed")
+                continue
 
-        assert rem_action, "Action not found in removed actions"
+            raise AssertionError("Action not found in removed actions")
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
@@ -1051,6 +1101,14 @@ class TestEnactment:
         if voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
+
+        if xfails_ledger_3979:
+            blockers.GH(
+                issue=3979,
+                repo="IntersectMBO/cardano-ledger",
+                message="; ".join(xfails_ledger_3979),
+                check_on_devel=False,
+            ).finish_test()
 
     @allure.link(helpers.get_vcs_link())
     def test_treasury_withdrawals(  # noqa: C901
@@ -1278,18 +1336,29 @@ class TestEnactment:
         voted_votes = _cast_vote(approve=True, vote_id="yes")
 
         # Check ratification
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-        rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        _save_gov_state(gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}")
-        rem_action = governance_utils.lookup_removed_actions(
-            gov_state=rat_gov_state, action_txid=action_txid
-        )
+        xfails_ledger_3979 = set()
+        for __ in range(3):
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            _save_gov_state(
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+            )
+            rem_action = governance_utils.lookup_removed_actions(
+                gov_state=rat_gov_state, action_txid=action_txid
+            )
+            if rem_action:
+                break
 
-        # Known ledger issue where only one expired action gets removed in one epoch
-        if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
-            pytest.xfail("Only single expired action got removed")
-
-        assert rem_action, "Action not found in removed actions"
+            # Known ledger issue where only one expired action gets removed in one epoch.
+            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
+            if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
+                xfails_ledger_3979.add("Only single expired action got removed")
+                continue
+            # Maybe known ledger issue that no action gets removed. Wait until actions removal
+            # rewrite in ledger code is finished.
+            xfails_ledger_3979.add("No action got removed")
+        else:
+            raise AssertionError("Action not found in removed actions")
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -1313,10 +1382,18 @@ class TestEnactment:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
+        if xfails_ledger_3979:
+            blockers.GH(
+                issue=3979,
+                repo="IntersectMBO/cardano-ledger",
+                message="; ".join(xfails_ledger_3979),
+                check_on_devel=False,
+            ).finish_test()
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    def test_no_confidence(
+    def test_no_confidence(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -1519,20 +1596,28 @@ class TestEnactment:
             voted_votes = _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
 
             # Check ratification
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
-            _save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
-            )
-            rem_action = governance_utils.lookup_removed_actions(
-                gov_state=rat_gov_state, action_txid=action_txid
-            )
+            xfails_ledger_3979 = set()
+            for __ in range(3):
+                _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+                rat_gov_state = cluster.g_conway_governance.query.gov_state()
+                _save_gov_state(
+                    gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+                )
+                rem_action = governance_utils.lookup_removed_actions(
+                    gov_state=rat_gov_state, action_txid=action_txid
+                )
+                if rem_action:
+                    break
 
-            # Known ledger issue where only one expired action gets removed in one epoch
-            if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
-                pytest.xfail("Only single expired action got removed")
+                # Known ledger issue where only one expired action gets removed in one epoch.
+                # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
+                if not rem_action and _possible_rem_issue(
+                    gov_state=rat_gov_state, epoch=_cur_epoch
+                ):
+                    xfails_ledger_3979.add("Only single expired action got removed")
+                    continue
 
-            assert rem_action, "Action not found in removed actions"
+                raise AssertionError("Action not found in removed actions")
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
@@ -1573,6 +1658,14 @@ class TestEnactment:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
+
+        if xfails_ledger_3979:
+            blockers.GH(
+                issue=3979,
+                repo="IntersectMBO/cardano-ledger",
+                message="; ".join(xfails_ledger_3979),
+                check_on_devel=False,
+            ).finish_test()
 
 
 class TestExpiration:
@@ -2039,7 +2132,12 @@ class TestExpiration:
         if (
             rem_deposit_returned < init_return_account_balance + actions_deposit_combined
         ) and _possible_rem_issue(gov_state=rem_gov_state, epoch=_cur_epoch):
-            pytest.xfail("Only single expired action got removed")
+            blockers.GH(
+                issue=3979,
+                repo="IntersectMBO/cardano-ledger",
+                message="Only single expired action got removed",
+                check_on_devel=False,
+            ).finish_test()
 
         assert (
             rem_deposit_returned == init_return_account_balance + actions_deposit_combined
