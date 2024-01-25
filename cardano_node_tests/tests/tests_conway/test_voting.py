@@ -160,7 +160,7 @@ class TestEnactment:
     """Tests for actions enactment."""
 
     @allure.link(helpers.get_vcs_link())
-    def test_constitution(  # noqa: C901
+    def test_constitution(
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -363,11 +363,10 @@ class TestEnactment:
             return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
         # Check that SPOs cannot vote on change of constitution action
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
-        except clusterlib.CLIError as err:
-            if "StakePoolVoter" not in str(err):
-                raise
+        err_str = str(excinfo.value)
+        assert "StakePoolVoter" in err_str, err_str
 
         # Vote & disapprove the action
         _cast_vote(approve=False, vote_id="no")
@@ -422,11 +421,10 @@ class TestEnactment:
         _check_state(enact_gov_state["enactState"])
 
         # Try to vote on enacted action
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="enacted")
-        except clusterlib.CLIError as err:
-            if "(GovActionsDoNotExist" not in str(err):
-                raise
+        err_str = str(excinfo.value)
+        assert "(GovActionsDoNotExist" in err_str, err_str
 
         # Check action view
         req_cli20.start(url=helpers.get_vcs_link())
@@ -809,11 +807,10 @@ class TestEnactment:
         assert enact_member1_rec["status"] == "Active", "CC Member should be active"
 
         # Try to vote on enacted action
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="enacted")
-        except clusterlib.CLIError as err:
-            if "(GovActionsDoNotExist" not in str(err):
-                raise
+        err_str = str(excinfo.value)
+        assert "(GovActionsDoNotExist" in err_str, err_str
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=update_action)
@@ -847,7 +844,7 @@ class TestEnactment:
             blockers.finish_test(issues=known_issues)
 
     @allure.link(helpers.get_vcs_link())
-    def test_pparam_update(  # noqa: C901
+    def test_pparam_update(
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -1038,11 +1035,10 @@ class TestEnactment:
             return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
         # Check that SPOs cannot vote on change of constitution action
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
-        except clusterlib.CLIError as err:
-            if "StakePoolVoter" not in str(err):
-                raise
+        err_str = str(excinfo.value)
+        assert "StakePoolVoter" in err_str, err_str
 
         # Vote & disapprove the action
         _cast_vote(approve=False, vote_id="no")
@@ -1091,11 +1087,10 @@ class TestEnactment:
         _check_state(enact_gov_state["enactState"])
 
         # Try to vote on enacted action
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="enacted")
-        except clusterlib.CLIError as err:
-            if "(GovActionsDoNotExist" not in str(err):
-                raise
+        err_str = str(excinfo.value)
+        assert "(GovActionsDoNotExist" in err_str, err_str
 
         # Check vote view
         if voted_votes.cc:
@@ -1323,11 +1318,10 @@ class TestEnactment:
             return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
         # Check that SPOs cannot vote on change of constitution action
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
-        except clusterlib.CLIError as err:
-            if "StakePoolVoter" not in str(err):
-                raise
+        err_str = str(excinfo.value)
+        assert "StakePoolVoter" in err_str, err_str
 
         # Vote & disapprove the action
         _cast_vote(approve=False, vote_id="no")
@@ -1368,11 +1362,10 @@ class TestEnactment:
         ), "Incorrect reward account balance"
 
         # Try to vote on enacted action
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="enacted")
-        except clusterlib.CLIError as err:
-            if "(GovActionsDoNotExist" not in str(err):
-                raise
+        err_str = str(excinfo.value)
+        assert "(GovActionsDoNotExist" in err_str, err_str
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=withdrawal_actions[0])
@@ -1393,7 +1386,7 @@ class TestEnactment:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    def test_no_confidence(  # noqa: C901
+    def test_no_confidence(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -1638,11 +1631,10 @@ class TestEnactment:
             assert enact_prev_action_rec.ix == action_ix, "Incorrect previous action index"
 
             # Try to vote on enacted action
-            try:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
                 _cast_vote(approve=False, vote_id="enacted")
-            except clusterlib.CLIError as err:
-                if "(GovActionsDoNotExist" not in str(err):
-                    raise
+            err_str = str(excinfo.value)
+            assert "(GovActionsDoNotExist" in err_str, err_str
 
             governance_setup.reinstate_committee(
                 cluster_obj=cluster,
