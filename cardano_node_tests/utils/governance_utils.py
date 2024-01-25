@@ -85,7 +85,7 @@ def get_vote_str(vote: clusterlib.Votes) -> str:
     if vote == vote.NO:
         return "VoteNo"
     if vote == vote.ABSTAIN:
-        return "VoteAbstain"
+        return "Abstain"
     raise ValueError(f"Invalid vote `{vote}`")
 
 
