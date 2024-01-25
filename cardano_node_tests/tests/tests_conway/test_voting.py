@@ -70,6 +70,13 @@ def _possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
     return False
 
 
+def _get_yes_abstain_vote(idx: int) -> clusterlib.Votes:
+    """Check that votes of DReps who abstained are not considered as "No" votes."""
+    if idx % 2 == 0:
+        return clusterlib.Votes.YES
+    return clusterlib.Votes.ABSTAIN
+
+
 def _save_gov_state(gov_state: tp.Dict[str, tp.Any], name_template: str) -> None:
     """Save governance state to a file."""
     with open(f"{name_template}_gov_state.json", "w", encoding="utf-8") as out_fp:
@@ -632,16 +639,19 @@ class TestEnactment:
         resign_requested = [False]
 
         def _cast_vote(approve: bool, vote_id: str, add_cc_votes: bool = False) -> VotedVotes:
-            votes_drep = [
-                cluster.g_conway_governance.vote.create_drep(
+            _votes_drep = [
+                None  # This DRep doesn't vote, his votes count as "No"
+                if i % 3 == 0
+                else cluster.g_conway_governance.vote.create_drep(
                     vote_name=f"{temp_template}_{vote_id}_drep{i}",
                     action_txid=action_txid,
                     action_ix=action_ix,
-                    vote=clusterlib.Votes.YES if approve else clusterlib.Votes.NO,
+                    vote=_get_yes_abstain_vote(i) if approve else clusterlib.Votes.NO,
                     drep_vkey_file=d.key_pair.vkey_file,
                 )
                 for i, d in enumerate(governance_data.dreps_reg, start=1)
             ]
+            votes_drep = [r for r in _votes_drep if r]
             votes_spo = [
                 cluster.g_conway_governance.vote.create_spo(
                     vote_name=f"{temp_template}_{vote_id}_pool{i}",
@@ -950,16 +960,19 @@ class TestEnactment:
         action_ix = prop_action["actionId"]["govActionIx"]
 
         def _cast_vote(approve: bool, vote_id: str, add_spo_votes: bool = False) -> VotedVotes:
-            votes_cc = [
-                cluster.g_conway_governance.vote.create_committee(
+            _votes_cc = [
+                None  # This CC member doesn't vote, his votes count as "No"
+                if i % 3 == 0
+                else cluster.g_conway_governance.vote.create_committee(
                     vote_name=f"{temp_template}_{vote_id}_cc{i}",
                     action_txid=action_txid,
                     action_ix=action_ix,
-                    vote=clusterlib.Votes.YES if approve else clusterlib.Votes.NO,
+                    vote=_get_yes_abstain_vote(i) if approve else clusterlib.Votes.NO,
                     cc_hot_vkey_file=m.hot_vkey_file,
                 )
                 for i, m in enumerate(governance_data.cc_members, start=1)
             ]
+            votes_cc = [r for r in _votes_cc if r]
             votes_drep = [
                 cluster.g_conway_governance.vote.create_drep(
                     vote_name=f"{temp_template}_{vote_id}_drep{i}",
@@ -989,6 +1002,7 @@ class TestEnactment:
                 vote_files=[
                     *[r.vote_file for r in votes_cc],
                     *[r.vote_file for r in votes_drep],
+                    *[r.vote_file for r in votes_spo],
                 ],
                 signing_key_files=[
                     pool_user_lg.payment.skey_file,
