@@ -103,12 +103,12 @@ class TestCommittee:
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
-        req_cli3 = requirements.Req(id="CLI03", group=requirements.GroupsKnown.CHANG_US)
-        req_cli4 = requirements.Req(id="CLI04", group=requirements.GroupsKnown.CHANG_US)
-        req_cli5 = requirements.Req(id="CLI05", group=requirements.GroupsKnown.CHANG_US)
-        req_cli6 = requirements.Req(id="CLI06", group=requirements.GroupsKnown.CHANG_US)
-        req_cli7 = requirements.Req(id="CLI07", group=requirements.GroupsKnown.CHANG_US)
-        req_cli32 = requirements.Req(id="CLI32", group=requirements.GroupsKnown.CHANG_US)
+        req_cli3 = requirements.Req(id="CLI003", group=requirements.GroupsKnown.CHANG_US)
+        req_cli4 = requirements.Req(id="CLI004", group=requirements.GroupsKnown.CHANG_US)
+        req_cli5 = requirements.Req(id="CLI005", group=requirements.GroupsKnown.CHANG_US)
+        req_cli6 = requirements.Req(id="CLI006", group=requirements.GroupsKnown.CHANG_US)
+        req_cli7 = requirements.Req(id="CLI007", group=requirements.GroupsKnown.CHANG_US)
+        req_cli32 = requirements.Req(id="CLI032", group=requirements.GroupsKnown.CHANG_US)
         req_cip2 = requirements.Req(id="CIP002", group=requirements.GroupsKnown.CHANG_US)
         req_cip3 = requirements.Req(id="CIP003", group=requirements.GroupsKnown.CHANG_US)
         req_cip4 = requirements.Req(id="CIP004", group=requirements.GroupsKnown.CHANG_US)

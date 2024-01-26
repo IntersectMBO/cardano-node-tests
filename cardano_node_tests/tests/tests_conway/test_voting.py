@@ -187,10 +187,10 @@ class TestEnactment:
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
-        req_cli1 = requirements.Req(id="CLI01", group=requirements.GroupsKnown.CHANG_US)
-        req_cli2 = requirements.Req(id="CLI02", group=requirements.GroupsKnown.CHANG_US)
-        req_cli13 = requirements.Req(id="CLI13", group=requirements.GroupsKnown.CHANG_US)
-        req_cli20 = requirements.Req(id="CLI20", group=requirements.GroupsKnown.CHANG_US)
+        req_cli1 = requirements.Req(id="CLI001", group=requirements.GroupsKnown.CHANG_US)
+        req_cli2 = requirements.Req(id="CLI002", group=requirements.GroupsKnown.CHANG_US)
+        req_cli13 = requirements.Req(id="CLI013", group=requirements.GroupsKnown.CHANG_US)
+        req_cli20 = requirements.Req(id="CLI020", group=requirements.GroupsKnown.CHANG_US)
         req_cip1 = requirements.Req(id="CIP001", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
@@ -474,7 +474,7 @@ class TestEnactment:
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
-        req_cli14 = requirements.Req(id="CLI14", group=requirements.GroupsKnown.CHANG_US)
+        req_cli14 = requirements.Req(id="CLI014", group=requirements.GroupsKnown.CHANG_US)
         req_cip9 = requirements.Req(id="CIP009", group=requirements.GroupsKnown.CHANG_US)
         req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
 
@@ -878,7 +878,7 @@ class TestEnactment:
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
-        req_cli17 = requirements.Req(id="CLI17", group=requirements.GroupsKnown.CHANG_US)
+        req_cli17 = requirements.Req(id="CLI017", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -1148,7 +1148,7 @@ class TestEnactment:
         actions_num = 3
 
         # Linked user stories
-        req_cli15 = requirements.Req(id="CLI15", group=requirements.GroupsKnown.CHANG_US)
+        req_cli15 = requirements.Req(id="CLI015", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -1436,7 +1436,7 @@ class TestEnactment:
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
-        req_cli18 = requirements.Req(id="CLI18", group=requirements.GroupsKnown.CHANG_US)
+        req_cli18 = requirements.Req(id="CLI018", group=requirements.GroupsKnown.CHANG_US)
         req_cip13 = requirements.Req(id="CIP013", group=requirements.GroupsKnown.CHANG_US)
 
         # Reinstate CC members first, if needed, so we have a previous action
@@ -1713,12 +1713,12 @@ class TestExpiration:
         action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         # Linked user stories
-        req_cli16 = requirements.Req(id="CLI16", group=requirements.GroupsKnown.CHANG_US)
-        req_cli21 = requirements.Req(id="CLI21", group=requirements.GroupsKnown.CHANG_US)
-        req_cli22 = requirements.Req(id="CLI22", group=requirements.GroupsKnown.CHANG_US)
-        req_cli23 = requirements.Req(id="CLI23", group=requirements.GroupsKnown.CHANG_US)
-        req_cli24 = requirements.Req(id="CLI24", group=requirements.GroupsKnown.CHANG_US)
-        req_cli31 = requirements.Req(id="CLI31", group=requirements.GroupsKnown.CHANG_US)
+        req_cli16 = requirements.Req(id="CLI016", group=requirements.GroupsKnown.CHANG_US)
+        req_cli21 = requirements.Req(id="CLI021", group=requirements.GroupsKnown.CHANG_US)
+        req_cli22 = requirements.Req(id="CLI022", group=requirements.GroupsKnown.CHANG_US)
+        req_cli23 = requirements.Req(id="CLI023", group=requirements.GroupsKnown.CHANG_US)
+        req_cli24 = requirements.Req(id="CLI024", group=requirements.GroupsKnown.CHANG_US)
+        req_cli31 = requirements.Req(id="CLI031", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -1913,8 +1913,8 @@ class TestExpiration:
         actions_num = 3
 
         # Linked user stories
-        req_cli25 = requirements.Req(id="CLI25", group=requirements.GroupsKnown.CHANG_US)
-        req_cli26 = requirements.Req(id="CLI26", group=requirements.GroupsKnown.CHANG_US)
+        req_cli25 = requirements.Req(id="CLI025", group=requirements.GroupsKnown.CHANG_US)
+        req_cli26 = requirements.Req(id="CLI026", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
