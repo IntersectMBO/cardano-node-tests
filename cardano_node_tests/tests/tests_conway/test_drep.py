@@ -241,12 +241,12 @@ class TestDReps:
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
-        req_cli8 = requirements.Req(id="CLI08", group=requirements.GroupsKnown.CHANG_US)
-        req_cli9 = requirements.Req(id="CLI09", group=requirements.GroupsKnown.CHANG_US)
-        req_cli10 = requirements.Req(id="CLI10", group=requirements.GroupsKnown.CHANG_US)
-        req_cli11 = requirements.Req(id="CLI11", group=requirements.GroupsKnown.CHANG_US)
-        req_cli12 = requirements.Req(id="CLI12", group=requirements.GroupsKnown.CHANG_US)
-        req_cli33 = requirements.Req(id="CLI33", group=requirements.GroupsKnown.CHANG_US)
+        req_cli8 = requirements.Req(id="CLI008", group=requirements.GroupsKnown.CHANG_US)
+        req_cli9 = requirements.Req(id="CLI009", group=requirements.GroupsKnown.CHANG_US)
+        req_cli10 = requirements.Req(id="CLI010", group=requirements.GroupsKnown.CHANG_US)
+        req_cli11 = requirements.Req(id="CLI011", group=requirements.GroupsKnown.CHANG_US)
+        req_cli12 = requirements.Req(id="CLI012", group=requirements.GroupsKnown.CHANG_US)
+        req_cli33 = requirements.Req(id="CLI033", group=requirements.GroupsKnown.CHANG_US)
         req_cip21 = requirements.Req(id="CIP021", group=requirements.GroupsKnown.CHANG_US)
         req_cip23 = requirements.Req(id="CIP023", group=requirements.GroupsKnown.CHANG_US)
 
@@ -531,11 +531,11 @@ class TestDelegDReps:
         drep_id = custom_drep.drep_id if drep == "custom" else drep
 
         # Linked user stories
-        req_cli27 = requirements.Req(id="CLI27", group=requirements.GroupsKnown.CHANG_US)
-        req_cli28 = requirements.Req(id="CLI28", group=requirements.GroupsKnown.CHANG_US)
-        req_cli29 = requirements.Req(id="CLI29", group=requirements.GroupsKnown.CHANG_US)
-        req_cli34 = requirements.Req(id="CLI34", group=requirements.GroupsKnown.CHANG_US)
-        req_cli35 = requirements.Req(id="CLI35", group=requirements.GroupsKnown.CHANG_US)
+        req_cli27 = requirements.Req(id="CLI027", group=requirements.GroupsKnown.CHANG_US)
+        req_cli28 = requirements.Req(id="CLI028", group=requirements.GroupsKnown.CHANG_US)
+        req_cli29 = requirements.Req(id="CLI029", group=requirements.GroupsKnown.CHANG_US)
+        req_cli34 = requirements.Req(id="CLI034", group=requirements.GroupsKnown.CHANG_US)
+        req_cli35 = requirements.Req(id="CLI035", group=requirements.GroupsKnown.CHANG_US)
         req_cip20 = requirements.Req(id="CIP020", group=requirements.GroupsKnown.CHANG_US)
         req_cip22 = requirements.Req(id="CIP022", group=requirements.GroupsKnown.CHANG_US)
 
@@ -738,7 +738,7 @@ class TestDelegDReps:
         drep_id = custom_drep_wp.drep_id if drep == "custom" else drep
 
         # Linked user stories
-        req_cli30 = requirements.Req(id="CLI30", group=requirements.GroupsKnown.CHANG_US)
+        req_cli30 = requirements.Req(id="CLI030", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address registration cert
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
