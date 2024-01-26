@@ -247,6 +247,8 @@ class TestDReps:
         req_cli11 = requirements.Req(id="CLI11", group=requirements.GroupsKnown.CHANG_US)
         req_cli12 = requirements.Req(id="CLI12", group=requirements.GroupsKnown.CHANG_US)
         req_cli33 = requirements.Req(id="CLI33", group=requirements.GroupsKnown.CHANG_US)
+        req_cip21 = requirements.Req(id="CIP021", group=requirements.GroupsKnown.CHANG_US)
+        req_cip23 = requirements.Req(id="CIP023", group=requirements.GroupsKnown.CHANG_US)
 
         # Register DRep
 
@@ -260,14 +262,14 @@ class TestDReps:
         )
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli8, req_cli9, req_cli10)]
+        [r.start(url=_url) for r in (req_cli8, req_cli9, req_cli10, req_cip21)]
         reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
             drep_metadata_url=drep_metadata_url,
             drep_metadata_hash=drep_metadata_hash,
         )
-        [r.success() for r in (req_cli8, req_cli9, req_cli10)]
+        [r.success() for r in (req_cli8, req_cli9, req_cli10, req_cip21)]
 
         tx_files_reg = clusterlib.TxFiles(
             certificate_files=[reg_drep.registration_cert],
@@ -311,12 +313,14 @@ class TestDReps:
         # Retire DRep
 
         req_cli11.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli11, req_cip23)]
         ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
             cert_name=temp_template,
             deposit_amt=reg_drep.deposit,
             drep_vkey_file=reg_drep.key_pair.vkey_file,
         )
-        req_cli11.success()
+        [r.success() for r in (req_cli11, req_cip23)]
 
         tx_files_ret = clusterlib.TxFiles(
             certificate_files=[ret_cert],
@@ -521,7 +525,7 @@ class TestDelegDReps:
 
         * check that the stake address is registered
         """
-        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-statements,too-many-locals
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
         drep_id = custom_drep.drep_id if drep == "custom" else drep
@@ -532,6 +536,19 @@ class TestDelegDReps:
         req_cli29 = requirements.Req(id="CLI29", group=requirements.GroupsKnown.CHANG_US)
         req_cli34 = requirements.Req(id="CLI34", group=requirements.GroupsKnown.CHANG_US)
         req_cli35 = requirements.Req(id="CLI35", group=requirements.GroupsKnown.CHANG_US)
+        req_cip20 = requirements.Req(id="CIP020", group=requirements.GroupsKnown.CHANG_US)
+        req_cip22 = requirements.Req(id="CIP022", group=requirements.GroupsKnown.CHANG_US)
+
+        if drep == "custom":
+            req_cip_deleg = requirements.Req(id="CIP016", group=requirements.GroupsKnown.CHANG_US)
+        elif drep == "always_abstain":
+            req_cip_deleg = requirements.Req(id="CIP017", group=requirements.GroupsKnown.CHANG_US)
+        elif drep == "always_no_confidence":
+            req_cip_deleg = requirements.Req(id="CIP018", group=requirements.GroupsKnown.CHANG_US)
+        else:
+            raise ValueError(f"Unexpected DRep: {drep}")
+
+        req_cip_deleg.start(url=helpers.get_vcs_link())
 
         # Create stake address registration cert
         req_cli27.start(url=helpers.get_vcs_link())
@@ -543,7 +560,8 @@ class TestDelegDReps:
         req_cli27.success()
 
         # Create vote delegation cert
-        req_cli29.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli29, req_cip22)]
         deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=pool_user.stake.vkey_file,
@@ -551,7 +569,7 @@ class TestDelegDReps:
             always_abstain=drep == "always_abstain",
             always_no_confidence=drep == "always_no_confidence",
         )
-        req_cli29.success()
+        [r.success() for r in (req_cli29, req_cip22)]
 
         tx_files = clusterlib.TxFiles(
             certificate_files=[reg_cert, deleg_cert],
@@ -648,9 +666,11 @@ class TestDelegDReps:
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user.stake.vkey_file
             )
+            req_cip20.start(url=helpers.get_vcs_link())
             governance_utils.check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )
+            req_cip20.success()
 
             req_cli34.start(url=helpers.get_vcs_link())
             if drep == "custom":
@@ -680,6 +700,8 @@ class TestDelegDReps:
                 min_amount=deleg_amount,
             )
             req_cli34.success()
+
+        req_cip_deleg.success()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
