@@ -109,11 +109,15 @@ class TestCommittee:
         req_cli6 = requirements.Req(id="CLI06", group=requirements.GroupsKnown.CHANG_US)
         req_cli7 = requirements.Req(id="CLI07", group=requirements.GroupsKnown.CHANG_US)
         req_cli32 = requirements.Req(id="CLI32", group=requirements.GroupsKnown.CHANG_US)
+        req_cip2 = requirements.Req(id="CIP002", group=requirements.GroupsKnown.CHANG_US)
+        req_cip3 = requirements.Req(id="CIP003", group=requirements.GroupsKnown.CHANG_US)
+        req_cip4 = requirements.Req(id="CIP004", group=requirements.GroupsKnown.CHANG_US)
+        req_cip12 = requirements.Req(id="CIP012", group=requirements.GroupsKnown.CHANG_US)
 
         # Register a potential CC Member
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli3, req_cli4, req_cli5, req_cli6)]
+        [r.start(url=_url) for r in (req_cli3, req_cli4, req_cli5, req_cli6, req_cip3)]
         cc_auth_record = governance_utils.get_cc_member_auth_record(
             cluster_obj=cluster,
             name_template=temp_template,
@@ -133,6 +137,7 @@ class TestCommittee:
             use_build_cmd=use_build_cmd,
             tx_files=tx_files_auth,
         )
+        req_cip3.success()
 
         auth_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
         assert (
@@ -140,7 +145,8 @@ class TestCommittee:
             == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
-        req_cli32.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli32, req_cip2, req_cip4)]
         auth_committee_state = cluster.g_conway_governance.query.committee_state()
         member_key = f"keyHash-{cc_auth_record.key_hash}"
         member_rec = auth_committee_state["committee"][member_key]
@@ -149,11 +155,12 @@ class TestCommittee:
         ), "CC Member was NOT authorized"
         assert not member_rec["expiration"], "CC Member should not be elected"
         assert member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
-        req_cli32.success()
+        [r.success() for r in (req_cli32, req_cip2, req_cip4)]
 
         # Resignation of CC Member
 
-        req_cli7.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli7, req_cip12)]
         res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
             key_name=temp_template,
             cold_vkey_file=cc_auth_record.cold_key_pair.vkey_file,
@@ -176,12 +183,13 @@ class TestCommittee:
             tx_files=tx_files_res,
         )
 
+        cluster.wait_for_new_block(new_blocks=2)
         res_committee_state = cluster.g_conway_governance.query.committee_state()
-        if member_key in res_committee_state["committee"]:
-            assert (
-                res_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
-                == "MemberResigned"
-            ), "CC Member not resigned"
+        assert (
+            res_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
+            == "MemberResigned"
+        ), "CC Member not resigned"
+        req_cip12.success()
 
         res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
         assert (
@@ -211,6 +219,9 @@ class TestCommittee:
         temp_template = common.get_test_id(cluster)
         cc_size = 3
 
+        # Linked user stories
+        req_cip7 = requirements.Req(id="CIP007", group=requirements.GroupsKnown.CHANG_US)
+
         cc_auth_records = [
             governance_utils.get_cc_member_auth_record(
                 cluster_obj=cluster,
@@ -237,6 +248,7 @@ class TestCommittee:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
+        req_cip7.start(url=helpers.get_vcs_link())
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -279,3 +291,5 @@ class TestCommittee:
         prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
         assert prop, "Update committee action not found"
         assert prop["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"
+        assert prop["action"]["contents"][3] == 2 / 3
+        req_cip7.success()

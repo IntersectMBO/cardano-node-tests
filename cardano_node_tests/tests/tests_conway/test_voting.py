@@ -191,7 +191,7 @@ class TestEnactment:
         req_cli2 = requirements.Req(id="CLI02", group=requirements.GroupsKnown.CHANG_US)
         req_cli13 = requirements.Req(id="CLI13", group=requirements.GroupsKnown.CHANG_US)
         req_cli20 = requirements.Req(id="CLI20", group=requirements.GroupsKnown.CHANG_US)
-        req_cip1 = requirements.Req(id="CIP.001", group=requirements.GroupsKnown.CHANG_US)
+        req_cip1 = requirements.Req(id="CIP001", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -475,6 +475,8 @@ class TestEnactment:
 
         # Linked user stories
         req_cli14 = requirements.Req(id="CLI14", group=requirements.GroupsKnown.CHANG_US)
+        req_cip9 = requirements.Req(id="CIP009", group=requirements.GroupsKnown.CHANG_US)
+        req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
 
         # Authorize the hot keys
 
@@ -813,7 +815,10 @@ class TestEnactment:
             has_ledger_issue_4001
             or enact_member1_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
         ), "CC Member was NOT authorized"
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cip9, req_cip10)]
         assert enact_member1_rec["expiration"] == cc_member.epoch, "Expiration epoch is incorrect"
+        [r.success() for r in (req_cip9, req_cip10)]
         assert enact_member1_rec["status"] == "Active", "CC Member should be active"
 
         # Try to vote on enacted action
@@ -1432,6 +1437,7 @@ class TestEnactment:
 
         # Linked user stories
         req_cli18 = requirements.Req(id="CLI18", group=requirements.GroupsKnown.CHANG_US)
+        req_cip13 = requirements.Req(id="CIP013", group=requirements.GroupsKnown.CHANG_US)
 
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
@@ -1456,7 +1462,8 @@ class TestEnactment:
         anchor_url = "http://www.cc-no-confidence.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        req_cli18.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli18, req_cip13)]
         no_confidence_action = cluster.g_conway_governance.action.create_no_confidence(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -1646,6 +1653,7 @@ class TestEnactment:
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
             )
             assert not enact_gov_state["enactState"]["committee"], "Committee is not empty"
+            req_cip13.success()
 
             enact_prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
