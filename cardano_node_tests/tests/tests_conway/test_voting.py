@@ -461,21 +461,38 @@ class TestEnactment:
     ):
         """Test adding new CC member.
 
-        * create an "update committee" action
-        * vote to disapprove the action
-        * vote to approve the action
-        * check that CC members votes have no effect
-        * check that the action is ratified
-        * check that the action is enacted
-        * check that it's not possible to vote on enacted action
+        * authorize hot keys of 3 new potential CC members
+        * create an "update committee" action to add 2 of the 3 new potential CC members
+
+            - vote to disapprove the action
+            - vote to approve the action
+            - check that CC members votes have no effect
+            - check that the action is ratified
+            - check that the action is enacted
+            - check that the new CC members were added
+            - check that it's not possible to vote on enacted action
+
+        * create an "update committee" action to remove 1 CC member
+
+            - vote to disapprove the action
+            - vote to approve the action
+            - check that CC members votes have no effect
+            - check that the action is ratified
+            - check that the action is enacted
+            - check that the CC member was removed
+            - check that it's not possible to vote on enacted action
+
+        * check output of votes and action `view` commands
         """
-        # pylint: disable=too-many-locals,too-many-statements
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         # Linked user stories
         req_cli14 = requirements.Req(id="CLI014", group=requirements.GroupsKnown.CHANG_US)
         req_cip9 = requirements.Req(id="CIP009", group=requirements.GroupsKnown.CHANG_US)
+        req_cip5 = requirements.Req(id="CIP005", group=requirements.GroupsKnown.CHANG_US)
         req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
 
         # Authorize the hot keys
@@ -492,15 +509,23 @@ class TestEnactment:
         )
         cc_member2_key = f"keyHash-{cc_auth_record2.key_hash}"
 
+        cc_auth_record3 = governance_utils.get_cc_member_auth_record(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_member3",
+        )
+        cc_member3_key = f"keyHash-{cc_auth_record3.key_hash}"
+
         tx_files_auth = clusterlib.TxFiles(
             certificate_files=[
                 cc_auth_record1.auth_cert,
                 cc_auth_record2.auth_cert,
+                cc_auth_record3.auth_cert,
             ],
             signing_key_files=[
                 pool_user_lg.payment.skey_file,
                 cc_auth_record1.cold_key_pair.skey_file,
                 cc_auth_record2.cold_key_pair.skey_file,
+                cc_auth_record3.cold_key_pair.skey_file,
             ],
         )
 
@@ -526,7 +551,7 @@ class TestEnactment:
             committee_state=auth_committee_state,
             name_template=f"{temp_template}_auth_{_cur_epoch}",
         )
-        for mk in (cc_member1_key, cc_member2_key):
+        for mk in (cc_member1_key, cc_member2_key, cc_member3_key):
             auth_member_rec = auth_committee_state["committee"][mk]
             assert (
                 auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
@@ -534,99 +559,187 @@ class TestEnactment:
             assert not auth_member_rec["expiration"], "CC Member should not be elected"
             assert auth_member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
 
-        # Create an action
+        # New CC members
+        cc_members = [
+            clusterlib.CCMember(
+                epoch=cluster.g_query.get_epoch() + 5,
+                cold_vkey_file=r.cold_key_pair.vkey_file,
+                cold_skey_file=r.cold_key_pair.skey_file,
+                hot_vkey_file=r.hot_key_pair.vkey_file,
+                hot_skey_file=r.hot_key_pair.skey_file,
+            )
+            for r in (cc_auth_record1, cc_auth_record2)
+        ]
 
-        cc_member = clusterlib.CCMember(
-            epoch=cluster.g_query.get_epoch() + 4,
-            cold_vkey_file=cc_auth_record1.cold_key_pair.vkey_file,
-            cold_skey_file=cc_auth_record1.cold_key_pair.skey_file,
-            hot_vkey_file=cc_auth_record1.hot_key_pair.vkey_file,
-            hot_skey_file=cc_auth_record1.hot_key_pair.skey_file,
-        )
+        def _add_members() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+            """Add new CC members."""
+            anchor_url_add = "http://www.cc-add.com"
+            anchor_data_hash_add = (
+                "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+            )
+            prev_action_rec = governance_utils.get_prev_action(
+                action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+                gov_state=cluster.g_conway_governance.query.gov_state(),
+            )
 
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
-        anchor_url = "http://www.cc-update.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-        prev_action_rec = governance_utils.get_prev_action(
-            action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
-        )
+            req_cli14.start(url=helpers.get_vcs_link())
+            add_cc_action = cluster.g_conway_governance.action.update_committee(
+                action_name=f"{temp_template}_add",
+                deposit_amt=deposit_amt,
+                anchor_url=anchor_url_add,
+                anchor_data_hash=anchor_data_hash_add,
+                quorum=str(cluster.conway_genesis["committee"]["quorum"]),
+                add_cc_members=cc_members,
+                prev_action_txid=prev_action_rec.txid,
+                prev_action_ix=prev_action_rec.ix,
+                deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+            )
+            req_cli14.success()
 
-        req_cli14.start(url=helpers.get_vcs_link())
-        update_action = cluster.g_conway_governance.action.update_committee(
-            action_name=temp_template,
-            deposit_amt=deposit_amt,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
-            quorum=str(cluster.conway_genesis["committee"]["quorum"]),
-            add_cc_members=[cc_member],
-            prev_action_txid=prev_action_rec.txid,
-            prev_action_ix=prev_action_rec.ix,
-            deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
-        )
-        req_cli14.success()
+            tx_files_action_add = clusterlib.TxFiles(
+                proposal_files=[add_cc_action.action_file],
+                signing_key_files=[
+                    pool_user_lg.payment.skey_file,
+                ],
+            )
 
-        tx_files_action = clusterlib.TxFiles(
-            proposal_files=[update_action.action_file],
-            signing_key_files=[
-                pool_user_lg.payment.skey_file,
-            ],
-        )
+            # Make sure we have enough time to submit the proposal in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            )
 
-        # Make sure we have enough time to submit the proposal in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
+            tx_output_action = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_action",
+                src_address=pool_user_lg.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files_action_add,
+            )
 
-        tx_output_action = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_action",
-            src_address=pool_user_lg.payment.address,
-            use_build_cmd=True,
-            tx_files=tx_files_action,
-        )
+            out_utxos_action_add = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
+            assert (
+                clusterlib.filter_utxos(
+                    utxos=out_utxos_action_add, address=pool_user_lg.payment.address
+                )[0].amount
+                == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+                - tx_output_action.fee
+                - deposit_amt
+            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
-        out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_lg.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_action.txins)
-            - tx_output_action.fee
-            - deposit_amt
-        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+            action_add_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+            action_add_gov_state = cluster.g_conway_governance.query.gov_state()
+            _cur_epoch = cluster.g_query.get_epoch()
+            _save_gov_state(
+                gov_state=action_add_gov_state,
+                name_template=f"{temp_template}_action_add_{_cur_epoch}",
+            )
+            prop_action_add = governance_utils.lookup_proposal(
+                gov_state=action_add_gov_state, action_txid=action_add_txid
+            )
+            assert prop_action_add, "Update committee action not found"
+            assert (
+                prop_action_add["action"]["tag"]
+                == governance_utils.ActionTags.UPDATE_COMMITTEE.value
+            ), "Incorrect action tag"
 
-        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
-        _save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
-        )
-        prop_action = governance_utils.lookup_proposal(
-            gov_state=action_gov_state, action_txid=action_txid
-        )
-        assert prop_action, "Update committee action not found"
-        assert (
-            prop_action["action"]["tag"] == governance_utils.ActionTags.UPDATE_COMMITTEE.value
-        ), "Incorrect action tag"
+            action_add_ix = prop_action_add["actionId"]["govActionIx"]
 
-        action_ix = prop_action["actionId"]["govActionIx"]
+            return add_cc_action, action_add_txid, action_add_ix
 
-        # Resign the CC member so it doesn't affect voting
+        def _rem_member() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+            """Remove the CC member."""
+            anchor_url_rem = "http://www.cc-rem.com"
+            anchor_data_hash_rem = (
+                "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+            )
+            prev_action_rec = governance_utils.get_prev_action(
+                action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+                gov_state=cluster.g_conway_governance.query.gov_state(),
+            )
+
+            req_cip5.start(url=helpers.get_vcs_link())
+            rem_cc_action = cluster.g_conway_governance.action.update_committee(
+                action_name=f"{temp_template}_rem",
+                deposit_amt=deposit_amt,
+                anchor_url=anchor_url_rem,
+                anchor_data_hash=anchor_data_hash_rem,
+                quorum=str(cluster.conway_genesis["committee"]["quorum"]),
+                rem_cc_members=[cc_members[1]],
+                prev_action_txid=prev_action_rec.txid,
+                prev_action_ix=prev_action_rec.ix,
+                deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+            )
+            req_cip5.success()
+
+            tx_files_action_rem = clusterlib.TxFiles(
+                proposal_files=[rem_cc_action.action_file],
+                signing_key_files=[
+                    pool_user_lg.payment.skey_file,
+                ],
+            )
+
+            # Make sure we have enough time to submit the proposal in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            )
+
+            tx_output_action = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_action",
+                src_address=pool_user_lg.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files_action_rem,
+            )
+
+            out_utxos_action_rem = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
+            assert (
+                clusterlib.filter_utxos(
+                    utxos=out_utxos_action_rem, address=pool_user_lg.payment.address
+                )[0].amount
+                == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+                - tx_output_action.fee
+                - deposit_amt
+            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+
+            action_rem_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+            action_rem_gov_state = cluster.g_conway_governance.query.gov_state()
+            _cur_epoch = cluster.g_query.get_epoch()
+            _save_gov_state(
+                gov_state=action_rem_gov_state,
+                name_template=f"{temp_template}_action_rem_{_cur_epoch}",
+            )
+            prop_action_rem = governance_utils.lookup_proposal(
+                gov_state=action_rem_gov_state, action_txid=action_rem_txid
+            )
+            assert prop_action_rem, "Update committee action not found"
+            assert (
+                prop_action_rem["action"]["tag"]
+                == governance_utils.ActionTags.UPDATE_COMMITTEE.value
+            ), "Incorrect action tag"
+
+            action_rem_ix = prop_action_rem["actionId"]["govActionIx"]
+
+            return rem_cc_action, action_rem_txid, action_rem_ix
+
         def _resign():
+            """Resign the CC members so it doesn't affect voting."""
             with helpers.change_cwd(testfile_temp_dir):
-                res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
-                    key_name=temp_template,
-                    cold_vkey_file=cc_auth_record1.cold_key_pair.vkey_file,
-                    resignation_metadata_url="http://www.cc-resign.com",
-                    resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
-                )
+                res_certs = [
+                    cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
+                        key_name=f"{temp_template}_res{i}",
+                        cold_vkey_file=r.cold_key_pair.vkey_file,
+                        resignation_metadata_url="http://www.cc-resign.com",
+                        resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+                    )
+                    for i, r in enumerate((cc_auth_record1, cc_auth_record2))
+                ]
 
                 tx_files_res = clusterlib.TxFiles(
-                    certificate_files=[res_cert],
+                    certificate_files=res_certs,
                     signing_key_files=[
                         pool_user_lg.payment.skey_file,
                         cc_auth_record1.cold_key_pair.skey_file,
+                        cc_auth_record2.cold_key_pair.skey_file,
                     ],
                 )
 
@@ -640,7 +753,14 @@ class TestEnactment:
 
         resign_requested = [False]
 
-        def _cast_vote(approve: bool, vote_id: str, add_cc_votes: bool = False) -> VotedVotes:
+        def _cast_vote(
+            approve: bool,
+            vote_id: str,
+            action_txid: str,
+            action_ix: int,
+            add_cc_votes: bool = False,
+        ) -> VotedVotes:
+            """Cast a vote."""
             _votes_drep = [
                 None  # This DRep doesn't vote, his votes count as "No"
                 if i % 3 == 0
@@ -736,105 +856,232 @@ class TestEnactment:
 
             return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
+        # Add new CC members
+
+        # Create an action to add new CC members
+        add_cc_action, action_add_txid, action_add_ix = _add_members()
+
         # Vote & disapprove the action
-        _cast_vote(approve=False, vote_id="no")
+        _cast_vote(
+            approve=False, vote_id="add_no", action_txid=action_add_txid, action_ix=action_add_ix
+        )
 
         # Vote & approve the action
-        _cast_vote(approve=True, vote_id="yes")
+        _cast_vote(
+            approve=True, vote_id="add_yes", action_txid=action_add_txid, action_ix=action_add_ix
+        )
 
         # Check that CC members votes on "update committee" action are ignored
-        voted_votes = _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
+        voted_votes_add = _cast_vote(
+            approve=True,
+            vote_id="add_with_ccs",
+            add_cc_votes=True,
+            action_txid=action_add_txid,
+            action_ix=action_add_ix,
+        )
 
-        def _check_state(state: dict):
-            cc_member_val = state["committee"]["members"].get(cc_member1_key)
-            assert cc_member_val, "New committee member not found"
-            assert cc_member_val == cc_member.epoch
+        def _check_add_state(state: dict):
+            for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
+                cc_member_val = state["committee"]["members"].get(_cc_member_key)
+                assert cc_member_val, "New committee member not found"
+                assert cc_member_val == cc_members[i].epoch
 
         # Check ratification
         xfail_ledger_3979_msgs = set()
         for __ in range(3):
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            rat_add_gov_state = cluster.g_conway_governance.query.gov_state()
             _save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+                gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{_cur_epoch}"
             )
             rem_action = governance_utils.lookup_removed_actions(
-                gov_state=rat_gov_state, action_txid=action_txid
+                gov_state=rat_add_gov_state, action_txid=action_add_txid
             )
             if rem_action:
                 break
 
             # Known ledger issue where only one expired action gets removed in one epoch.
             # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rem_action and _possible_rem_issue(gov_state=rat_gov_state, epoch=_cur_epoch):
+            if not rem_action and _possible_rem_issue(
+                gov_state=rat_add_gov_state, epoch=_cur_epoch
+            ):
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
             raise AssertionError("Action not found in removed actions")
 
-        next_rat_state = rat_gov_state["nextRatifyState"]
-        _check_state(next_rat_state["nextEnactState"])
-        assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
+        next_rat_add_state = rat_add_gov_state["nextRatifyState"]
+        _check_add_state(next_rat_add_state["nextEnactState"])
+        assert next_rat_add_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after ratification
-        rat_committee_state = cluster.g_conway_governance.query.committee_state()
+        rat_add_committee_state = cluster.g_conway_governance.query.committee_state()
         _save_committee_state(
-            committee_state=rat_committee_state,
-            name_template=f"{temp_template}_rat_{_cur_epoch}",
+            committee_state=rat_add_committee_state,
+            name_template=f"{temp_template}_rat_add_{_cur_epoch}",
         )
 
         has_ledger_issue_4001 = False
-        rat_member_rec = rat_committee_state["committee"].get(cc_member1_key) or {}
-        if rat_member_rec:
-            assert (
-                rat_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
-            ), "CC Member is no longer authorized"
-        else:
-            has_ledger_issue_4001 = True
+        for _cc_member_key in (cc_member1_key, cc_member2_key):
+            rat_add_member_rec = rat_add_committee_state["committee"].get(_cc_member_key) or {}
+            if rat_add_member_rec:
+                assert (
+                    rat_add_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
+                ), "CC Member is no longer authorized"
+            else:
+                has_ledger_issue_4001 = True
 
-        assert not rat_committee_state["committee"].get(
-            cc_member2_key
+        assert not rat_add_committee_state["committee"].get(
+            cc_member3_key
         ), "Non-elected unrecognized CC member was not removed"
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        enact_add_gov_state = cluster.g_conway_governance.query.gov_state()
         _save_gov_state(
-            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+            gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{_cur_epoch}"
         )
-        _check_state(enact_gov_state["enactState"])
+        _check_add_state(enact_add_gov_state["enactState"])
 
         # Check committee state after enactment
-        enact_committee_state = cluster.g_conway_governance.query.committee_state()
+        enact_add_committee_state = cluster.g_conway_governance.query.committee_state()
         _save_committee_state(
-            committee_state=enact_committee_state,
-            name_template=f"{temp_template}_enact_{_cur_epoch}",
+            committee_state=enact_add_committee_state,
+            name_template=f"{temp_template}_enact_add_{_cur_epoch}",
         )
-        enact_member1_rec = enact_committee_state["committee"][cc_member1_key]
-        assert (
-            has_ledger_issue_4001
-            or enact_member1_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
-        ), "CC Member was NOT authorized"
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (req_cip9, req_cip10)]
-        assert enact_member1_rec["expiration"] == cc_member.epoch, "Expiration epoch is incorrect"
+        for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
+            enact_add_member_rec = enact_add_committee_state["committee"][_cc_member_key]
+            assert (
+                has_ledger_issue_4001
+                or enact_add_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
+            ), "CC Member was NOT authorized"
+            assert enact_add_member_rec["status"] == "Active", "CC Member should be active"
+            assert (
+                enact_add_member_rec["expiration"] == cc_members[i].epoch
+            ), "Expiration epoch is incorrect"
         [r.success() for r in (req_cip9, req_cip10)]
-        assert enact_member1_rec["status"] == "Active", "CC Member should be active"
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _cast_vote(approve=False, vote_id="enacted")
+            _cast_vote(
+                approve=False,
+                vote_id="add_enacted",
+                action_txid=action_add_txid,
+                action_ix=action_add_ix,
+            )
+        err_str = str(excinfo.value)
+        assert "(GovActionsDoNotExist" in err_str, err_str
+
+        # Remove a CC member
+
+        # Create an action to remove CC member
+        rem_cc_action, action_rem_txid, action_rem_ix = _rem_member()
+
+        # Vote & disapprove the action
+        _cast_vote(
+            approve=False, vote_id="rem_no", action_txid=action_rem_txid, action_ix=action_rem_ix
+        )
+
+        # Vote & approve the action
+        _cast_vote(
+            approve=True, vote_id="rem_yes", action_txid=action_rem_txid, action_ix=action_rem_ix
+        )
+
+        # Check that CC members votes on "update committee" action are ignored
+        voted_votes_rem = _cast_vote(
+            approve=True,
+            vote_id="rem_with_ccs",
+            add_cc_votes=True,
+            action_txid=action_rem_txid,
+            action_ix=action_rem_ix,
+        )
+
+        def _check_rem_state(state: dict):
+            cc_member_val = state["committee"]["members"].get(cc_member2_key)
+            assert not cc_member_val, "Removed committee member still present"
+
+        # Check ratification
+        for __ in range(3):
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_rem_gov_state = cluster.g_conway_governance.query.gov_state()
+            _save_gov_state(
+                gov_state=rat_rem_gov_state, name_template=f"{temp_template}_rat_rem_{_cur_epoch}"
+            )
+            rem_action = governance_utils.lookup_removed_actions(
+                gov_state=rat_rem_gov_state, action_txid=action_rem_txid
+            )
+            if rem_action:
+                break
+
+            # Known ledger issue where only one expired action gets removed in one epoch.
+            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
+            if not rem_action and _possible_rem_issue(
+                gov_state=rat_rem_gov_state, epoch=_cur_epoch
+            ):
+                xfail_ledger_3979_msgs.add("Only single expired action got removed")
+                continue
+
+            raise AssertionError("Action not found in removed actions")
+
+        next_rat_rem_state = rat_rem_gov_state["nextRatifyState"]
+        _check_rem_state(next_rat_rem_state["nextEnactState"])
+        assert next_rat_rem_state["ratificationDelayed"], "Ratification not delayed"
+
+        # Check committee state after ratification
+        rat_rem_committee_state = cluster.g_conway_governance.query.committee_state()
+        _save_committee_state(
+            committee_state=rat_rem_committee_state,
+            name_template=f"{temp_template}_rat_rem_{_cur_epoch}",
+        )
+
+        rat_rem_member_rec = rat_rem_committee_state["committee"][cc_member2_key]
+        assert (
+            rat_rem_member_rec["hotCredsAuthStatus"]["tag"] == "MemberNotAuthorized"
+        ), "CC Member is still authorized"
+
+        # Check enactment
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_rem_gov_state = cluster.g_conway_governance.query.gov_state()
+        _save_gov_state(
+            gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{_cur_epoch}"
+        )
+        _check_rem_state(enact_rem_gov_state["enactState"])
+
+        # Check committee state after enactment
+        enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
+        _save_committee_state(
+            committee_state=enact_rem_committee_state,
+            name_template=f"{temp_template}_enact_rem_{_cur_epoch}",
+        )
+        enact_rem_member_rec = enact_rem_committee_state["committee"].get(cc_member2_key)
+        assert not enact_rem_member_rec, "Removed committee member still present"
+
+        # Try to vote on enacted action
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _cast_vote(
+                approve=False,
+                vote_id="rem_enacted",
+                action_txid=action_rem_txid,
+                action_ix=action_rem_ix,
+            )
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
 
         # Check action view
-        governance_utils.check_action_view(cluster_obj=cluster, action_data=update_action)
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=add_cc_action)
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=rem_cc_action)
 
         # Check vote view
-        if voted_votes.cc:
-            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
+        if voted_votes_add.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_add.cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_add.drep[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_add.spo[0])
+        if voted_votes_rem.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.drep[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.spo[0])
 
         known_issues = []
         if xfail_ledger_3979_msgs:
