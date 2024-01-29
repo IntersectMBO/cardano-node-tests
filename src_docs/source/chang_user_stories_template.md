@@ -1,6 +1,9 @@
 Chang HF User Stories Coverage
 ==============================
 
+Status for **TODAY**
+&nbsp;
+
 **Legend:** ![Success Badge][success-badge] ![Failure Badge][failure-badge] ![Uncovered Badge][uncovered-badge]
 &nbsp;
 
