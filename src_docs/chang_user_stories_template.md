@@ -1,7 +1,7 @@
 System Tests Coverage
 =====================
 
-The page is updated about once a week.
+The page is updated about once a week until the coverage is complete.
 
 Latest update: **TODAY**
 &nbsp;
