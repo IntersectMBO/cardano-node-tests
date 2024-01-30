@@ -1,7 +1,9 @@
-Chang HF User Stories Coverage
-==============================
+System Tests Coverage
+=====================
 
-Status for **TODAY**
+The page is updated about once a week.
+
+Latest update: **TODAY**
 &nbsp;
 
 **Legend:** ![Success Badge][success-badge] ![Failure Badge][failure-badge] ![Uncovered Badge][uncovered-badge]
