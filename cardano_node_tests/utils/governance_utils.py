@@ -298,29 +298,39 @@ def check_action_view(  # noqa: C901
             "tag": ActionTags.NEW_CONSTITUTION.value,
         }
     elif isinstance(action_data, clusterlib.ActionUpdateCommittee):
-        added_members = []
-        for _m in action_data.add_cc_members:
-            if _m.cold_vkey_file:
+
+        def _get_cvkey_hash(member: clusterlib.CCMember) -> str:
+            if member.cold_vkey_file:
                 cvkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
-                    vkey_file=_m.cold_vkey_file
+                    vkey_file=member.cold_vkey_file
                 )
-            elif _m.cold_vkey:
+            elif member.cold_vkey:
                 cvkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
-                    vkey=_m.cold_vkey
+                    vkey=member.cold_vkey
                 )
-            elif _m.cold_vkey_hash:
-                cvkey_hash = _m.cold_vkey_hash
+            elif member.cold_vkey_hash:
+                cvkey_hash = member.cold_vkey_hash
             else:
                 raise ValueError("No cold key was specified")
-            added_members.append({f"keyHash-{cvkey_hash}": _m.epoch})
+
+            return cvkey_hash
+
+        added_members = {}
+        for _m in action_data.add_cc_members:
+            cvkey_hash = _get_cvkey_hash(member=_m)
+            added_members[f"keyHash-{cvkey_hash}"] = _m.epoch
+
+        removed_members = []
+        for _m in action_data.rem_cc_members:
+            removed_members.append({"keyHash": _get_cvkey_hash(member=_m)})
 
         gov_action = {
             "contents": [
                 {"govActionIx": prev_action_ix, "txId": prev_action_txid}
                 if prev_action_txid
                 else None,
-                [],  # TODO: removed members?
-                *added_members,
+                removed_members if removed_members else [],
+                added_members,
                 float(action_data.quorum),
             ],
             "tag": ActionTags.UPDATE_COMMITTEE.value,
