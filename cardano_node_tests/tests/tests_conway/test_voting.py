@@ -1106,7 +1106,7 @@ class TestEnactment:
             blockers.finish_test(issues=known_issues)
 
     @allure.link(helpers.get_vcs_link())
-    def test_pparam_update(
+    def test_pparam_update(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -1126,6 +1126,7 @@ class TestEnactment:
 
         # Linked user stories
         req_cli17 = requirements.Req(id="CLI017", group=requirements.GroupsKnown.CHANG_US)
+        req_cip6 = requirements.Req(id="CIP006", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -1152,9 +1153,20 @@ class TestEnactment:
                 name="dRepActivity",
             ),
         ]
+        if configuration.HAS_CC:
+            update_proposals.append(
+                clusterlib_utils.UpdateProposal(
+                    arg="--min-committee-size",
+                    value=random.randint(3, 5),
+                    name="committeeMinSize",
+                )
+            )
         update_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
 
-        req_cli17.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        req_cli17.start(url=_url)
+        if configuration.HAS_CC:
+            req_cip6.start(url=_url)
         pparams_action = cluster.g_conway_governance.action.create_pparams_update(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -1165,7 +1177,6 @@ class TestEnactment:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
-        req_cli17.success()
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[pparams_action.action_file],
@@ -1208,6 +1219,7 @@ class TestEnactment:
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.PARAMETER_CHANGE.value
         ), "Incorrect action tag"
+        req_cli17.success()
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
@@ -1351,6 +1363,8 @@ class TestEnactment:
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
         _check_state(enact_gov_state["enactState"])
+        if configuration.HAS_CC:
+            req_cip6.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
