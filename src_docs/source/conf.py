@@ -117,6 +117,7 @@ html_static_path = ["_static"]
 # or fully qualified paths (eg. https://...)
 html_css_files = [
     "css/copyright.css",
+    "css/tables.css",
 ]
 
 # Clear tokens from the output
