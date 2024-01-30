@@ -452,7 +452,7 @@ class TestEnactment:
             ).finish_test()
 
     @allure.link(helpers.get_vcs_link())
-    def test_add_new_committee_member(  # noqa: C901
+    def test_committee_member(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
