@@ -193,3 +193,17 @@ class CommitteeDeregistrationRecord:
     cert_index: int
     voting_anchor_id: int
     cold_key: str
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class DrepRegistrationRecord:
+    # pylint: disable-next=invalid-name
+    id: int
+    tx_id: int
+    cert_index: int
+    deposit: int
+    drep_hash_id: int
+    voting_anchor_id: int
+    hash_hex: str
+    hash_bech32: str
+    has_script: bool
