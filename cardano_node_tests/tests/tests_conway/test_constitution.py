@@ -265,8 +265,8 @@ class TestConstitution:
                 anchor["dataHash"]
                 == constitution_hash
                 == "d6d9034f61e2f7ada6e58c252e15684c8df7f0b197a95d80f42ca0a3685de26e"
-            ), "Incorrect constitution anchor hash"
-            assert anchor["url"] == constitution_url, "Incorrect constitution anchor URL"
+            ), "Incorrect constitution data hash"
+            assert anchor["url"] == constitution_url, "Incorrect constitution data URL"
 
         # Check ratification
         xfail_ledger_3979_msgs = set()
