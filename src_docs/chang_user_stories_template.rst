@@ -11,7 +11,7 @@ CLI User Stories
 ----------------
 
 .. list-table::
-   :widths: 11 26 34
+   :widths: 8 26 37
    :header-rows: 1
 
    -
@@ -264,7 +264,7 @@ CIP1694 User Stories
 --------------------
 
 .. list-table::
-   :widths: 11 26 34
+   :widths: 8 26 37
    :header-rows: 1
 
    -
