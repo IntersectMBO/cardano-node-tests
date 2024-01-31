@@ -1,4 +1,4 @@
-"""Tests for Conway governance voting functionality."""
+"""Tests for Conway governance protocol parameters update."""
 # pylint: disable=expression-not-assigned
 import logging
 import random
@@ -40,21 +40,8 @@ def pool_user_lg(
     )
 
 
-@pytest.fixture
-def pool_user_ug(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_use_governance: governance_setup.GovClusterT,
-) -> clusterlib.PoolUser:
-    """Create a pool user for "use governance"."""
-    cluster, __ = cluster_use_governance
-    key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
-        cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
-    )
-
-
-class TestEnactment:
-    """Tests for actions enactment."""
+class TestPParamUpdate:
+    """Tests for protocol parameters update."""
 
     @allure.link(helpers.get_vcs_link())
     def test_pparam_update(  # noqa: C901
