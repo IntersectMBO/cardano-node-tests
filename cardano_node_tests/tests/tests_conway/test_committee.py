@@ -1379,7 +1379,9 @@ class TestCommittee:
 
         # Check ratification
         rat_zero_cc_gov_state = _check_rat_gov_state(
-            name_template=f"{temp_template}_rat", action_txid=zero_cc_txid, action_ix=zero_cc_ix
+            name_template=f"{temp_template}_rat_zero_cc",
+            action_txid=zero_cc_txid,
+            action_ix=zero_cc_ix,
         )
         next_rat_zero_cc_state = rat_zero_cc_gov_state["nextRatifyState"]
         _check_zero_cc_state(next_rat_zero_cc_state["nextEnactState"])
@@ -1395,7 +1397,8 @@ class TestCommittee:
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         enact_zero_cc_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=enact_zero_cc_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+            gov_state=enact_zero_cc_gov_state,
+            name_template=f"{temp_template}_enact_zero_cc_{_cur_epoch}",
         )
         _check_zero_cc_state(enact_zero_cc_gov_state["enactState"])
 
