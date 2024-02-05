@@ -244,12 +244,15 @@ class TestNoConfidence:
         _cast_vote(approve=False, vote_id="no")
 
         # Vote & approve the action
-        _cast_vote(approve=True, vote_id="yes")
+        voted_votes = _cast_vote(approve=True, vote_id="yes")
 
         # Testnet will be in state of no confidence, respin is needed
         with cluster_manager.respin_on_failure():
-            # Check that CC members votes on "no confidence" action are ignored
-            voted_votes = _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
+            # Check that CC cannot vote on "no confidence" action
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _cast_vote(approve=True, vote_id="with_ccs", add_cc_votes=True)
+            err_str = str(excinfo.value)
+            assert "CommitteeVoter" in err_str, err_str
 
             # Check ratification
             xfail_ledger_3979_msgs = set()
@@ -259,21 +262,21 @@ class TestNoConfidence:
                 conway_common.save_gov_state(
                     gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
                 )
-                rem_action = governance_utils.lookup_removed_actions(
+                rat_action = governance_utils.lookup_ratified_actions(
                     gov_state=rat_gov_state, action_txid=action_txid
                 )
-                if rem_action:
+                if rat_action:
                     break
 
                 # Known ledger issue where only one expired action gets removed in one epoch.
                 # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-                if not rem_action and conway_common.possible_rem_issue(
+                if not rat_action and conway_common.possible_rem_issue(
                     gov_state=rat_gov_state, epoch=_cur_epoch
                 ):
                     xfail_ledger_3979_msgs.add("Only single expired action got removed")
                     continue
 
-                raise AssertionError("Action not found in removed actions")
+                raise AssertionError("Action not found in ratified actions")
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
@@ -311,7 +314,8 @@ class TestNoConfidence:
         governance_utils.check_action_view(cluster_obj=cluster, action_data=no_confidence_action)
 
         # Check vote view
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
+        if voted_votes.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
 

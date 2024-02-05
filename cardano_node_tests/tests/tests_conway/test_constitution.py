@@ -243,7 +243,7 @@ class TestConstitution:
             )
             assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
             assert prop_vote["dRepVotes"], "No DRep votes"
-            assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+            assert not votes_spo or prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
             return conway_common.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
@@ -276,15 +276,15 @@ class TestConstitution:
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
             )
-            rem_action = governance_utils.lookup_removed_actions(
+            rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_gov_state, action_txid=action_txid
             )
-            if rem_action:
+            if rat_action:
                 break
 
             # Known ledger issue where only one expired action gets removed in one epoch.
             # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rem_action and conway_common.possible_rem_issue(
+            if not rat_action and conway_common.possible_rem_issue(
                 gov_state=rat_gov_state, epoch=_cur_epoch
             ):
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")

@@ -54,10 +54,10 @@ class PrevActionRec:
 
 
 class PrevGovActionIds(enum.Enum):
-    COMMITTEE = "pgaCommittee"
-    CONSTITUTION = "pgaConstitution"
-    HARDFORK = "pgaHardFork"
-    PPARAM_UPDATE = "pgaPParamUpdate"
+    COMMITTEE = "EnactedCommittee"
+    CONSTITUTION = "EnactedConstitution"
+    HARDFORK = "EnactedHardFork"
+    PPARAM_UPDATE = "EnactedPParamUpdate"
 
 
 class ActionTags(enum.Enum):
@@ -131,24 +131,41 @@ def get_prev_action(
     return PrevActionRec(txid=txid, ix=ix)
 
 
-def lookup_proposal(
-    gov_state: tp.Dict[str, tp.Any], action_txid: str, action_ix: int = 0
+def _lookup_action(
+    actions: tp.List[tp.Dict[str, tp.Any]], action_txid: str, action_ix: int = 0
 ) -> tp.Dict[str, tp.Any]:
-    proposals: tp.List[tp.Dict[str, tp.Any]] = gov_state["proposals"]
     prop: tp.Dict[str, tp.Any] = {}
-    for _p in proposals:
-        _p_action_id = _p["actionId"]
+    for _a in actions:
+        _p_action_id = _a["actionId"]
         if _p_action_id["txId"] == action_txid and _p_action_id["govActionIx"] == action_ix:
-            prop = _p
+            prop = _a
             break
     return prop
 
 
-def lookup_removed_actions(
+def lookup_proposal(
     gov_state: tp.Dict[str, tp.Any], action_txid: str, action_ix: int = 0
 ) -> tp.Dict[str, tp.Any]:
+    proposals: tp.List[tp.Dict[str, tp.Any]] = gov_state["proposals"]
+    return _lookup_action(actions=proposals, action_txid=action_txid, action_ix=action_ix)
+
+
+def lookup_ratified_actions(
+    gov_state: tp.Dict[str, tp.Any], action_txid: str, action_ix: int = 0
+) -> tp.Dict[str, tp.Any]:
+    ratified_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
+        "enactedGovActions"
+    ]
+    return _lookup_action(actions=ratified_actions, action_txid=action_txid, action_ix=action_ix)
+
+
+def lookup_expired_actions(
+    gov_state: tp.Dict[str, tp.Any],
+    action_txid: str,
+    action_ix: int = 0,
+) -> tp.Dict[str, tp.Any]:
     removed_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
-        "removedGovActions"
+        "expiredGovActions"
     ]
     raction: tp.Dict[str, tp.Any] = {}
     for _r in removed_actions:
@@ -269,12 +286,15 @@ def check_action_view(  # noqa: C901
         gov_action = {
             "contents": [
                 [
-                    {
-                        "credential": {"keyHash": recv_addr_vkey_hash},
-                        "network": "Testnet",
-                    },
-                    action_data.transfer_amt,
-                ]
+                    [
+                        {
+                            "credential": {"keyHash": recv_addr_vkey_hash},
+                            "network": "Testnet",
+                        },
+                        action_data.transfer_amt,
+                    ],
+                ],
+                None,  # TODO 8.8: what is this?
             ],
             "tag": ActionTags.TREASURY_WITHDRAWALS.value,
         }

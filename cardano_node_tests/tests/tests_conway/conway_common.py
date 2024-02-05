@@ -29,7 +29,7 @@ def possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
     See https://github.com/IntersectMBO/cardano-ledger/issues/3979
     """
     removed_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
-        "removedGovActions"
+        "expiredGovActions"
     ]
     proposals: tp.List[tp.Dict[str, tp.Any]] = gov_state["proposals"]
 

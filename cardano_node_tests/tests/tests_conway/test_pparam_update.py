@@ -26,6 +26,20 @@ pytestmark = pytest.mark.skipif(
     reason="runs only with Tx era >= Conway",
 )
 
+# Security related pparams that require also SPO approval
+SECURITY_PPARAMS = {
+    "maxBlockBodySize",
+    "maxTxSize",
+    "maxBlockHeaderSize",
+    "maxValSize",
+    "maxBlockExUnits",
+    "minFeeA",
+    "minFeeB",
+    "coinsPerUTxOByte",
+    "govActionDeposit",
+    "minFeeRefScriptsCoinsPerByte",  # not in 8.8 release yet
+}
+
 
 @pytest.fixture
 def pool_user_lg(
@@ -89,6 +103,11 @@ class TestPParamUpdate:
                 arg="--drep-activity",
                 value=random.randint(101, 120),
                 name="dRepActivity",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-block-header-size",
+                value=random.randint(1100, 1150),
+                name="maxBlockHeaderSize",
             ),
         ]
         if configuration.HAS_CC:
@@ -195,7 +214,7 @@ class TestPParamUpdate:
                         vote_name=f"{temp_template}_{vote_id}_pool{i}",
                         action_txid=action_txid,
                         action_ix=action_ix,
-                        vote=clusterlib.Votes.NO,
+                        vote=clusterlib.Votes.YES,
                         cold_vkey_file=p.vkey_file,
                     )
                     for i, p in enumerate(governance_data.pools_cold, start=1)
@@ -248,21 +267,27 @@ class TestPParamUpdate:
             )
             assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
             assert prop_vote["dRepVotes"], "No DRep votes"
-            assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
+            assert not votes_spo or prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
             return conway_common.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
-        # Check that SPOs cannot vote on change of constitution action
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
-        err_str = str(excinfo.value)
-        assert "StakePoolVoter" in err_str, err_str
+        proposal_names = {p.name for p in update_proposals}
+        add_spo_votes = True
+
+        if proposal_names.isdisjoint(SECURITY_PPARAMS):
+            # Check that SPOs cannot vote on change of constitution action
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
+            err_str = str(excinfo.value)
+            assert "StakePoolVoter" in err_str, err_str
+
+            add_spo_votes = False
 
         # Vote & disapprove the action
-        _cast_vote(approve=False, vote_id="no")
+        _cast_vote(approve=False, vote_id="no", add_spo_votes=add_spo_votes)
 
         # Vote & approve the action
-        voted_votes = _cast_vote(approve=True, vote_id="yes")
+        voted_votes = _cast_vote(approve=True, vote_id="yes", add_spo_votes=add_spo_votes)
 
         def _check_state(state: dict):
             pparams = state["curPParams"]
@@ -278,21 +303,21 @@ class TestPParamUpdate:
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
             )
-            rem_action = governance_utils.lookup_removed_actions(
+            rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_gov_state, action_txid=action_txid
             )
-            if rem_action:
+            if rat_action:
                 break
 
             # Known ledger issue where only one expired action gets removed in one epoch.
             # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rem_action and conway_common.possible_rem_issue(
+            if not rat_action and conway_common.possible_rem_issue(
                 gov_state=rat_gov_state, epoch=_cur_epoch
             ):
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
-            raise AssertionError("Action not found in removed actions")
+            raise AssertionError("Action not found in ratified actions")
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])
