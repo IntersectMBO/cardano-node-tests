@@ -251,7 +251,7 @@ class RewardDBRow:
     amount: decimal.Decimal
     earned_epoch: int
     spendable_epoch: int
-    pool_id: str
+    pool_id: tp.Optional[str] = ""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -723,8 +723,25 @@ def query_address_reward(
         "FROM reward "
         "INNER JOIN stake_address ON reward.addr_id = stake_address.id "
         "LEFT JOIN pool_hash ON pool_hash.id = reward.pool_id "
-        "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s) "
-        "ORDER BY reward.id;"
+        "WHERE (stake_address.view = %s) AND (reward.spendable_epoch BETWEEN %s AND %s) ;"
+    )
+
+    with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield RewardDBRow(*result)
+
+
+def query_address_instant_reward(
+    address: str, epoch_from: int = 0, epoch_to: int = 99999999
+) -> tp.Generator[RewardDBRow, None, None]:
+    """Query instant reward records for stake address in db-sync."""
+    query = (
+        "SELECT"
+        " stake_address.view, instant_reward.type, instant_reward.amount, "
+        " instant_reward.earned_epoch, instant_reward.spendable_epoch "
+        "FROM instant_reward "
+        "INNER JOIN stake_address ON instant_reward.addr_id = stake_address.id "
+        "WHERE (stake_address.view = %s) AND (instant_reward.spendable_epoch BETWEEN %s AND %s) ;"
     )
 
     with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
