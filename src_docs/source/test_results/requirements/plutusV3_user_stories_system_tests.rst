@@ -12,12 +12,12 @@ Smart Contract User Stories
    :widths: 8 26 37
    :header-rows: 1
 
-   - 
+   -
 
       - Status for Story ID
       - Title
       - Story Overview
-   - 
+   -
 
       - |CIP-85-badge| PlutusV3 is not supported in this build so cannot
          use plutus-tx compiler v1.1.0
@@ -25,21 +25,21 @@ Smart Contract User Stories
          `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/main/docs/user-stories/04-smart-contracts.md#user-story-id-cip-85>`__
       - As a DApp developer I want to use sums-of-products instead of
          Scott-encoding in my Plutus scripts to get better performance.
-   - 
+   -
 
       - |CIP-101-badge| Plutus version in use doesn’t include this builtin
       - Keccak256 in Plutus v3
          `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/main/docs/user-stories/04-smart-contracts.md#user-story-id-cip-101>`__
       - As a DApp developer I want to use the Keccak hashing function to
          validate ECDSA signatures formatted via the EVM standard.
-   - 
+   -
 
       - |PLT-001-badge|\  Plutus version in use doesn’t include this builtin
       - Blake2b-224 in Plutus v3
          `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/main/docs/user-stories/04-smart-contracts.md#user-story-id-plt001>`__
       - As a DApp developer I want to use the Blake2b-224 hashing
          function to compute PubKeyHash onchain.
-   - 
+   -
 
       - |CIP-87-badge| Plutus version in use doesn’t include this builtin
       - Use bitwise operations in Plutus V3
