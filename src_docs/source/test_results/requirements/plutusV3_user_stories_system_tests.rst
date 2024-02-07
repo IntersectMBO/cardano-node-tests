@@ -9,7 +9,7 @@ Smart Contract User Stories
 ---------------------------
 
 .. list-table::
-   :widths: 34 11 26
+   :widths: 8 26 37
    :header-rows: 1
 
    - 
