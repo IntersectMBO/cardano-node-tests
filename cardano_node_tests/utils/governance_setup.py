@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import pathlib as pl
 import pickle
 import typing as tp
 
@@ -9,6 +10,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 
 LOGGER = logging.getLogger(__name__)
@@ -187,57 +189,190 @@ def setup(
 
     cluster_obj.wait_for_new_epoch(padding_seconds=5)
 
-    return DefaultGovernance(
+    # Check delegation to DReps
+    deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster_obj)
+    drep_id = drep_reg_records[0].drep_id
+    stake_addr_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+        stake_vkey_file=drep_users[0].stake.vkey_file
+    )
+    governance_utils.check_drep_delegation(
+        deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
+    )
+
+    gov_data = save_default_governance(
         dreps_reg=drep_reg_records,
         drep_delegators=drep_users,
         cc_members=cc_members,
         pools_cold=node_cold_records,
     )
 
+    return gov_data
+
 
 def get_default_governance(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
 ) -> DefaultGovernance:
-    with cluster_manager.cache_fixture(key="default_governance") as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
+    cluster_env = cluster_nodes.get_cluster_env()
+    gov_data_dir = cluster_env.state_dir / GOV_DATA_DIR
+    gov_data_store = gov_data_dir / GOV_DATA_STORE
+    governance_data = None
 
-        cluster_env = cluster_nodes.get_cluster_env()
-        gov_data_dir = cluster_env.state_dir / GOV_DATA_DIR
-        gov_data_store = gov_data_dir / GOV_DATA_STORE
-
-        if gov_data_store.exists():
-            with open(gov_data_store, "rb") as in_data:
-                loaded_gov_data = pickle.load(in_data)
-            fixture_cache.value = loaded_gov_data
-            return loaded_gov_data  # type: ignore
-
+    def _setup_gov() -> tp.Optional[DefaultGovernance]:
         with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
-            gov_data_dir.mkdir(exist_ok=True, parents=True)
+            if gov_data_store.exists():
+                return None
 
-            governance_data = setup(
+            return setup(
                 cluster_obj=cluster_obj,
                 cluster_manager=cluster_manager,
                 destination_dir=gov_data_dir,
             )
 
-            # Check delegation to DReps
-            deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster_obj)
-            drep_id = governance_data.dreps_reg[0].drep_id
-            stake_addr_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
-                stake_vkey_file=governance_data.drep_delegators[0].stake.vkey_file
+    if not gov_data_store.exists():
+        governance_data = _setup_gov()
+
+    gov_data_checksum = helpers.checksum(gov_data_store)
+
+    with cluster_manager.cache_fixture(key=gov_data_checksum) as fixture_cache:
+        if fixture_cache.value:
+            return fixture_cache.value  # type: ignore
+
+        if not governance_data and gov_data_store.exists():
+            with open(gov_data_store, "rb") as in_data:
+                governance_data = pickle.load(in_data)
+
+        fixture_cache.value = governance_data
+        return fixture_cache.value  # type: ignore
+
+
+def save_default_governance(
+    dreps_reg: tp.List[governance_utils.DRepRegistration],
+    drep_delegators: tp.List[clusterlib.PoolUser],
+    cc_members: tp.List[clusterlib.CCMember],
+    pools_cold: tp.List[clusterlib.ColdKeyPair],
+) -> DefaultGovernance:
+    """Save governance data to a pickle, so it can be reused.
+
+    This needs to be called either under a file lock (`FileLockIfXdist`), or in a test
+    that locked whole governance for itself.
+    """
+    cluster_env = cluster_nodes.get_cluster_env()
+    gov_data_dir = cluster_env.state_dir / GOV_DATA_DIR
+    gov_data_store = gov_data_dir / GOV_DATA_STORE
+
+    gov_data = DefaultGovernance(
+        dreps_reg=dreps_reg,
+        drep_delegators=drep_delegators,
+        cc_members=cc_members,
+        pools_cold=pools_cold,
+    )
+
+    gov_data_dir.mkdir(exist_ok=True, parents=True)
+    with open(gov_data_store, "wb") as out_data:
+        pickle.dump(gov_data, out_data)
+
+    return gov_data
+
+
+def refresh_cc_keys(
+    cluster_obj: clusterlib.ClusterLib,
+    cc_members: tp.List[clusterlib.CCMember],
+    governance_data: DefaultGovernance,
+) -> DefaultGovernance:
+    """Refresh ho certs for original CC members."""
+    gov_data_dir = pl.Path(cc_members[0].hot_vkey_file).parent
+
+    new_cc_members = []
+    for c in cc_members:
+        key_name = pl.Path(c.hot_vkey_file).stem.replace("_committee_hot", "")
+        # Until it is possible to revive resigned CC member, we need to create also
+        # new cold keys and thus create a completely new CC member.
+        committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
+            key_name=key_name,
+            destination_dir=gov_data_dir,
+        )
+        committee_hot_keys = cluster_obj.g_conway_governance.committee.gen_hot_key_pair(
+            key_name=key_name,
+            destination_dir=gov_data_dir,
+        )
+        cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
+            key_name=key_name,
+            cold_vkey_file=c.cold_vkey_file,
+            hot_key_file=committee_hot_keys.vkey_file,
+            destination_dir=gov_data_dir,
+        )
+        new_cc_members.append(
+            clusterlib.CCMember(
+                epoch=c.epoch,
+                cold_vkey_file=committee_cold_keys.vkey_file,
+                cold_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                    vkey_file=committee_cold_keys.vkey_file,
+                ),
+                cold_skey_file=committee_cold_keys.skey_file,
+                hot_vkey_file=committee_hot_keys.vkey_file,
+                hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                    vkey_file=committee_hot_keys.vkey_file
+                ),
+                hot_skey_file=committee_hot_keys.skey_file,
             )
-            governance_utils.check_drep_delegation(
-                deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
-            )
+        )
 
-            fixture_cache.value = governance_data
+    unchanged_cc_members = set(governance_data.cc_members).difference(cc_members)
 
-            with open(gov_data_store, "wb") as out_data:
-                pickle.dump(governance_data, out_data)
+    recreated_gov_data = save_default_governance(
+        dreps_reg=governance_data.dreps_reg,
+        drep_delegators=governance_data.drep_delegators,
+        cc_members=[*new_cc_members, *unchanged_cc_members],
+        pools_cold=governance_data.pools_cold,
+    )
 
-    return governance_data
+    return recreated_gov_data
+
+
+def auth_cc_members(
+    cluster_obj: clusterlib.ClusterLib,
+    cc_members: tp.List[clusterlib.CCMember],
+    name_template: str,
+    payment_addr: clusterlib.AddressRecord,
+) -> None:
+    """Authorize the original CC members."""
+    assert cc_members, "No CC members found"
+    gov_data_dir = pl.Path(cc_members[0].hot_vkey_file).parent
+
+    hot_auth_certs = []
+    for c in cc_members:
+        stem = pl.Path(c.hot_vkey_file).stem
+        hot_auth_certs.append(gov_data_dir / f"{stem}_auth.cert")
+
+    tx_files = clusterlib.TxFiles(
+        certificate_files=hot_auth_certs,
+        signing_key_files=[
+            payment_addr.skey_file,
+            *[r.cold_skey_file for r in cc_members],
+        ],
+    )
+
+    tx_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_cc_auth",
+        src_address=payment_addr.address,
+        use_build_cmd=True,
+        tx_files=tx_files,
+    )
+
+    reg_out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
+    assert (
+        clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
+        == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
+    ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+    reg_committee_state = cluster_obj.g_conway_governance.query.committee_state()
+    member_key = f"keyHash-{cc_members[0].cold_vkey_hash}"
+    assert (
+        reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
+        == "MemberAuthorized"
+    ), "CC Member was not authorized"
 
 
 def reinstate_committee(
@@ -395,37 +530,9 @@ def reinstate_committee(
     enact_gov_state = cluster_obj.g_conway_governance.query.gov_state()
     _check_state(enact_gov_state["enactState"])
 
-    # Authorize CC members
-
-    gov_data_dir = cluster_nodes.get_cluster_env().state_dir / GOV_DATA_DIR
-    hot_auth_certs = list(gov_data_dir.glob("cc_member*_committee_hot_auth.cert"))
-    assert hot_auth_certs, "No certs found"
-
-    tx_files_auth = clusterlib.TxFiles(
-        certificate_files=hot_auth_certs,
-        signing_key_files=[
-            pool_user.payment.skey_file,
-            *[r.cold_skey_file for r in governance_data.cc_members],
-        ],
-    )
-
-    tx_output_auth = clusterlib_utils.build_and_submit_tx(
+    auth_cc_members(
         cluster_obj=cluster_obj,
-        name_template=f"{name_template}_cc_auth",
-        src_address=pool_user.payment.address,
-        use_build_cmd=True,
-        tx_files=tx_files_auth,
+        cc_members=governance_data.cc_members,
+        name_template=name_template,
+        payment_addr=pool_user.payment,
     )
-
-    reg_out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_auth)
-    assert (
-        clusterlib.filter_utxos(utxos=reg_out_utxos, address=pool_user.payment.address)[0].amount
-        == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
-    ), f"Incorrect balance for source address `{pool_user.payment.address}`"
-
-    reg_committee_state = cluster_obj.g_conway_governance.query.committee_state()
-    member_key = f"keyHash-{governance_data.cc_members[0].cold_vkey_hash}"
-    assert (
-        reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
-        == "MemberAuthorized"
-    ), "CC Member was not authorized"

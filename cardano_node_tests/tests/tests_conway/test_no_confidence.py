@@ -326,3 +326,53 @@ class TestNoConfidence:
                 message="; ".join(xfail_ledger_3979_msgs),
                 check_on_devel=False,
             ).finish_test()
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
+    @pytest.mark.long
+    def test_auto_no_confidence(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_lock_governance: governance_setup.GovClusterT,
+        pool_user_lg: clusterlib.PoolUser,
+    ):
+        """Test enactment of no confidence action.
+
+        * create a "no confidence" action
+        * vote to disapprove the action
+        * vote to approve the action
+        * check that CC members votes have no effect
+        * check that the action is ratified
+        * check that the action is enacted
+        * check that it's not possible to vote on enacted action
+        """
+        # pylint: disable=too-many-locals,too-many-statements
+        cluster, governance_data = cluster_lock_governance
+        temp_template = common.get_test_id(cluster)
+
+        # Linked user stories
+        # req_cip14 = requirements.Req(id="CIP014", group=requirements.GroupsKnown.CHANG_US)
+
+        # Resign all CC Members but one
+
+        cc_members_to_resign = governance_data.cc_members[1:]
+        conway_common.resign_ccs(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            ccs_to_resign=cc_members_to_resign,
+            payment_addr=pool_user_lg.payment,
+        )
+
+        # Testnet will be in (sort of) state of no confidence, respin is needed
+        with cluster_manager.respin_on_failure():
+            governance_data = governance_setup.refresh_cc_keys(
+                cluster_obj=cluster,
+                cc_members=cc_members_to_resign,
+                governance_data=governance_data,
+            )
+            governance_setup.reinstate_committee(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_reinstate",
+                pool_user=pool_user_lg,
+            )
