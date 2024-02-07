@@ -326,3 +326,103 @@ class TestNoConfidence:
                 message="; ".join(xfail_ledger_3979_msgs),
                 check_on_devel=False,
             ).finish_test()
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
+    @pytest.mark.long
+    def test_committee_min_size(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_lock_governance: governance_setup.GovClusterT,
+        pool_user_lg: clusterlib.PoolUser,
+    ):
+        """Test that actions cannot be ratified when the number of CC members < committeeMinSize.
+
+        Only update-committee and no-confidence governance actions can be ratified.
+
+        * resign all CC Members but one
+        * try to ratify a "create constitution" action
+        * check that the action is not ratified
+        * reinstate the original CC members
+        """
+        # pylint: disable=too-many-locals,too-many-statements
+        cluster, governance_data = cluster_lock_governance
+        temp_template = common.get_test_id(cluster)
+
+        # Linked user stories
+        req_cip14 = requirements.Req(id="CIP014", group=requirements.GroupsKnown.CHANG_US)
+
+        # Resign all CC Members but one
+
+        req_cip14.start(url=helpers.get_vcs_link())
+
+        cc_members_to_resign = governance_data.cc_members[1:]
+        conway_common.resign_ccs(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            ccs_to_resign=cc_members_to_resign,
+            payment_addr=pool_user_lg.payment,
+        )
+
+        # Testnet will be in (sort of) state of no confidence, respin is needed in case of
+        # failure.
+        with cluster_manager.respin_on_failure():
+            # Try to ratify a "create constitution" action
+            (
+                __,
+                const_action_txid,
+                const_action_ix,
+            ) = conway_common.propose_change_constitution(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_constitution",
+                pool_user=pool_user_lg,
+            )
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_constitution",
+                payment_addr=pool_user_lg.payment,
+                action_txid=const_action_txid,
+                action_ix=const_action_ix,
+                approve_cc=True,
+                approve_drep=True,
+            )
+
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            approved_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=approved_gov_state, name_template=f"{temp_template}_approved_{_cur_epoch}"
+            )
+            prop_const_action = governance_utils.lookup_proposal(
+                gov_state=approved_gov_state,
+                action_txid=const_action_txid,
+                action_ix=const_action_ix,
+            )
+            expire_epoch = prop_const_action["expiresAfter"] + 1
+
+            # Check that the action is not ratified
+            _cur_epoch = cluster.wait_for_new_epoch(
+                new_epochs=expire_epoch - _cur_epoch, padding_seconds=5
+            )
+            expire_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{_cur_epoch}"
+            )
+            assert governance_utils.lookup_expired_actions(
+                gov_state=expire_gov_state, action_txid=const_action_txid, action_ix=const_action_ix
+            ), "Action not found in removed actions"
+
+            req_cip14.success()
+
+            # Reinstate the original CC members
+            governance_data = governance_setup.refresh_cc_keys(
+                cluster_obj=cluster,
+                cc_members=cc_members_to_resign,
+                governance_data=governance_data,
+            )
+            governance_setup.reinstate_committee(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_reinstate",
+                pool_user=pool_user_lg,
+            )
