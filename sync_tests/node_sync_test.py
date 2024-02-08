@@ -158,7 +158,8 @@ def get_node_config_files(env, node_topology_type):
     download_config_file(env, 'shelley-genesis.json')
     download_config_file(env, 'alonzo-genesis.json')
     # Temporary hardcoded sanchonet conway genesis file:
-    download_config_file('sanchonet', 'conway-genesis.json')
+    #download_config_file('sanchonet', 'conway-genesis.json')
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/eaa7f0d9be009084b08705484560d3936dff3db6/cardano_node_tests/cluster_scripts/conway/genesis.conway.spec.json", 'conway-genesis.json')
 
     if env == 'mainnet' and node_topology_type == 'p2p':
         print('Creating the topology.json file...')
@@ -175,7 +176,7 @@ def get_node_config_files(env, node_topology_type):
             if 'ConwayGenesisHash' not in line.strip("\n"):
                 f.write(line)
             else:                
-                f.write('  "ConwayGenesisHash": "89dd23dc6a020afa0c7521fe52fe14e38d494129933a3604154a3acfa4ac16e4",\n')    
+                f.write('  "ConwayGenesisHash": "d78b4fc6f8096751974fdde0b04ba9a63cea67ea5e63862f411d0350d923b71f",\n')    
 
     #if not utils.cli_has(f"{CLI} governance create-poll"):
     #    Path('conway-genesis.json').unlink(missing_ok=True)
