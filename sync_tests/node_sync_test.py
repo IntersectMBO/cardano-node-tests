@@ -158,7 +158,8 @@ def get_node_config_files(env, node_topology_type):
     download_config_file(env, 'shelley-genesis.json')
     download_config_file(env, 'alonzo-genesis.json')
     # Temporary hardcoded sanchonet conway genesis file:
-    download_config_file('sanchonet', 'conway-genesis.json')
+    #download_config_file('sanchonet', 'conway-genesis.json')
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/027476c54b99e3ca0cc97b8cafa2eeb1c50a1c4b/cardano_node_tests/cluster_scripts/conway/genesis.conway.spec.json", 'conway-genesis.json')
 
     if env == 'mainnet' and node_topology_type == 'p2p':
         print('Creating the topology.json file...')
@@ -168,14 +169,19 @@ def get_node_config_files(env, node_topology_type):
         download_config_file(env, 'topology.json')
 
     # Temporary hardcoded sanchonet conway genesis file hash:
+    conway_hash = "88b1773f4262601b8ea7a4918868e00afd4d75576c6eb4a167fbe5fd5c9c4c68"
+    #alonzo_hash = "27bd50c2318934f0886ea215dbba9a50368441629ef29a22b1f413ea4e05a954"
+
     with open('config.json', 'r') as f:
         lines = f.readlines()
     with open('config.json', 'w') as f:
         for line in lines:
-            if 'ConwayGenesisHash' not in line.strip("\n"):
-                f.write(line)
-            else:                
-                f.write('  "ConwayGenesisHash": "89dd23dc6a020afa0c7521fe52fe14e38d494129933a3604154a3acfa4ac16e4",\n')    
+            if 'ConwayGenesisHash' in line.strip("\n"):
+                line = f'  "ConwayGenesisHash": "{conway_hash}",\n'
+            #elif 'AlonzoGenesisHash' in line.strip("\n"):
+            #    line = f'  "AlonzoGenesisHash": "{alonzo_hash}",\n'
+            f.write(line)
+
 
     #if not utils.cli_has(f"{CLI} governance create-poll"):
     #    Path('conway-genesis.json').unlink(missing_ok=True)
