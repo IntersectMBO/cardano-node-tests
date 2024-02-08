@@ -11,12 +11,14 @@ on:
         description: "Cluster era"
         options:
         - babbage
+        - conway
         default: babbage
       tx_era:
         type: choice
         description: "Tx era"
         options:
         - default
+        - conway
         - babbage
         - alonzo
         - mary
@@ -32,6 +34,7 @@ on:
         - plutus
         - plutus and smoke
         - not long
+        - conway only
         default: all
       topology:
         type: choice
