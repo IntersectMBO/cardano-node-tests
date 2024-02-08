@@ -381,10 +381,10 @@ def reinstate_committee(
     # Check ratification
     _cur_epoch = cluster_obj.wait_for_new_epoch(padding_seconds=5)
     rat_gov_state = cluster_obj.g_conway_governance.query.gov_state()
-    rem_action = governance_utils.lookup_removed_actions(
+    rat_action = governance_utils.lookup_ratified_actions(
         gov_state=rat_gov_state, action_txid=action_txid
     )
-    assert rem_action, "Action not found in removed actions"
+    assert rat_action, "Action not found in ratified actions"
 
     next_rat_state = rat_gov_state["nextRatifyState"]
     _check_state(next_rat_state["nextEnactState"])

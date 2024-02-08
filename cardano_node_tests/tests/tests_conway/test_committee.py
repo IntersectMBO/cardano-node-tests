@@ -715,18 +715,21 @@ class TestCommittee:
         )
 
         # Vote & approve the action
-        _cast_vote(
+        voted_votes_add = _cast_vote(
             approve=True, vote_id="add_yes", action_txid=action_add_txid, action_ix=action_add_ix
         )
 
-        # Check that CC members votes on "update committee" action are ignored
-        voted_votes_add = _cast_vote(
-            approve=True,
-            vote_id="add_with_ccs",
-            add_cc_votes=True,
-            action_txid=action_add_txid,
-            action_ix=action_add_ix,
-        )
+        # Check that CC cannot vote on "update committee" action
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _cast_vote(
+                approve=True,
+                vote_id="add_with_ccs",
+                add_cc_votes=True,
+                action_txid=action_add_txid,
+                action_ix=action_add_ix,
+            )
+        err_str = str(excinfo.value)
+        assert "CommitteeVoter" in err_str, err_str
 
         def _check_add_state(state: dict):
             for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
@@ -742,21 +745,21 @@ class TestCommittee:
             conway_common.save_gov_state(
                 gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{_cur_epoch}"
             )
-            rem_action = governance_utils.lookup_removed_actions(
+            rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_add_gov_state, action_txid=action_add_txid
             )
-            if rem_action:
+            if rat_action:
                 break
 
             # Known ledger issue where only one expired action gets removed in one epoch.
             # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rem_action and conway_common.possible_rem_issue(
+            if not rat_action and conway_common.possible_rem_issue(
                 gov_state=rat_add_gov_state, epoch=_cur_epoch
             ):
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
-            raise AssertionError("Action not found in removed actions")
+            raise AssertionError("Action not found in ratified actions")
 
         next_rat_add_state = rat_add_gov_state["nextRatifyState"]
         _check_add_state(next_rat_add_state["nextEnactState"])
@@ -769,15 +772,16 @@ class TestCommittee:
             name_template=f"{temp_template}_rat_add_{_cur_epoch}",
         )
 
-        has_ledger_issue_4001 = False
+        xfail_ledger_4001_msgs = set()
         for _cc_member_key in (cc_member1_key, cc_member2_key):
             rat_add_member_rec = rat_add_committee_state["committee"].get(_cc_member_key) or {}
             if rat_add_member_rec:
-                assert (
-                    rat_add_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
-                ), "CC Member is no longer authorized"
+                if rat_add_member_rec["hotCredsAuthStatus"]["tag"] != "MemberAuthorized":
+                    xfail_ledger_4001_msgs.add("Newly elected CC members lose authorization")
             else:
-                has_ledger_issue_4001 = True
+                xfail_ledger_4001_msgs.add(
+                    "Newly elected CC members are removed during ratification"
+                )
 
         assert not rat_add_committee_state["committee"].get(
             cc_member3_key
@@ -802,7 +806,7 @@ class TestCommittee:
         for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
             enact_add_member_rec = enact_add_committee_state["committee"][_cc_member_key]
             assert (
-                has_ledger_issue_4001
+                xfail_ledger_4001_msgs
                 or enact_add_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
             ), "CC Member was NOT authorized"
             assert enact_add_member_rec["status"] == "Active", "CC Member should be active"
@@ -833,18 +837,21 @@ class TestCommittee:
         )
 
         # Vote & approve the action
-        _cast_vote(
+        voted_votes_rem = _cast_vote(
             approve=True, vote_id="rem_yes", action_txid=action_rem_txid, action_ix=action_rem_ix
         )
 
-        # Check that CC members votes on "update committee" action are ignored
-        voted_votes_rem = _cast_vote(
-            approve=True,
-            vote_id="rem_with_ccs",
-            add_cc_votes=True,
-            action_txid=action_rem_txid,
-            action_ix=action_rem_ix,
-        )
+        # Check that CC cannot vote on "update committee" action
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            _cast_vote(
+                approve=True,
+                vote_id="rem_with_ccs",
+                add_cc_votes=True,
+                action_txid=action_rem_txid,
+                action_ix=action_rem_ix,
+            )
+        err_str = str(excinfo.value)
+        assert "CommitteeVoter" in err_str, err_str
 
         def _check_rem_state(state: dict):
             cc_member_val = state["committee"]["members"].get(cc_member2_key)
@@ -857,21 +864,21 @@ class TestCommittee:
             conway_common.save_gov_state(
                 gov_state=rat_rem_gov_state, name_template=f"{temp_template}_rat_rem_{_cur_epoch}"
             )
-            rem_action = governance_utils.lookup_removed_actions(
+            rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_rem_gov_state, action_txid=action_rem_txid
             )
-            if rem_action:
+            if rat_action:
                 break
 
             # Known ledger issue where only one expired action gets removed in one epoch.
             # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rem_action and conway_common.possible_rem_issue(
+            if not rat_action and conway_common.possible_rem_issue(
                 gov_state=rat_rem_gov_state, epoch=_cur_epoch
             ):
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
-            raise AssertionError("Action not found in removed actions")
+            raise AssertionError("Action not found in ratified actions")
 
         next_rat_rem_state = rat_rem_gov_state["nextRatifyState"]
         _check_rem_state(next_rat_rem_state["nextEnactState"])
@@ -941,12 +948,12 @@ class TestCommittee:
                     check_on_devel=False,
                 )
             )
-        if has_ledger_issue_4001:
+        if xfail_ledger_4001_msgs:
             known_issues.append(
                 blockers.GH(
                     issue=4001,
                     repo="IntersectMBO/cardano-ledger",
-                    message="Newly elected CC members are removed during ratification",
+                    message="; ".join(xfail_ledger_4001_msgs),
                     check_on_devel=False,
                 )
             )
@@ -1320,10 +1327,8 @@ class TestCommittee:
                 gov_state=vote_gov_state, action_txid=action_txid
             )
             assert prop_vote["dRepVotes"], "No DRep votes"
-            if votes_cc:
-                assert prop_vote["committeeVotes"], "No committee votes"
-            if votes_spo:
-                assert prop_vote["stakePoolVotes"], "No stake pool votes"
+            assert not votes_cc or prop_vote["committeeVotes"], "No committee votes"
+            assert not votes_spo or prop_vote["stakePoolVotes"], "No stake pool votes"
 
             return conway_common.VotedVotes(cc=[], drep=votes_drep, spo=votes_spo)
 
@@ -1336,21 +1341,21 @@ class TestCommittee:
                 conway_common.save_gov_state(
                     gov_state=gov_state, name_template=f"{name_template}_{_cur_epoch}"
                 )
-                rem_action = governance_utils.lookup_removed_actions(
+                rat_action = governance_utils.lookup_ratified_actions(
                     gov_state=gov_state, action_txid=action_txid, action_ix=action_ix
                 )
-                if rem_action:
+                if rat_action:
                     return gov_state
 
                 # Known ledger issue where only one expired action gets removed in one epoch.
                 # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-                if not rem_action and conway_common.possible_rem_issue(
+                if not rat_action and conway_common.possible_rem_issue(
                     gov_state=gov_state, epoch=_cur_epoch
                 ):
                     xfail_ledger_3979_msgs.add("Only single expired action got removed")
                     continue
 
-                raise AssertionError("Action not found in removed actions")
+                raise AssertionError("Action not found in ratified actions")
 
             return {}
 
