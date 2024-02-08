@@ -866,6 +866,7 @@ class TestNegativeReferenceScripts:
             assert rf"script failed:\n\"{script2_base64}\"" in err_str, err_str
             blockers.GH(
                 issue=3731,
+                fixed_in="8.9.0",
                 repo="IntersectMBO/cardano-ledger",
                 message="base64 encoded binary script",
             ).finish_test()
