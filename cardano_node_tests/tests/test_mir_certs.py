@@ -15,8 +15,14 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+
+pytestmark = pytest.mark.skipif(
+    VERSIONS.transaction_era >= VERSIONS.CONWAY,
+    reason="runs only with Tx era < Conway",
+)
 
 RESERVES = "reserves"
 TREASURY = "treasury"
