@@ -152,6 +152,11 @@ class GH:
         if not self.gh_issue.is_closed():
             return True
 
+        # The issue is blocked if the fix was integrated into a node version that is greater than
+        # the node version we are currently running.
+        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:
+            return True
+
         return False
 
     def finish_test(self) -> None:
