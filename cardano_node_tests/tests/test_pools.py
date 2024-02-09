@@ -703,7 +703,7 @@ class TestStakePool:
                     ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
                 )
 
-            dbsync_utils.retry_query(query_func=_query_func, timeout=120)
+            dbsync_utils.retry_query(query_func=_query_func, timeout=300)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -781,7 +781,7 @@ class TestStakePool:
                     ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
                 )
 
-            dbsync_utils.retry_query(query_func=_query_func, timeout=120)
+            dbsync_utils.retry_query(query_func=_query_func, timeout=300)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD

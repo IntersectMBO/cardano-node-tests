@@ -36,6 +36,19 @@ def get_address_reward(
                 pool_id=db_row.pool_id or "",
             )
         )
+
+    for db_row in dbsync_queries.query_address_instant_reward(
+        address=address, epoch_from=epoch_from, epoch_to=epoch_to
+    ):
+        rewards.append(
+            dbsync_types.RewardEpochRecord(
+                amount=int(db_row.amount),
+                earned_epoch=db_row.earned_epoch,
+                spendable_epoch=db_row.spendable_epoch,
+                type=db_row.type,
+                pool_id=db_row.pool_id or "",
+            )
+        )
     if not rewards:
         return dbsync_types.RewardRecord(address=address, reward_sum=0, rewards=[])
 
@@ -718,7 +731,8 @@ def check_pool_off_chain_fetch_error(
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
 
     assert (
-        f'Connection failure when fetching metadata from "{metadata_url}"' in fetch_error_str
+        f'Connection failure error when fetching metadata from PoolUrl "{metadata_url}"'
+        in fetch_error_str
     ), f"The error is not the expected one: {fetch_error_str}"
 
     return db_pool_off_chain_fetch_error[0]
