@@ -10,6 +10,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_build
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -181,17 +182,26 @@ class TestCollateralOutput:
             clusterlib.TxOut(dst_addr.address, amount=return_collateral_amount)
         ]
 
-        tx_output_redeem = self._build_spend_locked_txin(
-            temp_template=temp_template,
-            cluster=cluster,
-            payment_addr=payment_addr,
-            dst_addr=dst_addr,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            plutus_op=plutus_op,
-            total_collateral_amount=redeem_cost.collateral if use_total_collateral else None,
-            return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
-        )
+        try:
+            tx_output_redeem = self._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster=cluster,
+                payment_addr=payment_addr,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                total_collateral_amount=redeem_cost.collateral if use_total_collateral else None,
+                return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
+            )
+        except clusterlib.CLIError as exc:
+            if "(ValidationTagMismatch" not in str(exc):
+                raise
+            blockers.GH(
+                issue=947,
+                repo="IntersectMBO/ouroboros-consensus",
+                message="submit fails with invalid Plutus script",
+            ).finish_test()
 
         # check that collateral was taken
         assert not cluster.g_query.get_utxo(utxo=collateral_utxos), "Collateral was NOT spent"
@@ -274,17 +284,26 @@ class TestCollateralOutput:
             ),
         ]
 
-        tx_output_redeem = self._build_spend_locked_txin(
-            temp_template=temp_template,
-            cluster=cluster,
-            payment_addr=payment_addr,
-            dst_addr=dst_addr,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            plutus_op=plutus_op,
-            total_collateral_amount=redeem_cost.collateral,
-            return_collateral_txouts=txouts_return_collateral,
-        )
+        try:
+            tx_output_redeem = self._build_spend_locked_txin(
+                temp_template=temp_template,
+                cluster=cluster,
+                payment_addr=payment_addr,
+                dst_addr=dst_addr,
+                script_utxos=script_utxos,
+                collateral_utxos=collateral_utxos,
+                plutus_op=plutus_op,
+                total_collateral_amount=redeem_cost.collateral,
+                return_collateral_txouts=txouts_return_collateral,
+            )
+        except clusterlib.CLIError as exc:
+            if "(ValidationTagMismatch" not in str(exc):
+                raise
+            blockers.GH(
+                issue=947,
+                repo="IntersectMBO/ouroboros-consensus",
+                message="submit fails with invalid Plutus script",
+            ).finish_test()
 
         # check that collateral was taken
         assert not cluster.g_query.get_utxo(utxo=collateral_utxos), "Collateral was NOT spent"
