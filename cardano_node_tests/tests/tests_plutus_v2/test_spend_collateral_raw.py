@@ -10,6 +10,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -158,10 +159,19 @@ class TestCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        cluster.g_transaction.submit_tx(
-            tx_file=tx_signed_redeem,
-            txins=collateral_utxos,
-        )
+        try:
+            cluster.g_transaction.submit_tx(
+                tx_file=tx_signed_redeem,
+                txins=collateral_utxos,
+            )
+        except clusterlib.CLIError as exc:
+            if "(ValidationTagMismatch" not in str(exc):
+                raise
+            blockers.GH(
+                issue=947,
+                repo="IntersectMBO/ouroboros-consensus",
+                message="submit fails with invalid Plutus script",
+            ).finish_test()
 
         # check that the right amount of collateral was spent
         dst_balance = cluster.g_query.get_address_balance(dst_addr.address)
@@ -296,10 +306,19 @@ class TestCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        cluster.g_transaction.submit_tx(
-            tx_file=tx_signed_redeem,
-            txins=collateral_utxos,
-        )
+        try:
+            cluster.g_transaction.submit_tx(
+                tx_file=tx_signed_redeem,
+                txins=collateral_utxos,
+            )
+        except clusterlib.CLIError as exc:
+            if "(ValidationTagMismatch" not in str(exc):
+                raise
+            blockers.GH(
+                issue=947,
+                repo="IntersectMBO/ouroboros-consensus",
+                message="submit fails with invalid Plutus script",
+            ).finish_test()
 
         # check that the right amount of collateral was spent and that the tokens were returned
 
