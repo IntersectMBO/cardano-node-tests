@@ -1,11 +1,11 @@
 {
     "auxiliary scripts": null,
     "certificates": null,
-    "collateral inputs": null,
-    "era": "Mary",
-    "fee": "190182 Lovelace",
+    "collateral inputs": [],
+    "era": "Babbage",
+    "fee": "190279 Lovelace",
     "inputs": [
-        "9d43c61d25e780112200a023840b2fdfdf318c12acc9b230685f788167a9419f#0"
+        "dd104594a4931043f7ef36013f242d4970b9a29fc6b830287da8d76672aa94f7#0"
     ],
     "metadata": {
         "1": "foo",
@@ -17,18 +17,18 @@
     "mint": null,
     "outputs": [
         {
-            "address": "addr_test1vz2522g9f8lznckrujg9zxxkyk7qd9thnq292855sxz3gmszxqcfc",
+            "address": "addr_test1vqr5aky0nwt8ew90naqhc8el0xfnmy5xvnerzm0r2w6g9tcsug7hk",
             "address era": "Shelley",
             "amount": {
-                "lovelace": 2809818
+                "lovelace": 999809721
             },
             "network": "Testnet",
-            "payment credential key hash": "9545290549fe29e2c3e4905118d625bc0695779814551e948185146e",
+            "payment credential key hash": "074ed88f9b967cb8af9f417c1f3f79933d928664f2316de353b482af",
             "reference script": null,
             "stake reference": null
         }
     ],
-    "reference inputs": null,
+    "reference inputs": [],
     "required signers (payment key hashes needed for scripts)": null,
     "return collateral": null,
     "total collateral": null,
