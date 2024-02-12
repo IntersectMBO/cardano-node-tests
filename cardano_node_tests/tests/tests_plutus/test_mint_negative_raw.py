@@ -181,7 +181,11 @@ class TestMintingNegative:
         )
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        assert "MissingRequiredSigners" in str(excinfo.value)
+        str_err = str(excinfo.value)
+        assert (
+            "MissingRequiredSigners" in str_err  # on node version < 8.8.0
+            or "MissingVKeyWitnessesUTXOW" in str_err
+        ), str_err
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
