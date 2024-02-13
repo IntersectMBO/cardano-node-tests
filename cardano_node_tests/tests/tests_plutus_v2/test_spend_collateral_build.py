@@ -200,6 +200,7 @@ class TestCollateralOutput:
             blockers.GH(
                 issue=947,
                 repo="IntersectMBO/ouroboros-consensus",
+                fixed_in="8.9.0",
                 message="submit fails with invalid Plutus script",
             ).finish_test()
 
@@ -302,6 +303,7 @@ class TestCollateralOutput:
             blockers.GH(
                 issue=947,
                 repo="IntersectMBO/ouroboros-consensus",
+                fixed_in="8.9.0",
                 message="submit fails with invalid Plutus script",
             ).finish_test()
 
