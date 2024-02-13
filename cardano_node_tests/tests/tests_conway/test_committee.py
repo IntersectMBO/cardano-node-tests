@@ -842,16 +842,17 @@ class TestCommittee:
         )
 
         # Check that CC cannot vote on "update committee" action
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            _cast_vote(
-                approve=True,
-                vote_id="rem_with_ccs",
-                add_cc_votes=True,
-                action_txid=action_rem_txid,
-                action_ix=action_rem_ix,
-            )
-        err_str = str(excinfo.value)
-        assert "CommitteeVoter" in err_str, err_str
+        if governance_data.cc_members:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _cast_vote(
+                    approve=True,
+                    vote_id="rem_with_ccs",
+                    add_cc_votes=True,
+                    action_txid=action_rem_txid,
+                    action_ix=action_rem_ix,
+                )
+            err_str = str(excinfo.value)
+            assert "CommitteeVoter" in err_str, err_str
 
         def _check_rem_state(state: dict):
             cc_member_val = state["committee"]["members"].get(cc_member2_key)
