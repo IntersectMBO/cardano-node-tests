@@ -134,15 +134,21 @@ def cast_vote(
     approve_cc: tp.Optional[bool] = None,
     approve_drep: tp.Optional[bool] = None,
     approve_spo: tp.Optional[bool] = None,
+    cc_skip_votes: bool = False,
+    drep_skip_votes: bool = False,
+    spo_skip_votes: bool = False,
 ) -> VotedVotes:
     """Cast a vote."""
+    # pylint: disable=too-many-arguments
     votes_cc = []
     votes_drep = []
     votes_spo = []
 
     if approve_cc is not None:
-        votes_cc = [
-            cluster_obj.g_conway_governance.vote.create_committee(
+        _votes_cc = [
+            None  # This CC member doesn't vote, his votes count as "No"
+            if cc_skip_votes and i % 3 == 0
+            else cluster_obj.g_conway_governance.vote.create_committee(
                 vote_name=f"{name_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
@@ -153,9 +159,12 @@ def cast_vote(
             )
             for i, m in enumerate(governance_data.cc_members, start=1)
         ]
+        votes_cc = [v for v in _votes_cc if v]
     if approve_drep is not None:
-        votes_drep = [
-            cluster_obj.g_conway_governance.vote.create_drep(
+        _votes_drep = [
+            None  # This DRep doesn't vote, his votes count as "No"
+            if drep_skip_votes and i % 3 == 0
+            else cluster_obj.g_conway_governance.vote.create_drep(
                 vote_name=f"{name_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
@@ -166,9 +175,12 @@ def cast_vote(
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
+        votes_drep = [v for v in _votes_drep if v]
     if approve_spo is not None:
-        votes_spo = [
-            cluster_obj.g_conway_governance.vote.create_spo(
+        _votes_spo = [
+            None  # This SPO doesn't vote, his votes count as "No"
+            if spo_skip_votes and i % 3 == 0
+            else cluster_obj.g_conway_governance.vote.create_spo(
                 vote_name=f"{name_template}_pool{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
@@ -179,6 +191,7 @@ def cast_vote(
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
         ]
+        votes_spo = [v for v in _votes_spo if v]
 
     cc_keys = [r.hot_skey_file for r in governance_data.cc_members] if votes_cc else []
     drep_keys = [r.key_pair.skey_file for r in governance_data.dreps_reg] if votes_drep else []
