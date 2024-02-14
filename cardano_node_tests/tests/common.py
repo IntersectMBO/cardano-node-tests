@@ -289,3 +289,12 @@ def match_blocker(func: tp.Callable) -> tp.Any:
         raise
 
     return ret
+
+
+def get_conway_address_deposit(cluster_obj: clusterlib.ClusterLib) -> int:
+    """Get stake address deposit amount - is required in Conway+."""
+    stake_deposit_amt = -1
+    if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+        stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
+
+    return stake_deposit_amt
