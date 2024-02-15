@@ -238,6 +238,7 @@ class TestDReps:
         * check that DRep was retired
         * check that deposit was returned to source address
         """
+        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
@@ -249,6 +250,7 @@ class TestDReps:
         req_cli33 = requirements.Req(id="CLI033", group=requirements.GroupsKnown.CHANG_US)
         req_cip21 = requirements.Req(id="CIP021", group=requirements.GroupsKnown.CHANG_US)
         req_cip23 = requirements.Req(id="CIP023", group=requirements.GroupsKnown.CHANG_US)
+        req_cip24 = requirements.Req(id="CIP024", group=requirements.GroupsKnown.CHANG_US)
 
         # Register DRep
 
@@ -337,10 +339,12 @@ class TestDReps:
             deposit=-reg_drep.deposit,
         )
 
+        req_cip24.start(url=helpers.get_vcs_link())
         ret_drep_state = cluster.g_conway_governance.query.drep_state(
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert not ret_drep_state, "DRep was not retired"
+        req_cip24.success()
 
         ret_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_ret)
         assert (
@@ -538,6 +542,7 @@ class TestDelegDReps:
         req_cli35 = requirements.Req(id="CLI035", group=requirements.GroupsKnown.CHANG_US)
         req_cip20 = requirements.Req(id="CIP020", group=requirements.GroupsKnown.CHANG_US)
         req_cip22 = requirements.Req(id="CIP022", group=requirements.GroupsKnown.CHANG_US)
+        req_cip25 = requirements.Req(id="CIP025", group=requirements.GroupsKnown.CHANG_US)
 
         if drep == "custom":
             req_cip_deleg = requirements.Req(id="CIP016", group=requirements.GroupsKnown.CHANG_US)
@@ -672,7 +677,8 @@ class TestDelegDReps:
             )
             req_cip20.success()
 
-            req_cli34.start(url=helpers.get_vcs_link())
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (req_cli34, req_cip25)]
             if drep == "custom":
                 stake_distrib = cluster.g_conway_governance.query.drep_stake_distribution(
                     drep_key_hash=custom_drep.drep_id
@@ -699,7 +705,7 @@ class TestDelegDReps:
                 drep_id=drep_id,
                 min_amount=deleg_amount,
             )
-            req_cli34.success()
+            [r.success() for r in (req_cli34, req_cip25)]
 
         req_cip_deleg.success()
 
