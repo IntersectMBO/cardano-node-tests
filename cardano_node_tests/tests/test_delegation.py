@@ -315,7 +315,9 @@ class TestDelegateAddr:
         # Create registration certificates
         stake_addr_reg_cert_files = [
             cluster.g_stake_address.gen_stake_addr_registration_cert(
-                addr_name=f"{temp_template}_{i}_addr", stake_vkey_file=pu.stake.vkey_file
+                addr_name=f"{temp_template}_{i}_addr",
+                stake_vkey_file=pu.stake.vkey_file,
+                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
             )
             for i, pu in enumerate(pool_users)
         ]
@@ -496,6 +498,7 @@ class TestDelegateAddr:
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
@@ -629,13 +632,17 @@ class TestDelegateAddr:
         )
 
         # files for deregistering / re-registering stake address
+        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_undeleg_addr0",
             stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
+            deposit_amt=address_deposit,
         )
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_undeleg_addr0",
             stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
+            deposit_amt=address_deposit,
         )
         tx_files_undeleg = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert_file, stake_addr_reg_cert_file],
@@ -741,11 +748,14 @@ class TestDelegateAddr:
         stake_vkey_file = user_registered.stake.vkey_file if stake_cert == "vkey_file" else None
         stake_address = user_registered.stake.address if stake_cert == "stake_address" else None
 
+        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=stake_vkey_file,
             stake_address=stake_address,
+            deposit_amt=address_deposit,
         )
 
         # create stake address deregistration cert
@@ -753,6 +763,7 @@ class TestDelegateAddr:
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=stake_vkey_file,
             stake_address=stake_address,
+            deposit_amt=address_deposit,
         )
 
         # register stake address
@@ -876,7 +887,10 @@ class TestNegative:
                 stake_pool_id=pool_id,
             )
         err_msg = str(excinfo.value)
-        assert "Expected: StakeVerificationKeyShelley" in err_msg, err_msg
+        assert (
+            "Expected: StakeVerificationKeyShelley" in err_msg
+            or "MissingVKeyWitnessesUTXOW" in err_msg
+        ), err_msg
 
     @allure.link(helpers.get_vcs_link())
     def test_delegate_addr_with_wrong_key(
@@ -897,7 +911,9 @@ class TestNegative:
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=user_registered.stake.vkey_file,
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
         )
 
         # register stake address
@@ -1012,8 +1028,11 @@ class TestNegative:
         user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address registration cert
+        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=user_registered.stake.vkey_file,
+            deposit_amt=address_deposit,
         )
 
         # register stake address
@@ -1034,6 +1053,7 @@ class TestNegative:
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
+            deposit_amt=address_deposit,
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert_file],
@@ -1108,7 +1128,9 @@ class TestNegative:
 
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0", stake_vkey_file=user_registered.stake.vkey_file
+            addr_name=f"{temp_template}_addr0",
+            stake_vkey_file=user_registered.stake.vkey_file,
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
         )
 
         # register stake address
