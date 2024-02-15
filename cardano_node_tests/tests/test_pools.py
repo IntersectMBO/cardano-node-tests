@@ -421,7 +421,9 @@ def _create_register_pool_delegate_stake_tx(
     # create stake address registration certs
     stake_addr_reg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
+            addr_name=f"{temp_template}_addr{i}",
+            stake_vkey_file=p.stake.vkey_file,
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
         )
         for i, p in enumerate(pool_owners)
     ]
@@ -553,7 +555,9 @@ def _create_register_pool_tx_delegate_stake_tx(
     # create stake address registration certs
     stake_addr_reg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr{i}", stake_vkey_file=p.stake.vkey_file
+            addr_name=f"{temp_template}_addr{i}",
+            stake_vkey_file=p.stake.vkey_file,
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
         )
         for i, p in enumerate(pool_owners)
     ]
