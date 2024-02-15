@@ -290,16 +290,14 @@ def resign_ccs(
 def propose_change_constitution(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
+    anchor_url: str,
+    anchor_data_hash: str,
+    constitution_url: str,
+    constitution_hash: str,
     pool_user: clusterlib.PoolUser,
 ) -> tp.Tuple[clusterlib.ActionConstitution, str, int]:
     """Propose a constitution change."""
     deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
-
-    anchor_url = "http://www.const-action.com"
-    anchor_data_hash = cluster_obj.g_conway_governance.get_anchor_data_hash(text=anchor_url)
-
-    constitution_url = "http://www.const-new.com"
-    constitution_hash = cluster_obj.g_conway_governance.get_anchor_data_hash(text=constitution_url)
 
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
@@ -307,7 +305,7 @@ def propose_change_constitution(
     )
 
     constitution_action = cluster_obj.g_conway_governance.action.create_constitution(
-        action_name=f"{name_template}_constitution",
+        action_name=name_template,
         deposit_amt=deposit_amt,
         anchor_url=anchor_url,
         anchor_data_hash=anchor_data_hash,

@@ -10,7 +10,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -70,8 +69,6 @@ class TestConstitution:
 
         # Create an action
 
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
-
         anchor_url = "http://www.const-action.com"
         anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
 
@@ -95,68 +92,21 @@ class TestConstitution:
         )
         req_cli2.success()
 
-        prev_action_rec = governance_utils.get_prev_action(
-            action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
-        )
-
         req_cli13.start(url=helpers.get_vcs_link())
-        constitution_action = cluster.g_conway_governance.action.create_constitution(
-            action_name=temp_template,
-            deposit_amt=deposit_amt,
+        (
+            constitution_action,
+            action_txid,
+            action_ix,
+        ) = conway_common.propose_change_constitution(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_constitution",
             anchor_url=anchor_url,
             anchor_data_hash=anchor_data_hash,
             constitution_url=constitution_url,
             constitution_hash=constitution_hash,
-            prev_action_txid=prev_action_rec.txid,
-            prev_action_ix=prev_action_rec.ix,
-            deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+            pool_user=pool_user_lg,
         )
         req_cli13.success()
-
-        tx_files_action = clusterlib.TxFiles(
-            proposal_files=[constitution_action.action_file],
-            signing_key_files=[pool_user_lg.payment.skey_file],
-        )
-
-        # Make sure we have enough time to submit the proposal in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
-
-        tx_output_action = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_action",
-            src_address=pool_user_lg.payment.address,
-            use_build_cmd=True,
-            tx_files=tx_files_action,
-        )
-
-        out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_lg.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_action.txins)
-            - tx_output_action.fee
-            - deposit_amt
-        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
-
-        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
-        conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
-        )
-        prop_action = governance_utils.lookup_proposal(
-            gov_state=action_gov_state, action_txid=action_txid
-        )
-        assert prop_action, "Create constitution action not found"
-        assert (
-            prop_action["action"]["tag"] == governance_utils.ActionTags.NEW_CONSTITUTION.value
-        ), "Incorrect action tag"
-
-        action_ix = prop_action["actionId"]["govActionIx"]
 
         # Check that SPOs cannot vote on change of constitution action
         with pytest.raises(clusterlib.CLIError) as excinfo:

@@ -316,6 +316,8 @@ class TestNoConfidence:
         # failure.
         with cluster_manager.respin_on_failure():
             # Try to ratify a "create constitution" action
+            anchor_url = "http://www.const-action.com"
+            constitution_url = "http://www.const-new.com"
             (
                 __,
                 const_action_txid,
@@ -323,6 +325,12 @@ class TestNoConfidence:
             ) = conway_common.propose_change_constitution(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_constitution",
+                anchor_url=anchor_url,
+                anchor_data_hash=cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url),
+                constitution_url=constitution_url,
+                constitution_hash=cluster.g_conway_governance.get_anchor_data_hash(
+                    text=constitution_url
+                ),
                 pool_user=pool_user_lg,
             )
             conway_common.cast_vote(
