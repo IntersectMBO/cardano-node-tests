@@ -180,114 +180,53 @@ class TestPParamUpdate:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        def _cast_vote(
-            approve: bool, vote_id: str, add_spo_votes: bool = False
-        ) -> conway_common.VotedVotes:
-            _votes_cc = [
-                None  # This CC member doesn't vote, his votes count as "No"
-                if i % 3 == 0
-                else cluster.g_conway_governance.vote.create_committee(
-                    vote_name=f"{temp_template}_{vote_id}_cc{i}",
-                    action_txid=action_txid,
-                    action_ix=action_ix,
-                    vote=conway_common.get_yes_abstain_vote(i) if approve else clusterlib.Votes.NO,
-                    cc_hot_vkey_file=m.hot_vkey_file,
-                )
-                for i, m in enumerate(governance_data.cc_members, start=1)
-            ]
-            votes_cc = [r for r in _votes_cc if r]
-            votes_drep = [
-                cluster.g_conway_governance.vote.create_drep(
-                    vote_name=f"{temp_template}_{vote_id}_drep{i}",
-                    action_txid=action_txid,
-                    action_ix=action_ix,
-                    vote=clusterlib.Votes.YES if approve else clusterlib.Votes.NO,
-                    drep_vkey_file=d.key_pair.vkey_file,
-                )
-                for i, d in enumerate(governance_data.dreps_reg, start=1)
-            ]
-
-            votes_spo = []
-            if add_spo_votes:
-                votes_spo = [
-                    cluster.g_conway_governance.vote.create_spo(
-                        vote_name=f"{temp_template}_{vote_id}_pool{i}",
-                        action_txid=action_txid,
-                        action_ix=action_ix,
-                        vote=clusterlib.Votes.YES,
-                        cold_vkey_file=p.vkey_file,
-                    )
-                    for i, p in enumerate(governance_data.pools_cold, start=1)
-                ]
-
-            spo_keys = [r.skey_file for r in governance_data.pools_cold] if votes_spo else []
-            tx_files_vote = clusterlib.TxFiles(
-                vote_files=[
-                    *[r.vote_file for r in votes_cc],
-                    *[r.vote_file for r in votes_drep],
-                    *[r.vote_file for r in votes_spo],
-                ],
-                signing_key_files=[
-                    pool_user_lg.payment.skey_file,
-                    *[r.hot_skey_file for r in governance_data.cc_members],
-                    *[r.key_pair.skey_file for r in governance_data.dreps_reg],
-                    *spo_keys,
-                ],
-            )
-
-            # Make sure we have enough time to submit the votes in one epoch
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-            )
-
-            tx_output_vote = clusterlib_utils.build_and_submit_tx(
-                cluster_obj=cluster,
-                name_template=f"{temp_template}_vote_{vote_id}",
-                src_address=pool_user_lg.payment.address,
-                use_build_cmd=True,
-                tx_files=tx_files_vote,
-            )
-
-            out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
-            assert (
-                clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_lg.payment.address)[
-                    0
-                ].amount
-                == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
-
-            vote_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
-            conway_common.save_gov_state(
-                gov_state=vote_gov_state,
-                name_template=f"{temp_template}_vote_{vote_id}_{_cur_epoch}",
-            )
-            prop_vote = governance_utils.lookup_proposal(
-                gov_state=vote_gov_state, action_txid=action_txid
-            )
-            assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
-            assert prop_vote["dRepVotes"], "No DRep votes"
-            assert not votes_spo or prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
-
-            return conway_common.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
-
         proposal_names = {p.name for p in update_proposals}
         add_spo_votes = True
 
         if proposal_names.isdisjoint(SECURITY_PPARAMS):
             # Check that SPOs cannot vote on change of constitution action
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
+                conway_common.cast_vote(
+                    cluster_obj=cluster,
+                    governance_data=governance_data,
+                    name_template=f"{temp_template}_with_spos",
+                    payment_addr=pool_user_lg.payment,
+                    action_txid=action_txid,
+                    action_ix=action_ix,
+                    approve_cc=False,
+                    approve_drep=False,
+                    approve_spo=True,
+                )
             err_str = str(excinfo.value)
             assert "StakePoolVoter" in err_str, err_str
 
             add_spo_votes = False
 
         # Vote & disapprove the action
-        _cast_vote(approve=False, vote_id="no", add_spo_votes=add_spo_votes)
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_no",
+            payment_addr=pool_user_lg.payment,
+            action_txid=action_txid,
+            action_ix=action_ix,
+            approve_cc=False,
+            approve_drep=False,
+            approve_spo=False if add_spo_votes else None,
+        )
 
         # Vote & approve the action
-        voted_votes = _cast_vote(approve=True, vote_id="yes", add_spo_votes=add_spo_votes)
+        voted_votes = conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_yes",
+            payment_addr=pool_user_lg.payment,
+            action_txid=action_txid,
+            action_ix=action_ix,
+            approve_cc=True,
+            approve_drep=True,
+            approve_spo=True if add_spo_votes else None,
+        )
 
         def _check_state(state: dict):
             pparams = state["curPParams"]
@@ -335,7 +274,16 @@ class TestPParamUpdate:
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            _cast_vote(approve=False, vote_id="enacted")
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_enacted",
+                payment_addr=pool_user_lg.payment,
+                action_txid=action_txid,
+                action_ix=action_ix,
+                approve_cc=False,
+                approve_drep=False,
+            )
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
 
