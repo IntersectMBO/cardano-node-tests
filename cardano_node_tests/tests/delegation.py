@@ -152,8 +152,8 @@ def delegate_stake_addr(
     else:
         stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=pool_user.stake.vkey_file,
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+            stake_vkey_file=pool_user.stake.vkey_file,
         )
 
     # create stake address delegation cert

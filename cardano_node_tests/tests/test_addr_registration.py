@@ -91,8 +91,8 @@ class TestRegisterAddr:
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=address_deposit,
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
 
         # Register stake address
@@ -129,8 +129,8 @@ class TestRegisterAddr:
         # Create stake address deregistration cert
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=address_deposit,
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
 
         # Deregister stake address
@@ -217,15 +217,15 @@ class TestRegisterAddr:
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=address_deposit,
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
 
         # create stake address deregistration cert
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=address_deposit,
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
 
         # register and deregister stake address in single TX
@@ -309,15 +309,15 @@ class TestRegisterAddr:
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=address_deposit,
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
 
         # create stake address deregistration cert
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=address_deposit,
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
 
         # register, deregister, register, deregister and register stake address in single TX
@@ -397,8 +397,8 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr0",
-                stake_vkey_file=pool_users[0].payment.vkey_file,
                 deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+                stake_vkey_file=pool_users[0].payment.vkey_file,
             )
         err_msg = str(excinfo.value)
         assert "Expected: StakeVerificationKeyShelley" in err_msg, err_msg
@@ -422,8 +422,8 @@ class TestNegative:
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
 
         # register stake address, use wrong payment skey
@@ -457,8 +457,8 @@ class TestNegative:
         # files for deregistering stake address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=user_registered.stake.vkey_file,
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            stake_vkey_file=user_registered.stake.vkey_file,
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],

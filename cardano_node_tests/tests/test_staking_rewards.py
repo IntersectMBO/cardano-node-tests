@@ -894,10 +894,12 @@ class TestRewards:
 
                 # undelegate rewards address
                 if this_epoch == init_epoch + 5:
+                    address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
                     # create stake address deregistration cert
                     reward_addr_dereg_cert_file = (
                         cluster.g_stake_address.gen_stake_addr_deregistration_cert(
                             addr_name=f"{temp_template}_reward",
+                            deposit_amt=address_deposit,
                             stake_vkey_file=pool_reward.stake.vkey_file,
                         )
                     )
@@ -906,6 +908,7 @@ class TestRewards:
                     reward_addr_reg_cert_file = (
                         cluster.g_stake_address.gen_stake_addr_registration_cert(
                             addr_name=f"{temp_template}_reward",
+                            deposit_amt=address_deposit,
                             stake_vkey_file=pool_reward.stake.vkey_file,
                         )
                     )
@@ -1398,6 +1401,7 @@ class TestRewards:
         cluster, pool1_name, pool2_name = cluster_use_two_pools
 
         temp_template = common.get_test_id(cluster)
+        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
 
         pool1_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool1_name
@@ -1555,6 +1559,7 @@ class TestRewards:
                     cluster_obj=cluster,
                     pool_user=delegation_out.pool_user,
                     name_template=f"{temp_template}_ep3",
+                    deposit_amt=address_deposit,
                 )
                 withdrawal_past_epoch = True
 
@@ -1577,6 +1582,7 @@ class TestRewards:
                     cluster_obj=cluster,
                     pool_user=delegation_out.pool_user,
                     name_template=f"{temp_template}_ep4",
+                    deposit_amt=address_deposit,
                 )
                 withdrawal_past_epoch = True
 

@@ -215,6 +215,7 @@ class TestLocking:
         # create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=pool_users[0].stake.vkey_file,
         )
 
