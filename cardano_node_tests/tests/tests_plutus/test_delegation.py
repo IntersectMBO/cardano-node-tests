@@ -132,7 +132,9 @@ def register_delegate_stake_addr(
     """Submit registration certificate and delegate to pool."""
     # Create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-        addr_name=f"{temp_template}_addr0", stake_script_file=pool_user.stake.script_file
+        addr_name=f"{temp_template}_addr0",
+        deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+        stake_script_file=pool_user.stake.script_file,
     )
 
     # Create stake address delegation cert
@@ -224,7 +226,9 @@ def register_stake_addr(
     """Register a stake address."""
     # Create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-        addr_name=f"{temp_template}_addr0", stake_script_file=pool_user.stake.script_file
+        addr_name=f"{temp_template}_addr0",
+        deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+        stake_script_file=pool_user.stake.script_file,
     )
 
     src_init_balance = cluster_obj.g_query.get_address_balance(pool_user.payment.address)
@@ -395,6 +399,7 @@ def deregister_stake_addr(
     # Create stake address deregistration cert
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"{temp_template}_addr0",
+        deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
         stake_script_file=pool_user.stake.script_file,
     )
 

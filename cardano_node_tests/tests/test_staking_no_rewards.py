@@ -419,8 +419,8 @@ class TestNoRewards:
         # deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=pool_owner.stake.vkey_file,
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            stake_vkey_file=pool_owner.stake.vkey_file,
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
@@ -625,8 +625,8 @@ class TestNoRewards:
         # deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=pool_reward.stake.vkey_file,
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            stake_vkey_file=pool_reward.stake.vkey_file,
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
@@ -798,8 +798,8 @@ class TestNoRewards:
         # deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            stake_vkey_file=pool_reward.stake.vkey_file,
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            stake_vkey_file=pool_reward.stake.vkey_file,
         )
         tx_files_deregister = clusterlib.TxFiles(
             certificate_files=[stake_addr_dereg_cert],
