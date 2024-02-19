@@ -58,9 +58,7 @@ def multisig_tx(
     # create TX body
     script_txins = (
         # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
-        [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
-        if multisig_script
-        else []
+        [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)] if multisig_script else []
     )
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
     witness_count = len(payment_skey_files)

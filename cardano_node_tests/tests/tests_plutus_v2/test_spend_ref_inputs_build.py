@@ -502,7 +502,8 @@ class TestNegativeReadonlyReferenceInputs:
         assert (
             # TODO: in 1.35.3 and older - cardano-node issue #4012
             "following tx input(s) were not present in the UTxO: \n"
-            f"{reference_input[0].utxo_hash}" in err_str
+            f"{reference_input[0].utxo_hash}"
+            in err_str
             or re.search(
                 "TranslationLogicMissingInput .*unTxId = SafeHash "
                 f'"{reference_input[0].utxo_hash}"',

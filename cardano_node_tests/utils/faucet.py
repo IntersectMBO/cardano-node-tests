@@ -24,7 +24,8 @@ def fund_from_faucet(
     """Send `amount` from faucet addr to all `dst_addrs`."""
     # get payment AddressRecord out of PoolUser
     dst_addr_records: tp.List[clusterlib.AddressRecord] = [
-        (r.payment if hasattr(r, "payment") else r) for r in dst_addrs  # type: ignore
+        (r.payment if hasattr(r, "payment") else r)
+        for r in dst_addrs  # type: ignore
     ]
     if isinstance(amount, int):
         amount = [amount] * len(dst_addr_records)

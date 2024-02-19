@@ -1316,7 +1316,9 @@ class TestQuerySlotNumber:
 
     @allure.link(helpers.get_vcs_link())
     def test_slot_number(
-        self, cluster: clusterlib.ClusterLib, query_slot_number_available: None  # noqa: ARG002
+        self,
+        cluster: clusterlib.ClusterLib,
+        query_slot_number_available: None,  # noqa: ARG002
     ):
         """Test `query slot-number`."""
         # pylint: disable=unused-argument
@@ -1335,7 +1337,9 @@ class TestQuerySlotNumber:
 
     @allure.link(helpers.get_vcs_link())
     def test_slot_number_invalid_format(
-        self, cluster: clusterlib.ClusterLib, query_slot_number_available: None  # noqa: ARG002
+        self,
+        cluster: clusterlib.ClusterLib,
+        query_slot_number_available: None,  # noqa: ARG002
     ):
         """Test `query slot-number` with a timestamp invalid format.
 

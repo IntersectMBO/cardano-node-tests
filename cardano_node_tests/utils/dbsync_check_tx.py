@@ -189,7 +189,7 @@ def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
 
 
 def utxodata2txout(
-    utxodata: tp.Union[dbsync_types.UTxORecord, clusterlib.UTXOData]
+    utxodata: tp.Union[dbsync_types.UTxORecord, clusterlib.UTXOData],
 ) -> clusterlib.TxOut:
     """Convert `UTxORecord` or `UTxOData` to `clusterlib.TxOut`."""
     return clusterlib.TxOut(

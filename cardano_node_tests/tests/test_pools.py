@@ -116,8 +116,7 @@ def _check_staking(
 
         assert (
             # strip 'e0' from the beginning of the address hash
-            helpers.decode_bech32(stake_addr_info.address)[2:]
-            in pool_params["owners"]
+            helpers.decode_bech32(stake_addr_info.address)[2:] in pool_params["owners"]
         ), "'owner' value is different than expected"
 
 

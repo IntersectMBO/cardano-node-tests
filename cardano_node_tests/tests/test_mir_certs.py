@@ -1014,11 +1014,9 @@ class TestMIRCerts:
         # wait for next epoch and check the reward
         cluster.wait_for_new_epoch()
 
-        assert not cluster.g_query.get_stake_addr_info(
-            pool_user.stake.address
-        ).reward_account_balance, (
-            f"Reward was added for unregistered stake address `{pool_user.stake.address}`"
-        )
+        assert (
+            not cluster.g_query.get_stake_addr_info(pool_user.stake.address).reward_account_balance
+        ), f"Reward was added for unregistered stake address `{pool_user.stake.address}`"
 
         if tx_db_record:
             # check that the amount was not transferred out of the pot

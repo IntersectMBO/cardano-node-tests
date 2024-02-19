@@ -284,7 +284,8 @@ class TestNegative:
         err_str = str(excinfo.value)
         assert (
             "expected to be key witnessed but are actually script witnessed: "
-            f'["{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"]' in err_str
+            f'["{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"]'
+            in err_str
             # in 1.35.3 and older
             or "Expected key witnessed collateral" in err_str
         ), err_str
