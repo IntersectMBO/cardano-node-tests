@@ -1099,80 +1099,6 @@ class TestCommittee:
 
             return rem_cc_action, action_rem_txid, action_rem_ix
 
-        def _change_constitution() -> tp.Tuple[clusterlib.ActionConstitution, str, int]:
-            """Change constitution."""
-            anchor_url = "http://www.const-action.com"
-            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
-
-            constitution_url = "http://www.const-new.com"
-            constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
-                text=constitution_url
-            )
-
-            prev_action_rec = governance_utils.get_prev_action(
-                action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
-            )
-
-            constitution_action = cluster.g_conway_governance.action.create_constitution(
-                action_name=f"{temp_template}_constitution",
-                deposit_amt=deposit_amt,
-                anchor_url=anchor_url,
-                anchor_data_hash=anchor_data_hash,
-                constitution_url=constitution_url,
-                constitution_hash=constitution_hash,
-                prev_action_txid=prev_action_rec.txid,
-                prev_action_ix=prev_action_rec.ix,
-                deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
-            )
-
-            tx_files_action = clusterlib.TxFiles(
-                proposal_files=[constitution_action.action_file],
-                signing_key_files=[pool_user_lg.payment.skey_file],
-            )
-
-            # Make sure we have enough time to submit the proposal in one epoch
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-            )
-
-            tx_output_action = clusterlib_utils.build_and_submit_tx(
-                cluster_obj=cluster,
-                name_template=f"{temp_template}_constitution_action",
-                src_address=pool_user_lg.payment.address,
-                use_build_cmd=True,
-                tx_files=tx_files_action,
-            )
-
-            out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
-            assert (
-                clusterlib.filter_utxos(
-                    utxos=out_utxos_action, address=pool_user_lg.payment.address
-                )[0].amount
-                == clusterlib.calculate_utxos_balance(tx_output_action.txins)
-                - tx_output_action.fee
-                - deposit_amt
-            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
-
-            action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-            action_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
-            conway_common.save_gov_state(
-                gov_state=action_gov_state,
-                name_template=f"{temp_template}_constitution_action_{_cur_epoch}",
-            )
-            prop_action = governance_utils.lookup_proposal(
-                gov_state=action_gov_state, action_txid=action_txid
-            )
-            assert prop_action, "Create constitution action not found"
-            assert (
-                prop_action["action"]["tag"] == governance_utils.ActionTags.NEW_CONSTITUTION.value
-            ), "Incorrect action tag"
-
-            action_ix = prop_action["actionId"]["govActionIx"]
-
-            return constitution_action, action_txid, action_ix
-
         def _check_rat_gov_state(
             name_template: str, action_txid: str, action_ix: int
         ) -> tp.Dict[str, tp.Any]:
@@ -1301,7 +1227,27 @@ class TestCommittee:
         # Change Constitution without needing CC votes
 
         # Create an action to change Constitution
-        const_action, action_const_txid, action_const_ix = _change_constitution()
+        anchor_url_const = "http://www.const-action.com"
+        anchor_data_hash_const = cluster.g_conway_governance.get_anchor_data_hash(
+            text=anchor_url_const
+        )
+
+        constitution_url = "http://www.const-new.com"
+        constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(text=constitution_url)
+
+        (
+            const_action,
+            action_const_txid,
+            action_const_ix,
+        ) = conway_common.propose_change_constitution(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_constitution",
+            anchor_url=anchor_url_const,
+            anchor_data_hash=anchor_data_hash_const,
+            constitution_url=constitution_url,
+            constitution_hash=constitution_hash,
+            pool_user=pool_user_lg,
+        )
 
         # Vote & approve the action
         conway_common.cast_vote(
