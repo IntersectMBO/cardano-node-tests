@@ -1300,11 +1300,9 @@ class TestRewards:
         assert (
             len(rewards_ledger_pool1[-1].leader_pool_ids) == 2
         ), "Reward address of 'pool1' is not used as reward address for both 'pool1' and 'pool2'"
-        assert rewards_ledger_pool1[
-            -1
-        ].reward_per_epoch, (
-            f"Reward address didn't receive any reward in epoch {rewards_ledger_pool1[-1].epoch_no}"
-        )
+        assert (
+            rewards_ledger_pool1[-1].reward_per_epoch
+        ), f"Reward address didn't receive any reward in epoch {rewards_ledger_pool1[-1].epoch_no}"
         assert (
             rewards_ledger_pool2[-1].reward_per_epoch == 0
         ), "Original reward address of 'pool2' received unexpected rewards"

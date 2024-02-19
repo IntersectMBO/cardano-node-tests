@@ -160,9 +160,9 @@ curl -u username:password -X PATCH -v http://localhost:3100/api/v1/enlist -H 'co
 select * from delisted_pool;
 ```
 
-| id       | hash_raw                                                    |
-| --       | ----------------------------------------------------------- |
-| (0 rows) |                                                             |
+| id       | hash_raw
+| --       | -----------------------------------------------------------
+| (0 rows) |  
 
 d) Query pool again:
 
@@ -365,9 +365,9 @@ We have a pool `pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla` that c
 select * from pool_hash where view='pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla';
 ```
 
- id  | hash_raw                                                   | view
----- | ---------------------------------------------------------  | ----------------------------------------------------------
- 103 | \xbe329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853 | pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla
+| id  | hash_raw                                                   | view
+|---- | ---------------------------------------------------------  | ----------------------------------------------------------
+| 103 | \xbe329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853 | pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla
 
 
 **pool_retire**:
@@ -376,9 +376,9 @@ select * from pool_hash where view='pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq6
 select * from pool_retire where hash_id=103;
 ```
 
-| id       | hash_id | cert_index | announced_tx_id | retiring_epoch |
-| ---      | ------- | ---------- | --------------- | -------------- |
-| (0 rows) |         |            |                 |                |
+| id       | hash_id | cert_index | announced_tx_id | retiring_epoch
+| ---      | ------- | ---------- | --------------- | --------------
+| (0 rows) |         |            |                 |  
 
 
 Let's check the last update for this pool
@@ -386,12 +386,12 @@ Let's check the last update for this pool
 **pool_update**:
 
 
- id  | hash_id | cert_index | vrf_key_hash                                                       | pledge     | reward_addr                                                  | active_epoch_no | meta_id | margin | fixed_cost | registered_tx_id
----- | ------- | ---------- | ------------------------------------------------------------------ | ---------- | ------------------------------------------------------------ | --------------- | ------- | ------ | ---------- | -----------------
- 103 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 100000000  | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 85              | 101     | 0.04   | 340000000  | 25037
- 118 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 250000000  | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 87              | 116     | 0.01   | 340000000  | 34587
- 292 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 250000000  | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 90              | 290     | 0.04   | 430000000  | 55996
- 303 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 3495862056 | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 91              | 301     | 0.0095 | 340000000  | 56543
+| id  | hash_id | cert_index | vrf_key_hash                                                       | pledge     | reward_addr                                                  | active_epoch_no | meta_id | margin | fixed_cost | registered_tx_id
+|---- | ------- | ---------- | ------------------------------------------------------------------ | ---------- | ------------------------------------------------------------ | --------------- | ------- | ------ | ---------- | -----------------
+| 103 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 100000000  | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 85              | 101     | 0.04   | 340000000  | 25037
+| 118 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 250000000  | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 87              | 116     | 0.01   | 340000000  | 34587
+| 292 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 250000000  | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 90              | 290     | 0.04   | 430000000  | 55996
+| 303 | 103     | 0          | \xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6 | 3495862056 | \xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68 | 91              | 301     | 0.0095 | 340000000  | 56543
 
 (4 rows)
 
@@ -404,12 +404,12 @@ and metadata associated with it
 select * from pool_metadata_ref where pool_id=103;
 ```
 
- id  | pool_id | url                    | hash                                                               | registered_tx_id
----- | ------- | --------------------   | ------------------------------------------------------------------ | -----------------
- 301 | 103     | <https://git.io/JTUAD> | \xf2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 | 56543
- 101 | 103     | <https://git.io/JU8gA> | \x314699218763d2d0c1c2cc75d4405de67709a888f01a4ca4d2b0f290e285c6e1 | 25037
- 290 | 103     | <https://git.io/JUNOy> | \x94be57c392f721154c96bafbf9ebd80fe369b35ec8f177b292329ee21db25cbf | 55996
- 116 | 103     | <https://LLCJ.com>     | \x4001829c25b4af556d1a473dec4874a621899cf6a84c60156ec2411727f1a169 | 34587
+| id  | pool_id | url                    | hash                                                               | registered_tx_id
+|---- | ------- | --------------------   | ------------------------------------------------------------------ | -----------------
+| 301 | 103     | <https://git.io/JTUAD> | \xf2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 | 56543
+| 101 | 103     | <https://git.io/JU8gA> | \x314699218763d2d0c1c2cc75d4405de67709a888f01a4ca4d2b0f290e285c6e1 | 25037
+| 290 | 103     | <https://git.io/JUNOy> | \x94be57c392f721154c96bafbf9ebd80fe369b35ec8f177b292329ee21db25cbf | 55996
+| 116 | 103     | <https://LLCJ.com>     | \x4001829c25b4af556d1a473dec4874a621899cf6a84c60156ec2411727f1a169 | 34587
 
 
 So our pool is not visible in tools like wallet and it is also not present in **pool_retire** table.
@@ -552,9 +552,9 @@ curl http://localhost:3100/api/v1/errors/pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7v
 For hash `f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395`, the URL from **pool_metadata_ref** is:
 
 
- id  | pool_id | url                    | hash                                                               | registered_tx_id
----- | ------- | --------------------   | ------------------------------------------------------------------ | -----------------
- 301 | 103     | <https://git.io/JTUAD> | \xf2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 | 56543
+| id  | pool_id | url                    | hash                                                               | registered_tx_id
+|---- | ------- | --------------------   | ------------------------------------------------------------------ | -----------------
+| 301 | 103     | <https://git.io/JTUAD> | \xf2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 | 56543
 
 
 `https://git.io/JTUAD` opens correctly a GH page with the following JSON:
@@ -578,9 +578,9 @@ The **pool_offline_data** table shows different metadata - the one that matches 
 select id, pool_id, json from pool_offline_data where pool_id=103;
 ```
 
- id  | pool_id | json
----- | ------- | ----------------------------------------------------------------------------------------------------
- 138 | 103     | `{"name": "Lpool", "ticker": "LPO", "homepage": "https://LLCJ.com", "description": "L pool is cool"}`
+| id  | pool_id | json
+|---- | ------- | ----------------------------------------------------------------------------------------------------
+| 138 | 103     | `{"name": "Lpool", "ticker": "LPO", "homepage": "https://LLCJ.com", "description": "L pool is cool"}`
 
 
 but this is not the last entry in **pool_metadata_ref** which has `id=301` and  `homepage=https://git.io/JTUAD`.
