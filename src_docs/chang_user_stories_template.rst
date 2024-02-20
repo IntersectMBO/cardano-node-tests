@@ -428,6 +428,66 @@ CIP1694 User Stories
       - DRep retirement certificate
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP023>`__
       - **As** a DRep, **I want** to generate a retirement certificate, **so that** the system and Ada holders (delegators) know that I’m no longer voting on governance actions and they should redelegate.
+   -
+
+      - |image-CIP075|
+      - Auditor review of current network parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP075>`__
+      - **As** an Auditor, **I want** to audit the current state of the network parameters, **so that** I can ensure they align with the governance decisions.
+   -
+
+      - |image-CIP076|
+      - Auditor review of current technical parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP076>`__
+      - **As** an Auditor, **I want** to audit the current technical parameters, including consenus and cost models **so that** I can ensure their compliance with the network parameters specified.
+   -
+
+      - |image-CIP077|
+      - Auditor review of current economic parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP077>`__
+      - **As** an Auditor, **I want** to audit the current economic parameters, including parameters affecting transaction fees, taxes, and staking rewards **so that** I can assess their impact on the network's economy.
+   -
+
+      - |image-CIP078|
+      - Auditor review of current governance parameters and voting thresholds
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP078>`__
+      - **As** an Auditor, **I want** to audit the current governance parameters and voting thresholds for governance actions to fail or ratify **so that** I can verify their appropriateness and adherence to governance rules, adherence to the constitution, and enforcement of voting thresholds.
+   -
+
+      - |image-CIP079|
+      - Auditor review of current state of the treasury
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP079>`__
+      - **As** an Auditor, **I want** to audit the current state of the treasury, including the total amount of Ada, **so that** I can assess the current balance and the system's financial health.
+   -
+
+      - |image-CIP080|
+      - Auditor needs access to historical proposals affecting network parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP080>`__
+      - **As** an Auditor, **I want** to access and review the history of proposals related to network parameters, including their outcomes, **so that** I can track governance effectiveness over time.
+   -
+
+      - |image-CIP081|
+      - Auditor needs access to historical proposals affecting technical parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP081>`__
+      - **As** an Auditor, **I want** to access and review the history of proposals related to technical parameters, including both ratified and failed proposals, **so that** I can understand technical evolution and parameter change impact.
+   -
+
+      - |image-CIP082|
+      - Auditor needs access to historical proposals affecting economic parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP082>`__
+      - **As** an Auditor, **I want** to access and review the history of proposals related to economic parameters, focusing on their ratification status, **so that** I can evaluate economic policy changes.
+   -
+
+      - |image-CIP083|
+      - Auditor needs access to the historical record of all governance proposals and voting thresholds
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP083>`__
+      - **As** an Auditor, **I want** to access history changes to governance parameters, the proposals, and the voting thresholds, **so that** I can audit the changes made over time and verify compliance with governance rules, and evaluate the impact of these changes on governance actions' outcomes, with the primary purpose to verify voting thresholds were enforced.
+   -
+
+      - |image-CIP084|
+      - Auditor needs access to the history of treasury withdrawals
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP084>`__
+      - **As** an Auditor, **I want** to audit the history of treasury withdrawals, including amounts, dates, and recipient wallet addresses, **so that** I can ensure transparency and accountability.
 
 .. |Success Badge| image:: https://img.shields.io/badge/success-green
 .. |Failure Badge| image:: https://img.shields.io/badge/failure-red
@@ -562,3 +622,24 @@ CIP1694 User Stories
    :target: https://github.com/CIP022-404
 .. |image-CIP23| image:: https://img.shields.io/badge/CIP023-grey
    :target: https://github.com/CIP023-404
+
+.. |image-CIP75| image:: https://img.shields.io/badge/CIP075-grey
+   :target: https://github.com/CIP075-404
+.. |image-CIP76| image:: https://img.shields.io/badge/CIP076-grey
+   :target: https://github.com/CIP076-404
+.. |image-CIP77| image:: https://img.shields.io/badge/CIP077-grey
+   :target: https://github.com/CIP077-404
+.. |image-CIP78| image:: https://img.shields.io/badge/CIP078-grey
+   :target: https://github.com/CIP078-404
+.. |image-CIP79| image:: https://img.shields.io/badge/CIP079-grey
+   :target: https://github.com/CIP079-404
+.. |image-CIP80| image:: https://img.shields.io/badge/CIP080-grey
+   :target: https://github.com/CIP080-404
+.. |image-CIP81| image:: https://img.shields.io/badge/CIP081-grey
+   :target: https://github.com/CIP081-404
+.. |image-CIP82| image:: https://img.shields.io/badge/CIP082-grey
+   :target: https://github.com/CIP082-404
+.. |image-CIP83| image:: https://img.shields.io/badge/CIP083-grey
+   :target: https://github.com/CIP083-404
+.. |image-CIP84| image:: https://img.shields.io/badge/CIP084-grey
+   :target: https://github.com/CIP084-404
