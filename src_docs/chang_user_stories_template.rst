@@ -723,7 +723,7 @@ CIP1694 User Stories
       - |image-CIP54|
       - Preventing accidental clash of actions of the same type
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP054>`__
-      - **As** a Stakeholder **I want** all governance actions, except for Treasury withdrawals and Infos, to include the governance action ID of the most recently enacted action of the same type. This is to prevent accidental clashes between actions.
+      - **As** a Stakeholder **I want** all governance actions, except for Treasury withdrawals and Infos, to include the governance action ID of the most recently enacted action of the same type **so that** accidental clashes between actions can be prevented.
    -
 
       - |image-CIP55|
@@ -761,7 +761,7 @@ CIP1694 User Stories
       - |image-CIP59|
       - Governance action ID
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP059>`__
-      - **As** a Stakeholder **I want** the transaction ID and index of the transaction that submits the governance action to the chain to serve as the governance action ID. This ID shall be used for casting votes.
+      - **As** a Stakeholder **I want** the transaction ID and index of the transaction that submits the governance action to the chain to serve as the governance action ID **so that** this ID shall would be used for casting votes.
    -
 
       - |image-CIP60|
@@ -797,7 +797,7 @@ CIP1694 User Stories
       - |image-CIP64|
       - Unregistered stake behaves like Abstain vote
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP064>`__
-      - **As** a Stakeholder **I want** unregistered stake to be treated as an abstain vote; meaning, it should not count towards the active voting stake.
+      - **As** a Stakeholder **I want** unregistered stake to be treated as an abstain vote **so that** it should not count towards the active voting stake.
    -
 
       - |image-CIP65|
@@ -815,7 +815,7 @@ CIP1694 User Stories
       - |image-CIP67|
       - Any new vote overrides any older vote for the same credential and role
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP067>`__
-      - **As** a Stakeholder **I want** new votes on a governance action to override any previous votes for the same credential and role, allowing individuals to change their minds.
+      - **As** a Stakeholder **I want** new votes on a governance action to override any previous votes for the same credential and role **so that** individuals could change their minds.
    -
 
       - |image-CIP68|
@@ -833,7 +833,7 @@ CIP1694 User Stories
       - |image-CIP70|
       - Remove MIR certificates
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP070>`__
-      - **As** a Stakeholder **I want** MIR certificates to be removed, ensuring that the only way to withdraw funds from the treasury is through a ratified Treasury Withdrawal governance action.
+      - **As** a Stakeholder **I want** MIR certificates to be removed **so that** the only way to withdraw funds from the treasury is through a ratified Treasury Withdrawal governance action.
    -
 
       - |image-CIP71|
