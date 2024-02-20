@@ -105,7 +105,7 @@ class TestMinting:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -485,6 +485,7 @@ class TestMinting:
         (
             "plutus_v1",
             pytest.param("mix_v2_v1", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v3_v1", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
     )
     def test_two_scripts_minting(
@@ -513,6 +514,7 @@ class TestMinting:
 
         script_file1_v1 = plutus_common.MINTING_PLUTUS_V1
         script_file1_v2 = plutus_common.MINTING_PLUTUS_V2
+        script_file1_v3 = plutus_common.MINTING_PLUTUS_V3
 
         # this is higher than `plutus_common.MINTING*_COST`, because the script context has changed
         # to include more stuff
@@ -526,6 +528,9 @@ class TestMinting:
         minting_cost1_v2 = plutus_common.ExecutionCost(
             per_time=185_595_199, per_space=595_446, fixed_cost=47_739
         )
+        minting_cost1_v3 = plutus_common.ExecutionCost(
+            per_time=161_100, per_space=800, fixed_cost=58
+        )
 
         if plutus_version == "plutus_v1":
             script_file1 = script_file1_v1
@@ -533,6 +538,9 @@ class TestMinting:
         elif plutus_version == "mix_v2_v1":
             script_file1 = script_file1_v2
             execution_cost1 = minting_cost1_v2
+        elif plutus_version == "mix_v3_v1":
+            script_file1 = script_file1_v3
+            execution_cost1 = minting_cost1_v3
         else:
             raise AssertionError("Unknown test variant.")
 
@@ -1169,7 +1177,7 @@ class TestMinting:
         "ttl_offset",
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1313,7 +1321,7 @@ class TestCollateralOutput:
     """Tests for collateral output."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,
