@@ -38,9 +38,59 @@ It takes ~ 30 minutes for local cluster instance to get from Byron to Babbage. I
 
 To start local cluster directly in Babbage era, set `CI_FAST_CLUSTER=1`.
 
-The execution can be configured using env variables described in the section below.
+## Running individual tests on persistent local cluster using Nix
+
+Sometimes it is useful to run individual tests and keep the local cluster running in between test runs.
+
+1. run nix shell that has all the needed dependencies
+
+    ```sh
+    nix flake update --accept-flake-config --override-input cardano-node "github:IntersectMBO/cardano-node/master"  # change `master` to rev you want
+    nix develop --accept-flake-config
+    ```
+
+1. prepare work dir
+
+    ```sh
+    rm -rf dev_workdir
+    mkdir -p dev_workdir/tmp
+    ```
+
+1. set the cluster environment
+
+    ```sh
+    export CARDANO_NODE_SOCKET_PATH=$PWD/dev_workdir/state-cluster0/bft1.socket TMPDIR=$PWD/dev_workdir/tmp COMMAND_ERA=conway CLUSTER_ERA=conway DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 NO_ARTIFACTS=1
+    ```
+
+1. generate the cluster scripts
+
+    ```sh
+    PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py -s "cardano_node_tests/cluster_scripts/conway_fast" -d dev_workdir/conway_fast
+    ```
+
+1. start the cluster instance
+
+    ```sh
+    ./dev_workdir/conway_fast/start-cluster
+    ```
+
+1. run some test
+
+    ```sh
+    pytest -s -k test_minting_one_token cardano_node_tests/tests/tests_plutus
+    # or run some tests and see all the executed `cardano-cli` commands
+    pytest -s --log-level=debug -k test_minting_one_token cardano_node_tests/tests/tests_plutus
+    ```
+
+1. stop the cluster instance
+
+    ```sh
+    ./dev_workdir/conway_fast/stop-cluster
+    ```
 
 ## Variables for configuring testrun
+
+Tests execution can be configured using env variables.
 
 * `SCHEDULING_LOG` – specifies the path to the file where log messages for tests and cluster instance scheduler are stored
 * `PYTEST_ARGS` – specifies additional arguments for pytest (default: unset)
@@ -48,7 +98,8 @@ The execution can be configured using env variables described in the section bel
 * `TEST_THREADS` – specifies the number of pytest workers (default: 20)
 * `CLUSTERS_COUNT` – number of cluster instances that will be started (default: 9)
 * `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script (default: babbage)
-* `TX_ERA` – era for transactions – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
+* `TX_ERA` (deprecated) – era for transactions – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
+* `COMMAND_ERA` – era for cardano-cli commands – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
 * `NUM_POOLS` – number of stake pools created in each cluster instance (default: 3)
 * `ENABLE_P2P` – use P2P networking instead of the default legacy networking (default: unset)
 * `MIXED_P2P` – use mix of P2P and legacy networking; half of stake pools using legacy and the other half P2P (default: unset)
@@ -86,7 +137,7 @@ For example:
     NODE_REV=8.0.0 BOOTSTRAP_DIR=~/tmp/shelley_qa_config/ ./.github/regression.sh
     ```
 
-## Local usage for tests development
+## Local usage for tests development (useful only for tests developers)
 
 Install and configure nix, follow [cardano-node documentation](https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
 Install and configure poetry, follow [Poetry documentation](https://python-poetry.org/docs/#installation).
