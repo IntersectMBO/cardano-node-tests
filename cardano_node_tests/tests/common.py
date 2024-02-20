@@ -64,6 +64,11 @@ SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
     reason="Plutus V2 is available only in Babbage+ eras",
 )
 
+SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.CONWAY,
+    reason="Plutus V3 is available only in Conway+ eras",
+)
+
 
 SKIP_ASSET_BALANCING = VERSIONS.node >= version.parse("1.36.0")
 
@@ -85,6 +90,16 @@ PARAM_PLUTUS_VERSION = pytest.mark.parametrize(
         pytest.param("v2", marks=SKIPIF_PLUTUSV2_UNUSABLE),
     ),
     ids=("plutus_v1", "plutus_v2"),
+)
+
+PARAM_PLUTUS3_VERSION = pytest.mark.parametrize(
+    "plutus_version",
+    (
+        "v1",
+        pytest.param("v2", marks=SKIPIF_PLUTUSV2_UNUSABLE),
+        pytest.param("v3", marks=SKIPIF_PLUTUSV3_UNUSABLE),
+    ),
+    ids=("plutus_v1", "plutus_v2", "plutus_v3"),
 )
 
 
