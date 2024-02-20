@@ -15,6 +15,7 @@ DATA_DIR = pl.Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
+SCRIPTS_V3_DIR = PLUTUS_DIR / "v3"
 SEPC256K1_ECDSA_DIR = PLUTUS_DIR / "sepc256k1_ecdsa"
 SEPC256K1_SCHNORR_DIR = PLUTUS_DIR / "sepc256k1_schnorr"
 
@@ -44,6 +45,8 @@ MINTING_CHECK_REF_SCRIPTS_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-with-referenc
 MINTING_CHECK_INLINE_DATUM_PLUTUS_V2 = SCRIPTS_V2_DIR / "check-mint-inline-datum.plutus"
 MINTING_SECP256K1_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-ecdsa-policy.plutus"
 MINTING_SECP256K1_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-schnorr-policy.plutus"
+
+MINTING_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedPolicyScriptV3.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
@@ -125,6 +128,8 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
     per_time=208_093_920, per_space=674_744, fixed_cost=53_937
 )
 
+MINTING_V3_COST = ExecutionCost(per_time=161_100, per_space=800, fixed_cost=58)
+
 
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusScriptData:
@@ -165,6 +170,7 @@ GUESSING_GAME_UNTYPED = {
 MINTING_PLUTUS = {
     "v1": PlutusScriptData(script_file=MINTING_PLUTUS_V1, execution_cost=MINTING_COST),
     "v2": PlutusScriptData(script_file=MINTING_PLUTUS_V2, execution_cost=MINTING_V2_COST),
+    "v3": PlutusScriptData(script_file=MINTING_PLUTUS_V3, execution_cost=MINTING_V3_COST),
 }
 
 
