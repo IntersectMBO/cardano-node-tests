@@ -393,6 +393,7 @@ class TestBuildMinting:
         (
             "plutus_v1",
             pytest.param("mix_v2_v1", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v3_v1", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
     )
     def test_two_scripts_minting(
@@ -427,6 +428,7 @@ class TestBuildMinting:
 
         script_file1_v1 = plutus_common.MINTING_PLUTUS_V1
         script_file1_v2 = plutus_common.MINTING_PLUTUS_V2
+        script_file1_v3 = plutus_common.MINTING_PLUTUS_V3
 
         # this is higher than `plutus_common.MINTING*_COST`, because the script context has changed
         # to include more stuff
@@ -440,6 +442,9 @@ class TestBuildMinting:
         minting_cost1_v2 = plutus_common.ExecutionCost(
             per_time=185_595_199, per_space=595_446, fixed_cost=47_739
         )
+        minting_cost1_v3 = plutus_common.ExecutionCost(
+            per_time=161_100, per_space=800, fixed_cost=58
+        )
 
         if plutus_version == "plutus_v1":
             script_file1 = script_file1_v1
@@ -447,6 +452,9 @@ class TestBuildMinting:
         elif plutus_version == "mix_v2_v1":
             script_file1 = script_file1_v2
             execution_cost1 = minting_cost1_v2
+        elif plutus_version == "mix_v3_v1":
+            script_file1 = script_file1_v3
+            execution_cost1 = minting_cost1_v3
         else:
             raise AssertionError("Unknown test variant.")
 
@@ -627,7 +635,7 @@ class TestBuildMinting:
         expected_fee_step1 = 168_977
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 633_269
+        expected_fee_step2 = 428_543 if plutus_version == "mix_v3_v1" else 633_269
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         plutus_common.check_plutus_costs(
