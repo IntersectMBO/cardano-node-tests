@@ -189,7 +189,7 @@ class TestMintingNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_low_budget(
         self,
         cluster: clusterlib.ClusterLib,
@@ -286,7 +286,7 @@ class TestMintingNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_low_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -595,7 +595,7 @@ class TestNegativeCollateral:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_minting_with_invalid_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
@@ -695,7 +695,7 @@ class TestNegativeCollateral:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_minting_with_insufficient_collateral(
         self,
         cluster: clusterlib.ClusterLib,
