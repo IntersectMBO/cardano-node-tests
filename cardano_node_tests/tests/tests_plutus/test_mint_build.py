@@ -101,7 +101,7 @@ class TestBuildMinting:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_minting_one_token(
         self,
         cluster: clusterlib.ClusterLib,
@@ -220,11 +220,11 @@ class TestBuildMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check expected fees
+        # Check expected fees
         expected_fee_step1 = 168_977
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 350_000
+        expected_fee_step2 = 187_031 if plutus_version == "v3" else 350_000
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         plutus_common.check_plutus_costs(
@@ -232,7 +232,7 @@ class TestBuildMinting:
             expected_costs=[plutus_v_record.execution_cost],
         )
 
-        # check tx_view
+        # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
@@ -999,7 +999,7 @@ class TestBuildMinting:
         "ttl_offset",
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1118,7 +1118,7 @@ class TestCollateralOutput:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,
