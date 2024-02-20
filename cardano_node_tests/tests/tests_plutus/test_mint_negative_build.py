@@ -304,7 +304,7 @@ class TestBuildMintingNegative:
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
-        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V1)
         asset_name = asset_name.encode("utf-8").hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -314,7 +314,7 @@ class TestBuildMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V2,
+                script_file=plutus_common.MINTING_PLUTUS_V1,
                 collaterals=collateral_utxos,
                 redeemer_file=plutus_common.REDEEMER_42,
                 policyid=policyid,
