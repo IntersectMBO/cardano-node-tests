@@ -430,61 +430,506 @@ CIP1694 User Stories
       - **As** a DRep, **I want** to generate a retirement certificate, **so that** the system and Ada holders (delegators) know that I’m no longer voting on governance actions and they should redelegate.
    -
 
-      - |image-CIP075|
+      - |image-CIP24|
+      - DRep retirement certificate is applied immediately after being accepted on-chain
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP024>`__
+      - **As** a DRep, **I want** my retirement certificate to be applied immediately upon acceptance on-chain, **so that** the DRep deposit is returned in the same transaction, ensuring no waiting time.
+   -
+
+      - |image-CIP25|
+      - per-DRep stake distribution
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP025>`__
+      - **As** an Ada Holder, **I want** the system to calculate the stake distribution per DRep, **so that** each DRep's vote is weighted according to the actual stake delegated to them. This per-DRep stake distribution should use the stake snapshot from the last epoch boundary.
+   -
+
+      - |image-CIP26|
+      - Bootstrapping phase
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP026>`__
+      - 
+   -
+
+      - |image-CIP27|
+      - Block rewards withdrawals for stake credentials that are not delegating to a DRep
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP027>`__
+      - **As** a Stakeholder **I want** that when bootstrapping phase ends, the system blocks rewards withdrawals for stake credentials that are not delegating to a DRep.
+   -
+
+      - |image-CIP28|
+      - Types of governance actions
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP028>`__
+      - **As** a Stakeholder **I want** the governance system to allow 7 different types of governance actions:
+
+        1. Motion of no-confidence A motion to create a state of no-confidence in the current Constitutional Committee
+        2. New Constitutional Committee and/or threshold and/or terms Changes to the members of the Constitutional Committee and/or to its signature threshold and/or terms
+        3. Update to the Constitution or proposal policy A modification to the Constitution or proposal policy, recorded as on-chain hashes
+        4. Hard-Fork Initiation Triggers a non-backwards compatible upgrade of the network; requires a prior software upgrade
+        5. Protocol Parameter Changes Any change to one or more updatable protocol parameters, excluding changes to major protocol versions ("hard forks")
+        6. Treasury Withdrawals from the treasury
+        7. Info
+   -
+
+      - |image-CIP29|
+      - Governance action initiation
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP029>`__
+      - **As** a Stakeholder, **I want** any stakeholder to be able to submit a governance action without restrictions, beyond those necessary for a transaction of this type to be considered valid.
+   -
+
+      - |image-CIP30|
+      - Governance action initiation
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP030>`__
+      - **As** a Stakeholder, **I want** Governance Actors to be required to provide a deposit in lovelace **so that** I can prevent the network from being spammed with meaningless governance actions. This deposit should be returned once the action is either ratified or expired
+   -
+
+      - |image-CIP31a|
+      - Contents of governance actions
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP031a>`__
+      - **As** a Governance Actor, **I want** every governance action to contain the following elements:
+
+        - a deposit amount
+        - a reward address to receive the deposit back
+        - an anchor for any metadata
+        - a hash digest value of the last enacted governance action of the same type (except for Treasury withdrawals and Info), to ensure the action can be processed by the node, accepted on-chain, and considered by the governance bodies.
+   -
+
+      - |image-CIP31b|
+      - New committee/threshold GA additional data
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP031b>`__
+      - **As** a Governance actor creating a New Committee governance action, **I want** to specify the following additional data:
+
+        - The set of verification key hash digests for members to be removed.
+        - A map of verification key hash digests to epoch numbers for new members - and their term limit in epochs.
+        - A fraction representing the quorum threshold. So that I can create a governance action that aligns with the Conway CDDL ensuring it is comprehensible and can be accurately processed by the ledger.
+   -
+
+      - |image-CIP31c|
+      - Update the constitution GA additional data
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP031c>`__
+      - **As** a Governance actor creating a Update to the constitution GA, **I want** to include an anchor to the Constitution and an optional script hash of the proposal policy.
+   -
+
+      - |image-CIP31d|
+      - Hardfork initiation GA additional data
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP031d>`__
+      - **As** a Governance actor creating a hardfork initiation governance action, **I want* to include the new (greater) major protocol version.
+   -
+
+      - |image-CIP31e|
+      - Protocol parameter changes GA additional data
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP031e>`__
+      - **As** a Governance actor creating a protocol parameter change GA, **I want** to include the parameter to change and their new values.
+   -
+
+      - |image-CIP31f|
+      - Treasury withdrawal GA additional data
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP031f>`__
+      - **As** a governance actor creating a treasury withdrawal GA, **I want** to include a map from stake credentials to a positive number of Lovelace.
+   -
+
+      - |image-CIP32|
+      - Governance action maximum lifetime
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP032>`__
+      - **As** a Stakeholder, **I want** governance actions submitted in a transaction and admitted to the chain to remain active for up to govActionLifetime epochs **so that** these actions are checked for ratification at every epoch boundary within their govActionLifetime. If an action gathers enough 'yes' votes to meet the thresholds of the governing bodies, it is ratified; otherwise, if it fails to gather sufficient 'yes' votes during the active period, the proposal expires and is removed.
+   -
+
+      - |image-CIP33|
+      - Enactment of ratified actions
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP033>`__
+      - **As** a Stakeholder, **I want** ratified actions to be automatically enacted at the next epoch transition following their ratification.
+   -
+
+      - |image-CIP34|
+      - Governance action deposit returns
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP034>`__
+      - **As** a Governance Actor, **I want** governance action deposits to be returned immediately after ratification or expiration.
+   -
+
+      - |image-CIP35|
+      - Deposits count towards voting power (stake)
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP035>`__
+      - Governance action deposits are added to the deposit pot and count towards the stake of the reward address to which they will be returned, to ensure that the proposer can back their own action with their voting power.
+   -
+
+      - |image-CIP36|
+      - Proposal policy
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP036>`__
+      - **As** a Stakeholder, **I want** governance actions that attempt to change protocol parameters or involve treasury withdrawals to include the supplementary script from the constitution in the witness set, either directly or via reference inputs, whenever such a script exists.
+   -
+
+      - |image-CIP37|
+      - Multiple protocol parameter updates
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP037>`__
+      - **As** a Governance Actor **I want** a governance action to allow multiple protocol parameter changes at once.
+   -
+
+      - |image-CIP38|
+      - Delay of ratification
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP038>`__
+      - **As** a Stakeholder, **I want** the ratification of all other governance actions to be delayed until the first epoch following the enactment of a successful motion of no-confidence, the election of a new Constitutional Committee, a constitutional change, or a hard-fork.
+   -
+
+      - |image-CIP39|
+      - Motion of no confidence, requirements for ratification
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP039>`__
+      - **As** a Stakeholder **I want** that the ratification of a Motion of no confidence governance action requires:
+
+        - DRep votes to be >= than DrepVotingThreshold for NoConfidence as a percentage of active voting stake.
+        - SPO votes to be >= than PoolVotingThreshold for NoConfidence as a percentage of the total delegated active stake for the epoch
+   -
+
+      - |image-CIP40|
+      - New committee/threshold (normal state), requirements for ratification
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP040>`__
+      - **As** a Stakeholder **I want** that the ratification of a New committee/threshold (normal state) governance action requires:
+
+        - DRep votes to be >= than DrepVotingThreshold for CommitteeNormalState as a percentage of active voting stake.
+        - SPO votes to be >= than PoolVotingThreshold for CommitteeNormalState as a percentage of the total delegated active stake for the epoch
+   -
+
+      - |image-CIP41|
+      - New committee/threshold (state of no-confidence), requirements for ratification
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP041>`__
+      - **As** a Stakeholder **I want** that the ratification of a New committee/threshold (state of no-confidence) governance action requires:
+
+        - DRep votes to be >= than DrepVotingThreshold dvtCommitteeNoConfidence as a percentage of active voting stake.
+        - SPO votes to be >= than pvtCommitteeNoConfidence as a percentage of the total delegated active stake for the epoch
+   -
+
+      - |image-CIP42|
+      - Update to the Constitution or proposal policy, requirements for ratification
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP042>`__
+      - **As** a Stakeholder **I want** that the ratification of a Update to the Constitution or proposal policy governance action requires:
+
+        - A minimum of CommitteeThreshold members must approve the Governance action
+        - DRep votes to be >= than DrepVotingThreshold for UpdateToConstitution as a percentage of active voting stake.
+   -
+
+      - |image-CIP43|
+      - Hard-fork initiation, requirements for ratification
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP043>`__
+      - **As** a Stakeholder **I want** that the ratification of a Hard-fork initiation governance action requires:
+
+        - A minimum of CommitteeThreshold members must approve the Governance action
+        - DRep votes to be >= than DrepVotingThreshold for HardForkInitiation as a percentage of active voting stake.
+        - SPO votes to be >= than PoolVotingThreshold for HardForkInitiation as a percentage of the total delegated active stake for the epoch
+   -
+
+      - |image-CIP44|
+      - Protocol parameter changes, network group
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP044>`__
+      - **As** a Stakeholder **I want** that the ratification of a network group protocol parameter change requires:
+
+        - A minimum of CommitteeThreshold members must approve the Governance action
+        - DRep votes to be >= than DrepVotingThreshold for PPNetworkGroup as a percentage of active voting stake
+   -
+
+      - |image-CIP45|
+      - Protocol parameter changes, economic group
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP045>`__
+      - **As** a Stakeholder **I want** that the ratification of a economic group protocol parameter change requires:
+
+        - A minimum of CommitteeThreshold members must approve the Governance action
+        - DRep votes to be >= than DrepVotingThreshold for PPEconomicGroup as a percentage of active voting stake
+   -
+
+      - |image-CIP46|
+      - Protocol parameter changes, technical group
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP046>`__
+      - **As** a Stakeholder **I want** that the ratification of a technical group protocol parameter change requires:
+
+        - A minimum of CommitteeThreshold members must approve the Governance action
+        - DRep votes to be >= than DrepVotingThreshold for PPTechnicalGroup_ as a percentage of active voting stake
+   -
+
+      - |image-CIP47|
+      - Protocol parameter changes, governance group
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP047>`__
+      - **As** a Stakeholder **I want** that the ratification of a governance group protocol parameter change requires:
+
+        - A minimum of CommitteeThreshold members must approve the Governance action
+        - DRep votes to be >= than DrepVotingThreshold PPGovGroup as a percentage of active voting stake
+   -
+
+      - |image-CIP48|
+      - Treasury withdrawal, requirements for ratification
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP048>`__
+      - **As** a Stakeholder **I want** that the ratification of a Treasury withdrawal governance action requires:
+
+        - A minimum of CommitteeThreshold members must approve the Governance action
+        - DRep votes to be >= than DrepVotingThreshold for TreasuryWithdrawal as a percentage of active voting stake
+   -
+
+      - |image-CIP49|
+      - The network group protocol parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP049>`__
+      - **As** a Stakeholder **I want** the network group consist of:
+
+        - maximum block body size (maxBBSize)
+        - maximum transaction size (maxTxSize)
+        - maximum block header size (maxBHSize)
+        - maximum size of a serialized asset value (maxValSize)
+        - maximum script execution units in a single transaction (maxTxExUnits)
+        - maximum script execution units in a single block (maxBlockExUnits)
+        - maximum number of collateral inputs (maxCollateralInputs)
+   -
+
+      - |image-CIP50|
+      - The economic group protocol parameters	
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP050>`__
+      - **As** a Stakeholder **I want** that the economic group consist of:
+
+        - minimum fee coefficient (minFeeA)
+        - minimum fee constant (minFeeB)
+        - delegation key Lovelace deposit (keyDeposit)
+        - pool registration Lovelace deposit (poolDeposit)
+        - monetary expansion (rho)
+        - treasury expansion (tau)
+        - minimum fixed rewards cut for pools (minPoolCost)
+        - minimum Lovelace deposit per byte of serialized UTxO (coinsPerUTxOByte)
+        - prices of Plutus execution units (prices)
+   -
+
+      - |image-CIP51|
+      - The technical group protocol parameters
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP051>`__
+      - **As** a Stakeholder **I want** that the technical group consist of:
+
+        - pool pledge influence (a0)
+        - pool retirement maximum epoch (eMax)
+        - desired number of pools (nOpt)
+        - Plutus execution cost models (costModels)
+        - proportion of collateral needed for scripts (collateralPercentage)
+   -
+
+      - |image-CIP52|
+      - The governance group protocol parameters	
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP052>`__
+      - **As** a Stakeholder **I want** that the governance group consist of:
+
+        - governance voting thresholds
+        - governance action maximum lifetime in epochs (govActionLifetime)
+        - governance action deposit (govActionDeposit)
+        - DRep deposit amount (drepDeposit)
+        - DRep activity period in epochs (drepActivity)
+        - minimal constitutional committee size (ccMinSize)
+        - maximum term length (in epochs) for the constitutional committee members (ccMaxTermLength)
+   -
+
+      - |image-CIP53|
+      - Thresholds for Info is set to 100%
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP053>`__
+      - **As** a Stakeholder **I want** the two thresholds for the Info action be set to 100% since setting it any lower would result in not being able to poll above the threshold.
+   -
+
+      - |image-CIP54|
+      - Preventing accidental clash of actions of the same type
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP054>`__
+      - **As** a Stakeholder **I want** all governance actions, except for Treasury withdrawals and Infos, to include the governance action ID of the most recently enacted action of the same type. This is to prevent accidental clashes between actions.
+   -
+
+      - |image-CIP55|
+      - Governance action enactment prioritization	
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP055>`__
+      - **As** a Stakeholder **I want** actions that have been ratified in the current epoch to be prioritized for enactment in the following order:
+
+        - Motion of no-confidence
+        - New committee/threshold
+        - Update to the Constitution or proposal policy
+        - Hard Fork initiation
+        - Protocol parameter changes
+        - Treasury withdrawals
+        - Info
+   -
+
+      - |image-CIP56|
+      - Governance action order of enactment	
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP056>`__
+      - **As** a Stakeholder **I want** governance actions to be enacted in the order of their acceptance to the chain.
+   -
+
+      - |image-CIP57|
+      - Governance actions automatic enactment	
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP057>`__
+      - **As** a Stakeholder **I want** ratified actions to be automatically enacted at the next epoch boundary.
+   -
+
+      - |image-CIP58|
+      - No duplicate committee members	
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP058>`__
+      - **As** a Stakeholder **I want** each pair of credentials in a committee to be unique, ensuring no duplicate committee members.
+   -
+
+      - |image-CIP59|
+      - Governance action ID
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP059>`__
+      - **As** a Stakeholder **I want** the transaction ID and index of the transaction that submits the governance action to the chain to serve as the governance action ID. This ID shall be used for casting votes.
+   -
+
+      - |image-CIP60|
+      - Vote transactions contents
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP060>`__
+      - **As** a Stakeholder **I want** each vote transaction to consist of the following elements:
+
+        - a governance action ID
+        - a role (Constitutional Committee member, DRep, or SPO)
+        - a governance credential witness for the role
+        - an optional anchor for information relevant to the vote (as defined above)
+        - a 'Yes'/'No'/'Abstain' vote.
+   -
+
+      - |image-CIP61|
+      - SPO and DREP votes are proportional to the stake delegated to them
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP061>`__
+      - For SPOs and DReps, the number of votes cast ('Yes', 'No', or 'Abstain') shall be proportional to the amount of Lovelace delegated to them at the time the action is checked for ratification.
+   -
+
+      - |image-CIP62|
+      - CC votes
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP062>`__
+      - **As** a Stakeholder **I want** each current committee member to have one vote.
+   -
+
+      - |image-CIP63|
+      - Active voting stake
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP063>`__
+      - **As** a Stakeholder **I want** the active voting stake to be the total registered stake minus the abstain votes stake (both credential DReps and AlwaysAbstain).
+   -
+
+      - |image-CIP64|
+      - Unregistered stake behaves like Abstain vote
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP064>`__
+      - **As** a Stakeholder **I want** unregistered stake to be treated as an abstain vote; meaning, it should not count towards the active voting stake.
+   -
+
+      - |image-CIP65|
+      - Registered stake that did not vote behaves like a 'No' vote
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP065>`__
+      - **As** a Stakeholder **I want** any registered stake that did not submit a vote, whether through its DRep or SPO, to be counted as a 'No' vote.
+   -
+
+      - |image-CIP66|
+      - New Plutus script purpose for scripts
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP066>`__
+      - **As** a Stakeholder **I want** a new voting purpose for Plutus scripts
+   -
+
+      - |image-CIP67|
+      - Any new vote overrides any older vote for the same credential and role
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP067>`__
+      - **As** a Stakeholder **I want** new votes on a governance action to override any previous votes for the same credential and role, allowing individuals to change their minds.
+   -
+
+      - |image-CIP68|
+      - Voting ends when an action is ratified and transactions containing further votes are invalid
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP068>`__
+      - **As** a Stakeholder **I want** the voting period to terminate immediately after an action is ratified or expires.
+   -
+
+      - |image-CIP69|
+      - Governance state tracking governance action progress
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP070>`__
+      - **As** a Stakeholder **I want** the governance state section of the ledger to track the progress of governance actions to include: capturing votes, tracking the expiration epoch, and other relevant information until the actions are either ratified or expired.
+   -
+
+      - |image-CIP70|
+      - Remove MIR certificates
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP070>`__
+      - **As** a Stakeholder **I want** MIR certificates to be removed, ensuring that the only way to withdraw funds from the treasury is through a ratified Treasury Withdrawal governance action.
+   -
+
+      - |image-CIP71|
+      - Remove genesis certificates
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP071>`__
+      - **As** a Stakeholder **I want** genesis certificates to be removed. In Conway era these are no longer useful or required.
+   -
+
+      - |image-CIP72|
+      - Changes to the existing ledger rules
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP072>`__
+      - **As** a Stakeholder **I want** the ledger to adjust its rules to accommodate for the governance features, i.e. Delegations, Certificates, Proposals, Votes, Ratification, Enactment.
+   -
+
+      - |image-CIP73|
+      - Changes to the local state-query protocol
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP073>`__
+      - **As** a Stakeholder **I want** the ledger to adjust the local state query protocol to accommodate for new queries that provide insights about governance, at least:
+
+        - Governance actions currently staged for enactment
+        - Governance actions under ratification, with the total and percentage of yes stake, no stake and abstain stake
+        - The current constitutional committee, and constitution hash digest
+   -
+
+      - |image-CIP74|
+      - Ratification of Security related parameters	
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP074>`__
+      - The security relevant protocol parameters require the approval of the three governing bodies.
+
+        - maxBBSize
+        - maxTxSize
+        - maxBHSize
+        - maxValSize
+        - maxBlockExUnits
+        - minFeeA
+        - minFeeB
+        - coinsPerUTxOByte
+        - govActionDeposit
+        - minFeeRefScriptsCoinsPerByte
+   -
+
+      - |image-CIP75|
       - Auditor review of current network parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP075>`__
       - **As** an Auditor, **I want** to audit the current state of the network parameters, **so that** I can ensure they align with the governance decisions.
    -
 
-      - |image-CIP076|
+      - |image-CIP76|
       - Auditor review of current technical parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP076>`__
       - **As** an Auditor, **I want** to audit the current technical parameters, including consenus and cost models **so that** I can ensure their compliance with the network parameters specified.
    -
 
-      - |image-CIP077|
+      - |image-CIP77|
       - Auditor review of current economic parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP077>`__
       - **As** an Auditor, **I want** to audit the current economic parameters, including parameters affecting transaction fees, taxes, and staking rewards **so that** I can assess their impact on the network's economy.
    -
 
-      - |image-CIP078|
+      - |image-CIP78|
       - Auditor review of current governance parameters and voting thresholds
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP078>`__
       - **As** an Auditor, **I want** to audit the current governance parameters and voting thresholds for governance actions to fail or ratify **so that** I can verify their appropriateness and adherence to governance rules, adherence to the constitution, and enforcement of voting thresholds.
    -
 
-      - |image-CIP079|
+      - |image-CIP79|
       - Auditor review of current state of the treasury
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP079>`__
       - **As** an Auditor, **I want** to audit the current state of the treasury, including the total amount of Ada, **so that** I can assess the current balance and the system's financial health.
    -
 
-      - |image-CIP080|
+      - |image-CIP80|
       - Auditor needs access to historical proposals affecting network parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP080>`__
       - **As** an Auditor, **I want** to access and review the history of proposals related to network parameters, including their outcomes, **so that** I can track governance effectiveness over time.
    -
 
-      - |image-CIP081|
+      - |image-CIP81|
       - Auditor needs access to historical proposals affecting technical parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP081>`__
       - **As** an Auditor, **I want** to access and review the history of proposals related to technical parameters, including both ratified and failed proposals, **so that** I can understand technical evolution and parameter change impact.
    -
 
-      - |image-CIP082|
+      - |image-CIP82|
       - Auditor needs access to historical proposals affecting economic parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP082>`__
       - **As** an Auditor, **I want** to access and review the history of proposals related to economic parameters, focusing on their ratification status, **so that** I can evaluate economic policy changes.
    -
 
-      - |image-CIP083|
+      - |image-CIP83|
       - Auditor needs access to the historical record of all governance proposals and voting thresholds
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP083>`__
       - **As** an Auditor, **I want** to access history changes to governance parameters, the proposals, and the voting thresholds, **so that** I can audit the changes made over time and verify compliance with governance rules, and evaluate the impact of these changes on governance actions' outcomes, with the primary purpose to verify voting thresholds were enforced.
    -
 
-      - |image-CIP084|
+      - |image-CIP84|
       - Auditor needs access to the history of treasury withdrawals
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP084>`__
       - **As** an Auditor, **I want** to audit the history of treasury withdrawals, including amounts, dates, and recipient wallet addresses, **so that** I can ensure transparency and accountability.
@@ -622,7 +1067,118 @@ CIP1694 User Stories
    :target: https://github.com/CIP022-404
 .. |image-CIP23| image:: https://img.shields.io/badge/CIP023-grey
    :target: https://github.com/CIP023-404
-
+.. |image-CIP24| image:: https://img.shields.io/badge/CIP024-grey
+   :target: https://github.com/CIP024-404
+.. |image-CIP25| image:: https://img.shields.io/badge/CIP025-grey
+   :target: https://github.com/CIP025-404
+.. |image-CIP26| image:: https://img.shields.io/badge/CIP026-grey
+   :target: https://github.com/CIP026-404
+.. |image-CIP27| image:: https://img.shields.io/badge/CIP027-grey
+   :target: https://github.com/CIP027-404
+.. |image-CIP28| image:: https://img.shields.io/badge/CIP028-grey
+   :target: https://github.com/CIP028-404
+.. |image-CIP29| image:: https://img.shields.io/badge/CIP029-grey
+   :target: https://github.com/CIP029-404
+.. |image-CIP30| image:: https://img.shields.io/badge/CIP030-grey
+   :target: https://github.com/CIP030-404
+.. |image-CIP31a| image:: https://img.shields.io/badge/CIP031a-grey
+   :target: https://github.com/CIP031a-404
+.. |image-CIP31b| image:: https://img.shields.io/badge/CIP031b-grey
+   :target: https://github.com/CIP031b-404
+.. |image-CIP31c| image:: https://img.shields.io/badge/CIP031c-grey
+   :target: https://github.com/CIP031c-404
+.. |image-CIP31d| image:: https://img.shields.io/badge/CIP031d-grey
+   :target: https://github.com/CIP031d-404
+.. |image-CIP31e| image:: https://img.shields.io/badge/CIP031e-grey
+   :target: https://github.com/CIP031e-404
+.. |image-CIP31f| image:: https://img.shields.io/badge/CIP031f-grey
+   :target: https://github.com/CIP031f-404
+.. |image-CIP32| image:: https://img.shields.io/badge/CIP032-grey
+   :target: https://github.com/CIP032-404
+.. |image-CIP33| image:: https://img.shields.io/badge/CIP033-grey
+   :target: https://github.com/CIP033-404
+.. |image-CIP34| image:: https://img.shields.io/badge/CIP034-grey
+   :target: https://github.com/CIP034-404
+.. |image-CIP35| image:: https://img.shields.io/badge/CIP035-grey
+   :target: https://github.com/CIP035-404
+.. |image-CIP36| image:: https://img.shields.io/badge/CIP036-grey
+   :target: https://github.com/CIP036-404
+.. |image-CIP37| image:: https://img.shields.io/badge/CIP037-grey
+   :target: https://github.com/CIP037-404
+.. |image-CIP38| image:: https://img.shields.io/badge/CIP038-grey
+   :target: https://github.com/CIP038-404
+.. |image-CIP39| image:: https://img.shields.io/badge/CIP039-grey
+   :target: https://github.com/CIP039-404
+.. |image-CIP40| image:: https://img.shields.io/badge/CIP040-grey
+   :target: https://github.com/CIP040-404
+.. |image-CIP41| image:: https://img.shields.io/badge/CIP041-grey
+   :target: https://github.com/CIP41-404
+.. |image-CIP42| image:: https://img.shields.io/badge/CIP042-grey
+   :target: https://github.com/CIP042-404
+.. |image-CIP43| image:: https://img.shields.io/badge/CIP043-grey
+   :target: https://github.com/CIP043-404
+.. |image-CIP44| image:: https://img.shields.io/badge/CIP044-grey
+   :target: https://github.com/CIP044-404
+.. |image-CIP45| image:: https://img.shields.io/badge/CIP045-grey
+   :target: https://github.com/CIP045-404
+.. |image-CIP46| image:: https://img.shields.io/badge/CIP046-grey
+   :target: https://github.com/CIP046-404
+.. |image-CIP47| image:: https://img.shields.io/badge/CIP047-grey
+   :target: https://github.com/CIP047-404
+.. |image-CIP48| image:: https://img.shields.io/badge/CIP048-grey
+   :target: https://github.com/CIP048-404
+.. |image-CIP49| image:: https://img.shields.io/badge/CIP049-grey
+   :target: https://github.com/CIP049-404
+.. |image-CIP50| image:: https://img.shields.io/badge/CIP050-grey
+   :target: https://github.com/CIP050-404
+.. |image-CIP51| image:: https://img.shields.io/badge/CIP051-grey
+   :target: https://github.com/CIP051-404
+.. |image-CIP52| image:: https://img.shields.io/badge/CIP052-grey
+   :target: https://github.com/CIP052-404
+.. |image-CIP53| image:: https://img.shields.io/badge/CIP053-grey
+   :target: https://github.com/CIP053-404
+.. |image-CIP54| image:: https://img.shields.io/badge/CIP054-grey
+   :target: https://github.com/CIP054-404
+.. |image-CIP55| image:: https://img.shields.io/badge/CIP055-grey
+   :target: https://github.com/CIP055-404
+.. |image-CIP56| image:: https://img.shields.io/badge/CIP056-grey
+   :target: https://github.com/CIP056-404
+.. |image-CIP57| image:: https://img.shields.io/badge/CIP057-grey
+   :target: https://github.com/CIP057-404
+.. |image-CIP58| image:: https://img.shields.io/badge/CIP058-grey
+   :target: https://github.com/CIP058-404
+.. |image-CIP59| image:: https://img.shields.io/badge/CIP059-grey
+   :target: https://github.com/CIP059-404
+.. |image-CIP60| image:: https://img.shields.io/badge/CIP060-grey
+   :target: https://github.com/CIP060-404
+.. |image-CIP61| image:: https://img.shields.io/badge/CIP061-grey
+   :target: https://github.com/CIP061-404
+.. |image-CIP62| image:: https://img.shields.io/badge/CIP062-grey
+   :target: https://github.com/CIP062-404
+.. |image-CIP63| image:: https://img.shields.io/badge/CIP063-grey
+   :target: https://github.com/CIP063-404
+.. |image-CIP64| image:: https://img.shields.io/badge/CIP064-grey
+   :target: https://github.com/CIP064-404
+.. |image-CIP65| image:: https://img.shields.io/badge/CIP065-grey
+   :target: https://github.com/CIP065-404
+.. |image-CIP66| image:: https://img.shields.io/badge/CIP066-grey
+   :target: https://github.com/CIP066-404
+.. |image-CIP67| image:: https://img.shields.io/badge/CIP067-grey
+   :target: https://github.com/CIP067-404
+.. |image-CIP68| image:: https://img.shields.io/badge/CIP068-grey
+   :target: https://github.com/CIP068-404
+.. |image-CIP69| image:: https://img.shields.io/badge/CIP069-grey
+   :target: https://github.com/CIP069-404
+.. |image-CIP70| image:: https://img.shields.io/badge/CIP070-grey
+   :target: https://github.com/CIP070-404
+.. |image-CIP71| image:: https://img.shields.io/badge/CIP071-grey
+   :target: https://github.com/CIP071-404
+.. |image-CIP72| image:: https://img.shields.io/badge/CIP072-grey
+   :target: https://github.com/CIP072-404
+.. |image-CIP73| image:: https://img.shields.io/badge/CIP073-grey
+   :target: https://github.com/CIP073-404
+.. |image-CIP74| image:: https://img.shields.io/badge/CIP074-grey
+   :target: https://github.com/CIP074-404
 .. |image-CIP75| image:: https://img.shields.io/badge/CIP075-grey
    :target: https://github.com/CIP075-404
 .. |image-CIP76| image:: https://img.shields.io/badge/CIP076-grey
