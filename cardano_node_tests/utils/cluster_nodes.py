@@ -385,6 +385,25 @@ def get_cluster_env() -> ClusterEnv:
     return cluster_env
 
 
+def reload_supervisor_config(instance_num: tp.Optional[int] = None) -> None:
+    """Reload supervisor configuration."""
+    LOGGER.info("Reloading supervisor configuration.")
+
+    if instance_num is None:
+        instance_num = get_cluster_env().instance_num
+
+    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
+    try:
+        helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} update")
+    except Exception as exc:
+        raise Exception(  # pylint: disable=broad-exception-raised
+            "Failed to reload configuration."
+        ) from exc
+
+    # Wait for potential nodes restart
+    time.sleep(5)
+
+
 def start_cluster(cmd: str, args: tp.List[str]) -> clusterlib.ClusterLib:
     """Start cluster."""
     args_str = " ".join(args)
@@ -431,7 +450,7 @@ def services_action(
             )
         except Exception as exc:
             raise Exception(  # pylint: disable=broad-exception-raised
-                f"Failed to restart service `{service_name}`"
+                f"Failed to {action} service `{service_name}`"
             ) from exc
 
 
