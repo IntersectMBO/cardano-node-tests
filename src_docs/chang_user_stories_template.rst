@@ -5,7 +5,7 @@ The page is updated about once a week until the coverage is complete.
 
 Latest update: **TODAY**  
 
-**Legend:** |Success Badge| |Failure Badge| |Uncovered Badge|  
+**Legend:** |Success Badge| |Failure Badge| |Partial Coverage Badge| |Uncovered Badge|  
 
 CLI User Stories
 ----------------
@@ -936,6 +936,7 @@ CIP1694 User Stories
 
 .. |Success Badge| image:: https://img.shields.io/badge/success-green
 .. |Failure Badge| image:: https://img.shields.io/badge/failure-red
+.. |Partial Coverage Badge| image:: https://img.shields.io/badge/partial_coverage-yellow
 .. |Uncovered Badge| image:: https://img.shields.io/badge/uncovered-grey
 
 .. |image-CLI1| image:: https://img.shields.io/badge/CLI001-grey

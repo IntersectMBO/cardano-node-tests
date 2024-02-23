@@ -20,6 +20,12 @@ def get_args() -> argparse.Namespace:
         help="Path to a directory with testing artifacts",
     )
     parser.add_argument(
+        "-m",
+        "--requirements-mapping",
+        required=True,
+        help="JSON file with requirements mapping",
+    )
+    parser.add_argument(
         "-o",
         "--output-file",
         required=True,
@@ -35,7 +41,9 @@ def main() -> None:
     )
     args = get_args()
 
-    report = requirements.collect_executed_req(base_dir=args.artifacts_base_dir)
+    executed_req = requirements.collect_executed_req(base_dir=args.artifacts_base_dir)
+    report = requirements.get_mapped_req(mapping=args.us_mapping, executed_req=executed_req)
+
     helpers.write_json(out_file=args.output_file, content=report)
 
 
