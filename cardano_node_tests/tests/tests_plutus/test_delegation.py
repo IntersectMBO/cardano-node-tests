@@ -24,6 +24,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -147,9 +148,19 @@ def register_delegate_stake_addr(
     src_init_balance = cluster_obj.g_query.get_address_balance(pool_user.payment.address)
 
     # Register stake address and delegate it to pool
-    reg_cert_script = clusterlib.ComplexCert(
-        certificate_file=stake_addr_reg_cert_file,
-    )
+    if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+        reg_cert_script = clusterlib.ComplexCert(
+            certificate_file=stake_addr_reg_cert_file,
+            script_file=pool_user.stake.script_file if not reference_script_utxos else "",
+            reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
+            collaterals=collaterals,
+            execution_units=(218855869, 686154),
+            redeemer_file=redeemer_file,
+        )
+    else:
+        reg_cert_script = clusterlib.ComplexCert(
+            certificate_file=stake_addr_reg_cert_file,
+        )
     deleg_cert_script = clusterlib.ComplexCert(
         certificate_file=stake_addr_deleg_cert_file,
         script_file=pool_user.stake.script_file if not reference_script_utxos else "",
