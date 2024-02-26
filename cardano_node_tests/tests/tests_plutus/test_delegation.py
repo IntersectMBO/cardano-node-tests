@@ -671,13 +671,17 @@ class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_reference_script", (True, False), ids=("reference_script", "script_file")
+    )
     @pytest.mark.dbsync
-    def test_delegate_deregister(
+    def test_delegate_deregister(  # noqa: C901
         self,
         cluster_lock_42stake: tp.Tuple[clusterlib.ClusterLib, str],
         pool_user: delegation.PoolUserScript,
         plutus_version: str,
         use_build_cmd: bool,
+        use_reference_script: bool,
     ):
         """Register, delegate and deregister Plutus script stake address.
 
@@ -693,6 +697,9 @@ class TestDelegateAddr:
         # pylint: disable=too-many-locals,too-many-statements
         cluster, pool_id = cluster_lock_42stake
         temp_template = common.get_test_id(cluster)
+
+        if plutus_version == "v1" and use_reference_script:
+            pytest.skip("PlutusV1 doesn't support reference scripts")
 
         collateral_fund_deleg = 1_500_000_000
         collateral_fund_withdraw = 1_500_000_000
@@ -718,7 +725,7 @@ class TestDelegateAddr:
             clusterlib.TxOut(address=pool_user.payment.address, amount=dereg_fund),
         ]
 
-        if plutus_version == "v2":
+        if use_reference_script:
             txouts_step1.append(
                 clusterlib.TxOut(
                     address=pool_user.payment.address,
@@ -758,7 +765,7 @@ class TestDelegateAddr:
 
         reference_script_utxos = (
             clusterlib.filter_utxos(utxos=step1_utxos, utxo_ix=utxo_ix_offset + 5)
-            if plutus_version == "v2"
+            if use_reference_script
             else None
         )
 
@@ -813,10 +820,18 @@ class TestDelegateAddr:
 
         reward_error = ""
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
-        if not cluster.g_query.get_stake_addr_info(pool_user.stake.address).reward_account_balance:
-            reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
+        # To speed up test run, skip waiting for rewards in selected scenarios
+        skip_rewards_check = (use_reference_script and not use_build_cmd) or (
+            not use_reference_script and use_build_cmd
+        )
+
+        if not skip_rewards_check:
+            LOGGER.info("Waiting 4 epochs for first reward.")
+            cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+            if not cluster.g_query.get_stake_addr_info(
+                pool_user.stake.address
+            ).reward_account_balance:
+                reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
