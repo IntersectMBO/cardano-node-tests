@@ -13,7 +13,6 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import helpers
 
-
 LOGGER = logging.getLogger(__name__)
 
 

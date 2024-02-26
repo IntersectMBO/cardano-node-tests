@@ -8,7 +8,6 @@ import os
 
 import pytest
 
-
 PYTEST_XDIST_WORKER_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 0)
 
 pytestmark = pytest.mark.skipif(

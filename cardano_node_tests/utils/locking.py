@@ -4,7 +4,6 @@ import typing as tp
 
 from cardano_node_tests.utils import configuration
 
-
 # Use dummy locking if not executing with multiple workers.
 # When running with multiple workers, operations with shared resources (like faucet addresses)
 # need to be locked to single worker (otherwise e.g. balances would not check).

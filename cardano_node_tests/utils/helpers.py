@@ -19,7 +19,6 @@ import typing as tp
 
 import cardano_node_tests.utils.types as ttypes
 
-
 LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/IntersectMBO/cardano-node-tests"
