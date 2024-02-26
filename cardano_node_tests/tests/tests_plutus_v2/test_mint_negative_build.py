@@ -56,11 +56,13 @@ class TestNegativeCollateralOutput:
         (True, False),
         ids=("with_return_collateral", "without_return_collateral"),
     )
+    @common.PARAM_PLUTUS2ONWARDS_VERSION
     def test_minting_with_unbalanced_total_collateral(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         with_return_collateral: bool,
+        plutus_version: str,
     ):
         """Test minting a token with a Plutus script with unbalanced total collateral.
 
@@ -74,8 +76,10 @@ class TestNegativeCollateralOutput:
         token_amount = 5
         script_fund = 200_000_000
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_V2_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -99,7 +103,7 @@ class TestNegativeCollateralOutput:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -109,7 +113,7 @@ class TestNegativeCollateralOutput:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V2,
+                script_file=plutus_v_record.script_file,
                 collaterals=[collateral_utxo],
                 execution_units=(
                     plutus_common.MINTING_COST.per_time,
