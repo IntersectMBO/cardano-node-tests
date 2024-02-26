@@ -102,6 +102,15 @@ PARAM_PLUTUS3_VERSION = pytest.mark.parametrize(
     ids=("plutus_v1", "plutus_v2", "plutus_v3"),
 )
 
+PARAM_PLUTUS2ONWARDS_VERSION = pytest.mark.parametrize(
+    "plutus_version",
+    (
+        "v2",
+        pytest.param("v3", marks=SKIPIF_PLUTUSV3_UNUSABLE),
+    ),
+    ids=("plutus_v2", "plutus_v3"),
+)
+
 
 # intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)
 if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:

@@ -106,11 +106,13 @@ class TestBuildMinting:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @common.PARAM_PLUTUS2ONWARDS_VERSION
     def test_minting_one_token(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_reference_script: bool,
+        plutus_version: str,
     ):
         """Test minting a token with a Plutus script.
 
@@ -132,8 +134,10 @@ class TestBuildMinting:
         token_amount = 5
         script_fund = 200_000_000
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_V2_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -148,13 +152,13 @@ class TestBuildMinting:
             issuer_addr=issuer_addr,
             minting_cost=minting_cost,
             amount=script_fund,
-            reference_script=plutus_common.MINTING_PLUTUS_V2 if use_reference_script else None,
+            reference_script=plutus_v_record.script_file if use_reference_script else None,
         )
         assert reference_utxo or not use_reference_script, "No reference script UTxO"
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -164,7 +168,7 @@ class TestBuildMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V2 if not use_reference_script else "",
+                script_file=plutus_v_record.script_file if not use_reference_script else "",
                 reference_txin=reference_utxo if use_reference_script else None,
                 collaterals=collateral_utxos,
                 redeemer_file=plutus_common.REDEEMER_42,
@@ -229,7 +233,7 @@ class TestBuildMinting:
         else:
             expected_fee_step1 = 167_437
             expected_fee_step2 = 304_694
-            expected_cost = plutus_common.MINTING_V2_COST
+            expected_cost = plutus_v_record.execution_cost
 
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)

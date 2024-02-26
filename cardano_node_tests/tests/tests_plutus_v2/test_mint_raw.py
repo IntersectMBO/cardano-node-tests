@@ -97,11 +97,13 @@ class TestMinting:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @common.PARAM_PLUTUS2ONWARDS_VERSION
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         use_reference_script: bool,
+        plutus_version: str,
     ):
         """Test minting two tokens with a single Plutus script.
 
@@ -120,10 +122,12 @@ class TestMinting:
         token_amount = 5
         fee_txsize = 600_000
 
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
         if use_reference_script:
             execution_cost = plutus_common.MINTING_V2_REF_COST
         else:
-            execution_cost = plutus_common.MINTING_V2_COST
+            execution_cost = plutus_v_record.execution_cost
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=execution_cost,
@@ -141,7 +145,7 @@ class TestMinting:
             amount=lovelace_amount,
             fee_txsize=fee_txsize,
             collateral_utxo_num=2,
-            reference_script=plutus_common.MINTING_PLUTUS_V2,
+            reference_script=plutus_v_record.script_file if use_reference_script else None,
         )
         assert reference_utxo or not use_reference_script, "No reference script UTxO"
 
@@ -149,7 +153,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_PLUTUS_V2)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode().hex()
         token_a = f"{policyid}.{asset_name_a}"
         asset_name_b = f"qacoinb{clusterlib.get_rand_str(4)}".encode().hex()
@@ -162,7 +166,7 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_PLUTUS_V2 if not use_reference_script else "",
+                script_file=plutus_v_record.script_file if not use_reference_script else "",
                 reference_txin=reference_utxo if use_reference_script else None,
                 collaterals=collateral_utxos,
                 execution_units=(
