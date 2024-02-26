@@ -517,7 +517,10 @@ class TestDelegateAddr:
                 tx_files=tx_files_deregister,
             )
         err_msg = str(excinfo.value)
-        assert "StakeKeyNonZeroAccountBalanceDELEG" in err_msg, err_msg
+        assert (
+            "StakeKeyNonZeroAccountBalanceDELEG" in err_msg
+            or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in err_msg
+        ), err_msg
 
         src_payment_balance = cluster.g_query.get_address_balance(src_address)
         reward_balance = cluster.g_query.get_stake_addr_info(
@@ -769,7 +772,7 @@ class TestDelegateAddr:
         # register stake address
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[user_payment.skey_file],
+            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
         tx_raw_output_reg = cluster.g_transaction.send_tx(
             src_address=user_payment.address,
@@ -919,7 +922,7 @@ class TestNegative:
         # register stake address
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[user_payment.skey_file],
+            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
         cluster.g_transaction.send_tx(
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
@@ -1006,7 +1009,9 @@ class TestNegative:
                     tx_files=tx_files,
                 )
         err_msg = str(excinfo.value)
-        assert "StakeDelegationImpossibleDELEG" in err_msg, err_msg
+        assert (
+            "StakeDelegationImpossibleDELEG" in err_msg or "StakeKeyNotRegisteredDELEG" in err_msg
+        ), err_msg
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -1038,7 +1043,7 @@ class TestNegative:
         # register stake address
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[user_payment.skey_file],
+            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
         cluster.g_transaction.send_tx(
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
@@ -1108,7 +1113,9 @@ class TestNegative:
                     tx_files=tx_files,
                 )
         err_msg = str(excinfo.value)
-        assert "StakeDelegationImpossibleDELEG" in err_msg, err_msg
+        assert (
+            "StakeDelegationImpossibleDELEG" in err_msg or "StakeKeyNotRegisteredDELEG" in err_msg
+        ), err_msg
 
     @allure.link(helpers.get_vcs_link())
     def test_delegatee_not_registered(
@@ -1136,7 +1143,7 @@ class TestNegative:
         # register stake address
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[user_payment.skey_file],
+            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
         cluster.g_transaction.send_tx(
             src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
