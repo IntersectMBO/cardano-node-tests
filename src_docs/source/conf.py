@@ -11,7 +11,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 # Mock testing environment if needed
 if not os.environ.get("CARDANO_NODE_SOCKET_PATH"):
     os.environ["CARDANO_NODE_SOCKET_PATH"] = "/nonexistent"
