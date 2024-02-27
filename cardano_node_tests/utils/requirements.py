@@ -16,6 +16,8 @@ class GroupsKnown:
 class Statuses:
     SUCCESS: tp.Final[str] = "success"
     FAILURE: tp.Final[str] = "failure"
+    UNCOVERED: tp.Final[str] = "uncovered"
+    PARTIAL_SUCCESS: tp.Final[str] = "partial_success"
 
 
 class Req:
@@ -93,3 +95,44 @@ def collect_executed_req(base_dir: pl.Path) -> dict:
         id_collected["url"] = req_rec.get("url") or ""
 
     return collected
+
+
+def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:
+    """Get mapped requirements."""
+    with open(mapping, encoding="utf-8") as in_fp:
+        requirements_mapping = json.load(in_fp)
+
+    for group, reqs in requirements_mapping.items():
+        executed_group = executed_req.get(group) or {}
+
+        for req_id, dependencies in reqs.items():
+            url = None
+            dependencies_success = []
+            dependencies_failures = []
+
+            for p_req in dependencies:
+                p_status = executed_group.get(p_req, {}).get("status")
+
+                if not url:
+                    url = executed_group.get(p_req, {}).get("url")
+
+                if p_status == Statuses.SUCCESS:
+                    dependencies_success.append(p_req)
+                elif p_status == Statuses.FAILURE:
+                    dependencies_failures.append(p_req)
+
+            # If any partial requirement failed, the overall outcome would be failed
+            if dependencies_failures:
+                status = Statuses.FAILURE
+            # If none partial requirement is covered, the overall outcome would be uncovered
+            elif not (dependencies_success or dependencies_failures):
+                status = Statuses.UNCOVERED
+            # If all partial requirements are successful, the overall outcome would be success
+            elif len(dependencies_success) == len(dependencies):
+                status = Statuses.SUCCESS
+            else:
+                status = Statuses.PARTIAL_SUCCESS
+
+            executed_req[group][req_id] = {"status": status, "url": url}
+
+    return executed_req

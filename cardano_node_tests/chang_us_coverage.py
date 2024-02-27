@@ -39,6 +39,8 @@ def _get_color(status: str) -> str:
         return "green"
     if status == requirements.Statuses.FAILURE:
         return "red"
+    if status == requirements.Statuses.PARTIAL_SUCCESS:
+        return "yellow"
     return "grey"
 
 
@@ -58,6 +60,10 @@ def main() -> None:
     chang_group: dict = coverage.get(requirements.GroupsKnown.CHANG_US)
 
     for req_id, req_data in chang_group.items():
+        # Partial or uncovered requirements should be ignored
+        if req_id.startswith("int") or req_data["status"] == requirements.Statuses.UNCOVERED:
+            continue
+
         color = _get_color(req_data["status"])
         report = report.replace(f"/{req_id}-grey", f"/{req_id}-{color}")
         url = req_data.get("url")
