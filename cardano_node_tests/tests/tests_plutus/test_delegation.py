@@ -206,7 +206,7 @@ def register_delegate_stake_addr(
             txins=txins,
             tx_files=tx_files,
             complex_certs=[reg_cert_script, deleg_cert_script],
-            fee=300_000,
+            fee=400_000,
         )
 
     # Check that the balance for source address was correctly updated
