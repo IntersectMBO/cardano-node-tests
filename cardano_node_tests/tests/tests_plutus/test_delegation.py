@@ -473,7 +473,7 @@ def deregister_stake_addr(
             tx_files=tx_files,
             complex_certs=[dereg_cert_script],
             script_withdrawals=[withdrawal_script],
-            fee=300_000,
+            fee=400_000,
         )
 
     # Check that the key deposit was returned and rewards withdrawn
