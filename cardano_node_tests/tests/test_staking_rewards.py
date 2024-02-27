@@ -1759,7 +1759,11 @@ class TestNegativeWithdrawal:
             )
             raise AssertionError("The Tx submit succeeded unexpectedly.")
         except clusterlib.CLIError as exc:
-            if "(WithdrawalsNotInRewardsDELEGS" not in str(exc):
+            err_str = str(exc)
+            if (
+                "WithdrawalsNotInRewardsDELEGS" not in err_str
+                and "WithdrawalsNotInRewardsCERTS" not in err_str  # in node >= 8.8.0
+            ):
                 reward_balance = cluster.g_query.get_stake_addr_info(
                     stake_addr=pool_reward.stake.address
                 ).reward_account_balance
