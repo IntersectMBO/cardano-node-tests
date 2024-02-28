@@ -343,6 +343,7 @@ class TestCommittee:
         req_cip5 = requirements.Req(id="CIP005", group=requirements.GroupsKnown.CHANG_US)
         req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
+        req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
 
         # Authorize the hot keys
 
@@ -432,14 +433,14 @@ class TestCommittee:
             )
 
             _url = helpers.get_vcs_link()
-            [r.start(url=_url) for r in (req_cli14, req_cip31b)]
+            [r.start(url=_url) for r in (req_cli14, req_cip31b, req_cip58)]
             add_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_add",
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_url_add,
                 anchor_data_hash=anchor_data_hash_add,
                 quorum=str(cluster.conway_genesis["committee"]["quorum"]),
-                add_cc_members=cc_members,
+                add_cc_members=[*cc_members, cc_members[0]],  # test adding the same member twice
                 prev_action_txid=prev_action_rec.txid,
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
@@ -731,7 +732,7 @@ class TestCommittee:
             assert (
                 enact_add_member_rec["expiration"] == cc_members[i].epoch
             ), "Expiration epoch is incorrect"
-        [r.success() for r in (req_cip9, req_cip10)]
+        [r.success() for r in (req_cip9, req_cip10, req_cip58)]
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
