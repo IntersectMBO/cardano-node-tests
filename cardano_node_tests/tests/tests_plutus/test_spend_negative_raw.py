@@ -389,7 +389,7 @@ class TestNegative:
                 amount=amount,
             )
         err_str = str(excinfo.value)
-        assert "cardano-cli transaction submit" in err_str, err_str
+        assert "transaction submit" in err_str, err_str
         assert "ScriptsNotPaidUTxO" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
