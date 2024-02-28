@@ -79,6 +79,7 @@ class TestPParamUpdate:
         # Linked user stories
         req_cli17 = requirements.Req(id="CLI017", group=requirements.GroupsKnown.CHANG_US)
         req_cip6 = requirements.Req(id="CIP006", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP31a-05", group=requirements.GroupsKnown.CHANG_US)
         req_cip31e = requirements.Req(id="CIP031e", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
@@ -122,7 +123,7 @@ class TestPParamUpdate:
         update_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli17, req_cip31e)]
+        [r.start(url=_url) for r in (req_cli17, req_cip31a, req_cip31e)]
         if configuration.HAS_CC:
             req_cip6.start(url=_url)
         pparams_action = cluster.g_conway_governance.action.create_pparams_update(
@@ -135,7 +136,7 @@ class TestPParamUpdate:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
-        req_cip31e.success()
+        [r.success() for r in (req_cip31a, req_cip31e)]
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[pparams_action.action_file],
