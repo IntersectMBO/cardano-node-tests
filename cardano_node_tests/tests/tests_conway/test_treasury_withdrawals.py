@@ -69,6 +69,7 @@ class TestTreasuryWithdrawals:
 
         # Linked user stories
         req_cli15 = requirements.Req(id="CLI015", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31f = requirements.Req(id="CIP031f", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -89,7 +90,8 @@ class TestTreasuryWithdrawals:
 
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        req_cli15.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli15, req_cip31f)]
         withdrawal_actions = [
             cluster.g_conway_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_{a}",
@@ -102,7 +104,7 @@ class TestTreasuryWithdrawals:
             )
             for a in range(actions_num)
         ]
-        req_cli15.success()
+        [r.success() for r in (req_cli15, req_cip31f)]
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
@@ -363,6 +365,9 @@ class TestTreasuryWithdrawals:
         # Linked user stories
         req_cli25 = requirements.Req(id="CLI025", group=requirements.GroupsKnown.CHANG_US)
         req_cli26 = requirements.Req(id="CLI026", group=requirements.GroupsKnown.CHANG_US)
+        req_int_cip30ex = requirements.Req(
+            id="intCIP030ex", group=requirements.GroupsKnown.CHANG_US
+        )
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -386,6 +391,7 @@ class TestTreasuryWithdrawals:
 
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
+        req_int_cip30ex.start(url=helpers.get_vcs_link())
         withdrawal_actions = [
             cluster.g_conway_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_{a}",
@@ -616,6 +622,8 @@ class TestTreasuryWithdrawals:
         assert (
             rem_deposit_returned == init_return_account_balance + actions_deposit_combined
         ), "Incorrect return account balance"
+
+        req_int_cip30ex.success()
 
         # Additional checks of governance state output
         assert governance_utils.lookup_expired_actions(
