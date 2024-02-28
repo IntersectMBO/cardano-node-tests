@@ -287,9 +287,7 @@ class TestNegativeInlineDatum:
                 script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
-        assert (
-            "Error translating the transaction context: InlineDatumsNotSupported" in err_str
-        ), err_str
+        assert "InlineDatumsNotSupported" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_content=st.text(alphabet=string.ascii_letters, min_size=65))
