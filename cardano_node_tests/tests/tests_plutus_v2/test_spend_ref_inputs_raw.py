@@ -514,7 +514,7 @@ class TestNegativeReadonlyReferenceInputs:
         temp_template = common.get_test_id(cluster)
         reference_input_amount = 2_000_000
 
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         reference_input = spend_raw._build_reference_txin(
             temp_template=temp_template,
@@ -528,7 +528,6 @@ class TestNegativeReadonlyReferenceInputs:
                 [
                     "transaction",
                     "build-raw",
-                    "--babbage-era",
                     "--fee",
                     f"{200_000}",
                     "--read-only-tx-in-reference",
@@ -537,6 +536,7 @@ class TestNegativeReadonlyReferenceInputs:
                     f"{payment_addrs[1].address}+{2_000_000}",
                     "--out-file",
                     f"{temp_template}_tx.body",
+                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         err_str = str(excinfo.value)
