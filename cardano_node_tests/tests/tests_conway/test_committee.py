@@ -342,6 +342,7 @@ class TestCommittee:
         req_cip9 = requirements.Req(id="CIP009", group=requirements.GroupsKnown.CHANG_US)
         req_cip5 = requirements.Req(id="CIP005", group=requirements.GroupsKnown.CHANG_US)
         req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
 
         # Authorize the hot keys
 
@@ -430,7 +431,8 @@ class TestCommittee:
                 gov_state=cluster.g_conway_governance.query.gov_state(),
             )
 
-            req_cli14.start(url=helpers.get_vcs_link())
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (req_cli14, req_cip31b)]
             add_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_add",
                 deposit_amt=deposit_amt,
@@ -442,7 +444,7 @@ class TestCommittee:
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
             )
-            req_cli14.success()
+            [r.success() for r in (req_cli14, req_cip31b)]
 
             tx_files_action_add = clusterlib.TxFiles(
                 proposal_files=[add_cc_action.action_file],

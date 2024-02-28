@@ -68,6 +68,10 @@ class TestNoConfidence:
         # Linked user stories
         req_cli18 = requirements.Req(id="CLI018", group=requirements.GroupsKnown.CHANG_US)
         req_cip13 = requirements.Req(id="CIP013", group=requirements.GroupsKnown.CHANG_US)
+        req_cip29 = requirements.Req(id="CIP029", group=requirements.GroupsKnown.CHANG_US)
+        req_int_cip30en = requirements.Req(
+            id="intCIP030en", group=requirements.GroupsKnown.CHANG_US
+        )
 
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
@@ -87,13 +91,17 @@ class TestNoConfidence:
             )
         assert prev_action_rec.txid, "No previous action found, it is needed for 'no confidence'"
 
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+
         # Create an action
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
         anchor_url = "http://www.cc-no-confidence.com"
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli18, req_cip13)]
+        [r.start(url=_url) for r in (req_cli18, req_cip13, req_cip29, req_int_cip30en)]
         no_confidence_action = cluster.g_conway_governance.action.create_no_confidence(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -148,6 +156,8 @@ class TestNoConfidence:
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.NO_CONFIDENCE.value
         ), "Incorrect action tag"
+
+        req_cip29.success()
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
@@ -235,6 +245,16 @@ class TestNoConfidence:
             )
             assert enact_prev_action_rec.txid == action_txid, "Incorrect previous action Txid"
             assert enact_prev_action_rec.ix == action_ix, "Incorrect previous action index"
+
+            enact_deposit_returned = cluster.g_query.get_stake_addr_info(
+                pool_user_lg.stake.address
+            ).reward_account_balance
+
+            assert (
+                enact_deposit_returned == init_return_account_balance + deposit_amt
+            ), "Incorrect return account balance"
+
+            req_int_cip30en.success()
 
             # Try to vote on enacted action
             with pytest.raises(clusterlib.CLIError) as excinfo:
