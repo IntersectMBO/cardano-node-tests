@@ -6,15 +6,14 @@
 
 # Cardano Node Testing Team
 
-doc                                @mkoura @saratomaz @dorin100 @ArturWieczorek
-src_docs                           @mkoura @saratomaz @dorin100 @ArturWieczorek
+doc                                @mkoura @saratomaz @ArturWieczorek
+src_docs                           @mkoura @saratomaz @ArturWieczorek
 cabal_build_tests                  @ArturWieczorek
+cardano_node_tests/utils/dbsync_*  @mkoura @saratomaz @ArturWieczorek
 
 
 # CICD
 
-nix/                               @input-output-hk/devops @mkoura
-*.nix                              @input-output-hk/devops @mkoura
 .github/workflows/db_sync_*        @ArturWieczorek
 .github/workflows/node_sync_*      @ArturWieczorek
 .github/workflows/smash_*          @ArturWieczorek
