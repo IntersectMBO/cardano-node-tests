@@ -226,6 +226,7 @@ class TestCommittee:
 
         # Linked user stories
         req_cip7 = requirements.Req(id="CIP007", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP31a-01", group=requirements.GroupsKnown.CHANG_US)
 
         cc_auth_records = [
             governance_utils.get_cc_member_auth_record(
@@ -253,7 +254,8 @@ class TestCommittee:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
-        req_cip7.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cip7, req_cip31a)]
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -265,6 +267,7 @@ class TestCommittee:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
         )
+        req_cip31a.success()
 
         tx_files = clusterlib.TxFiles(
             certificate_files=[r.auth_cert for r in cc_auth_records],

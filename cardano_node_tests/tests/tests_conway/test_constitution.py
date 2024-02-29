@@ -66,6 +66,7 @@ class TestConstitution:
         req_cli13 = requirements.Req(id="CLI013", group=requirements.GroupsKnown.CHANG_US)
         req_cli20 = requirements.Req(id="CLI020", group=requirements.GroupsKnown.CHANG_US)
         req_cip1 = requirements.Req(id="CIP001", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP31a-02", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -92,7 +93,8 @@ class TestConstitution:
         )
         req_cli2.success()
 
-        req_cli13.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli13, req_cip31a)]
         (
             constitution_action,
             action_txid,
@@ -106,7 +108,7 @@ class TestConstitution:
             constitution_hash=constitution_hash,
             pool_user=pool_user_lg,
         )
-        req_cli13.success()
+        [r.success() for r in (req_cli13, req_cip31a)]
 
         # Check that SPOs cannot vote on change of constitution action
         with pytest.raises(clusterlib.CLIError) as excinfo:
