@@ -168,6 +168,7 @@ class TestMinting:
                 txouts=mint_txouts,
                 script_file=plutus_v_record.script_file if not use_reference_script else "",
                 reference_txin=reference_utxo if use_reference_script else None,
+                reference_type=plutus_v_record.script_type if use_reference_script else "",
                 collaterals=collateral_utxos,
                 execution_units=(
                     execution_cost.per_time,

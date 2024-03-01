@@ -129,48 +129,84 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
 )
 
 MINTING_V3_COST = ExecutionCost(per_time=161_100, per_space=800, fixed_cost=58)
+MINTING_V3_REF_COST = ExecutionCost(per_time=161_100, per_space=800, fixed_cost=58)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusScriptData:
     script_file: pl.Path
+    script_type: str
     execution_cost: ExecutionCost
 
 
 ALWAYS_FAILS = {
-    "v1": PlutusScriptData(script_file=ALWAYS_FAILS_PLUTUS_V1, execution_cost=ALWAYS_FAILS_COST),
-    "v2": PlutusScriptData(script_file=ALWAYS_FAILS_PLUTUS_V2, execution_cost=ALWAYS_FAILS_V2_COST),
+    "v1": PlutusScriptData(
+        script_file=ALWAYS_FAILS_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=ALWAYS_FAILS_COST,
+    ),
+    "v2": PlutusScriptData(
+        script_file=ALWAYS_FAILS_PLUTUS_V2,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V2,
+        execution_cost=ALWAYS_FAILS_V2_COST,
+    ),
 }
 
 ALWAYS_SUCCEEDS = {
     "v1": PlutusScriptData(
-        script_file=ALWAYS_SUCCEEDS_PLUTUS_V1, execution_cost=ALWAYS_SUCCEEDS_COST
+        script_file=ALWAYS_SUCCEEDS_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=ALWAYS_SUCCEEDS_COST,
     ),
     "v2": PlutusScriptData(
-        script_file=ALWAYS_SUCCEEDS_PLUTUS_V2, execution_cost=ALWAYS_SUCCEEDS_V2_COST
+        script_file=ALWAYS_SUCCEEDS_PLUTUS_V2,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V2,
+        execution_cost=ALWAYS_SUCCEEDS_V2_COST,
     ),
 }
 
 GUESSING_GAME = {
-    "v1": PlutusScriptData(script_file=GUESSING_GAME_PLUTUS_V1, execution_cost=GUESSING_GAME_COST),
+    "v1": PlutusScriptData(
+        script_file=GUESSING_GAME_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=GUESSING_GAME_COST,
+    ),
     "v2": PlutusScriptData(
-        script_file=GUESSING_GAME_PLUTUS_V2, execution_cost=GUESSING_GAME_V2_COST
+        script_file=GUESSING_GAME_PLUTUS_V2,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V2,
+        execution_cost=GUESSING_GAME_V2_COST,
     ),
 }
 
 GUESSING_GAME_UNTYPED = {
     "v1": PlutusScriptData(
-        script_file=GUESSING_GAME_UNTYPED_PLUTUS_V1, execution_cost=GUESSING_GAME_UNTYPED_COST
+        script_file=GUESSING_GAME_UNTYPED_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=GUESSING_GAME_UNTYPED_COST,
     ),
     "v2": PlutusScriptData(
-        script_file=GUESSING_GAME_UNTYPED_PLUTUS_V2, execution_cost=GUESSING_GAME_UNTYPED_V2_COST
+        script_file=GUESSING_GAME_UNTYPED_PLUTUS_V2,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V2,
+        execution_cost=GUESSING_GAME_UNTYPED_V2_COST,
     ),
 }
 
 MINTING_PLUTUS = {
-    "v1": PlutusScriptData(script_file=MINTING_PLUTUS_V1, execution_cost=MINTING_COST),
-    "v2": PlutusScriptData(script_file=MINTING_PLUTUS_V2, execution_cost=MINTING_V2_COST),
-    "v3": PlutusScriptData(script_file=MINTING_PLUTUS_V3, execution_cost=MINTING_V3_COST),
+    "v1": PlutusScriptData(
+        script_file=MINTING_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=MINTING_COST,
+    ),
+    "v2": PlutusScriptData(
+        script_file=MINTING_PLUTUS_V2,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V2,
+        execution_cost=MINTING_V2_COST,
+    ),
+    "v3": PlutusScriptData(
+        script_file=MINTING_PLUTUS_V3,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=MINTING_V3_COST,
+    ),
 }
 
 
