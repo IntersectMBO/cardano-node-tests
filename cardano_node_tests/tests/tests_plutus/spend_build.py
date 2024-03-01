@@ -6,6 +6,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import tx_view
@@ -150,7 +151,7 @@ def _build_spend_locked_txin(  # noqa: C901
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
-    # pylint: disable=too-many-arguments,too-many-locals
+    # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 
@@ -253,7 +254,27 @@ def _build_spend_locked_txin(  # noqa: C901
     script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
 
     if not script_valid:
-        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
+        cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
+
+        cluster_obj.wait_for_new_block(new_blocks=2)
+        try:
+            cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
+        except clusterlib.CLIError as exc:
+            # Check if resubmitting failed because an input UTxO was already spent
+            if "(BadInputsUTxO" not in str(exc):
+                raise
+        else:
+            pytest.fail("Transaction was not submitted successfully")
+
+        # Check that the collateral UTxO was spent
+        spent_collateral_utxo = cluster_obj.g_query.get_utxo(utxo=collateral_utxos)
+        if spent_collateral_utxo:
+            blockers.GH(
+                issue=973,
+                repo="IntersectMBO/ouroboros-consensus",
+                fixed_in="8.9.1",
+                message="tx with invalid Plutus script stuck in mempool",
+            ).finish_test()
 
         assert (
             cluster_obj.g_query.get_address_balance(dst_addr.address)

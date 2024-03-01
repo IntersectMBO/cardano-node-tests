@@ -114,7 +114,17 @@ class TestCollateralOutput:
             signing_key_files=tx_files_redeem.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=collateral_utxos)
+        cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
+
+        cluster.wait_for_new_block(new_blocks=2)
+        try:
+            cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
+        except clusterlib.CLIError as exc:
+            # Check if resubmitting failed because an input UTxO was already spent
+            if "(BadInputsUTxO" not in str(exc):
+                raise
+        else:
+            pytest.fail("Transaction was not submitted successfully")
 
         return tx_output_redeem
 
@@ -149,7 +159,7 @@ class TestCollateralOutput:
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_FAILS
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
@@ -160,7 +170,7 @@ class TestCollateralOutput:
             execution_cost=plutus_op.execution_cost, protocol_params=protocol_params
         )
 
-        # fund the script address and create a UTxO for collateral
+        # Fund the script address and create a UTxO for collateral
 
         amount_for_collateral = (
             redeem_cost.collateral * 4 if use_return_collateral else redeem_cost.collateral
@@ -176,7 +186,7 @@ class TestCollateralOutput:
             collateral_amount=amount_for_collateral,
         )
 
-        #  spend the "locked" UTxO
+        # Spend the "locked" UTxO
 
         return_collateral_txouts = [
             clusterlib.TxOut(dst_addr.address, amount=return_collateral_amount)
@@ -204,17 +214,24 @@ class TestCollateralOutput:
                 message="submit fails with invalid Plutus script",
             ).finish_test()
 
-        # check that collateral was taken
-        assert not cluster.g_query.get_utxo(utxo=collateral_utxos), "Collateral was NOT spent"
+        # Check that collateral was taken
+        spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
+        if spent_collateral_utxo:
+            blockers.GH(
+                issue=973,
+                repo="IntersectMBO/ouroboros-consensus",
+                fixed_in="8.9.1",
+                message="tx with invalid Plutus script stuck in mempool",
+            ).finish_test()
 
-        # check that input UTxOs were not spent
+        # Check that input UTxOs were not spent
         assert cluster.g_query.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
         assert cluster.g_query.get_utxo(utxo=script_utxos), "Script UTxO was spent"
 
-        # check that collateral was correctly returned
+        # Check that collateral was correctly returned
         plutus_common.check_return_collateral(cluster_obj=cluster, tx_output=tx_output_redeem)
 
-        # check "transaction view"
+        # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
@@ -235,7 +252,7 @@ class TestCollateralOutput:
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_FAILS
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
@@ -249,7 +266,7 @@ class TestCollateralOutput:
         amount_for_collateral = redeem_cost.collateral * 4
         return_collateral_amount = amount_for_collateral - redeem_cost.collateral
 
-        # create the token
+        # Create the token
         token_rand = clusterlib.get_rand_str(5)
         token = clusterlib_utils.new_tokens(
             *[f"qacoin{token_rand}".encode().hex()],
@@ -261,7 +278,7 @@ class TestCollateralOutput:
         )
         tokens_rec = [plutus_common.Token(coin=token[0].token, amount=token[0].amount)]
 
-        # fund the script address and create a UTxO for collateral
+        # Fund the script address and create a UTxO for collateral
 
         script_utxos, collateral_utxos, *__ = spend_build._build_fund_script(
             temp_template=temp_template,
@@ -273,7 +290,7 @@ class TestCollateralOutput:
             tokens_collateral=tokens_rec,
         )
 
-        #  spend the "locked" UTxO
+        # Spend the "locked" UTxO
 
         txouts_return_collateral = [
             clusterlib.TxOut(
@@ -307,17 +324,24 @@ class TestCollateralOutput:
                 message="submit fails with invalid Plutus script",
             ).finish_test()
 
-        # check that collateral was taken
-        assert not cluster.g_query.get_utxo(utxo=collateral_utxos), "Collateral was NOT spent"
+        # Check that collateral was taken
+        spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
+        if spent_collateral_utxo:
+            blockers.GH(
+                issue=973,
+                repo="IntersectMBO/ouroboros-consensus",
+                fixed_in="8.9.1",
+                message="tx with invalid Plutus script stuck in mempool",
+            ).finish_test()
 
-        # check that input UTxOs were not spent
+        # Check that input UTxOs were not spent
         assert cluster.g_query.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
         assert cluster.g_query.get_utxo(utxo=script_utxos), "Script UTxO was spent"
 
-        # check that collateral was correctly returned
+        # Check that collateral was correctly returned
         plutus_common.check_return_collateral(cluster_obj=cluster, tx_output=tx_output_redeem)
 
-        # check "transaction view"
+        # Check "transaction view"
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
         policyid, asset_name = token[0].token.split(".")
         tx_view_policy_key = f"policy {policyid}"
