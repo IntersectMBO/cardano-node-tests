@@ -348,8 +348,7 @@ class TestCommittee:
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
 
-        # Authorize the hot keys
-
+        # Auth keys for CC members
         cc_auth_record1 = governance_utils.get_cc_member_auth_record(
             cluster_obj=cluster,
             name_template=f"{temp_template}_member1",
@@ -368,51 +367,7 @@ class TestCommittee:
         )
         cc_member3_key = f"keyHash-{cc_auth_record3.key_hash}"
 
-        tx_files_auth = clusterlib.TxFiles(
-            certificate_files=[
-                cc_auth_record1.auth_cert,
-                cc_auth_record2.auth_cert,
-                cc_auth_record3.auth_cert,
-            ],
-            signing_key_files=[
-                pool_user_lg.payment.skey_file,
-                cc_auth_record1.cold_key_pair.skey_file,
-                cc_auth_record2.cold_key_pair.skey_file,
-                cc_auth_record3.cold_key_pair.skey_file,
-            ],
-        )
-
-        tx_output_auth = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_auth",
-            src_address=pool_user_lg.payment.address,
-            use_build_cmd=True,
-            tx_files=tx_files_auth,
-        )
-
-        out_utxos_auth = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos_auth, address=pool_user_lg.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
-        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
-
-        auth_committee_state = cluster.g_conway_governance.query.committee_state()
-        _cur_epoch = cluster.g_query.get_epoch()
-        conway_common.save_committee_state(
-            committee_state=auth_committee_state,
-            name_template=f"{temp_template}_auth_{_cur_epoch}",
-        )
-        for mk in (cc_member1_key, cc_member2_key, cc_member3_key):
-            auth_member_rec = auth_committee_state["committee"][mk]
-            assert (
-                auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
-            ), "CC Member was NOT authorized"
-            assert not auth_member_rec["expiration"], "CC Member should not be elected"
-            assert auth_member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
-
-        # New CC members
+        # New CC members to be added
         cc_members = [
             clusterlib.CCMember(
                 epoch=cluster.g_query.get_epoch() + 5,
@@ -423,6 +378,54 @@ class TestCommittee:
             )
             for r in (cc_auth_record1, cc_auth_record2)
         ]
+
+        def _auth_hot_keys() -> None:
+            """Authorize the hot keys."""
+            tx_files_auth = clusterlib.TxFiles(
+                certificate_files=[
+                    cc_auth_record1.auth_cert,
+                    cc_auth_record2.auth_cert,
+                    cc_auth_record3.auth_cert,
+                ],
+                signing_key_files=[
+                    pool_user_lg.payment.skey_file,
+                    cc_auth_record1.cold_key_pair.skey_file,
+                    cc_auth_record2.cold_key_pair.skey_file,
+                    cc_auth_record3.cold_key_pair.skey_file,
+                ],
+            )
+
+            tx_output_auth = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_auth",
+                src_address=pool_user_lg.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files_auth,
+            )
+
+            out_utxos_auth = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
+            assert (
+                clusterlib.filter_utxos(utxos=out_utxos_auth, address=pool_user_lg.payment.address)[
+                    0
+                ].amount
+                == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
+            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+
+            auth_committee_state = cluster.g_conway_governance.query.committee_state()
+            _cur_epoch = cluster.g_query.get_epoch()
+            conway_common.save_committee_state(
+                committee_state=auth_committee_state,
+                name_template=f"{temp_template}_auth_{_cur_epoch}",
+            )
+            for mk in (cc_member1_key, cc_member2_key, cc_member3_key):
+                auth_member_rec = auth_committee_state["committee"][mk]
+                assert (
+                    auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
+                ), "CC Member was NOT authorized"
+                assert not auth_member_rec["expiration"], "CC Member should not be elected"
+                assert (
+                    auth_member_rec["status"] == "Unrecognized"
+                ), "CC Member should not be recognized"
 
         def _add_members() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Add new CC members."""
@@ -607,6 +610,10 @@ class TestCommittee:
 
         # Add new CC members
 
+        # Authorize hot keys of new potential CC members for the first time, just to check that
+        # the authorization will be removed after ratification.
+        _auth_hot_keys()
+
         # Create an action to add new CC members
         add_cc_action, action_add_txid, action_add_ix = _add_members()
 
@@ -698,8 +705,9 @@ class TestCommittee:
         for _cc_member_key in (cc_member1_key, cc_member2_key):
             rat_add_member_rec = rat_add_committee_state["committee"].get(_cc_member_key) or {}
             if rat_add_member_rec:
-                if rat_add_member_rec["hotCredsAuthStatus"]["tag"] != "MemberAuthorized":
-                    xfail_ledger_4001_msgs.add("Newly elected CC members lose authorization")
+                assert (
+                    rat_add_member_rec["hotCredsAuthStatus"]["tag"] != "MemberAuthorized"
+                ), "CC Member is still authorized"
             else:
                 xfail_ledger_4001_msgs.add(
                     "Newly elected CC members are removed during ratification"
@@ -708,6 +716,11 @@ class TestCommittee:
         assert not rat_add_committee_state["committee"].get(
             cc_member3_key
         ), "Non-elected unrecognized CC member was not removed"
+
+        # Authorize hot keys of new CC members for the second time. The members were elected and
+        # they can already place "prevotes" that will take effect next epoch when the CC members
+        # are enacted.
+        _auth_hot_keys()
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -840,8 +853,8 @@ class TestCommittee:
 
         rat_rem_member_rec = rat_rem_committee_state["committee"][cc_member2_key]
         assert (
-            rat_rem_member_rec["hotCredsAuthStatus"]["tag"] == "MemberNotAuthorized"
-        ), "CC Member is still authorized"
+            rat_rem_member_rec["nextEpochChange"]["tag"] == "ToBeRemoved"
+        ), "CC Member is not marked for removal"
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
