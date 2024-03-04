@@ -170,6 +170,7 @@ class TestBuildMinting:
                 txouts=mint_txouts,
                 script_file=plutus_v_record.script_file if not use_reference_script else "",
                 reference_txin=reference_utxo if use_reference_script else None,
+                reference_type=plutus_v_record.script_type if use_reference_script else "",
                 collaterals=collateral_utxos,
                 redeemer_file=plutus_common.REDEEMER_42,
                 policyid=policyid,
@@ -226,21 +227,34 @@ class TestBuildMinting:
         ), "Reference UTxO was spent"
 
         # check expected fees
-        if use_reference_script:
-            expected_fee_step1 = 252_929
-            expected_fee_step2 = 230_646
-            expected_cost = plutus_common.MINTING_V2_REF_COST
-        else:
-            expected_fee_step1 = 167_437
-            expected_fee_step2 = 304_694
-            expected_cost = plutus_v_record.execution_cost
+        expected_fees: dict = {
+            "reference_script": {
+                "v2": {
+                    "fee_1": 252_929,
+                    "fee_2": 230_646,
+                    "cost": plutus_common.MINTING_V2_REF_COST,
+                },
+                "v3": {
+                    "fee_1": 169_769,
+                    "fee_2": 182_235,
+                    "cost": plutus_common.MINTING_V3_REF_COST,
+                },
+            },
+            "script_file": {
+                "v2": {"fee_1": 167_437, "fee_2": 304_694, "cost": plutus_v_record.execution_cost},
+                "v3": {"fee_1": 167_437, "fee_2": 181_003, "cost": plutus_v_record.execution_cost},
+            },
+        }
 
-        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
-        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
+        script_type = "reference_script" if use_reference_script else "script_file"
+        script_expected_fee = expected_fees[script_type][plutus_version]
+
+        assert helpers.is_in_interval(tx_output_step2.fee, script_expected_fee["fee_2"], frac=0.15)
+        assert helpers.is_in_interval(tx_output_step1.fee, script_expected_fee["fee_1"], frac=0.15)
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
-            expected_costs=[expected_cost],
+            expected_costs=[script_expected_fee["cost"]],
         )
 
     @allure.link(helpers.get_vcs_link())
