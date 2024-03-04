@@ -645,20 +645,21 @@ class TestCommittee:
         )
 
         # Check that CC cannot vote on "update committee" action
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            conway_common.cast_vote(
-                cluster_obj=cluster,
-                governance_data=governance_data,
-                name_template=f"{temp_template}_add_with_ccs",
-                payment_addr=pool_user_lg.payment,
-                action_txid=action_add_txid,
-                action_ix=action_add_ix,
-                approve_cc=True,
-                approve_drep=True,
-                approve_spo=True,
-            )
-        err_str = str(excinfo.value)
-        assert "CommitteeVoter" in err_str, err_str
+        if configuration.HAS_CC:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                conway_common.cast_vote(
+                    cluster_obj=cluster,
+                    governance_data=governance_data,
+                    name_template=f"{temp_template}_add_with_ccs",
+                    payment_addr=pool_user_lg.payment,
+                    action_txid=action_add_txid,
+                    action_ix=action_add_ix,
+                    approve_cc=True,
+                    approve_drep=True,
+                    approve_spo=True,
+                )
+            err_str = str(excinfo.value)
+            assert "CommitteeVoter" in err_str, err_str
 
         def _check_add_state(state: dict):
             for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
