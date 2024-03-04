@@ -1242,7 +1242,9 @@ class TestCommittee:
             committee_state=enact_rem_committee_state,
             name_template=f"{temp_template}_enact_rem_{_cur_epoch}",
         )
-        assert not enact_rem_committee_state["committee"], "Removed committee members still present"
+        assert set(enact_rem_committee_state["committee"].keys()).isdisjoint(
+            removed_members_hashes
+        ), "Removed committee members still present"
 
         # Change Constitution without needing CC votes
 
