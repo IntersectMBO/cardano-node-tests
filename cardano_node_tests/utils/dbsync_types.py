@@ -1,4 +1,5 @@
 """Types used in db-sync related functions."""
+
 import dataclasses
 import typing as tp
 

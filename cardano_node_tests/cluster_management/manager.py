@@ -1,4 +1,5 @@
 """Functionality for managing cluster instances."""
+
 import contextlib
 import dataclasses
 import datetime
@@ -29,7 +30,8 @@ from cardano_node_tests.utils import temptools
 LOGGER = logging.getLogger(__name__)
 
 if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
-    raise RuntimeError("Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set.")
+    msg = "Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set."
+    raise RuntimeError(msg)
 
 
 def _get_manager_fixture_line_str() -> str:
@@ -71,7 +73,8 @@ class ClusterManager:
     @property
     def cluster_instance_num(self) -> int:
         if self._cluster_instance_num == -1:
-            raise RuntimeError("Cluster instance not set.")
+            msg = "Cluster instance not set."
+            raise RuntimeError(msg)
         return self._cluster_instance_num
 
     @property
@@ -290,7 +293,8 @@ class ClusterManager:
         from_set: tp.Optional[tp.Iterable[str]] = None,
     ) -> tp.List[str]:
         if from_set is not None and isinstance(from_set, str):
-            raise AssertionError("`from_set` cannot be a string")
+            msg = "`from_set` cannot be a string"
+            raise AssertionError(msg)
 
         resources_locked = set(common._get_resources_from_paths(paths=self.instance_dir.glob(glob)))
 
@@ -386,7 +390,8 @@ class ClusterManager:
         # initialize `cardano_clusterlib.ClusterLib` object
         cluster_obj = self.cache.cluster_obj
         if not cluster_obj:
-            raise AssertionError("`cluster_obj` not available, that cannot happen")
+            msg = "`cluster_obj` not available, that cannot happen"
+            raise AssertionError(msg)
         cluster_obj.cluster_id = self.cluster_instance_num
         cluster_obj._cluster_manager = self  # type: ignore
         self._initialized = True
@@ -411,7 +416,8 @@ class ClusterManager:
         # If you've ran into this issue, check that all the fixtures you use in the test are using
         # the same `cluster` fixture.
         if check_initialized and self._initialized:
-            raise AssertionError("manager is already initialized")
+            msg = "manager is already initialized"
+            raise AssertionError(msg)
 
         self.init(
             mark=mark,

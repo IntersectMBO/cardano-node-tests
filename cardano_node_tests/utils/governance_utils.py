@@ -1,4 +1,5 @@
 """Utilities for Conway governance."""
+
 import dataclasses
 import enum
 import logging
@@ -86,7 +87,8 @@ def get_vote_str(vote: clusterlib.Votes) -> str:
         return "VoteNo"
     if vote == vote.ABSTAIN:
         return "Abstain"
-    raise ValueError(f"Invalid vote `{vote}`")
+    msg = f"Invalid vote `{vote}`"
+    raise ValueError(msg)
 
 
 def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
@@ -113,7 +115,8 @@ def check_drep_stake_distribution(
             found_rec = r
             break
     else:
-        raise AssertionError(f"Record for `{expected_drep}` not found")
+        msg = f"Record for `{expected_drep}` not found"
+        raise AssertionError(msg)
 
     assert found_rec[1] >= min_amount, f"The stake amount delegated to DRep < {min_amount}"
 
@@ -261,7 +264,8 @@ def check_action_view(  # noqa: C901
         elif action_data.deposit_return_stake_key_hash:
             return_addr_vkey_hash = action_data.deposit_return_stake_key_hash
         else:
-            raise ValueError("No return stake key was specified")
+            msg = "No return stake key was specified"
+            raise ValueError(msg)
 
     prev_action_txid = getattr(action_data, "prev_action_txid", None)
     prev_action_ix = getattr(action_data, "prev_action_ix", None)
@@ -281,7 +285,8 @@ def check_action_view(  # noqa: C901
             elif action_data.funds_receiving_stake_key_hash:
                 recv_addr_vkey_hash = action_data.funds_receiving_stake_key_hash
             else:
-                raise ValueError("No funds receiving stake key was specified")
+                msg = "No funds receiving stake key was specified"
+                raise ValueError(msg)
 
         gov_action = {
             "contents": [
@@ -331,7 +336,8 @@ def check_action_view(  # noqa: C901
             elif member.cold_vkey_hash:
                 cvkey_hash = member.cold_vkey_hash
             else:
-                raise ValueError("No cold key was specified")
+                msg = "No cold key was specified"
+                raise ValueError(msg)
 
             return cvkey_hash
 
@@ -363,7 +369,8 @@ def check_action_view(  # noqa: C901
             "tag": ActionTags.NO_CONFIDENCE.value,
         }
     else:
-        raise NotImplementedError(f"Not implemented for action `{action_data}`")
+        msg = f"Not implemented for action `{action_data}`"
+        raise NotImplementedError(msg)
 
     expected_action_out = {
         "anchor": {
@@ -405,7 +412,8 @@ def check_vote_view(  # noqa: C901
         elif vote_data.cc_hot_key_hash:
             cc_key_hash = vote_data.cc_hot_key_hash
         else:
-            raise ValueError("No hot key was specified")
+            msg = "No hot key was specified"
+            raise ValueError(msg)
 
         vote_key = f"committee-keyHash-{cc_key_hash}"
     elif isinstance(vote_data, clusterlib.VoteDrep):
@@ -420,7 +428,8 @@ def check_vote_view(  # noqa: C901
         elif vote_data.drep_key_hash:
             drep_id = vote_data.drep_key_hash
         else:
-            raise ValueError("No drep key was specified")
+            msg = "No drep key was specified"
+            raise ValueError(msg)
 
         if drep_id.startswith("drep1"):
             drep_id = helpers.decode_bech32(bech32=drep_id)
@@ -438,14 +447,16 @@ def check_vote_view(  # noqa: C901
         elif vote_data.stake_pool_id:
             pool_id = vote_data.stake_pool_id
         else:
-            raise ValueError("No stake pool key was specified")
+            msg = "No stake pool key was specified"
+            raise ValueError(msg)
 
         if pool_id.startswith("pool1"):
             pool_id = helpers.decode_bech32(bech32=pool_id)
 
         vote_key = f"stakepool-keyHash-{pool_id}"
     else:
-        raise NotImplementedError(f"Not implemented for vote `{vote_data}`")
+        msg = f"Not implemented for vote `{vote_data}`"
+        raise NotImplementedError(msg)
 
     assert vote_key, "No vote key was specified"
 
@@ -478,4 +489,5 @@ def wait_delayed_ratification(
             break
         cluster_obj.wait_for_new_epoch(padding_seconds=5)
     else:
-        raise AssertionError("Ratification is still delayed")
+        msg = "Ratification is still delayed"
+        raise AssertionError(msg)

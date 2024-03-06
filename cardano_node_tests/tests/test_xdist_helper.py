@@ -4,6 +4,7 @@ The `pytest-xdist` plugin needs to schedule two tests per worker in initial batc
 gets scheduled as first not long-running test on every pytest worker so the other test can be
 an actual long-running test.
 """
+
 import os
 
 import pytest

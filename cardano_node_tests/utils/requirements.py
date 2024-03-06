@@ -1,4 +1,5 @@
 """Functionality for tracking execution of external requirements."""
+
 import json
 import logging
 import pathlib as pl

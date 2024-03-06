@@ -1,4 +1,5 @@
 """Functionality for KES key used in multiple tests modules."""
+
 import datetime
 import logging
 import typing as tp

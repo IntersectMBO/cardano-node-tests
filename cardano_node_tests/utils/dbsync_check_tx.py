@@ -1,4 +1,5 @@
 """Function for checking a transaction in db-sync."""
+
 import dataclasses
 import functools
 import itertools
@@ -153,9 +154,8 @@ def _compare_redeemers(
                 ):
                     break
             else:
-                raise AssertionError(
-                    f"Couldn't find matching redeemer info in db-sync for\n{tx_rec}"
-                )
+                msg = f"Couldn't find matching redeemer info in db-sync for\n{tx_rec}"
+                raise AssertionError(msg)
 
 
 def _sanitize_txout(

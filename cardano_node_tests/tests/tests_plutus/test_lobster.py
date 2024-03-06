@@ -2,6 +2,7 @@
 
 See https://github.com/input-output-hk/lobster-challenge
 """
+
 import logging
 import pathlib as pl
 import random
@@ -462,7 +463,7 @@ class TestLobsterChallenge:
                 if vote_counter:
                     utxo_counter_token = utxo_counter_tokens[0]
             except IndexError:
-                LOGGER.error(f"Unexpected vote UTxOs in vote number {vote_num}: {vote_utxos}")
+                LOGGER.exception(f"Unexpected vote UTxOs in vote number {vote_num}: {vote_utxos}")
                 raise
 
             assert (

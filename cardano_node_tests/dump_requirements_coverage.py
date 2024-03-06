@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate coverage results for external requirements."""
+
 import argparse
 import logging
 

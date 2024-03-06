@@ -1,4 +1,5 @@
 """Tests for KES period."""
+
 # pylint: disable=abstract-class-instantiated
 import datetime
 import json
@@ -35,7 +36,8 @@ if VERSIONS.cluster_era == VERSIONS.BABBAGE:
 elif VERSIONS.cluster_era == VERSIONS.CONWAY:
     NUM_OF_EPOCHS = 9
 else:
-    raise AssertionError(f"Unsupported era '{VERSIONS.cluster_era_name}'")
+    msg = f"Unsupported era '{VERSIONS.cluster_era_name}'"
+    raise AssertionError(msg)
 
 
 pytestmark = common.SKIPIF_WRONG_ERA
@@ -573,9 +575,10 @@ class TestKES:
                         pytest.xfail(str(exc))
                     raise
 
-                raise AssertionError(
+                msg = (
                     f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
                 )
+                raise AssertionError(msg)
 
         # check kes-period-info with valid operational certificate
         kes_period_info = cluster.g_query.get_kes_period_info(valid_opcert_file)
@@ -741,9 +744,10 @@ class TestKES:
                         pytest.xfail(str(exc))
                     raise
 
-                raise AssertionError(
+                msg = (
                     f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
                 )
+                raise AssertionError(msg)
 
         # check that metrics reported by kes-period-info got updated once the pool started
         # minting blocks again

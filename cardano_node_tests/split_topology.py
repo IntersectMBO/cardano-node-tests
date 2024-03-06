@@ -3,6 +3,7 @@
 
 For settings it uses the same env variables as when running the tests.
 """
+
 import argparse
 import logging
 import pathlib as pl
@@ -57,8 +58,8 @@ def main() -> int:
             instance_num=args.instance_num,
             offset=args.offset,
         )
-    except Exception as exc:
-        LOGGER.error(str(exc))
+    except Exception:
+        LOGGER.exception("Failure")
         return 1
 
     return 0

@@ -1,4 +1,5 @@
 """Tests for Conway governance DRep functionality."""
+
 # pylint: disable=expression-not-assigned
 import logging
 import pathlib as pl
@@ -551,7 +552,8 @@ class TestDelegDReps:
         elif drep == "always_no_confidence":
             req_cip_deleg = requirements.Req(id="CIP018", group=requirements.GroupsKnown.CHANG_US)
         else:
-            raise ValueError(f"Unexpected DRep: {drep}")
+            msg = f"Unexpected DRep: {drep}"
+            raise ValueError(msg)
 
         req_cip_deleg.start(url=helpers.get_vcs_link())
 

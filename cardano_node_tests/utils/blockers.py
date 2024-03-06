@@ -1,4 +1,5 @@
 """Functionality for checking if an issue is blocked and thus blocking a test."""
+
 import logging
 import os
 import typing as tp

@@ -1,4 +1,5 @@
 """Tests for spending with Plutus using `transaction build`."""
+
 import dataclasses
 import logging
 import pathlib as pl
@@ -317,7 +318,8 @@ class TestBuildLocking:
             datum_cbor_file = plutus_common.DATUM_42_CBOR
             redeemer_cbor_file = plutus_common.REDEEMER_42_CBOR
         else:
-            raise AssertionError("Unknown test variant.")
+            msg = "Unknown test variant."
+            raise AssertionError(msg)
 
         execution_cost = plutus_common.GUESSING_GAME[plutus_version].execution_cost
         if script_file == plutus_common.GUESSING_GAME_UNTYPED[plutus_version].script_file:
@@ -443,7 +445,8 @@ class TestBuildLocking:
             execution_cost2 = execution_cost2_v2
             expected_fee_redeem = 321_378
         else:
-            raise AssertionError("Unknown test variant.")
+            msg = "Unknown test variant."
+            raise AssertionError(msg)
 
         plutus_op1 = plutus_common.PlutusOp(
             script_file=script_file1,

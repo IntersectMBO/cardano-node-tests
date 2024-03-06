@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate coverage report of Chang User Stories."""
+
 import argparse
 import datetime
 import json
@@ -69,7 +70,7 @@ def main() -> None:
         url = req_data.get("url")
         report = report.replace(f"https://github.com/{req_id}-404", url)
 
-    report = report.replace("TODAY", str(datetime.date.today()))
+    report = report.replace("TODAY", str(datetime.datetime.now(tz=datetime.timezone.utc).date()))
 
     with open(args.output_report, "w", encoding="utf-8") as out_fp:
         out_fp.write(report)

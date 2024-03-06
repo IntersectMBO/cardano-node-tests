@@ -1,4 +1,5 @@
 """Cluster and test environment configuration."""
+
 import os
 import pathlib as pl
 import typing as tp
@@ -8,7 +9,8 @@ def _check_cardano_node_socket_path() -> None:
     """Check that `CARDANO_NODE_SOCKET_PATH` value is valid for use by testing framework."""
     socket_env = os.environ.get("CARDANO_NODE_SOCKET_PATH")
     if not socket_env:
-        raise RuntimeError("The `CARDANO_NODE_SOCKET_PATH` env variable is not set.")
+        msg = "The `CARDANO_NODE_SOCKET_PATH` env variable is not set."
+        raise RuntimeError(msg)
 
     socket_path = pl.Path(socket_env).expanduser().resolve()
     parts = socket_path.parts
@@ -16,9 +18,8 @@ def _check_cardano_node_socket_path() -> None:
         "bft1.socket",
         "relay1.socket",
     ):
-        raise RuntimeError(
-            "The `CARDANO_NODE_SOCKET_PATH` value is not valid for use by testing framework."
-        )
+        msg = "The `CARDANO_NODE_SOCKET_PATH` value is not valid for use by testing framework."
+        raise RuntimeError(msg)
 
 
 _check_cardano_node_socket_path()
@@ -41,7 +42,8 @@ HAS_CC = (os.environ.get("NO_CC") or "") == ""
 # used also in startup scripts
 DB_BACKEND = os.environ.get("DB_BACKEND") or ""
 if DB_BACKEND not in ("", "mem", "lmdb"):
-    raise RuntimeError(f"Invalid DB_BACKEND: {DB_BACKEND}")
+    msg = f"Invalid DB_BACKEND: {DB_BACKEND}"
+    raise RuntimeError(msg)
 
 TESTNET_POOL_IDS = (
     "pool18yslg3q320jex6gsmetukxvzm7a20qd90wsll9anlkrfua38flr",
@@ -67,15 +69,18 @@ if BLOCK_PRODUCTION_DB:
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
 if CLUSTER_ERA not in ("", "babbage", "conway"):
-    raise RuntimeError(f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}")
+    msg = f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}"
+    raise RuntimeError(msg)
 
 TX_ERA = os.environ.get("TX_ERA") or ""
 if TX_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage"):
-    raise RuntimeError(f"Invalid TX_ERA: {TX_ERA}")
+    msg = f"Invalid TX_ERA: {TX_ERA}"
+    raise RuntimeError(msg)
 
 COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
 if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "conway"):
-    raise RuntimeError(f"Invalid COMMAND_ERA: {COMMAND_ERA}")
+    msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
+    raise RuntimeError(msg)
 
 CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
 WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 1)
@@ -88,7 +93,8 @@ BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
 
 NUM_POOLS = int(os.environ.get("NUM_POOLS") or 3)
 if not BOOTSTRAP_DIR and NUM_POOLS < 3:
-    raise RuntimeError(f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3")
+    msg = f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3"
+    raise RuntimeError(msg)
 
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 if HAS_DBSYNC:

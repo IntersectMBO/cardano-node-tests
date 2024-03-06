@@ -1,4 +1,5 @@
 """Functionality for stake address delegation used in multiple tests modules."""
+
 import dataclasses
 import logging
 import pathlib as pl

@@ -7,6 +7,7 @@ This file tests:
 * poll answer
 * poll verification
 """
+
 import logging
 import pathlib as pl
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate coverage report for `cardano-cli` sub-commands and options."""
+
 import argparse
 import copy
 import json
@@ -175,9 +176,8 @@ def get_coverage(coverage_files: tp.List[pl.Path], available_commands: dict) -> 
             coverage = get_log_coverage(in_coverage)
 
         if coverage.get("cardano-cli", {}).get("_count") is None:
-            raise AttributeError(
-                f"Data in '{in_coverage}' doesn't seem to be in proper coverage format."
-            )
+            msg = f"Data in '{in_coverage}' doesn't seem to be in proper coverage format."
+            raise AttributeError(msg)
 
         coverage_dict = merge_coverage(coverage_dict, coverage)
 
@@ -254,8 +254,8 @@ def main() -> int:
         coverage = get_coverage(
             coverage_files=args.input_files, available_commands=available_commands
         )
-    except AttributeError as exc:
-        LOGGER.error(str(exc))
+    except AttributeError:
+        LOGGER.exception("Error")
         return 1
 
     report, *__ = get_report(

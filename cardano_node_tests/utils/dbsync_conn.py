@@ -1,4 +1,5 @@
 """Functionality for interacting with db-sync database in postgres."""
+
 import logging
 import typing as tp
 

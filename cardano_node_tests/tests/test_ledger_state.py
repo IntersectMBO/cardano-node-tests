@@ -1,4 +1,5 @@
 """Tests for ledger state."""
+
 import functools
 import itertools
 import logging

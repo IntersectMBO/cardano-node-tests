@@ -1,4 +1,5 @@
 """Functionality for obtaining and setting up a cluster instance."""
+
 # pylint: disable=abstract-class-instantiated
 import dataclasses
 import logging
@@ -34,8 +35,6 @@ else:
         secs: float,  # noqa: ARG001
     ) -> None:
         """No need to sleep if tests are running on a single worker."""
-        # pylint: disable=unused-argument,unnecessary-pass
-        pass
 
 
 def _kill_supervisor(instance_num: int) -> None:
@@ -118,7 +117,8 @@ class ClusterGetter:
     @property
     def cluster_instance_num(self) -> int:
         if self._cluster_instance_num == -1:
-            raise RuntimeError("Cluster instance not set.")
+            msg = "Cluster instance not set."
+            raise RuntimeError(msg)
         return self._cluster_instance_num
 
     @property
@@ -154,7 +154,8 @@ class ClusterGetter:
 
         # Fail if cluster respin is forbidden and the cluster was already started
         if configuration.FORBID_RESTART and cluster_running_file.exists():
-            raise RuntimeError("Cannot respin cluster when 'FORBID_RESTART' is set.")
+            msg = "Cannot respin cluster when 'FORBID_RESTART' is set."
+            raise RuntimeError(msg)
 
         self.log(
             f"c{self.cluster_instance_num}: called `_respin`, start_cmd='{start_cmd}', "
@@ -168,7 +169,8 @@ class ClusterGetter:
                 f"c{self.cluster_instance_num}: ERROR: state dir exists but cluster "
                 "was not started by the framework"
             )
-            raise RuntimeError("Cannot respin cluster when it was not started by the framework.")
+            msg = "Cannot respin cluster when it was not started by the framework."
+            raise RuntimeError(msg)
 
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
             destdir=self._create_startup_files_dir(self.cluster_instance_num),
@@ -219,7 +221,7 @@ class ClusterGetter:
                 )
                 _cluster_started = True
             except Exception as err:
-                LOGGER.error(f"Failed to start cluster: {err}")
+                LOGGER.error(f"Failed to start cluster: {err}")  # noqa: TRY400
                 excp = err
             finally:
                 if state_dir.exists():
@@ -568,7 +570,8 @@ class ClusterGetter:
             self.pytest_tmp_dir.glob(f"{common.CLUSTER_DIR_TEMPLATE}*/{common.CLUSTER_DEAD_FILE}")
         )
         if len(dead_clusters) == self.num_of_instances:
-            raise RuntimeError("All clusters are dead, cannot run.")
+            msg = "All clusters are dead, cannot run."
+            raise RuntimeError(msg)
 
     def _cleanup_dead_clusters(self, cget_status: _ClusterGetStatus) -> None:
         """Cleanup if the selected cluster instance failed to start."""
@@ -768,11 +771,13 @@ class ClusterGetter:
             available_instances = list(range(self.num_of_instances))
 
         if configuration.FORBID_RESTART and start_cmd:
-            raise RuntimeError("Cannot use custom start command when 'FORBID_RESTART' is set.")
+            msg = "Cannot use custom start command when 'FORBID_RESTART' is set."
+            raise RuntimeError(msg)
 
         if start_cmd:
             if resources.Resources.CLUSTER not in lock_resources:
-                raise RuntimeError("Custom start command can be used only together with singleton.")
+                msg = "Custom start command can be used only together with singleton."
+                raise RuntimeError(msg)
             # always clean after test(s) that started cluster with custom configuration
             cleanup = True
 

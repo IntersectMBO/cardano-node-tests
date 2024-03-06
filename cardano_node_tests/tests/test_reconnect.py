@@ -1,4 +1,5 @@
 """Tests for reconnect."""
+
 import logging
 import os
 import pathlib as pl
@@ -145,11 +146,13 @@ class TestNodeReconnect:
             if sprogress == 100:
                 break
             if sprogress == old_sprogress:
-                raise AssertionError(f"Cannot sync node2, sync progress: {sprogress}%")
+                msg = f"Cannot sync node2, sync progress: {sprogress}%"
+                raise AssertionError(msg)
             old_sprogress = sprogress
             time.sleep(2)
         else:
-            raise AssertionError(f"Cannot sync node2 in time, sync progress: {sprogress}%")
+            msg = f"Cannot sync node2 in time, sync progress: {sprogress}%"
+            raise AssertionError(msg)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not TEST_RECONNECT, reason="This is not a 'reconnect' testrun")

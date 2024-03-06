@@ -1,4 +1,5 @@
 """Negative tests for minting with Plutus V2 using `transaction build`."""
+
 import logging
 import typing as tp
 

@@ -1,4 +1,5 @@
 """Functions for working with SPO polls."""
+
 import dataclasses
 import json
 import logging
@@ -40,7 +41,8 @@ def create_poll(
 
     stderr_out = cli_out.stderr.decode("utf-8")
     if "Poll created successfully" not in stderr_out:
-        raise clusterlib.CLIError(f"Unexpected output from `governance create-poll`: {stderr_out}")
+        msg = f"Unexpected output from `governance create-poll`: {stderr_out}"
+        raise clusterlib.CLIError(msg)
 
     with open(metadata_file, "w", encoding="utf-8") as fp_out:
         json.dump(json.loads(cli_out.stdout.rstrip().decode("utf-8")), fp_out)
@@ -67,7 +69,8 @@ def answer_poll(
 
     stderr_out = cli_out.stderr.decode("utf-8")
     if "Poll answer created successfully" not in stderr_out:
-        raise clusterlib.CLIError(f"Unexpected output from `governance answer-poll`: {stderr_out}")
+        msg = f"Unexpected output from `governance answer-poll`: {stderr_out}"
+        raise clusterlib.CLIError(msg)
 
     with open(answer_file, "w", encoding="utf-8") as fp_out:
         json.dump(json.loads(cli_out.stdout.rstrip().decode("utf-8")), fp_out)
@@ -101,7 +104,8 @@ def verify_poll(
 
     stderr_out = cli_out.stderr.decode("utf-8")
     if "Found valid poll answer" not in stderr_out:
-        raise clusterlib.CLIError(f"Unexpected output from `governance verify-poll`: {stderr_out}")
+        msg = f"Unexpected output from `governance verify-poll`: {stderr_out}"
+        raise clusterlib.CLIError(msg)
 
     signers = json.loads(cli_out.stdout.decode("utf-8"))
     return tuple(signers)

@@ -1,4 +1,5 @@
 """Tests for node upgrade."""
+
 import logging
 import os
 import shutil

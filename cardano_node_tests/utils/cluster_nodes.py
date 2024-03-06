@@ -1,4 +1,6 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
+
+# ruff: noqa: ARG002
 import dataclasses
 import json
 import logging
@@ -72,19 +74,22 @@ class ClusterType:
     @property
     def uses_shortcut(self) -> bool:
         """Check if cluster uses shortcut to go from Byron to last supported era."""
-        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+        msg = f"Not implemented for cluster type '{self.type}'."
+        raise NotImplementedError(msg)
 
     def get_cluster_obj(
         self, protocol: str = "", tx_era: str = "", slots_offset: int = 0, command_era: str = ""
     ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
-        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+        msg = f"Not implemented for cluster type '{self.type}'."
+        raise NotImplementedError(msg)
 
     def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
     ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
-        raise NotImplementedError(f"Not implemented for cluster type '{self.type}'.")
+        msg = f"Not implemented for cluster type '{self.type}'."
+        raise NotImplementedError(msg)
 
 
 class LocalCluster(ClusterType):
@@ -105,7 +110,8 @@ class LocalCluster(ClusterType):
         """Check if cluster uses shortcut to go from Byron to last supported era."""
         byron_dir = get_cluster_env().state_dir / "byron"
         if not byron_dir.exists():
-            raise RuntimeError("Can't check, cluster instance was not started yet.")
+            msg = "Can't check, cluster instance was not started yet."
+            raise RuntimeError(msg)
 
         _uses_shortcut = not (byron_dir / "address-000-converted").exists()
         return _uses_shortcut
@@ -191,7 +197,8 @@ class LocalCluster(ClusterType):
                 skey_file=shelley_dir / "genesis-utxo.skey",
             )
         else:
-            raise RuntimeError("Faucet address file doesn't exist.")
+            msg = "Faucet address file doesn't exist."
+            raise RuntimeError(msg)
 
         # fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
@@ -303,8 +310,8 @@ class TestnetCluster(ClusterType):
 
     def create_addrs_data(
         self,
-        cluster_obj: clusterlib.ClusterLib,  # noqa: ARG002
-        destination_dir: clusterlib.FileType = ".",  # noqa: ARG002
+        cluster_obj: clusterlib.ClusterLib,
+        destination_dir: clusterlib.FileType = ".",
     ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         shelley_dir = get_cluster_env().state_dir / "shelley"
@@ -396,8 +403,9 @@ def reload_supervisor_config(instance_num: tp.Optional[int] = None) -> None:
     try:
         helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} update")
     except Exception as exc:
+        msg = "Failed to reload configuration."
         raise Exception(  # pylint: disable=broad-exception-raised
-            "Failed to reload configuration."
+            msg
         ) from exc
 
     # Wait for potential nodes restart
@@ -425,8 +433,9 @@ def restart_all_nodes(instance_num: tp.Optional[int] = None) -> None:
     try:
         helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
     except Exception as exc:
+        msg = "Failed to restart cluster nodes."
         raise Exception(  # pylint: disable=broad-exception-raised
-            "Failed to restart cluster nodes."
+            msg
         ) from exc
 
     # wait for nodes to start
@@ -449,8 +458,9 @@ def services_action(
                 f"supervisorctl -s http://localhost:{supervisor_port} {action} {service_name}"
             )
         except Exception as exc:
+            msg = f"Failed to {action} service `{service_name}`"
             raise Exception(  # pylint: disable=broad-exception-raised
-                f"Failed to {action} service `{service_name}`"
+                msg
             ) from exc
 
 

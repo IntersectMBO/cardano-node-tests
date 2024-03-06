@@ -1,4 +1,5 @@
 """Utilities that extends the functionality of `cardano-clusterlib`."""
+
 import base64
 import dataclasses
 import itertools
@@ -228,7 +229,8 @@ def register_stake_address(
     )
 
     if not cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
-        raise AssertionError(f"The address {pool_user.stake.address} was not registered.")
+        msg = f"The address {pool_user.stake.address} was not registered."
+        raise AssertionError(msg)
 
     return tx_raw_output
 
@@ -489,7 +491,8 @@ def check_updated_params(update_proposals: tp.List[UpdateProposal], protocol_par
 
     if failures:
         failures_str = "\n".join(failures)
-        raise AssertionError(f"Update proposal failed!\n{failures_str}")
+        msg = f"Update proposal failed!\n{failures_str}"
+        raise AssertionError(msg)
 
 
 def get_pparams_update_args(
@@ -852,7 +855,8 @@ def withdraw_reward_w_build(
         cluster_obj.g_query.get_stake_addr_info(stake_addr_record.address).reward_account_balance
         != 0
     ):
-        raise AssertionError("Not all rewards were transferred.")
+        msg = "Not all rewards were transferred."
+        raise AssertionError(msg)
 
     # check that rewards were transferred
     src_reward_balance = cluster_obj.g_query.get_address_balance(dst_address)
@@ -862,7 +866,8 @@ def withdraw_reward_w_build(
         - tx_raw_withdrawal_output.fee
         + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
     ):
-        raise AssertionError(f"Incorrect balance for destination address `{dst_address}`.")
+        msg = f"Incorrect balance for destination address `{dst_address}`."
+        raise AssertionError(msg)
 
     return tx_raw_withdrawal_output
 
@@ -890,7 +895,8 @@ def new_tokens(
         token = f"{policyid}.{asset_name}"
 
         if cluster_obj.g_query.get_utxo(address=token_mint_addr.address, coins=[token]):
-            raise AssertionError("The token already exists.")
+            msg = "The token already exists."
+            raise AssertionError(msg)
 
         tokens_to_mint.append(
             TokenRecord(
@@ -914,7 +920,8 @@ def new_tokens(
             address=token_mint_addr.address, coins=[token_rec.token]
         )
         if not (token_utxo and token_utxo[0].amount == amount):
-            raise AssertionError("The token was not minted.")
+            msg = "The token was not minted."
+            raise AssertionError(msg)
 
     return tokens_to_mint
 
@@ -1049,7 +1056,8 @@ def wait_for_epoch_interval(
     stop_abs = stop if stop >= 0 else cluster_obj.epoch_length_sec + stop
 
     if start_abs > stop_abs:
-        raise AssertionError(f"The 'start' ({start_abs}) needs to be <= 'stop' ({stop_abs}).")
+        msg = f"The 'start' ({start_abs}) needs to be <= 'stop' ({stop_abs})."
+        raise AssertionError(msg)
 
     start_epoch = cluster_obj.g_query.get_epoch()
 
@@ -1066,14 +1074,16 @@ def wait_for_epoch_interval(
         # if we are already after the required interval, wait for next epoch
         if stop_abs < s_from_epoch_start:
             if force_epoch:
-                raise AssertionError(
+                msg = (
                     f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch."
                 )
+                raise AssertionError(msg)
             if cluster_obj.g_query.get_epoch() >= start_epoch + 2:
-                raise AssertionError(
+                msg = (
                     f"Was unable to reach the given interval ({start_abs}s to {stop_abs}s) "
                     "in past 3 epochs."
                 )
+                raise AssertionError(msg)
             cluster_obj.wait_for_new_epoch()
             continue
 
@@ -1088,7 +1098,8 @@ def wait_for_epoch_interval(
         if not check_slot:
             break
     else:
-        raise AssertionError(f"Failed to wait for given interval from {start_abs}s to {stop_abs}s.")
+        msg = f"Failed to wait for given interval from {start_abs}s to {stop_abs}s."
+        raise AssertionError(msg)
 
 
 def load_body_metadata(tx_body_file: pl.Path) -> tp.Any:
@@ -1179,7 +1190,8 @@ def create_script_context(
     elif plutus_version == 2:
         version_arg = "--plutus-v2"
     else:
-        raise AssertionError(f"Unknown plutus version: {plutus_version}")
+        msg = f"Unknown plutus version: {plutus_version}"
+        raise AssertionError(msg)
 
     if tx_file:
         cmd_args = [
@@ -1218,7 +1230,8 @@ def check_txins_spent(
     utxo_data = cluster_obj.g_query.get_utxo(utxo=txins)
 
     if utxo_data:
-        raise AssertionError(f"Some txins were not spent: {txins}")
+        msg = f"Some txins were not spent: {txins}"
+        raise AssertionError(msg)
 
 
 def create_reference_utxo(

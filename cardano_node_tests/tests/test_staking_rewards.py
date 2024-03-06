@@ -1,4 +1,5 @@
 """Tests for staking, rewards, blocks production on real block-producing pools."""
+
 import dataclasses
 import logging
 import typing as tp
@@ -1757,7 +1758,8 @@ class TestNegativeWithdrawal:
                 fee=0,  # set fee too low to make 100% sure the transaction can't be accepted
                 withdrawals=[clusterlib.TxOut(address=pool_reward.stake.address, amount=amount)],
             )
-            raise AssertionError("The Tx submit succeeded unexpectedly.")
+            msg = "The Tx submit succeeded unexpectedly."
+            raise AssertionError(msg)
         except clusterlib.CLIError as exc:
             err_str = str(exc)
             if (

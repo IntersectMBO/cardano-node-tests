@@ -1,4 +1,5 @@
 """Tests for minting with Plutus using `transaction build`."""
+
 import dataclasses
 import datetime
 import logging
@@ -295,7 +296,10 @@ class TestBuildMinting:
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         # POSIX timestamp + offset
-        redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
+        redeemer_value = (
+            int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp() * 1_000)
+            + timestamp_offset_ms
+        )
 
         policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
@@ -456,7 +460,8 @@ class TestBuildMinting:
             script_file1 = script_file1_v3
             execution_cost1 = minting_cost1_v3
         else:
-            raise AssertionError("Unknown test variant.")
+            msg = "Unknown test variant."
+            raise AssertionError(msg)
 
         script_file2 = plutus_common.MINTING_TIME_RANGE_PLUTUS_V1
 
@@ -541,7 +546,8 @@ class TestBuildMinting:
 
         # POSIX timestamp + offset
         redeemer_value_timerange = (
-            int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
+            int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp() * 1_000)
+            + timestamp_offset_ms
         )
 
         policyid2 = cluster.g_transaction.get_policyid(script_file2)

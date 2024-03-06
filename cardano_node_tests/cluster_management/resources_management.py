@@ -1,4 +1,5 @@
 """Functionality for getting a cluster instance that has required resources available."""
+
 import random
 import typing as tp
 
@@ -12,7 +13,7 @@ class BaseFilter:
 
     def filter(self, unavailable: tp.Iterable[str], **kwargs: tp.Any) -> tp.List[str]:
         """Filter resources."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.resources})"

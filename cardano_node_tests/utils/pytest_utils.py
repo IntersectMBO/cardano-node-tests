@@ -30,7 +30,8 @@ def get_current_test() -> PytestTest:
         r"(^.*/test_\w+\.py)(?:::)?(Test\w+)?::(test_\w+)(\[.+\])? *\(?(\w+)?", curr_test
     )
     if not reg:
-        raise AssertionError(f"Failed to match '{curr_test}'")
+        msg = f"Failed to match '{curr_test}'"
+        raise AssertionError(msg)
 
     return PytestTest(
         test_function=reg.group(3),

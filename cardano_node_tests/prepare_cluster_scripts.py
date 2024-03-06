@@ -3,6 +3,7 @@
 
 For settings it uses the same env variables as when running the tests.
 """
+
 import argparse
 import logging
 import pathlib as pl
@@ -57,7 +58,8 @@ def prepare_scripts_files(
         start_script = next(scriptsdir.glob("start-cluster*"), "")
         stop_script = next(scriptsdir.glob("stop-cluster*"), "")
         if not (start_script and stop_script):
-            raise RuntimeError(f"Start/stop scripts not found in '{scriptsdir}'.")
+            msg = f"Start/stop scripts not found in '{scriptsdir}'."
+            raise RuntimeError(msg)
 
     startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
         destdir=destdir,
@@ -87,8 +89,8 @@ def main() -> int:
         prepare_scripts_files(
             destdir=destdir, scriptsdir=scriptsdir, instance_num=args.instance_num
         )
-    except Exception as exc:
-        LOGGER.error(str(exc))
+    except Exception:
+        LOGGER.exception("Failure")
         return 1
 
     return 0

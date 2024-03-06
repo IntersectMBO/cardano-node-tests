@@ -1,4 +1,5 @@
 """Utilities for `cardano-submit-api` REST service."""
+
 import binascii
 import dataclasses
 import json
@@ -76,12 +77,13 @@ def submit_tx_bare(tx_file: clusterlib.FileType) -> SubmitApiOut:
 
     response = post_cbor(cbor_file=cbor_file, url=url)
     if not response:
-        raise SubmitApiError(
+        msg = (
             f"Failed to submit the tx.\n"
             f"  status: {response.status_code}\n"
             f"  reason: {response.reason}\n"
             f"  error: {response.text}"
         )
+        raise SubmitApiError(msg)
 
     out = SubmitApiOut(txid=response.json(), response=response)
 
@@ -134,10 +136,8 @@ def submit_tx(
         if err is not None:
             # Submitting the TX raised an exception as if the input was already
             # spent, but it was either not the case, or the TX is still in mempool.
-            raise SubmitApiError(
-                f"Failed to resubmit the transaction '{txid}' (from '{tx_file}')."
-            ) from err
+            msg = f"Failed to resubmit the transaction '{txid}' (from '{tx_file}')."
+            raise SubmitApiError(msg) from err
 
-        raise SubmitApiError(
-            f"Transaction '{txid}' didn't make it to the chain (from '{tx_file}')."
-        )
+        msg = f"Transaction '{txid}' didn't make it to the chain (from '{tx_file}')."
+        raise SubmitApiError(msg)

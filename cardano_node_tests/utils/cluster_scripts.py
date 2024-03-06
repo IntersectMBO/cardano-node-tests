@@ -3,7 +3,9 @@
 * copying scripts and their configuration, so it can be atered by tests
 * setup of scripts and their configuration for starting of multiple cluster instances
 """
+
 # pylint: disable=abstract-method
+# ruff: noqa: ARG002
 import contextlib
 import dataclasses
 import itertools
@@ -80,11 +82,13 @@ class ScriptsTypes:
 
     def get_instance_ports(self, instance_num: int) -> InstancePorts:
         """Return ports mapping for given cluster instance."""
-        raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
 
     def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files."""
-        raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
 
     def prepare_scripts_files(
         self,
@@ -94,13 +98,15 @@ class ScriptsTypes:
         stop_script: ttypes.FileType = "",
     ) -> InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
-        raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
 
     def gen_split_topology_files(
         self, destdir: ttypes.FileType, instance_num: int, offset: int = 0
     ) -> None:
         """Generate topology files for split network."""
-        raise NotImplementedError(f"Not implemented for cluster instance type '{self.type}'.")
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
 
 
 class LocalScripts(ScriptsTypes):
@@ -454,10 +460,11 @@ class LocalScripts(ScriptsTypes):
     ) -> None:
         """Generate topology files for split network."""
         if self.num_pools < 4:
-            raise ValueError(
+            msg = (
                 "There must be at least 4 pools for split topology "
                 f"(current number: {self.num_pools})"
             )
+            raise ValueError(msg)
 
         destdir = pl.Path(destdir).expanduser().resolve()
         instance_ports = self.get_instance_ports(instance_num=instance_num)
@@ -472,10 +479,11 @@ class LocalScripts(ScriptsTypes):
         second_half = all_nodes[split_idx:]
 
         if min(len(first_half), len(second_half)) < 2:
-            raise ValueError(
+            msg = (
                 "There must be at least 2 nodes on each side of split "
                 f"(number of pools: {self.num_pools})"
             )
+            raise ValueError(msg)
 
         for node_rec in nodes:
             ports_group = first_half if node_rec.node in first_half else second_half
@@ -652,10 +660,12 @@ class TestnetScripts(ScriptsTypes):
         bootstrap_conf_dir = bootstrap_dir / self.BOOTSTRAP_CONF
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
             if not configuration.BOOTSTRAP_DIR:
-                raise RuntimeError("The 'BOOTSTRAP_DIR' env variable is not set.")
+                msg = "The 'BOOTSTRAP_DIR' env variable is not set."
+                raise RuntimeError(msg)
             bootstrap_conf_dir = pl.Path(configuration.BOOTSTRAP_DIR).expanduser().resolve()
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
-            raise RuntimeError("The 'BOOTSTRAP_DIR' doesn't contain all the needed files.")
+            msg = "The 'BOOTSTRAP_DIR' doesn't contain all the needed files."
+            raise RuntimeError(msg)
         return bootstrap_conf_dir
 
     def prepare_scripts_files(

@@ -1,4 +1,5 @@
 """Functionality for working with GitHub issues."""
+
 import logging
 import typing as tp
 
@@ -65,7 +66,7 @@ class GHIssue:
             try:
                 cached_state = self.github.get_repo(self.repo).get_issue(self.number).state.lower()
             except github.UnknownObjectException:
-                LOGGER.error("Unknown issue '%s'", identifier)
+                LOGGER.exception("Unknown issue '%s'", identifier)
                 cached_state = "unknown"
             except Exception:
                 # pylint: disable=broad-except

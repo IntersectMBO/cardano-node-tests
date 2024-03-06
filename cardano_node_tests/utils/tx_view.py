@@ -1,4 +1,5 @@
 """Checks for `transaction view` CLI command."""
+
 import itertools
 import json
 import logging
@@ -246,7 +247,8 @@ def check_tx_view(  # noqa: C901
     tx_raw_txins = tx_raw_simple_txins.union(tx_raw_script_txins)
 
     if tx_raw_txins != loaded_txins:
-        raise AssertionError(f"txins: {tx_raw_txins} != {loaded_txins}")
+        msg = f"txins: {tx_raw_txins} != {loaded_txins}"
+        raise AssertionError(msg)
 
     # check outputs
     tx_loaded_outputs = tx_loaded.get("outputs") or []
@@ -259,7 +261,8 @@ def check_tx_view(  # noqa: C901
     tx_raw_txouts = {(r.address, r.amount, r.coin) for r in tx_raw_output.txouts}
 
     if not tx_raw_txouts.issubset(loaded_txouts):
-        raise AssertionError(f"txouts: {tx_raw_txouts} not in {loaded_txouts}")
+        msg = f"txouts: {tx_raw_txouts} not in {loaded_txouts}"
+        raise AssertionError(msg)
 
     # check fee
     fee = int(tx_loaded.get("fee", "").split()[0] or 0)
@@ -268,24 +271,23 @@ def check_tx_view(  # noqa: C901
         -1,
         fee,
     ):
-        raise AssertionError(f"fee: {tx_raw_output.fee} != {fee}")
+        msg = f"fee: {tx_raw_output.fee} != {fee}"
+        raise AssertionError(msg)
 
     # check validity intervals
     validity_range = tx_loaded.get("validity range") or {}
 
     loaded_invalid_before = validity_range.get("lower bound")
     if tx_raw_output.invalid_before != loaded_invalid_before:
-        raise AssertionError(
-            f"invalid before: {tx_raw_output.invalid_before} != {loaded_invalid_before}"
-        )
+        msg = f"invalid before: {tx_raw_output.invalid_before} != {loaded_invalid_before}"
+        raise AssertionError(msg)
 
     loaded_invalid_hereafter = validity_range.get("upper bound") or validity_range.get(
         "time to live"
     )
     if tx_raw_output.invalid_hereafter != loaded_invalid_hereafter:
-        raise AssertionError(
-            f"invalid hereafter: {tx_raw_output.invalid_hereafter} != {loaded_invalid_hereafter}"
-        )
+        msg = f"invalid hereafter: {tx_raw_output.invalid_hereafter} != {loaded_invalid_hereafter}"
+        raise AssertionError(msg)
 
     # check minting and burning
     loaded_mint = set(_load_assets(assets=tx_loaded.get("mint") or {}))
@@ -293,7 +295,8 @@ def check_tx_view(  # noqa: C901
     tx_raw_mint = {(r.amount, r.coin) for r in mint_txouts}
 
     if tx_raw_mint != loaded_mint:
-        raise AssertionError(f"mint: {tx_raw_mint} != {loaded_mint}")
+        msg = f"mint: {tx_raw_mint} != {loaded_mint}"
+        raise AssertionError(msg)
 
     # check withdrawals
     tx_loaded_withdrawals = tx_loaded.get("withdrawals")
@@ -315,7 +318,8 @@ def check_tx_view(  # noqa: C901
     }
 
     if tx_raw_withdrawals != loaded_withdrawals:
-        raise AssertionError(f"withdrawals: {tx_raw_withdrawals} != {loaded_withdrawals}")
+        msg = f"withdrawals: {tx_raw_withdrawals} != {loaded_withdrawals}"
+        raise AssertionError(msg)
 
     # check certificates
     tx_raw_len_certs = len(tx_raw_output.tx_files.certificate_files) + len(
@@ -324,7 +328,8 @@ def check_tx_view(  # noqa: C901
     loaded_len_certs = len(tx_loaded.get("certificates") or [])
 
     if tx_raw_len_certs != loaded_len_certs:
-        raise AssertionError(f"certificates: {tx_raw_len_certs} != {loaded_len_certs}")
+        msg = f"certificates: {tx_raw_len_certs} != {loaded_len_certs}"
+        raise AssertionError(msg)
 
     for certificate in tx_loaded.get("certificates") or []:
         certificate_name = next(iter(certificate.keys()))
@@ -333,10 +338,11 @@ def check_tx_view(  # noqa: C901
         certificate_diff = certificate_golden and certificate_fields.difference(certificate_golden)
 
         if certificate_diff:
-            raise AssertionError(
+            msg = (
                 f"The output of the certificate '{certificate_name}' has unexpected fields:\n"
                 f"{certificate_diff}"
             )
+            raise AssertionError(msg)
 
     # load and check transaction era
     loaded_tx_era: str = tx_loaded["era"]
@@ -349,9 +355,8 @@ def check_tx_view(  # noqa: C901
     )
 
     if loaded_tx_version != output_tx_version:
-        raise AssertionError(
-            f"Unexpected transaction era: {loaded_tx_version} != {output_tx_version}"
-        )
+        msg = f"Unexpected transaction era: {loaded_tx_version} != {output_tx_version}"
+        raise AssertionError(msg)
 
     # check collateral inputs, this is only available on Alonzo+ TX
     if loaded_tx_version >= VERSIONS.ALONZO:

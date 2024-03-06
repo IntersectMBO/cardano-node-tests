@@ -1,4 +1,5 @@
 """Negative tests for spending with Plutus using `transaction build-raw`."""
+
 import dataclasses
 import json
 import logging
@@ -138,7 +139,8 @@ class TestNegative:
             datum_file = plutus_common.DATUM_43_TYPED
             redeemer_file = plutus_common.REDEEMER_43_TYPED
         else:
-            raise AssertionError("Unknown test variant.")
+            msg = "Unknown test variant."
+            raise AssertionError(msg)
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME[plutus_version].script_file,

@@ -6,6 +6,7 @@
 * pool metadata
 * pool reregistration
 """
+
 # pylint: disable=abstract-class-instantiated
 import dataclasses
 import json
@@ -105,7 +106,8 @@ def _check_staking(
         if stake_pool_id in cluster_obj.g_query.get_stake_distribution():
             break
     else:
-        raise AssertionError(f"Stake pool `{stake_pool_id}` not registered even after 3 epochs.")
+        msg = f"Stake pool `{stake_pool_id}` not registered even after 3 epochs."
+        raise AssertionError(msg)
 
     for owner in pool_owners:
         stake_addr_info = cluster_obj.g_query.get_stake_addr_info(owner.stake.address)
@@ -1115,10 +1117,11 @@ class TestStakePool:
             if pool_creation_out.stake_pool_id in cluster.g_query.get_stake_distribution():
                 break
         else:
-            raise AssertionError(
+            msg = (
                 f"Stake pool `{pool_creation_out.stake_pool_id}` not registered "
                 "even after 5 epochs."
             )
+            raise AssertionError(msg)
         # check that pool was correctly setup
         _check_pool(
             cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
@@ -1261,7 +1264,8 @@ class TestStakePool:
             if not clusterlib_utils.get_pool_state(
                 cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
             ).pool_params:
-                raise AssertionError("Pool `{pool_creation_out.stake_pool_id}` got deregistered.")
+                msg = "Pool `{pool_creation_out.stake_pool_id}` got deregistered."
+                raise AssertionError(msg)
 
         # check that pool is still correctly setup
         _check_pool(

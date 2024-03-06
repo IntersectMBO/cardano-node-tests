@@ -1,4 +1,5 @@
 """Tests for Conway governance Constitutional Committee functionality."""
+
 # pylint: disable=expression-not-assigned
 import logging
 import pathlib as pl
@@ -689,7 +690,8 @@ class TestCommittee:
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
-            raise AssertionError("Action not found in ratified actions")
+            msg = "Action not found in ratified actions"
+            raise AssertionError(msg)
 
         next_rat_add_state = rat_add_gov_state["nextRatifyState"]
         _check_add_state(next_rat_add_state["nextEnactState"])
@@ -839,7 +841,8 @@ class TestCommittee:
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
-            raise AssertionError("Action not found in ratified actions")
+            msg = "Action not found in ratified actions"
+            raise AssertionError(msg)
 
         next_rat_rem_state = rat_rem_gov_state["nextRatifyState"]
         _check_rem_state(next_rat_rem_state["nextEnactState"])
@@ -1142,7 +1145,8 @@ class TestCommittee:
                     xfail_ledger_3979_msgs.add("Only single expired action got removed")
                     continue
 
-                raise AssertionError("Action not found in ratified actions")
+                msg = "Action not found in ratified actions"
+                raise AssertionError(msg)
 
             return {}
 

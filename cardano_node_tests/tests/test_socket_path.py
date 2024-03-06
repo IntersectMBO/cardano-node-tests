@@ -1,4 +1,5 @@
 """Tests for `--socket-path` CLI argument."""
+
 import logging
 import os
 import typing as tp

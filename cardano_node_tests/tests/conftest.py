@@ -85,9 +85,9 @@ def pytest_configure(config: tp.Any) -> None:
     config.stash[metadata_key]["DB_BACKEND"] = configuration.DB_BACKEND
     config.stash[metadata_key]["HAS_CC"] = str(configuration.HAS_CC)
     config.stash[metadata_key]["cardano-node-tests rev"] = helpers.get_current_commit()
-    config.stash[metadata_key][
-        "cardano-node-tests url"
-    ] = f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
+    config.stash[metadata_key]["cardano-node-tests url"] = (
+        f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
+    )
     config.stash[metadata_key]["CARDANO_NODE_SOCKET_PATH"] = os.environ.get(
         "CARDANO_NODE_SOCKET_PATH"
     )
@@ -305,7 +305,6 @@ def session_autouse(
 ) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
-    pass
 
 
 @pytest.fixture(scope="module")
@@ -342,14 +341,14 @@ def function_autouse(
 ) -> None:
     """Autouse function fixtures that are required for each test setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
-    pass
 
 
 def _raise_logs_error(errors: str) -> None:
     """Report errors found in cluster log files by raising `LogsError` with errors details."""
     if not errors:
         return
-    raise LogsError(f"Errors found in cluster log files:\n{errors}") from None
+    msg = f"Errors found in cluster log files:\n{errors}"
+    raise LogsError(msg) from None
 
 
 @pytest.fixture

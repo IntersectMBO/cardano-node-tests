@@ -1,4 +1,5 @@
 """Tests for minting with Plutus V2 using `transaction build-raw`."""
+
 import json
 import logging
 import pathlib as pl

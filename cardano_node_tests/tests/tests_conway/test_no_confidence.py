@@ -1,4 +1,5 @@
 """Tests for Conway governance state of no confidence."""
+
 # pylint: disable=expression-not-assigned
 import logging
 
@@ -226,7 +227,8 @@ class TestNoConfidence:
                     xfail_ledger_3979_msgs.add("Only single expired action got removed")
                     continue
 
-                raise AssertionError("Action not found in ratified actions")
+                msg = "Action not found in ratified actions"
+                raise AssertionError(msg)
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             assert next_rat_state["ratificationDelayed"], "Ratification not delayed"

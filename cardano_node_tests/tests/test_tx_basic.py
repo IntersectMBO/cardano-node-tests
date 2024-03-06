@@ -1,4 +1,5 @@
 """Tests for basic transactions."""
+
 import dataclasses
 import itertools
 import logging

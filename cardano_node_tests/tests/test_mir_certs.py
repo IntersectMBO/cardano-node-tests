@@ -1,4 +1,5 @@
 """Tests for MIR certificates."""
+
 import logging
 import time
 import typing as tp
@@ -40,9 +41,8 @@ def _wait_for_ada_pots(
         if len(pots_records) == expected_len:
             break
     else:
-        raise AssertionError(
-            f"Got {len(pots_records)} record(s) instead of expected {expected_len}."
-        )
+        msg = f"Got {len(pots_records)} record(s) instead of expected {expected_len}."
+        raise AssertionError(msg)
 
     return pots_records
 

@@ -1,4 +1,5 @@
 """Common functionality for Conway governance tests."""
+
 import dataclasses
 import json
 import logging

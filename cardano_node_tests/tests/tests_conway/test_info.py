@@ -1,4 +1,5 @@
 """Tests for Conway governance info."""
+
 # pylint: disable=expression-not-assigned
 import logging
 

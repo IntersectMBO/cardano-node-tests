@@ -58,4 +58,5 @@ def submit_tx(
             cluster_obj=cluster_obj, tx_file=tx_file, txins=txins, wait_blocks=wait_blocks
         )
     else:
-        raise ValueError(f"Unknown submit method: {submit_method}")
+        msg = f"Unknown submit method: {submit_method}"
+        raise ValueError(msg)
