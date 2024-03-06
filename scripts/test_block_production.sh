@@ -19,6 +19,9 @@ export BLOCK_PRODUCTION_DB
 # Node revision to use. If not set, the latest master will be used.
 export NODE_REV="${NODE_REV:-""}"
 
+# Start cluster in Byron era
+export CI_BYRON_CLUSTER="${CI_BYRON_CLUSTER:-"true"}"
+
 # The number of pools to setup
 export NUM_POOLS="${NUM_POOLS:-"10"}"
 if [ $((NUM_POOLS % 2)) -ne 0 ]; then

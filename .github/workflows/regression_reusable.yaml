@@ -35,7 +35,7 @@ on:
         required: false
         type: string
         default: ""
-      fast_cluster:
+      byron_cluster:
         required: false
         type: boolean
         default: false
@@ -89,7 +89,7 @@ jobs:
           echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
           echo "SCRIPTS_DIRNAME=${{ inputs.scripts_dirname }}" >> .github_ci_env
           echo "CI_TOPOLOGY=${{ inputs.topology }}" >> .github_ci_env
-          echo "CI_FAST_CLUSTER=${{ inputs.fast_cluster }}" >> .github_ci_env
+          echo "CI_BYRON_CLUSTER=${{ inputs.byron_cluster }}" >> .github_ci_env
           echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
           echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env
           if [ -e "${{ inputs.env-path }}" ]; then cat "${{ inputs.env-path }}" >> .github_ci_env; fi

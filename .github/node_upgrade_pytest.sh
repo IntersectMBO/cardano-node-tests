@@ -45,10 +45,10 @@ if [ "$1" = "step1" ]; then
     export PATH="${BASE_REV_BIN}:${PATH}"
   fi
 
-  if [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
-    : "${SCRIPTS_DIRNAME:="${CLUSTER_ERA}_fast"}"
-  else
+  if [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
     : "${SCRIPTS_DIRNAME:="$CLUSTER_ERA"}"
+  else
+    : "${SCRIPTS_DIRNAME:="${CLUSTER_ERA}_fast"}"
   fi
   export SCRIPTS_DIRNAME
 

@@ -100,10 +100,10 @@ fi
 
 if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   :  # don't touch `SCRIPTS_DIRNAME` when running on testnet
-elif [ "${CI_FAST_CLUSTER:-"false"}" != "false" ]; then
-  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"${CLUSTER_ERA}_fast"}"
-else
+elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
   export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"$CLUSTER_ERA"}"
+else
+  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"${CLUSTER_ERA}_fast"}"
 fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
