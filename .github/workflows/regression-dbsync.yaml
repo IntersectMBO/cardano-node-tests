@@ -48,10 +48,10 @@ on:
         - p2p
         - mixed
         default: legacy
-      fast_cluster:
+      byron_cluster:
         type: boolean
         default: false
-        description: "Start cluster directly in target era"
+        description: "Start cluster in Byron era"
       testrun_name:
         required: false
         description: "Test run name (internal)"
@@ -73,7 +73,7 @@ jobs:
       tx_era: ${{ inputs.tx_era }}
       markexpr: ${{ inputs.markexpr }}
       topology: ${{ inputs.topology }}
-      fast_cluster: ${{ inputs.fast_cluster }}
+      byron_cluster: ${{ inputs.byron_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}
       env-path: .github/env_regression_dbsync

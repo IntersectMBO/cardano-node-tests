@@ -3,3 +3,4 @@ TX_ERA=babbage
 MARKEXPR=dbsync
 CLUSTERS_COUNT=5
 DBSYNC_REV=master
+CI_BYRON_CLUSTER=true
