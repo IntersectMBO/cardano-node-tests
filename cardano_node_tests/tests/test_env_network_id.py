@@ -1,4 +1,5 @@
 """Tests for `CARDANO_NODE_NETWORK_ID` environment variable."""
+
 import logging
 import os
 import time

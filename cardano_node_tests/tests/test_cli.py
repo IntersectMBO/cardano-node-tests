@@ -1,4 +1,5 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
+
 import datetime
 import json
 import logging
@@ -922,7 +923,8 @@ class TestAdvancedQueries:
                 expected_pool_ids = []
                 stake_snapshot = cluster_obj.g_query.get_stake_snapshot()
             else:
-                raise ValueError(f"Unknown option: {option}")
+                msg = f"Unknown option: {option}"
+                raise ValueError(msg)
         except json.decoder.JSONDecodeError as err:
             blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
         except clusterlib.CLIError as err:
@@ -1163,9 +1165,8 @@ class TestAdvancedQueries:
             if last_ledger_slot + 1 == tx_mempool["slot"]:
                 break
         else:
-            raise AssertionError(
-                f"Expected slot number '{last_ledger_slot + 1}', got '{tx_mempool['slot']}'"
-            )
+            msg = f"Expected slot number '{last_ledger_slot + 1}', got '{tx_mempool['slot']}'"
+            raise AssertionError(msg)
 
         assert {"capacityInBytes", "numberOfTxs", "sizeInBytes", "slot"}.issubset(tx_mempool)
 

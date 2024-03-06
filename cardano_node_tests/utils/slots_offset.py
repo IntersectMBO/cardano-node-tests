@@ -6,8 +6,11 @@ from datetime import timezone
 
 def _datetime2timestamp(datetime_str: str) -> int:
     """Convert UTC datetime string to timestamp."""
-    converted_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-    timestamp = converted_time.replace(tzinfo=timezone.utc).timestamp()
+    timestamp = (
+        datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
+        .replace(tzinfo=timezone.utc)
+        .timestamp()
+    )
     return int(timestamp)
 
 

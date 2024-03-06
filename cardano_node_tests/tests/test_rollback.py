@@ -3,6 +3,7 @@
 In rollback tests, we split the cluster into two parts. We achieve this by changing topology
 configuration.
 """
+
 import logging
 import os
 import pathlib as pl

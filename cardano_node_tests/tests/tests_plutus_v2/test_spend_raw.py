@@ -1,4 +1,5 @@
 """Tests for spending with Plutus V2 using `transaction build-raw`."""
+
 import binascii
 import logging
 import typing as tp

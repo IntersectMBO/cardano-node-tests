@@ -1,4 +1,5 @@
 """Tests for Conway governance treasury withdrawals."""
+
 # pylint: disable=expression-not-assigned
 import logging
 import typing as tp
@@ -307,7 +308,8 @@ class TestTreasuryWithdrawals:
             if not remaining_actions:
                 break
         else:
-            raise AssertionError("Not all actions got removed")
+            msg = "Not all actions got removed"
+            raise AssertionError(msg)
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)

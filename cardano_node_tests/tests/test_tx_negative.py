@@ -2,6 +2,7 @@
 
 Tests like duplicated transaction, sending funds to wrong addresses, wrong fee, wrong ttl.
 """
+
 import dataclasses
 import logging
 import pathlib as pl

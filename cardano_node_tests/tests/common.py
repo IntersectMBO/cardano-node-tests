@@ -208,9 +208,8 @@ def check_missing_utxos(
     missing_nodes = get_nodes_missing_utxos(cluster_obj=cluster_obj, utxos=utxos)
 
     if missing_nodes:
-        raise AssertionError(
-            f"Following nodes are missing the given UTxOs: {sorted(missing_nodes)}"
-        )
+        msg = f"Following nodes are missing the given UTxOs: {sorted(missing_nodes)}"
+        raise AssertionError(msg)
 
 
 def detect_fork(

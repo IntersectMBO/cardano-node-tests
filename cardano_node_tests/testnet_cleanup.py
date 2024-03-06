@@ -5,6 +5,7 @@
 * deregister stake addresses
 * return funds to faucet
 """
+
 import argparse
 import logging
 import os

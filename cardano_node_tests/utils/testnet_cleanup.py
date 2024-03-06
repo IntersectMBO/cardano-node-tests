@@ -4,6 +4,7 @@
 * deregister stake addresses
 * return funds to faucet
 """
+
 import concurrent.futures
 import contextlib
 import functools
@@ -114,7 +115,8 @@ def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
     skey_file = basedir / f"{f_name}.skey"
 
     if not (vkey_file.exists() and skey_file.exists()):
-        raise ValueError(f"Keys for '{addr_file}' not available.")
+        msg = f"Keys for '{addr_file}' not available."
+        raise ValueError(msg)
 
     addr_record = clusterlib.AddressRecord(
         address=clusterlib.read_address_from_file(addr_file),

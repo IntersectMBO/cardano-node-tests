@@ -1,4 +1,5 @@
 """SQL queries to db-sync database."""
+
 import contextlib
 import dataclasses
 import decimal

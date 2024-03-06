@@ -1,4 +1,5 @@
 """Tests for datum while spending with Plutus using `transaction build`."""
+
 import json
 import logging
 import pathlib as pl

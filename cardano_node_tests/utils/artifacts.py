@@ -1,4 +1,5 @@
 """Functionality for collecting testing artifacts."""
+
 import json
 import logging
 import os

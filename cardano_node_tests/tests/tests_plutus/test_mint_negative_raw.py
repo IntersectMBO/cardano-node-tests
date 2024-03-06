@@ -1,4 +1,5 @@
 """Negative tests for minting with Plutus using `transaction build-raw`."""
+
 import dataclasses
 import datetime
 import logging
@@ -541,7 +542,10 @@ class TestMintingNegative:
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         # POSIX timestamp + offset
-        redeemer_value = int(datetime.datetime.now().timestamp() * 1_000) + timestamp_offset_ms
+        redeemer_value = (
+            int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp() * 1_000)
+            + timestamp_offset_ms
+        )
 
         policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()

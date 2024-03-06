@@ -1,4 +1,5 @@
 """Tests for protocol state and protocol parameters."""
+
 import json
 import logging
 import typing as tp

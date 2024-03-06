@@ -1,4 +1,5 @@
 """Cardano node version, cluster era, transaction era, db-sync version."""
+
 import typing as tp
 
 from packaging import version

@@ -1,4 +1,5 @@
 """Tests for transactions chaining."""
+
 import logging
 import pathlib as pl
 import time
@@ -153,14 +154,16 @@ class TestTxChaining:
                 except clusterlib.CLIError as exc:
                     err_str = str(exc)
                     if r == 0 and "(BadInputsUTxO" in err_str:
+                        msg = "Tx input is missing, maybe temporary fork?"
                         raise Exception(  # pylint: disable=broad-exception-raised
-                            "Tx input is missing, maybe temporary fork?"
+                            msg
                         ) from exc
                     if "(BadInputsUTxO" not in err_str:
                         raise
                     break
             else:
-                raise AssertionError("Failed to make sure the Tx is in mempool")
+                msg = "Failed to make sure the Tx is in mempool"
+                raise AssertionError(msg)
 
         # submit Txs one by one without waiting for them to appear on ledger
         for tx_file in generated_txs:

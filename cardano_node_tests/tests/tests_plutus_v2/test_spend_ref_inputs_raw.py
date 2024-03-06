@@ -1,4 +1,5 @@
 """Tests for ro reference inputs while spending with Plutus V2 using `transaction build-raw`."""
+
 import logging
 import re
 import typing as tp

@@ -1,4 +1,5 @@
 """Tests for Conway governance constitution."""
+
 # pylint: disable=expression-not-assigned
 import logging
 
@@ -181,7 +182,8 @@ class TestConstitution:
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
-            raise AssertionError("Action not found in removed actions")
+            msg = "Action not found in removed actions"
+            raise AssertionError(msg)
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _url = helpers.get_vcs_link()

@@ -1,4 +1,5 @@
 """Tests for stake address delegation."""
+
 import logging
 import typing as tp
 

@@ -1,4 +1,5 @@
 """Tests for stake address registration."""
+
 import logging
 import typing as tp
 

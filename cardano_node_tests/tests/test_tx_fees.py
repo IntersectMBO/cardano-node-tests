@@ -1,4 +1,5 @@
 """Tests for fees of various kinds of transactions."""
+
 import itertools
 import logging
 import typing as tp

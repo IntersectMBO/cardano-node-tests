@@ -124,7 +124,8 @@ def run_command(
     if not ignore_fail and p.returncode != 0:
         err_dec = stderr.decode()
         err_dec = err_dec or stdout.decode()
-        raise AssertionError(f"An error occurred while running `{cmd_str}`: {err_dec}")
+        msg = f"An error occurred while running `{cmd_str}`: {err_dec}"
+        raise AssertionError(msg)
 
     return stdout
 
@@ -237,7 +238,8 @@ def check_dir_arg(dir_path: str) -> tp.Optional[pl.Path]:
         return None
     abs_path = pl.Path(dir_path).expanduser().resolve()
     if not (abs_path.exists() and abs_path.is_dir()):
-        raise argparse.ArgumentTypeError(f"check_dir_arg: directory '{dir_path}' doesn't exist")
+        msg = f"check_dir_arg: directory '{dir_path}' doesn't exist"
+        raise argparse.ArgumentTypeError(msg)
     return abs_path
 
 
@@ -247,7 +249,8 @@ def check_file_arg(file_path: str) -> tp.Optional[pl.Path]:
         return None
     abs_path = pl.Path(file_path).expanduser().resolve()
     if not (abs_path.exists() and abs_path.is_file()):
-        raise argparse.ArgumentTypeError(f"check_file_arg: file '{file_path}' doesn't exist")
+        msg = f"check_file_arg: file '{file_path}' doesn't exist"
+        raise argparse.ArgumentTypeError(msg)
     return abs_path
 
 

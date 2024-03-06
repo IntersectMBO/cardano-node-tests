@@ -5,6 +5,7 @@
 * auxiliary scripts
 * reference UTxO
 """
+
 import json
 import logging
 import pathlib as pl
@@ -2718,7 +2719,8 @@ class TestNested:
             script_nested = []
             expected_err = "ScriptWitnessNotValidatingUTXOW"
         else:
-            raise AssertionError(f"Unknown scenario: {scenario}")
+            msg = f"Unknown scenario: {scenario}"
+            raise AssertionError(msg)
 
         # create multisig script
         multisig_script = pl.Path(f"{temp_template}_multisig.script")

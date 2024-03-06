@@ -138,7 +138,8 @@ def create_dreps(
     no_of_addrs = len(pool_users)
 
     if no_of_addrs < DREPS_NUM:
-        raise ValueError("Not enough pool users to create drep registrations")
+        msg = "Not enough pool users to create drep registrations"
+        raise ValueError(msg)
 
     name_template = "default_drep"
     stake_deposit = cluster_obj.g_query.get_address_deposit()

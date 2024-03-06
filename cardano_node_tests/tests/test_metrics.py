@@ -1,4 +1,5 @@
 """Tests for Prometheus and EKG metrics."""
+
 import logging
 import typing as tp
 

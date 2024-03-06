@@ -1,4 +1,5 @@
 """Compatibility tests for spending with Plutus using `transaction build`."""
+
 import logging
 import typing as tp
 

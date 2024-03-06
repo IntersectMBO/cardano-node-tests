@@ -1,4 +1,5 @@
 """Tests of effect of pool saturation on rewards and blocks production."""
+
 import dataclasses
 import logging
 import pickle
@@ -473,9 +474,12 @@ class TestPoolSaturation:
                         )
                     except clusterlib.CLIError as exc:
                         if "(WithdrawalsNotInRewardsDELEGS" in str(exc):
-                            raise Exception(  # pylint: disable=broad-exception-raised
+                            msg = (
                                 "Withdrawal likely happened at epoch boundary and the reward "
                                 "amounts no longer match"
+                            )
+                            raise Exception(  # pylint: disable=broad-exception-raised
+                                msg
                             ) from exc
                         raise
 
@@ -510,9 +514,8 @@ class TestPoolSaturation:
                     helpers.write_json(
                         out_file=f"{temp_template}_{this_epoch}_failed_tip.json", content=tip
                     )
-                    raise AssertionError(
-                        "Failed to finish actions in single epoch, it would affect other checks"
-                    )
+                    msg = "Failed to finish actions in single epoch, it would affect other checks"
+                    raise AssertionError(msg)
         except Exception:
             # at this point the cluster needs respin in case of any failure
             if cluster.g_query.get_epoch() >= init_epoch + epoch_saturate:

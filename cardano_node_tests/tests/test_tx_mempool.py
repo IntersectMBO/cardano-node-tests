@@ -1,4 +1,5 @@
 """Tests for transactions in mempool."""
+
 import logging
 import typing as tp
 
@@ -102,7 +103,8 @@ class TestMempool:
                     raise
                 break
         else:
-            raise AssertionError("Failed to make sure the Tx is in mempool")
+            msg = "Failed to make sure the Tx is in mempool"
+            raise AssertionError(msg)
 
         # If the Tx is only in mempool, its txins can still be queried
         txin_queried = bool(cluster.g_query.get_utxo(utxo=tx_raw_output.txins[0]))

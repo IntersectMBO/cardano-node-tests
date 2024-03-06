@@ -1,4 +1,5 @@
 """Tests for update proposals."""
+
 import json
 import logging
 import pathlib as pl

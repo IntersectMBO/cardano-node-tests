@@ -2,6 +2,7 @@
 
 Other block production checks may be present in `test_staking.py`.
 """
+
 import logging
 import os
 import random
@@ -512,7 +513,8 @@ class TestDynamicBlockProd:
                         service_names=[f"nodes:{self.backup_node_name}"]
                     )[0]
                     if not backup_node_status.pid:
-                        raise AssertionError("Replacement node is not running.")
+                        msg = "Replacement node is not running."
+                        raise AssertionError(msg)
                     cluster_nodes.stop_nodes(node_names=[self.producing_node_name])
                     os.kill(backup_node_status.pid, signal.SIGHUP)
 

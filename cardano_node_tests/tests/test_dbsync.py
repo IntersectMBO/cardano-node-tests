@@ -1,4 +1,5 @@
 """Tests for db-sync."""
+
 import logging
 import time
 import typing as tp
@@ -200,10 +201,11 @@ class TestDBSync:
             and rec.block_no
             and block_no not in (rec.block_no, rec.block_no - 1, rec.block_no + 1)
         ):
-            raise AssertionError(
+            msg = (
                 "last `block_no` value is different than expected; "
                 f"{block_no} not in ({rec.block_no}, {rec.block_no - 1}, {rec.block_no + 1})"
             )
+            raise AssertionError(msg)
 
         # if cardano-node knows about Babbage and network is in Alonzo or higher era, check that
         # the highest known protocol major version matches the expected value

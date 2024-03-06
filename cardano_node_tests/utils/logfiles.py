@@ -98,7 +98,8 @@ def _look_back_found(buffer: tp.List[str]) -> bool:
             look_back_re = look_re
             break
     else:
-        raise KeyError(f"Look back regex not found for error line: {err_line}")
+        msg = f"Look back regex not found for error line: {err_line}"
+        raise KeyError(msg)
 
     # Check if the look back regex matches any of the previous log messages
     return any(re.search(look_back_re, line) for line in buffer[:-1])

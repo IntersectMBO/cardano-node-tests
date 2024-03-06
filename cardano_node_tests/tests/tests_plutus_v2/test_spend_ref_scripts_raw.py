@@ -1,4 +1,5 @@
 """Tests for reference scripts while spending with Plutus V2 using `transaction build-raw`."""
+
 import logging
 import pathlib as pl
 import typing as tp

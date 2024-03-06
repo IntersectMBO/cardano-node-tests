@@ -1,4 +1,5 @@
 """Tests for checking staking scenarios where no rewards are expected."""
+
 import dataclasses
 import logging
 import pathlib as pl
@@ -968,7 +969,8 @@ class TestNoRewards:
                 if pool_id in cluster.g_query.get_stake_distribution():
                     break
             else:
-                raise AssertionError(f"Stake pool `{pool_id}` not registered even after 5 epochs.")
+                msg = f"Stake pool `{pool_id}` not registered even after 5 epochs."
+                raise AssertionError(msg)
 
             # check command kes-period-info case: re-register pool
             kes_period_info = cluster.g_query.get_kes_period_info(pool_opcert_file)

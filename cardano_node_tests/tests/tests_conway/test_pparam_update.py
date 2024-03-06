@@ -1,4 +1,5 @@
 """Tests for Conway governance protocol parameters update."""
+
 # pylint: disable=expression-not-assigned
 import logging
 import random
@@ -259,7 +260,8 @@ class TestPParamUpdate:
                 xfail_ledger_3979_msgs.add("Only single expired action got removed")
                 continue
 
-            raise AssertionError("Action not found in ratified actions")
+            msg = "Action not found in ratified actions"
+            raise AssertionError(msg)
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _check_state(next_rat_state["nextEnactState"])

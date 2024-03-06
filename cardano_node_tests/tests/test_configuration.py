@@ -1,4 +1,5 @@
 """Tests for node configuration."""
+
 # pylint: disable=abstract-class-instantiated
 import json
 import logging

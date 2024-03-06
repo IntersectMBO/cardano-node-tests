@@ -1,4 +1,5 @@
 """Functionality for interacting with db-sync."""
+
 import functools
 import logging
 import time
@@ -79,7 +80,8 @@ def check_address_reward(
 
     if errors:
         err_str = ", ".join(errors)
-        raise AssertionError(f"The 'earned epoch' and 'spendable epoch' don't match: {err_str}.")
+        msg = f"The 'earned epoch' and 'spendable epoch' don't match: {err_str}."
+        raise AssertionError(msg)
 
     return reward
 
@@ -183,7 +185,8 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
         if tx_id == -1:
             tx_id = query_row.tx_id
         if tx_id != query_row.tx_id:
-            raise AssertionError("Transaction ID differs from the expected ID.")
+            msg = "Transaction ID differs from the expected ID."
+            raise AssertionError(msg)
 
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
@@ -235,7 +238,8 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
             mint_utxo_out.append(mint_rec)
 
     if tx_id == -1:
-        raise RuntimeError("No results were returned by the TX SQL query.")
+        msg = "No results were returned by the TX SQL query."
+        raise RuntimeError(msg)
 
     # pylint: disable=undefined-loop-variable
     txdata = dbsync_types.TxPrelimRecord(
@@ -695,7 +699,8 @@ def check_pool_data(  # noqa: C901
 
     if errors_list:
         errors_str = "\n\n".join(errors_list)
-        raise AssertionError(f"{errors_str}\n\nStake Pool Details: \n{ledger_pool_data}")
+        msg = f"{errors_str}\n\nStake Pool Details: \n{ledger_pool_data}"
+        raise AssertionError(msg)
 
     return db_pool_data
 
@@ -780,9 +785,8 @@ def check_plutus_costs(
     )
 
     if len(sorted_costs) != len(sorted_db):
-        raise AssertionError(
-            f"Number of cost records is different:\n{sorted_costs}\nvs\n{sorted_db}"
-        )
+        msg = f"Number of cost records is different:\n{sorted_costs}\nvs\n{sorted_db}"
+        raise AssertionError(msg)
 
     errors = []
     for db_record, cost_record in zip(sorted_db, sorted_costs):
@@ -834,7 +838,8 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
 
     if failures:
         failures_str = "\n".join(failures)
-        raise AssertionError(f"Unexpected parameter proposal values in db-sync:\n{failures_str}")
+        msg = f"Unexpected parameter proposal values in db-sync:\n{failures_str}"
+        raise AssertionError(msg)
 
     return param_proposal_db
 
