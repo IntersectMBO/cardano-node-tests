@@ -70,8 +70,10 @@ class TestTreasuryWithdrawals:
 
         # Linked user stories
         req_cli15 = requirements.Req(id="CLI015", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP31a-06", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP031a-06", group=requirements.GroupsKnown.CHANG_US)
         req_cip31f = requirements.Req(id="CIP031f", group=requirements.GroupsKnown.CHANG_US)
+        req_cip33 = requirements.Req(id="CIP033", group=requirements.GroupsKnown.CHANG_US)
+        req_cip48 = requirements.Req(id="CIP048", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -273,6 +275,7 @@ class TestTreasuryWithdrawals:
         _cast_vote(approve=False, vote_id="no")
 
         # Vote & approve the action
+        req_cip48.start(url=helpers.get_vcs_link())
         voted_votes = _cast_vote(approve=True, vote_id="yes")
 
         # Check ratification
@@ -311,12 +314,15 @@ class TestTreasuryWithdrawals:
             msg = "Not all actions got removed"
             raise AssertionError(msg)
 
+        req_cip33.start(url=helpers.get_vcs_link())
+
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
             == transfer_amt * actions_num
         ), "Incorrect reward account balance"
+        [r.success() for r in (req_cip33, req_cip48)]
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -371,6 +377,12 @@ class TestTreasuryWithdrawals:
         req_cli26 = requirements.Req(id="CLI026", group=requirements.GroupsKnown.CHANG_US)
         req_int_cip30ex = requirements.Req(
             id="intCIP030ex", group=requirements.GroupsKnown.CHANG_US
+        )
+        req_int_cip32ex = requirements.Req(
+            id="intCIP032ex", group=requirements.GroupsKnown.CHANG_US
+        )
+        req_int_cip34ex = requirements.Req(
+            id="intCIP034ex", group=requirements.GroupsKnown.CHANG_US
         )
 
         # Create stake address and registration certificate
@@ -580,6 +592,7 @@ class TestTreasuryWithdrawals:
         ), "Incorrect reward account balance"
 
         # Check that the actions expired
+        req_int_cip32ex.start(url=helpers.get_vcs_link())
         epochs_to_expiration = (
             cluster.conway_genesis["govActionLifetime"]
             + 1
@@ -623,16 +636,18 @@ class TestTreasuryWithdrawals:
                 check_on_devel=False,
             ).finish_test()
 
+        req_int_cip34ex.start(url=helpers.get_vcs_link())
         assert (
             rem_deposit_returned == init_return_account_balance + actions_deposit_combined
         ), "Incorrect return account balance"
 
-        req_int_cip30ex.success()
+        [r.success() for r in (req_int_cip30ex, req_int_cip34ex)]
 
         # Additional checks of governance state output
         assert governance_utils.lookup_expired_actions(
             gov_state=expire_gov_state, action_txid=action_txid
         ), "Action not found in removed actions"
+        req_int_cip32ex.success()
         assert governance_utils.lookup_proposal(
             gov_state=expire_gov_state, action_txid=action_txid
         ), "Action no longer found in proposals"

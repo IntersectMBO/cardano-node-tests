@@ -98,10 +98,22 @@ class TestPParamUpdate:
         # Linked user stories
         req_cli17 = requirements.Req(id="CLI017", group=requirements.GroupsKnown.CHANG_US)
         req_cip6 = requirements.Req(id="CIP006", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP31a-05", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP031a-05", group=requirements.GroupsKnown.CHANG_US)
         req_cip31e = requirements.Req(id="CIP031e", group=requirements.GroupsKnown.CHANG_US)
+        req_cip37 = requirements.Req(id="CIP037", group=requirements.GroupsKnown.CHANG_US)
+        req_cip44 = requirements.Req(id="CIP044", group=requirements.GroupsKnown.CHANG_US)
+        req_cip45 = requirements.Req(id="CIP045", group=requirements.GroupsKnown.CHANG_US)
+        req_cip46 = requirements.Req(id="CIP046", group=requirements.GroupsKnown.CHANG_US)
+        req_cip47 = requirements.Req(id="CIP047", group=requirements.GroupsKnown.CHANG_US)
+        req_cip49 = requirements.Req(id="CIP049", group=requirements.GroupsKnown.CHANG_US)
+        req_cip50 = requirements.Req(id="CIP050", group=requirements.GroupsKnown.CHANG_US)
+        req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
+        req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
 
         # PParam groups
+
+        _groups_url = helpers.get_vcs_link()
+        [r.start(url=_groups_url) for r in (req_cip49, req_cip50, req_cip51, req_cip52)]
 
         network_g_proposals = [
             clusterlib_utils.UpdateProposal(
@@ -342,7 +354,27 @@ class TestPParamUpdate:
         ]
 
         # Hand-picked parameters and values that can stay changed even for other tests
+        cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
         fin_update_proposals = [
+            # From network group
+            clusterlib_utils.UpdateProposal(
+                arg="--max-collateral-inputs",
+                value=cur_pparams["maxCollateralInputs"],
+                name="maxCollateralInputs",
+            ),
+            # From economic group
+            clusterlib_utils.UpdateProposal(
+                arg="--min-pool-cost",
+                value=cur_pparams["minPoolCost"],
+                name="minPoolCost",
+            ),
+            # From technical group
+            clusterlib_utils.UpdateProposal(
+                arg="--collateral-percent",
+                value=cur_pparams["collateralPercentage"],
+                name="collateralPercentage",
+            ),
+            # From governance group
             clusterlib_utils.UpdateProposal(
                 arg="--committee-term-length",
                 value=random.randint(11000, 12000),
@@ -352,11 +384,6 @@ class TestPParamUpdate:
                 arg="--drep-activity",
                 value=random.randint(101, 120),
                 name="dRepActivity",
-            ),
-            clusterlib_utils.UpdateProposal(
-                arg="--max-block-header-size",
-                value=random.randint(1100, 1150),
-                name="maxBlockHeaderSize",
             ),
         ]
         if configuration.HAS_CC:
@@ -446,6 +473,9 @@ class TestPParamUpdate:
             proposal_names = {p.name for p in proposals}
 
             return action_txid, action_ix, proposal_names
+
+        _vote_url = helpers.get_vcs_link()
+        [r.start(url=_vote_url) for r in (req_cip44, req_cip45, req_cip46, req_cip47)]
 
         # Vote on update proposals from network group that will NOT get approved by DReps
         net_nodrep_update_proposals = random.sample(network_g_proposals, 3)
@@ -555,30 +585,30 @@ class TestPParamUpdate:
             )
 
         # Vote on the final action that will be enacted
+        req_cip37.start(url=_action_url)
         fin_action_txid, fin_action_ix, fin_proposal_names = _create_pparams_action(
             proposals=fin_update_proposals
         )
+        assert fin_proposal_names.isdisjoint(
+            SECURITY_PPARAMS
+        ), "There are security pparams being changed"
 
-        fin_add_spo_votes = True
-
-        if fin_proposal_names.isdisjoint(SECURITY_PPARAMS):
-            # Check that SPOs cannot vote on change of constitution action
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                conway_common.cast_vote(
-                    cluster_obj=cluster,
-                    governance_data=governance_data,
-                    name_template=f"{temp_template}_fin_with_spos",
-                    payment_addr=pool_user_lg.payment,
-                    action_txid=fin_action_txid,
-                    action_ix=fin_action_ix,
-                    approve_cc=False,
-                    approve_drep=False,
-                    approve_spo=True,
-                )
-            err_str = str(excinfo.value)
-            assert "StakePoolVoter" in err_str, err_str
-
-            fin_add_spo_votes = False
+        # Check that SPOs cannot vote on change of constitution action if no security params
+        # are being changed.
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_fin_with_spos",
+                payment_addr=pool_user_lg.payment,
+                action_txid=fin_action_txid,
+                action_ix=fin_action_ix,
+                approve_cc=False,
+                approve_drep=False,
+                approve_spo=True,
+            )
+        err_str = str(excinfo.value)
+        assert "StakePoolVoter" in err_str, err_str
 
         # Vote & disapprove the action
         conway_common.cast_vote(
@@ -590,7 +620,6 @@ class TestPParamUpdate:
             action_ix=fin_action_ix,
             approve_cc=False,
             approve_drep=False,
-            approve_spo=False if fin_add_spo_votes else None,
         )
 
         # Vote & approve the action
@@ -603,7 +632,6 @@ class TestPParamUpdate:
             action_ix=fin_action_ix,
             approve_cc=True,
             approve_drep=True,
-            approve_spo=True if fin_add_spo_votes else None,
         )
         fin_approve_epoch = cluster.g_query.get_epoch()
 
@@ -734,6 +762,20 @@ class TestPParamUpdate:
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
         _check_state(enact_gov_state["enactState"])
+        [
+            r.success()
+            for r in (
+                req_cip37,
+                req_cip44,
+                req_cip45,
+                req_cip46,
+                req_cip47,
+                req_cip49,
+                req_cip50,
+                req_cip51,
+                req_cip52,
+            )
+        ]
         if configuration.HAS_CC:
             req_cip6.success()
 
