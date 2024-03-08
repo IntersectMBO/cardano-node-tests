@@ -73,7 +73,15 @@ class TestNoConfidence:
         req_int_cip30en = requirements.Req(
             id="intCIP030en", group=requirements.GroupsKnown.CHANG_US
         )
-        req_cip31a = requirements.Req(id="intCIP31a-04", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP031a-04", group=requirements.GroupsKnown.CHANG_US)
+        req_int_cip32en = requirements.Req(
+            id="intCIP032en", group=requirements.GroupsKnown.CHANG_US
+        )
+        req_int_cip34en = requirements.Req(
+            id="intCIP034en", group=requirements.GroupsKnown.CHANG_US
+        )
+        req_cip39 = requirements.Req(id="CIP039", group=requirements.GroupsKnown.CHANG_US)
+        req_cip41 = requirements.Req(id="CIP041", group=requirements.GroupsKnown.CHANG_US)
 
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
@@ -176,6 +184,7 @@ class TestNoConfidence:
         )
 
         # Vote & approve the action
+        req_cip39.start(url=helpers.get_vcs_link())
         voted_votes = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -234,13 +243,14 @@ class TestNoConfidence:
             assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
 
             # Check enactment
+            req_int_cip32en.start(url=helpers.get_vcs_link())
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
             )
             assert not enact_gov_state["enactState"]["committee"], "Committee is not empty"
-            req_cip13.success()
+            [r.success() for r in (req_cip13, req_cip39)]
 
             enact_prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
@@ -248,7 +258,9 @@ class TestNoConfidence:
             )
             assert enact_prev_action_rec.txid == action_txid, "Incorrect previous action Txid"
             assert enact_prev_action_rec.ix == action_ix, "Incorrect previous action index"
+            req_int_cip32en.success()
 
+            req_int_cip34en.start(url=helpers.get_vcs_link())
             enact_deposit_returned = cluster.g_query.get_stake_addr_info(
                 pool_user_lg.stake.address
             ).reward_account_balance
@@ -256,8 +268,7 @@ class TestNoConfidence:
             assert (
                 enact_deposit_returned == init_return_account_balance + deposit_amt
             ), "Incorrect return account balance"
-
-            req_int_cip30en.success()
+            [r.success() for r in (req_int_cip30en, req_int_cip34en)]
 
             # Try to vote on enacted action
             with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -274,12 +285,14 @@ class TestNoConfidence:
             err_str = str(excinfo.value)
             assert "(GovActionsDoNotExist" in err_str, err_str
 
+            req_cip41.start(url=helpers.get_vcs_link())
             governance_setup.reinstate_committee(
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_reinstate2",
                 pool_user=pool_user_lg,
             )
+            req_cip41.success()
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=no_confidence_action)

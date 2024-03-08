@@ -227,7 +227,7 @@ class TestCommittee:
 
         # Linked user stories
         req_cip7 = requirements.Req(id="CIP007", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP31a-01", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP031a-01", group=requirements.GroupsKnown.CHANG_US)
 
         cc_auth_records = [
             governance_utils.get_cc_member_auth_record(
@@ -347,6 +347,7 @@ class TestCommittee:
         req_cip5 = requirements.Req(id="CIP005", group=requirements.GroupsKnown.CHANG_US)
         req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
+        req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
 
         # Auth keys for CC members
@@ -633,6 +634,7 @@ class TestCommittee:
 
         # Vote & approve the action
         request.addfinalizer(_resign)
+        req_cip40.start(url=helpers.get_vcs_link())
         voted_votes_add = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -732,6 +734,7 @@ class TestCommittee:
             gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{_cur_epoch}"
         )
         _check_add_state(enact_add_gov_state["enactState"])
+        req_cip40.success()
 
         # Check committee state after enactment
         enact_add_committee_state = cluster.g_conway_governance.query.committee_state()
