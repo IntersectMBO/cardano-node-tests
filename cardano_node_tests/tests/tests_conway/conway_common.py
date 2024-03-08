@@ -56,7 +56,18 @@ def possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
 
 def get_yes_abstain_vote(idx: int) -> clusterlib.Votes:
     """Check that votes of DReps who abstained are not considered as "No" votes."""
-    if idx % 2 == 0:
+    if idx == 1 or idx % 2 == 0:
+        return clusterlib.Votes.YES
+    if idx % 3 == 0:
+        return clusterlib.Votes.NO
+    return clusterlib.Votes.ABSTAIN
+
+
+def get_no_abstain_vote(idx: int) -> clusterlib.Votes:
+    """Check that votes of DReps who abstained are not considered as "No" votes."""
+    if idx == 1 or idx % 2 == 0:
+        return clusterlib.Votes.NO
+    if idx % 3 == 0:
         return clusterlib.Votes.YES
     return clusterlib.Votes.ABSTAIN
 
@@ -77,6 +88,7 @@ def get_pool_user(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str,
+    fund_amount: int = 1000_000_000,
 ) -> clusterlib.PoolUser:
     """Create a pool user."""
     with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
@@ -96,6 +108,7 @@ def get_pool_user(
         pool_user.payment,
         cluster_obj=cluster_obj,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
+        amount=fund_amount,
     )
 
     # Register the stake address
@@ -153,7 +166,7 @@ def cast_vote(
                 vote_name=f"{name_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote=get_yes_abstain_vote(i) if approve_cc else clusterlib.Votes.NO,
+                vote=get_yes_abstain_vote(i) if approve_cc else get_no_abstain_vote(i),
                 cc_hot_vkey_file=m.hot_vkey_file,
                 anchor_url=f"http://www.cc-vote{i}.com",
                 anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
@@ -169,7 +182,7 @@ def cast_vote(
                 vote_name=f"{name_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote=get_yes_abstain_vote(i) if approve_drep else clusterlib.Votes.NO,
+                vote=get_yes_abstain_vote(i) if approve_drep else get_no_abstain_vote(i),
                 drep_vkey_file=d.key_pair.vkey_file,
                 anchor_url=f"http://www.drep-vote{i}.com",
                 anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
@@ -185,7 +198,7 @@ def cast_vote(
                 vote_name=f"{name_template}_pool{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote=get_yes_abstain_vote(i) if approve_spo else clusterlib.Votes.NO,
+                vote=get_yes_abstain_vote(i) if approve_spo else get_no_abstain_vote(i),
                 cold_vkey_file=p.vkey_file,
                 anchor_url=f"http://www.spo-vote{i}.com",
                 anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
@@ -219,7 +232,7 @@ def cast_vote(
 
     tx_output = clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster_obj,
-        name_template=f"{name_template}_vote_",
+        name_template=f"{name_template}_vote",
         src_address=payment_addr.address,
         use_build_cmd=True,
         tx_files=tx_files,
