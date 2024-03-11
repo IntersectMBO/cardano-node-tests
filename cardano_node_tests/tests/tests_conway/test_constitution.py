@@ -67,7 +67,8 @@ class TestConstitution:
         req_cli13 = requirements.Req(id="CLI013", group=requirements.GroupsKnown.CHANG_US)
         req_cli20 = requirements.Req(id="CLI020", group=requirements.GroupsKnown.CHANG_US)
         req_cip1 = requirements.Req(id="CIP001", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP31a-02", group=requirements.GroupsKnown.CHANG_US)
+        req_cip31a = requirements.Req(id="intCIP031a-02", group=requirements.GroupsKnown.CHANG_US)
+        req_cip42 = requirements.Req(id="CIP042", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -140,6 +141,7 @@ class TestConstitution:
         )
 
         # Vote & approve the action
+        req_cip42.start(url=helpers.get_vcs_link())
         voted_votes = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -199,6 +201,7 @@ class TestConstitution:
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
         _check_state(enact_gov_state["enactState"])
+        req_cip42.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:

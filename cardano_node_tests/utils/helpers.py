@@ -1,4 +1,5 @@
 import argparse
+import collections
 import contextlib
 import datetime
 import functools
@@ -286,3 +287,19 @@ def tool_has(command: str) -> bool:
 
     cmd_err = err_str.split(":", maxsplit=1)[1].strip()
     return not cmd_err.startswith("Invalid")
+
+
+def flatten(
+    iterable: tp.Iterable, ltypes: type[tp.Iterable[tp.Any]] = collections.abc.Iterable
+) -> tp.Generator:
+    """Flatten an irregular (arbitrarily nested) iterable of iterables."""
+    remainder = iter(iterable)
+    while True:
+        try:
+            first = next(remainder)
+        except StopIteration:
+            break
+        if isinstance(first, ltypes) and not isinstance(first, (str, bytes)):
+            remainder = itertools.chain(first, remainder)
+        else:
+            yield first

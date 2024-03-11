@@ -1,5 +1,6 @@
 # README for cardano-node-tests
 
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 System and end-to-end (E2E) tests for cardano-node.
@@ -47,29 +48,16 @@ Sometimes it is useful to run individual tests and keep the local cluster runnin
     nix develop --accept-flake-config
     ```
 
-1. prepare work dir
+1. prepare testing environment
 
     ```sh
-    rm -rf dev_workdir
-    mkdir -p dev_workdir/tmp
-    ```
-
-1. set the cluster environment
-
-    ```sh
-    export CARDANO_NODE_SOCKET_PATH=$PWD/dev_workdir/state-cluster0/bft1.socket TMPDIR=$PWD/dev_workdir/tmp COMMAND_ERA=conway CLUSTER_ERA=conway DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 NO_ARTIFACTS=1
-    ```
-
-1. generate the cluster scripts
-
-    ```sh
-    PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py -s "cardano_node_tests/cluster_scripts/conway_fast" -d dev_workdir/conway_fast
+    source ./prepare_test_env.sh babbage  # 'conway' is also supported
     ```
 
 1. start the cluster instance
 
     ```sh
-    ./dev_workdir/conway_fast/start-cluster
+    ./dev_workdir/babbage_fast/start-cluster
     ```
 
 1. run some test
@@ -83,7 +71,7 @@ Sometimes it is useful to run individual tests and keep the local cluster runnin
 1. stop the cluster instance
 
     ```sh
-    ./dev_workdir/conway_fast/stop-cluster
+    ./dev_workdir/babbage_fast/stop-cluster
     ```
 
 ## Variables for configuring testrun
@@ -145,7 +133,7 @@ Install and configure poetry, follow [Poetry documentation](https://python-poetr
 Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
 
 ```sh
-./setup_venv.sh
+./setup_dev_venv.sh
 ```
 
 ### Running development cluster
@@ -228,10 +216,10 @@ Restaring the running development cluster is useful mainly when using the "babba
 
 ### Checking the development environment
 
-To check that the development environment was correctly setup, run the `./check_env.sh` script.
+To check that the development environment was correctly setup, run the `./check_dev_env.sh` script.
 
 ```text
-$ ./check_env.sh
+$ ./check_dev_env.sh
 'cardano-node' available: ✔
 'cardano-cli' available: ✔
 'python' available: ✔
@@ -306,7 +294,7 @@ To install cardano-clusterlib in development mode:
 1. update virtual env (answer 'y' to question "Install into the current virtual env? [y/N]")
 
     ```sh
-    ./setup_venv.sh
+    ./setup_dev_venv.sh
     ```
 
 1. uninstall `cardano-clusterlib` installed by poetry
@@ -339,7 +327,15 @@ To install cardano-clusterlib in development mode:
     python -c 'from cardano_clusterlib import clusterlib_klass; print(clusterlib_klass.__file__)'
     ```
 
-Note that after you run `poetry install` (eg through running `./setup_venv.sh`), poetry will reinstall `cardano-clusterlib`. If you want to keep using cardano-clusterlib in development mode, you'll need to repeat the steps above.
+Note that after you run `poetry install` (eg through running `./setup_dev_venv.sh`), poetry will reinstall `cardano-clusterlib`. If you want to keep using cardano-clusterlib in development mode, you'll need to repeat the steps above.
+
+### Updating dependencies using poetry
+
+Edit `pyproject.toml` and run
+
+```sh
+./poetry_update_deps.sh
+```
 
 ### Building documentation
 

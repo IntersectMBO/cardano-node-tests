@@ -72,10 +72,14 @@ set +e
 # shellcheck disable=SC2086
 nix flake update --accept-flake-config $NODE_OVERRIDE
 # shellcheck disable=SC2016
-nix develop --accept-flake-config --command bash -c '
+nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step1"
   printf "finish: %(%H:%M:%S)T\n" -1
   echo "::endgroup::"  # end group for "Nix env setup"
+
+  echo "::group::Python venv setup"
+  . .github/setup_venv.sh clean
+  echo "::endgroup::"  # end group for "Python venv setup"
 
   echo "::group::Pytest step1"
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
@@ -104,8 +108,12 @@ fi
 # shellcheck disable=SC2086
 nix flake update --accept-flake-config $NODE_OVERRIDE
 # shellcheck disable=SC2016
-nix develop --accept-flake-config --command bash -c '
+nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step2"
+
+  echo "::group::Python venv setup"
+  . .github/setup_venv.sh clean
+  echo "::endgroup::"  # end group for "Python venv setup"
 
   # update cluster nodes, run smoke tests
   ./.github/node_upgrade_pytest.sh step2
