@@ -12,6 +12,12 @@ get_version() {
     echo "${version#* }"
 }
 
+get_rev() {
+    local revision
+    revision="$("$1" --version | grep "git rev")"
+    echo "${revision#* }"
+}
+
 true="$(printf '\033[0;32m\u2714\033[0m' | iconv -f UTF-8)"
 false="$(printf '\u274c' | iconv -f UTF-8)"
 
@@ -90,8 +96,8 @@ if [ "$HAS_PYTHON" = "$true" ]; then
 fi
 
 if [ "$HAS_NODE" = "$true" ] && [ "$HAS_CLI" = "$true" ]; then
-  NODE_VERSION="$(get_version cardano-node)"
-  CLI_VERSION="$(get_version cardano-cli)"
+  NODE_VERSION="$(get_rev cardano-node)"
+  CLI_VERSION="$(get_rev cardano-cli)"
   SAME_VERSION="$([ "$NODE_VERSION" = "$CLI_VERSION" ]; process_result)" || exit_code=1
   printf "same version of node and cli: $SAME_VERSION\n"
 fi
