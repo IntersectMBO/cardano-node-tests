@@ -104,6 +104,15 @@
             postgres = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ glibcLocales postgresql lsof procps ];
             };
+            venv = (
+              cardano-node.devShells.${system}.devops
+            ).overrideAttrs (oldAttrs: rec {
+              nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ oldAttrs.nativeBuildInputs ++ [
+                cardano-node.packages.${system}.cardano-submit-api
+                pkgs.python3Packages.pip
+                pkgs.python3Packages.virtualenv
+              ];
+            });
             default = (
               cardano-node.devShells.${system}.devops or (
                 # Compat with 1.34.1:

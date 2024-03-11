@@ -126,15 +126,21 @@ set +e
 # shellcheck disable=SC2046,SC2119
 nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
-nix develop --accept-flake-config --command bash -c '
+nix develop --accept-flake-config .#venv --command bash -c '
   printf "finish: %(%H:%M:%S)T\n" -1
   echo "::endgroup::"  # end group for "Nix env setup"
+
+  echo "::group::Python venv setup"
+  . .github/setup_venv.sh
+  echo "::endgroup::"  # end group for "Python venv setup"
+
   echo "::group::Pytest run"
   export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   make "${MAKE_TARGET:-"tests"}"
   retval="$?"
   echo "::endgroup::"
+
   echo "::group::Collect artifacts"
   ./.github/cli_coverage.sh .
   exit "$retval"
