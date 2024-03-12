@@ -163,8 +163,9 @@ cd cardano-node || exit 1
 git fetch --all --recurse-submodules --tags
 
 # Checkout with prechecks for git object and git object type
-if [[ "$(git cat-file -t "$GIT_OBJECT")" != "commit" ]]; then
-  >&2 echo "'$(git cat-file -t "$GIT_OBJECT")' does not refer to a commit/tag."
+OBJ_TYPE="$(git cat-file -t "$GIT_OBJECT")"
+if [[ "$OBJ_TYPE" != "commit" && "$OBJ_TYPE" != "tag" ]]; then
+  >&2 echo "'$OBJ_TYPE' does not refer to a commit/tag."
   exit 1
 fi
 
