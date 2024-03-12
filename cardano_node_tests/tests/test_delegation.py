@@ -11,7 +11,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -149,7 +148,6 @@ def stake_address_option_unusable() -> bool:
     )
 
 
-@pytest.mark.testnets
 @pytest.mark.order(8)
 class TestDelegateAddr:
     """Tests for stake address delegation."""
@@ -158,6 +156,7 @@ class TestDelegateAddr:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_delegate_using_pool_id(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -201,10 +200,6 @@ class TestDelegateAddr:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.smoke
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET,
-        reason="supposed to run on cluster with pools",
-    )
     def test_delegate_using_vkey(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -402,6 +397,7 @@ class TestDelegateAddr:
     @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
+    @pytest.mark.testnets
     def test_deregister_delegated(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -569,6 +565,7 @@ class TestDelegateAddr:
     @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
+    @pytest.mark.testnets
     def test_undelegate(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -716,6 +713,7 @@ class TestDelegateAddr:
         ("vkey_file", "stake_address"),
     )
     @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_addr_delegation_deregistration(
         self,
         cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
