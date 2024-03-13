@@ -12,6 +12,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -280,6 +281,7 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     def test_addr_registration_certificate_order(
@@ -288,6 +290,7 @@ class TestRegisterAddr:
         pool_users: tp.List[clusterlib.PoolUser],
         pool_users_disposable: tp.List[clusterlib.PoolUser],
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Submit (de)registration certificates in single TX and check that the order matter.
 
@@ -305,7 +308,7 @@ class TestRegisterAddr:
         user_payment = pool_users[0].payment
         src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
-        # create stake address registration cert
+        # Create stake address registration cert
         address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
@@ -314,14 +317,14 @@ class TestRegisterAddr:
             stake_vkey_file=user_registered.stake.vkey_file,
         )
 
-        # create stake address deregistration cert
+        # Create stake address deregistration cert
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=address_deposit,
             stake_vkey_file=user_registered.stake.vkey_file,
         )
 
-        # register, deregister, register, deregister and register stake address in single TX
+        # Register, deregister, register, deregister and register stake address in single TX
         # prove that the order matters
         tx_files = clusterlib.TxFiles(
             certificate_files=[
@@ -336,35 +339,22 @@ class TestRegisterAddr:
 
         deposit = cluster.g_query.get_address_deposit()
 
-        if use_build_cmd:
-            tx_raw_output = cluster.g_transaction.build_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg_dereg_cert_order",
-                tx_files=tx_files,
-                fee_buffer=2_000_000,
-                witness_override=len(tx_files.signing_key_files),
-                deposit=deposit,
-            )
-            tx_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=f"{temp_template}_reg_dereg_cert_order",
-            )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-        else:
-            tx_raw_output = cluster.g_transaction.send_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg_dereg",
-                tx_files=tx_files,
-                deposit=deposit,
-            )
+        tx_raw_output = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            src_address=user_payment.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files,
+            deposit=deposit,
+        )
 
-        # check that the stake address is registered
+        # Check that the stake address is registered
         assert cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
-        # check that the balance for source address was correctly updated and that key deposit
+        # Check that the balance for source address was correctly updated and that key deposit
         # was needed
         assert (
             cluster.g_query.get_address_balance(user_payment.address)
