@@ -489,15 +489,18 @@ def create_script_context_w_blockers(
             tx_file=tx_file,
         )
     except AssertionError as err:
-        if "DeserialiseFailure" in str(err):
+        str_err = str(err)
+        if "Unwitnessed Tx ConwayEra" in str_err:
+            pytest.xfail("create-script-context: unsupported 'Unwitnessed Tx ConwayEra'")
+        if "DeserialiseFailure" in str_err:
             blockers.GH(
                 issue=583, repo="IntersectMBO/plutus-apps", message="DeserialiseFailure"
             ).finish_test()
-        if "TextEnvelopeTypeError" in str(err):
+        if "TextEnvelopeTypeError" in str_err:
             blockers.GH(
                 issue=1078, repo="IntersectMBO/plutus-apps", message="TextEnvelopeTypeError"
             ).finish_test()
-        if "PlutusScriptV1 custom redeemer not wired up" in str(err):
+        if "PlutusScriptV1 custom redeemer not wired up" in str_err:
             blockers.GH(
                 issue=1107,
                 repo="IntersectMBO/plutus-apps",
