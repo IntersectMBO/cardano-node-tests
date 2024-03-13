@@ -260,8 +260,16 @@ def _build_spend_locked_txin(  # noqa: C901
         try:
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
         except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
+                blockers.GH(
+                    issue=4198,
+                    repo="IntersectMBO/cardano-ledger",
+                    fixed_in="8.10.0",
+                    message="Conway: submit fails with invalid Plutus script",
+                ).finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
-            if "(BadInputsUTxO" not in str(exc):
+            if "(BadInputsUTxO" not in str_exc:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
