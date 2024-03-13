@@ -15,6 +15,7 @@ from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -117,16 +118,6 @@ class TestCollateralOutput:
         )
         cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
 
-        cluster.wait_for_new_block(new_blocks=2)
-        try:
-            cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
-        except clusterlib.CLIError as exc:
-            # Check if resubmitting failed because an input UTxO was already spent
-            if "(BadInputsUTxO" not in str(exc):
-                raise
-        else:
-            pytest.fail("Transaction was not submitted successfully")
-
         return tx_output_redeem
 
     @allure.link(helpers.get_vcs_link())
@@ -214,6 +205,26 @@ class TestCollateralOutput:
                 fixed_in="8.9.0",
                 message="submit fails with invalid Plutus script",
             ).finish_test()
+
+        cluster.wait_for_new_block(new_blocks=2)
+        try:
+            cluster.g_transaction.submit_tx_bare(
+                tx_file=tx_output_redeem.out_file.with_suffix(".signed")
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
+                blockers.GH(
+                    issue=4198,
+                    repo="IntersectMBO/cardano-ledger",
+                    fixed_in="8.10.0",
+                    message="Conway: submit fails with invalid Plutus script",
+                ).finish_test()
+            # Check if resubmitting failed because an input UTxO was already spent
+            if "(BadInputsUTxO" not in str_exc:
+                raise
+        else:
+            pytest.fail("Transaction was not submitted successfully")
 
         # Check that collateral was taken
         spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
@@ -324,6 +335,26 @@ class TestCollateralOutput:
                 fixed_in="8.9.0",
                 message="submit fails with invalid Plutus script",
             ).finish_test()
+
+        cluster.wait_for_new_block(new_blocks=2)
+        try:
+            cluster.g_transaction.submit_tx_bare(
+                tx_file=tx_output_redeem.out_file.with_suffix(".signed")
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
+                blockers.GH(
+                    issue=4198,
+                    repo="IntersectMBO/cardano-ledger",
+                    fixed_in="8.10.0",
+                    message="Conway: submit fails with invalid Plutus script",
+                ).finish_test()
+            # Check if resubmitting failed because an input UTxO was already spent
+            if "(BadInputsUTxO" not in str_exc:
+                raise
+        else:
+            pytest.fail("Transaction was not submitted successfully")
 
         # Check that collateral was taken
         spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
