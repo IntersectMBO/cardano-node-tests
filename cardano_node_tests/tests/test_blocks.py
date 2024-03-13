@@ -417,6 +417,7 @@ class TestDynamicBlockProd:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     def test_dynamic_block_production(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -458,6 +459,10 @@ class TestDynamicBlockProd:
             and curr_epoch < 2
         ):
             curr_epoch = cluster.wait_for_new_epoch(new_epochs=2 - curr_epoch)
+
+        # The network needs to be at least in epoch 1
+        if curr_epoch < 1:
+            curr_epoch = cluster.wait_for_new_epoch(new_epochs=1)
 
         # The cluster needs respin after this point
         cluster_manager.set_needs_respin()
