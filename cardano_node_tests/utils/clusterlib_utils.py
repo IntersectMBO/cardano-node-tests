@@ -63,6 +63,7 @@ def build_and_submit_tx(
     complex_certs: clusterlib.OptionalScriptCerts = (),
     change_address: str = "",
     fee_buffer: tp.Optional[int] = None,
+    raw_fee: tp.Optional[int] = None,
     required_signers: cl_types.OptionalFiles = (),
     required_signer_hashes: tp.Optional[tp.List[str]] = None,
     withdrawals: clusterlib.OptionalTxOuts = (),
@@ -130,7 +131,7 @@ def build_and_submit_tx(
             withdrawals=withdrawals,
             script_withdrawals=script_withdrawals,
         )
-        fee = cluster_obj.g_transaction.calculate_tx_fee(
+        fee = raw_fee or cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=name_template,
             txins=txins,
