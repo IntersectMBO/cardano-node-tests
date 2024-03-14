@@ -53,16 +53,14 @@ Nightly results
    * default (legacy) network topology
    * skip long-running tests
    * cluster starts directly in Babbage era
-* `nightly-governance-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-governance-cc/>`__:  |nightly-governance-cc-badge|
+* `nightly-conway-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-cc/>`__:  |nightly-conway-cc-badge|
    * network in Conway era
    * P2P network topology
-   * run only Conway governance tests
    * Constitutional Commitee has 3 members
    * cluster starts directly in Conway era
-* `nightly-governance-no-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-governance-no-cc/>`__:  |nightly-governance-nocc-badge|
+* `nightly-conway-no-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-no-cc/>`__:  |nightly-conway-nocc-badge|
    * network in Conway era
    * P2P network topology
-   * run only Conway governance tests
    * Constitutional Commitee has 0 members
    * cluster starts directly in Conway era
 
@@ -118,8 +116,8 @@ Nightly upgrade testing
 .. |nightly-upgrade-step3-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-upgrade%2Fstep3%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step3/
 
-.. |nightly-governance-cc-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-governance-cc%2Fbadge.json
-   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-governance-cc/
+.. |nightly-conway-cc-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-conway-cc%2Fbadge.json
+   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-cc/
 
-.. |nightly-governance-nocc-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-governance-no-cc%2Fbadge.json
-   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-governance-no-cc/
+.. |nightly-conway-nocc-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-conway-no-cc%2Fbadge.json
+   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-no-cc/

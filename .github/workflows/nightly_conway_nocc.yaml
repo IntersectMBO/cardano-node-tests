@@ -1,8 +1,8 @@
-name: Nightly tests Governance CC
+name: Nightly tests Conway no CC
 
 on:
   schedule:
-    - cron: '15 7 * * *'
+    - cron: '15 8 * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,7 @@ jobs:
     # reusable workflow from local repo and same branch as this config
     uses: ./.github/workflows/regression_reusable.yaml
     with:
-      env-path: .github/env_nightly_gov_cc
+      env-path: .github/env_nightly_conway_nocc
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}
