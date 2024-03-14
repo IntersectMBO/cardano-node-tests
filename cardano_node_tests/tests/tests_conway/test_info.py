@@ -51,7 +51,7 @@ class TestInfo:
         """Test voting on info action.
 
         * submit an "info" action
-        * vote on the the action
+        * vote on the action
         * check the votes
         """
         # pylint: disable=too-many-locals,too-many-statements
@@ -67,6 +67,7 @@ class TestInfo:
         req_cli24 = requirements.Req(id="CLI024", group=requirements.GroupsKnown.CHANG_US)
         req_cli31 = requirements.Req(id="CLI031", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-03", group=requirements.GroupsKnown.CHANG_US)
+        req_cip59 = requirements.Req(id="CIP059", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -142,7 +143,8 @@ class TestInfo:
                 return clusterlib.Votes.YES
             return clusterlib.Votes.NO
 
-        req_cli21.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cli21, req_cip59)]
         votes_cc = [
             cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
@@ -173,7 +175,7 @@ class TestInfo:
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
         ]
-        req_cli21.success()
+        [r.success() for r in (req_cli21, req_cip59)]
 
         tx_files_vote = clusterlib.TxFiles(
             vote_files=[
