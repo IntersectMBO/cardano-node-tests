@@ -149,33 +149,39 @@ def register_delegate_stake_addr(
     src_init_balance = cluster_obj.g_query.get_address_balance(pool_user.payment.address)
 
     # Register stake address and delegate it to pool
+    execution_units = (218855869, 686154)
+    raw_fee = 400_000
     if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+        execution_units = (258855869, 786154)
+        raw_fee = 500_000
+
         reg_cert_script = clusterlib.ComplexCert(
             certificate_file=stake_addr_reg_cert_file,
             script_file=pool_user.stake.script_file if not reference_script_utxos else "",
             reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
             collaterals=collaterals,
-            execution_units=(218855869, 686154),
+            execution_units=execution_units,
             redeemer_file=redeemer_file,
         )
     else:
         reg_cert_script = clusterlib.ComplexCert(
             certificate_file=stake_addr_reg_cert_file,
         )
+
     deleg_cert_script = clusterlib.ComplexCert(
         certificate_file=stake_addr_deleg_cert_file,
         script_file=pool_user.stake.script_file if not reference_script_utxos else "",
         reference_txin=reference_script_utxos[0] if reference_script_utxos else None,
         collaterals=collaterals,
-        execution_units=(218855869, 686154),
+        execution_units=execution_units,
         redeemer_file=redeemer_file,
     )
 
     tx_files = clusterlib.TxFiles(signing_key_files=[pool_user.payment.skey_file])
-    plutus_costs = []
 
-    if use_build_cmd:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
+    # Calculate cost of Plutus script
+    plutus_costs = (
+        cluster_obj.g_transaction.calculate_plutus_script_cost(
             src_address=pool_user.payment.address,
             tx_name=f"{temp_template}_reg_deleg",
             txins=txins,
@@ -184,37 +190,26 @@ def register_delegate_stake_addr(
             fee_buffer=2_000_000,
             witness_override=len(tx_files.signing_key_files),
         )
-        # Calculate cost of Plutus script
-        plutus_costs = cluster_obj.g_transaction.calculate_plutus_script_cost(
-            src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_reg_deleg",
-            txins=txins,
-            tx_files=tx_files,
-            complex_certs=[reg_cert_script, deleg_cert_script],
-            fee_buffer=2_000_000,
-            witness_override=len(tx_files.signing_key_files),
-        )
-        tx_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_reg_deleg",
-        )
-        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-    else:
-        tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_reg_deleg",
-            txins=txins,
-            tx_files=tx_files,
-            complex_certs=[reg_cert_script, deleg_cert_script],
-            fee=400_000,
-        )
+        if use_build_cmd
+        else []
+    )
+
+    tx_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{temp_template}_reg_deleg",
+        src_address=pool_user.payment.address,
+        txins=txins,
+        use_build_cmd=use_build_cmd,
+        tx_files=tx_files,
+        complex_certs=[reg_cert_script, deleg_cert_script],
+        raw_fee=raw_fee,
+    )
 
     # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit()
     assert (
         cluster_obj.g_query.get_address_balance(pool_user.payment.address)
-        == src_init_balance - deposit - tx_raw_output.fee
+        == src_init_balance - deposit - tx_output.fee
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
     # Check that the stake address was delegated
@@ -222,7 +217,7 @@ def register_delegate_stake_addr(
     assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
     assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-    return tx_raw_output, plutus_costs
+    return tx_output, plutus_costs
 
 
 def register_stake_addr(
