@@ -33,11 +33,12 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def payment_addr(
+def payment_addr_comm(
     cluster_manager: cluster_management.ClusterManager,
-    cluster: clusterlib.ClusterLib,
+    cluster_use_committee: governance_setup.GovClusterT,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
+    cluster, __ = cluster_use_committee
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
@@ -94,8 +95,8 @@ class TestCommittee:
     @pytest.mark.smoke
     def test_register_and_resign_committee_member(
         self,
-        cluster: clusterlib.ClusterLib,
-        payment_addr: clusterlib.AddressRecord,
+        cluster_use_committee: governance_setup.GovClusterT,
+        payment_addr_comm: clusterlib.AddressRecord,
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -106,6 +107,7 @@ class TestCommittee:
         * resign from CC Member position
         * check that CC Member resigned
         """
+        cluster, __ = cluster_use_committee
         temp_template = common.get_test_id(cluster)
 
         # Linked user stories
@@ -132,13 +134,13 @@ class TestCommittee:
 
         tx_files_auth = clusterlib.TxFiles(
             certificate_files=[cc_auth_record.auth_cert],
-            signing_key_files=[payment_addr.skey_file, cc_auth_record.cold_key_pair.skey_file],
+            signing_key_files=[payment_addr_comm.skey_file, cc_auth_record.cold_key_pair.skey_file],
         )
 
         tx_output_auth = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_auth",
-            src_address=payment_addr.address,
+            src_address=payment_addr_comm.address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files_auth,
@@ -147,9 +149,11 @@ class TestCommittee:
 
         auth_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
         assert (
-            clusterlib.filter_utxos(utxos=auth_out_utxos, address=payment_addr.address)[0].amount
+            clusterlib.filter_utxos(utxos=auth_out_utxos, address=payment_addr_comm.address)[
+                0
+            ].amount
             == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
-        ), f"Incorrect balance for source address `{payment_addr.address}`"
+        ), f"Incorrect balance for source address `{payment_addr_comm.address}`"
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (req_cli32, req_cip2, req_cip4)]
@@ -177,13 +181,13 @@ class TestCommittee:
 
         tx_files_res = clusterlib.TxFiles(
             certificate_files=[res_cert],
-            signing_key_files=[payment_addr.skey_file, cc_auth_record.cold_key_pair.skey_file],
+            signing_key_files=[payment_addr_comm.skey_file, cc_auth_record.cold_key_pair.skey_file],
         )
 
         tx_output_res = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_res",
-            src_address=payment_addr.address,
+            src_address=payment_addr_comm.address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files_res,
@@ -199,9 +203,11 @@ class TestCommittee:
 
         res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
         assert (
-            clusterlib.filter_utxos(utxos=res_out_utxos, address=payment_addr.address)[0].amount
+            clusterlib.filter_utxos(utxos=res_out_utxos, address=payment_addr_comm.address)[
+                0
+            ].amount
             == clusterlib.calculate_utxos_balance(tx_output_res.txins) - tx_output_res.fee
-        ), f"Incorrect balance for source address `{payment_addr.address}`"
+        ), f"Incorrect balance for source address `{payment_addr_comm.address}`"
 
         # Check CC member in db-sync
         dbsync_utils.check_committee_member_registration(

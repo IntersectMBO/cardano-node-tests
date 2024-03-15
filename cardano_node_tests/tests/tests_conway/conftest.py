@@ -10,6 +10,22 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture
+def cluster_use_committee(
+    cluster_manager: cluster_management.ClusterManager,
+) -> governance_setup.GovClusterT:
+    """Mark governance committee as "in use" and return instance of `clusterlib.ClusterLib`."""
+    cluster_obj = cluster_manager.get(
+        use_resources=[
+            cluster_management.Resources.COMMITTEE,
+        ]
+    )
+    governance_data = governance_setup.get_default_governance(
+        cluster_manager=cluster_manager, cluster_obj=cluster_obj
+    )
+    return cluster_obj, governance_data
+
+
+@pytest.fixture
 def cluster_use_governance(
     cluster_manager: cluster_management.ClusterManager,
 ) -> governance_setup.GovClusterT:
