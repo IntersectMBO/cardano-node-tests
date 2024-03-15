@@ -7,6 +7,6 @@
             "intCIP031a-04", "intCIP031a-05", "intCIP031a-06"
         ],
         "CIP032": ["intCIP032en", "intCIP032ex"],
-        "CIP034": ["intCIP034en", "intCIP034ex"],
+        "CIP034": ["intCIP034en", "intCIP034ex"]
     }
 }
