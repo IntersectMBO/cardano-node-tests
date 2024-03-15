@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-tests_repo="$1"
+tests_repo="$(readlink -m "${0%/*}/..")"
 reports_dir="$tests_repo/.reports"
 results_tar="$tests_repo/allure-results.tar.xz"
 allure_results_dir="$tests_repo/allure-results"

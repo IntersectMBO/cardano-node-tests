@@ -142,7 +142,8 @@ nix develop --accept-flake-config .#venv --command bash -c '
   echo "::endgroup::"
 
   echo "::group::Collect artifacts"
-  ./.github/cli_coverage.sh .
+  ./.github/cli_coverage.sh
+  ./.github/reqs_coverage.sh
   exit "$retval"
 '
 retval="$?"
@@ -175,7 +176,7 @@ stop_postgres || true
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # create results archive
-  ./.github/results.sh .
+  ./.github/results.sh
 
   # save testing artifacts
   # shellcheck disable=SC1090,SC1091
