@@ -43,7 +43,9 @@ def main() -> None:
     args = get_args()
 
     executed_req = requirements.collect_executed_req(base_dir=args.artifacts_base_dir)
-    report = requirements.get_mapped_req(mapping=args.us_mapping, executed_req=executed_req)
+    report = requirements.get_mapped_req(
+        mapping=args.requirements_mapping, executed_req=executed_req
+    )
 
     helpers.write_json(out_file=args.output_file, content=report)
 
