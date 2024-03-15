@@ -349,6 +349,7 @@ class TestCommittee:
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
         req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
+        req_cip67 = requirements.Req(id="CIP067", group=requirements.GroupsKnown.CHANG_US)
 
         # Auth keys for CC members
         cc_auth_record1 = governance_utils.get_cc_member_auth_record(
@@ -619,6 +620,7 @@ class TestCommittee:
         # Create an action to add new CC members
         add_cc_action, action_add_txid, action_add_ix = _add_members()
 
+        req_cip67.start(url=helpers.get_vcs_link())
         # Vote & disapprove the action
         conway_common.cast_vote(
             cluster_obj=cluster,
@@ -908,6 +910,7 @@ class TestCommittee:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.spo[0])
+        req_cip67.success()
 
         known_issues = []
         if xfail_ledger_3979_msgs:
