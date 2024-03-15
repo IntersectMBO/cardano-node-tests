@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-tests_repo="$1"
+tests_repo="$(readlink -m "${0%/*}/..")"
 
 get_coverage() {
   if [ ! -e "$tests_repo/.cli_coverage" ] || ! hash cardano-cli; then

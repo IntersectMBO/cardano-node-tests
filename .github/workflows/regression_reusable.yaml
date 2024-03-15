@@ -146,6 +146,7 @@ jobs:
             errors_all.log
             testrun-report.xml
             deselected_tests.txt
+            requirements_coverage.json
       - name: Upload CLI coverage
         uses: actions/upload-artifact@v4
         if: success() || failure()
