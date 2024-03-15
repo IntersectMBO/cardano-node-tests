@@ -1,3 +1,2 @@
 CLUSTER_ERA=babbage
 TX_ERA=babbage
-CI_BYRON_CLUSTER=true
