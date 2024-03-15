@@ -109,6 +109,7 @@ class TestPParamUpdate:
         req_cip50 = requirements.Req(id="CIP050", group=requirements.GroupsKnown.CHANG_US)
         req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
         req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
+        req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
 
         # PParam groups
 
@@ -475,7 +476,7 @@ class TestPParamUpdate:
             return action_txid, action_ix, proposal_names
 
         _vote_url = helpers.get_vcs_link()
-        [r.start(url=_vote_url) for r in (req_cip44, req_cip45, req_cip46, req_cip47)]
+        [r.start(url=_vote_url) for r in (req_cip44, req_cip45, req_cip46, req_cip47, req_cip60)]
 
         # Vote on update proposals from network group that will NOT get approved by DReps
         net_nodrep_update_proposals = random.sample(network_g_proposals, 3)
@@ -774,6 +775,7 @@ class TestPParamUpdate:
                 req_cip50,
                 req_cip51,
                 req_cip52,
+                req_cip60,
             )
         ]
         if configuration.HAS_CC:
