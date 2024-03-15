@@ -24,6 +24,7 @@ Nightly results
    * network in Babbage era
    * Babbage transaction era
    * default (legacy) network topology
+   * cluster starts directly in Babbage era
 * `nightly-dbsync <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-dbsync/>`__:  |nightly-dbsync-badge|
    * network in Babbage era
    * Babbage transaction era
@@ -42,11 +43,7 @@ Nightly results
    * Alonzo transaction era
    * default (legacy) network topology
    * skip long-running tests
-* `nightly-mary-tx <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-mary-tx/>`__:  |nightly-mary-tx-badge|
-   * network in Babbage era
-   * Mary transaction era
-   * default (legacy) network topology
-   * skip long-running tests
+   * cluster starts directly in Babbage era
 * `nightly-shelley-tx <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-shelley-tx/>`__:  |nightly-shelley-tx-badge|
    * network in Babbage era
    * Shelley transaction era
@@ -100,9 +97,6 @@ Nightly upgrade testing
 
 .. |nightly-alonzo-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-alonzo-tx%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-alonzo-tx/
-
-.. |nightly-mary-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-mary-tx%2Fbadge.json
-   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-mary-tx/
 
 .. |nightly-shelley-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-shelley-tx%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-shelley-tx/

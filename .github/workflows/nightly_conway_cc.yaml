@@ -2,7 +2,7 @@ name: Nightly tests Conway CC
 
 on:
   schedule:
-    - cron: '15 7 * * *'
+    - cron: '15 03 * * *'
   workflow_dispatch:
 
 jobs:

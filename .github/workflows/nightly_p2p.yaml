@@ -2,7 +2,7 @@ name: Nightly tests P2P
 
 on:
   schedule:
-    - cron: '15 0 * * *'
+    - cron: '15 00 * * *'
   workflow_dispatch:
 
 jobs:
