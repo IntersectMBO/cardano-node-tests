@@ -44,6 +44,12 @@ ISSUE_299 = blockers.GH(
     repo="IntersectMBO/cardano-cli",
     message="Cannot de-register Plutus stake address",
 )
+ISSUE_650 = blockers.GH(
+    issue=650,
+    repo="IntersectMBO/cardano-cli",
+    message="Plutus cost too low",
+    check_on_devel=False,
+)
 
 
 @pytest.fixture
@@ -152,7 +158,7 @@ def register_delegate_stake_addr(
     execution_units = (218855869, 686154)
     raw_fee = 400_000
     if VERSIONS.transaction_era >= VERSIONS.CONWAY:
-        execution_units = (258855869, 786154)
+        execution_units = (240000000, 790000)
         raw_fee = 500_000
 
         reg_cert_script = clusterlib.ComplexCert(
@@ -787,7 +793,7 @@ class TestDelegateAddr:
             )
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
-            if not (
+            if (
                 # Old cardano-cli 297 issue
                 "(MissingScriptWitnessesUTXOW" in str_exc
                 or "(MissingRedeemers" in str_exc
@@ -795,8 +801,10 @@ class TestDelegateAddr:
                 or "(ExtraRedeemers" in str_exc
                 or "points to a script hash that is not known" in str_exc
             ):
-                raise
-            ISSUE_297.finish_test()
+                ISSUE_297.finish_test()
+            if use_build_cmd and "overspent budget" in str_exc:
+                ISSUE_650.finish_test()
+            raise
 
         assert (
             cluster.g_query.get_epoch() == init_epoch
