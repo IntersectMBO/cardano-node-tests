@@ -16,6 +16,7 @@ from cardano_node_tests.tests import delegation
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import requirements
@@ -222,6 +223,7 @@ class TestDReps:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_register_and_retire_drep(
@@ -241,6 +243,7 @@ class TestDReps:
         """
         # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
+        errors_final = []
 
         # Linked user stories
         req_cli8 = requirements.Req(id="CLI008", group=requirements.GroupsKnown.CHANG_US)
@@ -311,6 +314,11 @@ class TestDReps:
             == "592e53f74765c8c6c97dfda2fd6038236ffc7ad55800592118d9e36ad1c8140d"
         ), "Unexpected metadata hash"
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
+        try:
+            dbsync_utils.check_drep_registration(drep=reg_drep, drep_state=reg_drep_state)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            errors_final.append(f"DB-Sync unexpected DRep registration error: {str_exc}")
         req_cli12.success()
 
         # Retire DRep
@@ -354,6 +362,13 @@ class TestDReps:
             - tx_output_ret.fee
             + reg_drep.deposit
         ), f"Incorrect balance for source address `{payment_addr.address}`"
+        try:
+            dbsync_utils.check_drep_deregistration(drep=reg_drep)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            errors_final.append(f"DB-Sync unexpected DRep deregistration error: {str_exc}")
+        if errors_final:
+            raise AssertionError("\n".join(errors_final))
 
 
 class TestNegativeDReps:

@@ -367,6 +367,20 @@ class CommitteeDeregistrationDBRow:
     cold_key: memoryview
 
 
+@dataclasses.dataclass(frozen=True)
+class DrepRegistrationDBRow:
+    # pylint: disable-next=invalid-name
+    id: int
+    tx_id: int
+    cert_index: int
+    deposit: int
+    drep_hash_id: int
+    voting_anchor_id: int
+    hash_raw: memoryview
+    hash_view: str
+    has_script: bool
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -997,3 +1011,24 @@ def query_committee_deregistration(
     with execute(query=query, vars=(rf"\x{cold_key}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield CommitteeDeregistrationDBRow(*result)
+
+
+def query_drep_registration(
+    drep_hash: str, drep_deposit: int = 2000000
+) -> tp.Generator[DrepRegistrationDBRow, None, None]:
+    """Query drep registration in db-sync."""
+    query = (
+        "SELECT"
+        " dr.id, dr.tx_id, dr.cert_index, dr.deposit, "
+        " dr.drep_hash_id, dr.voting_anchor_id, "
+        " dh.raw, dh.view, dh.has_script "
+        "FROM drep_registration as dr "
+        "INNER JOIN drep_hash dh on dh.id = dr.drep_hash_id "
+        "WHERE dh.raw = %s "
+        "AND dr.deposit = %s "
+        "ORDER BY dr.tx_id;"
+    )
+
+    with execute(query=query, vars=(rf"\x{drep_hash}", drep_deposit)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield DrepRegistrationDBRow(*result)

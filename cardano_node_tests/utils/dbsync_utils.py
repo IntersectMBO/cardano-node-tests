@@ -11,6 +11,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_check_tx
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_types
+from cardano_node_tests.utils import governance_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -919,3 +920,65 @@ def check_committee_member_deregistration(
     ), "CC Member not present in deregistration table in db-sync"
 
     return cc_member_data
+
+
+def get_drep(drep_hash: str, drep_deposit: int) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+    """Get drep data from db-sync."""
+    dreps = list(dbsync_queries.query_drep_registration(drep_hash, drep_deposit))
+    if not dreps:
+        return None
+
+    drep = dreps[-1]
+    drep_data = dbsync_types.DrepRegistrationRecord(
+        id=drep.id,
+        tx_id=drep.tx_id,
+        cert_index=drep.cert_index,
+        deposit=drep.deposit,
+        drep_hash_id=drep.drep_hash_id,
+        voting_anchor_id=drep.voting_anchor_id,
+        hash_hex=drep.hash_raw.hex(),
+        hash_bech32=drep.hash_view,
+        has_script=drep.has_script,
+    )
+
+    return drep_data
+
+
+def check_drep_registration(
+    drep: governance_utils.DRepRegistration, drep_state: tp.List[tp.List[tp.Dict[str, tp.Any]]]
+) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+    """Check drep registration in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
+
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registartion"
+    assert (
+        drep_state[0][0]["keyHash"] == drep_data.hash_hex
+    ), f"DRep {drep.drep_id} not present in registration table in db-sync"
+    assert (
+        drep_state[0][1]["deposit"] == drep_data.deposit
+    ), f"Wrong deposit value for registered DRep {drep.drep_id} in db-sync"
+
+    return drep_data
+
+
+def check_drep_deregistration(
+    drep: governance_utils.DRepRegistration,
+) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+    """Check drep deregistration in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=-drep.deposit)
+
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistartion"
+    assert (
+        drep.drep_id == drep_data.hash_hex
+    ), f"Deregistered DRep {drep.drep_id} not present in registration table in db-sync"
+    assert (
+        drep.deposit == -drep_data.deposit
+    ), f"Wrong deposit value for deregistered DRep {drep.drep_id} in db-sync"
+
+    return drep_data
