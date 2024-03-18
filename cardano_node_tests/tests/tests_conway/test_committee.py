@@ -326,6 +326,7 @@ class TestCommittee:
             - vote to approve the action
             - check that CC members votes have no effect
             - check that the action is ratified
+            - try to disapprove the ratified action, this shouldn't have any effect
             - check that the action is enacted
             - check that the new CC members were added
             - check that it's not possible to vote on enacted action
@@ -336,6 +337,7 @@ class TestCommittee:
             - vote to approve the action
             - check that CC members votes have no effect
             - check that the action is ratified
+            - try to disapprove the ratified action, this shouldn't have any effect
             - check that the action is enacted
             - check that the CC member was removed
             - check that it's not possible to vote on enacted action
@@ -703,6 +705,18 @@ class TestCommittee:
             msg = "Action not found in ratified actions"
             raise AssertionError(msg)
 
+        # Disapprove ratified action, the voting shouldn't have any effect
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_after_ratification",
+            payment_addr=pool_user_lg.payment,
+            action_txid=action_add_txid,
+            action_ix=action_add_ix,
+            approve_drep=False,
+            approve_spo=False,
+        )
+
         next_rat_add_state = rat_add_gov_state["nextRatifyState"]
         _check_add_state(next_rat_add_state["nextEnactState"])
         assert next_rat_add_state["ratificationDelayed"], "Ratification not delayed"
@@ -854,6 +868,18 @@ class TestCommittee:
 
             msg = "Action not found in ratified actions"
             raise AssertionError(msg)
+
+        # Disapprove ratified action, the voting shouldn't have any effect
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_after_ratification",
+            payment_addr=pool_user_lg.payment,
+            action_txid=action_rem_txid,
+            action_ix=action_rem_ix,
+            approve_drep=False,
+            approve_spo=False,
+        )
 
         next_rat_rem_state = rat_rem_gov_state["nextRatifyState"]
         _check_rem_state(next_rat_rem_state["nextEnactState"])

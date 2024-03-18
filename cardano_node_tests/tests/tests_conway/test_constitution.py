@@ -54,6 +54,7 @@ class TestConstitution:
         * vote to disapprove the action
         * vote to approve the action
         * check that the action is ratified
+        * try to disapprove the ratified action, this shouldn't have any effect
         * check that the action is enacted
         * check that it's not possible to vote on enacted action
         """
@@ -186,6 +187,18 @@ class TestConstitution:
 
             msg = "Action not found in removed actions"
             raise AssertionError(msg)
+
+        # Disapprove ratified action, the voting shouldn't have any effect
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_after_ratification",
+            payment_addr=pool_user_lg.payment,
+            action_txid=action_txid,
+            action_ix=action_ix,
+            approve_cc=False,
+            approve_drep=False,
+        )
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _url = helpers.get_vcs_link()

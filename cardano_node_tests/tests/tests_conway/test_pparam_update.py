@@ -81,11 +81,12 @@ class TestPParamUpdate:
             - one action for each parameter group
             - one action with multiple proposals from different groups
 
-        * vote to diapprove the actions
+        * vote to disapprove the actions
         * submit a "protocol parameters update" action that will be enacted
         * check that SPOs cannot vote on a "protocol parameters update" action
         * vote to approve the action
         * check that the action is ratified
+        * try to disapprove the ratified action, this shouldn't have any effect
         * check that the action is enacted
         * check that it's not possible to vote on enacted action
         """
@@ -110,6 +111,7 @@ class TestPParamUpdate:
         req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
         req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
         req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
+        req_cip68 = requirements.Req(id="CIP068", group=requirements.GroupsKnown.CHANG_US)
 
         # PParam groups
 
@@ -735,6 +737,7 @@ class TestPParamUpdate:
             )
 
         # Check ratification
+        req_cip68.start(url=_vote_url)
         _cur_epoch = cluster.g_query.get_epoch()
         if _cur_epoch == fin_approve_epoch:
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -744,10 +747,23 @@ class TestPParamUpdate:
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
             )
+
             rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_gov_state, action_txid=fin_action_txid
             )
             assert rat_action, "Action not found in ratified actions"
+
+            # Disapprove ratified action, the voting shouldn't have any effect
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_after_ratification",
+                payment_addr=pool_user_lg.payment,
+                action_txid=fin_action_txid,
+                action_ix=fin_action_ix,
+                approve_cc=False,
+                approve_drep=False,
+            )
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             _check_state(next_rat_state["nextEnactState"])
@@ -776,6 +792,7 @@ class TestPParamUpdate:
                 req_cip51,
                 req_cip52,
                 req_cip60,
+                req_cip68,
             )
         ]
         if configuration.HAS_CC:

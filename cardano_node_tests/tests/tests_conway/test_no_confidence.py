@@ -59,6 +59,7 @@ class TestNoConfidence:
         * vote to approve the action
         * check that CC members votes have no effect
         * check that the action is ratified
+        * try to disapprove the ratified action, this shouldn't have any effect
         * check that the action is enacted
         * check that it's not possible to vote on enacted action
         """
@@ -238,6 +239,18 @@ class TestNoConfidence:
 
                 msg = "Action not found in ratified actions"
                 raise AssertionError(msg)
+
+            # Disapprove ratified action, the voting shouldn't have any effect
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_after_ratification",
+                payment_addr=pool_user_lg.payment,
+                action_txid=action_txid,
+                action_ix=action_ix,
+                approve_drep=False,
+                approve_spo=False,
+            )
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             assert next_rat_state["ratificationDelayed"], "Ratification not delayed"

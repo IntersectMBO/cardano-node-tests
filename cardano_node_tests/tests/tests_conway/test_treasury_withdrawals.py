@@ -60,6 +60,7 @@ class TestTreasuryWithdrawals:
         * check that SPOs cannot vote on a "treasury withdrawal" action
         * vote to approve the actions
         * check that the actions are ratified
+        * try to disapprove the ratified action, this shouldn't have any effect
         * check that the action are enacted
         * check that it's not possible to vote on enacted action
         """
@@ -313,6 +314,9 @@ class TestTreasuryWithdrawals:
         else:
             msg = "Not all actions got removed"
             raise AssertionError(msg)
+
+        # Disapprove ratified action, the voting shouldn't have any effect
+        _cast_vote(approve=False, vote_id="after_ratification")
 
         req_cip33.start(url=helpers.get_vcs_link())
 
