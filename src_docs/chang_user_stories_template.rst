@@ -246,7 +246,7 @@ CLI User Stories
       - |image-CLI36|
       - Query constitution.
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/02-cardano-cli.md#CLI036>`__
-      -
+      - **As** any persona, **I want** to query the on-chain constitution, **so that** I can know the url where it is stored and the document hash so that I can verify authenticity.
    -
 
       - |image-CLI37|
