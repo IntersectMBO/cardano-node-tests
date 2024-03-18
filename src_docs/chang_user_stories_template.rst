@@ -826,7 +826,7 @@ CIP1694 User Stories
 
       - |image-CIP69|
       - Governance state tracking governance action progress
-        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP070>`__
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP069>`__
       - **As** a Stakeholder **I want** the governance state section of the ledger to track the progress of governance actions to include: capturing votes, tracking the expiration epoch, and other relevant information until the actions are either ratified or expired.
    -
 
