@@ -659,3 +659,42 @@ class TestTreasuryWithdrawals:
         assert not governance_utils.lookup_proposal(
             gov_state=rem_gov_state, action_txid=action_txid
         ), "Action was not removed from proposals"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("mir_cert", ("treasury", "rewards", "stake_addr"))
+    def test_mir_certificates(
+        self,
+        cluster: clusterlib.ClusterLib,
+        mir_cert: str,
+    ):
+        """Try to withdraw funds from the treasury using MIR certificates.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 1_000_000_000_000
+
+        req_cip70 = requirements.Req(id="CIP070", group=requirements.GroupsKnown.CHANG_US)
+
+        req_cip70.start(url=helpers.get_vcs_link())
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            if mir_cert == "treasury":
+                cluster.g_governance.gen_mir_cert_to_treasury(
+                    transfer=amount,
+                    tx_name=temp_template,
+                )
+            elif mir_cert == "rewards":
+                cluster.g_governance.gen_mir_cert_to_rewards(
+                    transfer=amount,
+                    tx_name=temp_template,
+                )
+            else:
+                cluster.g_governance.gen_mir_cert_stake_addr(
+                    tx_name=temp_template,
+                    stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
+                    reward=amount,
+                    use_treasury=True,
+                )
+        err_str = str(excinfo.value)
+        assert "Invalid argument `create-mir-certificate'" in err_str, err_str
+        req_cip70.success()
