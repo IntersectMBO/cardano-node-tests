@@ -67,6 +67,7 @@ class TestInfo:
         req_cli24 = requirements.Req(id="CLI024", group=requirements.GroupsKnown.CHANG_US)
         req_cli31 = requirements.Req(id="CLI031", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-03", group=requirements.GroupsKnown.CHANG_US)
+        req_cip53 = requirements.Req(id="CIP053", group=requirements.GroupsKnown.CHANG_US)
         req_cip59 = requirements.Req(id="CIP059", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
@@ -136,21 +137,14 @@ class TestInfo:
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        def _get_vote(idx: int) -> clusterlib.Votes:
-            if idx % 3 == 0:
-                return clusterlib.Votes.ABSTAIN
-            if idx % 2 == 0:
-                return clusterlib.Votes.YES
-            return clusterlib.Votes.NO
-
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli21, req_cip59)]
+        [r.start(url=_url) for r in (req_cli21, req_cip53, req_cip59)]
         votes_cc = [
             cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote=_get_vote(i),
+                vote=clusterlib.Votes.YES,
                 cc_hot_vkey_file=m.hot_vkey_file,
             )
             for i, m in enumerate(governance_data.cc_members, start=1)
@@ -160,7 +154,7 @@ class TestInfo:
                 vote_name=f"{temp_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote=_get_vote(i),
+                vote=clusterlib.Votes.YES,
                 drep_vkey_file=d.key_pair.vkey_file,
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
@@ -170,7 +164,7 @@ class TestInfo:
                 vote_name=f"{temp_template}_pool{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
-                vote=_get_vote(i),
+                vote=clusterlib.Votes.YES,
                 cold_vkey_file=p.vkey_file,
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
@@ -220,11 +214,25 @@ class TestInfo:
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
         )
         prop_vote = governance_utils.lookup_proposal(
-            gov_state=vote_gov_state, action_txid=action_txid
+            gov_state=vote_gov_state, action_txid=action_txid, action_ix=action_ix
         )
         assert not configuration.HAS_CC or prop_vote["committeeVotes"], "No committee votes"
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
+
+        # Check that the Info action cannot be ratified
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        approved_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=approved_gov_state, name_template=f"{temp_template}_approved_{_cur_epoch}"
+        )
+        rat_info_action = governance_utils.lookup_ratified_actions(
+            gov_state=approved_gov_state,
+            action_txid=action_txid,
+            action_ix=action_ix,
+        )
+        assert not rat_info_action, "Action found in ratified actions"
+        req_cip53.success()
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
