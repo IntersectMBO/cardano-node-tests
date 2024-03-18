@@ -341,9 +341,10 @@ class TestNoConfidence:
         req_cip14.start(url=helpers.get_vcs_link())
 
         cc_members_to_resign = governance_data.cc_members[1:]
+        _cur_epoch = cluster.g_query.get_epoch()
         conway_common.resign_ccs(
             cluster_obj=cluster,
-            name_template=temp_template,
+            name_template=f"{temp_template}_{_cur_epoch}",
             ccs_to_resign=cc_members_to_resign,
             payment_addr=pool_user_lg.payment,
         )
@@ -390,9 +391,24 @@ class TestNoConfidence:
                 action_txid=const_action_txid,
                 action_ix=const_action_ix,
             )
-            expire_epoch = prop_const_action["expiresAfter"] + 1
 
             # Check that the action is not ratified
+            rat_const_action = governance_utils.lookup_ratified_actions(
+                gov_state=approved_gov_state,
+                action_txid=const_action_txid,
+                action_ix=const_action_ix,
+            )
+            if rat_const_action:
+                blockers.GH(
+                    issue=4204,
+                    repo="IntersectMBO/cardano-ledger",
+                    message="Resigned CC members can approve actions",
+                    check_on_devel=False,
+                ).finish_test()
+            assert not rat_const_action, "Action found in ratified actions"
+
+            # Check that the action expired
+            expire_epoch = prop_const_action["expiresAfter"] + 1
             _cur_epoch = cluster.wait_for_new_epoch(
                 new_epochs=expire_epoch - _cur_epoch, padding_seconds=5
             )
@@ -400,9 +416,10 @@ class TestNoConfidence:
             conway_common.save_gov_state(
                 gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{_cur_epoch}"
             )
-            assert governance_utils.lookup_expired_actions(
+            exp_const_action = governance_utils.lookup_expired_actions(
                 gov_state=expire_gov_state, action_txid=const_action_txid, action_ix=const_action_ix
-            ), "Action not found in removed actions"
+            )
+            assert exp_const_action, "Action NOT found in expired actions"
 
             req_cip14.success()
 
