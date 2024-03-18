@@ -111,6 +111,7 @@ class TestPParamUpdate:
         req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
         req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
         req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
+        req_cip65 = requirements.Req(id="CIP065", group=requirements.GroupsKnown.CHANG_US)
         req_cip68 = requirements.Req(id="CIP068", group=requirements.GroupsKnown.CHANG_US)
         req_cip74 = requirements.Req(id="CIP074", group=requirements.GroupsKnown.CHANG_US)
 
@@ -635,6 +636,8 @@ class TestPParamUpdate:
         err_str = str(excinfo.value)
         assert "StakePoolVoter" in err_str, err_str
 
+        req_cip65.start(url=helpers.get_vcs_link())
+
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -643,7 +646,7 @@ class TestPParamUpdate:
             action_txid=tech_nodrep_action_txid,
             action_ix=tech_nodrep_action_ix,
             approve_cc=True,
-            approve_drep=False,
+            approve_drep=None,
         )
 
         # Vote on update proposals from technical group that will NOT get approved by CC
@@ -659,7 +662,7 @@ class TestPParamUpdate:
                 payment_addr=pool_user_lg.payment,
                 action_txid=tech_nocc_action_txid,
                 action_ix=tech_nocc_action_ix,
-                approve_cc=False,
+                approve_cc=None,
                 approve_drep=True,
                 approve_spo=None if tech_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
             )
@@ -679,7 +682,7 @@ class TestPParamUpdate:
             action_ix=sec_nospo_action_ix,
             approve_cc=True,
             approve_drep=True,
-            approve_spo=False,
+            approve_spo=None,
         )
 
         # Vote on the final action that will be enacted
@@ -869,6 +872,7 @@ class TestPParamUpdate:
                 req_cip51,
                 req_cip52,
                 req_cip60,
+                req_cip65,
                 req_cip68,
                 req_cip74,
             )
