@@ -112,6 +112,7 @@ class TestPParamUpdate:
         req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
         req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
         req_cip68 = requirements.Req(id="CIP068", group=requirements.GroupsKnown.CHANG_US)
+        req_cip74 = requirements.Req(id="CIP074", group=requirements.GroupsKnown.CHANG_US)
 
         # PParam groups
 
@@ -356,6 +357,55 @@ class TestPParamUpdate:
             ),
         ]
 
+        security_proposals = [
+            clusterlib_utils.UpdateProposal(
+                arg="--max-block-body-size",
+                value=65544,
+                name="maxBlockBodySize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-tx-size",
+                value=16392,
+                name="maxTxSize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-block-header-size",
+                value=random.randint(1101, 1200),
+                name="maxBlockHeaderSize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-value-size",
+                value=random.randint(5001, 5100),
+                name="maxValSize",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--max-block-execution-units",
+                value=f"({random.randint(62000001, 62000100)},"
+                f"{random.randint(40000000001, 40000000100)})",
+                name="",  # needs custom check of `maxBlockExUnits`
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--min-fee-linear",
+                value=44,
+                name="minFeeA",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--min-fee-constant",
+                value=155381,
+                name="minFeeB",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--utxo-cost-per-byte",
+                value=random.randint(4311, 4400),
+                name="coinsPerUTxOByte",
+            ),
+            clusterlib_utils.UpdateProposal(
+                arg="--new-governance-action-deposit",
+                value=random.randint(100000001, 100000100),
+                name="govActionDeposit",
+            ),
+        ]
+
         # Hand-picked parameters and values that can stay changed even for other tests
         cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
         fin_update_proposals = [
@@ -387,6 +437,12 @@ class TestPParamUpdate:
                 arg="--drep-activity",
                 value=random.randint(101, 120),
                 name="dRepActivity",
+            ),
+            # From security pparams
+            clusterlib_utils.UpdateProposal(
+                arg="--max-tx-size",
+                value=cur_pparams["maxTxSize"],
+                name="maxTxSize",
             ),
         ]
         if configuration.HAS_CC:
@@ -557,6 +613,28 @@ class TestPParamUpdate:
         tech_nodrep_action_txid, tech_nodrep_action_ix, tech_nodrep_proposal_names = (
             _create_pparams_action(proposals=tech_nodrep_update_proposals)
         )
+
+        assert tech_nodrep_proposal_names.isdisjoint(
+            SECURITY_PPARAMS
+        ), "There are security pparams being changed"
+
+        # Check that SPOs cannot vote on change of constitution action if no security params
+        # are being changed.
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_fin_with_spos",
+                payment_addr=pool_user_lg.payment,
+                action_txid=tech_nodrep_action_txid,
+                action_ix=tech_nodrep_action_ix,
+                approve_cc=False,
+                approve_drep=False,
+                approve_spo=True,
+            )
+        err_str = str(excinfo.value)
+        assert "StakePoolVoter" in err_str, err_str
+
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -566,7 +644,6 @@ class TestPParamUpdate:
             action_ix=tech_nodrep_action_ix,
             approve_cc=True,
             approve_drep=False,
-            approve_spo=None if tech_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
         )
 
         # Vote on update proposals from technical group that will NOT get approved by CC
@@ -587,31 +664,29 @@ class TestPParamUpdate:
                 approve_spo=None if tech_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
             )
 
+        # Vote on update proposals from security params that will NOT get approved by SPOs
+        req_cip74.start(url=_vote_url)
+        sec_nospo_update_proposals = random.sample(security_proposals, 3)
+        sec_nospo_action_txid, sec_nospo_action_ix, sec_nospo_proposal_names = (
+            _create_pparams_action(proposals=sec_nospo_update_proposals)
+        )
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_sec_nospo",
+            payment_addr=pool_user_lg.payment,
+            action_txid=sec_nospo_action_txid,
+            action_ix=sec_nospo_action_ix,
+            approve_cc=True,
+            approve_drep=True,
+            approve_spo=False,
+        )
+
         # Vote on the final action that will be enacted
         req_cip37.start(url=_action_url)
         fin_action_txid, fin_action_ix, fin_proposal_names = _create_pparams_action(
             proposals=fin_update_proposals
         )
-        assert fin_proposal_names.isdisjoint(
-            SECURITY_PPARAMS
-        ), "There are security pparams being changed"
-
-        # Check that SPOs cannot vote on change of constitution action if no security params
-        # are being changed.
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            conway_common.cast_vote(
-                cluster_obj=cluster,
-                governance_data=governance_data,
-                name_template=f"{temp_template}_fin_with_spos",
-                payment_addr=pool_user_lg.payment,
-                action_txid=fin_action_txid,
-                action_ix=fin_action_ix,
-                approve_cc=False,
-                approve_drep=False,
-                approve_spo=True,
-            )
-        err_str = str(excinfo.value)
-        assert "StakePoolVoter" in err_str, err_str
 
         # Vote & disapprove the action
         conway_common.cast_vote(
@@ -623,6 +698,7 @@ class TestPParamUpdate:
             action_ix=fin_action_ix,
             approve_cc=False,
             approve_drep=False,
+            approve_spo=False,
         )
 
         # Vote & approve the action
@@ -635,6 +711,7 @@ class TestPParamUpdate:
             action_ix=fin_action_ix,
             approve_cc=True,
             approve_drep=True,
+            approve_spo=True,
         )
         fin_approve_epoch = cluster.g_query.get_epoch()
 
@@ -793,6 +870,7 @@ class TestPParamUpdate:
                 req_cip52,
                 req_cip60,
                 req_cip68,
+                req_cip74,
             )
         ]
         if configuration.HAS_CC:
