@@ -67,7 +67,8 @@ class TestConstitution:
         req_cli2 = requirements.Req(id="CLI002", group=requirements.GroupsKnown.CHANG_US)
         req_cli13 = requirements.Req(id="CLI013", group=requirements.GroupsKnown.CHANG_US)
         req_cli20 = requirements.Req(id="CLI020", group=requirements.GroupsKnown.CHANG_US)
-        req_cip1 = requirements.Req(id="CIP001", group=requirements.GroupsKnown.CHANG_US)
+        req_cip1a = requirements.Req(id="CIP001a", group=requirements.GroupsKnown.CHANG_US)
+        req_cip1b = requirements.Req(id="CIP001b", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip42 = requirements.Req(id="CIP042", group=requirements.GroupsKnown.CHANG_US)
 
@@ -202,9 +203,9 @@ class TestConstitution:
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli1, req_cip1)]
+        [r.start(url=_url) for r in (req_cli1, req_cip1a, req_cip1b)]
         _check_state(next_rat_state["nextEnactState"])
-        [r.success() for r in (req_cli1, req_cip1)]
+        [r.success() for r in (req_cli1, req_cip1a, req_cip1b)]
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check enactment
