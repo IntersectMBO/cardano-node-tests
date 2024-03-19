@@ -133,7 +133,7 @@ class TestCLI:
         errors = []
 
         # Prior to node 1.36.0 the fields 'slotInEpoch' and 'slotsToEpochEnd' did not exist
-        if not tip_out.get("slotInEpoch"):
+        if "slotInEpoch" not in tip_out:
             expected_out = {
                 "block",
                 "epoch",
