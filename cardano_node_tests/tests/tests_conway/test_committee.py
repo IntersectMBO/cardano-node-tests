@@ -361,6 +361,7 @@ class TestCommittee:
         req_cip11 = requirements.Req(id="CIP011", group=requirements.GroupsKnown.CHANG_US)
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
         req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_02 = requirements.Req(id="intCIP054_02", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_01 = requirements.Req(id="intCIP064-01", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_02 = requirements.Req(id="intCIP064-02", group=requirements.GroupsKnown.CHANG_US)
@@ -479,7 +480,7 @@ class TestCommittee:
             )
 
             _url = helpers.get_vcs_link()
-            [r.start(url=_url) for r in (req_cli14, req_cip31b, req_cip58)]
+            [r.start(url=_url) for r in (req_cli14, req_cip31b, req_cip54_02, req_cip58)]
             add_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_add",
                 deposit_amt=deposit_amt,
@@ -491,7 +492,7 @@ class TestCommittee:
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
             )
-            [r.success() for r in (req_cli14, req_cip31b)]
+            [r.success() for r in (req_cli14, req_cip31b, req_cip54_02)]
 
             tx_files_action_add = clusterlib.TxFiles(
                 proposal_files=[add_cc_action.action_file],

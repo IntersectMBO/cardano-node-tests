@@ -68,6 +68,7 @@ class TestInfo:
         req_cli31 = requirements.Req(id="CLI031", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-03", group=requirements.GroupsKnown.CHANG_US)
         req_cip53 = requirements.Req(id="CIP053", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_06 = requirements.Req(id="intCIP054_06", group=requirements.GroupsKnown.CHANG_US)
         req_cip59 = requirements.Req(id="CIP059", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
@@ -77,7 +78,7 @@ class TestInfo:
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli16, req_cip31a)]
+        [r.start(url=_url) for r in (req_cli16, req_cip31a, req_cip54_06)]
         info_action = cluster.g_conway_governance.action.create_info(
             action_name=temp_template,
             deposit_amt=action_deposit_amt,
@@ -85,7 +86,7 @@ class TestInfo:
             anchor_data_hash=anchor_data_hash,
             deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
         )
-        [r.success() for r in (req_cli16, req_cip31a)]
+        [r.success() for r in (req_cli16, req_cip31a, req_cip54_06)]
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[info_action.action_file],
