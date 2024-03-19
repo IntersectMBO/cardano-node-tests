@@ -111,9 +111,25 @@ class TestPParamUpdate:
         req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
         req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
         req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
+        req_cip64_03 = requirements.Req(id="intCIP064-03", group=requirements.GroupsKnown.CHANG_US)
+        req_cip64_04 = requirements.Req(id="intCIP064-04", group=requirements.GroupsKnown.CHANG_US)
         req_cip65 = requirements.Req(id="CIP065", group=requirements.GroupsKnown.CHANG_US)
         req_cip68 = requirements.Req(id="CIP068", group=requirements.GroupsKnown.CHANG_US)
         req_cip74 = requirements.Req(id="CIP074", group=requirements.GroupsKnown.CHANG_US)
+
+        # Check if total delegated stake is below the threshold. This can be used to check that
+        # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
+        # missing votes would approve the action.
+        delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
+        cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
+        drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["ppSecurityGroup"]
+        spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["ppSecurityGroup"]
+        is_drep_total_below_threshold = (
+            delegated_stake.drep / delegated_stake.total_lovelace
+        ) < drep_constitution_threshold
+        is_spo_total_below_threshold = (
+            delegated_stake.spo / delegated_stake.total_lovelace
+        ) < spo_constitution_threshold
 
         # PParam groups
 
@@ -534,8 +550,8 @@ class TestPParamUpdate:
 
             return action_txid, action_ix, proposal_names
 
-        _vote_url = helpers.get_vcs_link()
-        [r.start(url=_vote_url) for r in (req_cip44, req_cip45, req_cip46, req_cip47, req_cip60)]
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cip44, req_cip45, req_cip46, req_cip47, req_cip60)]
 
         # Vote on update proposals from network group that will NOT get approved by DReps
         net_nodrep_update_proposals = random.sample(network_g_proposals, 3)
@@ -636,7 +652,10 @@ class TestPParamUpdate:
         err_str = str(excinfo.value)
         assert "StakePoolVoter" in err_str, err_str
 
-        req_cip65.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        req_cip65.start(url=_url)
+        if is_drep_total_below_threshold:
+            req_cip64_03.start(url=_url)
 
         conway_common.cast_vote(
             cluster_obj=cluster,
@@ -668,7 +687,10 @@ class TestPParamUpdate:
             )
 
         # Vote on update proposals from security params that will NOT get approved by SPOs
-        req_cip74.start(url=_vote_url)
+        _url = helpers.get_vcs_link()
+        req_cip74.start(url=_url)
+        if is_spo_total_below_threshold:
+            req_cip64_04.start(url=_url)
         sec_nospo_update_proposals = random.sample(security_proposals, 3)
         sec_nospo_action_txid, sec_nospo_action_ix, sec_nospo_proposal_names = (
             _create_pparams_action(proposals=sec_nospo_update_proposals)
@@ -817,7 +839,7 @@ class TestPParamUpdate:
             )
 
         # Check ratification
-        req_cip68.start(url=_vote_url)
+        req_cip68.start(url=helpers.get_vcs_link())
         _cur_epoch = cluster.g_query.get_epoch()
         if _cur_epoch == fin_approve_epoch:
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -879,6 +901,10 @@ class TestPParamUpdate:
         ]
         if configuration.HAS_CC:
             req_cip6.success()
+        if is_drep_total_below_threshold:
+            req_cip64_03.success()
+        if is_spo_total_below_threshold:
+            req_cip64_04.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:

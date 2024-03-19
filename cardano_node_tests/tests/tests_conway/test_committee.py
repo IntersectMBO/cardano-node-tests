@@ -362,8 +362,24 @@ class TestCommittee:
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
         req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
+        req_cip64_01 = requirements.Req(id="intCIP064-01", group=requirements.GroupsKnown.CHANG_US)
+        req_cip64_02 = requirements.Req(id="intCIP064-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip67 = requirements.Req(id="CIP067", group=requirements.GroupsKnown.CHANG_US)
         req_cip73_3 = requirements.Req(id="intCIP073-03", group=requirements.GroupsKnown.CHANG_US)
+
+        # Check if total delegated stake is below the threshold. This can be used to check that
+        # undelegated stake is treated as Abstain. If undelegated stake was treated as No, it
+        # would not be possible to approve any action.
+        delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
+        cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
+        drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["committeeNormal"]
+        spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["committeeNormal"]
+        is_drep_total_below_threshold = (
+            delegated_stake.drep / delegated_stake.total_lovelace
+        ) < drep_constitution_threshold
+        is_spo_total_below_threshold = (
+            delegated_stake.spo / delegated_stake.total_lovelace
+        ) < spo_constitution_threshold
 
         # Auth keys for CC members
         cc_auth_record1 = governance_utils.get_cc_member_auth_record(
@@ -670,7 +686,12 @@ class TestCommittee:
 
         # Vote & approve the action
         request.addfinalizer(_resign)
-        req_cip40.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        req_cip40.start(url=_url)
+        if is_drep_total_below_threshold:
+            req_cip64_01.start(url=_url)
+        if is_spo_total_below_threshold:
+            req_cip64_02.start(url=_url)
         voted_votes_add = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -787,6 +808,10 @@ class TestCommittee:
         req_cip73_3.start(url=helpers.get_vcs_link())
         _check_add_state(enact_add_gov_state["enactState"])
         [r.success() for r in (req_cip40, req_cip73_3)]
+        if is_drep_total_below_threshold:
+            req_cip64_01.success()
+        if is_spo_total_below_threshold:
+            req_cip64_02.success()
 
         # Check committee state after enactment
         enact_add_committee_state = cluster.g_conway_governance.query.committee_state()

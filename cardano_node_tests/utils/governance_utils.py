@@ -2,6 +2,7 @@
 
 import dataclasses
 import enum
+import functools
 import logging
 import pathlib as pl
 import typing as tp
@@ -52,6 +53,13 @@ class PrevActionRec:
 
     def __bool__(self) -> bool:
         return bool(self.txid)
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class StakeDelegation:
+    spo: int
+    drep: int
+    total_lovelace: int
 
 
 class PrevGovActionIds(enum.Enum):
@@ -491,3 +499,18 @@ def wait_delayed_ratification(
     else:
         msg = "Ratification is still delayed"
         raise AssertionError(msg)
+
+
+def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
+    """Get total stake delegated to SPOs and DReps."""
+    total_lovelace = cluster_obj.genesis["maxLovelaceSupply"]
+
+    stake_snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
+    total_spo_stake = stake_snapshot["total"]["stakeGo"]
+
+    drep_state = cluster_obj.g_conway_governance.query.drep_state()
+    total_drep_stake = functools.reduce(lambda x, y: x + y[1]["stake"], drep_state, 0)
+
+    return StakeDelegation(
+        spo=total_spo_stake, drep=total_drep_stake, total_lovelace=total_lovelace
+    )
