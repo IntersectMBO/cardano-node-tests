@@ -30,6 +30,67 @@ pytestmark = pytest.mark.skipif(
     reason="runs only with Tx era >= Conway",
 )
 
+
+NETWORK_GROUP_PPARAMS = {
+    "maxBlockBodySize",
+    "maxTxSize",
+    "maxBlockHeaderSize",
+    "maxValSize",
+    "maxTxExUnits",
+    "maxBlockExUnits",
+    "maxCollateralInputs",
+}
+
+ECONOMIC_GROUP_PPARAMS = {
+    "minFeeA",
+    "minFeeB",
+    "keyDeposit",
+    "poolDeposit",
+    "rho",
+    "tau",
+    "minPoolCost",
+    "coinsPerUTxOByte",
+    "prices",
+}
+
+TECHNICAL_GROUP_PPARAMS = {
+    "a0",
+    "eMax",
+    "nOpt",
+    "costmdls",
+    "collateralPercentage",
+}
+
+GOVERNANCE_GROUP_PPARAMS = {
+    "govActionLifetime",
+    "govActionDeposit",
+    "dRepDeposit",
+    "dRepActivity",
+    "committeeMinSize",
+    "committeeMaxTermLength",
+}
+
+GOVERNANCE_GROUP_PPARAMS_DREP_THRESHOLDS = {
+    "committeeNoConfidence",
+    "committeeNormal",
+    "hardForkInitiation",
+    "motionNoConfidence",
+    "ppEconomicGroup",
+    "ppGovGroup",
+    "ppNetworkGroup",
+    "ppTechnicalGroup",
+    "treasuryWithdrawal",
+    "updateToConstitution",
+}
+
+GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS = {
+    "committeeNoConfidence",
+    "committeeNormal",
+    "hardForkInitiation",
+    "motionNoConfidence",
+    "ppSecurityGroup",
+}
+
 # Security related pparams that require also SPO approval
 SECURITY_PPARAMS = {
     "maxBlockBodySize",
@@ -926,3 +987,45 @@ class TestPParamUpdate:
         if fin_voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
+
+
+class TestPParamData:
+    """Tests for checking protocol parameters keys and values."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_pparam_keys(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test presence of expected protocol parameters keys."""
+        common.get_test_id(cluster)
+
+        # Linked user stories
+        req_cip75 = requirements.Req(id="CIP075", group=requirements.GroupsKnown.CHANG_US)
+        req_cip76 = requirements.Req(id="CIP076", group=requirements.GroupsKnown.CHANG_US)
+        req_cip77 = requirements.Req(id="CIP077", group=requirements.GroupsKnown.CHANG_US)
+        req_cip78 = requirements.Req(id="CIP078", group=requirements.GroupsKnown.CHANG_US)
+
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cip75, req_cip76, req_cip77, req_cip78)]
+
+        cur_pparam = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
+        for pparam in [
+            *NETWORK_GROUP_PPARAMS,
+            *ECONOMIC_GROUP_PPARAMS,
+            *TECHNICAL_GROUP_PPARAMS,
+            *GOVERNANCE_GROUP_PPARAMS,
+        ]:
+            assert pparam in cur_pparam, f"Param `{pparam}` not found"
+
+        drep_thresholds = cur_pparam["dRepVotingThresholds"]
+        for drep_thresh in GOVERNANCE_GROUP_PPARAMS_DREP_THRESHOLDS:
+            assert drep_thresh in drep_thresholds, f"DRep threshold `{drep_thresh}` not found"
+
+        pool_thresholds = cur_pparam["poolVotingThresholds"]
+        for pool_thresh in GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS:
+            assert pool_thresh in pool_thresholds, f"Pool threshold `{pool_thresh}` not found"
+
+        [r.success() for r in (req_cip75, req_cip76, req_cip77, req_cip78)]
