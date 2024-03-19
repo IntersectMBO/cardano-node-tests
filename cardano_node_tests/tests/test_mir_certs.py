@@ -452,7 +452,7 @@ class TestMIRCerts:
         * check that the expected amount was added to the stake address reward account
         * (optional) check transaction in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}"
+        temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
         amount = 50_000_000
         registered_user = registered_users[0]
@@ -545,7 +545,7 @@ class TestMIRCerts:
         * check that the expected amount was added to the stake address reward account
         * (optional) check transaction in db-sync
         """
-        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}"
+        temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
         amount = 50_000_000
         registered_user = registered_users[0]
@@ -928,7 +928,7 @@ class TestMIRCerts:
         * (optional) check transaction in db-sync
         """
         # pylint: disable=too-many-branches
-        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}_{addr_history}"
+        temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
 
         if fund_src == TREASURY:
@@ -1049,7 +1049,7 @@ class TestNegativeMIRCerts:
         * submit a TX with the MIR certificate
         * check that submitting the transaction fails with an expected error
         """
-        temp_template = f"{common.get_test_id(cluster_pots)}_{fund_src}"
+        temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
         amount = 50_000_000_000_000_000
         registered_user = registered_users[0]
