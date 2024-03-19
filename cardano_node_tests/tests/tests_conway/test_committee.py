@@ -322,6 +322,9 @@ class TestCommittee:
         * authorize hot keys of 3 new potential CC members
         * create an "update committee" action to add 2 of the 3 new potential CC members
 
+            - the first CC member is listed twice to test that it's not possible to add the same
+              member multiple times
+            - the first CC member expires in 3 epochs, the second in 5 epochs
             - vote to disapprove the action
             - vote to approve the action
             - check that CC members votes have no effect
@@ -331,7 +334,7 @@ class TestCommittee:
             - check that the new CC members were added
             - check that it's not possible to vote on enacted action
 
-        * create an "update committee" action to remove 1 CC member
+        * create an "update committee" action to remove the second CC member
 
             - vote to disapprove the action
             - vote to approve the action
@@ -339,7 +342,8 @@ class TestCommittee:
             - check that the action is ratified
             - try to disapprove the ratified action, this shouldn't have any effect
             - check that the action is enacted
-            - check that the CC member was removed
+            - check that the second CC member was removed
+            - check that the first CC member has expired as expected
             - check that it's not possible to vote on enacted action
 
         * check output of votes and action `view` commands
