@@ -11,6 +11,7 @@
         ],
         "CIP032": ["intCIP032en", "intCIP032ex"],
         "CIP034": ["intCIP034en", "intCIP034ex"],
+        "CIP064": ["intCIP064-01", "intCIP064-02", "intCIP064-03", "intCIP064-04"],
         "CIP073": ["intCIP073-01", "intCIP073-02", "intCIP073-03", "intCIP073-04"]
     }
 }
