@@ -83,6 +83,7 @@ class TestNoConfidence:
         )
         req_cip39 = requirements.Req(id="CIP039", group=requirements.GroupsKnown.CHANG_US)
         req_cip41 = requirements.Req(id="CIP041", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_04 = requirements.Req(id="intCIP054_04", group=requirements.GroupsKnown.CHANG_US)
         req_cip57 = requirements.Req(id="CIP057", group=requirements.GroupsKnown.CHANG_US)
 
         # Reinstate CC members first, if needed, so we have a previous action
@@ -113,7 +114,10 @@ class TestNoConfidence:
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli18, req_cip13, req_cip29, req_int_cip30en, req_cip31a)]
+        [
+            r.start(url=_url)
+            for r in (req_cli18, req_cip13, req_cip29, req_int_cip30en, req_cip31a, req_cip54_04)
+        ]
         no_confidence_action = cluster.g_conway_governance.action.create_no_confidence(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -123,7 +127,7 @@ class TestNoConfidence:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
-        [r.success() for r in (req_cli18, req_cip31a)]
+        [r.success() for r in (req_cli18, req_cip31a, req_cip54_04)]
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[no_confidence_action.action_file],

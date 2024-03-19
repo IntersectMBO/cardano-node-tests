@@ -110,6 +110,7 @@ class TestPParamUpdate:
         req_cip50 = requirements.Req(id="CIP050", group=requirements.GroupsKnown.CHANG_US)
         req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
         req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_01 = requirements.Req(id="intCIP054_01", group=requirements.GroupsKnown.CHANG_US)
         req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_03 = requirements.Req(id="intCIP064-03", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_04 = requirements.Req(id="intCIP064-04", group=requirements.GroupsKnown.CHANG_US)
@@ -487,7 +488,7 @@ class TestPParamUpdate:
 
             update_args = clusterlib_utils.get_pparams_update_args(update_proposals=proposals)
 
-            [r.start(url=_action_url) for r in (req_cli17, req_cip31a, req_cip31e)]
+            [r.start(url=_action_url) for r in (req_cli17, req_cip31a, req_cip31e, req_cip54_01)]
             if configuration.HAS_CC:
                 req_cip6.start(url=_action_url)
             pparams_action = cluster.g_conway_governance.action.create_pparams_update(
@@ -500,7 +501,7 @@ class TestPParamUpdate:
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
             )
-            [r.success() for r in (req_cip31a, req_cip31e)]
+            [r.success() for r in (req_cip31a, req_cip31e, req_cip54_01)]
 
             tx_files_action = clusterlib.TxFiles(
                 proposal_files=[pparams_action.action_file],

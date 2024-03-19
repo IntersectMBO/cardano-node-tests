@@ -3,14 +3,25 @@
         "CIP028": ["CLI018", "CIP031b", "CIP031c", "CIP031d", "CIP031e", "CIP031f", "CLI031"],
         "CIP030": ["intCIP030en", "intCIP030ex"],
         "CIP031a": [
-            "intCIP031a-01", "intCIP031a-02", "intCIP031a-03",
-            "intCIP031a-04", "intCIP031a-05", "intCIP031a-06"
+            "intCIP031a-01",
+            "intCIP031a-02",
+            "intCIP031a-03",
+            "intCIP031a-04",
+            "intCIP031a-05",
+            "intCIP031a-06"
         ],
-        "CIP031c": [
-            "intCIP031c-01", "intCIP031c-02"
-        ],
+        "CIP031c": ["intCIP031c-01", "intCIP031c-02"],
         "CIP032": ["intCIP032en", "intCIP032ex"],
         "CIP034": ["intCIP034en", "intCIP034ex"],
+        "CIP054": [
+            "intCIP054-01",
+            "intCIP054-02",
+            "intCIP054-03",
+            "intCIP054-04",
+            "intCIP054-05",
+            "intCIP054-06",
+            "intCIP054-07"
+        ],
         "CIP064": ["intCIP064-01", "intCIP064-02", "intCIP064-03", "intCIP064-04"],
         "CIP073": ["intCIP073-01", "intCIP073-02", "intCIP073-03", "intCIP073-04"]
     }

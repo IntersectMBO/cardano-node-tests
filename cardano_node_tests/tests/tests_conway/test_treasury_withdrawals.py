@@ -75,6 +75,7 @@ class TestTreasuryWithdrawals:
         req_cip31f = requirements.Req(id="CIP031f", group=requirements.GroupsKnown.CHANG_US)
         req_cip33 = requirements.Req(id="CIP033", group=requirements.GroupsKnown.CHANG_US)
         req_cip48 = requirements.Req(id="CIP048", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_05 = requirements.Req(id="intCIP054_05", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -96,7 +97,7 @@ class TestTreasuryWithdrawals:
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli15, req_cip31a, req_cip31f)]
+        [r.start(url=_url) for r in (req_cli15, req_cip31a, req_cip31f, req_cip54_05)]
 
         withdrawal_actions = [
             cluster.g_conway_governance.action.create_treasury_withdrawal(
@@ -110,7 +111,7 @@ class TestTreasuryWithdrawals:
             )
             for a in range(actions_num)
         ]
-        [r.success() for r in (req_cli15, req_cip31a, req_cip31f)]
+        [r.success() for r in (req_cli15, req_cip31a, req_cip31f, req_cip54_05)]
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
