@@ -310,6 +310,7 @@ class TestCommittee:
         req_cip7.success()
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     def test_add_rm_committee_members(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -1029,6 +1030,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
+    @pytest.mark.long
     def test_empty_committee(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,

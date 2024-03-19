@@ -42,6 +42,7 @@ class TestConstitution:
     """Tests for constitution."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     def test_change_constitution(
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
