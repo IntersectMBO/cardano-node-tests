@@ -67,6 +67,7 @@ class TestConstitution:
         req_cli2 = requirements.Req(id="CLI002", group=requirements.GroupsKnown.CHANG_US)
         req_cli13 = requirements.Req(id="CLI013", group=requirements.GroupsKnown.CHANG_US)
         req_cli20 = requirements.Req(id="CLI020", group=requirements.GroupsKnown.CHANG_US)
+        req_cli36 = requirements.Req(id="CLI036", group=requirements.GroupsKnown.CHANG_US)
         req_cip1a = requirements.Req(id="CIP001a", group=requirements.GroupsKnown.CHANG_US)
         req_cip1b = requirements.Req(id="CIP001b", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-02", group=requirements.GroupsKnown.CHANG_US)
@@ -155,14 +156,21 @@ class TestConstitution:
             approve_drep=True,
         )
 
-        def _check_state(state: dict):
-            anchor = state["constitution"]["anchor"]
+        def _assert_anchor(anchor: dict):
             assert (
                 anchor["dataHash"]
                 == constitution_hash
                 == "d6d9034f61e2f7ada6e58c252e15684c8df7f0b197a95d80f42ca0a3685de26e"
             ), "Incorrect constitution data hash"
             assert anchor["url"] == constitution_url, "Incorrect constitution data URL"
+
+        def _check_state(state: dict):
+            anchor = state["constitution"]["anchor"]
+            _assert_anchor(anchor)
+
+        def _check_cli_query():
+            anchor = cluster.g_conway_governance.query.constitution()["anchor"]
+            _assert_anchor(anchor)
 
         # Check ratification
         xfail_ledger_3979_msgs = set()
@@ -216,6 +224,10 @@ class TestConstitution:
         )
         _check_state(enact_gov_state["enactState"])
         req_cip42.success()
+
+        req_cli36.start(url=helpers.get_vcs_link())
+        _check_cli_query()
+        req_cli36.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
