@@ -83,7 +83,7 @@ class TestNoConfidence:
         )
         req_cip39 = requirements.Req(id="CIP039", group=requirements.GroupsKnown.CHANG_US)
         req_cip41 = requirements.Req(id="CIP041", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_04 = requirements.Req(id="intCIP054_04", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_04 = requirements.Req(id="intCIP054-04", group=requirements.GroupsKnown.CHANG_US)
         req_cip57 = requirements.Req(id="CIP057", group=requirements.GroupsKnown.CHANG_US)
 
         # Reinstate CC members first, if needed, so we have a previous action

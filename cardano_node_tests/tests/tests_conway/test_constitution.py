@@ -74,7 +74,7 @@ class TestConstitution:
         req_cip31a = requirements.Req(id="intCIP031a-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip31c = requirements.Req(id="intCIP031c-01", group=requirements.GroupsKnown.CHANG_US)
         req_cip42 = requirements.Req(id="CIP042", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_03 = requirements.Req(id="intCIP054_03", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_03 = requirements.Req(id="intCIP054-03", group=requirements.GroupsKnown.CHANG_US)
         req_cip73_1 = requirements.Req(id="intCIP073-01", group=requirements.GroupsKnown.CHANG_US)
         req_cip73_4 = requirements.Req(id="intCIP073-04", group=requirements.GroupsKnown.CHANG_US)
 

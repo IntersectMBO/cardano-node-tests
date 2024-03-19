@@ -1138,8 +1138,8 @@ CIP1694 User Stories
    :target: https://github.com/IntersectMBO/cardano-node-tests/blob/932357aadd24bf69c5c6c38faf149e1e102e01f9/cardano_node_tests/tests/tests_conway/test_pparam_update.py#L198
 .. |image-CIP53| image:: https://img.shields.io/badge/CIP053-green
    :target: https://github.com/IntersectMBO/cardano-node-tests/blob/932357aadd24bf69c5c6c38faf149e1e102e01f9/cardano_node_tests/tests/tests_conway/test_info.py#L141
-.. |image-CIP54| image:: https://img.shields.io/badge/CIP054-grey
-   :target: https://github.com/CIP054-404
+.. |image-CIP54| image:: https://img.shields.io/badge/CIP054-green
+   :target: https://github.com/IntersectMBO/cardano-node-tests/blob/932357aadd24bf69c5c6c38faf149e1e102e01f9/cardano_node_tests/tests/tests_conway/test_pparam_update.py#L542
 .. |image-CIP55| image:: https://img.shields.io/badge/CIP055-grey
    :target: https://github.com/CIP055-404
 .. |image-CIP56| image:: https://img.shields.io/badge/CIP056-grey

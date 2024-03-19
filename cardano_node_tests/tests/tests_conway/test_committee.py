@@ -362,7 +362,7 @@ class TestCommittee:
         req_cip11 = requirements.Req(id="CIP011", group=requirements.GroupsKnown.CHANG_US)
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
         req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_02 = requirements.Req(id="intCIP054_02", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_02 = requirements.Req(id="intCIP054-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_01 = requirements.Req(id="intCIP064-01", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_02 = requirements.Req(id="intCIP064-02", group=requirements.GroupsKnown.CHANG_US)
