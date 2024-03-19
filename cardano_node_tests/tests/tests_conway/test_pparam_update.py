@@ -184,7 +184,7 @@ class TestPParamUpdate:
         # missing votes would approve the action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
         cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
-        drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["ppSecurityGroup"]
+        drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["ppGovGroup"]
         spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["ppSecurityGroup"]
         is_drep_total_below_threshold = (
             delegated_stake.drep / delegated_stake.total_lovelace
