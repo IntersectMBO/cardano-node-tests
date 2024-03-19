@@ -46,6 +46,7 @@ class TestTreasuryWithdrawals:
     """Tests for treasury withdrawals."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     def test_treasury_withdrawals(  # noqa: C901
         self,
         cluster_use_governance: governance_setup.GovClusterT,
@@ -352,6 +353,7 @@ class TestTreasuryWithdrawals:
             ).finish_test()
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     def test_expire_treasury_withdrawals(
         self,
         cluster_use_governance: governance_setup.GovClusterT,
@@ -663,6 +665,7 @@ class TestTreasuryWithdrawals:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("mir_cert", ("treasury", "rewards", "stake_addr"))
+    @pytest.mark.smoke
     def test_mir_certificates(
         self,
         cluster: clusterlib.ClusterLib,

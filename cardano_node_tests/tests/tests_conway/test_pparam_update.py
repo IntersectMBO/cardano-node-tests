@@ -130,6 +130,7 @@ class TestPParamUpdate:
     """Tests for protocol parameters update."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     def test_pparam_update(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
