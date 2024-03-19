@@ -68,7 +68,7 @@ class TestInfo:
         req_cli31 = requirements.Req(id="CLI031", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-03", group=requirements.GroupsKnown.CHANG_US)
         req_cip53 = requirements.Req(id="CIP053", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_06 = requirements.Req(id="intCIP054_06", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_06 = requirements.Req(id="intCIP054-06", group=requirements.GroupsKnown.CHANG_US)
         req_cip59 = requirements.Req(id="CIP059", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action

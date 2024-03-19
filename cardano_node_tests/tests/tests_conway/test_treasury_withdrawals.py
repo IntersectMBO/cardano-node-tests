@@ -76,7 +76,7 @@ class TestTreasuryWithdrawals:
         req_cip31f = requirements.Req(id="CIP031f", group=requirements.GroupsKnown.CHANG_US)
         req_cip33 = requirements.Req(id="CIP033", group=requirements.GroupsKnown.CHANG_US)
         req_cip48 = requirements.Req(id="CIP048", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_05 = requirements.Req(id="intCIP054_05", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_05 = requirements.Req(id="intCIP054-05", group=requirements.GroupsKnown.CHANG_US)
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()

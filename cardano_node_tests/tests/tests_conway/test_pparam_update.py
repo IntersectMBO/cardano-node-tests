@@ -172,7 +172,7 @@ class TestPParamUpdate:
         req_cip50 = requirements.Req(id="CIP050", group=requirements.GroupsKnown.CHANG_US)
         req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
         req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_01 = requirements.Req(id="intCIP054_01", group=requirements.GroupsKnown.CHANG_US)
+        req_cip54_01 = requirements.Req(id="intCIP054-01", group=requirements.GroupsKnown.CHANG_US)
         req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_03 = requirements.Req(id="intCIP064-03", group=requirements.GroupsKnown.CHANG_US)
         req_cip64_04 = requirements.Req(id="intCIP064-04", group=requirements.GroupsKnown.CHANG_US)
