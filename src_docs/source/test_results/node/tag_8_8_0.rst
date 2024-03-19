@@ -19,7 +19,7 @@ Regression testing on a local cluster
      - |:x:| \*
    * - P2P OFF - Babbage with Alonzo TX
      - |:x:| \*
-   * - Plutus Functionality using `Antaeus <https://github.com/input-output-hk/antaeus/tree/cardano-node-8_8>`__ - `Multi-era (without V3 scripts) <https://cardano-tests-reports-3-74-115-22.nip.io/antaeus/8.8.0/>`__
+   * - Plutus Functionality using `Antaeus <https://github.com/input-output-hk/antaeus/tree/cardano-node-8_8>`__ - `Multi-era (with V3 scripts) <https://cardano-tests-reports-3-74-115-22.nip.io/antaeus/8.8.0/>`__
      - |:heavy_check_mark:|
 
 .. list-table:: Other Testing
