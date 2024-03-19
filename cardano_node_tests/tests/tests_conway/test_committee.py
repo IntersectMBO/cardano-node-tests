@@ -354,6 +354,7 @@ class TestCommittee:
         req_cip9 = requirements.Req(id="CIP009", group=requirements.GroupsKnown.CHANG_US)
         req_cip5 = requirements.Req(id="CIP005", group=requirements.GroupsKnown.CHANG_US)
         req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
+        req_cip11 = requirements.Req(id="CIP011", group=requirements.GroupsKnown.CHANG_US)
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
         req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
@@ -379,15 +380,22 @@ class TestCommittee:
         cc_member3_key = f"keyHash-{cc_auth_record3.key_hash}"
 
         # New CC members to be added
+        cc_member1_expire = cluster.g_query.get_epoch() + 3
         cc_members = [
             clusterlib.CCMember(
+                epoch=cc_member1_expire,
+                cold_vkey_file=cc_auth_record1.cold_key_pair.vkey_file,
+                cold_skey_file=cc_auth_record1.cold_key_pair.skey_file,
+                hot_vkey_file=cc_auth_record1.hot_key_pair.vkey_file,
+                hot_skey_file=cc_auth_record1.hot_key_pair.skey_file,
+            ),
+            clusterlib.CCMember(
                 epoch=cluster.g_query.get_epoch() + 5,
-                cold_vkey_file=r.cold_key_pair.vkey_file,
-                cold_skey_file=r.cold_key_pair.skey_file,
-                hot_vkey_file=r.hot_key_pair.vkey_file,
-                hot_skey_file=r.hot_key_pair.skey_file,
-            )
-            for r in (cc_auth_record1, cc_auth_record2)
+                cold_vkey_file=cc_auth_record2.cold_key_pair.vkey_file,
+                cold_skey_file=cc_auth_record2.cold_key_pair.skey_file,
+                hot_vkey_file=cc_auth_record2.hot_key_pair.vkey_file,
+                hot_skey_file=cc_auth_record2.hot_key_pair.skey_file,
+            ),
         ]
 
         def _auth_hot_keys() -> None:
@@ -619,6 +627,19 @@ class TestCommittee:
                     tx_files=tx_files_res,
                 )
 
+        def _check_cc_member1_expired(
+            committee_state: tp.Dict[str, tp.Any], curr_epoch: int
+        ) -> None:
+            member_rec = committee_state["committee"][cc_member1_key]
+            if curr_epoch <= cc_member1_expire:
+                assert member_rec["status"] != "Expired", "CC Member is already expired"
+            if curr_epoch == cc_member1_expire:
+                assert (
+                    member_rec["nextEpochChange"]["tag"] == "ToBeExpired"
+                ), "CC Member not to expire"
+            elif curr_epoch > cc_member1_expire:
+                assert member_rec["status"] == "Expired", "CC Member should be expired"
+
         # Add new CC members
 
         # Authorize hot keys of new potential CC members for the first time, just to check that
@@ -674,9 +695,9 @@ class TestCommittee:
             err_str = str(excinfo.value)
             assert "CommitteeVoter" in err_str, err_str
 
-        def _check_add_state(state: dict):
+        def _check_add_state(gov_state: tp.Dict[str, tp.Any]):
             for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
-                cc_member_val = state["committee"]["members"].get(_cc_member_key)
+                cc_member_val = gov_state["committee"]["members"].get(_cc_member_key)
                 assert cc_member_val, "New committee member not found"
                 assert cc_member_val == cc_members[i].epoch
 
@@ -718,7 +739,7 @@ class TestCommittee:
         )
 
         next_rat_add_state = rat_add_gov_state["nextRatifyState"]
-        _check_add_state(next_rat_add_state["nextEnactState"])
+        _check_add_state(gov_state=next_rat_add_state["nextEnactState"])
         assert next_rat_add_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after ratification
@@ -727,6 +748,8 @@ class TestCommittee:
             committee_state=rat_add_committee_state,
             name_template=f"{temp_template}_rat_add_{_cur_epoch}",
         )
+        req_cip11.start(url=helpers.get_vcs_link())
+        _check_cc_member1_expired(committee_state=rat_add_committee_state, curr_epoch=_cur_epoch)
 
         xfail_ledger_4001_msgs = set()
         for _cc_member_key in (cc_member1_key, cc_member2_key):
@@ -755,7 +778,7 @@ class TestCommittee:
         conway_common.save_gov_state(
             gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{_cur_epoch}"
         )
-        _check_add_state(enact_add_gov_state["enactState"])
+        _check_add_state(gov_state=enact_add_gov_state["enactState"])
         req_cip40.success()
 
         # Check committee state after enactment
@@ -764,6 +787,8 @@ class TestCommittee:
             committee_state=enact_add_committee_state,
             name_template=f"{temp_template}_enact_add_{_cur_epoch}",
         )
+        _check_cc_member1_expired(committee_state=enact_add_committee_state, curr_epoch=_cur_epoch)
+
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (req_cip9, req_cip10)]
         for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
@@ -841,8 +866,8 @@ class TestCommittee:
             err_str = str(excinfo.value)
             assert "CommitteeVoter" in err_str, err_str
 
-        def _check_rem_state(state: dict):
-            cc_member_val = state["committee"]["members"].get(cc_member2_key)
+        def _check_rem_state(gov_state: tp.Dict[str, tp.Any]):
+            cc_member_val = gov_state["committee"]["members"].get(cc_member2_key)
             assert not cc_member_val, "Removed committee member still present"
 
         # Check ratification
@@ -882,7 +907,7 @@ class TestCommittee:
         )
 
         next_rat_rem_state = rat_rem_gov_state["nextRatifyState"]
-        _check_rem_state(next_rat_rem_state["nextEnactState"])
+        _check_rem_state(gov_state=next_rat_rem_state["nextEnactState"])
         assert next_rat_rem_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after ratification
@@ -903,7 +928,7 @@ class TestCommittee:
         conway_common.save_gov_state(
             gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{_cur_epoch}"
         )
-        _check_rem_state(enact_rem_gov_state["enactState"])
+        _check_rem_state(gov_state=enact_rem_gov_state["enactState"])
 
         # Check committee state after enactment
         enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
@@ -913,6 +938,9 @@ class TestCommittee:
         )
         enact_rem_member_rec = enact_rem_committee_state["committee"].get(cc_member2_key)
         assert not enact_rem_member_rec, "Removed committee member still present"
+
+        _check_cc_member1_expired(committee_state=enact_rem_committee_state, curr_epoch=_cur_epoch)
+        req_cip11.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
