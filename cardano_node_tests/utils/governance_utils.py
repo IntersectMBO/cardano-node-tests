@@ -509,7 +509,7 @@ def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
     total_spo_stake = stake_snapshot["total"]["stakeGo"]
 
     drep_state = cluster_obj.g_conway_governance.query.drep_state()
-    total_drep_stake = functools.reduce(lambda x, y: x + y[1]["stake"], drep_state, 0)
+    total_drep_stake = functools.reduce(lambda x, y: x + (y[1].get("stake") or 0), drep_state, 0)
 
     return StakeDelegation(
         spo=total_spo_stake, drep=total_drep_stake, total_lovelace=total_lovelace
