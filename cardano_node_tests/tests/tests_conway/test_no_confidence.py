@@ -83,6 +83,7 @@ class TestNoConfidence:
         )
         req_cip39 = requirements.Req(id="CIP039", group=requirements.GroupsKnown.CHANG_US)
         req_cip41 = requirements.Req(id="CIP041", group=requirements.GroupsKnown.CHANG_US)
+        req_cip57 = requirements.Req(id="CIP057", group=requirements.GroupsKnown.CHANG_US)
 
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
@@ -256,14 +257,15 @@ class TestNoConfidence:
             assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
 
             # Check enactment
-            req_int_cip32en.start(url=helpers.get_vcs_link())
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (req_int_cip32en, req_cip57)]
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
             )
             assert not enact_gov_state["enactState"]["committee"], "Committee is not empty"
-            [r.success() for r in (req_cip13, req_cip39)]
+            [r.success() for r in (req_cip13, req_cip39, req_cip57)]
 
             enact_prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
