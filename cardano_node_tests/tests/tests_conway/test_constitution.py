@@ -72,6 +72,8 @@ class TestConstitution:
         req_cip1b = requirements.Req(id="CIP001b", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip42 = requirements.Req(id="CIP042", group=requirements.GroupsKnown.CHANG_US)
+        req_cip73_1 = requirements.Req(id="intCIP073-01", group=requirements.GroupsKnown.CHANG_US)
+        req_cip73_4 = requirements.Req(id="intCIP073-04", group=requirements.GroupsKnown.CHANG_US)
 
         # Create an action
 
@@ -211,9 +213,9 @@ class TestConstitution:
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli1, req_cip1a, req_cip1b)]
+        [r.start(url=_url) for r in (req_cli1, req_cip1a, req_cip1b, req_cip73_1, req_cip73_4)]
         _check_state(next_rat_state["nextEnactState"])
-        [r.success() for r in (req_cli1, req_cip1a, req_cip1b)]
+        [r.success() for r in (req_cli1, req_cip1a, req_cip1b, req_cip73_1)]
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check enactment
@@ -223,7 +225,7 @@ class TestConstitution:
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
         _check_state(enact_gov_state["enactState"])
-        req_cip42.success()
+        [r.success() for r in (req_cip42, req_cip73_4)]
 
         req_cli36.start(url=helpers.get_vcs_link())
         _check_cli_query()

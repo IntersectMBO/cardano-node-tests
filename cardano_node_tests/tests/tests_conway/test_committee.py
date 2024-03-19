@@ -363,6 +363,7 @@ class TestCommittee:
         req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
         req_cip67 = requirements.Req(id="CIP067", group=requirements.GroupsKnown.CHANG_US)
+        req_cip73_3 = requirements.Req(id="intCIP073-03", group=requirements.GroupsKnown.CHANG_US)
 
         # Auth keys for CC members
         cc_auth_record1 = governance_utils.get_cc_member_auth_record(
@@ -782,8 +783,10 @@ class TestCommittee:
         conway_common.save_gov_state(
             gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{_cur_epoch}"
         )
-        _check_add_state(gov_state=enact_add_gov_state["enactState"])
-        req_cip40.success()
+
+        req_cip73_3.start(url=helpers.get_vcs_link())
+        _check_add_state(enact_add_gov_state["enactState"])
+        [r.success() for r in (req_cip40, req_cip73_3)]
 
         # Check committee state after enactment
         enact_add_committee_state = cluster.g_conway_governance.query.committee_state()
