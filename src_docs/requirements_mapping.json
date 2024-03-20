@@ -13,6 +13,7 @@
         "CIP031c": ["intCIP031c-01", "intCIP031c-02"],
         "CIP032": ["intCIP032en", "intCIP032ex"],
         "CIP034": ["intCIP034en", "intCIP034ex"],
+        "CIP038": ["intCIP038-01", "intCIP038-02", "intCIP038-03", "intCIP038-04", "intCIP038-05", "intCIP038-06", "intCIP038-07"],
         "CIP054": [
             "intCIP054-01",
             "intCIP054-02",

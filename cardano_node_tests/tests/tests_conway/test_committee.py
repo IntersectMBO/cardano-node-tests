@@ -364,6 +364,7 @@ class TestCommittee:
         req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
         req_cip11 = requirements.Req(id="CIP011", group=requirements.GroupsKnown.CHANG_US)
         req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
+        req_cip38_01 = requirements.Req(id="intCIP038-01", group=requirements.GroupsKnown.CHANG_US)
         req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
         req_cip54_02 = requirements.Req(id="intCIP054-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
@@ -789,6 +790,7 @@ class TestCommittee:
 
         next_rat_add_state = rat_add_gov_state["nextRatifyState"]
         _check_add_state(gov_state=next_rat_add_state["nextEnactState"])
+        req_cip38_01.start(url=helpers.get_vcs_link())
         assert next_rat_add_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after add action ratification
@@ -880,6 +882,7 @@ class TestCommittee:
             gov_state=enact_add_gov_state, action_txid=action_rem_txid
         )
         assert rat_action, "Action not found in ratified actions"
+        req_cip38_01.success()
 
         # Disapprove ratified removal action, the voting shouldn't have any effect
         conway_common.cast_vote(

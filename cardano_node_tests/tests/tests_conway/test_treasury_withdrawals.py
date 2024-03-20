@@ -75,6 +75,7 @@ class TestTreasuryWithdrawals:
         req_cip31a = requirements.Req(id="intCIP031a-06", group=requirements.GroupsKnown.CHANG_US)
         req_cip31f = requirements.Req(id="CIP031f", group=requirements.GroupsKnown.CHANG_US)
         req_cip33 = requirements.Req(id="CIP033", group=requirements.GroupsKnown.CHANG_US)
+        req_cip38_06 = requirements.Req(id="intCIP038-06", group=requirements.GroupsKnown.CHANG_US)
         req_cip48 = requirements.Req(id="CIP048", group=requirements.GroupsKnown.CHANG_US)
         req_cip54_05 = requirements.Req(id="intCIP054-05", group=requirements.GroupsKnown.CHANG_US)
 
@@ -316,6 +317,12 @@ class TestTreasuryWithdrawals:
         else:
             msg = "Not all actions got removed"
             raise AssertionError(msg)
+
+        req_cip38_06.start(url=helpers.get_vcs_link())
+        assert not rat_gov_state["nextRatifyState"][
+            "ratificationDelayed"
+        ], "Ratification is delayed unexpectedly"
+        req_cip38_06.success()
 
         # Disapprove ratified action, the voting shouldn't have any effect
         _cast_vote(approve=False, vote_id="after_ratification")

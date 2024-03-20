@@ -164,6 +164,7 @@ class TestPParamUpdate:
         req_cip31a = requirements.Req(id="intCIP031a-05", group=requirements.GroupsKnown.CHANG_US)
         req_cip31e = requirements.Req(id="CIP031e", group=requirements.GroupsKnown.CHANG_US)
         req_cip37 = requirements.Req(id="CIP037", group=requirements.GroupsKnown.CHANG_US)
+        req_cip38_04 = requirements.Req(id="intCIP038-04", group=requirements.GroupsKnown.CHANG_US)
         req_cip44 = requirements.Req(id="CIP044", group=requirements.GroupsKnown.CHANG_US)
         req_cip45 = requirements.Req(id="CIP045", group=requirements.GroupsKnown.CHANG_US)
         req_cip46 = requirements.Req(id="CIP046", group=requirements.GroupsKnown.CHANG_US)
@@ -932,7 +933,9 @@ class TestPParamUpdate:
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             _check_state(next_rat_state["nextEnactState"])
+            req_cip38_04.start(url=helpers.get_vcs_link())
             assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
+            req_cip38_04.success()
 
             # Wait for enactment
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)

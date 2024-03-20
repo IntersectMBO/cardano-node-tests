@@ -67,6 +67,7 @@ class TestInfo:
         req_cli24 = requirements.Req(id="CLI024", group=requirements.GroupsKnown.CHANG_US)
         req_cli31 = requirements.Req(id="CLI031", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-03", group=requirements.GroupsKnown.CHANG_US)
+        req_cip38_05 = requirements.Req(id="intCIP038-05", group=requirements.GroupsKnown.CHANG_US)
         req_cip53 = requirements.Req(id="CIP053", group=requirements.GroupsKnown.CHANG_US)
         req_cip54_06 = requirements.Req(id="intCIP054-06", group=requirements.GroupsKnown.CHANG_US)
         req_cip59 = requirements.Req(id="CIP059", group=requirements.GroupsKnown.CHANG_US)
@@ -234,6 +235,12 @@ class TestInfo:
         )
         assert not rat_info_action, "Action found in ratified actions"
         req_cip53.success()
+
+        req_cip38_05.start(url=helpers.get_vcs_link())
+        assert not approved_gov_state["nextRatifyState"][
+            "ratificationDelayed"
+        ], "Ratification is delayed unexpectedly"
+        req_cip38_05.success()
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
