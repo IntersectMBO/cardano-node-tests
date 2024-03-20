@@ -321,7 +321,7 @@ class TestCommittee:
         """Test adding and removing CC members.
 
         * authorize hot keys of 3 new potential CC members
-        * create an "update committee" action to add 2 of the 3 new potential CC members
+        * create the first "update committee" action to add 2 of the 3 new potential CC members
 
             - the first CC member is listed twice to test that it's not possible to add the same
               member multiple times
@@ -335,14 +335,17 @@ class TestCommittee:
             - check that the new CC members were added
             - check that it's not possible to vote on enacted action
 
-        * create an "update committee" action to remove the second CC member
+        * create the second "update committee" action to remove the second CC member
 
+            - propose the action at the same epoch as the first action
+            - use the first action as previous action
             - vote to disapprove the action
-            - vote to approve the action
+            - vote to approve the action in the same epoch as the first action was approved
             - check that CC members votes have no effect
             - check that the action is ratified
             - try to disapprove the ratified action, this shouldn't have any effect
-            - check that the action is enacted
+            - check that the action is enacted one epoch after the first action, due to the
+              ratification delay
             - check that the second CC member was removed
             - check that the first CC member has expired as expected
             - check that it's not possible to vote on enacted action
@@ -502,11 +505,6 @@ class TestCommittee:
                 ],
             )
 
-            # Make sure we have enough time to submit the proposal in one epoch
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-            )
-
             tx_output_action = clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_action_add",
@@ -545,15 +543,13 @@ class TestCommittee:
 
             return add_cc_action, action_add_txid, action_add_ix
 
-        def _rem_member() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+        def _rem_member(
+            prev_action_txid: str, prev_action_ix: int
+        ) -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove the CC member."""
             anchor_url_rem = "http://www.cc-rem.com"
             anchor_data_hash_rem = (
                 "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-            )
-            prev_action_rec = governance_utils.get_prev_action(
-                action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
             )
 
             req_cip5.start(url=helpers.get_vcs_link())
@@ -564,8 +560,8 @@ class TestCommittee:
                 anchor_data_hash=anchor_data_hash_rem,
                 quorum=str(cluster.conway_genesis["committee"]["quorum"]),
                 rem_cc_members=[cc_members[1]],
-                prev_action_txid=prev_action_rec.txid,
-                prev_action_ix=prev_action_rec.ix,
+                prev_action_txid=prev_action_txid,
+                prev_action_ix=prev_action_ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
             )
             req_cip5.success()
@@ -575,11 +571,6 @@ class TestCommittee:
                 signing_key_files=[
                     pool_user_lg.payment.skey_file,
                 ],
-            )
-
-            # Make sure we have enough time to submit the proposal in one epoch
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
             )
 
             tx_output_action = clusterlib_utils.build_and_submit_tx(
@@ -663,17 +654,41 @@ class TestCommittee:
             elif curr_epoch > cc_member1_expire:
                 assert member_rec["status"] == "Expired", "CC Member should be expired"
 
-        # Add new CC members
+        def _check_add_state(gov_state: tp.Dict[str, tp.Any]):
+            for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
+                cc_member_val = gov_state["committee"]["members"].get(_cc_member_key)
+                assert cc_member_val, "New committee member not found"
+                assert cc_member_val == cc_members[i].epoch
+
+        def _check_rem_state(gov_state: tp.Dict[str, tp.Any]):
+            cc_member_val = gov_state["committee"]["members"].get(cc_member2_key)
+            assert not cc_member_val, "Removed committee member still present"
 
         # Authorize hot keys of new potential CC members for the first time, just to check that
         # the authorization will be removed after ratification.
         _auth_hot_keys()
 
+        # Make sure we have enough time to submit the proposals in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 10
+        )
+        actions_epoch = cluster.g_query.get_epoch()
+
         # Create an action to add new CC members
         add_cc_action, action_add_txid, action_add_ix = _add_members()
 
+        # Create an action to remove CC member. Use add action as previous action, as the add
+        # action will be ratified first.
+        rem_cc_action, action_rem_txid, action_rem_ix = _rem_member(
+            prev_action_txid=action_add_txid, prev_action_ix=action_add_ix
+        )
+
+        _cur_epoch = cluster.g_query.get_epoch()
+        assert _cur_epoch == actions_epoch, "Haven't managed to submit the proposals in one epoch"
+
         req_cip67.start(url=helpers.get_vcs_link())
-        # Vote & disapprove the action
+
+        # Vote & disapprove the add action
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -686,7 +701,7 @@ class TestCommittee:
             drep_skip_votes=True,
         )
 
-        # Vote & approve the action
+        # Vote & approve the add action
         request.addfinalizer(_resign)
         _url = helpers.get_vcs_link()
         req_cip40.start(url=_url)
@@ -723,42 +738,48 @@ class TestCommittee:
             err_str = str(excinfo.value)
             assert "CommitteeVoter" in err_str, err_str
 
-        def _check_add_state(gov_state: tp.Dict[str, tp.Any]):
-            for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
-                cc_member_val = gov_state["committee"]["members"].get(_cc_member_key)
-                assert cc_member_val, "New committee member not found"
-                assert cc_member_val == cc_members[i].epoch
-
-        # Check ratification
-        xfail_ledger_3979_msgs = set()
-        for __ in range(3):
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_add_gov_state = cluster.g_conway_governance.query.gov_state()
-            conway_common.save_gov_state(
-                gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{_cur_epoch}"
-            )
-            rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_add_gov_state, action_txid=action_add_txid
-            )
-            if rat_action:
-                break
-
-            # Known ledger issue where only one expired action gets removed in one epoch.
-            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rat_action and conway_common.possible_rem_issue(
-                gov_state=rat_add_gov_state, epoch=_cur_epoch
-            ):
-                xfail_ledger_3979_msgs.add("Only single expired action got removed")
-                continue
-
-            msg = "Action not found in ratified actions"
-            raise AssertionError(msg)
-
-        # Disapprove ratified action, the voting shouldn't have any effect
+        # Vote & disapprove the removal action
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
-            name_template=f"{temp_template}_after_ratification",
+            name_template=f"{temp_template}_rem_no",
+            payment_addr=pool_user_lg.payment,
+            action_txid=action_rem_txid,
+            action_ix=action_rem_ix,
+            approve_drep=False,
+            approve_spo=False,
+            drep_skip_votes=True,
+        )
+
+        # Vote & approve the removal action
+        voted_votes_rem = conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_rem_yes",
+            payment_addr=pool_user_lg.payment,
+            action_txid=action_rem_txid,
+            action_ix=action_rem_ix,
+            approve_drep=True,
+            approve_spo=True,
+            drep_skip_votes=True,
+        )
+
+        # Check ratification of add action
+        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        rat_add_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{_cur_epoch}"
+        )
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=rat_add_gov_state, action_txid=action_add_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
+
+        # Disapprove ratified add action, the voting shouldn't have any effect
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_add_after_ratification",
             payment_addr=pool_user_lg.payment,
             action_txid=action_add_txid,
             action_ix=action_add_ix,
@@ -770,7 +791,7 @@ class TestCommittee:
         _check_add_state(gov_state=next_rat_add_state["nextEnactState"])
         assert next_rat_add_state["ratificationDelayed"], "Ratification not delayed"
 
-        # Check committee state after ratification
+        # Check committee state after add action ratification
         rat_add_committee_state = cluster.g_conway_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=rat_add_committee_state,
@@ -800,7 +821,7 @@ class TestCommittee:
         # are enacted.
         _auth_hot_keys()
 
-        # Check enactment
+        # Check enactment of add action
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         enact_add_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
@@ -815,7 +836,7 @@ class TestCommittee:
         if is_spo_total_below_threshold:
             req_cip64_02.success()
 
-        # Check committee state after enactment
+        # Check committee state after add action enactment
         enact_add_committee_state = cluster.g_conway_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_add_committee_state,
@@ -837,7 +858,7 @@ class TestCommittee:
             ), "Expiration epoch is incorrect"
         [r.success() for r in (req_cip9, req_cip10, req_cip58)]
 
-        # Try to vote on enacted action
+        # Try to vote on enacted add action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             conway_common.cast_vote(
                 cluster_obj=cluster,
@@ -852,87 +873,19 @@ class TestCommittee:
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
 
-        # Remove a CC member
+        # Check ratification of removal action. The removal action should be ratified at the same
+        # time as the add action is enacted, because ratification of new actions was delayed by
+        # the add action.
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=enact_add_gov_state, action_txid=action_rem_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
 
-        # Create an action to remove CC member
-        rem_cc_action, action_rem_txid, action_rem_ix = _rem_member()
-
-        # Vote & disapprove the action
+        # Disapprove ratified removal action, the voting shouldn't have any effect
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
-            name_template=f"{temp_template}_rem_no",
-            payment_addr=pool_user_lg.payment,
-            action_txid=action_rem_txid,
-            action_ix=action_rem_ix,
-            approve_drep=False,
-            approve_spo=False,
-            drep_skip_votes=True,
-        )
-
-        # Vote & approve the action
-        voted_votes_rem = conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_rem_yes",
-            payment_addr=pool_user_lg.payment,
-            action_txid=action_rem_txid,
-            action_ix=action_rem_ix,
-            approve_drep=True,
-            approve_spo=True,
-            drep_skip_votes=True,
-        )
-
-        # Check that CC cannot vote on "update committee" action
-        if governance_data.cc_members:
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                conway_common.cast_vote(
-                    cluster_obj=cluster,
-                    governance_data=governance_data,
-                    name_template=f"{temp_template}_rem_with_ccs",
-                    payment_addr=pool_user_lg.payment,
-                    action_txid=action_rem_txid,
-                    action_ix=action_rem_ix,
-                    approve_cc=True,
-                    approve_drep=False,
-                    approve_spo=False,
-                )
-            err_str = str(excinfo.value)
-            assert "CommitteeVoter" in err_str, err_str
-
-        def _check_rem_state(gov_state: tp.Dict[str, tp.Any]):
-            cc_member_val = gov_state["committee"]["members"].get(cc_member2_key)
-            assert not cc_member_val, "Removed committee member still present"
-
-        # Check ratification
-        for __ in range(3):
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_rem_gov_state = cluster.g_conway_governance.query.gov_state()
-            conway_common.save_gov_state(
-                gov_state=rat_rem_gov_state, name_template=f"{temp_template}_rat_rem_{_cur_epoch}"
-            )
-            rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_rem_gov_state, action_txid=action_rem_txid
-            )
-            if rat_action:
-                break
-
-            # Known ledger issue where only one expired action gets removed in one epoch.
-            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rat_action and conway_common.possible_rem_issue(
-                gov_state=rat_rem_gov_state, epoch=_cur_epoch
-            ):
-                xfail_ledger_3979_msgs.add("Only single expired action got removed")
-                continue
-
-            msg = "Action not found in ratified actions"
-            raise AssertionError(msg)
-
-        # Disapprove ratified action, the voting shouldn't have any effect
-        conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_after_ratification",
+            name_template=f"{temp_template}_rem_after_ratification",
             payment_addr=pool_user_lg.payment,
             action_txid=action_rem_txid,
             action_ix=action_rem_ix,
@@ -940,23 +893,17 @@ class TestCommittee:
             approve_spo=False,
         )
 
-        next_rat_rem_state = rat_rem_gov_state["nextRatifyState"]
+        next_rat_rem_state = enact_add_gov_state["nextRatifyState"]
         _check_rem_state(gov_state=next_rat_rem_state["nextEnactState"])
         assert next_rat_rem_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after ratification
-        rat_rem_committee_state = cluster.g_conway_governance.query.committee_state()
-        conway_common.save_committee_state(
-            committee_state=rat_rem_committee_state,
-            name_template=f"{temp_template}_rat_rem_{_cur_epoch}",
-        )
-
-        rat_rem_member_rec = rat_rem_committee_state["committee"][cc_member2_key]
+        rat_rem_member_rec = enact_add_committee_state["committee"][cc_member2_key]
         assert (
             rat_rem_member_rec["nextEpochChange"]["tag"] == "ToBeRemoved"
         ), "CC Member is not marked for removal"
 
-        # Check enactment
+        # Check enactment of removal action
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         enact_rem_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
@@ -964,7 +911,7 @@ class TestCommittee:
         )
         _check_rem_state(gov_state=enact_rem_gov_state["enactState"])
 
-        # Check committee state after enactment
+        # Check committee state after enactment of removal action
         enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_rem_committee_state,
@@ -976,7 +923,7 @@ class TestCommittee:
         _check_cc_member1_expired(committee_state=enact_rem_committee_state, curr_epoch=_cur_epoch)
         req_cip11.success()
 
-        # Try to vote on enacted action
+        # Try to vote on enacted removal action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             voted_votes_rem = conway_common.cast_vote(
                 cluster_obj=cluster,
@@ -1007,15 +954,6 @@ class TestCommittee:
         req_cip67.success()
 
         known_issues = []
-        if xfail_ledger_3979_msgs:
-            known_issues.append(
-                blockers.GH(
-                    issue=3979,
-                    repo="IntersectMBO/cardano-ledger",
-                    message="; ".join(xfail_ledger_3979_msgs),
-                    check_on_devel=False,
-                )
-            )
         if xfail_ledger_4001_msgs:
             known_issues.append(
                 blockers.GH(
