@@ -73,6 +73,7 @@ class TestConstitution:
         req_cip1b = requirements.Req(id="CIP001b", group=requirements.GroupsKnown.CHANG_US)
         req_cip31a = requirements.Req(id="intCIP031a-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip31c = requirements.Req(id="intCIP031c-01", group=requirements.GroupsKnown.CHANG_US)
+        req_cip38_02 = requirements.Req(id="intCIP038-02", group=requirements.GroupsKnown.CHANG_US)
         req_cip42 = requirements.Req(id="CIP042", group=requirements.GroupsKnown.CHANG_US)
         req_cip54_03 = requirements.Req(id="intCIP054-03", group=requirements.GroupsKnown.CHANG_US)
         req_cip73_1 = requirements.Req(id="intCIP073-01", group=requirements.GroupsKnown.CHANG_US)
@@ -219,7 +220,9 @@ class TestConstitution:
         [r.start(url=_url) for r in (req_cli1, req_cip1a, req_cip1b, req_cip73_1, req_cip73_4)]
         _check_state(next_rat_state["nextEnactState"])
         [r.success() for r in (req_cli1, req_cip1a, req_cip1b, req_cip73_1)]
+        req_cip38_02.start(url=_url)
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
+        req_cip38_02.success()
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)

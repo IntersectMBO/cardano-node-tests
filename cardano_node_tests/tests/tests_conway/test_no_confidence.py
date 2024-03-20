@@ -81,6 +81,7 @@ class TestNoConfidence:
         req_int_cip34en = requirements.Req(
             id="intCIP034en", group=requirements.GroupsKnown.CHANG_US
         )
+        req_cip38_03 = requirements.Req(id="intCIP038-03", group=requirements.GroupsKnown.CHANG_US)
         req_cip39 = requirements.Req(id="CIP039", group=requirements.GroupsKnown.CHANG_US)
         req_cip41 = requirements.Req(id="CIP041", group=requirements.GroupsKnown.CHANG_US)
         req_cip54_04 = requirements.Req(id="intCIP054-04", group=requirements.GroupsKnown.CHANG_US)
@@ -257,8 +258,11 @@ class TestNoConfidence:
                 approve_spo=False,
             )
 
-            next_rat_state = rat_gov_state["nextRatifyState"]
-            assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
+            req_cip38_03.start(url=helpers.get_vcs_link())
+            assert rat_gov_state["nextRatifyState"][
+                "ratificationDelayed"
+            ], "Ratification not delayed"
+            req_cip38_03.success()
 
             # Check enactment
             _url = helpers.get_vcs_link()
