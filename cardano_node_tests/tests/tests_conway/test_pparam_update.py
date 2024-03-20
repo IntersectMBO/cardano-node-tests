@@ -196,8 +196,8 @@ class TestPParamUpdate:
 
         # PParam groups
 
-        _groups_url = helpers.get_vcs_link()
-        [r.start(url=_groups_url) for r in (req_cip49, req_cip50, req_cip51, req_cip52)]
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (req_cip49, req_cip50, req_cip51, req_cip52)]
 
         network_g_proposals = [
             clusterlib_utils.UpdateProposal(
@@ -771,7 +771,7 @@ class TestPParamUpdate:
         )
 
         # Vote on the final action that will be enacted
-        req_cip37.start(url=_action_url)
+        req_cip37.start(url=helpers.get_vcs_link())
         fin_action_txid, fin_action_ix, fin_proposal_names = _create_pparams_action(
             proposals=fin_update_proposals
         )
