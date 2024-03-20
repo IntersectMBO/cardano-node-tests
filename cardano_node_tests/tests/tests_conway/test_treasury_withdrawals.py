@@ -398,6 +398,9 @@ class TestTreasuryWithdrawals:
         req_int_cip34ex = requirements.Req(
             id="intCIP034ex", group=requirements.GroupsKnown.CHANG_US
         )
+        req_int_cip69ex = requirements.Req(
+            id="intCIP069ex", group=requirements.GroupsKnown.CHANG_US
+        )
 
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
@@ -575,6 +578,8 @@ class TestTreasuryWithdrawals:
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
         )
 
+        req_int_cip69ex.start(url=helpers.get_vcs_link())
+
         for action_ix in range(actions_num):
             prop_vote = governance_utils.lookup_proposal(
                 gov_state=vote_gov_state, action_txid=action_txid, action_ix=action_ix
@@ -669,6 +674,8 @@ class TestTreasuryWithdrawals:
         assert not governance_utils.lookup_proposal(
             gov_state=rem_gov_state, action_txid=action_txid
         ), "Action was not removed from proposals"
+
+        req_int_cip69ex.success()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("mir_cert", ("treasury", "rewards", "stake_addr"))

@@ -86,6 +86,9 @@ class TestNoConfidence:
         req_cip41 = requirements.Req(id="CIP041", group=requirements.GroupsKnown.CHANG_US)
         req_cip54_04 = requirements.Req(id="intCIP054-04", group=requirements.GroupsKnown.CHANG_US)
         req_cip57 = requirements.Req(id="CIP057", group=requirements.GroupsKnown.CHANG_US)
+        req_int_cip69en = requirements.Req(
+            id="intCIP069en", group=requirements.GroupsKnown.CHANG_US
+        )
 
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
@@ -177,6 +180,8 @@ class TestNoConfidence:
         req_cip29.success()
 
         action_ix = prop_action["actionId"]["govActionIx"]
+
+        req_int_cip69en.start(url=helpers.get_vcs_link())
 
         # Vote & disapprove the action
         conway_common.cast_vote(
@@ -281,7 +286,7 @@ class TestNoConfidence:
             )
             assert enact_prev_action_rec.txid == action_txid, "Incorrect previous action Txid"
             assert enact_prev_action_rec.ix == action_ix, "Incorrect previous action index"
-            req_int_cip32en.success()
+            [r.success() for r in (req_int_cip32en, req_int_cip69en)]
 
             req_int_cip34en.start(url=helpers.get_vcs_link())
             enact_deposit_returned = cluster.g_query.get_stake_addr_info(
