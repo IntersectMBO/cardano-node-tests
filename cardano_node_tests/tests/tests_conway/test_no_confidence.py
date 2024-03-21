@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
@@ -16,7 +17,6 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -67,29 +67,6 @@ class TestNoConfidence:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
-        # Linked user stories
-        req_cli18 = requirements.Req(id="CLI018", group=requirements.GroupsKnown.CHANG_US)
-        req_cip13 = requirements.Req(id="CIP013", group=requirements.GroupsKnown.CHANG_US)
-        req_cip29 = requirements.Req(id="CIP029", group=requirements.GroupsKnown.CHANG_US)
-        req_int_cip30en = requirements.Req(
-            id="intCIP030en", group=requirements.GroupsKnown.CHANG_US
-        )
-        req_cip31a = requirements.Req(id="intCIP031a-04", group=requirements.GroupsKnown.CHANG_US)
-        req_int_cip32en = requirements.Req(
-            id="intCIP032en", group=requirements.GroupsKnown.CHANG_US
-        )
-        req_int_cip34en = requirements.Req(
-            id="intCIP034en", group=requirements.GroupsKnown.CHANG_US
-        )
-        req_cip38_03 = requirements.Req(id="intCIP038-03", group=requirements.GroupsKnown.CHANG_US)
-        req_cip39 = requirements.Req(id="CIP039", group=requirements.GroupsKnown.CHANG_US)
-        req_cip41 = requirements.Req(id="CIP041", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_04 = requirements.Req(id="intCIP054-04", group=requirements.GroupsKnown.CHANG_US)
-        req_cip57 = requirements.Req(id="CIP057", group=requirements.GroupsKnown.CHANG_US)
-        req_int_cip69en = requirements.Req(
-            id="intCIP069en", group=requirements.GroupsKnown.CHANG_US
-        )
-
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
@@ -120,7 +97,14 @@ class TestNoConfidence:
         _url = helpers.get_vcs_link()
         [
             r.start(url=_url)
-            for r in (req_cli18, req_cip13, req_cip29, req_int_cip30en, req_cip31a, req_cip54_04)
+            for r in (
+                reqc.cli018,
+                reqc.cip013,
+                reqc.cip029,
+                reqc.cip030en,
+                reqc.cip031a_04,
+                reqc.cip054_04,
+            )
         ]
         no_confidence_action = cluster.g_conway_governance.action.create_no_confidence(
             action_name=temp_template,
@@ -131,7 +115,7 @@ class TestNoConfidence:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
         )
-        [r.success() for r in (req_cli18, req_cip31a, req_cip54_04)]
+        [r.success() for r in (reqc.cli018, reqc.cip031a_04, reqc.cip054_04)]
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[no_confidence_action.action_file],
@@ -177,11 +161,11 @@ class TestNoConfidence:
             prop_action["action"]["tag"] == governance_utils.ActionTags.NO_CONFIDENCE.value
         ), "Incorrect action tag"
 
-        req_cip29.success()
+        reqc.cip029.success()
 
         action_ix = prop_action["actionId"]["govActionIx"]
 
-        req_int_cip69en.start(url=helpers.get_vcs_link())
+        reqc.cip069en.start(url=helpers.get_vcs_link())
 
         # Vote & disapprove the action
         conway_common.cast_vote(
@@ -196,7 +180,7 @@ class TestNoConfidence:
         )
 
         # Vote & approve the action
-        req_cip39.start(url=helpers.get_vcs_link())
+        reqc.cip039.start(url=helpers.get_vcs_link())
         voted_votes = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -263,22 +247,22 @@ class TestNoConfidence:
                 approve_spo=False,
             )
 
-            req_cip38_03.start(url=helpers.get_vcs_link())
+            reqc.cip038_03.start(url=helpers.get_vcs_link())
             assert rat_gov_state["nextRatifyState"][
                 "ratificationDelayed"
             ], "Ratification not delayed"
-            req_cip38_03.success()
+            reqc.cip038_03.success()
 
             # Check enactment
             _url = helpers.get_vcs_link()
-            [r.start(url=_url) for r in (req_int_cip32en, req_cip57)]
+            [r.start(url=_url) for r in (reqc.cip032en, reqc.cip057)]
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
             )
             assert not enact_gov_state["enactState"]["committee"], "Committee is not empty"
-            [r.success() for r in (req_cip13, req_cip39, req_cip57)]
+            [r.success() for r in (reqc.cip013, reqc.cip039, reqc.cip057)]
 
             enact_prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
@@ -286,9 +270,9 @@ class TestNoConfidence:
             )
             assert enact_prev_action_rec.txid == action_txid, "Incorrect previous action Txid"
             assert enact_prev_action_rec.ix == action_ix, "Incorrect previous action index"
-            [r.success() for r in (req_int_cip32en, req_int_cip69en)]
+            [r.success() for r in (reqc.cip032en, reqc.cip069en)]
 
-            req_int_cip34en.start(url=helpers.get_vcs_link())
+            reqc.cip034en.start(url=helpers.get_vcs_link())
             enact_deposit_returned = cluster.g_query.get_stake_addr_info(
                 pool_user_lg.stake.address
             ).reward_account_balance
@@ -296,7 +280,7 @@ class TestNoConfidence:
             assert (
                 enact_deposit_returned == init_return_account_balance + deposit_amt
             ), "Incorrect return account balance"
-            [r.success() for r in (req_int_cip30en, req_int_cip34en)]
+            [r.success() for r in (reqc.cip030en, reqc.cip034en)]
 
             # Try to vote on enacted action
             with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -313,14 +297,14 @@ class TestNoConfidence:
             err_str = str(excinfo.value)
             assert "(GovActionsDoNotExist" in err_str, err_str
 
-            req_cip41.start(url=helpers.get_vcs_link())
+            reqc.cip041.start(url=helpers.get_vcs_link())
             governance_setup.reinstate_committee(
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_reinstate2",
                 pool_user=pool_user_lg,
             )
-            req_cip41.success()
+            reqc.cip041.success()
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=no_confidence_action)
@@ -361,12 +345,9 @@ class TestNoConfidence:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
-        # Linked user stories
-        req_cip14 = requirements.Req(id="CIP014", group=requirements.GroupsKnown.CHANG_US)
-
         # Resign all CC Members but one
 
-        req_cip14.start(url=helpers.get_vcs_link())
+        reqc.cip014.start(url=helpers.get_vcs_link())
 
         cc_members_to_resign = governance_data.cc_members[1:]
         _cur_epoch = cluster.g_query.get_epoch()
@@ -449,7 +430,7 @@ class TestNoConfidence:
             )
             assert exp_const_action, "Action NOT found in expired actions"
 
-            req_cip14.success()
+            reqc.cip014.success()
 
             # Reinstate the original CC members
             governance_data = governance_setup.refresh_cc_keys(

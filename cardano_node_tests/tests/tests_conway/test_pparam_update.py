@@ -13,13 +13,13 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -158,29 +158,6 @@ class TestPParamUpdate:
         cost_proposal_file = DATA_DIR / "cost_models_list.json"
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
-        # Linked user stories
-        req_cli17 = requirements.Req(id="CLI017", group=requirements.GroupsKnown.CHANG_US)
-        req_cip6 = requirements.Req(id="CIP006", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP031a-05", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31e = requirements.Req(id="CIP031e", group=requirements.GroupsKnown.CHANG_US)
-        req_cip37 = requirements.Req(id="CIP037", group=requirements.GroupsKnown.CHANG_US)
-        req_cip38_04 = requirements.Req(id="intCIP038-04", group=requirements.GroupsKnown.CHANG_US)
-        req_cip44 = requirements.Req(id="CIP044", group=requirements.GroupsKnown.CHANG_US)
-        req_cip45 = requirements.Req(id="CIP045", group=requirements.GroupsKnown.CHANG_US)
-        req_cip46 = requirements.Req(id="CIP046", group=requirements.GroupsKnown.CHANG_US)
-        req_cip47 = requirements.Req(id="CIP047", group=requirements.GroupsKnown.CHANG_US)
-        req_cip49 = requirements.Req(id="CIP049", group=requirements.GroupsKnown.CHANG_US)
-        req_cip50 = requirements.Req(id="CIP050", group=requirements.GroupsKnown.CHANG_US)
-        req_cip51 = requirements.Req(id="CIP051", group=requirements.GroupsKnown.CHANG_US)
-        req_cip52 = requirements.Req(id="CIP052", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_01 = requirements.Req(id="intCIP054-01", group=requirements.GroupsKnown.CHANG_US)
-        req_cip60 = requirements.Req(id="CIP060", group=requirements.GroupsKnown.CHANG_US)
-        req_cip64_03 = requirements.Req(id="intCIP064-03", group=requirements.GroupsKnown.CHANG_US)
-        req_cip64_04 = requirements.Req(id="intCIP064-04", group=requirements.GroupsKnown.CHANG_US)
-        req_cip65 = requirements.Req(id="CIP065", group=requirements.GroupsKnown.CHANG_US)
-        req_cip68 = requirements.Req(id="CIP068", group=requirements.GroupsKnown.CHANG_US)
-        req_cip74 = requirements.Req(id="CIP074", group=requirements.GroupsKnown.CHANG_US)
-
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
         # missing votes would approve the action.
@@ -198,7 +175,7 @@ class TestPParamUpdate:
         # PParam groups
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cip49, req_cip50, req_cip51, req_cip52)]
+        [r.start(url=_url) for r in (reqc.cip049, reqc.cip050, reqc.cip051, reqc.cip052)]
 
         network_g_proposals = [
             clusterlib_utils.UpdateProposal(
@@ -551,9 +528,12 @@ class TestPParamUpdate:
 
             update_args = clusterlib_utils.get_pparams_update_args(update_proposals=proposals)
 
-            [r.start(url=_action_url) for r in (req_cli17, req_cip31a, req_cip31e, req_cip54_01)]
+            [
+                r.start(url=_action_url)
+                for r in (reqc.cli017, reqc.cip031a_05, reqc.cip031e, reqc.cip054_01)
+            ]
             if configuration.HAS_CC:
-                req_cip6.start(url=_action_url)
+                reqc.cip006.start(url=_action_url)
             pparams_action = cluster.g_conway_governance.action.create_pparams_update(
                 action_name=temp_template,
                 deposit_amt=deposit_amt,
@@ -564,7 +544,7 @@ class TestPParamUpdate:
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
             )
-            [r.success() for r in (req_cip31a, req_cip31e, req_cip54_01)]
+            [r.success() for r in (reqc.cip031a_05, reqc.cip031e, reqc.cip054_01)]
 
             tx_files_action = clusterlib.TxFiles(
                 proposal_files=[pparams_action.action_file],
@@ -607,7 +587,7 @@ class TestPParamUpdate:
             assert (
                 prop_action["action"]["tag"] == governance_utils.ActionTags.PARAMETER_CHANGE.value
             ), "Incorrect action tag"
-            req_cli17.success()
+            reqc.cli017.success()
 
             action_ix = prop_action["actionId"]["govActionIx"]
             proposal_names = {p.name for p in proposals}
@@ -615,7 +595,10 @@ class TestPParamUpdate:
             return action_txid, action_ix, proposal_names
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cip44, req_cip45, req_cip46, req_cip47, req_cip60)]
+        [
+            r.start(url=_url)
+            for r in (reqc.cip044, reqc.cip045, reqc.cip046, reqc.cip047, reqc.cip060)
+        ]
 
         # Vote on update proposals from network group that will NOT get approved by DReps
         net_nodrep_update_proposals = random.sample(network_g_proposals, 3)
@@ -717,9 +700,9 @@ class TestPParamUpdate:
         assert "StakePoolVoter" in err_str, err_str
 
         _url = helpers.get_vcs_link()
-        req_cip65.start(url=_url)
+        reqc.cip065.start(url=_url)
         if is_drep_total_below_threshold:
-            req_cip64_03.start(url=_url)
+            reqc.cip064_03.start(url=_url)
 
         conway_common.cast_vote(
             cluster_obj=cluster,
@@ -752,9 +735,9 @@ class TestPParamUpdate:
 
         # Vote on update proposals from security params that will NOT get approved by SPOs
         _url = helpers.get_vcs_link()
-        req_cip74.start(url=_url)
+        reqc.cip074.start(url=_url)
         if is_spo_total_below_threshold:
-            req_cip64_04.start(url=_url)
+            reqc.cip064_04.start(url=_url)
         sec_nospo_update_proposals = random.sample(security_proposals, 3)
         sec_nospo_action_txid, sec_nospo_action_ix, sec_nospo_proposal_names = (
             _create_pparams_action(proposals=sec_nospo_update_proposals)
@@ -772,7 +755,7 @@ class TestPParamUpdate:
         )
 
         # Vote on the final action that will be enacted
-        req_cip37.start(url=helpers.get_vcs_link())
+        reqc.cip037.start(url=helpers.get_vcs_link())
         fin_action_txid, fin_action_ix, fin_proposal_names = _create_pparams_action(
             proposals=fin_update_proposals
         )
@@ -903,7 +886,7 @@ class TestPParamUpdate:
             )
 
         # Check ratification
-        req_cip68.start(url=helpers.get_vcs_link())
+        reqc.cip068.start(url=helpers.get_vcs_link())
         _cur_epoch = cluster.g_query.get_epoch()
         if _cur_epoch == fin_approve_epoch:
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -933,9 +916,9 @@ class TestPParamUpdate:
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             _check_state(next_rat_state["nextEnactState"])
-            req_cip38_04.start(url=helpers.get_vcs_link())
+            reqc.cip038_04.start(url=helpers.get_vcs_link())
             assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
-            req_cip38_04.success()
+            reqc.cip038_04.success()
 
             # Wait for enactment
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -950,27 +933,27 @@ class TestPParamUpdate:
         [
             r.success()
             for r in (
-                req_cip37,
-                req_cip44,
-                req_cip45,
-                req_cip46,
-                req_cip47,
-                req_cip49,
-                req_cip50,
-                req_cip51,
-                req_cip52,
-                req_cip60,
-                req_cip65,
-                req_cip68,
-                req_cip74,
+                reqc.cip037,
+                reqc.cip044,
+                reqc.cip045,
+                reqc.cip046,
+                reqc.cip047,
+                reqc.cip049,
+                reqc.cip050,
+                reqc.cip051,
+                reqc.cip052,
+                reqc.cip060,
+                reqc.cip065,
+                reqc.cip068,
+                reqc.cip074,
             )
         ]
         if configuration.HAS_CC:
-            req_cip6.success()
+            reqc.cip006.success()
         if is_drep_total_below_threshold:
-            req_cip64_03.success()
+            reqc.cip064_03.success()
         if is_spo_total_below_threshold:
-            req_cip64_04.success()
+            reqc.cip064_04.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1006,14 +989,8 @@ class TestPParamData:
         """Test presence of expected protocol parameters keys."""
         common.get_test_id(cluster)
 
-        # Linked user stories
-        req_cip75 = requirements.Req(id="CIP075", group=requirements.GroupsKnown.CHANG_US)
-        req_cip76 = requirements.Req(id="CIP076", group=requirements.GroupsKnown.CHANG_US)
-        req_cip77 = requirements.Req(id="CIP077", group=requirements.GroupsKnown.CHANG_US)
-        req_cip78 = requirements.Req(id="CIP078", group=requirements.GroupsKnown.CHANG_US)
-
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cip75, req_cip76, req_cip77, req_cip78)]
+        [r.start(url=_url) for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
 
         cur_pparam = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
         for pparam in [
@@ -1032,4 +1009,4 @@ class TestPParamData:
         for pool_thresh in GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS:
             assert pool_thresh in pool_thresholds, f"Pool threshold `{pool_thresh}` not found"
 
-        [r.success() for r in (req_cip75, req_cip76, req_cip77, req_cip78)]
+        [r.success() for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
