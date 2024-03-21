@@ -10,6 +10,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
@@ -17,7 +18,6 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -70,15 +70,6 @@ class TestTreasuryWithdrawals:
         temp_template = common.get_test_id(cluster)
         actions_num = 3
 
-        # Linked user stories
-        req_cli15 = requirements.Req(id="CLI015", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP031a-06", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31f = requirements.Req(id="CIP031f", group=requirements.GroupsKnown.CHANG_US)
-        req_cip33 = requirements.Req(id="CIP033", group=requirements.GroupsKnown.CHANG_US)
-        req_cip38_06 = requirements.Req(id="intCIP038-06", group=requirements.GroupsKnown.CHANG_US)
-        req_cip48 = requirements.Req(id="CIP048", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_05 = requirements.Req(id="intCIP054-05", group=requirements.GroupsKnown.CHANG_US)
-
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
 
@@ -99,7 +90,7 @@ class TestTreasuryWithdrawals:
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli15, req_cip31a, req_cip31f, req_cip54_05)]
+        [r.start(url=_url) for r in (reqc.cli015, reqc.cip031a_06, reqc.cip031f, reqc.cip054_05)]
 
         withdrawal_actions = [
             cluster.g_conway_governance.action.create_treasury_withdrawal(
@@ -113,7 +104,7 @@ class TestTreasuryWithdrawals:
             )
             for a in range(actions_num)
         ]
-        [r.success() for r in (req_cli15, req_cip31a, req_cip31f, req_cip54_05)]
+        [r.success() for r in (reqc.cli015, reqc.cip031a_06, reqc.cip031f, reqc.cip054_05)]
 
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
@@ -279,7 +270,7 @@ class TestTreasuryWithdrawals:
         _cast_vote(approve=False, vote_id="no")
 
         # Vote & approve the action
-        req_cip48.start(url=helpers.get_vcs_link())
+        reqc.cip048.start(url=helpers.get_vcs_link())
         voted_votes = _cast_vote(approve=True, vote_id="yes")
 
         # Check ratification
@@ -318,16 +309,16 @@ class TestTreasuryWithdrawals:
             msg = "Not all actions got removed"
             raise AssertionError(msg)
 
-        req_cip38_06.start(url=helpers.get_vcs_link())
+        reqc.cip038_06.start(url=helpers.get_vcs_link())
         assert not rat_gov_state["nextRatifyState"][
             "ratificationDelayed"
         ], "Ratification is delayed unexpectedly"
-        req_cip38_06.success()
+        reqc.cip038_06.success()
 
         # Disapprove ratified action, the voting shouldn't have any effect
         _cast_vote(approve=False, vote_id="after_ratification")
 
-        req_cip33.start(url=helpers.get_vcs_link())
+        reqc.cip033.start(url=helpers.get_vcs_link())
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -335,7 +326,7 @@ class TestTreasuryWithdrawals:
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
             == transfer_amt * actions_num
         ), "Incorrect reward account balance"
-        [r.success() for r in (req_cip33, req_cip48)]
+        [r.success() for r in (reqc.cip033, reqc.cip048)]
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -386,22 +377,6 @@ class TestTreasuryWithdrawals:
         temp_template = common.get_test_id(cluster)
         actions_num = 3
 
-        # Linked user stories
-        req_cli25 = requirements.Req(id="CLI025", group=requirements.GroupsKnown.CHANG_US)
-        req_cli26 = requirements.Req(id="CLI026", group=requirements.GroupsKnown.CHANG_US)
-        req_int_cip30ex = requirements.Req(
-            id="intCIP030ex", group=requirements.GroupsKnown.CHANG_US
-        )
-        req_int_cip32ex = requirements.Req(
-            id="intCIP032ex", group=requirements.GroupsKnown.CHANG_US
-        )
-        req_int_cip34ex = requirements.Req(
-            id="intCIP034ex", group=requirements.GroupsKnown.CHANG_US
-        )
-        req_int_cip69ex = requirements.Req(
-            id="intCIP069ex", group=requirements.GroupsKnown.CHANG_US
-        )
-
         # Create stake address and registration certificate
         stake_deposit_amt = cluster.g_query.get_address_deposit()
 
@@ -424,7 +399,7 @@ class TestTreasuryWithdrawals:
 
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        req_int_cip30ex.start(url=helpers.get_vcs_link())
+        reqc.cip030ex.start(url=helpers.get_vcs_link())
         withdrawal_actions = [
             cluster.g_conway_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_{a}",
@@ -452,7 +427,7 @@ class TestTreasuryWithdrawals:
 
         actions_deposit_combined = action_deposit_amt * len(withdrawal_actions)
 
-        req_cli25.start(url=helpers.get_vcs_link())
+        reqc.cli025.start(url=helpers.get_vcs_link())
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
@@ -460,7 +435,7 @@ class TestTreasuryWithdrawals:
             tx_files=tx_files_action,
             deposit=actions_deposit_combined + stake_deposit_amt,
         )
-        req_cli25.success()
+        reqc.cli025.success()
 
         assert cluster.g_query.get_stake_addr_info(
             recv_stake_addr_rec.address
@@ -552,7 +527,7 @@ class TestTreasuryWithdrawals:
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
-        req_cli26.start(url=helpers.get_vcs_link())
+        reqc.cli026.start(url=helpers.get_vcs_link())
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_vote",
@@ -562,7 +537,7 @@ class TestTreasuryWithdrawals:
             else submit_utils.SubmitMethods.CLI,
             tx_files=tx_files_vote,
         )
-        req_cli26.success()
+        reqc.cli026.success()
 
         out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
         assert (
@@ -578,7 +553,7 @@ class TestTreasuryWithdrawals:
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
         )
 
-        req_int_cip69ex.start(url=helpers.get_vcs_link())
+        reqc.cip069ex.start(url=helpers.get_vcs_link())
 
         for action_ix in range(actions_num):
             prop_vote = governance_utils.lookup_proposal(
@@ -611,7 +586,7 @@ class TestTreasuryWithdrawals:
         ), "Incorrect reward account balance"
 
         # Check that the actions expired
-        req_int_cip32ex.start(url=helpers.get_vcs_link())
+        reqc.cip032ex.start(url=helpers.get_vcs_link())
         epochs_to_expiration = (
             cluster.conway_genesis["govActionLifetime"]
             + 1
@@ -655,18 +630,18 @@ class TestTreasuryWithdrawals:
                 check_on_devel=False,
             ).finish_test()
 
-        req_int_cip34ex.start(url=helpers.get_vcs_link())
+        reqc.cip034ex.start(url=helpers.get_vcs_link())
         assert (
             rem_deposit_returned == init_return_account_balance + actions_deposit_combined
         ), "Incorrect return account balance"
 
-        [r.success() for r in (req_int_cip30ex, req_int_cip34ex)]
+        [r.success() for r in (reqc.cip030ex, reqc.cip034ex)]
 
         # Additional checks of governance state output
         assert governance_utils.lookup_expired_actions(
             gov_state=expire_gov_state, action_txid=action_txid
         ), "Action not found in removed actions"
-        req_int_cip32ex.success()
+        reqc.cip032ex.success()
         assert governance_utils.lookup_proposal(
             gov_state=expire_gov_state, action_txid=action_txid
         ), "Action no longer found in proposals"
@@ -675,7 +650,7 @@ class TestTreasuryWithdrawals:
             gov_state=rem_gov_state, action_txid=action_txid
         ), "Action was not removed from proposals"
 
-        req_int_cip69ex.success()
+        reqc.cip069ex.success()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("mir_cert", ("treasury", "rewards", "stake_addr"))
@@ -692,9 +667,7 @@ class TestTreasuryWithdrawals:
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000_000_000
 
-        req_cip70 = requirements.Req(id="CIP070", group=requirements.GroupsKnown.CHANG_US)
-
-        req_cip70.start(url=helpers.get_vcs_link())
+        reqc.cip070.start(url=helpers.get_vcs_link())
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if mir_cert == "treasury":
                 cluster.g_governance.gen_mir_cert_to_treasury(
@@ -715,4 +688,4 @@ class TestTreasuryWithdrawals:
                 )
         err_str = str(excinfo.value)
         assert "Invalid argument `create-mir-certificate'" in err_str, err_str
-        req_cip70.success()
+        reqc.cip070.success()

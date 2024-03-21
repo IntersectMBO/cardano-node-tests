@@ -9,13 +9,13 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -59,19 +59,6 @@ class TestInfo:
         temp_template = common.get_test_id(cluster)
         action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
-        # Linked user stories
-        req_cli16 = requirements.Req(id="CLI016", group=requirements.GroupsKnown.CHANG_US)
-        req_cli21 = requirements.Req(id="CLI021", group=requirements.GroupsKnown.CHANG_US)
-        req_cli22 = requirements.Req(id="CLI022", group=requirements.GroupsKnown.CHANG_US)
-        req_cli23 = requirements.Req(id="CLI023", group=requirements.GroupsKnown.CHANG_US)
-        req_cli24 = requirements.Req(id="CLI024", group=requirements.GroupsKnown.CHANG_US)
-        req_cli31 = requirements.Req(id="CLI031", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP031a-03", group=requirements.GroupsKnown.CHANG_US)
-        req_cip38_05 = requirements.Req(id="intCIP038-05", group=requirements.GroupsKnown.CHANG_US)
-        req_cip53 = requirements.Req(id="CIP053", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_06 = requirements.Req(id="intCIP054-06", group=requirements.GroupsKnown.CHANG_US)
-        req_cip59 = requirements.Req(id="CIP059", group=requirements.GroupsKnown.CHANG_US)
-
         # Create an action
 
         rand_str = helpers.get_rand_str(4)
@@ -79,7 +66,7 @@ class TestInfo:
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli16, req_cip31a, req_cip54_06)]
+        [r.start(url=_url) for r in (reqc.cli016, reqc.cip031a_03, reqc.cip054_06)]
         info_action = cluster.g_conway_governance.action.create_info(
             action_name=temp_template,
             deposit_amt=action_deposit_amt,
@@ -87,7 +74,7 @@ class TestInfo:
             anchor_data_hash=anchor_data_hash,
             deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
         )
-        [r.success() for r in (req_cli16, req_cip31a, req_cip54_06)]
+        [r.success() for r in (reqc.cli016, reqc.cip031a_03, reqc.cip054_06)]
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[info_action.action_file],
@@ -99,7 +86,7 @@ class TestInfo:
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
-        req_cli23.start(url=helpers.get_vcs_link())
+        reqc.cli023.start(url=helpers.get_vcs_link())
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
@@ -107,7 +94,7 @@ class TestInfo:
             use_build_cmd=True,
             tx_files=tx_files_action,
         )
-        req_cli23.success()
+        reqc.cli023.success()
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
@@ -120,7 +107,7 @@ class TestInfo:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        req_cli31.start(url=helpers.get_vcs_link())
+        reqc.cli031.start(url=helpers.get_vcs_link())
         action_gov_state = cluster.g_conway_governance.query.gov_state()
         _cur_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
@@ -129,7 +116,7 @@ class TestInfo:
         prop_action = governance_utils.lookup_proposal(
             gov_state=action_gov_state, action_txid=action_txid
         )
-        req_cli31.success()
+        reqc.cli031.success()
         assert prop_action, "Info action not found"
         assert (
             prop_action["action"]["tag"] == governance_utils.ActionTags.INFO_ACTION.value
@@ -140,7 +127,7 @@ class TestInfo:
         action_ix = prop_action["actionId"]["govActionIx"]
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli21, req_cip53, req_cip59)]
+        [r.start(url=_url) for r in (reqc.cli021, reqc.cip053, reqc.cip059)]
         votes_cc = [
             cluster.g_conway_governance.vote.create_committee(
                 vote_name=f"{temp_template}_cc{i}",
@@ -171,7 +158,7 @@ class TestInfo:
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
         ]
-        [r.success() for r in (req_cli21, req_cip59)]
+        [r.success() for r in (reqc.cli021, reqc.cip059)]
 
         tx_files_vote = clusterlib.TxFiles(
             vote_files=[
@@ -192,7 +179,7 @@ class TestInfo:
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
-        req_cli24.start(url=helpers.get_vcs_link())
+        reqc.cli024.start(url=helpers.get_vcs_link())
         tx_output_vote = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_vote",
@@ -200,7 +187,7 @@ class TestInfo:
             use_build_cmd=True,
             tx_files=tx_files_vote,
         )
-        req_cli24.success()
+        reqc.cli024.success()
 
         out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
         assert (
@@ -234,21 +221,21 @@ class TestInfo:
             action_ix=action_ix,
         )
         assert not rat_info_action, "Action found in ratified actions"
-        req_cip53.success()
+        reqc.cip053.success()
 
-        req_cip38_05.start(url=helpers.get_vcs_link())
+        reqc.cip038_05.start(url=helpers.get_vcs_link())
         assert not approved_gov_state["nextRatifyState"][
             "ratificationDelayed"
         ], "Ratification is delayed unexpectedly"
-        req_cip38_05.success()
+        reqc.cip038_05.success()
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
 
         # Check vote view
-        req_cli22.start(url=helpers.get_vcs_link())
+        reqc.cli022.start(url=helpers.get_vcs_link())
         if votes_cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_spo[0])
-        req_cli22.success()
+        reqc.cli022.success()

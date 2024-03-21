@@ -12,6 +12,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
@@ -20,7 +21,6 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -110,27 +110,18 @@ class TestCommittee:
         cluster, __ = cluster_use_committee
         temp_template = common.get_test_id(cluster)
 
-        # Linked user stories
-        req_cli3 = requirements.Req(id="CLI003", group=requirements.GroupsKnown.CHANG_US)
-        req_cli4 = requirements.Req(id="CLI004", group=requirements.GroupsKnown.CHANG_US)
-        req_cli5 = requirements.Req(id="CLI005", group=requirements.GroupsKnown.CHANG_US)
-        req_cli6 = requirements.Req(id="CLI006", group=requirements.GroupsKnown.CHANG_US)
-        req_cli7 = requirements.Req(id="CLI007", group=requirements.GroupsKnown.CHANG_US)
-        req_cli32 = requirements.Req(id="CLI032", group=requirements.GroupsKnown.CHANG_US)
-        req_cip2 = requirements.Req(id="CIP002", group=requirements.GroupsKnown.CHANG_US)
-        req_cip3 = requirements.Req(id="CIP003", group=requirements.GroupsKnown.CHANG_US)
-        req_cip4 = requirements.Req(id="CIP004", group=requirements.GroupsKnown.CHANG_US)
-        req_cip12 = requirements.Req(id="CIP012", group=requirements.GroupsKnown.CHANG_US)
-
         # Register a potential CC Member
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli3, req_cli4, req_cli5, req_cli6, req_cip3)]
+        [
+            r.start(url=_url)
+            for r in (reqc.cli003, reqc.cli004, reqc.cli005, reqc.cli006, reqc.cip003)
+        ]
         cc_auth_record = governance_utils.get_cc_member_auth_record(
             cluster_obj=cluster,
             name_template=temp_template,
         )
-        [r.success() for r in (req_cli3, req_cli4, req_cli5, req_cli6)]
+        [r.success() for r in (reqc.cli003, reqc.cli004, reqc.cli005, reqc.cli006)]
 
         tx_files_auth = clusterlib.TxFiles(
             certificate_files=[cc_auth_record.auth_cert],
@@ -145,7 +136,7 @@ class TestCommittee:
             use_build_cmd=use_build_cmd,
             tx_files=tx_files_auth,
         )
-        req_cip3.success()
+        reqc.cip003.success()
 
         auth_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
         assert (
@@ -156,7 +147,7 @@ class TestCommittee:
         ), f"Incorrect balance for source address `{payment_addr_comm.address}`"
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli32, req_cip2, req_cip4)]
+        [r.start(url=_url) for r in (reqc.cli032, reqc.cip002, reqc.cip004)]
         auth_committee_state = cluster.g_conway_governance.query.committee_state()
         member_key = f"keyHash-{cc_auth_record.key_hash}"
         member_rec = auth_committee_state["committee"][member_key]
@@ -165,19 +156,19 @@ class TestCommittee:
         ), "CC Member was NOT authorized"
         assert not member_rec["expiration"], "CC Member should not be elected"
         assert member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
-        [r.success() for r in (req_cli32, req_cip2, req_cip4)]
+        [r.success() for r in (reqc.cli032, reqc.cip002, reqc.cip004)]
 
         # Resignation of CC Member
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli7, req_cip12)]
+        [r.start(url=_url) for r in (reqc.cli007, reqc.cip012)]
         res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
             key_name=temp_template,
             cold_vkey_file=cc_auth_record.cold_key_pair.vkey_file,
             resignation_metadata_url="http://www.cc-resign.com",
             resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
         )
-        req_cli7.success()
+        reqc.cli007.success()
 
         tx_files_res = clusterlib.TxFiles(
             certificate_files=[res_cert],
@@ -199,7 +190,7 @@ class TestCommittee:
             res_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
             == "MemberResigned"
         ), "CC Member not resigned"
-        req_cip12.success()
+        reqc.cip012.success()
 
         res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
         assert (
@@ -231,10 +222,6 @@ class TestCommittee:
         temp_template = common.get_test_id(cluster)
         cc_size = 3
 
-        # Linked user stories
-        req_cip7 = requirements.Req(id="CIP007", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP031a-01", group=requirements.GroupsKnown.CHANG_US)
-
         cc_auth_records = [
             governance_utils.get_cc_member_auth_record(
                 cluster_obj=cluster,
@@ -262,7 +249,7 @@ class TestCommittee:
         )
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cip7, req_cip31a)]
+        [r.start(url=_url) for r in (reqc.cip007, reqc.cip031a_01)]
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -274,7 +261,7 @@ class TestCommittee:
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
         )
-        req_cip31a.success()
+        reqc.cip031a_01.success()
 
         tx_files = clusterlib.TxFiles(
             certificate_files=[r.auth_cert for r in cc_auth_records],
@@ -307,7 +294,7 @@ class TestCommittee:
         assert prop, "Update committee action not found"
         assert prop["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"
         assert prop["action"]["contents"][3] == 2 / 3
-        req_cip7.success()
+        reqc.cip007.success()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -356,22 +343,6 @@ class TestCommittee:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-
-        # Linked user stories
-        req_cli14 = requirements.Req(id="CLI014", group=requirements.GroupsKnown.CHANG_US)
-        req_cip9 = requirements.Req(id="CIP009", group=requirements.GroupsKnown.CHANG_US)
-        req_cip5 = requirements.Req(id="CIP005", group=requirements.GroupsKnown.CHANG_US)
-        req_cip10 = requirements.Req(id="CIP010", group=requirements.GroupsKnown.CHANG_US)
-        req_cip11 = requirements.Req(id="CIP011", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31b = requirements.Req(id="CIP031b", group=requirements.GroupsKnown.CHANG_US)
-        req_cip38_01 = requirements.Req(id="intCIP038-01", group=requirements.GroupsKnown.CHANG_US)
-        req_cip40 = requirements.Req(id="CIP040", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_02 = requirements.Req(id="intCIP054-02", group=requirements.GroupsKnown.CHANG_US)
-        req_cip58 = requirements.Req(id="CIP058", group=requirements.GroupsKnown.CHANG_US)
-        req_cip64_01 = requirements.Req(id="intCIP064-01", group=requirements.GroupsKnown.CHANG_US)
-        req_cip64_02 = requirements.Req(id="intCIP064-02", group=requirements.GroupsKnown.CHANG_US)
-        req_cip67 = requirements.Req(id="CIP067", group=requirements.GroupsKnown.CHANG_US)
-        req_cip73_3 = requirements.Req(id="intCIP073-03", group=requirements.GroupsKnown.CHANG_US)
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as No, it
@@ -485,7 +456,7 @@ class TestCommittee:
             )
 
             _url = helpers.get_vcs_link()
-            [r.start(url=_url) for r in (req_cli14, req_cip31b, req_cip54_02, req_cip58)]
+            [r.start(url=_url) for r in (reqc.cli014, reqc.cip031b, reqc.cip054_02, reqc.cip058)]
             add_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_add",
                 deposit_amt=deposit_amt,
@@ -497,7 +468,7 @@ class TestCommittee:
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
             )
-            [r.success() for r in (req_cli14, req_cip31b, req_cip54_02)]
+            [r.success() for r in (reqc.cli014, reqc.cip031b, reqc.cip054_02)]
 
             tx_files_action_add = clusterlib.TxFiles(
                 proposal_files=[add_cc_action.action_file],
@@ -553,7 +524,7 @@ class TestCommittee:
                 "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
             )
 
-            req_cip5.start(url=helpers.get_vcs_link())
+            reqc.cip005.start(url=helpers.get_vcs_link())
             rem_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_rem",
                 deposit_amt=deposit_amt,
@@ -565,7 +536,7 @@ class TestCommittee:
                 prev_action_ix=prev_action_ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
             )
-            req_cip5.success()
+            reqc.cip005.success()
 
             tx_files_action_rem = clusterlib.TxFiles(
                 proposal_files=[rem_cc_action.action_file],
@@ -687,7 +658,7 @@ class TestCommittee:
         _cur_epoch = cluster.g_query.get_epoch()
         assert _cur_epoch == actions_epoch, "Haven't managed to submit the proposals in one epoch"
 
-        req_cip67.start(url=helpers.get_vcs_link())
+        reqc.cip067.start(url=helpers.get_vcs_link())
 
         # Vote & disapprove the add action
         conway_common.cast_vote(
@@ -705,11 +676,11 @@ class TestCommittee:
         # Vote & approve the add action
         request.addfinalizer(_resign)
         _url = helpers.get_vcs_link()
-        req_cip40.start(url=_url)
+        reqc.cip040.start(url=_url)
         if is_drep_total_below_threshold:
-            req_cip64_01.start(url=_url)
+            reqc.cip064_01.start(url=_url)
         if is_spo_total_below_threshold:
-            req_cip64_02.start(url=_url)
+            reqc.cip064_02.start(url=_url)
         voted_votes_add = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -790,7 +761,7 @@ class TestCommittee:
 
         next_rat_add_state = rat_add_gov_state["nextRatifyState"]
         _check_add_state(gov_state=next_rat_add_state["nextEnactState"])
-        req_cip38_01.start(url=helpers.get_vcs_link())
+        reqc.cip038_01.start(url=helpers.get_vcs_link())
         assert next_rat_add_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after add action ratification
@@ -799,7 +770,7 @@ class TestCommittee:
             committee_state=rat_add_committee_state,
             name_template=f"{temp_template}_rat_add_{_cur_epoch}",
         )
-        req_cip11.start(url=helpers.get_vcs_link())
+        reqc.cip011.start(url=helpers.get_vcs_link())
         _check_cc_member1_expired(committee_state=rat_add_committee_state, curr_epoch=_cur_epoch)
 
         xfail_ledger_4001_msgs = set()
@@ -830,13 +801,13 @@ class TestCommittee:
             gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{_cur_epoch}"
         )
 
-        req_cip73_3.start(url=helpers.get_vcs_link())
+        reqc.cip073_03.start(url=helpers.get_vcs_link())
         _check_add_state(enact_add_gov_state["enactState"])
-        [r.success() for r in (req_cip40, req_cip73_3)]
+        [r.success() for r in (reqc.cip040, reqc.cip073_03)]
         if is_drep_total_below_threshold:
-            req_cip64_01.success()
+            reqc.cip064_01.success()
         if is_spo_total_below_threshold:
-            req_cip64_02.success()
+            reqc.cip064_02.success()
 
         # Check committee state after add action enactment
         enact_add_committee_state = cluster.g_conway_governance.query.committee_state()
@@ -847,7 +818,7 @@ class TestCommittee:
         _check_cc_member1_expired(committee_state=enact_add_committee_state, curr_epoch=_cur_epoch)
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cip9, req_cip10)]
+        [r.start(url=_url) for r in (reqc.cip009, reqc.cip010)]
         for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
             enact_add_member_rec = enact_add_committee_state["committee"][_cc_member_key]
             assert (
@@ -858,7 +829,7 @@ class TestCommittee:
             assert (
                 enact_add_member_rec["expiration"] == cc_members[i].epoch
             ), "Expiration epoch is incorrect"
-        [r.success() for r in (req_cip9, req_cip10, req_cip58)]
+        [r.success() for r in (reqc.cip009, reqc.cip010, reqc.cip058)]
 
         # Try to vote on enacted add action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -882,7 +853,7 @@ class TestCommittee:
             gov_state=enact_add_gov_state, action_txid=action_rem_txid
         )
         assert rat_action, "Action not found in ratified actions"
-        req_cip38_01.success()
+        reqc.cip038_01.success()
 
         # Disapprove ratified removal action, the voting shouldn't have any effect
         conway_common.cast_vote(
@@ -924,7 +895,7 @@ class TestCommittee:
         assert not enact_rem_member_rec, "Removed committee member still present"
 
         _check_cc_member1_expired(committee_state=enact_rem_committee_state, curr_epoch=_cur_epoch)
-        req_cip11.success()
+        reqc.cip011.success()
 
         # Try to vote on enacted removal action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -954,7 +925,7 @@ class TestCommittee:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.spo[0])
-        req_cip67.success()
+        reqc.cip067.success()
 
         known_issues = []
         if xfail_ledger_4001_msgs:
@@ -1004,9 +975,6 @@ class TestCommittee:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-
-        # Linked user stories
-        req_cip8 = requirements.Req(id="CIP008", group=requirements.GroupsKnown.CHANG_US)
 
         xfail_ledger_3979_msgs = set()
 
@@ -1192,7 +1160,7 @@ class TestCommittee:
 
             return {}
 
-        req_cip8.start(url=helpers.get_vcs_link())
+        reqc.cip008.start(url=helpers.get_vcs_link())
 
         # Set `committeeMinSize` to 0
 
@@ -1354,7 +1322,7 @@ class TestCommittee:
         )
         _check_const_state(enact_const_gov_state["enactState"])
 
-        req_cip8.success()
+        reqc.cip008.success()
 
         known_issues = []
         if xfail_ledger_3979_msgs:

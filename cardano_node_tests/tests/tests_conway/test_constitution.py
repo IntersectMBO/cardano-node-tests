@@ -9,12 +9,12 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import requirements
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -63,22 +63,6 @@ class TestConstitution:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
-        # Linked user stories
-        req_cli1 = requirements.Req(id="CLI001", group=requirements.GroupsKnown.CHANG_US)
-        req_cli2 = requirements.Req(id="CLI002", group=requirements.GroupsKnown.CHANG_US)
-        req_cli13 = requirements.Req(id="CLI013", group=requirements.GroupsKnown.CHANG_US)
-        req_cli20 = requirements.Req(id="CLI020", group=requirements.GroupsKnown.CHANG_US)
-        req_cli36 = requirements.Req(id="CLI036", group=requirements.GroupsKnown.CHANG_US)
-        req_cip1a = requirements.Req(id="CIP001a", group=requirements.GroupsKnown.CHANG_US)
-        req_cip1b = requirements.Req(id="CIP001b", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31a = requirements.Req(id="intCIP031a-02", group=requirements.GroupsKnown.CHANG_US)
-        req_cip31c = requirements.Req(id="intCIP031c-01", group=requirements.GroupsKnown.CHANG_US)
-        req_cip38_02 = requirements.Req(id="intCIP038-02", group=requirements.GroupsKnown.CHANG_US)
-        req_cip42 = requirements.Req(id="CIP042", group=requirements.GroupsKnown.CHANG_US)
-        req_cip54_03 = requirements.Req(id="intCIP054-03", group=requirements.GroupsKnown.CHANG_US)
-        req_cip73_1 = requirements.Req(id="intCIP073-01", group=requirements.GroupsKnown.CHANG_US)
-        req_cip73_4 = requirements.Req(id="intCIP073-04", group=requirements.GroupsKnown.CHANG_US)
-
         # Create an action
 
         anchor_url = "http://www.const-action.com"
@@ -98,14 +82,14 @@ class TestConstitution:
             out_fp.write(constitution_text)
 
         constitution_url = "http://www.const-new.com"
-        req_cli2.start(url=helpers.get_vcs_link())
+        reqc.cli002.start(url=helpers.get_vcs_link())
         constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
             file_text=constitution_file
         )
-        req_cli2.success()
+        reqc.cli002.success()
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli13, req_cip31a, req_cip31c, req_cip54_03)]
+        [r.start(url=_url) for r in (reqc.cli013, reqc.cip031a_02, reqc.cip031c_01, reqc.cip054_03)]
         (
             constitution_action,
             action_txid,
@@ -119,7 +103,7 @@ class TestConstitution:
             constitution_hash=constitution_hash,
             pool_user=pool_user_lg,
         )
-        [r.success() for r in (req_cli13, req_cip31a, req_cip31c, req_cip54_03)]
+        [r.success() for r in (reqc.cli013, reqc.cip031a_02, reqc.cip031c_01, reqc.cip054_03)]
 
         # Check that SPOs cannot vote on change of constitution action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -150,7 +134,7 @@ class TestConstitution:
         )
 
         # Vote & approve the action
-        req_cip42.start(url=helpers.get_vcs_link())
+        reqc.cip042.start(url=helpers.get_vcs_link())
         voted_votes = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -217,12 +201,21 @@ class TestConstitution:
 
         next_rat_state = rat_gov_state["nextRatifyState"]
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (req_cli1, req_cip1a, req_cip1b, req_cip73_1, req_cip73_4)]
+        [
+            r.start(url=_url)
+            for r in (
+                reqc.cli001,
+                reqc.cip001a,
+                reqc.cip001b,
+                reqc.cip073_01,
+                reqc.cip073_04,
+            )
+        ]
         _check_state(next_rat_state["nextEnactState"])
-        [r.success() for r in (req_cli1, req_cip1a, req_cip1b, req_cip73_1)]
-        req_cip38_02.start(url=_url)
+        [r.success() for r in (reqc.cli001, reqc.cip001a, reqc.cip001b, reqc.cip073_01)]
+        reqc.cip038_02.start(url=_url)
         assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
-        req_cip38_02.success()
+        reqc.cip038_02.success()
 
         # Check enactment
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -231,11 +224,11 @@ class TestConstitution:
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
         _check_state(enact_gov_state["enactState"])
-        [r.success() for r in (req_cip42, req_cip73_4)]
+        [r.success() for r in (reqc.cip042, reqc.cip073_04)]
 
-        req_cli36.start(url=helpers.get_vcs_link())
+        reqc.cli036.start(url=helpers.get_vcs_link())
         _check_cli_query()
-        req_cli36.success()
+        reqc.cli036.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -253,9 +246,9 @@ class TestConstitution:
         assert "(GovActionsDoNotExist" in err_str, err_str
 
         # Check action view
-        req_cli20.start(url=helpers.get_vcs_link())
+        reqc.cli020.start(url=helpers.get_vcs_link())
         governance_utils.check_action_view(cluster_obj=cluster, action_data=constitution_action)
-        req_cli20.success()
+        reqc.cli020.success()
 
         # Check vote view
         if voted_votes.cc:
