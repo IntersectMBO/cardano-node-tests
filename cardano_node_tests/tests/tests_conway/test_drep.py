@@ -667,11 +667,11 @@ class TestDelegDReps:
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user.stake.vkey_file
             )
-            reqc.cip020.start(url=helpers.get_vcs_link())
+            reqc.cip020_01.start(url=helpers.get_vcs_link())
             governance_utils.check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )
-            reqc.cip020.success()
+            reqc.cip020_01.success()
 
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cli034, reqc.cip025)]

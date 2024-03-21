@@ -23,7 +23,9 @@ cip014 = r.Req(id="CIP014", group=__group)
 cip016 = r.Req(id="CIP016", group=__group)
 cip017 = r.Req(id="CIP017", group=__group)
 cip018 = r.Req(id="CIP017", group=__group)
-cip020 = r.Req(id="CIP020", group=__group)
+cip020_01 = r.Req(id="intCIP020-01", group=__group)  # verification key
+cip020_02 = r.Req(id="intCIP020-02", group=__group)  # native script
+cip020_03 = r.Req(id="intCIP020-03", group=__group)  # plutus script
 cip021 = r.Req(id="CIP021", group=__group)
 cip022 = r.Req(id="CIP022", group=__group)
 cip023 = r.Req(id="CIP023", group=__group)
