@@ -28,7 +28,6 @@ class Req:
         id: An identification of the requirement.
         group: A group of the requirement.
         url: An url of the requirement.
-        destination_dir: A destination directory for output files.
     """
 
     def __init__(
@@ -36,7 +35,6 @@ class Req:
         id: str,
         group: str = "",
         url: str = "",
-        destination_dir: tp.Optional[pl.Path] = None,
     ) -> None:
         # pylint: disable=invalid-name,redefined-builtin
         self.id = str(id)
@@ -44,22 +42,22 @@ class Req:
         self.url = url
         self.basename = f"req-{helpers.get_rand_str(8)}"
 
-        self.destination_dir = (
-            pl.Path(destination_dir).expanduser() if destination_dir else pl.Path()
-        ) / "requirements"
-        self.destination_dir.mkdir(parents=True, exist_ok=True)
+    def _get_dest_dir(self) -> pl.Path:
+        dest_dir = pl.Path.cwd() / "requirements"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        return dest_dir
 
     def success(self) -> bool:
         content = {"id": self.id, "group": self.group, "url": self.url, "status": Statuses.SUCCESS}
         helpers.write_json(
-            out_file=self.destination_dir / f"{self.basename}_success.json", content=content
+            out_file=self._get_dest_dir() / f"{self.basename}_success.json", content=content
         )
         return True
 
     def failure(self) -> bool:
         content = {"id": self.id, "group": self.group, "url": self.url, "status": Statuses.FAILURE}
         helpers.write_json(
-            out_file=self.destination_dir / f"{self.basename}_init.json", content=content
+            out_file=self._get_dest_dir() / f"{self.basename}_init.json", content=content
         )
         return False
 
