@@ -24,38 +24,41 @@ cip016 = r.Req(id="CIP016", group=__group)
 cip017 = r.Req(id="CIP017", group=__group)
 cip018 = r.Req(id="CIP017", group=__group)
 cip020_01 = r.Req(id="intCIP020-01", group=__group)  # verification key
-cip020_02 = r.Req(id="intCIP020-02", group=__group)  # native script
-cip020_03 = r.Req(id="intCIP020-03", group=__group)  # plutus script
+cip020_02 = r.Req(id="intCIP020-02", group=__group)  # Native script
+cip020_03 = r.Req(id="intCIP020-03", group=__group)  # Plutus script
 cip021 = r.Req(id="CIP021", group=__group)
 cip022 = r.Req(id="CIP022", group=__group)
 cip023 = r.Req(id="CIP023", group=__group)
 cip024 = r.Req(id="CIP024", group=__group)
 cip025 = r.Req(id="CIP025", group=__group)
 cip029 = r.Req(id="CIP029", group=__group)
-cip030en = r.Req(id="intCIP030en", group=__group)
-cip030ex = r.Req(id="intCIP030ex", group=__group)
-cip031a_01 = r.Req(id="intCIP031a-01", group=__group)
-cip031a_02 = r.Req(id="intCIP031a-02", group=__group)
-cip031a_03 = r.Req(id="intCIP031a-03", group=__group)
-cip031a_04 = r.Req(id="intCIP031a-04", group=__group)
-cip031a_05 = r.Req(id="intCIP031a-05", group=__group)
-cip031a_06 = r.Req(id="intCIP031a-06", group=__group)
+cip030en = r.Req(id="intCIP030en", group=__group)  # enacted
+cip030ex = r.Req(id="intCIP030ex", group=__group)  # expired
+cip031a_01 = r.Req(id="intCIP031a-01", group=__group)  # committee
+cip031a_02 = r.Req(id="intCIP031a-02", group=__group)  # constitution
+cip031a_03 = r.Req(id="intCIP031a-03", group=__group)  # info
+cip031a_04 = r.Req(id="intCIP031a-04", group=__group)  # no confidence
+cip031a_05 = r.Req(id="intCIP031a-05", group=__group)  # pparam update
+cip031a_06 = r.Req(id="intCIP031a-06", group=__group)  # treasury withdrawal
+cip031a_07 = r.Req(id="intCIP031a-07", group=__group)  # hard-fork
 cip031b = r.Req(id="CIP031b", group=__group)
-cip031c_01 = r.Req(id="intCIP031c-01", group=__group)
+cip031c_01 = r.Req(id="intCIP031c-01", group=__group)  # anchor
+cip031c_02 = r.Req(id="intCIP031c-02", group=__group)  # script hash
 cip031e = r.Req(id="CIP031e", group=__group)
 cip031f = r.Req(id="CIP031f", group=__group)
-cip032en = r.Req(id="intCIP032en", group=__group)
-cip032ex = r.Req(id="intCIP032ex", group=__group)
+cip032en = r.Req(id="intCIP032en", group=__group)  # enacted
+cip032ex = r.Req(id="intCIP032ex", group=__group)  # expired
 cip033 = r.Req(id="CIP033", group=__group)
-cip034en = r.Req(id="intCIP034en", group=__group)
-cip034ex = r.Req(id="intCIP034ex", group=__group)
+cip034en = r.Req(id="intCIP034en", group=__group)  # enacted
+cip034ex = r.Req(id="intCIP034ex", group=__group)  # expired
 cip037 = r.Req(id="CIP037", group=__group)
-cip038_01 = r.Req(id="intCIP038-01", group=__group)
-cip038_02 = r.Req(id="intCIP038-02", group=__group)
-cip038_03 = r.Req(id="intCIP038-03", group=__group)
-cip038_04 = r.Req(id="intCIP038-04", group=__group)
-cip038_05 = r.Req(id="intCIP038-05", group=__group)
-cip038_06 = r.Req(id="intCIP038-06", group=__group)
+cip038_01 = r.Req(id="intCIP038-01", group=__group)  # committee
+cip038_02 = r.Req(id="intCIP038-02", group=__group)  # constitution
+cip038_03 = r.Req(id="intCIP038-03", group=__group)  # no confidence
+cip038_04 = r.Req(id="intCIP038-04", group=__group)  # pparam update
+cip038_05 = r.Req(id="intCIP038-05", group=__group)  # info
+cip038_06 = r.Req(id="intCIP038-06", group=__group)  # treasury withdrawal
+cip038_07 = r.Req(id="intCIP038-07", group=__group)  # hard-fork
 cip039 = r.Req(id="CIP039", group=__group)
 cip040 = r.Req(id="CIP040", group=__group)
 cip041 = r.Req(id="CIP041", group=__group)
@@ -70,29 +73,31 @@ cip050 = r.Req(id="CIP050", group=__group)
 cip051 = r.Req(id="CIP051", group=__group)
 cip052 = r.Req(id="CIP052", group=__group)
 cip053 = r.Req(id="CIP053", group=__group)
-cip054_01 = r.Req(id="intCIP054-01", group=__group)
-cip054_02 = r.Req(id="intCIP054-02", group=__group)
-cip054_03 = r.Req(id="intCIP054-03", group=__group)
-cip054_04 = r.Req(id="intCIP054-04", group=__group)
-cip054_05 = r.Req(id="intCIP054-05", group=__group)
-cip054_06 = r.Req(id="intCIP054-06", group=__group)
+cip054_01 = r.Req(id="intCIP054-01", group=__group)  # pparam update
+cip054_02 = r.Req(id="intCIP054-02", group=__group)  # committee
+cip054_03 = r.Req(id="intCIP054-03", group=__group)  # constitution
+cip054_04 = r.Req(id="intCIP054-04", group=__group)  # no confidence
+cip054_05 = r.Req(id="intCIP054-05", group=__group)  # treasury withdrawal
+cip054_06 = r.Req(id="intCIP054-06", group=__group)  # info
+cip054_07 = r.Req(id="intCIP054-07", group=__group)  # hard-fork
 cip057 = r.Req(id="CIP057", group=__group)
 cip058 = r.Req(id="CIP058", group=__group)
 cip059 = r.Req(id="CIP059", group=__group)
 cip060 = r.Req(id="CIP060", group=__group)
-cip064_01 = r.Req(id="intCIP064-01", group=__group)
-cip064_02 = r.Req(id="intCIP064-02", group=__group)
-cip064_03 = r.Req(id="intCIP064-03", group=__group)
-cip064_04 = r.Req(id="intCIP064-04", group=__group)
+cip064_01 = r.Req(id="intCIP064-01", group=__group)  # DRep unreg stake not 'No'
+cip064_02 = r.Req(id="intCIP064-02", group=__group)  # SPO unreg stake not 'No'
+cip064_03 = r.Req(id="intCIP064-03", group=__group)  # DRep unreg stake not 'Yes'
+cip064_04 = r.Req(id="intCIP064-04", group=__group)  # SPO unreg stake not 'Yes'
 cip065 = r.Req(id="CIP065", group=__group)
 cip067 = r.Req(id="CIP067", group=__group)
 cip068 = r.Req(id="CIP068", group=__group)
-cip069en = r.Req(id="intCIP069en", group=__group)
-cip069ex = r.Req(id="intCIP069ex", group=__group)
+cip069en = r.Req(id="intCIP069en", group=__group)  # enacted
+cip069ex = r.Req(id="intCIP069ex", group=__group)  # expired
 cip070 = r.Req(id="CIP070", group=__group)
-cip073_01 = r.Req(id="intCIP073-01", group=__group)
-cip073_03 = r.Req(id="intCIP073-03", group=__group)
-cip073_04 = r.Req(id="intCIP073-04", group=__group)
+cip073_01 = r.Req(id="intCIP073-01", group=__group)  # actions staged for enactment
+cip073_02 = r.Req(id="intCIP073-02", group=__group)  # total and percentage of Yes/... stake
+cip073_03 = r.Req(id="intCIP073-03", group=__group)  # current constitutional committee
+cip073_04 = r.Req(id="intCIP073-04", group=__group)  # constitution hash
 cip074 = r.Req(id="CIP074", group=__group)
 cip075 = r.Req(id="CIP075", group=__group)
 cip076 = r.Req(id="CIP076", group=__group)
