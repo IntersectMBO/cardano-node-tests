@@ -737,8 +737,11 @@ def check_pool_off_chain_fetch_error(
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
 
     assert (
-        f"Error Offchain Pool: Connection failure error when fetching metadata from {metadata_url}"
+        f'Connection failure error when fetching metadata from PoolUrl "{metadata_url}"'
         in fetch_error_str
+    ) or (
+        f"Error Offchain Pool: Connection failure error when fetching metadata from {metadata_url}"
+        in fetch_error_str  # in db-sync > 13.2.0.1
     ), f"The error is not the expected one: {fetch_error_str}"
 
     return db_pool_off_chain_fetch_error[0]
