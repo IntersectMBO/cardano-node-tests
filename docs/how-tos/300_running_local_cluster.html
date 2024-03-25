@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to start a local cluster &mdash; cardano-node-tests  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/copyright.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/tables.css" type="text/css" />
+    <link rel="shortcut icon" href="https://user-images.githubusercontent.com/2352619/223086153-522289f3-9902-4f63-ad7b-a7d9c5789db0.png"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Testing MIR certificate submission with a local cluster" href="350_mir_cert_test_example_manual_steps.html" />
+    <link rel="prev" title="How Tos" href="../how-tos.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            cardano-node-tests
+              <img src="../_static/Cardano-Crypto-Logo-128.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">README for cardano-node-tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-using-github-actions">Running tests using Github Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-using-nix">Running tests using Nix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-individual-tests-on-persistent-local-cluster-using-nix">Running individual tests on persistent local cluster using Nix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#variables-for-configuring-testrun">Variables for configuring testrun</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#local-usage-for-tests-development-useful-only-for-tests-developers">Local usage for tests development (useful only for tests developers)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#preparing-python-virtual-environment">Preparing Python virtual environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#running-development-cluster">Running development cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#restarting-development-cluster">Restarting development cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#checking-the-development-environment">Checking the development environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#running-individual-tests">Running individual tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#running-linters">Running linters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#installing-cardano-clusterlib-in-development-mode">Installing <code class="docutils literal notranslate"><span class="pre">cardano-clusterlib</span></code> in development mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#updating-dependencies-using-poetry">Updating dependencies using poetry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#building-documentation">Building documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#contributing">Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_results.html">Test Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/nightly_system_tests.html">Nightly system tests pipelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#test-statuses">Test statuses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-results">Nightly results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-upgrade-testing">Nightly upgrade testing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/sync_tests.html">Sync tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/tag_tests.html">Tag Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_1.html">8.9.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_0.html">8.9.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_8_0.html">8.8.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_3.html">8.7.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_2.html">8.7.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html">8.6.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_1_1.html">8.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_0_0.html">8.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_7.html">1.35.7</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_6.html">1.35.6</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_5.html">1.35.5</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html">1.35.4-rc1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#secp256k1-iog-test-tracking">SECP256k1 IOG Test Tracking</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_3.html">1.35.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#relevant-existing-issues">Relevant existing issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/chang_user_stories.html">Chang HF User Stories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html">System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cli-user-stories">CLI User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cip1694-user-stories">CIP1694 User Stories</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html">PlutusV3 System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html#smart-contract-user-stories">Smart Contract User Stories</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_plans.html">Test Plans</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test-plans/100_conway_governance.html">Governance testing in Conway</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#committee">Committee</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#dreps">DReps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#actions-voting-ratification-and-enactment">Actions, Voting, Ratification and Enactment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#spos">SPOs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#transactions">Transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../process.html">Process</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../process/100_test_types.html">Types and levels of tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#node-system-tests">Node system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-nightly-cli-tests">Node nightly CLI tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-cli-tests-on-demand">Node CLI tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-sync-tests">Node sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#db-sync-system-tests">DB Sync system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-nightly-tests">DB Sync nightly tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-feature-tests-on-demand">DB Sync feature tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-sync-tests">DB Sync sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#exploratory-testing">Exploratory testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/200_quality_control_strategy.html">Quality control strategy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#scope-and-objectives">Scope and objectives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#key-principles">Key principles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#quality-control-approach">Quality control approach</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#quality-control-methodology">Quality control methodology</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/200_quality_control_strategy.html#active-quality-control">Active quality control</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/200_quality_control_strategy.html#passive-quality-control">Passive quality control</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/300_uat_strategy.html">User acceptance test strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../process/400_plutus.html">Plutus System-Level Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#summary">Summary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#scope">Scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#not-in-scope">Not in scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#automation">Automation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/400_plutus.html#antaeus">Antaeus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/400_plutus.html#cardano-node-tests">Cardano-node-tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#exploratory-testing">Exploratory Testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/400_system_level_tag_testing.html">System-Level Tag Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#what-we-do">What (We do)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#where-results">Where (Results)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#how-we-do-it">How (We do it)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#how-long-does-it-take">How long does it take?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../how-tos.html">How Tos</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">How to start a local cluster</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what-is-a-local-cluster">What is a local cluster</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#local-cluster-parameters">Local cluster parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#initial-setup-for-all-cardano-components">Initial setup for all Cardano components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#starting-postgres-test-database">Starting Postgres test database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#preparing-local-cluster-scripts">Preparing local cluster scripts</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#adjusting-some-parameter-values">Adjusting some parameter values</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#start-the-local-cluster">Start the local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#stop-the-local-cluster">Stop the local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#set-the-tx-era">Set the TX_Era</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#run-tests">Run tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#run-test-suite-from-file">Run test suite from file</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#run-a-single-test">Run a single test</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#interact-with-the-node">Interact with the node</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#transfer-funds-to-your-address">Transfer funds to your address</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-with-ipython">Debugging with IPython</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#logs-for-cardano-node-and-db-sync">Logs for <code class="docutils literal notranslate"><span class="pre">cardano-node</span></code> and <code class="docutils literal notranslate"><span class="pre">db-sync</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accessing-the-db-sync-database">Accessing the <code class="docutils literal notranslate"><span class="pre">db-sync</span></code> database</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#useful-queries">Useful queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#additional-resources">Additional resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html">Testing MIR certificate submission with a local cluster</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#creating-key-pairs">Creating key pairs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#payment-key-pair">Payment key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#stake-key-pair">Stake key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#payment-address">Payment address</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#stake-address">Stake address</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#transferring-funds-from-the-faucet-address-to-our-own-shelley-address-payment-addr">Transferring funds from the ‘faucet’ address to our own Shelley address <code class="docutils literal notranslate"><span class="pre">payment.addr</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#build-tx">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#sign-tx">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#submit-tx">Submit tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#check-funds-on-the-payment-addr">Check funds on the payment.addr</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#creating-a-stake-registration-certificate">Creating a stake registration certificate</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#submitting-the-certificate-with-a-transaction">Submitting the certificate with a transaction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#our-stake-address-has-id-13-and-is-registered">Our stake address has id=13 and is registered</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#deregistering-an-empty-stake-address">Deregistering an ‘empty’ stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#creating-a-deregistration-certificate">Creating a deregistration certificate</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#generating-mir-cert-to-send-funds-from-reserves-to-unregistered-stake-address">Generating MIR cert to send funds from reserves to unregistered stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#id4">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#id5">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#id6">Submit tx</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#state-of-tables-after-mir-cert-tx-submission">State of tables after MIR cert tx submission</a></li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#logs">Logs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#stdout-log">stdout.log</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="380_stake_credential_history_tool.html">Stake credential history tool</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="380_stake_credential_history_tool.html#documentation">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="380_stake_credential_history_tool.html#example-of-usage">Example of usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="500_smash_faq.html">SMASH FAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html">SMASH - tests and debugging examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#checking-smash-status">Checking SMASH status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#fetching-of-the-metadata">Fetching of the metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#delisting-pools">Delisting pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#reserving-a-ticker">Reserving a ticker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#whitelisting">Whitelisting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#checking-pool-rejection-errors">Checking pool rejection errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#pool-unregistrations">Pool unregistrations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#fetch-policies-from-another-smash-service">Fetch policies from another SMASH service</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#an-example-of-debugging-an-issue-with-a-pool">An example of debugging an issue with a pool</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/contributing.html">Contributing to the Cardano node tests repository</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#how-can-i-contribute">How can I contribute?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#reporting-an-issue">Reporting an issue</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#how-do-i-submit-a-good-issue-report">How do I submit a (good) issue report?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#your-first-code-contribution">Your first code contribution</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#pull-requests">Pull requests</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#id1">Style guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#git-commit-messages">Git commit messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#python-style-guide">Python style guide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#roles-and-responsibilities">Roles and Responsibilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">Source Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cardano_node_tests.html">cardano_node_tests package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.cluster_management.html">cardano_node_tests.cluster_management package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.pytest_plugins.html">cardano_node_tests.pytest_plugins package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.tests.html">cardano_node_tests.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.utils.html">cardano_node_tests.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.cardano_cli_coverage">cardano_node_tests.cardano_cli_coverage module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.chang_us_coverage">cardano_node_tests.chang_us_coverage module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.dump_requirements_coverage">cardano_node_tests.dump_requirements_coverage module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.prepare_cluster_scripts">cardano_node_tests.prepare_cluster_scripts module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.split_topology">cardano_node_tests.split_topology module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup">cardano_node_tests.testnet_cleanup module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">cardano-node-tests</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../how-tos.html">How Tos</a></li>
+      <li class="breadcrumb-item active">How to start a local cluster</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/IntersectMBO/cardano-node-tests/blob/master/src_docs/source/how-tos/300_running_local_cluster.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="how-to-start-a-local-cluster">
+<h1>How to start a local cluster<a class="headerlink" href="#how-to-start-a-local-cluster" title="Permalink to this headline"></a></h1>
+<section id="what-is-a-local-cluster">
+<h2>What is a local cluster<a class="headerlink" href="#what-is-a-local-cluster" title="Permalink to this headline"></a></h2>
+<p>A <strong>local cluster</strong> is a local Cardano blockchain that consists of 3 stake pools and 1 BFT node. The chain is started in Byron era and it is moved to the desired era, similarly to Mainnet, using Update Proposals. The default <code class="docutils literal notranslate"><span class="pre">testnet-magic</span></code> value is 42.</p>
+<p>Using a local cluster, you can test/play/interact with all the Cardano blockchain functionalities - from block creation to rewards generation - based on the stake delegated to each of the stake pools, generating and sending all kinds of transactions, to interact with Plutus scripts.</p>
+<section id="local-cluster-parameters">
+<h3>Local cluster parameters<a class="headerlink" href="#local-cluster-parameters" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>slotLength: 200ms</p></li>
+<li><p>epochLength: 1000 slots per epoch (that is 200sec)</p></li>
+<li><p>activeSlotsCoeff: 0.1 (that means there will be ~ 100 blocks per epoch)</p></li>
+</ul>
+</section>
+</section>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>Python 3.8 or newer</p></li>
+<li><p>python3-pip</p></li>
+<li><p>virtualenv</p></li>
+<li><p>nix For instructions on how to install <code class="docutils literal notranslate"><span class="pre">nix</span></code> and how to add IOHK binary cache, see <a class="reference external" href="https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md">https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md</a></p></li>
+</ul>
+</section>
+<section id="initial-setup-for-all-cardano-components">
+<h2>Initial setup for all Cardano components<a class="headerlink" href="#initial-setup-for-all-cardano-components" title="Permalink to this headline"></a></h2>
+<p>Create a directory for storing the Cardano components repositories:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>Projects
+<span class="nb">cd</span><span class="w"> </span>Projects
+</pre></div>
+</div>
+<p>Clone the Cardano projects:</p>
+<p><strong>cardano-node</strong>:</p>
+<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:IntersectMBO/cardano-node.git</span></code></p>
+<p><strong>cardano-db-sync</strong>:</p>
+<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:IntersectMBO/cardano-db-sync.git</span></code></p>
+<p><strong>cardano-node-tests</strong>:</p>
+<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:IntersectMBO/cardano-node-tests.git</span></code></p>
+<p>Checkout the <code class="docutils literal notranslate"><span class="pre">db-sync</span></code> version that you want to use. <code class="docutils literal notranslate"><span class="pre">cardano-node-tests</span></code> requires the <code class="docutils literal notranslate"><span class="pre">db-sync</span></code> executable file so we need to build db-sync.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>cardano-db-sync
+git<span class="w"> </span>checkout<span class="w"> </span>tags/13.1.1.0
+nix<span class="w"> </span>build<span class="w"> </span>.#cardano-db-sync<span class="w"> </span>-o<span class="w"> </span>db-sync-node
+<span class="s">&lt;&lt; wait for build to complete - it may take a w</span>hile<span class="w"> </span>&gt;&gt;
+</pre></div>
+</div>
+<p>Go to <code class="docutils literal notranslate"><span class="pre">cardano-node-tests</span></code>, start the virtual environment and install all dependencies:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>../cardano-node-tests
+./setup_venv.sh
+<span class="s">&lt;&lt; it may take a whi</span>le<span class="w"> </span>&gt;&gt;
+</pre></div>
+</div>
+<p>For debug purposes, at this point it might be beneficial to also install <code class="docutils literal notranslate"><span class="pre">ipython</span></code>:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>ipython
+</pre></div>
+</div>
+<p>Go to <code class="docutils literal notranslate"><span class="pre">cardano-node</span></code>, update and checkout the desired commit/tag:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>../cardano-node
+git<span class="w"> </span>checkout<span class="w"> </span>master
+git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>master
+git<span class="w"> </span>fetch<span class="w"> </span>--all<span class="w"> </span>--tags
+git<span class="w"> </span>checkout<span class="w"> </span>tags/1.30.1
+</pre></div>
+</div>
+<p>and start nix devops shell:</p>
+<p><code class="docutils literal notranslate"><span class="pre">nix</span> <span class="pre">develop</span> <span class="pre">.#devops</span></code></p>
+<p>Go back to the tests repo and activate the virtual environment:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>../cardano-node-tests
+.<span class="w"> </span>.env/bin/activate
+</pre></div>
+</div>
+<blockquote>
+<div><p><strong>Note:</strong> All the remaining steps from the sections below should be performed from the <code class="docutils literal notranslate"><span class="pre">cardano-node-tests</span></code> directory</p>
+</div></blockquote>
+<section id="starting-postgres-test-database">
+<h3>Starting Postgres test database<a class="headerlink" href="#starting-postgres-test-database" title="Permalink to this headline"></a></h3>
+<p><strong>Usage of a separate Postgres database for testing is not mandatory.</strong></p>
+<p>There is a script for creating test database: <code class="docutils literal notranslate"><span class="pre">cardano-node-tests/scripts/postgres-start.sh</span></code></p>
+<p><strong>Option 1:</strong> If you want to start a script that will use default values for Postgres
+port/username and you already have a running Postgres instance on your machine
+then you need to stop it first:</p>
+<p><code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">service</span> <span class="pre">postgresql</span> <span class="pre">stop</span></code></p>
+<p>Then you can start a separate Postgres instance that will be used for creating test database <strong>dbsync0</strong>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">./scripts/postgres-start.sh</span> <span class="pre">&quot;/home/username/Projects/tmp/postgres-qa&quot;</span> <span class="pre">-k</span></code></p>
+<p>As a first argument, pass a directory where you would like to have your DB data to be stored.  After the script ends, <code class="docutils literal notranslate"><span class="pre">postgres-qa</span></code> directory should be created with <code class="docutils literal notranslate"><span class="pre">data</span></code> directory inside it under the specified path.</p>
+<p>The “k” switch will kill any already running Postgres process (assuming it belongs to a regular user, not root) and remove the <code class="docutils literal notranslate"><span class="pre">data</span></code> directory (if you already used that directory in other test sessions).</p>
+<p><strong>Option 2</strong>: If you don’t want to stop your local Postgres instance that is already running on port <strong>5432</strong> then you can simply export environment variables with values that will not collide with your default Postgres setup, like:</p>
+<p><code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">PGHOST=localhost</span> <span class="pre">PGPORT=5434</span> <span class="pre">PGUSER=postgres_dbsync</span></code></p>
+<p>and then run this script:</p>
+<p><code class="docutils literal notranslate"><span class="pre">./scripts/postgres-start.sh</span> <span class="pre">&quot;/home/username/Projects/tmp/postgres-qa&quot;</span> <span class="pre">-k</span></code></p>
+<p>that will start a separate Postgres database for testing.</p>
+<p>Now you are ready to run the preparation script (which is described in detail in the next section).</p>
+</section>
+<section id="preparing-local-cluster-scripts">
+<h3>Preparing local cluster scripts<a class="headerlink" href="#preparing-local-cluster-scripts" title="Permalink to this headline"></a></h3>
+<p>Inside <code class="docutils literal notranslate"><span class="pre">cardano-node-tests/cardano_node_tests/cluster_scripts</span></code> there are folders with all the data and scripts necessary for starting the cluster in various eras and setups:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">babbage</span></code> - prepare files to start the cluster in <code class="docutils literal notranslate"><span class="pre">Byron</span></code> era and transition it through update proposals to <code class="docutils literal notranslate"><span class="pre">Babbage</span></code> era. Once the cluster is ready it will be in <code class="docutils literal notranslate"><span class="pre">Alonzo</span></code> era and the decentralization parameter is set to: <code class="docutils literal notranslate"><span class="pre">d</span> <span class="pre">=</span> <span class="pre">0</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">testnets</span></code> - prepare files so the cluster will run on the real network.</p></li>
+</ul>
+<p><strong>The procedure for setting up a local cluster on a real network will be described in a separate document and a link will be added here later.</strong></p>
+<p>If you want to prepare the local cluster for running in the <code class="docutils literal notranslate"><span class="pre">Alonzo</span></code> era, use:</p>
+<p><code class="docutils literal notranslate"><span class="pre">prepare-cluster-scripts</span> <span class="pre">-d</span> <span class="pre">scripts/destination/dir</span> <span class="pre">-s</span> <span class="pre">cardano_node_tests/cluster_scripts/alonzo</span></code></p>
+<p>Once you run this preparation script, you will notice a new directory with template files and scripts located in:
+<code class="docutils literal notranslate"><span class="pre">cardano-node-tests/scripts/destination/dir</span></code></p>
+<p>Those files will be used by the script that will start our local cluster.</p>
+</section>
+<section id="adjusting-some-parameter-values">
+<h3>Adjusting some parameter values<a class="headerlink" href="#adjusting-some-parameter-values" title="Permalink to this headline"></a></h3>
+<blockquote>
+<div><p><strong>Note:</strong> This step is optional.</p>
+</div></blockquote>
+<p>After running the preparation script, a new directory with template files and scripts will be created:
+<code class="docutils literal notranslate"><span class="pre">cardano-node-tests/scripts/destination/dir</span></code></p>
+<p>You can find there a <code class="docutils literal notranslate"><span class="pre">start-cluster</span></code> script that contains all the code that starts the local cluster.</p>
+<p>If you want, for example, to change the value of the decentralization parameter, just search for that keyword
+in the code of <code class="docutils literal notranslate"><span class="pre">start-cluster</span></code> and after finding the right place edit it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">MARY_HF_PROPOSAL</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$STATE_CLUSTER</span><span class="s2">/shelley/update-proposal-mary.proposal&quot;</span>
+
+cardano_cli_log<span class="w"> </span>governance<span class="w"> </span>create-update-proposal<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out-file<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$MARY_HF_PROPOSAL</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--epoch<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">GENESIS_VERIFICATION</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--decentralization-parameter<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--protocol-major-version<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--protocol-minor-version<span class="w"> </span><span class="m">0</span>
+</pre></div>
+</div>
+<p>If you would like to adjust some Alonzo-specific parameters like <code class="docutils literal notranslate"><span class="pre">maxCollateralInputs</span></code>, the  procedure
+would be the same - use the search option in your editor, find the proper place and edit it according to your needs:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;</span>
+<span class="s1">  .maxValueSize = 5000 |</span>
+<span class="s1">  .collateralPercentage = 150 |</span>
+<span class="s1">  .maxCollateralInputs = 3 |</span>
+<span class="s1">  .executionPrices.prSteps = 0.0000721 |</span>
+<span class="s1">  .executionPrices.prMem = 0.0577 |</span>
+<span class="s1">  .lovelacePerUTxOWord = 34482 |</span>
+<span class="s1">  .maxBlockExUnits.exUnitsMem = 50000000 |</span>
+<span class="s1">  .maxBlockExUnits.exUnitsSteps = 40000000000 |</span>
+<span class="s1">  .maxTxExUnits.exUnitsMem = 10000000 |</span>
+<span class="s1">  .maxTxExUnits.exUnitsSteps = 10000000000&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>&lt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$STATE_CLUSTER</span><span class="s2">/shelley/genesis.alonzo.json&quot;</span><span class="w"> </span>&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$STATE_CLUSTER</span><span class="s2">/shelley/genesis.alonzo.json_jq&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="start-the-local-cluster">
+<h3>Start the local cluster<a class="headerlink" href="#start-the-local-cluster" title="Permalink to this headline"></a></h3>
+<p>The last step is to export <strong>CARDANO_NODE_SOCKET_PATH</strong>, <strong>DBSYNC_REPO</strong> and <strong>DEV_CLUSTER_RUNNING</strong> environment variables</p>
+<p><code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">CARDANO_NODE_SOCKET_PATH=/home/username/Projects/cardano-node/state-cluster0/bft1.socket</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">DEV_CLUSTER_RUNNING=1</span></code></p>
+<p>Now export the location for <code class="docutils literal notranslate"><span class="pre">db-sync</span></code> so the test tool knows its location and can start it:</p>
+<p><code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">DBSYNC_REPO=&quot;/home/username/Projects/cardano-db-sync&quot;</span></code></p>
+<p>Finally, we can start our local cluster with:</p>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/destination/dir/start-cluster</span></code></p>
+<p>The local cluster will start 3 stake pools and 1 BFT node.</p>
+<p>Once the cluster is started, you can see that there is a directory created inside <code class="docutils literal notranslate"><span class="pre">cardano-node</span></code>
+with all the local cluster files:
+<code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0</span></code></p>
+<section id="output-example">
+<h4>OUTPUT example<a class="headerlink" href="#output-example" title="Permalink to this headline"></a></h4>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>nix-shell:~/Projects/cardano-node-tests<span class="o">]</span>$<span class="w"> </span>scripts/destination/dir/start-cluster
+Deleting<span class="w"> </span>db<span class="w"> </span>dbsync0
+NOTICE:<span class="w">  </span>database<span class="w"> </span><span class="s2">&quot;dbsync0&quot;</span><span class="w"> </span>does<span class="w"> </span>not<span class="w"> </span>exist,<span class="w"> </span>skipping
+Setting<span class="w"> </span>up<span class="w"> </span>db<span class="w"> </span>dbsync0
+Generating<span class="w"> </span>Pool<span class="w"> </span><span class="m">1</span><span class="w"> </span>Secrets
+Generating<span class="w"> </span>Pool<span class="w"> </span><span class="m">1</span><span class="w"> </span>Metadata
+Generating<span class="w"> </span>Pool<span class="w"> </span><span class="m">2</span><span class="w"> </span>Secrets
+Generating<span class="w"> </span>Pool<span class="w"> </span><span class="m">2</span><span class="w"> </span>Metadata
+Generating<span class="w"> </span>Pool<span class="w"> </span><span class="m">3</span><span class="w"> </span>Secrets
+Generating<span class="w"> </span>Pool<span class="w"> </span><span class="m">3</span><span class="w"> </span>Metadata
+Waiting<span class="w"> </span><span class="m">5</span><span class="w"> </span>seconds<span class="w"> </span><span class="k">for</span><span class="w"> </span>bft<span class="w"> </span>node<span class="w"> </span>to<span class="w"> </span>start
+Moving<span class="w"> </span>funds<span class="w"> </span>out<span class="w"> </span>of<span class="w"> </span>Byron<span class="w"> </span>genesis
+Transaction<span class="w"> </span>successfully<span class="w"> </span>submitted.
+Waiting<span class="w"> </span><span class="m">202</span><span class="w"> </span>sec<span class="w"> </span><span class="k">for</span><span class="w"> </span>Shelley<span class="w"> </span>era<span class="w"> </span>to<span class="w"> </span>start
+Starting<span class="w"> </span>db-sync
+dbsync:<span class="w"> </span>started
+Submitting<span class="w"> </span>update<span class="w"> </span>proposal<span class="w"> </span>to<span class="w"> </span>transfer<span class="w"> </span>to<span class="w"> </span>Allegra,<span class="w"> </span>transfering<span class="w"> </span>funds<span class="w"> </span>to<span class="w"> </span>pool<span class="w"> </span>owners,<span class="w"> </span>registering<span class="w"> </span>pools<span class="w"> </span>and<span class="w"> </span>delegations
+Transaction<span class="w"> </span>successfully<span class="w"> </span>submitted.
+Waiting<span class="w"> </span><span class="m">202</span><span class="w"> </span>sec<span class="w"> </span><span class="k">for</span><span class="w"> </span>Allegra<span class="w"> </span>era<span class="w"> </span>to<span class="w"> </span>start
+Submitting<span class="w"> </span>update<span class="w"> </span>proposal<span class="w"> </span>to<span class="w"> </span>transfer<span class="w"> </span>to<span class="w"> </span>Mary,<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>
+Transaction<span class="w"> </span>successfully<span class="w"> </span>submitted.
+Waiting<span class="w"> </span><span class="m">202</span><span class="w"> </span>sec<span class="w"> </span><span class="k">for</span><span class="w"> </span>Mary<span class="w"> </span>era<span class="w"> </span>to<span class="w"> </span>start
+Submitting<span class="w"> </span>update<span class="w"> </span>proposal<span class="w"> </span>to<span class="w"> </span>transfer<span class="w"> </span>to<span class="w"> </span>Alonzo
+Transaction<span class="w"> </span>successfully<span class="w"> </span>submitted.
+Waiting<span class="w"> </span><span class="m">15</span><span class="w"> </span>sec<span class="w"> </span>before<span class="w"> </span>restarting<span class="w"> </span>the<span class="w"> </span>nodes
+nodes:bft1:<span class="w"> </span>stopped
+nodes:pool1:<span class="w"> </span>stopped
+nodes:pool2:<span class="w"> </span>stopped
+nodes:pool3:<span class="w"> </span>stopped
+nodes:bft1:<span class="w"> </span>started
+nodes:pool1:<span class="w"> </span>started
+nodes:pool2:<span class="w"> </span>started
+nodes:pool3:<span class="w"> </span>started
+Waiting<span class="w"> </span><span class="m">187</span><span class="w"> </span>sec<span class="w"> </span><span class="k">for</span><span class="w"> </span>Alonzo<span class="w"> </span>era<span class="w"> </span>to<span class="w"> </span>start
+Cluster<span class="w"> </span>started.<span class="w"> </span>Run<span class="w"> </span><span class="sb">`</span>/home/artur/Projects/cardano-node-tests/scripts/destination/dir/stop-cluster<span class="sb">`</span><span class="w"> </span>to<span class="w"> </span>stop
+<span class="o">[</span><span class="m">18</span>:50:12<span class="o">]</span><span class="w"> </span><span class="o">(</span>.env<span class="o">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="stop-the-local-cluster">
+<h3>Stop the local cluster<a class="headerlink" href="#stop-the-local-cluster" title="Permalink to this headline"></a></h3>
+<p>To stop the cluster, run the exact command that the last line suggests in the above log:</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;scripts/destination/dir&gt;/stop-cluster</span></code></p>
+</section>
+<section id="set-the-tx-era">
+<h3>Set the TX_Era<a class="headerlink" href="#set-the-tx-era" title="Permalink to this headline"></a></h3>
+<p>You can even create and send different era transactions (for example the local cluster can be in the Alonzo era and you can create and send Shelley-era transactions).
+You can control the transaction era dynamically, while the cluster is running, using the
+following environment variable:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">TX_ERA</span><span class="o">=</span>mary
+</pre></div>
+</div>
+<p>Available options for <code class="docutils literal notranslate"><span class="pre">TX_ERA</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">shelley</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">allegra</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mary</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">alonzo</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">babbage</span></code></p></li>
+</ul>
+<dl class="simple">
+<dt>You can find the available options in this file:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">cardano-node-tests/cardano_node_tests/utils/configuration.py</span></code></p>
+</dd>
+</dl>
+<p>You can now start the test (in the same shell and from <code class="docutils literal notranslate"><span class="pre">cardano-node-tests</span></code> directory)</p>
+</section>
+</section>
+<section id="run-tests">
+<h2>Run tests<a class="headerlink" href="#run-tests" title="Permalink to this headline"></a></h2>
+<p>The CLI/System tests are located inside <code class="docutils literal notranslate"><span class="pre">cardano-node-tests/cardano_node_tests/tests</span></code></p>
+<section id="run-test-suite-from-file">
+<h3>Run test suite from file<a class="headerlink" href="#run-test-suite-from-file" title="Permalink to this headline"></a></h3>
+<p>You can run an entire test suite (tests covering an entire area of functionalities):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pytest<span class="w"> </span>cardano_node_tests/tests/test_native_tokens.py
+</pre></div>
+</div>
+</section>
+<section id="run-a-single-test">
+<h3>Run a single test<a class="headerlink" href="#run-a-single-test" title="Permalink to this headline"></a></h3>
+<p>Open the test file, find the name of the test you would like to run eg <code class="docutils literal notranslate"><span class="pre">test_minting_unicode_asset_name</span></code></p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pytest<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;test_minting_unicode_asset_name&quot;</span>
+
+pytest<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;MyClass and not method&quot;</span>
+</pre></div>
+</div>
+<p>This will run tests that contain names that match the given string expression (case-insensitive),
+which can include Python operators that use filenames, class names and function names as variables.
+The example above will run TestMyClass.test_something but not TestMyClass.test_method_simple.</p>
+<p>For more info on how to invoke tests, see <a class="reference external" href="https://docs.pytest.org/en/6.2.x/usage.html">https://docs.pytest.org/en/6.2.x/usage.html</a>.</p>
+</section>
+</section>
+<section id="interact-with-the-node">
+<h2>Interact with the node<a class="headerlink" href="#interact-with-the-node" title="Permalink to this headline"></a></h2>
+<p>Once the local cluster is running, you can interact with its nodes. You can open a new shell and export
+<code class="docutils literal notranslate"><span class="pre">CARDANO_NODE_SOCKET_PATH</span></code> with the same value you used before to start the cluster:</p>
+<p><code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">CARDANO_NODE_SOCKET_PATH=/home/username/Projects/cardano-node/state-cluster0/bft1.socket</span></code></p>
+<p>Now you are ready to use the <code class="docutils literal notranslate"><span class="pre">node-cli</span></code>:</p>
+<ul class="simple">
+<li><p>check the current tip and era:</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>tip<span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="o">{</span>
+<span class="w">    </span><span class="s2">&quot;epoch&quot;</span>:<span class="w"> </span><span class="m">1</span>,
+<span class="w">    </span><span class="s2">&quot;hash&quot;</span>:<span class="w"> </span><span class="s2">&quot;252f032be31fd997cdc30b076979490a05edd8fae49ce7e2fdcfd713920d0e7e&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;slot&quot;</span>:<span class="w"> </span><span class="m">1112</span>,
+<span class="w">    </span><span class="s2">&quot;block&quot;</span>:<span class="w"> </span><span class="m">1010</span>,
+<span class="w">    </span><span class="s2">&quot;era&quot;</span>:<span class="w"> </span><span class="s2">&quot;Shelley&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;syncProgress&quot;</span>:<span class="w"> </span><span class="s2">&quot;100.00&quot;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>check the protocol parameters:</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>protocol-parameters<span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="o">{</span>
+<span class="w">    </span><span class="s2">&quot;txFeePerByte&quot;</span>:<span class="w"> </span><span class="m">44</span>,
+<span class="w">    </span><span class="s2">&quot;minUTxOValue&quot;</span>:<span class="w"> </span><span class="m">1</span>,
+<span class="w">    </span><span class="s2">&quot;stakePoolDeposit&quot;</span>:<span class="w"> </span><span class="m">500000000</span>,
+<span class="w">    </span><span class="s2">&quot;utxoCostPerWord&quot;</span>:<span class="w"> </span>null,
+<span class="w">    </span><span class="s2">&quot;decentralization&quot;</span>:<span class="w"> </span><span class="m">0</span>.8,
+<span class="w">    </span><span class="s2">&quot;poolRetireMaxEpoch&quot;</span>:<span class="w"> </span><span class="m">18</span>,
+<span class="w">    </span><span class="s2">&quot;extraPraosEntropy&quot;</span>:<span class="w"> </span>null,
+<span class="w">    </span><span class="s2">&quot;collateralPercentage&quot;</span>:<span class="w"> </span>null,
+<span class="w">    </span><span class="s2">&quot;stakePoolTargetNum&quot;</span>:<span class="w"> </span><span class="m">10</span>,
+<span class="w">    </span><span class="s2">&quot;maxBlockBodySize&quot;</span>:<span class="w"> </span><span class="m">65536</span>,
+<span class="w">    </span><span class="s2">&quot;maxTxSize&quot;</span>:<span class="w"> </span><span class="m">16384</span>,
+<span class="w">    </span><span class="s2">&quot;treasuryCut&quot;</span>:<span class="w"> </span><span class="m">5</span>.0e-2,
+<span class="w">    </span><span class="s2">&quot;minPoolCost&quot;</span>:<span class="w"> </span><span class="m">0</span>,
+<span class="w">    </span><span class="s2">&quot;maxCollateralInputs&quot;</span>:<span class="w"> </span>null,
+<span class="w">    </span><span class="s2">&quot;maxValueSize&quot;</span>:<span class="w"> </span>null,
+<span class="w">    </span><span class="s2">&quot;maxBlockExecutionUnits&quot;</span>:<span class="w"> </span>null,
+<span class="w">    </span><span class="s2">&quot;maxBlockHeaderSize&quot;</span>:<span class="w"> </span><span class="m">1100</span>,
+<span class="w">    </span><span class="s2">&quot;costModels&quot;</span>:<span class="w"> </span><span class="o">{}</span>,
+<span class="w">    </span><span class="s2">&quot;maxTxExecutionUnits&quot;</span>:<span class="w"> </span>null,
+<span class="w">    </span><span class="s2">&quot;protocolVersion&quot;</span>:<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;minor&quot;</span>:<span class="w"> </span><span class="m">0</span>,
+<span class="w">        </span><span class="s2">&quot;major&quot;</span>:<span class="w"> </span><span class="m">2</span>
+<span class="w">    </span><span class="o">}</span>,
+<span class="w">    </span><span class="s2">&quot;txFeeFixed&quot;</span>:<span class="w"> </span><span class="m">155381</span>,
+<span class="w">    </span><span class="s2">&quot;stakeAddressDeposit&quot;</span>:<span class="w"> </span><span class="m">400000</span>,
+<span class="w">    </span><span class="s2">&quot;monetaryExpansion&quot;</span>:<span class="w"> </span><span class="m">2</span>.2e-3,
+<span class="w">    </span><span class="s2">&quot;poolPledgeInfluence&quot;</span>:<span class="w"> </span><span class="m">0</span>.3,
+<span class="w">    </span><span class="s2">&quot;executionUnitPrices&quot;</span>:<span class="w"> </span>null
+<span class="o">}</span>
+</pre></div>
+</div>
+<section id="transfer-funds-to-your-address">
+<h3>Transfer funds to your address<a class="headerlink" href="#transfer-funds-to-your-address" title="Permalink to this headline"></a></h3>
+<p>During cluster startup, a Byron address will be created and the funds will be moved out of the genesis UTXO into a regular address.</p>
+<p>Inside <code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/byron</span></code></p>
+<p>you can find:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">payment-keys.000.key</span></code> - Byron payment signing key</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">address-000</span></code> - printed address of a Byron payment signing key (above) where funds from genesis were moved</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">genesis-address-000</span></code> - genesis address with funds that will be transferred to a Byron address-000</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">payment-keys.000-converted.skey</span></code> - this is a Byron payment signing key (payment-keys.000.key) converted to a corresponding Shelley-format key</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">payment-keys.000-converted.vkey</span></code> - this is a verification key that was obtained from signing key <code class="docutils literal notranslate"><span class="pre">payment-keys.000-converted.skey</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">address-000-converted</span></code> - <code class="docutils literal notranslate"><span class="pre">address-000</span></code> converted to a corresponding Shelley-format key</p></li>
+</ul>
+<p>Let’s check the address that holds funds:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>/home/artur/Projects/cardano-node/state-cluster0/byron/address-000-converted
+2657WMsDfac7Mx1ew6MVfxGqLGwvkkExEFyuWRxDGk4rPQB86uAfrD8BGqjh6ToRj
+</pre></div>
+</div>
+<p>and query it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>utxo<span class="w"> </span>--address<span class="w"> </span>2657WMsDfac7Mx1ew6MVfxGqLGwvkkExEFyuWRxDGk4rPQB86uAfrD8BGqjh6ToRj<span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>TxHash</p></th>
+<th class="head"><p>TxIx</p></th>
+<th class="head"><p>Amount</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>30bfdafa359d0258e54c80de8d00b0556572fef93ec6171ac16572f3994132c7</p></td>
+<td><p>0</p></td>
+<td><p>35996998496920237  lovelace + TxOutDatumHashNone</p></td>
+</tr>
+</tbody>
+</table>
+<p>You can use <code class="docutils literal notranslate"><span class="pre">address-000-converted</span></code> as a faucet to transfer funds to your manually created addresses. The signing key file that you need to use during the transaction sign process is located here:
+<code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/byron/payment-keys.000-converted.skey</span></code></p>
+<p><strong>Example</strong>:</p>
+<p>Build tx:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
+--tx-in<span class="w"> </span>30bfdafa359d0258e54c80de8d00b0556572fef93ec6171ac16572f3994132c7#0<span class="w"> </span><span class="se">\</span>
+--tx-out<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>~/Projects/payment.addr<span class="k">)</span>+2000000000000<span class="w"> </span><span class="se">\</span>
+--change-address<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>~/Projects/cardano-node/state-cluster0/byron/address-000-converted<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx.raw<span class="w"> </span><span class="se">\</span>
+--witness-override<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+--alonzo-era
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">payment.addr</span></code> is the Shelley address created manually by the user and <code class="docutils literal notranslate"><span class="pre">--witness-override</span> <span class="pre">2</span></code> is used because of <a class="reference external" href="https://github.com/IntersectMBO/cardano-node/issues/3294">this issue</a>.</p>
+<p>Sign tx:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>sign<span class="w"> </span><span class="se">\</span>
+--tx-body-file<span class="w"> </span>tx.raw<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>~/Projects/cardano-node/state-cluster0/byron/payment-keys.000-converted.skey<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx.signed
+</pre></div>
+</div>
+<p>Submit tx:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>submit<span class="w"> </span>--tx-file<span class="w"> </span>tx.signed<span class="w">  </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+Transaction<span class="w"> </span>successfully<span class="w"> </span>submitted.
+</pre></div>
+</div>
+</section>
+</section>
+<section id="debugging-with-ipython">
+<h2>Debugging with IPython<a class="headerlink" href="#debugging-with-ipython" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>If you have not already installed the <code class="docutils literal notranslate"><span class="pre">ipython</span></code> package earlier, then do it in a shell that is not a <code class="docutils literal notranslate"><span class="pre">nix-shell</span></code> and where the virtual environment is activated</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>ipython
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>insert:</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>from<span class="w"> </span>IPython<span class="w"> </span>import<span class="w"> </span>embed<span class="p">;</span><span class="w"> </span>embed<span class="o">()</span>
+</pre></div>
+</div>
+<p>on the line above the one where the test code fails or where you want to simply investigate code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">test_minting_unicode_asset_name</span><span class="p">(</span>
+   <span class="bp">self</span><span class="p">,</span>
+   <span class="n">cluster</span><span class="p">:</span> <span class="n">clusterlib</span><span class="o">.</span><span class="n">ClusterLib</span><span class="p">,</span>
+   <span class="n">issuers_addrs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">clusterlib</span><span class="o">.</span><span class="n">AddressRecord</span><span class="p">],</span>
+<span class="p">):</span>
+   <span class="n">token_mint</span> <span class="o">=</span> <span class="n">clusterlib_utils</span><span class="o">.</span><span class="n">TokenRecord</span><span class="p">(</span>
+       <span class="n">token</span><span class="o">=</span><span class="n">token</span><span class="p">,</span>
+       <span class="n">amount</span><span class="o">=</span><span class="n">amount</span><span class="p">,</span>
+       <span class="n">issuers_addrs</span><span class="o">=</span><span class="p">[</span><span class="n">issuer_addr</span><span class="p">],</span>
+       <span class="n">token_mint_addr</span><span class="o">=</span><span class="n">token_mint_addr</span><span class="p">,</span>
+       <span class="n">script</span><span class="o">=</span><span class="n">script</span><span class="p">,</span>
+   <span class="p">)</span>
+   <span class="kn">from</span> <span class="nn">IPython</span> <span class="kn">import</span> <span class="n">embed</span><span class="p">;</span> <span class="n">embed</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>run with <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">-s</span> <span class="pre">...</span></code> and inspect the runtime state once it gives you the <code class="docutils literal notranslate"><span class="pre">ipython</span></code> shell.
+Now you can enter variable names in the <code class="docutils literal notranslate"><span class="pre">IPython</span></code> console to check their values/state.</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pytest<span class="w"> </span>-s<span class="w"> </span>cardano_node_tests/tests/test_native_tokens.py<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;test_minting_unicode_asset_name&quot;</span>
+Python<span class="w"> </span><span class="m">3</span>.8.5<span class="w"> </span><span class="o">(</span>default,<span class="w"> </span>Jan<span class="w"> </span><span class="m">27</span><span class="w"> </span><span class="m">2021</span>,<span class="w"> </span><span class="m">15</span>:41:15<span class="o">)</span>
+Type<span class="w"> </span><span class="s1">&#39;copyright&#39;</span>,<span class="w"> </span><span class="s1">&#39;credits&#39;</span><span class="w"> </span>or<span class="w"> </span><span class="s1">&#39;license&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>more<span class="w"> </span>information
+IPython<span class="w"> </span><span class="m">7</span>.19.0<span class="w"> </span>--<span class="w"> </span>An<span class="w"> </span>enhanced<span class="w"> </span>Interactive<span class="w"> </span>Python.<span class="w"> </span>Type<span class="w"> </span><span class="s1">&#39;?&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>help.
+In<span class="w"> </span><span class="o">[</span><span class="m">1</span><span class="o">]</span>:<span class="w"> </span>token_mint
+Out<span class="o">[</span><span class="m">1</span><span class="o">]</span>:<span class="w"> </span>TokenRecord<span class="o">(</span><span class="nv">token</span><span class="o">=</span><span class="s1">&#39;a7eb2fe41a690735883134ce854128f07da96bed9ac056f5fc68b3301.ᘓऩ⣆nqge&#39;</span>,<span class="w"> </span><span class="nv">amount</span><span class="o">=</span><span class="m">5</span>,<span class="w"> </span><span class="nv">issuers_addrs</span><span class="o">=[</span>AddressRecord<span class="o">(</span><span class="nv">address</span><span class="o">=</span><span class="s1">&#39;addr_test1vzdnfs753u3q08g5ue9t2g7c6hvtpdy5m332rxqxu9lkg3gxtejfd&#39;</span>,<span class="w"> </span><span class="nv">vkey_file</span><span class="o">=</span>PosixPath<span class="o">(</span><span class="s1">&#39;token_minting_ci0_1.vkey&#39;</span><span class="o">)</span>,<span class="w"> </span><span class="nv">skey_file</span><span class="o">=</span>PosixPath<span class="o">(</span><span class="s1">&#39;token_minting_ci0_1.skey&#39;</span><span class="o">))]</span>,<span class="w"> </span><span class="nv">token_mint_addr</span><span class="o">=</span>AddressRecord<span class="o">(</span><span class="nv">address</span><span class="o">=</span><span class="s1">&#39;addr_test1vqmhhujvsrpau0vhpkmjz0xzhxl80u4satu596eqm3zanwcxmle2u&#39;</span>,<span class="w"> </span><span class="nv">vkey_file</span><span class="o">=</span>PosixPath<span class="o">(</span><span class="s1">&#39;token_minting_ci0_0.vkey&#39;</span><span class="o">)</span>,<span class="w"> </span><span class="nv">skey_file</span><span class="o">=</span>PosixPath<span class="o">(</span><span class="s1">&#39;token_minting_ci0_0.skey&#39;</span><span class="o">))</span>,<span class="w"> </span><span class="nv">script</span><span class="o">=</span>PosixPath<span class="o">(</span><span class="s1">&#39;test_minting_unicode_asset_name.script&#39;</span><span class="o">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>leave <code class="docutils literal notranslate"><span class="pre">IPython</span></code> interactive mode by typing <code class="docutils literal notranslate"><span class="pre">exit();</span></code></p></li>
+</ul>
+<p>When you run tests with:</p>
+<p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">...</span> <span class="pre">--log-level=debug</span></code></p>
+<p>you can see what Cardano CLI commands are executed.</p>
+</section>
+<section id="logs-for-cardano-node-and-db-sync">
+<h2>Logs for <code class="docutils literal notranslate"><span class="pre">cardano-node</span></code> and <code class="docutils literal notranslate"><span class="pre">db-sync</span></code><a class="headerlink" href="#logs-for-cardano-node-and-db-sync" title="Permalink to this headline"></a></h2>
+<p>stake pools:</p>
+<p><code class="docutils literal notranslate"><span class="pre">N=1,2,3</span></code></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/pool&lt;N&gt;.stdout</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/pool&lt;N&gt;.stderr</span></code></p></li>
+</ul>
+<p>BFT node:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/bft1.stdout</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/bft1.stderr</span></code></p></li>
+</ul>
+<p>db-sync:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/dbsync.stdout</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cardano-node/state-cluster0/dbsync.stderr</span></code></p></li>
+</ul>
+</section>
+<section id="accessing-the-db-sync-database">
+<h2>Accessing the <code class="docutils literal notranslate"><span class="pre">db-sync</span></code> database<a class="headerlink" href="#accessing-the-db-sync-database" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>If you did not change <strong>PGPORT</strong> and <strong>PGUSER</strong>:
+<code class="docutils literal notranslate"><span class="pre">psql</span> <span class="pre">-h</span> <span class="pre">/path/to/your/data</span> <span class="pre">-U</span> <span class="pre">postgres</span> <span class="pre">-e</span> <span class="pre">dbsync0</span></code> &lt;/br&gt;
+Example:
+<code class="docutils literal notranslate"><span class="pre">psql</span> <span class="pre">-h</span> <span class="pre">/home/artur/Projects/tmp/postgres-qa</span> <span class="pre">-U</span> <span class="pre">postgres</span> <span class="pre">-e</span> <span class="pre">dbsync0</span></code></p></li>
+<li><p>If you changed <strong>PGPORT</strong> and <strong>PGUSER</strong>:
+<code class="docutils literal notranslate"><span class="pre">psql</span> <span class="pre">-h</span> <span class="pre">/path/to/your/data</span> <span class="pre">-U</span> <span class="pre">USER_YOU_USED</span> <span class="pre">-e</span> <span class="pre">dbsync0</span> <span class="pre">-p</span> <span class="pre">PORT_YOU_USED</span></code>
+for values used in examples above it would be: &lt;/br&gt;
+<code class="docutils literal notranslate"><span class="pre">psql</span> <span class="pre">-h</span> <span class="pre">/home/username/Projects/tmp/postgres-qa</span> <span class="pre">-U</span> <span class="pre">postgres_dbsync</span> <span class="pre">-e</span> <span class="pre">dbsync0</span> <span class="pre">-p</span> <span class="pre">5433</span></code></p></li>
+</ul>
+<p>Use <code class="docutils literal notranslate"><span class="pre">\dt</span></code> for listing all tables:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>dbsync0=# \dt
+</pre></div>
+</div>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Schema</p></th>
+<th class="head"><p>Name</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Owner</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>public</p></td>
+<td><p>ada_pots</p></td>
+<td><p>table</p></td>
+<td><p>postgres</p></td>
+</tr>
+<tr class="row-odd"><td><p>public</p></td>
+<td><p>admin_user</p></td>
+<td><p>table</p></td>
+<td><p>postgres</p></td>
+</tr>
+<tr class="row-even"><td><p>public</p></td>
+<td><p>block</p></td>
+<td><p>table</p></td>
+<td><p>postgres</p></td>
+</tr>
+<tr class="row-odd"><td><p>public</p></td>
+<td><p>collateral_tx_in</p></td>
+<td><p>table</p></td>
+<td><p>postgres</p></td>
+</tr>
+<tr class="row-even"><td><p>public</p></td>
+<td><p>cost_models</p></td>
+<td><p>table</p></td>
+<td><p>postgres</p></td>
+</tr>
+</tbody>
+</table>
+<p>Use <code class="docutils literal notranslate"><span class="pre">\d</span> <span class="pre">table_name</span></code> for checking table details:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>dbsync0=# \d collateral_tx_in
+</pre></div>
+</div>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Column</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Collation</p></th>
+<th class="head"><p>Nullable</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>id</p></td>
+<td><p>bigint</p></td>
+<td></td>
+<td><p>not null</p></td>
+<td><p>nextval(‘collateral_tx_in_id_seq’::regclass)</p></td>
+</tr>
+<tr class="row-odd"><td><p>tx_in_id</p></td>
+<td><p>bigint</p></td>
+<td></td>
+<td><p>not null</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>tx_out_id</p></td>
+<td><p>bigint</p></td>
+<td></td>
+<td><p>not null</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>tx_out_index</p></td>
+<td><p>txindex</p></td>
+<td></td>
+<td><p>not null</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Indexes:
+    &quot;collateral_tx_in_pkey&quot; PRIMARY KEY, btree (id)
+    &quot;unique_col_txin&quot; UNIQUE CONSTRAINT, btree (tx_in_id, tx_out_id, tx_out_index)
+Foreign-key constraints:
+    &quot;collateral_tx_in_tx_in_id_fkey&quot; FOREIGN KEY (tx_in_id) REFERENCES tx(id) ON UPDATE RESTRICT ON DELETE CASCADE
+    &quot;collateral_tx_in_tx_out_id_fkey&quot; FOREIGN KEY (tx_out_id) REFERENCES tx(id) ON UPDATE RESTRICT ON DELETE CASCADE
+</pre></div>
+</div>
+<p>and <code class="docutils literal notranslate"><span class="pre">\q</span></code> for leaving the database.</p>
+<section id="useful-queries">
+<h3>Useful queries<a class="headerlink" href="#useful-queries" title="Permalink to this headline"></a></h3>
+<p>For interesting db-sync queries, see <a class="reference external" href="https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/interesting-queries.md">https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/interesting-queries.md</a>.</p>
+</section>
+</section>
+<section id="additional-resources">
+<h2>Additional resources<a class="headerlink" href="#additional-resources" title="Permalink to this headline"></a></h2>
+<p>For more info on <strong>cardano-node</strong>, see <a class="reference external" href="https://github.com/IntersectMBO/cardano-node/tree/master/doc/getting-started">https://github.com/IntersectMBO/cardano-node/tree/master/doc/getting-started</a>.</p>
+<p>For more info on <strong>cardano-db-sync</strong>, see <a class="reference external" href="https://github.com/IntersectMBO/cardano-db-sync/tree/master/doc">https://github.com/IntersectMBO/cardano-db-sync/tree/master/doc</a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../how-tos.html" class="btn btn-neutral float-left" title="How Tos" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="350_mir_cert_test_example_manual_steps.html" class="btn btn-neutral float-right" title="Testing MIR certificate submission with a local cluster" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
