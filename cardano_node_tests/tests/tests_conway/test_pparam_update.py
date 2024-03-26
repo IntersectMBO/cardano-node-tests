@@ -145,11 +145,13 @@ class TestPParamUpdate:
 
         * vote to disapprove the actions
         * submit a "protocol parameters update" action that will be enacted
-        * check that SPOs cannot vote on a "protocol parameters update" action
+        * check that SPOs cannot vote on a "protocol parameters update" action that doesn't
+          change security parameters
         * vote to approve the action
         * check that the action is ratified
         * try to disapprove the ratified action, this shouldn't have any effect
         * check that the action is enacted
+        * check that only the ratified action that got accepted first to the chain gets enacted
         * check that it's not possible to vote on enacted action
         """
         # pylint: disable=too-many-locals,too-many-statements
@@ -754,39 +756,6 @@ class TestPParamUpdate:
             approve_spo=None,
         )
 
-        # Vote on the final action that will be enacted
-        reqc.cip037.start(url=helpers.get_vcs_link())
-        fin_action_txid, fin_action_ix, fin_proposal_names = _create_pparams_action(
-            proposals=fin_update_proposals
-        )
-
-        # Vote & disapprove the action
-        conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_fin_no",
-            payment_addr=pool_user_lg.payment,
-            action_txid=fin_action_txid,
-            action_ix=fin_action_ix,
-            approve_cc=False,
-            approve_drep=False,
-            approve_spo=False,
-        )
-
-        # Vote & approve the action
-        fin_voted_votes = conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_fin_yes",
-            payment_addr=pool_user_lg.payment,
-            action_txid=fin_action_txid,
-            action_ix=fin_action_ix,
-            approve_cc=True,
-            approve_drep=True,
-            approve_spo=True,
-        )
-        fin_approve_epoch = cluster.g_query.get_epoch()
-
         # Vote on update proposals from governance group that will NOT get approved by DReps
         gov_nodrep_update_proposals = list(
             helpers.flatten(random.sample(governance_g_proposals, 3))
@@ -879,6 +848,66 @@ class TestPParamUpdate:
                 approve_spo=None if mix_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
             )
 
+        # Vote on the "final" action that will be enacted
+        reqc.cip037.start(url=helpers.get_vcs_link())
+        fin_action_txid, fin_action_ix, fin_proposal_names = _create_pparams_action(
+            proposals=fin_update_proposals
+        )
+
+        # Vote & disapprove the action
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_fin_no",
+            payment_addr=pool_user_lg.payment,
+            action_txid=fin_action_txid,
+            action_ix=fin_action_ix,
+            approve_cc=False,
+            approve_drep=False,
+            approve_spo=False,
+        )
+
+        # Vote & approve the action
+        fin_voted_votes = conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_fin_yes",
+            payment_addr=pool_user_lg.payment,
+            action_txid=fin_action_txid,
+            action_ix=fin_action_ix,
+            approve_cc=True,
+            approve_drep=True,
+            approve_spo=True,
+        )
+        fin_approve_epoch = cluster.g_query.get_epoch()
+
+        # Vote on another update proposals from mix of groups. The proposal will get approved,
+        # but not enacted, because it comes after the "final" action that was accepted to the chain
+        # first.
+        reqc.cip056.start(url=helpers.get_vcs_link())
+        mix_approved_update_proposals = list(
+            helpers.flatten(
+                [
+                    *random.sample(network_g_proposals, 2),
+                    *random.sample(governance_g_proposals, 2),
+                ]
+            )
+        )
+        mix_approved_action_txid, mix_approved_action_ix, mix_approved_proposal_names = (
+            _create_pparams_action(proposals=mix_approved_update_proposals)
+        )
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_mix_approved",
+            payment_addr=pool_user_lg.payment,
+            action_txid=mix_approved_action_txid,
+            action_ix=mix_approved_action_ix,
+            approve_cc=True,
+            approve_drep=True,
+            approve_spo=None if mix_approved_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+        )
+
         def _check_state(state: dict):
             pparams = state["curPParams"]
             clusterlib_utils.check_updated_params(
@@ -942,6 +971,7 @@ class TestPParamUpdate:
                 reqc.cip050,
                 reqc.cip051,
                 reqc.cip052,
+                reqc.cip056,
                 reqc.cip060,
                 reqc.cip065,
                 reqc.cip068,
