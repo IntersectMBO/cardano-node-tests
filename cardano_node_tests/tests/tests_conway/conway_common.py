@@ -291,10 +291,7 @@ def resign_ccs(
 
     cluster_obj.wait_for_new_block(new_blocks=2)
     res_committee_state = cluster_obj.g_conway_governance.query.committee_state()
-    save_committee_state(
-        committee_state=res_committee_state,
-        name_template=name_template,
-    )
+    save_committee_state(committee_state=res_committee_state, name_template=f"{name_template}_res")
     for cc_member in ccs_to_resign:
         member_key = f"keyHash-{cc_member.cold_vkey_hash}"
         assert (
