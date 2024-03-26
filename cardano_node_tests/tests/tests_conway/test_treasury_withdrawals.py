@@ -459,13 +459,6 @@ class TestTreasuryWithdrawals:
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
         )
 
-        def _get_vote(idx: int) -> clusterlib.Votes:
-            if idx % 3 == 0:
-                return clusterlib.Votes.ABSTAIN
-            if idx % 2 == 0:
-                return clusterlib.Votes.NO
-            return clusterlib.Votes.YES
-
         votes_cc = []
         votes_drep = []
         for action_ix in range(actions_num):
@@ -491,7 +484,9 @@ class TestTreasuryWithdrawals:
                         vote_name=f"{temp_template}_{action_ix}_cc{i}",
                         action_txid=action_txid,
                         action_ix=action_ix,
-                        vote=clusterlib.Votes.YES if approve_cc else _get_vote(i),
+                        vote=conway_common.get_yes_abstain_vote(i)
+                        if approve_cc
+                        else conway_common.get_no_abstain_vote(i),
                         cc_hot_vkey_file=m.hot_vkey_file,
                     )
                     for i, m in enumerate(governance_data.cc_members, start=1)
@@ -503,7 +498,9 @@ class TestTreasuryWithdrawals:
                         vote_name=f"{temp_template}_{action_ix}_drep{i}",
                         action_txid=action_txid,
                         action_ix=action_ix,
-                        vote=clusterlib.Votes.YES if approve_dreps else _get_vote(i),
+                        vote=conway_common.get_yes_abstain_vote(i)
+                        if approve_dreps
+                        else conway_common.get_no_abstain_vote(i),
                         drep_vkey_file=d.key_pair.vkey_file,
                     )
                     for i, d in enumerate(governance_data.dreps_reg, start=1)
@@ -572,7 +569,7 @@ class TestTreasuryWithdrawals:
         for action_ix in range(actions_num):
             assert not governance_utils.lookup_ratified_actions(
                 gov_state=nonrat_gov_state, action_txid=action_txid, action_ix=action_ix
-            )
+            ), f"Action {action_txid}#{action_ix} got ratified unexpectedly"
 
         # Check that the actions are not enacted
         _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
@@ -638,19 +635,18 @@ class TestTreasuryWithdrawals:
         [r.success() for r in (reqc.cip030ex, reqc.cip034ex)]
 
         # Additional checks of governance state output
-        assert governance_utils.lookup_expired_actions(
-            gov_state=expire_gov_state, action_txid=action_txid
-        ), "Action not found in removed actions"
-        reqc.cip032ex.success()
-        assert governance_utils.lookup_proposal(
-            gov_state=expire_gov_state, action_txid=action_txid
-        ), "Action no longer found in proposals"
+        for action_ix in range(actions_num):
+            assert governance_utils.lookup_expired_actions(
+                gov_state=expire_gov_state, action_txid=action_txid, action_ix=action_ix
+            ), f"Action {action_txid}#{action_ix} not found in removed actions"
+            assert governance_utils.lookup_proposal(
+                gov_state=expire_gov_state, action_txid=action_txid, action_ix=action_ix
+            ), f"Action {action_txid}#{action_ix} no longer found in proposals"
+            assert not governance_utils.lookup_proposal(
+                gov_state=rem_gov_state, action_txid=action_txid, action_ix=action_ix
+            ), f"Action {action_txid}#{action_ix} not removed from proposals"
 
-        assert not governance_utils.lookup_proposal(
-            gov_state=rem_gov_state, action_txid=action_txid
-        ), "Action was not removed from proposals"
-
-        reqc.cip069ex.success()
+        [r.success() for r in (reqc.cip032ex, reqc.cip069ex)]
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("mir_cert", ("treasury", "rewards", "stake_addr"))
