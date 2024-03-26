@@ -83,6 +83,7 @@ cip054_04 = __r("intCIP054-04")  # no confidence
 cip054_05 = __r("intCIP054-05")  # treasury withdrawal
 cip054_06 = __r("intCIP054-06")  # info
 cip054_07 = __r("intCIP054-07")  # hard-fork
+cip056 = __r("CIP056")
 cip057 = __r("CIP057")
 cip058 = __r("CIP058")
 cip059 = __r("CIP059")
