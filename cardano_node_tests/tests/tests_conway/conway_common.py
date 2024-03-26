@@ -138,6 +138,42 @@ def get_pool_user(
     return pool_user
 
 
+def submit_vote(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    payment_addr: clusterlib.AddressRecord,
+    votes: tp.List[governance_utils.VotesAllT],
+    keys: tp.List[clusterlib.FileType],
+    submit_method: str = "",
+    use_build_cmd: bool = False,
+) -> clusterlib.TxRawOutput:
+    """Submit a Tx with votes."""
+    tx_files = clusterlib.TxFiles(
+        vote_files=[r.vote_file for r in votes],
+        signing_key_files=[
+            payment_addr.skey_file,
+            *keys,
+        ],
+    )
+
+    tx_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_vote",
+        src_address=payment_addr.address,
+        submit_method=submit_method,
+        use_build_cmd=use_build_cmd,
+        tx_files=tx_files,
+    )
+
+    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
+    assert (
+        clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr.address)[0].amount
+        == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
+    ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+    return tx_output
+
+
 def cast_vote(
     cluster_obj: clusterlib.ClusterLib,
     governance_data: governance_setup.DefaultGovernance,
@@ -211,39 +247,24 @@ def cast_vote(
     drep_keys = [r.key_pair.skey_file for r in governance_data.dreps_reg] if votes_drep else []
     spo_keys = [r.skey_file for r in governance_data.pools_cold] if votes_spo else []
 
-    tx_files = clusterlib.TxFiles(
-        vote_files=[
-            *[r.vote_file for r in votes_cc],
-            *[r.vote_file for r in votes_drep],
-            *[r.vote_file for r in votes_spo],
-        ],
-        signing_key_files=[
-            payment_addr.skey_file,
-            *cc_keys,
-            *drep_keys,
-            *spo_keys,
-        ],
-    )
+    votes_all: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
+    keys_all = [*cc_keys, *drep_keys, *spo_keys]
 
     # Make sure we have enough time to submit the votes in one epoch
     clusterlib_utils.wait_for_epoch_interval(
         cluster_obj=cluster_obj, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
     )
 
-    tx_output = clusterlib_utils.build_and_submit_tx(
+    submit_vote(
         cluster_obj=cluster_obj,
-        name_template=f"{name_template}_vote",
-        src_address=payment_addr.address,
+        name_template=name_template,
+        payment_addr=payment_addr,
+        votes=votes_all,
+        keys=keys_all,
         use_build_cmd=True,
-        tx_files=tx_files,
     )
 
-    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
-    assert (
-        clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr.address)[0].amount
-        == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
-    ), f"Incorrect balance for source address `{payment_addr.address}`"
-
+    # Make sure the vote is included in the ledger
     gov_state = cluster_obj.g_conway_governance.query.gov_state()
     _cur_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(

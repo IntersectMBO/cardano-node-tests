@@ -207,41 +207,26 @@ class TestTreasuryWithdrawals:
                         ]
                     )
 
+            votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
             spo_keys = [r.skey_file for r in governance_data.pools_cold] if votes_spo else []
-            tx_files_vote = clusterlib.TxFiles(
-                vote_files=[
-                    *[r.vote_file for r in votes_cc],
-                    *[r.vote_file for r in votes_drep],
-                    *[r.vote_file for r in votes_spo],
-                ],
-                signing_key_files=[
-                    pool_user_ug.payment.skey_file,
-                    *[r.hot_skey_file for r in governance_data.cc_members],
-                    *[r.key_pair.skey_file for r in governance_data.dreps_reg],
-                    *spo_keys,
-                ],
-            )
+            vote_keys = [
+                *[r.hot_skey_file for r in governance_data.cc_members],
+                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+                *spo_keys,
+            ]
 
             # Make sure we have enough time to submit the votes in one epoch
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
             )
 
-            tx_output_vote = clusterlib_utils.build_and_submit_tx(
+            conway_common.submit_vote(
                 cluster_obj=cluster,
-                name_template=f"{temp_template}_vote_{vote_id}",
-                src_address=pool_user_ug.payment.address,
-                use_build_cmd=True,
-                tx_files=tx_files_vote,
+                name_template=f"{temp_template}_{vote_id}",
+                payment_addr=pool_user_ug.payment,
+                votes=votes,
+                keys=vote_keys,
             )
-
-            out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
-            assert (
-                clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_ug.payment.address)[
-                    0
-                ].amount
-                == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-            ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
             vote_gov_state = cluster.g_conway_governance.query.gov_state()
             _cur_epoch = cluster.g_query.get_epoch()
@@ -459,8 +444,7 @@ class TestTreasuryWithdrawals:
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
         )
 
-        votes_cc = []
-        votes_drep = []
+        votes: tp.List[governance_utils.VotesAllT] = []
         for action_ix in range(actions_num):
             prop_action = governance_utils.lookup_proposal(
                 gov_state=action_gov_state, action_txid=action_txid, action_ix=action_ix
@@ -478,7 +462,7 @@ class TestTreasuryWithdrawals:
             elif action_ix == 1 and configuration.HAS_CC:
                 approve_dreps = True
 
-            votes_cc.extend(
+            votes.extend(
                 [
                     cluster.g_conway_governance.vote.create_committee(
                         vote_name=f"{temp_template}_{action_ix}_cc{i}",
@@ -492,7 +476,7 @@ class TestTreasuryWithdrawals:
                     for i, m in enumerate(governance_data.cc_members, start=1)
                 ]
             )
-            votes_drep.extend(
+            votes.extend(
                 [
                     cluster.g_conway_governance.vote.create_drep(
                         vote_name=f"{temp_template}_{action_ix}_drep{i}",
@@ -507,17 +491,10 @@ class TestTreasuryWithdrawals:
                 ]
             )
 
-        tx_files_vote = clusterlib.TxFiles(
-            vote_files=[
-                *[r.vote_file for r in votes_cc],
-                *[r.vote_file for r in votes_drep],
-            ],
-            signing_key_files=[
-                pool_user_ug.payment.skey_file,
-                *[r.hot_skey_file for r in governance_data.cc_members],
-                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
-            ],
-        )
+        vote_keys = [
+            *[r.hot_skey_file for r in governance_data.cc_members],
+            *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+        ]
 
         # Make sure we have enough time to submit the votes in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -525,24 +502,17 @@ class TestTreasuryWithdrawals:
         )
 
         reqc.cli026.start(url=helpers.get_vcs_link())
-        tx_output_vote = clusterlib_utils.build_and_submit_tx(
+        conway_common.submit_vote(
             cluster_obj=cluster,
-            name_template=f"{temp_template}_vote",
-            src_address=pool_user_ug.payment.address,
+            name_template=temp_template,
+            payment_addr=pool_user_ug.payment,
+            votes=votes,
+            keys=vote_keys,
             submit_method=submit_utils.SubmitMethods.API
             if submit_utils.is_submit_api_available()
             else submit_utils.SubmitMethods.CLI,
-            tx_files=tx_files_vote,
         )
         reqc.cli026.success()
-
-        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_ug.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-        ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         vote_gov_state = cluster.g_conway_governance.query.gov_state()
         _cur_epoch = cluster.g_query.get_epoch()

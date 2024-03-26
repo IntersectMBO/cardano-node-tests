@@ -50,7 +50,7 @@ def build_and_submit_tx(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     src_address: str,
-    submit_method: str = submit_utils.SubmitMethods.CLI,
+    submit_method: str = "",
     use_build_cmd: bool = False,
     txins: clusterlib.OptionalUTXOData = (),
     txouts: clusterlib.OptionalTxOuts = (),
@@ -87,6 +87,7 @@ def build_and_submit_tx(
     """
     # pylint: disable=too-many-arguments,too-many-locals
     tx_files = tx_files or clusterlib.TxFiles()
+    submit_method = submit_method or submit_utils.SubmitMethods.CLI
 
     if use_build_cmd:
         witness_override = (

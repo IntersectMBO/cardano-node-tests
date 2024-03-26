@@ -2,6 +2,7 @@
 
 # pylint: disable=expression-not-assigned
 import logging
+import typing as tp
 
 import allure
 import pytest
@@ -160,19 +161,12 @@ class TestInfo:
         ]
         [r.success() for r in (reqc.cli021, reqc.cip059)]
 
-        tx_files_vote = clusterlib.TxFiles(
-            vote_files=[
-                *[r.vote_file for r in votes_cc],
-                *[r.vote_file for r in votes_drep],
-                *[r.vote_file for r in votes_spo],
-            ],
-            signing_key_files=[
-                pool_user_ug.payment.skey_file,
-                *[r.hot_skey_file for r in governance_data.cc_members],
-                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
-                *[r.skey_file for r in governance_data.pools_cold],
-            ],
-        )
+        votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
+        vote_keys = [
+            *[r.hot_skey_file for r in governance_data.cc_members],
+            *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+            *[r.skey_file for r in governance_data.pools_cold],
+        ]
 
         # Make sure we have enough time to submit the votes in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -180,22 +174,15 @@ class TestInfo:
         )
 
         reqc.cli024.start(url=helpers.get_vcs_link())
-        tx_output_vote = clusterlib_utils.build_and_submit_tx(
+        conway_common.submit_vote(
             cluster_obj=cluster,
-            name_template=f"{temp_template}_vote",
-            src_address=pool_user_ug.payment.address,
+            name_template=temp_template,
+            payment_addr=pool_user_ug.payment,
+            votes=votes,
+            keys=vote_keys,
             use_build_cmd=True,
-            tx_files=tx_files_vote,
         )
         reqc.cli024.success()
-
-        out_utxos_vote = cluster.g_query.get_utxo(tx_raw_output=tx_output_vote)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos_vote, address=pool_user_ug.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_vote.txins) - tx_output_vote.fee
-        ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         vote_gov_state = cluster.g_conway_governance.query.gov_state()
         _cur_epoch = cluster.g_query.get_epoch()
