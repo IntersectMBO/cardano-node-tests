@@ -392,7 +392,7 @@ class GovActionProposalDBRow:
     expiration: int
     voting_anchor_id: int
     type: str
-    description: str
+    description: tp.Optional[dict]
     param_proposal: int
     ratified_epoch: int
     enacted_epoch: int

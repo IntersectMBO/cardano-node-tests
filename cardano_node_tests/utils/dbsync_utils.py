@@ -845,6 +845,17 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
     return param_proposal_db
 
 
+def get_gov_action_proposal(
+        txhash: str = "", type: str = ""
+) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
+    """Get goverment action proposal from db-sync."""
+    gaps = list(dbsync_queries.query_gov_action_proposal(txhash, type))
+    
+    if txhash:
+        return gaps[-1]
+    return gaps
+
+
 def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
     """Get committee member data from db-sync."""
     cc_members = list(dbsync_queries.query_committee_registration(cold_key=cold_key))

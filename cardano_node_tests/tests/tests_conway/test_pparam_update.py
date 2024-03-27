@@ -17,6 +17,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -157,6 +158,7 @@ class TestPParamUpdate:
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list.json"
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        db_errors_final = []
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
@@ -605,6 +607,20 @@ class TestPParamUpdate:
         net_nodrep_action_txid, net_nodrep_action_ix, net_nodrep_proposal_names = (
             _create_pparams_action(proposals=net_nodrep_update_proposals)
         )
+
+        # db-sync check
+        db_gov_action_proposals = dbsync_utils.get_gov_action_proposal(txhash=net_nodrep_action_txid)
+        db_gov_action_proposals_params = db_gov_action_proposals.description['contents'][1]
+        len(net_nodrep_update_proposals) == len(db_gov_action_proposals_params)
+    
+        for proposal in net_nodrep_update_proposals:
+            if (proposal.name and proposal.name in db_gov_action_proposals_params and 
+                proposal.value == db_gov_action_proposals_params[proposal.name]):
+                continue
+            else:
+                db_errors_final.append(f"DB-Sync Network Param Proposal comparison error: {proposal}")
+                break
+        
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -671,6 +687,20 @@ class TestPParamUpdate:
                 approve_drep=True,
                 approve_spo=None if eco_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
             )
+
+        # db-sync check
+        db_gov_action_proposals = dbsync_utils.get_gov_action_proposal(txhash=eco_nocc_action_txid)
+        db_gov_action_proposals_params = db_gov_action_proposals.description['contents'][1]
+        len(eco_nocc_update_proposals) == len(db_gov_action_proposals_params)
+    
+        for proposal in eco_nocc_update_proposals:
+            if (proposal.name and proposal.name in db_gov_action_proposals_params and 
+                proposal.value == db_gov_action_proposals_params[proposal.name]):
+                continue
+            else:
+                db_errors_final.append(f"DB-Sync Economic Param Proposal comparison error: {proposal}")
+                break
+        from IPython import embed; embed()
 
         # Vote on update proposals from technical group that will NOT get approved by DReps
         tech_nodrep_update_proposals = random.sample(technical_g_proposals, 3)
