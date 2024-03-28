@@ -258,6 +258,10 @@ class TestTreasuryWithdrawals:
         reqc.cip048.start(url=helpers.get_vcs_link())
         voted_votes = _cast_vote(approve=True, vote_id="yes")
 
+        treasury_init = clusterlib_utils.get_ledger_state(cluster_obj=cluster)["stateBefore"][
+            "esAccountState"
+        ]["treasury"]
+
         # Check ratification
         xfail_ledger_3979_msgs = set()
         ratified_actions: tp.Set[int] = set()
@@ -318,6 +322,13 @@ class TestTreasuryWithdrawals:
             _cast_vote(approve=False, vote_id="enacted")
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
+
+        reqc.cip079.start(url=helpers.get_vcs_link())
+        treasury_finish = clusterlib_utils.get_ledger_state(cluster_obj=cluster)["stateBefore"][
+            "esAccountState"
+        ]["treasury"]
+        assert treasury_init != treasury_finish, "Treasury balance didn't change"
+        reqc.cip079.success()
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=withdrawal_actions[0])
