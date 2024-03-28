@@ -381,6 +381,25 @@ class DrepRegistrationDBRow:
     has_script: bool
 
 
+@dataclasses.dataclass(frozen=True)
+class GovActionProposalDBRow:
+    # pylint: disable-next=invalid-name
+    id: int
+    tx_id: int
+    prev_gov_action_proposal: int
+    deposit: int
+    return_address: int
+    expiration: int
+    voting_anchor_id: int
+    type: str
+    description: str
+    param_proposal: int
+    ratified_epoch: int
+    enacted_epoch: int
+    dropped_epoch: int
+    expired_epoch: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1032,3 +1051,32 @@ def query_drep_registration(
     with execute(query=query, vars=(rf"\x{drep_hash}", drep_deposit)) as cur:
         while (result := cur.fetchone()) is not None:
             yield DrepRegistrationDBRow(*result)
+
+
+def query_gov_action_proposal(
+    txhash: str = "", type: str = ""
+) -> tp.Generator[GovActionProposalDBRow, None, None]:
+    """Query gov_action_proposal table in db-sync.
+
+    If type is provided txhash will be ignored.
+    """
+    if type:
+        gap_query = "gap.type = %s"
+        query_var: str = type
+    else:
+        gap_query = "tx.hash = %s"
+        query_var = rf"\x{txhash}"
+
+    query = (
+        "SELECT"
+        " gap.id, gap.tx_id, gap.prev_gov_action_proposal, gap.deposit, gap.return_address,"
+        " gap.expiration, gap.voting_anchor_id, gap.type, gap.description, gap.param_proposal,"
+        " gap.ratified_epoch, gap.enacted_epoch, gap.dropped_epoch, gap.expired_epoch "
+        "FROM gov_action_proposal as gap "
+        "INNER JOIN tx ON tx.id = gap.tx_id "
+        f"WHERE {gap_query};"
+    )
+
+    with execute(query=query, vars=(query_var,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield GovActionProposalDBRow(*result)
