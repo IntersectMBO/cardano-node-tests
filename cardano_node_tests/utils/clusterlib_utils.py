@@ -474,22 +474,81 @@ def check_pool_data(  # noqa: C901
     return "\n\n".join(errors_list)
 
 
+def _custom_check_voting_threshold(u, protocol_params, threshold_group, threshold_key):
+    """Custom check for voting threshold values."""
+    threshold_value = protocol_params.get(threshold_group, {}).get(threshold_key)
+    numerator, denominator = map(int, str(u.value).split('/'))
+    failures = []
+
+    if denominator == 0:
+        failures.append(f"Invalid denominator for {u.arg}: {u.value}")
+    else:
+        expected_value = numerator / denominator
+        if threshold_value != expected_value:
+            failures.append(f"Param value for {u.arg}: {threshold_value}.\nExpected: {expected_value}")
+    return failures
+
+
 def check_updated_params(update_proposals: tp.List[UpdateProposal], protocol_params: dict) -> None:
     """Compare update proposals with actual protocol parameters."""
     failures = []
     for u in update_proposals:
         if not u.name:
-            continue
+            if u.arg == "--max-tx-execution-units":
+                # Custom check for maxTxExUnits
+                max_tx_ex_units = protocol_params.get("maxTxExUnits", {})
+                expected_value = f"({max_tx_ex_units.get('exUnitsSteps', '')},{max_tx_ex_units.get('exUnitsMem', '')})"
+                if expected_value != u.value:
+                    failures.append(f"Param value for {u.arg}: {u.value}.\nExpected: {expected_value}")
+            elif u.arg == "--max-block-execution-units":
+                # Custom check for maxBlockExUnits
+                max_block_ex_units = protocol_params.get("maxBlockExUnits", {})
+                expected_value = f"({max_block_ex_units.get('exUnitsSteps', '')},{max_block_ex_units.get('exUnitsMem', '')})"
+                if expected_value != u.value:
+                    failures.append(f"Param value for {u.arg}: {u.value}.\nExpected: {expected_value}")
+            elif u.arg.startswith("--pool-voting-threshold"):
+                # Custom check for poolVotingThresholds group
+                threshold_group = "poolVotingThresholds"
+                threshold_key_parts = u.arg.split("--")[1].split("-")[3:]
+                threshold_key = threshold_key_parts[0].lower() + "".join(part.capitalize() for part in threshold_key_parts[1:])
+                failures.extend(_custom_check_voting_threshold(u, protocol_params, threshold_group, threshold_key))
+            elif u.arg.startswith("--drep-voting-threshold"):
+                # Custom check for dRepVotingThresholds group
+                threshold_group = "dRepVotingThresholds"
+                threshold_key_parts = u.arg.split("--")[1].split("-")[3:]
+                threshold_key = threshold_key_parts[0].lower() + "".join(part.capitalize() for part in threshold_key_parts[1:])
+                failures.extend(_custom_check_voting_threshold(u, protocol_params, threshold_group, threshold_key))
+            else: # Skip this update proposal as it doesn't require custom checks
+                continue
+        # Handle 'costmdls' group of update proposal
+        elif u.name == 'costmdls':
+                   try:
+                       with open(u.value, 'r') as f:
+                           cost_models = json.load(f)
+                       protocol_params['costmdls'] = cost_models
+                   except Exception as e:
+                       failures.append(f"Error loading cost models from file {u.value}: {e}")
+        elif '/' in str(u.value):
+            numerator, denominator = map(int, str(u.value).split('/'))
+            if denominator == 0:
+                failures.append(f"Invalid denominator for {u.arg}: {u.value}")
+                continue
+            result = numerator / denominator
+            u = UpdateProposal(
+                arg=u.arg,
+                value=str(result),
+                name=u.name,
+            )
+        else:
+            # Nested dictionaries - keys are separated with comma (,)
+            names = u.name.split(",")
+            nested = protocol_params
+            for n in names:
+                nested = nested[n.strip()]
+            updated_value = nested
 
-        # Nested dictionaries - keys are separated with comma (,)
-        names = u.name.split(",")
-        nested = protocol_params
-        for n in names:
-            nested = nested[n.strip()]
-        updated_value = nested
-
-        if str(updated_value) != str(u.value):
-            failures.append(f"Param value for {u.name}: {updated_value}.\nExpected: {u.value}")
+            if str(updated_value) != str(u.value):
+                failures.append(f"Param value for {u.name}: {updated_value}.\nExpected: {u.value}")
 
     if failures:
         failures_str = "\n".join(failures)

@@ -17,6 +17,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -131,6 +132,7 @@ class TestPParamUpdate:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
+    @pytest.mark.dbsync
     def test_pparam_update(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -159,6 +161,7 @@ class TestPParamUpdate:
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list.json"
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        db_errors_final = []
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
@@ -177,7 +180,10 @@ class TestPParamUpdate:
         # PParam groups
 
         _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (reqc.cip049, reqc.cip050, reqc.cip051, reqc.cip052)]
+        [r.start(url=_url) for r in (
+            reqc.cip049, reqc.cip050, reqc.cip051, reqc.cip052, reqc.cip080,
+            reqc.cip081, reqc.cip082, reqc.cip083
+        )]
 
         network_g_proposals = [
             clusterlib_utils.UpdateProposal(
@@ -469,7 +475,23 @@ class TestPParamUpdate:
         # Hand-picked parameters and values that can stay changed even for other tests
         cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
         fin_update_proposals = [
-            # From network group
+            # Artur custom test
+            #clusterlib_utils.UpdateProposal(
+            #    arg='--treasury-expansion', 
+            #    value='59421/722278', 
+            #    name='tau'
+            #),
+            #clusterlib_utils.UpdateProposal(
+            #    arg='--pool-reg-deposit', 
+            #    value=500000086, 
+            #    name='poolDeposit'
+            #),
+            #clusterlib_utils.UpdateProposal(
+            #    arg="--min-pool-cost",
+            #    value=cur_pparams["minPoolCost"],
+            #    name="minPoolCost",
+            #),
+            ## From network group
             clusterlib_utils.UpdateProposal(
                 arg="--max-collateral-inputs",
                 value=cur_pparams["maxCollateralInputs"],
@@ -619,6 +641,25 @@ class TestPParamUpdate:
             approve_spo=None if net_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
         )
 
+        current_gov_state = cluster.g_conway_governance.query.gov_state()
+        net_params_update_proposal = governance_utils.lookup_proposal(current_gov_state, net_nodrep_action_txid)           
+
+        clusterlib_utils.check_updated_params(
+            update_proposals=net_nodrep_update_proposals, 
+            protocol_params=net_params_update_proposal['action']['contents'][1]
+        )
+
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                net_params_update_proposal['action']['contents'][1],
+                net_nodrep_action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(net_params_update_proposal)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync network params update error: {str_exc}")
+
         # Vote on update proposals from network group that will NOT get approved by CC
         if configuration.HAS_CC:
             net_nocc_update_proposals = random.sample(network_g_proposals, 3)
@@ -674,6 +715,40 @@ class TestPParamUpdate:
                 approve_spo=None if eco_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
             )
 
+        current_gov_state = cluster.g_conway_governance.query.gov_state()
+        eco_params_update_proposal = governance_utils.lookup_proposal(current_gov_state, eco_nocc_action_txid)
+        # THROWS ERROR:
+        #
+        #   clusterlib_utils.check_updated_params(
+        #       update_proposals=eco_nodrep_update_proposals, 
+        #       protocol_params=eco_params_update_proposal['action']['contents'][1]
+        #   )
+        #
+        # use: from IPython import embed; embed() and check for contents of:
+        #
+        # eco_nodrep_update_proposals:
+        # 
+        #[UpdateProposal(arg='--min-fee-constant', value=155381, name='minFeeB'),
+        # UpdateProposal(arg='--utxo-cost-per-byte', value=4367, name='coinsPerUTxOByte'),
+        # UpdateProposal(arg='--pool-reg-deposit', value=500000001, name='poolDeposit')]
+        #
+        # VS:
+        #
+        # eco_params_update_proposal['action']['contents'][1]
+        #
+        # {'keyDeposit': 400019, 'minPoolCost': 7, 'tau': 0.08978276682615863}
+
+        # db-sync check        
+        #try:
+        #    dbsync_utils.check_conway_gov_action_proposal_description(
+        #        eco_params_update_proposal['action']['contents'][1],
+        #        eco_nocc_action_txid
+        #    )
+        #    dbsync_utils.check_conway_param_update_proposal(eco_params_update_proposal)
+        #except AssertionError as exc:
+        #    str_exc = str(exc)
+        #    db_errors_final.append(f"db-sync economic params update error: {str_exc}")
+
         # Vote on update proposals from technical group that will NOT get approved by DReps
         tech_nodrep_update_proposals = random.sample(technical_g_proposals, 3)
         tech_nodrep_action_txid, tech_nodrep_action_ix, tech_nodrep_proposal_names = (
@@ -716,6 +791,25 @@ class TestPParamUpdate:
             approve_cc=True,
             approve_drep=None,
         )
+
+        current_gov_state = cluster.g_conway_governance.query.gov_state()
+        tech_params_update_proposal = governance_utils.lookup_proposal(current_gov_state, tech_nodrep_action_txid)
+        
+        clusterlib_utils.check_updated_params(
+            update_proposals=tech_nodrep_update_proposals, 
+            protocol_params=tech_params_update_proposal['action']['contents'][1]
+        )
+
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                tech_params_update_proposal['action']['contents'][1],
+                tech_nodrep_action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(tech_params_update_proposal)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync technical params update error: {str_exc}")
 
         # Vote on update proposals from technical group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -775,6 +869,22 @@ class TestPParamUpdate:
             approve_spo=None if gov_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
         )
 
+        # db-sync check
+        current_gov_state = cluster.g_conway_governance.query.gov_state()
+        gov_params_update_proposal = governance_utils.lookup_proposal(current_gov_state, gov_nodrep_action_txid)
+        
+        clusterlib_utils.check_updated_params(
+            update_proposals=gov_nodrep_update_proposals, 
+            protocol_params=gov_params_update_proposal['action']['contents'][1]
+        )
+
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_param_update_proposal(gov_params_update_proposal)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync governance params update error: {str_exc}")
+
         # Vote on update proposals from governance group that will NOT get approved by CC
         if configuration.HAS_CC:
             gov_nocc_update_proposals = list(
@@ -820,6 +930,27 @@ class TestPParamUpdate:
             approve_drep=False,
             approve_spo=None if mix_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
         )
+
+        current_gov_state = cluster.g_conway_governance.query.gov_state()
+        mix_params_update_proposal = governance_utils.lookup_proposal(current_gov_state, mix_nodrep_action_txid)
+        
+        # Can fail if minFeeA and / or minFeeB will be selected from Economic group
+        #
+        # clusterlib_utils.check_updated_params(
+        #     update_proposals=mix_nodrep_update_proposals, 
+        #     protocol_params=mix_params_update_proposal['action']['contents'][1]
+        # )
+
+        # db-sync check        
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                mix_params_update_proposal['action']['contents'][1],
+                mix_nodrep_action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(mix_params_update_proposal)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync mixed group of params update error: {str_exc}")
 
         # Vote on update proposals from mix of groups that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -880,6 +1011,20 @@ class TestPParamUpdate:
             approve_spo=True,
         )
         fin_approve_epoch = cluster.g_query.get_epoch()
+
+        current_gov_state = cluster.g_conway_governance.query.gov_state()
+        fin_params_update_proposal = governance_utils.lookup_proposal(current_gov_state, fin_action_txid)
+
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                fin_params_update_proposal['action']['contents'][1],
+                fin_action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(fin_params_update_proposal)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync 'final' params update error: {str_exc}")
 
         # Vote on another update proposals from mix of groups. The proposal will get approved,
         # but not enacted, because it comes after the "final" action that was accepted to the chain
@@ -985,6 +1130,13 @@ class TestPParamUpdate:
         if is_spo_total_below_threshold:
             reqc.cip064_04.success()
 
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_param_update_enactment(enact_gov_state, _cur_epoch)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync params enactment error: {str_exc}")
+
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             conway_common.cast_vote(
@@ -1005,6 +1157,17 @@ class TestPParamUpdate:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
 
+        if db_errors_final:
+            raise AssertionError("\n".join(db_errors_final))
+        [
+            r.success()
+            for r in (
+                reqc.cip080,
+                reqc.cip081,
+                reqc.cip082,
+                reqc.cip083,
+            )
+        ]
 
 class TestPParamData:
     """Tests for checking protocol parameters keys and values."""
