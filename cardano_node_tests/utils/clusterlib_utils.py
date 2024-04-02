@@ -640,7 +640,7 @@ def mint_or_burn_witness(
             txouts=txouts,
             mint=mint,
             # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
-            witness_count_add=len(signing_key_files),
+            witness_count_add=int(len(signing_key_files) * 1.5),
         )
         tx_output = cluster_obj.g_transaction.build_raw_tx(
             src_address=token_mint_addr.address,

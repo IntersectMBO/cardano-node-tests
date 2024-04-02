@@ -198,6 +198,7 @@ class TestBasicTransactions:
             tx_files=tx_files,
             # TODO: cardano-node issue #4752
             witness_override=2 if src_addr_type == "byron" else None,
+            witness_count_add=2 if src_addr_type == "byron" else 0,
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
@@ -307,8 +308,11 @@ class TestBasicTransactions:
                 tx_files=tx_files,
                 txouts=txouts_init,
             )
-        fee_match = re.search(r"negative: Lovelace \(-([0-9]*)\) lovelace", str(excinfo.value))
-        assert fee_match
+        str_exc = str(excinfo.value)
+        fee_match_old = re.search(r"negative: Lovelace \(-([0-9]*)\) lovelace", str_exc)
+        fee_match_new = re.search(r"negative: -([0-9]*) Lovelace", str_exc)  # cardano-node 8.10.0
+        fee_match = fee_match_new or fee_match_old
+        assert fee_match, f"The expected error message was not found: {str_exc}"
 
         fee = int(fee_match.group(1))
         amount = src_init_balance - fee

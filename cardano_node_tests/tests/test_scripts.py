@@ -2353,6 +2353,7 @@ class TestReferenceUTxO:
             txouts=destinations,
             tx_files=tx_files,
             witness_override=2 if address_type == "byron" else None,
+            witness_count_add=2 if address_type == "byron" else 0,
         )
 
         # check that the reference UTxO was spent
