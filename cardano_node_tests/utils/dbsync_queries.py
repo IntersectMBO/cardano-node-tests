@@ -334,6 +334,26 @@ class ParamProposalDBRow:
     collateral_percent: int
     max_collateral_inputs: int
     registered_tx_id: int
+    pvt_motion_no_confidence: int
+    pvt_committee_normal: int
+    pvt_committee_no_confidence: int
+    pvt_hard_fork_initiation: int
+    dvt_motion_no_confidence: int
+    dvt_committee_normal: int
+    dvt_committee_no_confidence: int
+    dvt_update_to_constitution: int
+    dvt_hard_fork_initiation: int
+    dvt_p_p_network_group: int
+    dvt_p_p_economic_group: int
+    dvt_p_p_technical_group: int
+    dvt_p_p_gov_group: int
+    dvt_treasury_withdrawal: int
+    committee_min_size: int
+    committee_max_term_length: int
+    gov_action_lifetime: int
+    gov_action_deposit: int
+    drep_deposit: int
+    drep_activity: str
 
 
 @dataclasses.dataclass(frozen=True)
@@ -950,8 +970,18 @@ def query_cost_model() -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         return cost_model
 
 
-def query_param_proposal() -> ParamProposalDBRow:
-    """Query last param proposal record in db-sync."""
+def query_param_proposal(txhash: str = "") -> ParamProposalDBRow:
+    """Query param proposal record in db-sync.
+
+    If txhash is not provided the query will return the last record available.
+    """
+    if txhash:
+        hash_query = "WHERE tx.hash = %s "
+        query_var: str = rf"\x{txhash}"
+    else:
+        hash_query = ""
+        query_var = ""
+
     query = (
         "SELECT"
         " p.id, p.epoch_no, p.key, p.min_fee_a, p.min_fee_b, p.max_block_size,"
@@ -960,12 +990,21 @@ def query_param_proposal() -> ParamProposalDBRow:
         " p.decentralisation, p.entropy, p.protocol_major, p.protocol_minor, p.min_utxo_value,"
         " p.min_pool_cost, p.coins_per_utxo_size, p.cost_model_id, p.price_mem, p.price_step,"
         " p.max_tx_ex_mem, p.max_tx_ex_steps, p.max_block_ex_mem, p.max_block_ex_steps,"
-        " p.max_val_size, p.collateral_percent, p.max_collateral_inputs, p.registered_tx_id "
+        " p.max_val_size, p.collateral_percent, p.max_collateral_inputs, p.registered_tx_id,"
+        " p.pvt_motion_no_confidence, p.pvt_committee_normal, p.pvt_committee_no_confidence,"
+        " p.pvt_hard_fork_initiation, p.dvt_motion_no_confidence, p.dvt_committee_normal,"
+        " p.dvt_committee_no_confidence, p.dvt_update_to_constitution, p.dvt_hard_fork_initiation,"
+        " p.dvt_p_p_network_group, p.dvt_p_p_economic_group, p.dvt_p_p_technical_group,"
+        " p.dvt_p_p_gov_group, p.dvt_treasury_withdrawal, p.committee_min_size,"
+        " p.committee_max_term_length, p.gov_action_lifetime, p.gov_action_deposit,"
+        " p.drep_deposit, p.drep_activity "
         "FROM param_proposal AS p "
+        "INNER JOIN tx ON tx.id = p.registered_tx_id "
+        f"{hash_query}"
         "ORDER BY ID DESC LIMIT 1"
     )
 
-    with execute(query=query) as cur:
+    with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()
         return ParamProposalDBRow(*results)
 
