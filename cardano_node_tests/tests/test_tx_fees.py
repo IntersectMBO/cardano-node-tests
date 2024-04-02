@@ -19,6 +19,24 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+if VERSIONS.cli >= version.parse("8.21.0.0"):
+    POOL_DEREG_PARAMS = [(1, 185_213), (3, 210_205), (5, 225_197), (10, 280_000)]
+    TO_FROM_100_PARAMS = [(1, 886265), (100, 890_665), (11_000, 895_065), (100_000, 903_865)]
+    TO_10_FROM_1_PARAMS = [(1, 191_813), (100, 192_253), (11_000, 192_693), (100_000, 193_573)]
+    TO_1_FROM_10_PARAMS = [(1, 220_501), (100, 220_545), (11_000, 220_589), (100_000, 220_677)]
+    TO_10_FROM_10_PARAMS = [(1, 244_657), (100, 245_097), (11_000, 245_537), (100_000, 246_417)]
+else:
+    POOL_DEREG_PARAMS = [(1, 185_213), (3, 210_205), (5, 235_197), (10, 280_000)]
+    TO_FROM_100_PARAMS = [
+        (1, 1_200_000),
+        (100, 1_210_000),
+        (11_000, 1_220_000),
+        (100_000, 1_250_000),
+    ]
+    TO_10_FROM_1_PARAMS = [(1, 226_573), (100, 227_013), (11_000, 227_453), (100_000, 228_333)]
+    TO_1_FROM_10_PARAMS = [(1, 259_661), (100, 259_705), (11_000, 259_749), (100_000, 259_837)]
+    TO_10_FROM_10_PARAMS = [(1, 309_557), (100, 309_997), (11_000, 310_437), (100_000, 311_317)]
+
 
 @pytest.mark.testnets
 @pytest.mark.smoke
@@ -350,7 +368,7 @@ class TestExpectedFees:
         ), "Expected fee doesn't match the actual fee"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("addr_fee", [(1, 185_213), (3, 210_205), (5, 235_197), (10, 280_000)])
+    @pytest.mark.parametrize("addr_fee", POOL_DEREG_PARAMS)
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -516,9 +534,7 @@ class TestExpectedFees:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "amount_expected", [(1, 226_573), (100, 227_013), (11_000, 227_453), (100_000, 228_333)]
-    )
+    @pytest.mark.parametrize("amount_expected", TO_10_FROM_1_PARAMS)
     def test_transaction_to_10_addrs_from_1_addr_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -538,9 +554,7 @@ class TestExpectedFees:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "amount_expected", [(1, 259_661), (100, 259_705), (11_000, 259_749), (100_000, 259_837)]
-    )
+    @pytest.mark.parametrize("amount_expected", TO_1_FROM_10_PARAMS)
     def test_transaction_to_1_addr_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -560,9 +574,7 @@ class TestExpectedFees:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "amount_expected", [(1, 309_557), (100, 309_997), (11_000, 310_437), (100_000, 311_317)]
-    )
+    @pytest.mark.parametrize("amount_expected", TO_10_FROM_10_PARAMS)
     def test_transaction_to_10_addrs_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -585,10 +597,7 @@ class TestExpectedFees:
     @pytest.mark.skipif(
         VERSIONS.node < version.parse("8.7.0"), reason="Doesn't run on node < 8.7.0"
     )
-    @pytest.mark.parametrize(
-        "amount_expected",
-        [(1, 1_200_000), (100, 1_210_000), (11_000, 1_220_000), (100_000, 1_250_000)],
-    )
+    @pytest.mark.parametrize("amount_expected", TO_FROM_100_PARAMS)
     def test_transaction_to_100_addrs_from_100_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,

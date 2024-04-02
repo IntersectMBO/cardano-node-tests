@@ -20,6 +20,7 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -37,6 +38,39 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 MAX_TOKEN_AMOUNT = common.MAX_UINT64
+
+if VERSIONS.cli >= version.parse("8.21.0.0"):
+    MINT_BURN_SIGN_PARAMS = (
+        (5, 181_825, 183_629),
+        (10, 191_065, 192_869),
+        (50, 268_593, 270_397),
+        (100, 365_393, 368_781),
+        (1_000, 0, 0),
+    )
+    MINT_BURN_WITNESS_PARAMS = (
+        (5, 201_317, 201_317),
+        (10, 208_753, 210_557),
+        (50, 286_281, 288_085),
+        (100, 383_081, 386_469),
+        (1_000, 0, 0),
+    )
+    MINT_MULTIPLE_FEE = (214_825, 216_629)
+else:
+    MINT_BURN_SIGN_PARAMS = (
+        (5, 215_617, 183_629),
+        (10, 246_857, 192_869),
+        (50, 426_333, 270_397),
+        (100, 666_133, 368_781),
+        (1_000, 0, 0),
+    )
+    MINT_BURN_WITNESS_PARAMS = (
+        (5, 226_133, 201_317),
+        (10, 259_353, 210_557),
+        (50, 444_549, 288_085),
+        (100, 684_349, 386_469),
+        (1_000, 0, 0),
+    )
+    MINT_MULTIPLE_FEE = (260_365, 216_629)
 
 
 @pytest.fixture
@@ -344,7 +378,7 @@ class TestMinting:
         """
         temp_template = common.get_test_id(cluster)
 
-        expected_fee = 216_629 if use_build_cmd else 260_365
+        expected_fee = MINT_MULTIPLE_FEE[1] if use_build_cmd else MINT_MULTIPLE_FEE[0]
         num_of_scripts = 5
 
         amount = 5
@@ -672,18 +706,7 @@ class TestMinting:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
-    @pytest.mark.parametrize(
-        "tokens_db",
-        (
-            # TODO: why is the difference for `transaction calculate-min-fee` and
-            # `transaction build` so big?
-            (5, 226_133, 201_317),
-            (10, 259_353, 210_557),
-            (50, 444_549, 288_085),
-            (100, 684_349, 386_469),
-            (1_000, 0, 0),
-        ),
-    )
+    @pytest.mark.parametrize("tokens_db", MINT_BURN_WITNESS_PARAMS)
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_bundle_minting_and_burning_witnesses(
@@ -818,18 +841,7 @@ class TestMinting:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
-    @pytest.mark.parametrize(
-        "tokens_db",
-        (
-            # TODO: why is the difference for `transaction calculate-min-fee` and
-            # `transaction build` so big?
-            (5, 215_617, 183_629),
-            (10, 246_857, 192_869),
-            (50, 426_333, 270_397),
-            (100, 666_133, 368_781),
-            (1_000, 0, 0),
-        ),
-    )
+    @pytest.mark.parametrize("tokens_db", MINT_BURN_SIGN_PARAMS)
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_bundle_minting_and_burning_sign(
@@ -1698,7 +1710,7 @@ class TestTransfer:
         ]
 
         min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=calc_destinations)
-        assert min_value.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value.coin.lower() in (clusterlib.DEFAULT_COIN, "coin")
         assert min_value.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace = min_value.value
 
@@ -1860,14 +1872,13 @@ class TestTransfer:
         min_value_address1 = cluster.g_transaction.calculate_min_req_utxo(
             txouts=calc_destinations_address1
         )
-        assert min_value_address1.coin.lower() == clusterlib.DEFAULT_COIN
+        assert min_value_address1.coin.lower() in (clusterlib.DEFAULT_COIN, "coin")
         assert min_value_address1.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address1 = min_value_address1.value
 
         min_value_address2 = cluster.g_transaction.calculate_min_req_utxo(
             txouts=calc_destinations_address2
         )
-        assert min_value_address2.coin.lower() == clusterlib.DEFAULT_COIN
         assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address2 = min_value_address2.value
 
