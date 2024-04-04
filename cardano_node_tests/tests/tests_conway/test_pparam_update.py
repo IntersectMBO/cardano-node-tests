@@ -622,6 +622,7 @@ class TestPParamUpdate:
 
         # Vote on update proposals from network group that will NOT get approved by CC
         if configuration.HAS_CC:
+            reqc.cip062_02.start(url=helpers.get_vcs_link())
             net_nocc_update_proposals = random.sample(network_g_proposals, 3)
             net_nocc_action_txid, net_nocc_action_ix, net_nocc_proposal_names = (
                 _create_pparams_action(proposals=net_nocc_update_proposals)
@@ -869,6 +870,8 @@ class TestPParamUpdate:
         )
 
         # Vote & approve the action
+        if configuration.HAS_CC:
+            reqc.cip062_01.start(url=helpers.get_vcs_link())
         fin_voted_votes = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -981,6 +984,8 @@ class TestPParamUpdate:
         ]
         if configuration.HAS_CC:
             reqc.cip006.success()
+            reqc.cip062_01.success()
+            reqc.cip062_02.success()
         if is_drep_total_below_threshold:
             reqc.cip064_03.success()
         if is_spo_total_below_threshold:
