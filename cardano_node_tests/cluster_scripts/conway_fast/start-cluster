@@ -203,7 +203,7 @@ if [ -z "${NO_CC:-""}" ]; then
   jq \
     --argjson keyHashJson "$KEY_HASH_JSON" \
     '.committee.members = $keyHashJson
-    | .committee.quorum = 0.6
+    | .committee.threshold = 0.6
     | .committeeMinSize = 2' \
     "$STATE_CLUSTER/create_staked/genesis.conway.json" > "$STATE_CLUSTER/create_staked/genesis.conway.json_jq"
   cat "$STATE_CLUSTER/create_staked/genesis.conway.json_jq" > "$STATE_CLUSTER/create_staked/genesis.conway.json"
