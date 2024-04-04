@@ -98,6 +98,7 @@ cip068 = __r("CIP068")
 cip069en = __r("intCIP069en")  # enacted
 cip069ex = __r("intCIP069ex")  # expired
 cip070 = __r("CIP070")
+cip072 = __r("CIP072")
 cip073_01 = __r("intCIP073-01")  # actions staged for enactment
 cip073_02 = __r("intCIP073-02")  # total and percentage of Yes/... stake
 cip073_03 = __r("intCIP073-03")  # current constitutional committee
