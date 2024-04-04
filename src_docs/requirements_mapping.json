@@ -33,6 +33,7 @@
             "intCIP054-06",
             "intCIP054-07"
         ],
+        "CIP061": ["intCIP061-01", "intCIP061-02", "intCIP061-03", "intCIP061-04"],
         "CIP062": ["intCIP062-01", "intCIP062-02"],
         "CIP064": ["intCIP064-01", "intCIP064-02", "intCIP064-03", "intCIP064-04"],
         "CIP069": ["intCIP069en", "intCIP069ex"],

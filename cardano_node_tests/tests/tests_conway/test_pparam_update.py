@@ -608,6 +608,7 @@ class TestPParamUpdate:
         net_nodrep_action_txid, net_nodrep_action_ix, net_nodrep_proposal_names = (
             _create_pparams_action(proposals=net_nodrep_update_proposals)
         )
+        reqc.cip061_04.start(url=_url)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -737,11 +738,29 @@ class TestPParamUpdate:
                 approve_spo=None if tech_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
             )
 
-        # Vote on update proposals from security params that will NOT get approved by SPOs
+        # Vote on update proposals from security params that will NOT get votes from SPOs
         _url = helpers.get_vcs_link()
         reqc.cip074.start(url=_url)
         if is_spo_total_below_threshold:
             reqc.cip064_04.start(url=_url)
+        sec_nonespo_update_proposals = random.sample(security_proposals, 3)
+        sec_nonespo_action_txid, sec_nonespo_action_ix, sec_nonespo_proposal_names = (
+            _create_pparams_action(proposals=sec_nonespo_update_proposals)
+        )
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_sec_nonespo",
+            payment_addr=pool_user_lg.payment,
+            action_txid=sec_nonespo_action_txid,
+            action_ix=sec_nonespo_action_ix,
+            approve_cc=True,
+            approve_drep=True,
+            approve_spo=None,
+        )
+
+        # Vote on update proposals from security params that will NOT get approved by SPOs
+        reqc.cip061_02.start(url=helpers.get_vcs_link())
         sec_nospo_update_proposals = random.sample(security_proposals, 3)
         sec_nospo_action_txid, sec_nospo_action_ix, sec_nospo_proposal_names = (
             _create_pparams_action(proposals=sec_nospo_update_proposals)
@@ -755,7 +774,7 @@ class TestPParamUpdate:
             action_ix=sec_nospo_action_ix,
             approve_cc=True,
             approve_drep=True,
-            approve_spo=None,
+            approve_spo=False,
         )
 
         # Vote on update proposals from governance group that will NOT get approved by DReps
@@ -977,6 +996,8 @@ class TestPParamUpdate:
                 reqc.cip052,
                 reqc.cip056,
                 reqc.cip060,
+                reqc.cip061_02,
+                reqc.cip061_04,
                 reqc.cip065,
                 reqc.cip068,
                 reqc.cip074,

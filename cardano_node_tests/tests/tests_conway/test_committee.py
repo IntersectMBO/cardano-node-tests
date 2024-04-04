@@ -686,7 +686,7 @@ class TestCommittee:
         # Vote & approve the add action
         request.addfinalizer(_resign)
         _url = helpers.get_vcs_link()
-        reqc.cip040.start(url=_url)
+        [r.start(url=_url) for r in (reqc.cip061_01, reqc.cip061_03, reqc.cip040)]
         if is_drep_total_below_threshold:
             reqc.cip064_01.start(url=_url)
         if is_spo_total_below_threshold:
@@ -813,7 +813,7 @@ class TestCommittee:
 
         reqc.cip073_03.start(url=helpers.get_vcs_link())
         _check_add_state(enact_add_gov_state)
-        [r.success() for r in (reqc.cip040, reqc.cip073_03)]
+        [r.success() for r in (reqc.cip040, reqc.cip061_01, reqc.cip061_03, reqc.cip073_03)]
         if is_drep_total_below_threshold:
             reqc.cip064_01.success()
         if is_spo_total_below_threshold:
