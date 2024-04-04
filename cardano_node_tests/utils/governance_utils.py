@@ -63,10 +63,10 @@ class StakeDelegation:
 
 
 class PrevGovActionIds(enum.Enum):
-    COMMITTEE = "EnactedCommittee"
-    CONSTITUTION = "EnactedConstitution"
-    HARDFORK = "EnactedHardFork"
-    PPARAM_UPDATE = "EnactedPParamUpdate"
+    COMMITTEE = "Committee"
+    CONSTITUTION = "Constitution"
+    HARDFORK = "HardFork"
+    PPARAM_UPDATE = "PParamUpdate"
 
 
 class ActionTags(enum.Enum):

@@ -21,6 +21,10 @@ GOV_DATA_STORE = "governance_data.pickle"
 DREPS_NUM = 5
 
 
+def _get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
+    return data.get("committee") or data.get("commitee") or {}
+
+
 @dataclasses.dataclass(frozen=True, order=True)
 class DefaultGovernance:
     dreps_reg: tp.List[governance_utils.DRepRegistration]
@@ -442,7 +446,7 @@ def auth_cc_members(
     reg_committee_state = cluster_obj.g_conway_governance.query.committee_state()
     member_key = f"keyHash-{cc_members[0].cold_vkey_hash}"
     assert (
-        reg_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
+        _get_committee_val(data=reg_committee_state)[member_key]["hotCredsAuthStatus"]["tag"]
         == "MemberAuthorized"
     ), "CC Member was not authorized"
 
@@ -470,7 +474,7 @@ def reinstate_committee(
         deposit_amt=deposit_amt,
         anchor_url=anchor_url,
         anchor_data_hash=anchor_data_hash,
-        quorum=str(cluster_obj.conway_genesis["committee"]["quorum"]),
+        quorum=str(cluster_obj.conway_genesis["committee"]["threshold"]),
         add_cc_members=governance_data.cc_members,
         prev_action_txid=prev_action_rec.txid,
         prev_action_ix=prev_action_rec.ix,
@@ -509,7 +513,8 @@ def reinstate_committee(
     )
     assert prop_action, "Update committee action not found"
     assert (
-        prop_action["action"]["tag"] == governance_utils.ActionTags.UPDATE_COMMITTEE.value
+        prop_action["proposalProcedure"]["govAction"]["tag"]
+        == governance_utils.ActionTags.UPDATE_COMMITTEE.value
     ), "Incorrect action tag"
 
     action_ix = prop_action["actionId"]["govActionIx"]
@@ -526,7 +531,9 @@ def reinstate_committee(
 
     def _check_state(state: dict) -> None:
         cc_member = governance_data.cc_members[0]
-        cc_member_val = state["committee"]["members"].get(f"keyHash-{cc_member.cold_vkey_hash}")
+        cc_member_val = _get_committee_val(data=state)["members"].get(
+            f"keyHash-{cc_member.cold_vkey_hash}"
+        )
         assert cc_member_val, "New committee member not found"
         assert cc_member_val == cc_member.epoch
 
@@ -545,7 +552,7 @@ def reinstate_committee(
     # Check enactment
     _cur_epoch = cluster_obj.wait_for_new_epoch(padding_seconds=5)
     enact_gov_state = cluster_obj.g_conway_governance.query.gov_state()
-    _check_state(enact_gov_state["enactState"])
+    _check_state(enact_gov_state)
 
     auth_cc_members(
         cluster_obj=cluster_obj,

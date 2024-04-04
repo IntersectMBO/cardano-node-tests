@@ -35,29 +35,29 @@ NETWORK_GROUP_PPARAMS = {
     "maxBlockBodySize",
     "maxTxSize",
     "maxBlockHeaderSize",
-    "maxValSize",
-    "maxTxExUnits",
-    "maxBlockExUnits",
+    "maxValueSize",
+    "maxTxExecutionUnits",
+    "maxBlockExecutionUnits",
     "maxCollateralInputs",
 }
 
 ECONOMIC_GROUP_PPARAMS = {
-    "minFeeA",
-    "minFeeB",
-    "keyDeposit",
-    "poolDeposit",
-    "rho",
-    "tau",
+    "txFeePerByte",
+    "txFeeFixed",
+    "stakeAddressDeposit",
+    "stakePoolDeposit",
+    "monetaryExpansion",
+    "treasuryCut",
     "minPoolCost",
-    "coinsPerUTxOByte",
-    "prices",
+    "utxoCostPerByte",
+    "executionUnitPrices",
 }
 
 TECHNICAL_GROUP_PPARAMS = {
-    "a0",
-    "eMax",
-    "nOpt",
-    "costmdls",
+    "poolPledgeInfluence",
+    "poolRetireMaxEpoch",
+    "stakePoolTargetNum",
+    "costModels",
     "collateralPercentage",
 }
 
@@ -96,11 +96,11 @@ SECURITY_PPARAMS = {
     "maxBlockBodySize",
     "maxTxSize",
     "maxBlockHeaderSize",
-    "maxValSize",
-    "maxBlockExUnits",
-    "minFeeA",
-    "minFeeB",
-    "coinsPerUTxOByte",
+    "maxValueSize",
+    "maxBlockExecutionUnits",
+    "txFeePerByte",
+    "txFeeFixed",
+    "utxoCostPerByte",
     "govActionDeposit",
     "minFeeRefScriptsCoinsPerByte",  # not in 8.8 release yet
 }
@@ -164,7 +164,7 @@ class TestPParamUpdate:
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
         # missing votes would approve the action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
+        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
         drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["ppGovGroup"]
         spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["ppSecurityGroup"]
         is_drep_total_below_threshold = (
@@ -198,19 +198,19 @@ class TestPParamUpdate:
             clusterlib_utils.UpdateProposal(
                 arg="--max-value-size",
                 value=random.randint(5001, 5100),
-                name="maxValSize",
+                name="maxValueSize",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-tx-execution-units",
                 value=f"({random.randint(14000001, 14000100)},"
                 f"{random.randint(10000000001, 10000000100)})",
-                name="",  # needs custom check of `maxTxExUnits`
+                name="",  # needs custom check of `maxTxExecutionUnits`
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-execution-units",
                 value=f"({random.randint(62000001, 62000100)},"
                 f"{random.randint(40000000001, 40000000100)})",
-                name="",  # needs custom check of `maxBlockExUnits`
+                name="",  # needs custom check of `maxBlockExecutionUnits`
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-collateral-inputs",
@@ -223,32 +223,32 @@ class TestPParamUpdate:
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-linear",
                 value=44,
-                name="minFeeA",
+                name="txFeePerByte",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-constant",
                 value=155381,
-                name="minFeeB",
+                name="txFeeFixed",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--key-reg-deposit-amt",
                 value=random.randint(400001, 400100),
-                name="keyDeposit",
+                name="stakeAddressDeposit",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--pool-reg-deposit",
                 value=random.randint(500000001, 500000100),
-                name="poolDeposit",
+                name="stakePoolDeposit",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--monetary-expansion",
                 value=_get_rational_str(random.uniform(0.0023, 0.0122)),
-                name="rho",
+                name="monetaryExpansion",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--treasury-expansion",
                 value=_get_rational_str(random.uniform(0.051, 0.1)),
-                name="tau",
+                name="treasuryCut",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-pool-cost",
@@ -258,19 +258,19 @@ class TestPParamUpdate:
             clusterlib_utils.UpdateProposal(
                 arg="--utxo-cost-per-byte",
                 value=random.randint(4311, 4400),
-                name="coinsPerUTxOByte",
+                name="utxoCostPerByte",
             ),
             # These must be passed together
             [
                 clusterlib_utils.UpdateProposal(
                     arg="--price-execution-steps",
                     value=_get_rational_str(random.uniform(0.0578, 0.0677)),
-                    name="",  # prices
+                    name="",  # needs custom check of `executionUnitPrices`
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--price-execution-memory",
                     value=_get_rational_str(random.uniform(0.00008, 0.00009)),
-                    name="",  # prices
+                    name="",  # needs custom check of `executionUnitPrices`
                 ),
             ],
         ]
@@ -279,22 +279,22 @@ class TestPParamUpdate:
             clusterlib_utils.UpdateProposal(
                 arg="--pool-influence",
                 value=_get_rational_str(random.uniform(0.1, 0.5)),
-                name="a0",
+                name="poolPledgeInfluence",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--pool-retirement-epoch-interval",
                 value=random.randint(19, 30),
-                name="eMax",
+                name="poolRetireMaxEpoch",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--number-of-pools",
                 value=random.randint(500, 400100),
-                name="nOpt",
+                name="stakePoolTargetNum",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--cost-model-file",
                 value=str(cost_proposal_file),
-                name="costmdls",
+                name="costModels",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--collateral-percent",
@@ -436,28 +436,28 @@ class TestPParamUpdate:
             clusterlib_utils.UpdateProposal(
                 arg="--max-value-size",
                 value=random.randint(5001, 5100),
-                name="maxValSize",
+                name="maxValueSize",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-execution-units",
                 value=f"({random.randint(62000001, 62000100)},"
                 f"{random.randint(40000000001, 40000000100)})",
-                name="",  # needs custom check of `maxBlockExUnits`
+                name="",  # needs custom check of `maxBlockExecutionUnits`
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-linear",
                 value=44,
-                name="minFeeA",
+                name="txFeePerByte",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-constant",
                 value=155381,
-                name="minFeeB",
+                name="txFeeFixed",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--utxo-cost-per-byte",
                 value=random.randint(4311, 4400),
-                name="coinsPerUTxOByte",
+                name="utxoCostPerByte",
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--new-governance-action-deposit",
@@ -467,7 +467,7 @@ class TestPParamUpdate:
         ]
 
         # Hand-picked parameters and values that can stay changed even for other tests
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
+        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
         fin_update_proposals = [
             # From network group
             clusterlib_utils.UpdateProposal(
@@ -587,7 +587,8 @@ class TestPParamUpdate:
             )
             assert prop_action, "Param update action not found"
             assert (
-                prop_action["action"]["tag"] == governance_utils.ActionTags.PARAMETER_CHANGE.value
+                prop_action["proposalProcedure"]["govAction"]["tag"]
+                == governance_utils.ActionTags.PARAMETER_CHANGE.value
             ), "Incorrect action tag"
             reqc.cli017.success()
 
@@ -909,7 +910,7 @@ class TestPParamUpdate:
         )
 
         def _check_state(state: dict):
-            pparams = state["curPParams"]
+            pparams = state.get("curPParams") or state.get("currentPParams") or {}
             clusterlib_utils.check_updated_params(
                 update_proposals=fin_update_proposals, protocol_params=pparams
             )
@@ -958,7 +959,7 @@ class TestPParamUpdate:
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
-        _check_state(enact_gov_state["enactState"])
+        _check_state(enact_gov_state)
         [
             r.success()
             for r in (
@@ -1022,7 +1023,7 @@ class TestPParamData:
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
 
-        cur_pparam = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
+        cur_pparam = cluster.g_conway_governance.query.gov_state()["currentPParams"]
         cur_pparam_keys = set(cur_pparam.keys())
         known_pparam_keys = set().union(
             NETWORK_GROUP_PPARAMS,

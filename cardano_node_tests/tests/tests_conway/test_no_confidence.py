@@ -158,7 +158,8 @@ class TestNoConfidence:
         )
         assert prop_action, "No confidence action not found"
         assert (
-            prop_action["action"]["tag"] == governance_utils.ActionTags.NO_CONFIDENCE.value
+            prop_action["proposalProcedure"]["govAction"]["tag"]
+            == governance_utils.ActionTags.NO_CONFIDENCE.value
         ), "Incorrect action tag"
 
         reqc.cip029.success()
@@ -261,7 +262,9 @@ class TestNoConfidence:
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
             )
-            assert not enact_gov_state["enactState"]["committee"], "Committee is not empty"
+            assert not conway_common.get_committee_val(
+                data=enact_gov_state
+            ), "Committee is not empty"
             [r.success() for r in (reqc.cip013, reqc.cip039, reqc.cip057)]
 
             enact_prev_action_rec = governance_utils.get_prev_action(

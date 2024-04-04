@@ -23,6 +23,15 @@ class VotedVotes:
     spo: tp.List[clusterlib.VoteSPO]
 
 
+def get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
+    """Get the committee value from the data.
+
+    The key can be either correctly "committee", or with typo "commitee".
+    TODO: Remove this function when the typo is fixed in the ledger.
+    """
+    return data.get("committee") or data.get("commitee") or {}
+
+
 def possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
     """Check if the unexpected removed action situation can be result of known ledger issue.
 
@@ -388,7 +397,8 @@ def propose_change_constitution(
     )
     assert prop_action, "Create constitution action not found"
     assert (
-        prop_action["action"]["tag"] == governance_utils.ActionTags.NEW_CONSTITUTION.value
+        prop_action["proposalProcedure"]["govAction"]["tag"]
+        == governance_utils.ActionTags.NEW_CONSTITUTION.value
     ), "Incorrect action tag"
 
     action_ix = prop_action["actionId"]["govActionIx"]

@@ -223,7 +223,7 @@ class TestConstitution:
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
         )
-        _check_state(enact_gov_state["enactState"])
+        _check_state(enact_gov_state)
         [r.success() for r in (reqc.cip042, reqc.cip073_04)]
 
         reqc.cli036.start(url=helpers.get_vcs_link())

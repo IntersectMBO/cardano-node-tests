@@ -158,7 +158,7 @@ class TestTreasuryWithdrawals:
             )
             assert prop_action, "Treasury withdrawals action not found"
             assert (
-                prop_action["action"]["tag"]
+                prop_action["proposalProcedure"]["govAction"]["tag"]
                 == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
             ), "Incorrect action tag"
 
@@ -462,7 +462,7 @@ class TestTreasuryWithdrawals:
             )
             assert prop_action, "Treasury withdrawals action not found"
             assert (
-                prop_action["action"]["tag"]
+                prop_action["proposalProcedure"]["govAction"]["tag"]
                 == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
             ), "Incorrect action tag"
 
