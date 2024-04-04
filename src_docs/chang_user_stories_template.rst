@@ -246,7 +246,7 @@ CLI User Stories
       - |image-CLI36|
       - Query constitution.
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/02-cardano-cli.md#CLI036>`__
-      - **As** any persona, **I want** to query the on-chain constitution, **so that** I can know the url where it is stored and the document hash so that I can verify authenticity.
+      - **As** any persona, **I want** to query the on-chain constitution, **so that** I can know the url where it is stored and the document hash, **so that** I can verify authenticity.
    -
 
       - |image-CLI37|
@@ -295,67 +295,67 @@ CIP1694 User Stories
       - |image-CIP1b|
       - Hash value of the off-chain Constitution is recorded on-chain
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP001b>`__
-      - **As** an Ada holder, **I want** the ledger state to record the hash of the current constitution, **so that** I can verify the authenticity of the off-chain document.
+      - **As** a Stakeholder, **I want** the ledger to maintain a record of the hash value of the current constitution together with a URL hosting the off-chain document, **so that** I can verify the authenticity of the off-chain document.
    -
 
       - |image-CIP2|
       - Node records Committee member key hashes, terms and status
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP002>`__
-      - **As** an Ada holder, **I want** the key hash of active and expired Committee Members and their terms to be registered on-chain, **so that** the system can count their votes.
+      - **As** a Stakeholder, **I want** the key hash of active and expired Committee Members and their terms to be registered on-chain, **so that** the system can count their votes.
    -
 
       - |image-CIP3|
       - Authorization Certificate
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP003>`__
-      - **As** a Committee Member, **I want** to submit a Cold to Hot key Authorization certificate, **so that** I can sign my votes using the hot key and keep my cold keys safely in cold storage.
+      - **As** a Committee Member, **I want** to generate and submit a Cold to Hot Credential Authorization certificate, **so that** I can sign votes using the hot credential and keep the cold credential in safe storage.
    -
 
       - |image-CIP4|
       - Record cold credentials and authorization certificates on chain
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP004>`__
-      - **As** a committee member, **I want** node’s ledger state to accurately maintain the record of key-hashes, terms, and cold to hot key authorization maps for active and expired members, **so that** only votes from active Committee members are considered.
+      - **As** a committee member, **I want** the ledger to accurately maintain the record of key-hashes, terms, and cold to hot credentials authorization maps for active and expired members, **so that** only votes from active Committee members count.
    -
 
       - |image-CIP5|
       - Replacing the constitutional committee via a governance action
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP005>`__
-      - **As** an Ada holder, **I want** to be able to submit a governance action to replace all or part of the current constitutional committee, **so that** committee members that have lost confidence of Ada holders can be removed from their duties.
+      - **As** a Governance Actor, **I want** to submit a governance action to replace all or part of the current constitutional committee, **so that** committee members who have lost the confidence of stakeholders can be removed from their role.
    -
 
       - |image-CIP6|
       - Size of the constitutional committee
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP006>`__
-      - **As** an Ada holder, **I want** the size of the constitutional committee to be adjustable (a protocol parameter), **so that** I can propose a different size via a governance action.
+      - **As** a Stakeholder, **I want** the minimal size of the Constitutional Committee to be a protocol parameter, **so that** it can be adjusted via a governance action.
    -
 
       - |image-CIP7|
       - Committee voting threshold (quorum) can be modified
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP007>`__
-      - **As** an Ada holder, **I want** that the committee threshold (the fraction of committee required to ratify a gov action) is not fixed, **so that** I can propose a different threshold via a governance action.
+      - **As** a Stakeholder, **I want** the committee quorum (the fraction of committee required to ratify a gov action) to be not fixed, **so that** it can be modified via a governance action.
    -
 
       - |image-CIP8|
       - Electing an empty committee
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP008>`__
-      - **As** an Ada holder, **I want** to be able to elect an empty committee if the community wishes to abolish the constitutional committee entirely, **so that** governance actions don’t need the votes of a constitutional committee to be ratified.
+      - **As** a Stakeholder, **I want** to have the option of electing an empty committee, **so that** governance actions don’t need the votes of a Constitutional Committee to be ratified.
    -
 
       - |image-CIP9|
       - Constitutional committee members have a limited term
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP009>`__
-      - **As** an Ada holder, **I want** each committee member to have an individual term, **so that** the system can have a rotation scheme.
+      - **As** a Stakeholder and as a Committee Member, **I want** each Committee Member to have an individual term, **so that** the system can have a rotation scheme.
    -
 
       - |image-CIP10|
       - Tracking committee member expirations
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP010>`__
-      - **As** an Ada holder, **I want** the system to keep track of the expiration epoch of each committee member, **so that** the information is publicly available in the ledger and can be consumed by anyone interested.
+      - **As** a Stakeholder, **I want** the system to keep track of the expiration epoch of each committee member, **so that** the information is publicly available in the ledger and the community can plan ahead and agree on new CC member.
    -
 
       - |image-CIP11|
       - Automatically expire committee members that have completed their terms
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP011>`__
-      - **As** an Ada holder, **I want** the system to automatically expire committee members that have reached their term, **so that** only active committee members can vote.
+      - **As** a Stakeholder and as a Committee Member, **I want** the system to automatically expire committee members that have reached their term, **so that** only votes from active committee members count towards ratification.
    -
 
       - |image-CIP12|
@@ -367,37 +367,37 @@ CIP1694 User Stories
       - |image-CIP13|
       - State of no-confidence
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP013>`__
-      - **As** an Ada holder, **I want** to submit a governance action to depose the current constitutional committee and put the system in a no-confidence-state, **so that** the community must elect a new constitutional committee.
+      - **As** a Stakeholder, **I want** to submit a governance action to depose the current Constitutional Committee and put the system in a no-confidence state, **so that** the community must elect a new Constitutional Committee.
    -
 
       - |image-CIP14|
-      - Automatically enter a state of no-confidence
+      - Constitutional Committee below committeeMinSize
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP014>`__
-      - **As** an Ada holder, **I want** the system to automatically enter a state of no-confidence when the number of non-expired committee members falls below the minimal size of the committee, **so that** only update-committee governance actions can be ratified.
+      - **As** a Stakeholder, I want, when the number of non-expired committee members falls below the minimal size of the committee, only update-committee and no-confidence governance actions can be ratified.
    -
 
       - |image-CIP15|
       - Proposal policy
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP015>`__
-      - **As** an Ada holder, **I want** a supplementary script to the constitution, **so that** some proposal types are automatically restricted.
+      - **As** a Stakeholder, **I want** the option for the constitution to be accompanied by a script, **so that** governance actions proposing parameter changes or treasury withdrawals that violate accepted limits are automatically restricted.
    -
 
       - |image-CIP16|
-      - Delegate representatives
+      - Delegate votes to a registered Delegate Representatives
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP016>`__
-      - **As** an Ada holder, **I want** stake credentials to delegate voting rights to a registered delegate representative (DRep), **so that** I can participate in the governance of the system.
+      - **As** a Stakeholder, **I want** to delegate voting rights to a registered Delegate Representative (DRep), **so that** I can participate in the governance of the system backing up votes with my stake.
    -
 
       - |image-CIP17|
       - Delegate to always abstain
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP017>`__
-      - **As** an Ada holder or an exchange, **I want** to delegate my stake to the predefined option ‘Abstain’, **so that** my stake is marked as not participating in governance.
+      - **As** a Stakeholder, **I want** to delegate my stake to the predefined option 'Abstain', **so that** my stake is marked as not participating in governance.
    -
 
       - |image-CIP18|
       - Delegate to no-confidence
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP018>`__
-      - **As** an Ada holder, **I want** to delegate my stake to the predefined DRep ‘No Confidence’, **so that** my stake is counted as a ‘Yes’ vote on every ‘No Confidence’ action and a ‘No’ vote on every other action.
+      - **As** a Stakeholder, **I want** to delegate my stake to the predefined DRep 'No Confidence', **so that** my stake is counted as a 'Yes' vote on every 'No Confidence' action and a 'No' vote on every other action.
    -
 
       - |image-CIP19|
@@ -409,31 +409,31 @@ CIP1694 User Stories
       - |image-CIP20|
       - DRep credentials
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP020>`__
-      - **As** a DRep, **I want** to be identified by a credential (A verification key (Ed2559) or a Native or Plutus Script), **so that** I can register and vote on governance actions.
+      - **As** a DRep, **I want** to be identified by a credential that can be a verification key (Ed25519) or a Native or Plutus Script, **so that** I can register and vote on governance actions with a signing key or with the evaluation of a script logic.
    -
 
       - |image-CIP21|
       - DRep registration certificate
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP021>`__
-      - **As** a DRep, **I want** to generate a registration certificate, **so that** the system recognizes my credentials and counts my votes on governance actions.
+      - **As** a DRep, **I want** to generate and submit a registration certificate, **so that** the system recognizes my credentials and counts my votes on governance actions proportionally to the voting stake delegated to me.
    -
 
       - |image-CIP22|
       - Vote delegation certificate
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP022>`__
-      - **As** an Ada holder, **I want** to generate a vote delegation certificate, **so that** I can delegate my voting rights.
+      - **As** a Stakeholder, **I want** to generate a vote delegation certificate, enabling me to delegate my voting rights to either a default or a registered DRep.
    -
 
       - |image-CIP23|
       - DRep retirement certificate
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP023>`__
-      - **As** a DRep, **I want** to generate a retirement certificate, **so that** the system and Ada holders (delegators) know that I’m no longer voting on governance actions and they should redelegate.
+      - **As** a DRep, **I want** to generate and submit a retirement certificate, **so that** the system and stakeholders know that I’m no longer voting on governance actions and that stakeholders should re-delegate.
    -
 
       - |image-CIP24|
       - DRep retirement certificate is applied immediately after being accepted on-chain
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP024>`__
-      - **As** a DRep, **I want** my retirement certificate to be applied immediately upon acceptance on-chain, **so that** the DRep deposit is returned in the same transaction, ensuring no waiting time.
+      - **As** a DRep, **I want** my retirement certificate to be applied immediately upon acceptance on-chain, with the DRep deposit returned in the same transaction, ensuring no waiting time.
    -
 
       - |image-CIP25|
@@ -451,13 +451,13 @@ CIP1694 User Stories
       - |image-CIP27|
       - Block rewards withdrawals for stake credentials that are not delegating to a DRep
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP027>`__
-      - **As** a Stakeholder **I want** that when bootstrapping phase ends, the system blocks rewards withdrawals for stake credentials that are not delegating to a DRep.
+      - **As** a Stakeholder, **I want** that when bootstrapping phase ends, the system blocks rewards withdrawals for stake credentials that are not delegating to a DRep.
    -
 
       - |image-CIP28|
       - Types of governance actions
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP028>`__
-      - **As** a Stakeholder **I want** the governance system to allow 7 different types of governance actions:
+      - **As** a Stakeholder, **I want** the governance system to allow 7 different types of governance actions:
 
         1. Motion of no-confidence A motion to create a state of no-confidence in the current Constitutional Committee
         2. New Constitutional Committee and/or threshold and/or terms Changes to the members of the Constitutional Committee and/or to its signature threshold and/or terms
@@ -477,7 +477,7 @@ CIP1694 User Stories
       - |image-CIP30|
       - Governance action initiation
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP030>`__
-      - **As** a Stakeholder, **I want** Governance Actors to be required to provide a deposit in lovelace **so that** I can prevent the network from being spammed with meaningless governance actions. This deposit should be returned once the action is either ratified or expired.
+      - **As** a Stakeholder, **I want** Governance Actors to be required to provide a deposit in lovelace, **so that** I can prevent the network from being spammed with meaningless governance actions. This deposit should be returned once the action is either ratified or expired.
    -
 
       - |image-CIP31a|
@@ -528,7 +528,7 @@ CIP1694 User Stories
       - |image-CIP32|
       - Governance action maximum lifetime
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP032>`__
-      - **As** a Stakeholder, **I want** governance actions submitted in a transaction and admitted to the chain to remain active for up to govActionLifetime epochs **so that** these actions are checked for ratification at every epoch boundary within their govActionLifetime. If an action gathers enough 'yes' votes to meet the thresholds of the governing bodies, it is ratified; otherwise, if it fails to gather sufficient 'yes' votes during the active period, the proposal expires and is removed.
+      - **As** a Stakeholder, **I want** governance actions submitted in a transaction and admitted to the chain to remain active for up to govActionLifetime epochs, **so that** these actions are checked for ratification at every epoch boundary within their govActionLifetime. If an action gathers enough 'yes' votes to meet the thresholds of the governing bodies, it is ratified; otherwise, if it fails to gather sufficient 'yes' votes during the active period, the proposal expires and is removed.
    -
 
       - |image-CIP33|
@@ -558,7 +558,7 @@ CIP1694 User Stories
       - |image-CIP37|
       - Multiple protocol parameter updates
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP037>`__
-      - **As** a Governance Actor **I want** a governance action to allow multiple protocol parameter changes at once.
+      - **As** a Governance Actor, **I want** a governance action to allow multiple protocol parameter changes at once.
    -
 
       - |image-CIP38|
@@ -570,7 +570,7 @@ CIP1694 User Stories
       - |image-CIP39|
       - Motion of no confidence, requirements for ratification
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP039>`__
-      - **As** a Stakeholder **I want** that the ratification of a Motion of no confidence governance action requires:
+      - **As** a Stakeholder, **I want** that the ratification of a Motion of no confidence governance action requires:
 
         - DRep votes to be >= than DrepVotingThreshold for NoConfidence as a percentage of active voting stake.
         - SPO votes to be >= than PoolVotingThreshold for NoConfidence as a percentage of the total delegated active stake for the epoch
@@ -579,7 +579,7 @@ CIP1694 User Stories
       - |image-CIP40|
       - New committee/threshold (normal state), requirements for ratification
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP040>`__
-      - **As** a Stakeholder **I want** that the ratification of a New committee/threshold (normal state) governance action requires:
+      - **As** a Stakeholder, **I want** that the ratification of a New committee/threshold (normal state) governance action requires:
 
         - DRep votes to be >= than DrepVotingThreshold for CommitteeNormalState as a percentage of active voting stake.
         - SPO votes to be >= than PoolVotingThreshold for CommitteeNormalState as a percentage of the total delegated active stake for the epoch
@@ -588,7 +588,7 @@ CIP1694 User Stories
       - |image-CIP41|
       - New committee/threshold (state of no-confidence), requirements for ratification
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP041>`__
-      - **As** a Stakeholder **I want** that the ratification of a New committee/threshold (state of no-confidence) governance action requires:
+      - **As** a Stakeholder, **I want** that the ratification of a New committee/threshold (state of no-confidence) governance action requires:
 
         - DRep votes to be >= than DrepVotingThreshold dvtCommitteeNoConfidence as a percentage of active voting stake.
         - SPO votes to be >= than pvtCommitteeNoConfidence as a percentage of the total delegated active stake for the epoch
@@ -597,7 +597,7 @@ CIP1694 User Stories
       - |image-CIP42|
       - Update to the Constitution or proposal policy, requirements for ratification
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP042>`__
-      - **As** a Stakeholder **I want** that the ratification of a Update to the Constitution or proposal policy governance action requires:
+      - **As** a Stakeholder, **I want** that the ratification of a Update to the Constitution or proposal policy governance action requires:
 
         - A minimum of CommitteeThreshold members must approve the Governance action
         - DRep votes to be >= than DrepVotingThreshold for UpdateToConstitution as a percentage of active voting stake.
@@ -606,7 +606,7 @@ CIP1694 User Stories
       - |image-CIP43|
       - Hard-fork initiation, requirements for ratification
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP043>`__
-      - **As** a Stakeholder **I want** that the ratification of a Hard-fork initiation governance action requires:
+      - **As** a Stakeholder, **I want** that the ratification of a Hard-fork initiation governance action requires:
 
         - A minimum of CommitteeThreshold members must approve the Governance action
         - DRep votes to be >= than DrepVotingThreshold for HardForkInitiation as a percentage of active voting stake.
@@ -616,7 +616,7 @@ CIP1694 User Stories
       - |image-CIP44|
       - Protocol parameter changes, network group
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP044>`__
-      - **As** a Stakeholder **I want** that the ratification of a network group protocol parameter change requires:
+      - **As** a Stakeholder, **I want** that the ratification of a network group protocol parameter change requires:
 
         - A minimum of CommitteeThreshold members must approve the Governance action
         - DRep votes to be >= than DrepVotingThreshold for PPNetworkGroup as a percentage of active voting stake
@@ -625,7 +625,7 @@ CIP1694 User Stories
       - |image-CIP45|
       - Protocol parameter changes, economic group
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP045>`__
-      - **As** a Stakeholder **I want** that the ratification of a economic group protocol parameter change requires:
+      - **As** a Stakeholder, **I want** that the ratification of a economic group protocol parameter change requires:
 
         - A minimum of CommitteeThreshold members must approve the Governance action
         - DRep votes to be >= than DrepVotingThreshold for PPEconomicGroup as a percentage of active voting stake
@@ -634,7 +634,7 @@ CIP1694 User Stories
       - |image-CIP46|
       - Protocol parameter changes, technical group
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP046>`__
-      - **As** a Stakeholder **I want** that the ratification of a technical group protocol parameter change requires:
+      - **As** a Stakeholder, **I want** that the ratification of a technical group protocol parameter change requires:
 
         - A minimum of CommitteeThreshold members must approve the Governance action
         - DRep votes to be >= than `DrepVotingThreshold` for PPTechnicalGroup as a percentage of active voting stake
@@ -643,7 +643,7 @@ CIP1694 User Stories
       - |image-CIP47|
       - Protocol parameter changes, governance group
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP047>`__
-      - **As** a Stakeholder **I want** that the ratification of a governance group protocol parameter change requires:
+      - **As** a Stakeholder, **I want** that the ratification of a governance group protocol parameter change requires:
 
         - A minimum of CommitteeThreshold members must approve the Governance action
         - DRep votes to be >= than DrepVotingThreshold PPGovGroup as a percentage of active voting stake
@@ -652,7 +652,7 @@ CIP1694 User Stories
       - |image-CIP48|
       - Treasury withdrawal, requirements for ratification
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP048>`__
-      - **As** a Stakeholder **I want** that the ratification of a Treasury withdrawal governance action requires:
+      - **As** a Stakeholder, **I want** that the ratification of a Treasury withdrawal governance action requires:
 
         - A minimum of CommitteeThreshold members must approve the Governance action
         - DRep votes to be >= than DrepVotingThreshold for TreasuryWithdrawal as a percentage of active voting stake
@@ -661,7 +661,7 @@ CIP1694 User Stories
       - |image-CIP49|
       - The network group protocol parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP049>`__
-      - **As** a Stakeholder **I want** the network group consist of:
+      - **As** a Stakeholder, **I want** the network group consist of:
 
         - maximum block body size (maxBBSize)
         - maximum transaction size (maxTxSize)
@@ -675,7 +675,7 @@ CIP1694 User Stories
       - |image-CIP50|
       - The economic group protocol parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP050>`__
-      - **As** a Stakeholder **I want** that the economic group consist of:
+      - **As** a Stakeholder, **I want** that the economic group consist of:
 
         - minimum fee coefficient (minFeeA)
         - minimum fee constant (minFeeB)
@@ -691,7 +691,7 @@ CIP1694 User Stories
       - |image-CIP51|
       - The technical group protocol parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP051>`__
-      - **As** a Stakeholder **I want** that the technical group consist of:
+      - **As** a Stakeholder, **I want** that the technical group consist of:
 
         - pool pledge influence (a0)
         - pool retirement maximum epoch (eMax)
@@ -703,7 +703,7 @@ CIP1694 User Stories
       - |image-CIP52|
       - The governance group protocol parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP052>`__
-      - **As** a Stakeholder **I want** that the governance group consist of:
+      - **As** a Stakeholder, **I want** that the governance group consist of:
 
         - governance voting thresholds
         - governance action maximum lifetime in epochs (govActionLifetime)
@@ -717,19 +717,19 @@ CIP1694 User Stories
       - |image-CIP53|
       - Thresholds for Info is set to 100%
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP053>`__
-      - **As** a Stakeholder **I want** the two thresholds for the Info action be set to 100% since setting it any lower would result in not being able to poll above the threshold.
+      - **As** a Stakeholder, **I want** the two thresholds for the Info action be set to 100% since setting it any lower would result in not being able to poll above the threshold.
    -
 
       - |image-CIP54|
       - Preventing accidental clash of actions of the same type
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP054>`__
-      - **As** a Stakeholder **I want** all governance actions, except for Treasury withdrawals and Infos, to include the governance action ID of the most recently enacted action of the same type **so that** accidental clashes between actions can be prevented.
+      - **As** a Stakeholder, **I want** all governance actions, except for Treasury withdrawals and Infos, to include the governance action ID of the most recently enacted action of the same type, **so that** accidental clashes between actions can be prevented.
    -
 
       - |image-CIP55|
       - Governance action enactment prioritization
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP055>`__
-      - **As** a Stakeholder **I want** actions that have been ratified in the current epoch to be prioritized for enactment in the following order:
+      - **As** a Stakeholder, **I want** actions that have been ratified in the current epoch to be prioritized for enactment in the following order:
 
         - Motion of no-confidence
         - New committee/threshold
@@ -743,31 +743,31 @@ CIP1694 User Stories
       - |image-CIP56|
       - Governance action order of enactment
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP056>`__
-      - **As** a Stakeholder **I want** governance actions to be enacted in the order of their acceptance to the chain.
+      - **As** a Stakeholder, **I want** governance actions to be enacted in the order of their acceptance to the chain.
    -
 
       - |image-CIP57|
       - Governance actions automatic enactment
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP057>`__
-      - **As** a Stakeholder **I want** ratified actions to be automatically enacted at the next epoch boundary.
+      - **As** a Stakeholder, **I want** ratified actions to be automatically enacted at the next epoch boundary.
    -
 
       - |image-CIP58|
       - No duplicate committee members
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP058>`__
-      - **As** a Stakeholder **I want** each pair of credentials in a committee to be unique, ensuring no duplicate committee members.
+      - **As** a Stakeholder, **I want** each pair of credentials in a committee to be unique, ensuring no duplicate committee members.
    -
 
       - |image-CIP59|
       - Governance action ID
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP059>`__
-      - **As** a Stakeholder **I want** the transaction ID and index of the transaction that submits the governance action to the chain to serve as the governance action ID **so that** this ID shall would be used for casting votes.
+      - **As** a Stakeholder, **I want** the transaction ID and index of the transaction that submits the governance action to the chain to serve as the governance action ID, **so that** this ID shall would be used for casting votes.
    -
 
       - |image-CIP60|
       - Vote transactions contents
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP060>`__
-      - **As** a Stakeholder **I want** each vote transaction to consist of the following elements:
+      - **As** a Stakeholder, **I want** each vote transaction to consist of the following elements:
 
         - a governance action ID
         - a role (Constitutional Committee member, DRep, or SPO)
@@ -785,73 +785,73 @@ CIP1694 User Stories
       - |image-CIP62|
       - CC votes
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP062>`__
-      - **As** a Stakeholder **I want** each current committee member to have one vote.
+      - **As** a Stakeholder, **I want** each current committee member to have one vote.
    -
 
       - |image-CIP63|
       - Active voting stake
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP063>`__
-      - **As** a Stakeholder **I want** the active voting stake to be the total registered stake minus the abstain votes stake (both credential DReps and AlwaysAbstain).
+      - **As** a Stakeholder, **I want** the active voting stake to be the total registered stake minus the abstain votes stake (both credential DReps and AlwaysAbstain).
    -
 
       - |image-CIP64|
       - Unregistered stake behaves like Abstain vote
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP064>`__
-      - **As** a Stakeholder **I want** unregistered stake to be treated as an abstain vote **so that** it should not count towards the active voting stake.
+      - **As** a Stakeholder, **I want** unregistered stake to be treated as an abstain vote, **so that** it should not count towards the active voting stake.
    -
 
       - |image-CIP65|
       - Registered stake that did not vote behaves like a 'No' vote
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP065>`__
-      - **As** a Stakeholder **I want** any registered stake that did not submit a vote, whether through its DRep or SPO, to be counted as a 'No' vote.
+      - **As** a Stakeholder, **I want** any registered stake that did not submit a vote, whether through its DRep or SPO, to be counted as a 'No' vote.
    -
 
       - |image-CIP66|
       - New Plutus script purpose for scripts
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP066>`__
-      - **As** a Stakeholder **I want** a new voting purpose for Plutus scripts.
+      - **As** a Stakeholder, **I want** a new voting purpose for Plutus scripts.
    -
 
       - |image-CIP67|
       - Any new vote overrides any older vote for the same credential and role
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP067>`__
-      - **As** a Stakeholder **I want** new votes on a governance action to override any previous votes for the same credential and role **so that** individuals could change their minds.
+      - **As** a Stakeholder, **I want** new votes on a governance action to override any previous votes for the same credential and role, **so that** individuals could change their minds.
    -
 
       - |image-CIP68|
       - Voting ends when an action is ratified and transactions containing further votes are invalid
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP068>`__
-      - **As** a Stakeholder **I want** the voting period to terminate immediately after an action is ratified or expires.
+      - **As** a Stakeholder, **I want** the voting period to terminate immediately after an action is ratified or expires.
    -
 
       - |image-CIP69|
       - Governance state tracking governance action progress
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP069>`__
-      - **As** a Stakeholder **I want** the governance state section of the ledger to track the progress of governance actions to include: capturing votes, tracking the expiration epoch, and other relevant information until the actions are either ratified or expired.
+      - **As** a Stakeholder, **I want** the governance state section of the ledger to track the progress of governance actions to include: capturing votes, tracking the expiration epoch, and other relevant information until the actions are either ratified or expired.
    -
 
       - |image-CIP70|
       - Remove MIR certificates
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP070>`__
-      - **As** a Stakeholder **I want** MIR certificates to be removed **so that** the only way to withdraw funds from the treasury is through a ratified Treasury Withdrawal governance action.
+      - **As** a Stakeholder, **I want** MIR certificates to be removed, **so that** the only way to withdraw funds from the treasury is through a ratified Treasury Withdrawal governance action.
    -
 
       - |image-CIP71|
       - Remove genesis certificates
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP071>`__
-      - **As** a Stakeholder **I want** genesis certificates to be removed. In Conway era these are no longer useful or required.
+      - **As** a Stakeholder, **I want** genesis certificates to be removed. In Conway era these are no longer useful or required.
    -
 
       - |image-CIP72|
       - Changes to the existing ledger rules
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP072>`__
-      - **As** a Stakeholder **I want** the ledger to adjust its rules to accommodate for the governance features, i.e. Delegations, Certificates, Proposals, Votes, Ratification, Enactment.
+      - **As** a Stakeholder, **I want** the ledger to adjust its rules to accommodate for the governance features, i.e. Delegations, Certificates, Proposals, Votes, Ratification, Enactment.
    -
 
       - |image-CIP73|
       - Changes to the local state-query protocol
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP073>`__
-      - **As** a Stakeholder **I want** the ledger to adjust the local state query protocol to accommodate for new queries that provide insights about governance, at least:
+      - **As** a Stakeholder, **I want** the ledger to adjust the local state query protocol to accommodate for new queries that provide insights about governance, at least:
 
         - Governance actions currently staged for enactment
         - Governance actions under ratification, with the total and percentage of yes stake, no stake and abstain stake
@@ -884,19 +884,19 @@ CIP1694 User Stories
       - |image-CIP76|
       - Auditor review of current technical parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP076>`__
-      - **As** an Auditor, **I want** to audit the current technical parameters, including consenus and cost models **so that** I can ensure their compliance with the network parameters specified.
+      - **As** an Auditor, **I want** to audit the current technical parameters, including consenus and cost models, **so that** I can ensure their compliance with the network parameters specified.
    -
 
       - |image-CIP77|
       - Auditor review of current economic parameters
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP077>`__
-      - **As** an Auditor, **I want** to audit the current economic parameters, including parameters affecting transaction fees, taxes, and staking rewards **so that** I can assess their impact on the network's economy.
+      - **As** an Auditor, **I want** to audit the current economic parameters, including parameters affecting transaction fees, taxes, and staking rewards, **so that** I can assess their impact on the network's economy.
    -
 
       - |image-CIP78|
       - Auditor review of current governance parameters and voting thresholds
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/750a10833121e7d79ee97758b110050f1e04a5a6/docs/user-stories/01-cip1694.md#CIP078>`__
-      - **As** an Auditor, **I want** to audit the current governance parameters and voting thresholds for governance actions to fail or ratify **so that** I can verify their appropriateness and adherence to governance rules, adherence to the constitution, and enforcement of voting thresholds.
+      - **As** an Auditor, **I want** to audit the current governance parameters and voting thresholds for governance actions to fail or ratify, **so that** I can verify their appropriateness and adherence to governance rules, adherence to the constitution, and enforcement of voting thresholds.
    -
 
       - |image-CIP79|
