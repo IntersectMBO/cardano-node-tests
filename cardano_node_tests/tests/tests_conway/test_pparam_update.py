@@ -1023,20 +1023,22 @@ class TestPParamData:
         [r.start(url=_url) for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
 
         cur_pparam = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
-        for pparam in [
-            *NETWORK_GROUP_PPARAMS,
-            *ECONOMIC_GROUP_PPARAMS,
-            *TECHNICAL_GROUP_PPARAMS,
-            *GOVERNANCE_GROUP_PPARAMS,
-        ]:
-            assert pparam in cur_pparam, f"Param `{pparam}` not found"
+        cur_pparam_keys = set(cur_pparam.keys())
+        known_pparam_keys = set().union(
+            NETWORK_GROUP_PPARAMS,
+            ECONOMIC_GROUP_PPARAMS,
+            TECHNICAL_GROUP_PPARAMS,
+            GOVERNANCE_GROUP_PPARAMS,
+        )
+        missing_pparams = known_pparam_keys - cur_pparam_keys
+        assert not missing_pparams, f"Missing pparams: {missing_pparams}"
 
-        drep_thresholds = cur_pparam["dRepVotingThresholds"]
-        for drep_thresh in GOVERNANCE_GROUP_PPARAMS_DREP_THRESHOLDS:
-            assert drep_thresh in drep_thresholds, f"DRep threshold `{drep_thresh}` not found"
+        drep_thresholds = set(cur_pparam["dRepVotingThresholds"].keys())
+        missing_drep_thresholds = GOVERNANCE_GROUP_PPARAMS_DREP_THRESHOLDS - drep_thresholds
+        assert not missing_drep_thresholds, f"Missing DRep thresholds: {missing_drep_thresholds}"
 
-        pool_thresholds = cur_pparam["poolVotingThresholds"]
-        for pool_thresh in GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS:
-            assert pool_thresh in pool_thresholds, f"Pool threshold `{pool_thresh}` not found"
+        pool_thresholds = set(cur_pparam["poolVotingThresholds"].keys())
+        missing_pool_thresholds = GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS - pool_thresholds
+        assert not missing_pool_thresholds, f"Missing pool thresholds: {missing_pool_thresholds}"
 
         [r.success() for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
