@@ -474,7 +474,7 @@ def reinstate_committee(
         deposit_amt=deposit_amt,
         anchor_url=anchor_url,
         anchor_data_hash=anchor_data_hash,
-        quorum=str(cluster_obj.conway_genesis["committee"]["threshold"]),
+        threshold=str(cluster_obj.conway_genesis["committee"]["threshold"]),
         add_cc_members=governance_data.cc_members,
         prev_action_txid=prev_action_rec.txid,
         prev_action_ix=prev_action_rec.ix,

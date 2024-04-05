@@ -365,7 +365,7 @@ def check_action_view(  # noqa: C901
                 else None,
                 removed_members if removed_members else [],
                 added_members,
-                float(action_data.quorum),
+                float(action_data.threshold),
             ],
             "tag": ActionTags.UPDATE_COMMITTEE.value,
         }
