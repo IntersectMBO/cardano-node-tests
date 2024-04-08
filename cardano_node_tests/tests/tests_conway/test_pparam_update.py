@@ -1,6 +1,7 @@
 """Tests for Conway governance protocol parameters update."""
 
 # pylint: disable=expression-not-assigned
+import dataclasses
 import fractions
 import logging
 import pathlib as pl
@@ -29,6 +30,15 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
     reason="runs only with Tx era >= Conway",
 )
+
+
+@dataclasses.dataclass(frozen=True)
+class PParamPropRec:
+    proposals: tp.List[clusterlib_utils.UpdateProposal]
+    action_txid: str
+    action_ix: int
+    proposal_names: tp.Set[str]
+    future_pparams: tp.Dict[str, tp.Any]
 
 
 NETWORK_GROUP_PPARAMS = {
@@ -126,6 +136,90 @@ def _get_rational_str(value: float) -> str:
     return str(fractions.Fraction(value).limit_denominator())
 
 
+def _check_w_denominator(
+    update_proposal: clusterlib_utils.UpdateProposal, pparam: tp.Union[float, dict]
+) -> bool:
+    exp_val: tp.Union[float, dict, str] = pparam
+    if isinstance(pparam, dict):
+        exp_val = f"{pparam['numerator']}/{pparam['denominator']}"
+    return bool(update_proposal.value == exp_val)
+
+
+def _check_max_tx_execution_units(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    pparam = protocol_params["maxTxExecutionUnits"]
+    exp_val = f"({pparam['steps']},{pparam['memory']})"
+    return bool(update_proposal.value == exp_val)
+
+
+def _check_max_block_execution_units(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    pparam = protocol_params["maxBlockExecutionUnits"]
+    exp_val = f"({pparam['steps']},{pparam['memory']})"
+    return bool(update_proposal.value == exp_val)
+
+
+def _check_execution_unit_prices_mem(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    return _check_w_denominator(
+        update_proposal=update_proposal,
+        pparam=protocol_params["executionUnitPrices"]["priceMemory"],
+    )
+
+
+def _check_execution_unit_prices_steps(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    return _check_w_denominator(
+        update_proposal=update_proposal, pparam=protocol_params["executionUnitPrices"]["priceSteps"]
+    )
+
+
+def _check_monetary_expansion(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    return _check_w_denominator(
+        update_proposal=update_proposal, pparam=protocol_params["monetaryExpansion"]
+    )
+
+
+def _check_treasury_expansion(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    return _check_w_denominator(
+        update_proposal=update_proposal, pparam=protocol_params["treasuryCut"]
+    )
+
+
+def _check_pool_pledge_influence(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    return _check_w_denominator(
+        update_proposal=update_proposal, pparam=protocol_params["poolPledgeInfluence"]
+    )
+
+
+def _check_pool_thresholds(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    return _check_w_denominator(
+        update_proposal=update_proposal,
+        pparam=protocol_params["poolVotingThresholds"][update_proposal.name],
+    )
+
+
+def _check_drep_thresholds(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    return _check_w_denominator(
+        update_proposal=update_proposal,
+        pparam=protocol_params["dRepVotingThresholds"][update_proposal.name],
+    )
+
+
 class TestPParamUpdate:
     """Tests for protocol parameters update."""
 
@@ -204,13 +298,15 @@ class TestPParamUpdate:
                 arg="--max-tx-execution-units",
                 value=f"({random.randint(14000001, 14000100)},"
                 f"{random.randint(10000000001, 10000000100)})",
-                name="",  # needs custom check of `maxTxExecutionUnits`
+                name="maxTxExecutionUnits",
+                check_func=_check_max_tx_execution_units,
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-execution-units",
                 value=f"({random.randint(62000001, 62000100)},"
                 f"{random.randint(40000000001, 40000000100)})",
-                name="",  # needs custom check of `maxBlockExecutionUnits`
+                name="maxBlockExecutionUnits",
+                check_func=_check_max_block_execution_units,
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--max-collateral-inputs",
@@ -244,11 +340,13 @@ class TestPParamUpdate:
                 arg="--monetary-expansion",
                 value=_get_rational_str(random.uniform(0.0023, 0.0122)),
                 name="monetaryExpansion",
+                check_func=_check_monetary_expansion,
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--treasury-expansion",
                 value=_get_rational_str(random.uniform(0.051, 0.1)),
                 name="treasuryCut",
+                check_func=_check_treasury_expansion,
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-pool-cost",
@@ -265,12 +363,14 @@ class TestPParamUpdate:
                 clusterlib_utils.UpdateProposal(
                     arg="--price-execution-steps",
                     value=_get_rational_str(random.uniform(0.0578, 0.0677)),
-                    name="",  # needs custom check of `executionUnitPrices`
+                    name="executionUnitPrices (steps)",
+                    check_func=_check_execution_unit_prices_steps,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--price-execution-memory",
                     value=_get_rational_str(random.uniform(0.00008, 0.00009)),
-                    name="",  # needs custom check of `executionUnitPrices`
+                    name="executionUnitPrices (memory)",
+                    check_func=_check_execution_unit_prices_mem,
                 ),
             ],
         ]
@@ -280,6 +380,7 @@ class TestPParamUpdate:
                 arg="--pool-influence",
                 value=_get_rational_str(random.uniform(0.1, 0.5)),
                 name="poolPledgeInfluence",
+                check_func=_check_pool_pledge_influence,
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--pool-retirement-epoch-interval",
@@ -294,7 +395,7 @@ class TestPParamUpdate:
             clusterlib_utils.UpdateProposal(
                 arg="--cost-model-file",
                 value=str(cost_proposal_file),
-                name="costModels",
+                name="",  # costModels
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--collateral-percent",
@@ -309,52 +410,62 @@ class TestPParamUpdate:
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-committee-no-confidence",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `committeeNoConfidence`
+                    name="committeeNoConfidence",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-committee-normal",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `committeeNormal`
+                    name="committeeNormal",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-hard-fork-initiation",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `hardForkInitiation`
+                    name="hardForkInitiation",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-motion-no-confidence",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `motionNoConfidence`
+                    name="motionNoConfidence",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-pp-economic-group",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
                     name="ppEconomicGroup",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-pp-governance-group",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
                     name="ppGovGroup",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-pp-network-group",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
                     name="ppNetworkGroup",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-pp-technical-group",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
                     name="ppTechnicalGroup",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-treasury-withdrawal",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
                     name="treasuryWithdrawal",
+                    check_func=_check_drep_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--drep-voting-threshold-update-to-constitution",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
                     name="updateToConstitution",
+                    check_func=_check_drep_thresholds,
                 ),
             ],
             # These must be passed together
@@ -362,27 +473,32 @@ class TestPParamUpdate:
                 clusterlib_utils.UpdateProposal(
                     arg="--pool-voting-threshold-committee-no-confidence",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `committeeNoConfidence`
+                    name="committeeNoConfidence",
+                    check_func=_check_pool_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--pool-voting-threshold-committee-normal",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `committeeNormal`
+                    name="committeeNormal",
+                    check_func=_check_pool_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--pool-voting-threshold-hard-fork-initiation",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `hardForkInitiation`
+                    name="hardForkInitiation",
+                    check_func=_check_pool_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--pool-voting-threshold-motion-no-confidence",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
-                    name="",  # needs custom check of `motionNoConfidence`
+                    name="motionNoConfidence",
+                    check_func=_check_pool_thresholds,
                 ),
                 clusterlib_utils.UpdateProposal(
                     arg="--pool-voting-threshold-pp-security-group",
                     value=_get_rational_str(random.uniform(0.52, 0.60)),
                     name="ppSecurityGroup",
+                    check_func=_check_pool_thresholds,
                 ),
             ],
             clusterlib_utils.UpdateProposal(
@@ -442,7 +558,8 @@ class TestPParamUpdate:
                 arg="--max-block-execution-units",
                 value=f"({random.randint(62000001, 62000100)},"
                 f"{random.randint(40000000001, 40000000100)})",
-                name="",  # needs custom check of `maxBlockExecutionUnits`
+                name="maxBlockExecutionUnits",
+                check_func=_check_max_block_execution_units,
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--min-fee-linear",
@@ -524,7 +641,7 @@ class TestPParamUpdate:
 
         def _create_pparams_action(
             proposals: tp.List[clusterlib_utils.UpdateProposal],
-        ) -> tp.Tuple[str, int, tp.Set[str]]:
+        ) -> PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
 
@@ -595,7 +712,26 @@ class TestPParamUpdate:
             action_ix = prop_action["actionId"]["govActionIx"]
             proposal_names = {p.name for p in proposals}
 
-            return action_txid, action_ix, proposal_names
+            return PParamPropRec(
+                proposals=proposals,
+                action_txid=action_txid,
+                action_ix=action_ix,
+                proposal_names=proposal_names,
+                future_pparams=prop_action["proposalProcedure"]["govAction"]["contents"][1],
+            )
+
+        proposed_pparams_errors = []
+
+        def _check_proposed_pparams(
+            update_proposals: tp.List[clusterlib_utils.UpdateProposal], protocol_params: dict
+        ) -> None:
+            try:
+                clusterlib_utils.check_updated_params(
+                    update_proposals=update_proposals,
+                    protocol_params=protocol_params,
+                )
+            except AssertionError as err:
+                proposed_pparams_errors.append(str(err))
 
         _url = helpers.get_vcs_link()
         [
@@ -604,9 +740,10 @@ class TestPParamUpdate:
         ]
 
         # Vote on update proposals from network group that will NOT get approved by DReps
-        net_nodrep_update_proposals = random.sample(network_g_proposals, 3)
-        net_nodrep_action_txid, net_nodrep_action_ix, net_nodrep_proposal_names = (
-            _create_pparams_action(proposals=net_nodrep_update_proposals)
+        net_nodrep_prop_rec = _create_pparams_action(proposals=network_g_proposals)
+        _check_proposed_pparams(
+            update_proposals=net_nodrep_prop_rec.proposals,
+            protocol_params=net_nodrep_prop_rec.future_pparams,
         )
         reqc.cip061_04.start(url=_url)
         conway_common.cast_vote(
@@ -614,76 +751,80 @@ class TestPParamUpdate:
             governance_data=governance_data,
             name_template=f"{temp_template}_net_nodrep",
             payment_addr=pool_user_lg.payment,
-            action_txid=net_nodrep_action_txid,
-            action_ix=net_nodrep_action_ix,
+            action_txid=net_nodrep_prop_rec.action_txid,
+            action_ix=net_nodrep_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=False,
-            approve_spo=None if net_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+            approve_spo=None
+            if net_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+            else True,
         )
 
         # Vote on update proposals from network group that will NOT get approved by CC
         if configuration.HAS_CC:
             reqc.cip062_02.start(url=helpers.get_vcs_link())
-            net_nocc_update_proposals = random.sample(network_g_proposals, 3)
-            net_nocc_action_txid, net_nocc_action_ix, net_nocc_proposal_names = (
-                _create_pparams_action(proposals=net_nocc_update_proposals)
-            )
+            net_nocc_prop_rec = _create_pparams_action(proposals=network_g_proposals)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_net_nocc",
                 payment_addr=pool_user_lg.payment,
-                action_txid=net_nocc_action_txid,
-                action_ix=net_nocc_action_ix,
+                action_txid=net_nocc_prop_rec.action_txid,
+                action_ix=net_nocc_prop_rec.action_ix,
                 approve_cc=False,
                 approve_drep=True,
-                approve_spo=None if net_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+                approve_spo=None
+                if net_nocc_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+                else True,
             )
 
         # Vote on update proposals from economic group that will NOT get approved by DReps
-        eco_nodrep_update_proposals = list(helpers.flatten(random.sample(economic_g_proposals, 3)))
-        eco_nodrep_action_txid, eco_nodrep_action_ix, eco_nodrep_proposal_names = (
-            _create_pparams_action(proposals=eco_nodrep_update_proposals)
+        eco_nodrep_update_proposals = list(helpers.flatten(economic_g_proposals))
+        eco_nodrep_prop_rec = _create_pparams_action(proposals=eco_nodrep_update_proposals)
+        _check_proposed_pparams(
+            update_proposals=eco_nodrep_prop_rec.proposals,
+            protocol_params=eco_nodrep_prop_rec.future_pparams,
         )
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_eco_nodrep",
             payment_addr=pool_user_lg.payment,
-            action_txid=eco_nodrep_action_txid,
-            action_ix=eco_nodrep_action_ix,
+            action_txid=eco_nodrep_prop_rec.action_txid,
+            action_ix=eco_nodrep_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=False,
-            approve_spo=None if eco_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+            approve_spo=None
+            if eco_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+            else True,
         )
 
         # Vote on update proposals from economic group that will NOT get approved by CC
         if configuration.HAS_CC:
-            eco_nocc_update_proposals = list(
-                helpers.flatten(random.sample(economic_g_proposals, 3))
-            )
-            eco_nocc_action_txid, eco_nocc_action_ix, eco_nocc_proposal_names = (
-                _create_pparams_action(proposals=eco_nocc_update_proposals)
-            )
+            eco_nocc_update_proposals = list(helpers.flatten(economic_g_proposals))
+            eco_nocc_prop_rec = _create_pparams_action(proposals=eco_nocc_update_proposals)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_eco_nocc",
                 payment_addr=pool_user_lg.payment,
-                action_txid=eco_nocc_action_txid,
-                action_ix=eco_nocc_action_ix,
+                action_txid=eco_nocc_prop_rec.action_txid,
+                action_ix=eco_nocc_prop_rec.action_ix,
                 approve_cc=False,
                 approve_drep=True,
-                approve_spo=None if eco_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+                approve_spo=None
+                if eco_nocc_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+                else True,
             )
 
         # Vote on update proposals from technical group that will NOT get approved by DReps
-        tech_nodrep_update_proposals = random.sample(technical_g_proposals, 3)
-        tech_nodrep_action_txid, tech_nodrep_action_ix, tech_nodrep_proposal_names = (
-            _create_pparams_action(proposals=tech_nodrep_update_proposals)
+        tech_nodrep_prop_rec = _create_pparams_action(proposals=technical_g_proposals)
+        _check_proposed_pparams(
+            update_proposals=tech_nodrep_prop_rec.proposals,
+            protocol_params=tech_nodrep_prop_rec.future_pparams,
         )
 
-        assert tech_nodrep_proposal_names.isdisjoint(
+        assert tech_nodrep_prop_rec.proposal_names.isdisjoint(
             SECURITY_PPARAMS
         ), "There are security pparams being changed"
 
@@ -695,8 +836,8 @@ class TestPParamUpdate:
                 governance_data=governance_data,
                 name_template=f"{temp_template}_fin_with_spos",
                 payment_addr=pool_user_lg.payment,
-                action_txid=tech_nodrep_action_txid,
-                action_ix=tech_nodrep_action_ix,
+                action_txid=tech_nodrep_prop_rec.action_txid,
+                action_ix=tech_nodrep_prop_rec.action_ix,
                 approve_cc=False,
                 approve_drep=False,
                 approve_spo=True,
@@ -714,28 +855,27 @@ class TestPParamUpdate:
             governance_data=governance_data,
             name_template=f"{temp_template}_tech_nodrep",
             payment_addr=pool_user_lg.payment,
-            action_txid=tech_nodrep_action_txid,
-            action_ix=tech_nodrep_action_ix,
+            action_txid=tech_nodrep_prop_rec.action_txid,
+            action_ix=tech_nodrep_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=None,
         )
 
         # Vote on update proposals from technical group that will NOT get approved by CC
         if configuration.HAS_CC:
-            tech_nocc_update_proposals = random.sample(technical_g_proposals, 3)
-            tech_nocc_action_txid, tech_nocc_action_ix, tech_nocc_proposal_names = (
-                _create_pparams_action(proposals=tech_nocc_update_proposals)
-            )
+            tech_nocc_prop_rec = _create_pparams_action(proposals=technical_g_proposals)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_tech_nocc",
                 payment_addr=pool_user_lg.payment,
-                action_txid=tech_nocc_action_txid,
-                action_ix=tech_nocc_action_ix,
+                action_txid=tech_nocc_prop_rec.action_txid,
+                action_ix=tech_nocc_prop_rec.action_ix,
                 approve_cc=None,
                 approve_drep=True,
-                approve_spo=None if tech_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+                approve_spo=None
+                if tech_nocc_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+                else True,
             )
 
         # Vote on update proposals from security params that will NOT get votes from SPOs
@@ -743,17 +883,18 @@ class TestPParamUpdate:
         reqc.cip074.start(url=_url)
         if is_spo_total_below_threshold:
             reqc.cip064_04.start(url=_url)
-        sec_nonespo_update_proposals = random.sample(security_proposals, 3)
-        sec_nonespo_action_txid, sec_nonespo_action_ix, sec_nonespo_proposal_names = (
-            _create_pparams_action(proposals=sec_nonespo_update_proposals)
+        sec_nonespo_prop_rec = _create_pparams_action(proposals=security_proposals)
+        _check_proposed_pparams(
+            update_proposals=sec_nonespo_prop_rec.proposals,
+            protocol_params=sec_nonespo_prop_rec.future_pparams,
         )
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_sec_nonespo",
             payment_addr=pool_user_lg.payment,
-            action_txid=sec_nonespo_action_txid,
-            action_ix=sec_nonespo_action_ix,
+            action_txid=sec_nonespo_prop_rec.action_txid,
+            action_ix=sec_nonespo_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=True,
             approve_spo=None,
@@ -761,59 +902,56 @@ class TestPParamUpdate:
 
         # Vote on update proposals from security params that will NOT get approved by SPOs
         reqc.cip061_02.start(url=helpers.get_vcs_link())
-        sec_nospo_update_proposals = random.sample(security_proposals, 3)
-        sec_nospo_action_txid, sec_nospo_action_ix, sec_nospo_proposal_names = (
-            _create_pparams_action(proposals=sec_nospo_update_proposals)
-        )
+        sec_nospo_prop_rec = _create_pparams_action(proposals=security_proposals)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_sec_nospo",
             payment_addr=pool_user_lg.payment,
-            action_txid=sec_nospo_action_txid,
-            action_ix=sec_nospo_action_ix,
+            action_txid=sec_nospo_prop_rec.action_txid,
+            action_ix=sec_nospo_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=True,
             approve_spo=False,
         )
 
         # Vote on update proposals from governance group that will NOT get approved by DReps
-        gov_nodrep_update_proposals = list(
-            helpers.flatten(random.sample(governance_g_proposals, 3))
-        )
-        gov_nodrep_action_txid, gov_nodrep_action_ix, gov_nodrep_proposal_names = (
-            _create_pparams_action(proposals=gov_nodrep_update_proposals)
+        gov_nodrep_update_proposals = list(helpers.flatten(governance_g_proposals))
+        gov_nodrep_prop_rec = _create_pparams_action(proposals=gov_nodrep_update_proposals)
+        _check_proposed_pparams(
+            update_proposals=gov_nodrep_prop_rec.proposals,
+            protocol_params=gov_nodrep_prop_rec.future_pparams,
         )
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_gov_nodrep",
             payment_addr=pool_user_lg.payment,
-            action_txid=gov_nodrep_action_txid,
-            action_ix=gov_nodrep_action_ix,
+            action_txid=gov_nodrep_prop_rec.action_txid,
+            action_ix=gov_nodrep_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=False,
-            approve_spo=None if gov_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+            approve_spo=None
+            if gov_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+            else True,
         )
 
         # Vote on update proposals from governance group that will NOT get approved by CC
         if configuration.HAS_CC:
-            gov_nocc_update_proposals = list(
-                helpers.flatten(random.sample(governance_g_proposals, 3))
-            )
-            gov_nocc_action_txid, gov_nocc_action_ix, gov_nocc_proposal_names = (
-                _create_pparams_action(proposals=gov_nocc_update_proposals)
-            )
+            gov_nocc_update_proposals = list(helpers.flatten(governance_g_proposals))
+            gov_nocc_prop_rec = _create_pparams_action(proposals=gov_nocc_update_proposals)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_gov_nocc",
                 payment_addr=pool_user_lg.payment,
-                action_txid=gov_nocc_action_txid,
-                action_ix=gov_nocc_action_ix,
+                action_txid=gov_nocc_prop_rec.action_txid,
+                action_ix=gov_nocc_prop_rec.action_ix,
                 approve_cc=False,
                 approve_drep=True,
-                approve_spo=None if gov_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+                approve_spo=None
+                if gov_nocc_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+                else True,
             )
 
         # Vote on update proposals from mix of groups that will NOT get approved by DReps
@@ -827,19 +965,23 @@ class TestPParamUpdate:
                 ]
             )
         )
-        mix_nodrep_action_txid, mix_nodrep_action_ix, mix_nodrep_proposal_names = (
-            _create_pparams_action(proposals=mix_nodrep_update_proposals)
+        mix_nodrep_prop_rec = _create_pparams_action(proposals=mix_nodrep_update_proposals)
+        _check_proposed_pparams(
+            update_proposals=mix_nodrep_prop_rec.proposals,
+            protocol_params=mix_nodrep_prop_rec.future_pparams,
         )
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_mix_nodrep",
             payment_addr=pool_user_lg.payment,
-            action_txid=mix_nodrep_action_txid,
-            action_ix=mix_nodrep_action_ix,
+            action_txid=mix_nodrep_prop_rec.action_txid,
+            action_ix=mix_nodrep_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=False,
-            approve_spo=None if mix_nodrep_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+            approve_spo=None
+            if mix_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+            else True,
         )
 
         # Vote on update proposals from mix of groups that will NOT get approved by CC
@@ -854,25 +996,31 @@ class TestPParamUpdate:
                     ]
                 )
             )
-            mix_nocc_action_txid, mix_nocc_action_ix, mix_nocc_proposal_names = (
-                _create_pparams_action(proposals=mix_nocc_update_proposals)
+            mix_nocc_prop_rec = _create_pparams_action(proposals=mix_nocc_update_proposals)
+            _check_proposed_pparams(
+                update_proposals=mix_nocc_prop_rec.proposals,
+                protocol_params=mix_nocc_prop_rec.future_pparams,
             )
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_mix_nocc",
                 payment_addr=pool_user_lg.payment,
-                action_txid=mix_nocc_action_txid,
-                action_ix=mix_nocc_action_ix,
+                action_txid=mix_nocc_prop_rec.action_txid,
+                action_ix=mix_nocc_prop_rec.action_ix,
                 approve_cc=False,
                 approve_drep=True,
-                approve_spo=None if mix_nocc_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+                approve_spo=None
+                if mix_nocc_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+                else True,
             )
 
         # Vote on the "final" action that will be enacted
         reqc.cip037.start(url=helpers.get_vcs_link())
-        fin_action_txid, fin_action_ix, fin_proposal_names = _create_pparams_action(
-            proposals=fin_update_proposals
+        fin_prop_rec = _create_pparams_action(proposals=fin_update_proposals)
+        _check_proposed_pparams(
+            update_proposals=fin_prop_rec.proposals,
+            protocol_params=fin_prop_rec.future_pparams,
         )
 
         # Vote & disapprove the action
@@ -881,8 +1029,8 @@ class TestPParamUpdate:
             governance_data=governance_data,
             name_template=f"{temp_template}_fin_no",
             payment_addr=pool_user_lg.payment,
-            action_txid=fin_action_txid,
-            action_ix=fin_action_ix,
+            action_txid=fin_prop_rec.action_txid,
+            action_ix=fin_prop_rec.action_ix,
             approve_cc=False,
             approve_drep=False,
             approve_spo=False,
@@ -896,8 +1044,8 @@ class TestPParamUpdate:
             governance_data=governance_data,
             name_template=f"{temp_template}_fin_yes",
             payment_addr=pool_user_lg.payment,
-            action_txid=fin_action_txid,
-            action_ix=fin_action_ix,
+            action_txid=fin_prop_rec.action_txid,
+            action_ix=fin_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=True,
             approve_spo=True,
@@ -916,19 +1064,23 @@ class TestPParamUpdate:
                 ]
             )
         )
-        mix_approved_action_txid, mix_approved_action_ix, mix_approved_proposal_names = (
-            _create_pparams_action(proposals=mix_approved_update_proposals)
+        mix_approved_prop_rec = _create_pparams_action(proposals=mix_approved_update_proposals)
+        _check_proposed_pparams(
+            update_proposals=mix_approved_prop_rec.proposals,
+            protocol_params=mix_approved_prop_rec.future_pparams,
         )
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_mix_approved",
             payment_addr=pool_user_lg.payment,
-            action_txid=mix_approved_action_txid,
-            action_ix=mix_approved_action_ix,
+            action_txid=mix_approved_prop_rec.action_txid,
+            action_ix=mix_approved_prop_rec.action_ix,
             approve_cc=True,
             approve_drep=True,
-            approve_spo=None if mix_approved_proposal_names.isdisjoint(SECURITY_PPARAMS) else True,
+            approve_spo=None
+            if mix_approved_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
+            else True,
         )
 
         def _check_state(state: dict):
@@ -950,7 +1102,7 @@ class TestPParamUpdate:
             )
 
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=fin_action_txid
+                gov_state=rat_gov_state, action_txid=fin_prop_rec.action_txid
             )
             assert rat_action, "Action not found in ratified actions"
 
@@ -960,8 +1112,8 @@ class TestPParamUpdate:
                 governance_data=governance_data,
                 name_template=f"{temp_template}_after_ratification",
                 payment_addr=pool_user_lg.payment,
-                action_txid=fin_action_txid,
-                action_ix=fin_action_ix,
+                action_txid=fin_prop_rec.action_txid,
+                action_ix=fin_prop_rec.action_ix,
                 approve_cc=False,
                 approve_drep=False,
             )
@@ -1012,6 +1164,10 @@ class TestPParamUpdate:
         if is_spo_total_below_threshold:
             reqc.cip064_04.success()
 
+        if proposed_pparams_errors:
+            proposed_pparams_errors_str = "\n".join(proposed_pparams_errors)
+            raise AssertionError(proposed_pparams_errors_str)
+
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             conway_common.cast_vote(
@@ -1019,8 +1175,8 @@ class TestPParamUpdate:
                 governance_data=governance_data,
                 name_template=f"{temp_template}_enacted",
                 payment_addr=pool_user_lg.payment,
-                action_txid=fin_action_txid,
-                action_ix=fin_action_ix,
+                action_txid=fin_prop_rec.action_txid,
+                action_ix=fin_prop_rec.action_ix,
                 approve_cc=False,
                 approve_drep=False,
             )
