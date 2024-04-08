@@ -255,7 +255,7 @@ class TestCommittee:
             deposit_amt=deposit_amt,
             anchor_url=anchor_url,
             anchor_data_hash=anchor_data_hash,
-            quorum="2/3",
+            threshold="2/3",
             add_cc_members=cc_members,
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
@@ -292,8 +292,14 @@ class TestCommittee:
         gov_state = cluster.g_conway_governance.query.gov_state()
         prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
         assert prop, "Update committee action not found"
-        assert prop["action"]["tag"] == "UpdateCommittee", "Incorrect action tag"
-        assert prop["action"]["contents"][3] == 2 / 3
+        assert (
+            prop["proposalProcedure"]["govAction"]["tag"]
+            == governance_utils.ActionTags.UPDATE_COMMITTEE.value
+        ), "Incorrect action tag"
+        assert prop["proposalProcedure"]["govAction"]["contents"][3] == {
+            "denominator": 3,
+            "numerator": 2,
+        }
         reqc.cip007.success()
 
     @allure.link(helpers.get_vcs_link())
@@ -348,7 +354,7 @@ class TestCommittee:
         # undelegated stake is treated as Abstain. If undelegated stake was treated as No, it
         # would not be possible to approve any action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["enactState"]["curPParams"]
+        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
         drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["committeeNormal"]
         spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["committeeNormal"]
         is_drep_total_below_threshold = (
@@ -462,7 +468,7 @@ class TestCommittee:
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_url_add,
                 anchor_data_hash=anchor_data_hash_add,
-                quorum=str(cluster.conway_genesis["committee"]["quorum"]),
+                threshold=str(cluster.conway_genesis["committee"]["threshold"]),
                 add_cc_members=[*cc_members, cc_members[0]],  # test adding the same member twice
                 prev_action_txid=prev_action_rec.txid,
                 prev_action_ix=prev_action_rec.ix,
@@ -507,7 +513,7 @@ class TestCommittee:
             )
             assert prop_action_add, "Update committee action not found"
             assert (
-                prop_action_add["action"]["tag"]
+                prop_action_add["proposalProcedure"]["govAction"]["tag"]
                 == governance_utils.ActionTags.UPDATE_COMMITTEE.value
             ), "Incorrect action tag"
 
@@ -530,7 +536,7 @@ class TestCommittee:
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_url_rem,
                 anchor_data_hash=anchor_data_hash_rem,
-                quorum=str(cluster.conway_genesis["committee"]["quorum"]),
+                threshold=str(cluster.conway_genesis["committee"]["threshold"]),
                 rem_cc_members=[cc_members[1]],
                 prev_action_txid=prev_action_txid,
                 prev_action_ix=prev_action_ix,
@@ -575,7 +581,7 @@ class TestCommittee:
             )
             assert prop_action_rem, "Update committee action not found"
             assert (
-                prop_action_rem["action"]["tag"]
+                prop_action_rem["proposalProcedure"]["govAction"]["tag"]
                 == governance_utils.ActionTags.UPDATE_COMMITTEE.value
             ), "Incorrect action tag"
 
@@ -628,12 +634,16 @@ class TestCommittee:
 
         def _check_add_state(gov_state: tp.Dict[str, tp.Any]):
             for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
-                cc_member_val = gov_state["committee"]["members"].get(_cc_member_key)
+                cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
+                    _cc_member_key
+                )
                 assert cc_member_val, "New committee member not found"
                 assert cc_member_val == cc_members[i].epoch
 
         def _check_rem_state(gov_state: tp.Dict[str, tp.Any]):
-            cc_member_val = gov_state["committee"]["members"].get(cc_member2_key)
+            cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
+                cc_member2_key
+            )
             assert not cc_member_val, "Removed committee member still present"
 
         # Authorize hot keys of new potential CC members for the first time, just to check that
@@ -676,7 +686,7 @@ class TestCommittee:
         # Vote & approve the add action
         request.addfinalizer(_resign)
         _url = helpers.get_vcs_link()
-        reqc.cip040.start(url=_url)
+        [r.start(url=_url) for r in (reqc.cip061_01, reqc.cip061_03, reqc.cip040)]
         if is_drep_total_below_threshold:
             reqc.cip064_01.start(url=_url)
         if is_spo_total_below_threshold:
@@ -802,8 +812,8 @@ class TestCommittee:
         )
 
         reqc.cip073_03.start(url=helpers.get_vcs_link())
-        _check_add_state(enact_add_gov_state["enactState"])
-        [r.success() for r in (reqc.cip040, reqc.cip073_03)]
+        _check_add_state(enact_add_gov_state)
+        [r.success() for r in (reqc.cip040, reqc.cip061_01, reqc.cip061_03, reqc.cip073_03)]
         if is_drep_total_below_threshold:
             reqc.cip064_01.success()
         if is_spo_total_below_threshold:
@@ -883,7 +893,7 @@ class TestCommittee:
         conway_common.save_gov_state(
             gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{_cur_epoch}"
         )
-        _check_rem_state(gov_state=enact_rem_gov_state["enactState"])
+        _check_rem_state(gov_state=enact_rem_gov_state)
 
         # Check committee state after enactment of removal action
         enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
@@ -1052,7 +1062,8 @@ class TestCommittee:
             )
             assert prop_action, "Param update action not found"
             assert (
-                prop_action["action"]["tag"] == governance_utils.ActionTags.PARAMETER_CHANGE.value
+                prop_action["proposalProcedure"]["govAction"]["tag"]
+                == governance_utils.ActionTags.PARAMETER_CHANGE.value
             ), "Incorrect action tag"
 
             action_ix = prop_action["actionId"]["govActionIx"]
@@ -1075,7 +1086,7 @@ class TestCommittee:
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_url_rem,
                 anchor_data_hash=anchor_data_hash_rem,
-                quorum="0.0",
+                threshold="0.0",
                 rem_cc_members=governance_data.cc_members,
                 prev_action_txid=prev_action_rec.txid,
                 prev_action_ix=prev_action_rec.ix,
@@ -1124,7 +1135,7 @@ class TestCommittee:
             )
             assert prop_action_rem, "Update committee action not found"
             assert (
-                prop_action_rem["action"]["tag"]
+                prop_action_rem["proposalProcedure"]["govAction"]["tag"]
                 == governance_utils.ActionTags.UPDATE_COMMITTEE.value
             ), "Incorrect action tag"
 
@@ -1180,7 +1191,7 @@ class TestCommittee:
         )
 
         def _check_zero_cc_state(state: dict):
-            pparams = state["curPParams"]
+            pparams = state.get("curPParams") or state.get("currentPParams") or {}
             clusterlib_utils.check_updated_params(
                 update_proposals=zero_cc_update_proposals, protocol_params=pparams
             )
@@ -1208,7 +1219,7 @@ class TestCommittee:
             gov_state=enact_zero_cc_gov_state,
             name_template=f"{temp_template}_enact_zero_cc_{_cur_epoch}",
         )
-        _check_zero_cc_state(enact_zero_cc_gov_state["enactState"])
+        _check_zero_cc_state(enact_zero_cc_gov_state)
 
         # Remove all CC members
 
@@ -1246,9 +1257,9 @@ class TestCommittee:
         conway_common.save_gov_state(
             gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{_cur_epoch}"
         )
-        assert set(enact_rem_gov_state["enactState"]["committee"]["members"].keys()).isdisjoint(
-            removed_members_hashes
-        ), "Removed committee members still present"
+        assert set(
+            conway_common.get_committee_val(data=enact_rem_gov_state)["members"].keys()
+        ).isdisjoint(removed_members_hashes), "Removed committee members still present"
 
         # Check committee state after enactment
         enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
@@ -1320,7 +1331,7 @@ class TestCommittee:
             gov_state=enact_const_gov_state,
             name_template=f"{temp_template}_enact_const_{_cur_epoch}",
         )
-        _check_const_state(enact_const_gov_state["enactState"])
+        _check_const_state(enact_const_gov_state)
 
         reqc.cip008.success()
 

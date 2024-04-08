@@ -63,10 +63,10 @@ class StakeDelegation:
 
 
 class PrevGovActionIds(enum.Enum):
-    COMMITTEE = "EnactedCommittee"
-    CONSTITUTION = "EnactedConstitution"
-    HARDFORK = "EnactedHardFork"
-    PPARAM_UPDATE = "EnactedPParamUpdate"
+    COMMITTEE = "Committee"
+    CONSTITUTION = "Constitution"
+    HARDFORK = "HardFork"
+    PPARAM_UPDATE = "PParamUpdate"
 
 
 class ActionTags(enum.Enum):
@@ -365,7 +365,7 @@ def check_action_view(  # noqa: C901
                 else None,
                 removed_members if removed_members else [],
                 added_members,
-                float(action_data.quorum),
+                float(action_data.threshold),
             ],
             "tag": ActionTags.UPDATE_COMMITTEE.value,
         }

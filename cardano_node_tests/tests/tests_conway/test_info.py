@@ -120,7 +120,8 @@ class TestInfo:
         reqc.cli031.success()
         assert prop_action, "Info action not found"
         assert (
-            prop_action["action"]["tag"] == governance_utils.ActionTags.INFO_ACTION.value
+            prop_action["proposalProcedure"]["govAction"]["tag"]
+            == governance_utils.ActionTags.INFO_ACTION.value
         ), "Incorrect action tag"
 
         # Vote

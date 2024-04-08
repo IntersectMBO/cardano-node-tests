@@ -158,7 +158,7 @@ class TestTreasuryWithdrawals:
             )
             assert prop_action, "Treasury withdrawals action not found"
             assert (
-                prop_action["action"]["tag"]
+                prop_action["proposalProcedure"]["govAction"]["tag"]
                 == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
             ), "Incorrect action tag"
 
@@ -197,7 +197,7 @@ class TestTreasuryWithdrawals:
                     votes_spo.extend(
                         [
                             cluster.g_conway_governance.vote.create_spo(
-                                vote_name=f"{temp_template}_{vote_id}_{vote_id}_pool{i}",
+                                vote_name=f"{temp_template}_{vote_id}_{action_ix}_pool{i}",
                                 action_txid=action_txid,
                                 action_ix=action_ix,
                                 vote=clusterlib.Votes.NO,
@@ -245,7 +245,7 @@ class TestTreasuryWithdrawals:
 
             return conway_common.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
-        # Check that SPOs cannot vote on change of constitution action
+        # Check that SPOs cannot vote on treasury withdrawal action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
         err_str = str(excinfo.value)
@@ -462,7 +462,7 @@ class TestTreasuryWithdrawals:
             )
             assert prop_action, "Treasury withdrawals action not found"
             assert (
-                prop_action["action"]["tag"]
+                prop_action["proposalProcedure"]["govAction"]["tag"]
                 == governance_utils.ActionTags.TREASURY_WITHDRAWALS.value
             ), "Incorrect action tag"
 
