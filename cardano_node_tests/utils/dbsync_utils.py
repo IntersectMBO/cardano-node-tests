@@ -3,6 +3,7 @@
 import functools
 import logging
 import time
+import json
 import typing as tp
 
 from cardano_clusterlib import clusterlib
@@ -727,7 +728,7 @@ def check_pool_off_chain_data(
 def check_pool_off_chain_fetch_error(
     ledger_pool_data: dict, pool_id: str
 ) -> dbsync_queries.PoolOffChainFetchErrorDBRow:
-    """Check expected error on `PoolOffChainFetchError`."""
+    """Check expected error on pool off chain fetch error."""
     db_pool_off_chain_fetch_error = list(dbsync_queries.query_off_chain_pool_fetch_error(pool_id))
     assert (
         db_pool_off_chain_fetch_error
@@ -804,7 +805,7 @@ def check_plutus_costs(
 
 
 def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
-    """Check expected values in the `param_proposal` table in db-sync."""
+    """Check comparison for param proposal between ledger and db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
@@ -846,6 +847,173 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
         raise AssertionError(msg)
 
     return param_proposal_db
+
+
+def map_params_to_db_convention(protocol_params):
+    # Get the prices dictionary
+    prices = protocol_params.get("prices", {})
+
+    # Get prMem numerator and denominator
+    pr_mem = prices.get("prMem")
+    if isinstance(pr_mem, dict):
+        pr_mem_numerator = pr_mem.get("numerator", None)
+        pr_mem_denominator = pr_mem.get("denominator", None)
+    else:
+        pr_mem_numerator = pr_mem
+        pr_mem_denominator = 1  # Default denominator if prMem is not a dictionary
+
+    # Get prSteps numerator and denominator
+    pr_steps = prices.get("prSteps")
+    if isinstance(pr_steps, dict):
+        pr_steps_numerator = pr_steps.get("numerator", None)
+        pr_steps_denominator = pr_steps.get("denominator", None)
+    else:
+        pr_steps_numerator = pr_steps
+        pr_steps_denominator = 1  # Default denominator if prSteps is not a dictionary
+
+    # Calculate the price for prMem and prSteps
+    price_mem = pr_mem_numerator / pr_mem_denominator if pr_mem_numerator is not None else None
+    price_steps = pr_steps_numerator / pr_steps_denominator if pr_steps_numerator is not None else None
+  
+    params_mapping = {
+        # Network proposals group
+        "max_block_size": protocol_params.get("maxBlockBodySize", None),
+        "max_tx_size": protocol_params.get("maxTxSize", None),
+        "max_bh_size": protocol_params.get("maxBlockHeaderSize", None),
+        "max_val_size": protocol_params.get("maxValSize", None),
+        "max_tx_ex_mem": protocol_params.get("maxTxExUnits", {}).get("exUnitsMem", None),
+        "max_tx_ex_steps": protocol_params.get("maxTxExUnits", {}).get("exUnitsSteps", None),
+        "max_block_ex_mem": protocol_params.get("maxBlockExUnits", {}).get("exUnitsMem", None),
+        "max_block_ex_steps": protocol_params.get("maxBlockExUnits", {}).get("exUnitsSteps", None),
+        "max_collateral_inputs": protocol_params.get("maxCollateralInputs", None),
+
+        # Economic proposals group
+        "min_fee_a": protocol_params.get("minFeeA", None),
+        "min_fee_b": protocol_params.get("minFeeB", None),
+        "key_deposit": protocol_params.get("keyDeposit", None),
+        "pool_deposit": protocol_params.get("poolDeposit", None),
+        "monetary_expand_rate": protocol_params.get("rho", None),
+        "treasury_growth_rate": protocol_params.get("tau", None),
+        "min_pool_cost": protocol_params.get("minPoolCost", None),
+        "coins_per_utxo_size": protocol_params.get("coinsPerUTxOByte", None),
+        "price_mem": price_mem,
+        "price_step": price_steps,
+
+        # Technical proposals group
+        "influence": protocol_params.get("a0", None),
+        "max_epoch": protocol_params.get("eMax", None),
+        "optimal_pool_count": protocol_params.get("nOpt", None),
+        "collateral_percent": protocol_params.get("collateralPercentage", None),
+
+        # Governance proposal group
+        # DReps
+        "dvt_committee_no_confidence": protocol_params.get("dRepVotingThresholds", {}).get("committeeNoConfidence", None),
+        "dvt_committee_normal": protocol_params.get("dRepVotingThresholds", {}).get("committeeNormal", None),
+        "dvt_hard_fork_initiation": protocol_params.get("dRepVotingThresholds", {}).get("hardForkInitiation", None),
+        "dvt_motion_no_confidence": protocol_params.get("dRepVotingThresholds", {}).get("motionNoConfidence", None),
+        "dvt_p_p_economic_group": protocol_params.get("dRepVotingThresholds", {}).get("ppEconomicGroup", None),
+        "dvt_p_p_gov_group": protocol_params.get("dRepVotingThresholds", {}).get("ppGovGroup", None),
+        "dvt_p_p_network_group": protocol_params.get("dRepVotingThresholds", {}).get("ppNetworkGroup", None),
+        "dvt_p_p_technical_group": protocol_params.get("dRepVotingThresholds", {}).get("ppTechnicalGroup", None),
+        "dvt_treasury_withdrawal": protocol_params.get("dRepVotingThresholds", {}).get("treasuryWithdrawal", None),
+        "dvt_update_to_constitution": protocol_params.get("dRepVotingThresholds", {}).get("updateToConstitution", None),
+
+        # Pools
+        "pvt_committee_no_confidence": protocol_params.get("poolVotingThresholds", {}).get("committeeNoConfidence", None),
+        "pvt_committee_normal": protocol_params.get("poolVotingThresholds", {}).get("committeeNormal", None),
+        "pvt_hard_fork_initiation": protocol_params.get("poolVotingThresholds", {}).get("hardForkInitiation", None),
+        "pvt_motion_no_confidence": protocol_params.get("poolVotingThresholds", {}).get("motionNoConfidence", None),
+        "pvtpp_security_group": protocol_params.get("poolVotingThresholds", {}).get("ppSecurityGroup", None),
+
+        # General
+        "gov_action_lifetime":  protocol_params.get("govActionLifetime", None),
+        "gov_action_deposit":  protocol_params.get("govActionDeposit", None),
+        "drep_deposit":  protocol_params.get("dRepDeposit", None),
+        "drep_activity":  protocol_params.get("dRepActivity", None),
+        "committee_min_size":  protocol_params.get("committeeMinSize", None),
+        "committee_max_term_length":  protocol_params.get("committeeMaxTermLength", None),
+    }
+
+    return params_mapping
+
+
+def _check_param_proposal(param_proposal_db: dbsync_queries.ParamProposalDBRow, params_map: dict) -> list:
+    """Check parameter proposal against db-sync."""
+    failures = []
+
+    for param_db, protocol_value in params_map.items():
+        if protocol_value:
+            db_value = getattr(param_proposal_db, param_db)
+            if db_value and (db_value != protocol_value):
+                failures.append(f"Param value for {param_db}: {db_value}. Expected: {protocol_value}")
+    if failures:
+        failures_str = "\n".join(failures)
+        msg = f"Unexpected parameter proposal values in db-sync:\n{failures_str}"
+        raise AssertionError(msg)
+    return []
+
+
+def check_conway_param_update_proposal(gov_state: dict, ) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
+    """Check comparison for param proposal between ledger and db-sync."""
+    param_proposal_db = dbsync_queries.query_param_proposal()
+    param_proposal_ledger = gov_state['action']['contents'][1]
+    params_map = map_params_to_db_convention(param_proposal_ledger) 
+    failures = []
+
+    # Get cost model
+    if param_proposal_db.cost_model_id:
+        db_cost_model = dbsync_queries.query_cost_model(param_proposal_db.cost_model_id)
+        pp_cost_model = param_proposal_ledger.get("costmdls", None)
+        if db_cost_model != pp_cost_model:
+            mismatched_keys = set(db_cost_model) ^ set(pp_cost_model) | \
+                              {k for k, v in db_cost_model.items() if v != pp_cost_model.get(k)}
+            mismatched_parts = {k: (db_cost_model.get(k), pp_cost_model.get(k)) for k in mismatched_keys}         
+            failures.append(f"Cost model mismatch for {mismatched_keys}. Diff: {mismatched_parts}")
+    failures.extend(_check_param_proposal(param_proposal_db, params_map))
+
+    if failures:
+        failures_str = "\n".join(failures)
+        msg = f"Unexpected parameter proposal values in db-sync:\n{failures_str}"
+        raise AssertionError(msg)
+    return param_proposal_db
+
+
+def check_conway_param_update_enactment(gov_state: dict, epoch_no: int):
+    """Check params enactment between ledger and epoch param in db-sync."""
+    curr_params_db = dbsync_queries.query_epoch_param(epoch_no)
+    curr_params_ledger = gov_state["enactState"]['curPParams']
+    params_map = map_params_to_db_convention(curr_params_ledger)
+    _check_param_proposal(curr_params_db, params_map)
+
+
+def check_conway_gov_action_proposal_description(
+        update_proposal: dict, 
+        txhash: str = ""
+) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
+    """Check expected values in the param proposal table in db-sync."""
+    db_gov_action = get_gov_action_proposals(txhash=txhash)
+    db_gov_action_description = db_gov_action.description
+    db_gov_params_proposal = db_gov_action_description['contents'][1]
+
+    # Convert dictionaries to JSON strings
+    db_gov_params_proposal_json = json.dumps(db_gov_params_proposal, sort_keys=True)
+    ledger_gov_params_proposal_json = json.dumps(update_proposal, sort_keys=True)
+
+    if db_gov_params_proposal_json != ledger_gov_params_proposal_json:
+        msg = f"JSON comparison {db_gov_params_proposal_json} failed in db-sync:\n Expected {ledger_gov_params_proposal_json}"
+        raise AssertionError(msg)
+    return db_gov_action
+
+
+def get_gov_action_proposals(
+        txhash: str = "", type: str = ""
+) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
+    """Get goverment action proposal from db-sync."""
+    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash, type))
+
+    if txhash:
+        return gov_action_proposals[-1]
+    return gov_action_proposals
 
 
 def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
