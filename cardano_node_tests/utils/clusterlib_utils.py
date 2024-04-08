@@ -29,6 +29,7 @@ class UpdateProposal:
     arg: str
     value: tp.Any
     name: str = ""
+    check_func: tp.Optional[tp.Callable] = None
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -478,22 +479,23 @@ def check_updated_params(update_proposals: tp.List[UpdateProposal], protocol_par
     """Compare update proposals with actual protocol parameters."""
     failures = []
     for u in update_proposals:
-        if not u.name:
-            continue
+        if u.check_func:
+            if not u.check_func(update_proposal=u, protocol_params=protocol_params):
+                failures.append(f"Check function failed for {u.name or u}")
+        elif u.name:
+            # Nested dictionaries - keys are separated with comma (,)
+            names = u.name.split(",")
+            nested = protocol_params
+            for n in names:
+                nested = nested[n.strip()]
+            updated_value = nested
 
-        # Nested dictionaries - keys are separated with comma (,)
-        names = u.name.split(",")
-        nested = protocol_params
-        for n in names:
-            nested = nested[n.strip()]
-        updated_value = nested
-
-        if str(updated_value) != str(u.value):
-            failures.append(f"Param value for {u.name}: {updated_value}.\nExpected: {u.value}")
+            if str(updated_value) != str(u.value):
+                failures.append(f"Param value for {u.name}: {updated_value}.\nExpected: {u.value}")
 
     if failures:
         failures_str = "\n".join(failures)
-        msg = f"Update proposal failed!\n{failures_str}"
+        msg = f"Update proposal check failed!\n{failures_str}"
         raise AssertionError(msg)
 
 
