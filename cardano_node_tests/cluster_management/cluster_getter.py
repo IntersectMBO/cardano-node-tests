@@ -6,6 +6,7 @@ import logging
 import os
 import pathlib as pl
 import random
+import re
 import shutil
 import time
 import typing as tp
@@ -64,6 +65,14 @@ def _get_netstat_out() -> str:
         return helpers.run_command("netstat -plnt").decode()
     except Exception:
         return ""
+
+
+_SANITIZE_RE = re.compile("[^a-zA-Z0-9_]+")
+
+
+def sanitize4path(s: str) -> str:
+    """Sanitize string so it can be used in file name."""
+    return _SANITIZE_RE.sub("_", s).strip()[0:20]
 
 
 @dataclasses.dataclass
@@ -752,6 +761,11 @@ class ClusterGetter:
         # pylint: disable=too-many-statements,too-many-branches
         assert not isinstance(lock_resources, str), "`lock_resources` can't be single string"
         assert not isinstance(use_resources, str), "`use_resources` can't be single string"
+
+        # Sanitize strings so they can be used in file names
+        mark = sanitize4path(mark)
+        lock_resources = [sanitize4path(r) if isinstance(r, str) else r for r in lock_resources]
+        use_resources = [sanitize4path(r) if isinstance(r, str) else r for r in use_resources]
 
         if configuration.DEV_CLUSTER_RUNNING:
             if start_cmd:
