@@ -226,17 +226,24 @@ class TestReadonlyReferenceInputs:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=amount),
         ]
 
-        tx_output_redeem = cluster.g_transaction.send_tx(
-            src_address=payment_addrs[0].address,
-            tx_name=f"{temp_template}_step2",
-            txins=reference_input,
-            txouts=txouts_redeem,
-            readonly_reference_txins=reference_input,
-            tx_files=tx_files_redeem,
-            fee=redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,
-            join_txouts=False,
-            script_txins=plutus_txins,
-        )
+        try:
+            tx_output_redeem = cluster.g_transaction.send_tx(
+                src_address=payment_addrs[0].address,
+                tx_name=f"{temp_template}_step2",
+                txins=reference_input,
+                txouts=txouts_redeem,
+                readonly_reference_txins=reference_input,
+                tx_files=tx_files_redeem,
+                fee=redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,
+                join_txouts=False,
+                script_txins=plutus_txins,
+            )
+        except clusterlib.CLIError as exc:
+            if VERSIONS.transaction_era < VERSIONS.CONWAY:
+                raise
+            if "BabbageNonDisjointRefInputs" not in str(exc):
+                raise
+            return
 
         # check that the reference input was spent
         assert not cluster.g_query.get_utxo(
