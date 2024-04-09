@@ -605,7 +605,10 @@ class TestNegative:
         err_str = str(excinfo.value)
         script2_hash = helpers.decode_bech32(bech32=script_address2)[2:]
 
-        if rf"ScriptHash \"{script2_hash}\") fails" not in err_str:
+        if not (
+            rf"ScriptHash \"{script2_hash}\") fails" in err_str  # node < 8.10.0
+            or f'The script hash is:ScriptHash \\"{script2_hash}\\"' in err_str
+        ):
             # Try matching the error message with base64 encoded binary script instead
             script2_base64 = clusterlib_utils.get_plutus_b64(script_file=plutus_op2.script_file)
             assert rf"script failed:\n\"{script2_base64}\"" in err_str, err_str
