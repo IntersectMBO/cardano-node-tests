@@ -246,9 +246,17 @@ class TestReadonlyReferenceInputs:
             signing_key_files=tx_files_redeem.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
-        cluster.g_transaction.submit_tx(
-            tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
-        )
+        try:
+            cluster.g_transaction.submit_tx(
+                tx_file=tx_signed,
+                txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
+            )
+        except clusterlib.CLIError as exc:
+            if VERSIONS.transaction_era < VERSIONS.CONWAY:
+                raise
+            if "BabbageNonDisjointRefInputs" not in str(exc):
+                raise
+            return
 
         # check that the input used also as reference was spent
         assert not cluster.g_query.get_utxo(
