@@ -952,7 +952,10 @@ class TestNegativeReferenceScripts:
                 script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
-        assert "ReferenceInputsNotSupported" in err_str, err_str
+        assert (
+            "ReferenceInputsNotSupported" in err_str
+            or "InlineDatumsNotSupported" in err_str  # in Conway
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     def test_v1_attached_v2_reference(
@@ -1094,7 +1097,10 @@ class TestNegativeReferenceScripts:
                 script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
-        assert "ReferenceInputsNotSupported" in err_str, err_str
+        assert (
+            "ReferenceInputsNotSupported" in err_str
+            or "InlineDatumsNotSupported" in err_str  # in Conway
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
