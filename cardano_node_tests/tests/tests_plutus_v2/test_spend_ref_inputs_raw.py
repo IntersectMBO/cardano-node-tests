@@ -16,6 +16,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -488,7 +489,7 @@ class TestNegativeReadonlyReferenceInputs:
             clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
         ]
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        try:
             cluster.g_transaction.send_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=f"{temp_template}_step2",
@@ -499,8 +500,11 @@ class TestNegativeReadonlyReferenceInputs:
                 join_txouts=False,
                 script_txins=plutus_txins,
             )
-        err_str = str(excinfo.value)
-        assert "ReferenceInputsNotSupported" in err_str, err_str
+        except clusterlib.CLIError as exc:
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+                raise
+            if "ReferenceInputsNotSupported" not in str(exc):
+                raise
 
     @allure.link(helpers.get_vcs_link())
     def test_reference_input_without_spend_anything(
