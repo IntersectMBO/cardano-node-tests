@@ -1,3 +1,4 @@
+import re
 import typing as tp
 
 from cardano_node_tests.utils import configuration
@@ -22,3 +23,17 @@ class Resources:
     PERF: tp.Final[str] = "performance"
     DREPS: tp.Final[str] = "dreps"
     COMMITTEE: tp.Final[str] = "committee"
+
+
+_SANITIZE_RE = re.compile("[^a-zA-Z0-9_-]+")
+
+
+def sanitize_res_name(s: str) -> str:
+    """Sanitize resource name to expected format."""
+    sanitized = _SANITIZE_RE.sub("_", s).strip()[0:20]
+    return sanitized
+
+
+def get_unsanitized(ls: tp.Iterable[str]) -> tp.List[str]:
+    """Return unsanitized resource names from the list."""
+    return [s for s in ls if s != sanitize_res_name(s)]

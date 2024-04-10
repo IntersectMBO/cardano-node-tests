@@ -6,7 +6,6 @@ import logging
 import os
 import pathlib as pl
 import random
-import re
 import shutil
 import time
 import typing as tp
@@ -65,19 +64,6 @@ def _get_netstat_out() -> str:
         return helpers.run_command("netstat -plnt").decode()
     except Exception:
         return ""
-
-
-_SANITIZE_RE = re.compile("[^a-zA-Z0-9_-]+")
-
-
-def sanitize4path(s: str) -> str:
-    """Sanitize string so it can be used in file name."""
-    return _SANITIZE_RE.sub("_", s).strip()[0:20]
-
-
-def get_unsanitized(ls: tp.Iterable[str]) -> tp.List[str]:
-    """Return unsanitized strings from the list."""
-    return [s for s in ls if s != sanitize4path(s)]
 
 
 @dataclasses.dataclass
@@ -458,7 +444,7 @@ class ClusterGetter:
             paths=cget_status.instance_dir.glob(f"{common.RESOURCE_LOCKED_GLOB}_*")
         )
 
-        # this test wants to lock some resources, check if these are not in use
+        # This test wants to lock some resources, check if these are not in use
         res_lockable = []
         if cget_status.lock_resources:
             resources_used = common._get_resources_from_paths(
@@ -469,13 +455,6 @@ class ClusterGetter:
                 resources=cget_status.lock_resources,
                 unavailable=unlockable_resources,
             )
-            unsanitized_lockable = get_unsanitized(res_lockable)
-            if unsanitized_lockable:
-                msg = (
-                    "Following lockable resources names violates naming '[^a-zA-Z0-9_-]': "
-                    f"{unsanitized_lockable}"
-                )
-                raise RuntimeError(msg)
             if not res_lockable:
                 self.log(
                     f"c{cget_status.instance_num}: want to lock '{cget_status.lock_resources}' and "
@@ -483,20 +462,13 @@ class ClusterGetter:
                 )
                 return False
 
-        # this test wants to use some resources, check if these are not locked
+        # This test wants to use some resources, check if these are not locked
         res_usable = []
         if cget_status.use_resources:
             res_usable = resources_management.get_resources(
                 resources=cget_status.use_resources,
                 unavailable=resources_locked,
             )
-            unsanitized_usable = get_unsanitized(res_usable)
-            if unsanitized_usable:
-                msg = (
-                    "Following usable resources violates naming '[^a-zA-Z0-9_-]': "
-                    f"{unsanitized_usable}"
-                )
-                raise RuntimeError(msg)
             if not res_usable:
                 self.log(
                     f"c{cget_status.instance_num}: want to use '{cget_status.use_resources}' and "
@@ -504,7 +476,17 @@ class ClusterGetter:
                 )
                 return False
 
-        # resources that are locked are also in use
+        # Make sure that all resource names are sanitized, otherwise there will be issues with
+        # matching the unsanitized names to the sanitized ones.
+        unsanitized_res = resources.get_unsanitized([*res_usable, *res_lockable])
+        if unsanitized_res:
+            msg = (
+                "Following resource names violates naming '[a-zA-Z0-9_-]{1,20}': "
+                f"{unsanitized_res}"
+            )
+            raise RuntimeError(msg)
+
+        # Resources that are locked are also in use
         use_minus_lock = list(set(res_usable) - set(res_lockable))
 
         cget_status.final_use_resources = use_minus_lock
@@ -782,7 +764,13 @@ class ClusterGetter:
         assert not isinstance(use_resources, str), "`use_resources` can't be single string"
 
         # Sanitize strings so they can be used in file names
-        mark = sanitize4path(mark)
+        mark = resources.sanitize_res_name(mark)
+        lock_resources = [
+            resources.sanitize_res_name(r) if isinstance(r, str) else r for r in lock_resources
+        ]
+        use_resources = [
+            resources.sanitize_res_name(r) if isinstance(r, str) else r for r in use_resources
+        ]
 
         if configuration.DEV_CLUSTER_RUNNING:
             if start_cmd:
