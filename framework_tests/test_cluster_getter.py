@@ -9,7 +9,7 @@ def test_sanitize4path():
     lock_resources = ["$$res", oneof, "res1"]
     use_resources = ["res2", oneof, "res$&#@"]
     mark = cluster_getter.sanitize4path(
-        "res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@"
+        "res-Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@res@Foo@Bar@"
     )
     lock_resources = [
         cluster_getter.sanitize4path(r) if isinstance(r, str) else r for r in lock_resources
@@ -17,6 +17,11 @@ def test_sanitize4path():
     use_resources = [
         cluster_getter.sanitize4path(r) if isinstance(r, str) else r for r in use_resources
     ]
-    assert mark == "res_Foo_Bar_res_Foo_"
+    assert mark == "res-Foo_Bar_res_Foo_"
     assert lock_resources == ["_res", oneof, "res1"]
     assert use_resources == ["res2", oneof, "res_"]
+
+
+def test_get_unsanitized():
+    unsanitized = cluster_getter.get_unsanitized(["res1", "res2", "res$3", "res#%4"])
+    assert unsanitized == ["res$3", "res#%4"]

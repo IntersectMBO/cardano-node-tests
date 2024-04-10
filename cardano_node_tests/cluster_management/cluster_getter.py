@@ -67,12 +67,17 @@ def _get_netstat_out() -> str:
         return ""
 
 
-_SANITIZE_RE = re.compile("[^a-zA-Z0-9_]+")
+_SANITIZE_RE = re.compile("[^a-zA-Z0-9_-]+")
 
 
 def sanitize4path(s: str) -> str:
     """Sanitize string so it can be used in file name."""
     return _SANITIZE_RE.sub("_", s).strip()[0:20]
+
+
+def get_unsanitized(ls: tp.Iterable[str]) -> tp.List[str]:
+    """Return unsanitized strings from the list."""
+    return [s for s in ls if s != sanitize4path(s)]
 
 
 @dataclasses.dataclass
@@ -464,6 +469,13 @@ class ClusterGetter:
                 resources=cget_status.lock_resources,
                 unavailable=unlockable_resources,
             )
+            unsanitized_lockable = get_unsanitized(res_lockable)
+            if unsanitized_lockable:
+                msg = (
+                    "Following lockable resources names violates naming '[^a-zA-Z0-9_-]': "
+                    f"{unsanitized_lockable}"
+                )
+                raise RuntimeError(msg)
             if not res_lockable:
                 self.log(
                     f"c{cget_status.instance_num}: want to lock '{cget_status.lock_resources}' and "
@@ -478,6 +490,13 @@ class ClusterGetter:
                 resources=cget_status.use_resources,
                 unavailable=resources_locked,
             )
+            unsanitized_usable = get_unsanitized(res_usable)
+            if unsanitized_usable:
+                msg = (
+                    "Following usable resources violates naming '[^a-zA-Z0-9_-]': "
+                    f"{unsanitized_usable}"
+                )
+                raise RuntimeError(msg)
             if not res_usable:
                 self.log(
                     f"c{cget_status.instance_num}: want to use '{cget_status.use_resources}' and "
@@ -764,8 +783,6 @@ class ClusterGetter:
 
         # Sanitize strings so they can be used in file names
         mark = sanitize4path(mark)
-        lock_resources = [sanitize4path(r) if isinstance(r, str) else r for r in lock_resources]
-        use_resources = [sanitize4path(r) if isinstance(r, str) else r for r in use_resources]
 
         if configuration.DEV_CLUSTER_RUNNING:
             if start_cmd:
