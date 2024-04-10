@@ -32,9 +32,11 @@ NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
 POOL_COST="$(jq '.protocolParams.minPoolCost' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
 
-# TODO: see https://github.com/IntersectMBO/cardano-node/issues/4556
-INIT_SUPPLY="$((MAX_SUPPLY / 4))"  # in reality, it will be `INIT_SUPPLY * 1.8`
-DELEG_SUPPLY="$((MAX_SUPPLY / 8))" # in reality, it will be `DELEG_SUPPLY * 1.6`
+# There is some weird calculation going on, and the deleg supply needs to have a minimum value,
+# that is somehow based on non-delegated supply.
+DELEG_MAGIC_VALUE=3340000000000000
+DELEG_SUPPLY="$((POOL_PLEDGE * NUM_POOLS + DELEG_MAGIC_VALUE))"
+NONDELEG_SUPPLY="$(( (MAX_SUPPLY - DELEG_SUPPLY) * 8 / 10))"
 
 if [ -n "${MIXED_P2P:-""}" ]; then
   export ENABLE_P2P=1
@@ -188,7 +190,7 @@ gen_genesis() {
     --testnet-magic "$NETWORK_MAGIC" \
     --gen-pools "$NUM_POOLS" \
     --gen-utxo-keys 1 \
-    --supply "$INIT_SUPPLY" \
+    --supply "$NONDELEG_SUPPLY" \
     --gen-stake-delegs "$NUM_POOLS" \
     --supply-delegated "$DELEG_SUPPLY" \
     --start-time "$START_TIME_SHELLEY"
