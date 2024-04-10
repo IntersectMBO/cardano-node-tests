@@ -107,20 +107,16 @@ class TestCLI:
         tx_body = cluster.g_transaction.view_tx(tx_body_file=self.TX_BODY_FILE)
         tx = cluster.g_transaction.view_tx(tx_file=self.TX_FILE)
 
-        if "return collateral:" in tx_body:
+        if '"redeemers":' not in tx_body:
             pytest.skip("unsupported old output format")
 
-        if 'return collateral":' in tx_body:  # JSON format in node >= 8.6.0
-            with open(self.TX_BODY_OUT_JSON, encoding="utf-8") as infile:
-                tx_body_view_out = infile.read()
-            assert tx_body == tx_body_view_out.strip()
+        with open(self.TX_BODY_OUT_JSON, encoding="utf-8") as infile:
+            tx_body_golden = infile.read()
+        assert tx_body == tx_body_golden.strip()
 
-        if 'return collateral":' in tx:  # JSON format in node >= 8.6.0
-            with open(self.TX_OUT_JSON, encoding="utf-8") as infile:
-                tx_view_out = infile.read()
-            assert tx == tx_view_out.strip()
-        elif "witnesses:" not in tx:
-            assert tx == tx_body
+        with open(self.TX_OUT_JSON, encoding="utf-8") as infile:
+            tx_golden = infile.read()
+        assert tx == tx_golden.strip()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
