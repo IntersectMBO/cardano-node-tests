@@ -28,6 +28,7 @@
             "stake reference": null
         }
     ],
+    "redeemers": [],
     "reference inputs": [],
     "required signers (payment key hashes needed for scripts)": null,
     "return collateral": null,
