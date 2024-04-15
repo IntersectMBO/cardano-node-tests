@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
 from cardano_node_tests.utils import blockers
@@ -179,12 +180,7 @@ class TestCollateralOutput:
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
             if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
-                blockers.GH(
-                    issue=4198,
-                    repo="IntersectMBO/cardano-ledger",
-                    fixed_in="8.10.0",
-                    message="Conway: submit fails with invalid Plutus script",
-                ).finish_test()
+                issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             if "(BadInputsUTxO" not in str_exc:
                 raise
@@ -352,12 +348,7 @@ class TestCollateralOutput:
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
             if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
-                blockers.GH(
-                    issue=4198,
-                    repo="IntersectMBO/cardano-ledger",
-                    fixed_in="8.10.0",
-                    message="Conway: submit fails with invalid Plutus script",
-                ).finish_test()
+                issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             if "(BadInputsUTxO" not in str_exc:
                 raise

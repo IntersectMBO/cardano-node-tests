@@ -5,6 +5,7 @@ import typing as tp
 import pytest
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
@@ -262,12 +263,7 @@ def _build_spend_locked_txin(  # noqa: C901
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
             if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
-                blockers.GH(
-                    issue=4198,
-                    repo="IntersectMBO/cardano-ledger",
-                    fixed_in="8.10.0",
-                    message="Conway: submit fails with invalid Plutus script",
-                ).finish_test()
+                issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             if "(BadInputsUTxO" not in str_exc:
                 raise
