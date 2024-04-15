@@ -618,7 +618,7 @@ fi
 sleep 3
 
 query_spend_success=0
-for _ in {1..20}; do
+for _ in {1..30}; do
   if ! cardano_cli_log query utxo "${TXINS[@]}" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
     query_spend_success=1
     break
