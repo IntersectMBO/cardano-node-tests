@@ -8,6 +8,7 @@ import pytest
 import requests
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 
@@ -194,19 +195,16 @@ def get_xfails(errors: tp.List[str]) -> tp.List[blockers.GH]:
     Either all errors can Xfail, or none of them can. There can be only one outcome of a test,
     so if there are errors that can't be Xfailed, the test must fail.
     """
-    issue_4114 = blockers.GH(issue=4114)
-    issue_4396 = blockers.GH(issue=4396)
-
     xfails = []
 
     for error in errors:
         if not error:
             continue
-        if "issue #4114" in error and issue_4114.is_blocked():
-            xfails.append(issue_4114)
+        if "issue #4114" in error and issues.node_4114.is_blocked():
+            xfails.append(issues.node_4114)
             continue
-        if "issue #4396" in error and issue_4396.is_blocked():
-            xfails.append(issue_4396)
+        if "issue #4396" in error and issues.node_4396.is_blocked():
+            xfails.append(issues.node_4396)
             continue
         # If here, there are other failures than the expected ones
         return []

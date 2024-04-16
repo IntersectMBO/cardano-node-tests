@@ -18,8 +18,8 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -33,23 +33,6 @@ pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
-
-ISSUE_297 = blockers.GH(
-    issue=297,
-    repo="IntersectMBO/cardano-cli",
-    message="Cannot delegate Plutus stake address",
-)
-ISSUE_299 = blockers.GH(
-    issue=299,
-    repo="IntersectMBO/cardano-cli",
-    message="Cannot de-register Plutus stake address",
-)
-ISSUE_650 = blockers.GH(
-    issue=650,
-    repo="IntersectMBO/cardano-cli",
-    message="Plutus cost too low",
-    check_on_devel=False,
-)
 
 
 @pytest.fixture
@@ -801,9 +784,9 @@ class TestDelegateAddr:
                 or "(ExtraRedeemers" in str_exc
                 or "points to a script hash that is not known" in str_exc
             ):
-                ISSUE_297.finish_test()
+                issues.cli_297.finish_test()
             if use_build_cmd and "overspent budget" in str_exc:
-                ISSUE_650.finish_test()
+                issues.cli_650.finish_test()
             raise
 
         assert (
@@ -857,7 +840,7 @@ class TestDelegateAddr:
         except clusterlib.CLIError as exc:
             if "(MissingRedeemers" not in str(exc):
                 raise
-            ISSUE_299.finish_test()
+            issues.cli_299.finish_test()
 
         if reward_error:
             raise AssertionError(reward_error)

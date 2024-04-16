@@ -12,9 +12,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
@@ -937,23 +937,15 @@ class TestCommittee:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.spo[0])
         reqc.cip067.success()
 
-        known_issues = []
         if xfail_ledger_4001_msgs:
-            known_issues.append(
-                blockers.GH(
-                    issue=4001,
-                    repo="IntersectMBO/cardano-ledger",
-                    message="; ".join(xfail_ledger_4001_msgs),
-                    check_on_devel=False,
-                )
-            )
-        if known_issues:
-            blockers.finish_test(issues=known_issues)
+            ledger_4001 = issues.ledger_4001.copy()
+            ledger_4001.message = "; ".join(xfail_ledger_4001_msgs)
+            ledger_4001.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    def test_empty_committee(  # noqa: C901
+    def test_empty_committee(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -1335,15 +1327,7 @@ class TestCommittee:
 
         reqc.cip008.success()
 
-        known_issues = []
         if xfail_ledger_3979_msgs:
-            known_issues.append(
-                blockers.GH(
-                    issue=3979,
-                    repo="IntersectMBO/cardano-ledger",
-                    message="; ".join(xfail_ledger_3979_msgs),
-                    check_on_devel=False,
-                )
-            )
-        if known_issues:
-            blockers.finish_test(issues=known_issues)
+            ledger_3979 = issues.ledger_3979.copy()
+            ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
+            ledger_3979.finish_test()

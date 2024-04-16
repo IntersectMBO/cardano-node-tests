@@ -10,7 +10,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import blockers
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -56,7 +56,7 @@ class TestLedgerState:
         except AssertionError as err:
             if "Invalid numeric literal at line" not in str(err):
                 raise
-            blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
+            issues.node_3859.finish_test()
 
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,

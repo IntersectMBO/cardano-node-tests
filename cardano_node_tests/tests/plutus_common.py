@@ -6,7 +6,7 @@ import typing as tp
 import pytest
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import blockers
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -493,17 +493,9 @@ def create_script_context_w_blockers(
         if "Unwitnessed Tx ConwayEra" in str_err:
             pytest.xfail("create-script-context: unsupported 'Unwitnessed Tx ConwayEra'")
         if "DeserialiseFailure" in str_err:
-            blockers.GH(
-                issue=583, repo="IntersectMBO/plutus-apps", message="DeserialiseFailure"
-            ).finish_test()
+            issues.plutus_apps_583.finish_test()
         if "TextEnvelopeTypeError" in str_err:
-            blockers.GH(
-                issue=1078, repo="IntersectMBO/plutus-apps", message="TextEnvelopeTypeError"
-            ).finish_test()
+            issues.plutus_apps_1078.finish_test()
         if "PlutusScriptV1 custom redeemer not wired up" in str_err:
-            blockers.GH(
-                issue=1107,
-                repo="IntersectMBO/plutus-apps",
-                message="PlutusScriptV1 custom redeemer",
-            ).finish_test()
+            issues.plutus_apps_1107.finish_test()
         raise

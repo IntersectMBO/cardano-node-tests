@@ -19,7 +19,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import blockers
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -353,9 +353,7 @@ class TestPoll:
         assert "Poll answer out of bounds" in err_str or "negative index" in err_str, err_str
 
         if "Prelude.!!" in err_str:
-            blockers.GH(
-                issue=5182, fixed_in="8.7.0", message="'Prelude.!!' in error message"
-            ).finish_test()
+            issues.dbsync_1363.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD

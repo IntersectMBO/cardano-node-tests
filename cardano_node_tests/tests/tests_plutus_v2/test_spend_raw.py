@@ -10,9 +10,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
@@ -254,7 +254,4 @@ class TestLockingV2:
         # see https://github.com/IntersectMBO/cardano-db-sync/issues/1214
         # and https://github.com/IntersectMBO/cardano-node/issues/4433
         if db_cbor_hex != orig_cbor_hex:
-            blockers.GH(
-                issue=4433,
-                message="Datum bytes in db-sync doesn't correspond to the original datum",
-            ).finish_test()
+            issues.node_4433.finish_test()

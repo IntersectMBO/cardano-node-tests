@@ -17,8 +17,8 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -80,9 +80,7 @@ class TestCLI:
             if "cardano-cli: TODO" in str(err) or "Could not JSON decode TextEnvelopeCddl" in str(
                 err
             ):
-                blockers.GH(
-                    issue=4235, fixed_in="8.0.0", message="Not possible to use process substitution"
-                ).finish_test()
+                issues.node_4235.finish_test()
             raise
 
     @allure.link(helpers.get_vcs_link())
@@ -608,7 +606,7 @@ class TestKey:
             )
         except clusterlib.CLIError as err:
             if "key non-extended-key  Error: Invalid key." in str(err):
-                blockers.GH(issue=4914, message="Invalid non-extended-key").finish_test()
+                issues.node_4914.finish_test()
             raise
 
     @allure.link(helpers.get_vcs_link())
@@ -921,8 +919,8 @@ class TestAdvancedQueries:
             else:
                 msg = f"Unknown option: {option}"
                 raise ValueError(msg)
-        except json.decoder.JSONDecodeError as err:
-            blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
+        except json.decoder.JSONDecodeError:
+            issues.node_3859.finish_test()
         except clusterlib.CLIError as err:
             err_str = str(err)
             if "Missing" in err_str or "Invalid option" in err_str:
@@ -1046,9 +1044,9 @@ class TestAdvancedQueries:
             pytest.fail(f"Errors:\n{err_joined}")
         elif total_stake_errors:
             err_joined = "\n".join(total_stake_errors)
-            blockers.GH(
-                issue=4895, message=f"Unexpected values for total stake:\n{err_joined}"
-            ).finish_test()
+            node_4895 = issues.node_4895.copy()
+            node_4895.message = f"Unexpected values for total stake:\n{err_joined}"
+            node_4895.finish_test()
 
     @pytest.fixture
     def pool_ids(self, cluster: clusterlib.ClusterLib) -> tp.List[str]:
@@ -1067,7 +1065,7 @@ class TestAdvancedQueries:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         except AssertionError as err:
             if "Invalid numeric literal at line" in str(err):
-                blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
+                issues.node_3859.finish_test()
             raise
 
         assert "lastEpoch" in ledger_state
@@ -1118,8 +1116,8 @@ class TestAdvancedQueries:
 
         try:
             pool_params = cluster.g_query.get_pool_params(stake_pool_id=pool_ids[0])
-        except json.decoder.JSONDecodeError as err:
-            blockers.GH(issue=3859, message=f"Expected JSON, got CBOR: {err}").finish_test()
+        except json.decoder.JSONDecodeError:
+            issues.node_3859.finish_test()
 
         assert hasattr(pool_params, "retiring")
 
@@ -1227,7 +1225,7 @@ class TestPing:
 
         err_str = cli_out.stderr.rstrip().decode("utf-8")
         if "UnknownVersionInRsp" in err_str:
-            blockers.GH(issue=5324, message="`UnknownVersionInRsp` error").finish_test()
+            issues.node_5324.finish_test()
 
         ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
@@ -1275,26 +1273,17 @@ class TestPing:
         except clusterlib.CLIError as exc:
             if "MuxError MuxBearerClosed" not in str(exc):
                 raise
-            blockers.GH(
-                issue=5245,
-                fixed_in="8.2.0",
-                message="`MuxError MuxBearerClosed` error",
-                check_on_devel=False,
-            ).finish_test()
+            issues.node_5245.finish_test()
         else:
             logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
 
         err_str = cli_out.stderr.rstrip().decode("utf-8")
         if "UnknownVersionInRsp" in err_str:
-            blockers.GH(
-                issue=5324, fixed_in="8.1.1", message="`UnknownVersionInRsp` error"
-            ).finish_test()
+            issues.node_5324.finish_test()
 
         out_str = cli_out.stdout.rstrip().decode("utf-8")
         if not (out_str and out_str[0] == "{"):
-            blockers.GH(
-                issue=49, repo="IntersectMBO/cardano-cli", message="Not sending pings"
-            ).finish_test()
+            issues.cli_49.finish_test()
 
         ping_data = json.loads(out_str)
 

@@ -14,9 +14,9 @@ from cardano_clusterlib import txtools
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -163,11 +163,7 @@ class TestDatum:
         except clusterlib.CLIError as err:
             if "PPViewHashesDontMatch" not in str(err):
                 raise
-            blockers.GH(
-                issue=4058,
-                fixed_in="8.0.0",
-                message="`transaction build` requires protocol params",
-            ).finish_test()
+            issues.node_4058.finish_test()
 
 
 @pytest.mark.testnets

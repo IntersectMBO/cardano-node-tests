@@ -5,8 +5,8 @@ import typing as tp
 import pytest
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -254,12 +254,7 @@ def _spend_locked_txin(  # noqa: C901
         # Check that the collateral UTxO was spent
         spent_collateral_utxo = cluster_obj.g_query.get_utxo(utxo=collateral_utxos)
         if spent_collateral_utxo:
-            blockers.GH(
-                issue=973,
-                repo="IntersectMBO/ouroboros-consensus",
-                fixed_in="8.9.1",
-                message="tx with invalid Plutus script stuck in mempool",
-            ).finish_test()
+            issues.consensus_973.finish_test()
 
         assert (
             cluster_obj.g_query.get_address_balance(dst_addr.address)

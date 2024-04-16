@@ -10,9 +10,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
@@ -339,12 +339,9 @@ class TestTreasuryWithdrawals:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
         if xfail_ledger_3979_msgs:
-            blockers.GH(
-                issue=3979,
-                repo="IntersectMBO/cardano-ledger",
-                message="; ".join(xfail_ledger_3979_msgs),
-                check_on_devel=False,
-            ).finish_test()
+            ledger_3979 = issues.ledger_3979.copy()
+            ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
+            ledger_3979.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -601,12 +598,9 @@ class TestTreasuryWithdrawals:
         if (
             rem_deposit_returned < init_return_account_balance + actions_deposit_combined
         ) and conway_common.possible_rem_issue(gov_state=rem_gov_state, epoch=_cur_epoch):
-            blockers.GH(
-                issue=3979,
-                repo="IntersectMBO/cardano-ledger",
-                message="Only single expired action got removed",
-                check_on_devel=False,
-            ).finish_test()
+            ledger_3979 = issues.ledger_3979.copy()
+            ledger_3979.message = "Only single expired action got removed"
+            ledger_3979.finish_test()
 
         reqc.cip034ex.start(url=helpers.get_vcs_link())
         assert (

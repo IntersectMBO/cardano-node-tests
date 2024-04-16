@@ -9,9 +9,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
@@ -319,12 +319,9 @@ class TestNoConfidence:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
 
         if xfail_ledger_3979_msgs:
-            blockers.GH(
-                issue=3979,
-                repo="IntersectMBO/cardano-ledger",
-                message="; ".join(xfail_ledger_3979_msgs),
-                check_on_devel=False,
-            ).finish_test()
+            ledger_3979 = issues.ledger_3979.copy()
+            ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
+            ledger_3979.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
@@ -411,12 +408,7 @@ class TestNoConfidence:
                 action_ix=const_action_ix,
             )
             if rat_const_action:
-                blockers.GH(
-                    issue=4204,
-                    repo="IntersectMBO/cardano-ledger",
-                    message="Resigned CC members can approve actions",
-                    check_on_devel=False,
-                ).finish_test()
+                issues.ledger_4204.finish_test()
             assert not rat_const_action, "Action found in ratified actions"
 
             # Check that the action expired

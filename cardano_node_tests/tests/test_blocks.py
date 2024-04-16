@@ -20,7 +20,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
-from cardano_node_tests.utils import blockers
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -130,18 +130,12 @@ class TestLeadershipSchedule:
 
         if errors:
             # Xfail if cardano-api GH-269 is still open
-            issue_269 = blockers.GH(
-                issue=269,
-                repo="IntersectMBO/cardano-api",
-                message="Broken `nextEpochEligibleLeadershipSlots`",
-                check_on_devel=False,
-            )
             if (
                 VERSIONS.node > version.parse("8.1.2")
                 and VERSIONS.cluster_era >= VERSIONS.BABBAGE
-                and issue_269.is_blocked()
+                and issues.api_269.is_blocked()
             ):
-                issue_269.finish_test()
+                issues.api_269.finish_test()
 
             err_joined = "\n".join(errors)
             pytest.fail(f"Errors:\n{err_joined}")
@@ -181,9 +175,7 @@ class TestLeadershipSchedule:
         err_str = str(excinfo.value)
 
         if "PastHorizon" in err_str:
-            blockers.GH(
-                issue=4002, message="'PastHorizon' in `query leadership-schedule`"
-            ).finish_test()
+            issues.node_4002.finish_test()
 
         assert "current stake distribution is currently unstable" in err_str, err_str
 
