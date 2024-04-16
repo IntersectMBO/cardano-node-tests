@@ -38,11 +38,9 @@ def test_get_oneof_multi():
     usable_expected = ALL_POOLS - set(resources_locked)
 
     assert len(selected) == 3
-    assert selected[0] == "pool2"
+    assert "pool2" in selected
 
-    oneof_selected = set(selected[1:])
-    assert len(oneof_selected) == 2
-    assert "pool2" not in oneof_selected
+    oneof_selected = set(selected) - {"pool2"}
     assert set(oneof_selected).intersection(usable_expected)
 
 

@@ -1,0 +1,3 @@
+#!/bin/sh
+
+printf "cardano-cli 8.20.3.0 - linux-x86_64 - ghc-8.10\ngit rev 424983fa186786397f5a99539f51710abf62c37b\n"

@@ -162,7 +162,7 @@ def prepend_flag(flag: str, contents: tp.Iterable) -> tp.List[str]:
     Returns:
         List[str]: A list of flag followed by content, see below.
 
-    >>> prepend_flag(None, "--foo", [1, 2, 3])
+    >>> prepend_flag("--foo", [1, 2, 3])
     ['--foo', '1', '--foo', '2', '--foo', '3']
     """
     return list(itertools.chain.from_iterable([flag, str(x)] for x in contents))
