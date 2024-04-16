@@ -1,4 +1,4 @@
-name: repo_lint
+name: repo_tests
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ env:
   PY_COLORS: "1"
 
 jobs:
-  lint:
+  tests:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
@@ -49,5 +49,7 @@ jobs:
           cat ~/.cache/pre-commit/pre-commit.log
         fi
         exit "$retval"
-    - name: Run pre-commit
+    - name: Run pre-commit linters
       run: poetry run pre-commit run -a --show-diff-on-failure --color=always
+    - name: Run framework tests
+      run: poetry run pytest --doctest-modules framework_tests cardano_node_tests/utils/

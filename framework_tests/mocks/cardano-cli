@@ -1,0 +1,3 @@
+#!/bin/sh
+
+printf "cardano-node 1.36.0 - linux-x86_64 - ghc-8.10\ngit rev 420c4eb5d6efa4a6bf5fabc23d66080bdaa30353\n"
