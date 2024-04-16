@@ -212,13 +212,19 @@ class TestCommittee:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
-    def test_update_commitee_action(
+    def test_update_committee_action(
         self,
         cluster: clusterlib.ClusterLib,
         pool_user: clusterlib.PoolUser,
         use_build_cmd: bool,
         submit_method: str,
     ):
+        """Test update committee action.
+
+        * add CC Members
+        * update committee threshold
+        * check that the proposed changes are correct in `query gov-state`
+        """
         temp_template = common.get_test_id(cluster)
         cc_size = 3
 
@@ -300,6 +306,10 @@ class TestCommittee:
             "denominator": 3,
             "numerator": 2,
         }
+        cc_key_hashes = {f"keyHash-{c.key_hash}" for c in cc_auth_records}
+        prop_cc_key_hashes = set(prop["proposalProcedure"]["govAction"]["contents"][2].keys())
+        assert cc_key_hashes == prop_cc_key_hashes, "Incorrect CC key hashes"
+
         reqc.cip007.success()
 
     @allure.link(helpers.get_vcs_link())
