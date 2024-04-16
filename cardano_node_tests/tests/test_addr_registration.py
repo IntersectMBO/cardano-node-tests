@@ -9,7 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import blockers
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -18,13 +18,6 @@ from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-
-ISSUE_API_484 = blockers.GH(
-    issue=484,
-    repo="IntersectMBO/cardano-api",
-    message="repeated certificates stripped from Conway transaction",
-    check_on_devel=False,
-)
 
 
 @pytest.fixture
@@ -361,13 +354,13 @@ class TestRegisterAddr:
             )
         except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
             if "(ValueNotConservedUTxO" in str(exc) and VERSIONS.transaction_era >= VERSIONS.CONWAY:
-                ISSUE_API_484.finish_test()
+                issues.api_484.finish_test()
             raise
 
         # Check that the stake address is registered
         stake_addr_info = cluster.g_query.get_stake_addr_info(user_registered.stake.address)
         if not stake_addr_info and VERSIONS.transaction_era >= VERSIONS.CONWAY:
-            ISSUE_API_484.finish_test()
+            issues.api_484.finish_test()
         assert stake_addr_info, f"Stake address is not registered: {user_registered.stake.address}"
 
         # Check that the balance for source address was correctly updated and that key deposit

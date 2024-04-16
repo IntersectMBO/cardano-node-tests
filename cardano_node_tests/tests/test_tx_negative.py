@@ -20,8 +20,8 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import tx_common
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -374,7 +374,7 @@ class TestNegative:
         assert invalid_before == slot_no, f"SlotNo: {slot_no}, `invalid_before`: {invalid_before}"
 
         if slot_no > 0:
-            blockers.GH(issue=4863, fixed_in="8.0.0", message="UINT64 overflow").finish_test()
+            issues.node_4863.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -425,7 +425,7 @@ class TestNegative:
         assert invalid_before == slot_no, f"SlotNo: {slot_no}, `invalid_before`: {invalid_before}"
 
         if slot_no == before_value - 1:
-            blockers.GH(issue=4863, fixed_in="8.0.0", message="UINT64 overflow").finish_test()
+            issues.node_4863.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -1335,7 +1335,7 @@ class TestNegative:
         err_str = str(excinfo.value)
 
         if "Transaction _ fee not supported in" in err_str:
-            blockers.GH(issue=4591, message="Transaction _ fee not supported").finish_test()
+            issues.node_4591.finish_test()
 
         assert (
             "fee must be specified" in err_str
@@ -1385,9 +1385,7 @@ class TestNegative:
         err_str = str(excinfo.value)
 
         if "Transaction validity upper bound not supported" in err_str:
-            blockers.GH(
-                issue=4591, message="Transaction validity upper bound not supported"
-            ).finish_test()
+            issues.node_4591.finish_test()
 
         assert (
             "TTL must be specified" in err_str

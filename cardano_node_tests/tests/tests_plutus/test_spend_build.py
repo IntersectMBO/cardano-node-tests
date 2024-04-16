@@ -12,9 +12,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -747,12 +747,7 @@ class TestBuildLocking:
         except clusterlib.CLIError as exc:
             if "(ValidationTagMismatch" not in str(exc):
                 raise
-            blockers.GH(
-                issue=947,
-                repo="IntersectMBO/ouroboros-consensus",
-                fixed_in="8.9.0",
-                message="submit fails with invalid Plutus script",
-            ).finish_test()
+            issues.consensus_947.finish_test()
 
         # check expected fees
         expected_fee_fund = 168_845

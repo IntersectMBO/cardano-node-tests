@@ -172,6 +172,16 @@ class GH:
             LOGGER.error(f"FAIL: {log_message}")
             pytest.fail(reason)
 
+    def copy(self) -> "GH":
+        """Return a copy of the object."""
+        return GH(
+            issue=self.issue,
+            repo=self.repo,
+            fixed_in=self.fixed_in,
+            message=self.message,
+            check_on_devel=self.check_on_devel,
+        )
+
     def __repr__(self) -> str:
         return f"<GH: issue='{self.repo}#{self.issue}', fixed_in='{self.fixed_in}'>"
 

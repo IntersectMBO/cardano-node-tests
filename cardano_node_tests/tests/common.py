@@ -7,7 +7,7 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
-from cardano_node_tests.utils import blockers
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import pytest_utils
@@ -305,10 +305,7 @@ def match_blocker(func: tp.Callable) -> tp.Any:
             and "fromConsensusQueryResult: internal query mismatch" in str_exc
             and "--certificate-file" in str_exc
         ):
-            blockers.GH(
-                issue=268, repo="IntersectMBO/cardano-cli", message="internal query mismatch"
-            ).finish_test()
-
+            issues.cli_268.finish_test()
         raise
 
     return ret

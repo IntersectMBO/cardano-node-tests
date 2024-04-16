@@ -13,8 +13,8 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -491,12 +491,7 @@ class TestNegativeDReps:
 
         # Known ledger issue: https://github.com/IntersectMBO/cardano-ledger/issues/3890
         if len(errors_final) == 1 and reg_missing_success:
-            blockers.GH(
-                issue=3890,
-                repo="IntersectMBO/cardano-ledger",
-                message=errors_final[0],
-                check_on_devel=False,
-            ).finish_test()
+            issues.ledger_3890.finish_test()
 
         if errors_final:
             raise AssertionError("\n".join(errors_final))

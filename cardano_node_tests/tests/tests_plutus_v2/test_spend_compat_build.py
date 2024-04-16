@@ -9,9 +9,9 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_build
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -94,9 +94,7 @@ class TestCompatibility:
 
         assert script_utxos and not script_utxos[0].inline_datum, "Inline datum was NOT ignored"
 
-        blockers.GH(
-            issue=4424, message="Inconsistent handling of Babbage-only features"
-        ).finish_test()
+        issues.node_4424.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -143,9 +141,7 @@ class TestCompatibility:
             reference_utxo and not reference_utxo.reference_script
         ), "Reference script was NOT ignored"
 
-        blockers.GH(
-            issue=4424, message="Inconsistent handling of Babbage-only features"
-        ).finish_test()
+        issues.node_4424.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(

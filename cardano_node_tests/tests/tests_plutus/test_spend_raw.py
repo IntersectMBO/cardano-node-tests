@@ -15,9 +15,9 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -744,12 +744,7 @@ class TestLocking:
         except clusterlib.CLIError as exc:
             if "(ValidationTagMismatch" not in str(exc):
                 raise
-            blockers.GH(
-                issue=947,
-                repo="IntersectMBO/ouroboros-consensus",
-                fixed_in="8.9.0",
-                message="submit fails with invalid Plutus script",
-            ).finish_test()
+            issues.consensus_947.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

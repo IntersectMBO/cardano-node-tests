@@ -24,6 +24,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
@@ -1740,12 +1741,7 @@ class TestTransfer:
                     err_str = str(err)
                     if "Minimum required UTxO:" not in err_str:
                         raise
-                    xfail_issues.append(
-                        blockers.GH(
-                            issue=4297,
-                            message="`transaction build` min required UTxO calculation is broken",
-                        )
-                    )
+                    xfail_issues.append(issues.node_4297)
 
                 _min_reported_utxo = re.search("Minimum required UTxO: Lovelace ([0-9]+)", err_str)
                 assert _min_reported_utxo
@@ -1912,12 +1908,7 @@ class TestTransfer:
                     err_str = str(err)
                     if "Minimum required UTxO:" not in err_str:
                         raise
-                    xfail_issues.append(
-                        blockers.GH(
-                            issue=4297,
-                            message="`transaction build` min required UTxO calculation is broken",
-                        )
-                    )
+                    xfail_issues.append(issues.node_4297)
 
                 _min_reported_utxo = re.search("Minimum required UTxO: Lovelace ([0-9]+)", err_str)
                 assert _min_reported_utxo

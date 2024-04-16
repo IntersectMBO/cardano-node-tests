@@ -12,7 +12,6 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_build
-from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -200,12 +199,7 @@ class TestCollateralOutput:
         except clusterlib.CLIError as exc:
             if "(ValidationTagMismatch" not in str(exc):
                 raise
-            blockers.GH(
-                issue=947,
-                repo="IntersectMBO/ouroboros-consensus",
-                fixed_in="8.9.0",
-                message="submit fails with invalid Plutus script",
-            ).finish_test()
+            issues.consensus_947.finish_test()
 
         cluster.wait_for_new_block(new_blocks=2)
         try:
@@ -225,12 +219,7 @@ class TestCollateralOutput:
         # Check that collateral was taken
         spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
         if spent_collateral_utxo:
-            blockers.GH(
-                issue=973,
-                repo="IntersectMBO/ouroboros-consensus",
-                fixed_in="8.9.1",
-                message="tx with invalid Plutus script stuck in mempool",
-            ).finish_test()
+            issues.consensus_973.finish_test()
 
         # Check that input UTxOs were not spent
         assert cluster.g_query.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
@@ -325,12 +314,7 @@ class TestCollateralOutput:
         except clusterlib.CLIError as exc:
             if "(ValidationTagMismatch" not in str(exc):
                 raise
-            blockers.GH(
-                issue=947,
-                repo="IntersectMBO/ouroboros-consensus",
-                fixed_in="8.9.0",
-                message="submit fails with invalid Plutus script",
-            ).finish_test()
+            issues.consensus_947.finish_test()
 
         cluster.wait_for_new_block(new_blocks=2)
         try:
@@ -350,12 +334,7 @@ class TestCollateralOutput:
         # Check that collateral was taken
         spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
         if spent_collateral_utxo:
-            blockers.GH(
-                issue=973,
-                repo="IntersectMBO/ouroboros-consensus",
-                fixed_in="8.9.1",
-                message="tx with invalid Plutus script stuck in mempool",
-            ).finish_test()
+            issues.consensus_973.finish_test()
 
         # Check that input UTxOs were not spent
         assert cluster.g_query.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
