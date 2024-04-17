@@ -83,7 +83,7 @@ def multisig_tx(
             script_txins=script_txins,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
-            witness_count_add=witness_count,
+            witness_count_add=witness_count + 1,
         )
         tx_raw_output = cluster_obj.g_transaction.build_raw_tx(
             src_address=src_address,
