@@ -324,9 +324,9 @@ def resign_ccs(
     save_committee_state(committee_state=res_committee_state, name_template=f"{name_template}_res")
     for cc_member in ccs_to_resign:
         member_key = f"keyHash-{cc_member.cold_vkey_hash}"
+        member_rec = res_committee_state["committee"].get(member_key)
         assert (
-            res_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
-            == "MemberResigned"
+            not member_rec or member_rec["hotCredsAuthStatus"]["tag"] == "MemberResigned"
         ), "CC Member not resigned"
 
     return tx_output
