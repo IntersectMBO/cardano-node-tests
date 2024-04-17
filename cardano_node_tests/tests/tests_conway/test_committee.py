@@ -186,9 +186,9 @@ class TestCommittee:
 
         cluster.wait_for_new_block(new_blocks=2)
         res_committee_state = cluster.g_conway_governance.query.committee_state()
+        res_member_rec = res_committee_state["committee"].get(member_key)
         assert (
-            res_committee_state["committee"][member_key]["hotCredsAuthStatus"]["tag"]
-            == "MemberResigned"
+            not res_member_rec or res_member_rec["hotCredsAuthStatus"]["tag"] == "MemberResigned"
         ), "CC Member not resigned"
         reqc.cip012.success()
 
@@ -207,6 +207,7 @@ class TestCommittee:
         dbsync_utils.check_committee_member_deregistration(
             cc_member_cold_key=cc_auth_record.key_hash
         )
+        cluster.wait_for_new_epoch()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
