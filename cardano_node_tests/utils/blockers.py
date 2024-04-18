@@ -38,26 +38,17 @@ class GH:
         self.repo = repo
         self.fixed_in = fixed_in
         self.message = message
-        self.repo_name = repo.split("/")[-1]
         self.gh_issue = gh_issue.GHIssue(number=self.issue, repo=self.repo)
 
-        self._project = None
+        self.is_blocked: tp.Callable[[], bool]
         if self.repo == "IntersectMBO/cardano-node":
-            self._project = "node"
+            self.is_blocked = self._node_issue_is_blocked
         elif self.repo == "IntersectMBO/cardano-cli":
-            self._project = "cli"
+            self.is_blocked = self._cli_issue_is_blocked
         elif self.repo == "IntersectMBO/cardano-db-sync":
-            self._project = "dbsync"
-
-    def is_blocked(self) -> bool:
-        """Check if issue is blocked."""
-        if self._project == "node":
-            return self._node_issue_is_blocked()
-        if self._project == "cli":
-            return self._cli_issue_is_blocked()
-        if self._project == "dbsync":
-            return self._dbsync_issue_is_blocked()
-        return self._issue_is_blocked()
+            self.is_blocked = self._dbsync_issue_is_blocked
+        else:
+            self.is_blocked = self._issue_is_blocked
 
     def _node_issue_is_blocked(self) -> bool:
         """Check if node issue is blocked."""
