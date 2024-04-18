@@ -65,6 +65,44 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    def test_calculate_min_fee(self, cluster: clusterlib.ClusterLib):
+        """Check the `calculate-min-fee` command."""
+        common.get_test_id(cluster)
+        max_fee = 172_000
+
+        try:
+            out = (
+                cluster.cli(
+                    [
+                        "transaction",
+                        "calculate-min-fee",
+                        "--protocol-params-file",
+                        str(cluster.pparams_file),
+                        "--tx-body-file",
+                        str(self.TX_BODY_FILE),
+                        "--witness-count",
+                        "1",
+                        "--tx-in-count",
+                        "1",
+                        "--tx-out-count",
+                        "1",
+                        *cluster.magic_args,
+                    ]
+                )
+                .stdout.decode("utf-8")
+                .strip()
+            )
+        except clusterlib.CLIError as err:
+            if "Missing: --reference-script-size" in str(err):
+                issues.cli_715.finish_test()
+            raise
+
+        fee, coin = out.split()
+        assert int(fee) <= max_fee, f"Unexpected fee: {fee} > {max_fee}"
+        assert coin == "Lovelace", f"Unexpected coin: {coin} != Lovelace"
+
+    @allure.link(helpers.get_vcs_link())
     def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass Tx file using process substitution."""
         common.get_test_id(cluster)
