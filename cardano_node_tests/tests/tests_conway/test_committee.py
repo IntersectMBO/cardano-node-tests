@@ -6,6 +6,8 @@ import pathlib as pl
 import typing as tp
 
 import allure
+import hypothesis
+import hypothesis.strategies as st
 import pytest
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
@@ -1332,3 +1334,38 @@ class TestCommittee:
             ledger_3979 = issues.ledger_3979.copy()
             ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
             ledger_3979.finish_test()
+
+    @allure.link(helpers.get_vcs_link())
+    @hypothesis.given(threshold=st.floats(min_value=1, exclude_min=True, allow_infinity=False))
+    @common.hypothesis_settings(max_examples=100)
+    def test_update_committee_threshold_out_of_range(
+        self, cluster: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, threshold: float
+    ):
+        """Test update committee threshold with a value out of range [0,1].
+
+        Expect failure.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        anchor_url = "http://www.cc-update.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_conway_governance.action.update_committee(
+                action_name=temp_template,
+                deposit_amt=deposit_amt,
+                anchor_url=anchor_url,
+                anchor_data_hash=anchor_data_hash,
+                threshold=str(threshold),
+                prev_action_txid=prev_action_rec.txid,
+                prev_action_ix=prev_action_rec.ix,
+                deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
+            )
+
+        err_str = str(excinfo.value)
+        assert "Please enter a value in the range [0,1]" in err_str, err_str
