@@ -48,6 +48,8 @@ class GH:
         self._project = None
         if self.repo == "IntersectMBO/cardano-node":
             self._project = "node"
+        elif self.repo == "IntersectMBO/cardano-cli":
+            self._project = "cli"
         elif self.repo == "IntersectMBO/cardano-db-sync":
             self._project = "dbsync"
 
@@ -55,6 +57,8 @@ class GH:
         """Check if issue is blocked."""
         if self._project == "node":
             return self._node_issue_is_blocked()
+        if self._project == "cli":
+            return self._cli_issue_is_blocked()
         if self._project == "dbsync":
             return self._dbsync_issue_is_blocked()
         return self._issue_is_blocked()
@@ -91,6 +95,35 @@ class GH:
         # The issue is blocked if it was fixed in a node version that is greater than
         # the node version we are currently running.
         if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:
+            return True
+
+        return False
+
+    def _cli_issue_is_blocked(self) -> bool:
+        """Check if generic issue is blocked."""
+        # Assume that the issue is blocked if we are not supposed to check the issue on
+        # devel versions of node and we are running a devel version.
+        # This can be useful when the issue was fixed in a released version of cli, but
+        # node master has not integrated the fixed version yet.
+        if VERSIONS.node_is_devel and not self.check_on_devel:
+            return True
+
+        # Assume that the issue is blocked if no Github token was provided and so the check
+        # cannot be performed.
+        if not self.gh_issue.TOKEN:
+            LOGGER.warning(
+                "No GitHub token provided, cannot check if issue '%s' is blocked",
+                f"{self.repo}#{self.issue}",
+            )
+            return True
+
+        # The issue is blocked if it is was not closed yet
+        if not self.gh_issue.is_closed():
+            return True
+
+        # The issue is blocked if the fix was integrated into a node version that is greater than
+        # the node version we are currently running.
+        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.cli:
             return True
 
         return False

@@ -34,6 +34,13 @@ cli_650 = blockers.GH(
     message="Plutus cost too low.",
     check_on_devel=False,
 )
+cli_715 = blockers.GH(
+    issue=715,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.22.0.1",  # Fixed in a release after 8.22.0.0
+    message="Option `--reference-script-size` required.",
+    check_on_devel=False,
+)
 
 consensus_973 = blockers.GH(
     issue=973,
