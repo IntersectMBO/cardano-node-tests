@@ -4,14 +4,13 @@ api_269 = blockers.GH(
     issue=269,
     repo="IntersectMBO/cardano-api",
     message="Broken `nextEpochEligibleLeadershipSlots`.",
-    check_on_devel=False,
 )
 
 api_484 = blockers.GH(
     issue=484,
     repo="IntersectMBO/cardano-api",
+    fixed_in="8.11.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="repeated certificates stripped from Conway transaction.",
-    check_on_devel=False,
 )
 
 cli_49 = blockers.GH(issue=49, repo="IntersectMBO/cardano-cli", message="Not sending pings.")
@@ -31,15 +30,14 @@ cli_299 = blockers.GH(
 cli_650 = blockers.GH(
     issue=650,
     repo="IntersectMBO/cardano-cli",
+    fixed_in="8.22.0.1",  # Unknown yet, will be fixed sometime in the future
     message="Plutus cost too low.",
-    check_on_devel=False,
 )
 cli_715 = blockers.GH(
     issue=715,
     repo="IntersectMBO/cardano-cli",
     fixed_in="8.22.0.1",  # Fixed in a release after 8.22.0.0
     message="Option `--reference-script-size` required.",
-    check_on_devel=False,
 )
 
 consensus_973 = blockers.GH(
@@ -71,19 +69,16 @@ ledger_3890 = blockers.GH(
     issue=3890,
     repo="IntersectMBO/cardano-ledger",
     message="DRepRegistration certificate must require a witness.",
-    check_on_devel=False,
 )
 ledger_3979 = blockers.GH(
     issue=3979,
     repo="IntersectMBO/cardano-ledger",
     message="Only single action got removed.",
-    check_on_devel=False,
 )
 ledger_4001 = blockers.GH(
     issue=4001,
     repo="IntersectMBO/cardano-ledger",
     message="Newly elected CC members are removed.",
-    check_on_devel=False,
 )
 ledger_4198 = blockers.GH(
     issue=4198,
@@ -94,8 +89,8 @@ ledger_4198 = blockers.GH(
 ledger_4204 = blockers.GH(
     issue=4204,
     repo="IntersectMBO/cardano-ledger",
+    fixed_in="8.11.0",
     message="Resigned CC members can approve actions.",
-    check_on_devel=False,
 )
 
 node_3788 = blockers.GH(
@@ -142,7 +137,6 @@ node_5245 = blockers.GH(
     issue=5245,
     fixed_in="8.2.0",
     message="`MuxError MuxBearerClosed` error.",
-    check_on_devel=False,
 )
 node_5324 = blockers.GH(issue=5324, fixed_in="8.1.1", message="`UnknownVersionInRsp` error.")
 

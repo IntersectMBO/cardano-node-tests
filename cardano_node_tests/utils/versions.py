@@ -11,10 +11,6 @@ from cardano_node_tests.utils import helpers
 class Versions:
     """Cluster era, transaction era, node version info."""
 
-    LATEST_NODE_RELEASE_VER: tp.Final[version.Version] = version.parse("8.9.2")
-    LATEST_NODE_RELEASE_REV: tp.Final[str] = "424983fa186786397f5a99539f51710abf62c37b"
-    LATEST_DBSYNC_RELEASE_VER: tp.Final[version.Version] = version.parse("13.2.0.1")
-
     BYRON: tp.Final[int] = 1
     SHELLEY: tp.Final[int] = 2
     ALLEGRA: tp.Final[int] = 3
@@ -54,10 +50,6 @@ class Versions:
         self.ghc = node_version_db["ghc"]
         self.platform = node_version_db["platform"]
         self.git_rev = node_version_db["git_rev"]
-        self.node_is_devel = (
-            self.node >= self.LATEST_NODE_RELEASE_VER
-            and self.git_rev != self.LATEST_NODE_RELEASE_REV
-        )
 
         cli_version_db = self.get_cardano_cli_version()
         self.cli = version.parse(cli_version_db["version"])
@@ -70,7 +62,6 @@ class Versions:
         self.dbsync_ghc = dbsync_version_db.get("ghc")
         self.dbsync_platform = dbsync_version_db.get("platform")
         self.dbsync_git_rev = dbsync_version_db.get("git_rev")
-        self.dbsync_is_devel = self.dbsync > self.LATEST_DBSYNC_RELEASE_VER
 
     def _get_cardano_version(self, version_str: str) -> dict:
         """Return version info for cardano-*."""
