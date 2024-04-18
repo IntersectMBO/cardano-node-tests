@@ -44,12 +44,6 @@ Nightly results
    * default (legacy) network topology
    * skip long-running tests
    * cluster starts directly in Babbage era
-* `nightly-shelley-tx <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-shelley-tx/>`__:  |nightly-shelley-tx-badge|
-   * network in Babbage era
-   * Shelley transaction era
-   * default (legacy) network topology
-   * skip long-running tests
-   * cluster starts directly in Babbage era
 * `nightly-conway-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-cc/>`__:  |nightly-conway-cc-badge|
    * network in Conway era
    * P2P network topology
@@ -97,9 +91,6 @@ Nightly upgrade testing
 
 .. |nightly-alonzo-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-alonzo-tx%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-alonzo-tx/
-
-.. |nightly-shelley-tx-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-shelley-tx%2Fbadge.json
-   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-shelley-tx/
 
 .. |nightly-upgrade-step1-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-upgrade%2Fstep1%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step1/
