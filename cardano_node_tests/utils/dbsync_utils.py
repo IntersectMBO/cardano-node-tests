@@ -39,7 +39,7 @@ def get_address_reward(
             )
         )
 
-    for db_row in dbsync_queries.query_address_instant_reward(
+    for db_row in dbsync_queries.query_address_reward_rest(
         address=address, epoch_from=epoch_from, epoch_to=epoch_to
     ):
         rewards.append(
