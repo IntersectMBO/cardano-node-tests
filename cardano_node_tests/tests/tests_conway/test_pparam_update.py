@@ -1,7 +1,6 @@
 """Tests for Conway governance protocol parameters update."""
 
 # pylint: disable=expression-not-assigned
-import dataclasses
 import fractions
 import logging
 import pathlib as pl
@@ -30,15 +29,6 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
     reason="runs only with Tx era >= Conway",
 )
-
-
-@dataclasses.dataclass(frozen=True)
-class PParamPropRec:
-    proposals: tp.List[clusterlib_utils.UpdateProposal]
-    action_txid: str
-    action_ix: int
-    proposal_names: tp.Set[str]
-    future_pparams: tp.Dict[str, tp.Any]
 
 
 NETWORK_GROUP_PPARAMS = {
@@ -252,7 +242,6 @@ class TestPParamUpdate:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list.json"
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
@@ -637,87 +626,21 @@ class TestPParamUpdate:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
-        _action_url = helpers.get_vcs_link()
-
-        def _create_pparams_action(
+        def _propose_pparams_update(
+            name_template: str,
             proposals: tp.List[clusterlib_utils.UpdateProposal],
-        ) -> PParamPropRec:
+        ) -> conway_common.PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
 
-            update_args = clusterlib_utils.get_pparams_update_args(update_proposals=proposals)
-
-            [
-                r.start(url=_action_url)
-                for r in (reqc.cli017, reqc.cip031a_05, reqc.cip031e, reqc.cip054_01)
-            ]
-            if configuration.HAS_CC:
-                reqc.cip006.start(url=_action_url)
-            pparams_action = cluster.g_conway_governance.action.create_pparams_update(
-                action_name=temp_template,
-                deposit_amt=deposit_amt,
+            return conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=name_template,
                 anchor_url=anchor_url,
                 anchor_data_hash=anchor_data_hash,
-                cli_args=update_args,
-                prev_action_txid=prev_action_rec.txid,
-                prev_action_ix=prev_action_rec.ix,
-                deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
-            )
-            [r.success() for r in (reqc.cip031a_05, reqc.cip031e, reqc.cip054_01)]
-
-            tx_files_action = clusterlib.TxFiles(
-                proposal_files=[pparams_action.action_file],
-                signing_key_files=[pool_user_lg.payment.skey_file],
-            )
-
-            # Make sure we have enough time to submit the proposal in one epoch
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-            )
-
-            tx_output_action = clusterlib_utils.build_and_submit_tx(
-                cluster_obj=cluster,
-                name_template=f"{temp_template}_action",
-                src_address=pool_user_lg.payment.address,
-                use_build_cmd=True,
-                tx_files=tx_files_action,
-            )
-
-            out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
-            assert (
-                clusterlib.filter_utxos(
-                    utxos=out_utxos_action, address=pool_user_lg.payment.address
-                )[0].amount
-                == clusterlib.calculate_utxos_balance(tx_output_action.txins)
-                - tx_output_action.fee
-                - deposit_amt
-            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
-
-            action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-            action_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
-            conway_common.save_gov_state(
-                gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
-            )
-            prop_action = governance_utils.lookup_proposal(
-                gov_state=action_gov_state, action_txid=action_txid
-            )
-            assert prop_action, "Param update action not found"
-            assert (
-                prop_action["proposalProcedure"]["govAction"]["tag"]
-                == governance_utils.ActionTags.PARAMETER_CHANGE.value
-            ), "Incorrect action tag"
-            reqc.cli017.success()
-
-            action_ix = prop_action["actionId"]["govActionIx"]
-            proposal_names = {p.name for p in proposals}
-
-            return PParamPropRec(
+                pool_user=pool_user_lg,
                 proposals=proposals,
-                action_txid=action_txid,
-                action_ix=action_ix,
-                proposal_names=proposal_names,
-                future_pparams=prop_action["proposalProcedure"]["govAction"]["contents"][1],
+                prev_action_rec=prev_action_rec,
             )
 
         proposed_pparams_errors = []
@@ -740,7 +663,15 @@ class TestPParamUpdate:
         ]
 
         # Vote on update proposals from network group that will NOT get approved by DReps
-        net_nodrep_prop_rec = _create_pparams_action(proposals=network_g_proposals)
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cli017, reqc.cip031a_05, reqc.cip031e, reqc.cip054_01)]
+        if configuration.HAS_CC:
+            reqc.cip006.start(url=_url)
+        net_nodrep_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_net_nodrep", proposals=network_g_proposals
+        )
+        [r.success() for r in (reqc.cli017, reqc.cip031a_05, reqc.cip031e, reqc.cip054_01)]
+
         _check_proposed_pparams(
             update_proposals=net_nodrep_prop_rec.proposals,
             protocol_params=net_nodrep_prop_rec.future_pparams,
@@ -763,7 +694,9 @@ class TestPParamUpdate:
         # Vote on update proposals from network group that will NOT get approved by CC
         if configuration.HAS_CC:
             reqc.cip062_02.start(url=helpers.get_vcs_link())
-            net_nocc_prop_rec = _create_pparams_action(proposals=network_g_proposals)
+            net_nocc_prop_rec = _propose_pparams_update(
+                name_template=f"{temp_template}_net_nocc", proposals=network_g_proposals
+            )
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -780,7 +713,9 @@ class TestPParamUpdate:
 
         # Vote on update proposals from economic group that will NOT get approved by DReps
         eco_nodrep_update_proposals = list(helpers.flatten(economic_g_proposals))
-        eco_nodrep_prop_rec = _create_pparams_action(proposals=eco_nodrep_update_proposals)
+        eco_nodrep_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_eco_nodrep", proposals=eco_nodrep_update_proposals
+        )
         _check_proposed_pparams(
             update_proposals=eco_nodrep_prop_rec.proposals,
             protocol_params=eco_nodrep_prop_rec.future_pparams,
@@ -802,7 +737,9 @@ class TestPParamUpdate:
         # Vote on update proposals from economic group that will NOT get approved by CC
         if configuration.HAS_CC:
             eco_nocc_update_proposals = list(helpers.flatten(economic_g_proposals))
-            eco_nocc_prop_rec = _create_pparams_action(proposals=eco_nocc_update_proposals)
+            eco_nocc_prop_rec = _propose_pparams_update(
+                name_template=f"{temp_template}_eco_nocc", proposals=eco_nocc_update_proposals
+            )
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -818,7 +755,9 @@ class TestPParamUpdate:
             )
 
         # Vote on update proposals from technical group that will NOT get approved by DReps
-        tech_nodrep_prop_rec = _create_pparams_action(proposals=technical_g_proposals)
+        tech_nodrep_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_fin_with_spos", proposals=technical_g_proposals
+        )
         _check_proposed_pparams(
             update_proposals=tech_nodrep_prop_rec.proposals,
             protocol_params=tech_nodrep_prop_rec.future_pparams,
@@ -863,7 +802,9 @@ class TestPParamUpdate:
 
         # Vote on update proposals from technical group that will NOT get approved by CC
         if configuration.HAS_CC:
-            tech_nocc_prop_rec = _create_pparams_action(proposals=technical_g_proposals)
+            tech_nocc_prop_rec = _propose_pparams_update(
+                name_template=f"{temp_template}_tech_nocc", proposals=technical_g_proposals
+            )
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -883,7 +824,9 @@ class TestPParamUpdate:
         reqc.cip074.start(url=_url)
         if is_spo_total_below_threshold:
             reqc.cip064_04.start(url=_url)
-        sec_nonespo_prop_rec = _create_pparams_action(proposals=security_proposals)
+        sec_nonespo_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_sec_nonespo", proposals=security_proposals
+        )
         _check_proposed_pparams(
             update_proposals=sec_nonespo_prop_rec.proposals,
             protocol_params=sec_nonespo_prop_rec.future_pparams,
@@ -902,7 +845,9 @@ class TestPParamUpdate:
 
         # Vote on update proposals from security params that will NOT get approved by SPOs
         reqc.cip061_02.start(url=helpers.get_vcs_link())
-        sec_nospo_prop_rec = _create_pparams_action(proposals=security_proposals)
+        sec_nospo_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_sec_nospo", proposals=security_proposals
+        )
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -917,7 +862,9 @@ class TestPParamUpdate:
 
         # Vote on update proposals from governance group that will NOT get approved by DReps
         gov_nodrep_update_proposals = list(helpers.flatten(governance_g_proposals))
-        gov_nodrep_prop_rec = _create_pparams_action(proposals=gov_nodrep_update_proposals)
+        gov_nodrep_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_gov_nodrep", proposals=gov_nodrep_update_proposals
+        )
         _check_proposed_pparams(
             update_proposals=gov_nodrep_prop_rec.proposals,
             protocol_params=gov_nodrep_prop_rec.future_pparams,
@@ -939,7 +886,9 @@ class TestPParamUpdate:
         # Vote on update proposals from governance group that will NOT get approved by CC
         if configuration.HAS_CC:
             gov_nocc_update_proposals = list(helpers.flatten(governance_g_proposals))
-            gov_nocc_prop_rec = _create_pparams_action(proposals=gov_nocc_update_proposals)
+            gov_nocc_prop_rec = _propose_pparams_update(
+                name_template=f"{temp_template}_gov_nocc", proposals=gov_nocc_update_proposals
+            )
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -965,7 +914,9 @@ class TestPParamUpdate:
                 ]
             )
         )
-        mix_nodrep_prop_rec = _create_pparams_action(proposals=mix_nodrep_update_proposals)
+        mix_nodrep_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_mix_nodrep", proposals=mix_nodrep_update_proposals
+        )
         _check_proposed_pparams(
             update_proposals=mix_nodrep_prop_rec.proposals,
             protocol_params=mix_nodrep_prop_rec.future_pparams,
@@ -996,7 +947,9 @@ class TestPParamUpdate:
                     ]
                 )
             )
-            mix_nocc_prop_rec = _create_pparams_action(proposals=mix_nocc_update_proposals)
+            mix_nocc_prop_rec = _propose_pparams_update(
+                name_template=f"{temp_template}_mix_nocc", proposals=mix_nocc_update_proposals
+            )
             _check_proposed_pparams(
                 update_proposals=mix_nocc_prop_rec.proposals,
                 protocol_params=mix_nocc_prop_rec.future_pparams,
@@ -1017,7 +970,9 @@ class TestPParamUpdate:
 
         # Vote on the "final" action that will be enacted
         reqc.cip037.start(url=helpers.get_vcs_link())
-        fin_prop_rec = _create_pparams_action(proposals=fin_update_proposals)
+        fin_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_fin_no", proposals=fin_update_proposals
+        )
         _check_proposed_pparams(
             update_proposals=fin_prop_rec.proposals,
             protocol_params=fin_prop_rec.future_pparams,
@@ -1064,7 +1019,9 @@ class TestPParamUpdate:
                 ]
             )
         )
-        mix_approved_prop_rec = _create_pparams_action(proposals=mix_approved_update_proposals)
+        mix_approved_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_mix_approved", proposals=mix_approved_update_proposals
+        )
         _check_proposed_pparams(
             update_proposals=mix_approved_prop_rec.proposals,
             protocol_params=mix_approved_prop_rec.future_pparams,
