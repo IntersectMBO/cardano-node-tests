@@ -25,6 +25,7 @@ class PoolDataDBRow:
     meta_id: int
     margin: decimal.Decimal
     fixed_cost: int
+    deposit: decimal.Decimal
     registered_tx_id: int
     metadata_url: str
     metadata_hash: memoryview
@@ -240,7 +241,9 @@ class ADAPotsDBRow:
     reserves: decimal.Decimal
     rewards: decimal.Decimal
     utxo: decimal.Decimal
-    deposits: decimal.Decimal
+    deposits_stake: decimal.Decimal
+    deposits_drep: decimal.Decimal
+    deposits_proposal: decimal.Decimal
     fees: decimal.Decimal
     block_id: int
 
@@ -354,6 +357,7 @@ class ParamProposalDBRow:
     gov_action_deposit: int
     drep_deposit: int
     drep_activity: str
+    min_fee_ref_script_cost_per_byte: float
 
 
 @dataclasses.dataclass(frozen=True)
@@ -755,7 +759,8 @@ def query_ada_pots(
     """Query ADA pots record in db-sync."""
     query = (
         "SELECT"
-        " id, slot_no, epoch_no, treasury, reserves, rewards, utxo, deposits, fees, block_id "
+        " id, slot_no, epoch_no, treasury, reserves, rewards, utxo, "
+        " deposits_stake, deposits_drep, deposits_proposal, fees, block_id "
         "FROM ada_pots "
         "WHERE epoch_no BETWEEN %s AND %s "
         "ORDER BY id;"
@@ -785,17 +790,17 @@ def query_address_reward(
             yield RewardDBRow(*result)
 
 
-def query_address_instant_reward(
+def query_address_reward_rest(
     address: str, epoch_from: int = 0, epoch_to: int = 99999999
 ) -> tp.Generator[RewardDBRow, None, None]:
     """Query instant reward records for stake address in db-sync."""
     query = (
         "SELECT"
-        " stake_address.view, instant_reward.type, instant_reward.amount, "
-        " instant_reward.earned_epoch, instant_reward.spendable_epoch "
-        "FROM instant_reward "
-        "INNER JOIN stake_address ON instant_reward.addr_id = stake_address.id "
-        "WHERE (stake_address.view = %s) AND (instant_reward.spendable_epoch BETWEEN %s AND %s) ;"
+        " stake_address.view, reward_rest.type, reward_rest.amount, "
+        " reward_rest.earned_epoch, reward_rest.spendable_epoch "
+        "FROM reward_rest "
+        "INNER JOIN stake_address ON reward_rest.addr_id = stake_address.id "
+        "WHERE (stake_address.view = %s) AND (reward_rest.spendable_epoch BETWEEN %s AND %s) ;"
     )
 
     with execute(query=query, vars=(address, epoch_from, epoch_to)) as cur:
@@ -829,7 +834,8 @@ def query_pool_data(pool_id_bech32: str) -> tp.Generator[PoolDataDBRow, None, No
         " pool_update.cert_index, pool_update.vrf_key_hash, pool_update.pledge,"
         " join_reward_address.hash_raw, join_reward_address.view,"
         " pool_update.active_epoch_no, pool_update.meta_id,"
-        " pool_update.margin, pool_update.fixed_cost, pool_update.registered_tx_id,"
+        " pool_update.margin, pool_update.fixed_cost, pool_update.deposit,"
+        " pool_update.registered_tx_id,"
         " pool_metadata_ref.url AS metadata_url, pool_metadata_ref.hash AS metadata_hash,"
         " pool_owner.addr_id AS owner_stake_address_id,"
         " join_owner_address.hash_raw AS owner,"
@@ -997,7 +1003,7 @@ def query_param_proposal(txhash: str = "") -> ParamProposalDBRow:
         " p.dvt_p_p_network_group, p.dvt_p_p_economic_group, p.dvt_p_p_technical_group,"
         " p.dvt_p_p_gov_group, p.dvt_treasury_withdrawal, p.committee_min_size,"
         " p.committee_max_term_length, p.gov_action_lifetime, p.gov_action_deposit,"
-        " p.drep_deposit, p.drep_activity "
+        " p.drep_deposit, p.drep_activity, p.min_fee_ref_script_cost_per_byte "
         "FROM param_proposal AS p "
         "INNER JOIN tx ON tx.id = p.registered_tx_id "
         f"{hash_query}"

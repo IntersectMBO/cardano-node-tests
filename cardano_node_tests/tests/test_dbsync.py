@@ -66,6 +66,7 @@ class TestDBSync:
         "reserve",
         "reserved_pool_ticker",
         "reward",
+        "reward_rest",
         "schema_version",
         "script",
         "slot_leader",
