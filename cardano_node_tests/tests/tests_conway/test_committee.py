@@ -993,17 +993,10 @@ class TestCommittee:
 
         xfail_ledger_3979_msgs = set()
 
-        def _set_zero_committee_pparam() -> (
-            tp.Tuple[tp.List[clusterlib_utils.UpdateProposal], str, int]
-        ):
+        def _set_zero_committee_pparam() -> conway_common.PParamPropRec:
             """Set the `committeeMinSize` pparam to 0."""
             anchor_url = "http://www.pparam-cc-min-size.com"
             anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-
-            prev_action_rec = governance_utils.get_prev_action(
-                action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
-            )
 
             update_proposals = [
                 clusterlib_utils.UpdateProposal(
@@ -1012,68 +1005,15 @@ class TestCommittee:
                     name="committeeMinSize",
                 )
             ]
-            update_args = clusterlib_utils.get_pparams_update_args(
-                update_proposals=update_proposals
-            )
 
-            pparams_action = cluster.g_conway_governance.action.create_pparams_update(
-                action_name=f"{temp_template}_zero_cc",
-                deposit_amt=deposit_amt,
+            return conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_zero_cc",
                 anchor_url=anchor_url,
                 anchor_data_hash=anchor_data_hash,
-                cli_args=update_args,
-                prev_action_txid=prev_action_rec.txid,
-                prev_action_ix=prev_action_rec.ix,
-                deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+                pool_user=pool_user_lg,
+                proposals=update_proposals,
             )
-
-            tx_files_action = clusterlib.TxFiles(
-                proposal_files=[pparams_action.action_file],
-                signing_key_files=[pool_user_lg.payment.skey_file],
-            )
-
-            # Make sure we have enough time to submit the proposal in one epoch
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-            )
-
-            tx_output_action = clusterlib_utils.build_and_submit_tx(
-                cluster_obj=cluster,
-                name_template=f"{temp_template}_zero_cc_action",
-                src_address=pool_user_lg.payment.address,
-                use_build_cmd=True,
-                tx_files=tx_files_action,
-            )
-
-            out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
-            assert (
-                clusterlib.filter_utxos(
-                    utxos=out_utxos_action, address=pool_user_lg.payment.address
-                )[0].amount
-                == clusterlib.calculate_utxos_balance(tx_output_action.txins)
-                - tx_output_action.fee
-                - deposit_amt
-            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
-
-            action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-            action_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
-            conway_common.save_gov_state(
-                gov_state=action_gov_state,
-                name_template=f"{temp_template}_zero_cc_action_{_cur_epoch}",
-            )
-            prop_action = governance_utils.lookup_proposal(
-                gov_state=action_gov_state, action_txid=action_txid
-            )
-            assert prop_action, "Param update action not found"
-            assert (
-                prop_action["proposalProcedure"]["govAction"]["tag"]
-                == governance_utils.ActionTags.PARAMETER_CHANGE.value
-            ), "Incorrect action tag"
-
-            action_ix = prop_action["actionId"]["govActionIx"]
-
-            return update_proposals, action_txid, action_ix
 
         def _rem_committee() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove all CC members."""
@@ -1181,7 +1121,7 @@ class TestCommittee:
         # Set `committeeMinSize` to 0
 
         # Create an action to set the pparam
-        zero_cc_update_proposals, zero_cc_txid, zero_cc_ix = _set_zero_committee_pparam()
+        zero_cc_proposal = _set_zero_committee_pparam()
 
         # Vote & approve the action
         conway_common.cast_vote(
@@ -1189,8 +1129,8 @@ class TestCommittee:
             governance_data=governance_data,
             name_template=f"{temp_template}_zero_cc_yes",
             payment_addr=pool_user_lg.payment,
-            action_txid=zero_cc_txid,
-            action_ix=zero_cc_ix,
+            action_txid=zero_cc_proposal.action_txid,
+            action_ix=zero_cc_proposal.action_ix,
             approve_cc=True,
             approve_drep=True,
         )
@@ -1198,14 +1138,14 @@ class TestCommittee:
         def _check_zero_cc_state(state: dict):
             pparams = state.get("curPParams") or state.get("currentPParams") or {}
             clusterlib_utils.check_updated_params(
-                update_proposals=zero_cc_update_proposals, protocol_params=pparams
+                update_proposals=zero_cc_proposal.proposals, protocol_params=pparams
             )
 
         # Check ratification
         rat_zero_cc_gov_state = _check_rat_gov_state(
             name_template=f"{temp_template}_rat_zero_cc",
-            action_txid=zero_cc_txid,
-            action_ix=zero_cc_ix,
+            action_txid=zero_cc_proposal.action_txid,
+            action_ix=zero_cc_proposal.action_ix,
         )
         next_rat_zero_cc_state = rat_zero_cc_gov_state["nextRatifyState"]
         _check_zero_cc_state(next_rat_zero_cc_state["nextEnactState"])

@@ -23,6 +23,15 @@ class VotedVotes:
     spo: tp.List[clusterlib.VoteSPO]
 
 
+@dataclasses.dataclass(frozen=True)
+class PParamPropRec:
+    proposals: tp.List[clusterlib_utils.UpdateProposal]
+    action_txid: str
+    action_ix: int
+    proposal_names: tp.Set[str]
+    future_pparams: tp.Dict[str, tp.Any]
+
+
 def get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
     """Get the committee value from the data.
 
@@ -404,3 +413,83 @@ def propose_change_constitution(
     action_ix = prop_action["actionId"]["govActionIx"]
 
     return constitution_action, action_txid, action_ix
+
+
+def propose_pparams_update(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    anchor_url: str,
+    anchor_data_hash: str,
+    pool_user: clusterlib.PoolUser,
+    proposals: tp.List[clusterlib_utils.UpdateProposal],
+    prev_action_rec: tp.Optional[governance_utils.PrevActionRec] = None,
+) -> PParamPropRec:
+    """Propose a pparams update."""
+    deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
+
+    prev_action_rec = prev_action_rec or governance_utils.get_prev_action(
+        action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+        gov_state=cluster_obj.g_conway_governance.query.gov_state(),
+    )
+
+    update_args = clusterlib_utils.get_pparams_update_args(update_proposals=proposals)
+    pparams_action = cluster_obj.g_conway_governance.action.create_pparams_update(
+        action_name=name_template,
+        deposit_amt=deposit_amt,
+        anchor_url=anchor_url,
+        anchor_data_hash=anchor_data_hash,
+        cli_args=update_args,
+        prev_action_txid=prev_action_rec.txid,
+        prev_action_ix=prev_action_rec.ix,
+        deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
+    )
+
+    tx_files_action = clusterlib.TxFiles(
+        proposal_files=[pparams_action.action_file],
+        signing_key_files=[pool_user.payment.skey_file],
+    )
+
+    # Make sure we have enough time to submit the proposal in one epoch
+    clusterlib_utils.wait_for_epoch_interval(
+        cluster_obj=cluster_obj, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+    )
+
+    tx_output_action = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_action",
+        src_address=pool_user.payment.address,
+        use_build_cmd=True,
+        tx_files=tx_files_action,
+    )
+
+    out_utxos_action = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_action)
+    assert (
+        clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[0].amount
+        == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+        - tx_output_action.fee
+        - deposit_amt
+    ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+    action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+    action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    _cur_epoch = cluster_obj.g_query.get_epoch()
+    save_gov_state(gov_state=action_gov_state, name_template=f"{name_template}_action_{_cur_epoch}")
+    prop_action = governance_utils.lookup_proposal(
+        gov_state=action_gov_state, action_txid=action_txid
+    )
+    assert prop_action, "Param update action not found"
+    assert (
+        prop_action["proposalProcedure"]["govAction"]["tag"]
+        == governance_utils.ActionTags.PARAMETER_CHANGE.value
+    ), "Incorrect action tag"
+
+    action_ix = prop_action["actionId"]["govActionIx"]
+    proposal_names = {p.name for p in proposals}
+
+    return PParamPropRec(
+        proposals=proposals,
+        action_txid=action_txid,
+        action_ix=action_ix,
+        proposal_names=proposal_names,
+        future_pparams=prop_action["proposalProcedure"]["govAction"]["contents"][1],
+    )
