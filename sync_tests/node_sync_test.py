@@ -159,7 +159,7 @@ def get_node_config_files(env, node_topology_type):
     download_config_file(env, 'alonzo-genesis.json')
     # Temporary hardcoded sanchonet conway genesis file:
     #download_config_file('sanchonet', 'conway-genesis.json')
-    urllib.request.urlretrieve("https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/ab551d4880ebd32a6ca4e4e75df0a1914c3af572/cardano_node_tests/cluster_scripts/conway/genesis.conway.spec.json", 'conway-genesis.json')
+    urllib.request.urlretrieve("https://book.play.dev.cardano.org/environments/mainnet/conway-genesis.json", 'conway-genesis.json')
 
     if env == 'mainnet' and node_topology_type == 'p2p':
         print('Creating the topology.json file...')
@@ -169,7 +169,7 @@ def get_node_config_files(env, node_topology_type):
         download_config_file(env, 'topology.json')
 
     # Temporary hardcoded sanchonet conway genesis file hash:
-    conway_hash = "88b1773f4262601b8ea7a4918868e00afd4d75576c6eb4a167fbe5fd5c9c4c68"
+    conway_hash = "de609b281cb3d8ae91a9d63a00c87092975612d603aa54c0f1c6a781e33d6e1e"
     #alonzo_hash = "27bd50c2318934f0886ea215dbba9a50368441629ef29a22b1f413ea4e05a954"
 
     with open('config.json', 'r') as f:
