@@ -7,6 +7,7 @@ For settings it uses the same env variables as when running the tests.
 import argparse
 import logging
 import pathlib as pl
+import shutil
 import sys
 
 import cardano_node_tests.utils.types as ttypes
@@ -29,17 +30,21 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "-s",
         "--scripts-dir",
-        required=False,
         type=helpers.check_dir_arg,
         help="Path to directory with scripts templates",
     )
     parser.add_argument(
         "-i",
         "--instance-num",
-        required=False,
         type=int,
         default=0,
         help="Instance number in the sequence of cluster instances (default: 0)",
+    )
+    parser.add_argument(
+        "-c",
+        "--clean",
+        action="store_true",
+        help="Delete the destination directory if it already exists (default: false)",
     )
     return parser.parse_args()
 
@@ -78,9 +83,14 @@ def main() -> int:
     args = get_args()
 
     destdir = pl.Path(args.dest_dir)
+
+    if args.clean:
+        shutil.rmtree(destdir, ignore_errors=True)
+
     if destdir.exists():
         LOGGER.error(f"Destination directory '{destdir}' already exists.")
         return 1
+
     destdir.mkdir(parents=True)
 
     scriptsdir: ttypes.FileType = pl.Path(args.scripts_dir) if args.scripts_dir else ""
