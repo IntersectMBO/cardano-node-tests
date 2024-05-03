@@ -443,6 +443,7 @@ def auth_cc_members(
         == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
     ), f"Incorrect balance for source address `{payment_addr.address}`"
 
+    cluster_obj.wait_for_new_block(new_blocks=2)
     reg_committee_state = cluster_obj.g_conway_governance.query.committee_state()
     member_key = f"keyHash-{cc_members[0].cold_vkey_hash}"
     assert (
