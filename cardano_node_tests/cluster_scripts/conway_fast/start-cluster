@@ -6,6 +6,7 @@
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # DB_BACKEND - 'mem' or 'lmdb', default is 'mem' (or legacy) if unset
 # NO_CC - if set, will not create committee
+# PV10 - if set, will use protocol version 10
 # DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
@@ -28,6 +29,10 @@ NUM_CC=5
 SETTLE_DELAY=20
 POOL_PLEDGE=1000000000000
 BYRON_INIT_SUPPLY=10020000000
+PROTOCOL_VERSION=9
+if [ -n "${PV10:-""}" ]; then
+  PROTOCOL_VERSION=10
+fi
 
 SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
 NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
@@ -217,7 +222,9 @@ mv "$STATE_CLUSTER/create_staked/delegate-keys" "$STATE_CLUSTER/shelley/delegate
 mv "$STATE_CLUSTER/create_staked/genesis-keys" "$STATE_CLUSTER/shelley/genesis-keys"
 jq \
   --argjson max_supply "$MAX_SUPPLY" \
-  '.maxLovelaceSupply = $max_supply' \
+  --argjson prot_ver "$PROTOCOL_VERSION" \
+  '.protocolParams.protocolVersion.major = $prot_ver
+  | .maxLovelaceSupply = $max_supply' \
   "$STATE_CLUSTER/create_staked/genesis.json" > "$STATE_CLUSTER/shelley/genesis.json"
 rm -f "$STATE_CLUSTER/create_staked/genesis.json"
 mv "$STATE_CLUSTER"/create_staked/genesis*.json "$STATE_CLUSTER/shelley/"
@@ -247,10 +254,12 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
     --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
     --arg conway_hash "$CONWAY_GENESIS_HASH" \
+    --argjson prot_ver "$PROTOCOL_VERSION" \
     '.ByronGenesisHash = $byron_hash
     | .ShelleyGenesisHash = $shelley_hash
     | .AlonzoGenesisHash = $alonzo_hash
-    | .ConwayGenesisHash = $conway_hash' \
+    | .ConwayGenesisHash = $conway_hash
+    | ."LastKnownBlockVersion-Major" = $prot_ver' \
     "$conf" > "$STATE_CLUSTER/$fname"
 
   # enable P2P
