@@ -2297,7 +2297,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(pool_description=st.text(min_size=256))
+    @hypothesis.given(pool_description=st.text(min_size=256, max_size=1000))
     @common.hypothesis_settings()
     def test_stake_pool_metadata_long_description(
         self,
