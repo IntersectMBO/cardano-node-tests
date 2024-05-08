@@ -1,7 +1,7 @@
 {
     "chang_us": {
         "CIP020": ["intCIP020-01", "intCIP020-02", "intCIP020-03"],
-        "CIP028": ["CLI018", "CIP031b", "CIP031c", "CIP031d", "CIP031e", "CIP031f", "CLI031"],
+        "CIP028": ["CLI013", "CLI014", "CLI015", "CLI016", "CLI017", "CLI018", "CLI019"],
         "CIP030": ["intCIP030en", "intCIP030ex"],
         "CIP031a": [
             "intCIP031a-01",
@@ -23,6 +23,10 @@
             "intCIP038-05",
             "intCIP038-06",
             "intCIP038-07"
+        ],
+        "CIP043": [
+            "intCIP043-01",
+            "intCIP043-02"
         ],
         "CIP054": [
             "intCIP054-01",
