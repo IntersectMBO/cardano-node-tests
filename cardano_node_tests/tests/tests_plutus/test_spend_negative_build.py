@@ -164,7 +164,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -233,7 +233,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_same_collateral_txin(
         self,
         cluster: clusterlib.ClusterLib,
@@ -373,7 +373,7 @@ class TestNegative:
         assert "The Plutus script evaluation failed" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_two_scripts_spending_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
@@ -403,10 +403,10 @@ class TestNegative:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
         plutus_op2 = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_FAILS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_FAILS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_FAILS_COST,
+            execution_cost=plutus_common.ALWAYS_FAILS[plutus_version].execution_cost,
         )
 
         # Step 1: fund the Plutus scripts

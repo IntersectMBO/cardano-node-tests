@@ -497,11 +497,21 @@ class TestMintingNegative:
         assert "ExUnitsTooBigUTxO" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "plutus_version",
+        (
+            "v1",
+            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+        ),
+        ids=("plutus_v1", "plutus_v3"),
+    )
+    @pytest.mark.testnets
     @pytest.mark.testnets
     def test_time_range_missing_tx_validity(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting a token with a time constraints Plutus script and no TX validity.
 
@@ -557,7 +567,7 @@ class TestMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS_V1,
+                script_file=plutus_common.MINTING_TIME_RANGE[plutus_version].script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
                     plutus_common.MINTING_TIME_RANGE_COST.per_time,

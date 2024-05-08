@@ -32,6 +32,9 @@ GUESSING_GAME_UNTYPED_PLUTUS_V2 = SCRIPTS_V2_DIR / "guess-42-datum-42-txin.plutu
 SECP256K1_LOOP_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "ecdsa-secp256k1-loop.plutus"
 SECP256K1_LOOP_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "schnorr-secp256k1-loop.plutus"
 
+ALWAYS_SUCCEEDS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedSpendScriptV3.plutus"
+ALWAYS_FAILS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysFailsPolicyScriptV3.plutus"
+
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
 MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "minting-context-equivalence-test.plutus"
@@ -47,6 +50,10 @@ MINTING_SECP256K1_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-ecdsa-policy.plu
 MINTING_SECP256K1_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "secp256k1-schnorr-policy.plutus"
 
 MINTING_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedPolicyScriptV3.plutus"
+MINTING_SECP256K1_ECDSA_PLUTUS_V3 = SCRIPTS_V3_DIR / "verifyEcdsaPolicyScriptV3.plutus"
+MINTING_SECP256K1_SCHNORR_PLUTUS_V3 = SCRIPTS_V3_DIR / "verifySchnorrPolicyScriptV3.plutus"
+MINTING_TIME_RANGE_PLUTUS_V3 = SCRIPTS_V3_DIR / "timeRangePolicyScriptV3.plutus"
+MINTING_WITNESS_REDEEMER_PLUTUS_V3 = SCRIPTS_V3_DIR / "witnessRedeemerPolicyScriptV3.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
@@ -100,6 +107,9 @@ SECP256K1_SCHNORR_LOOP_COST = ExecutionCost(
     per_time=430_445_916, per_space=128_584, fixed_cost=38_455
 )
 
+ALWAYS_FAILS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
+ALWAYS_SUCCEEDS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
+
 MINTING_COST = ExecutionCost(per_time=259_868_784, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
     per_time=277_239_670, per_space=1_044_064, fixed_cost=80_232
@@ -150,6 +160,11 @@ ALWAYS_FAILS = {
         script_type=clusterlib.ScriptTypes.PLUTUS_V2,
         execution_cost=ALWAYS_FAILS_V2_COST,
     ),
+    "v3": PlutusScriptData(
+        script_file=ALWAYS_FAILS_PLUTUS_V3,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=ALWAYS_FAILS_V3_COST,
+    ),
 }
 
 ALWAYS_SUCCEEDS = {
@@ -162,6 +177,11 @@ ALWAYS_SUCCEEDS = {
         script_file=ALWAYS_SUCCEEDS_PLUTUS_V2,
         script_type=clusterlib.ScriptTypes.PLUTUS_V2,
         execution_cost=ALWAYS_SUCCEEDS_V2_COST,
+    ),
+    "v3": PlutusScriptData(
+        script_file=ALWAYS_SUCCEEDS_PLUTUS_V3,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=ALWAYS_SUCCEEDS_V3_COST,
     ),
 }
 
@@ -207,6 +227,42 @@ MINTING_PLUTUS = {
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=MINTING_V3_COST,
     ),
+}
+
+MINTING_WITNESS_REDEEMER = {
+    "v1": PlutusScriptData(
+        script_file=MINTING_WITNESS_REDEEMER_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=MINTING_WITNESS_REDEEMER_COST,
+    ),
+    "v3": PlutusScriptData(
+        script_file=MINTING_WITNESS_REDEEMER_PLUTUS_V3,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=MINTING_WITNESS_REDEEMER_COST,
+    ),
+}
+
+MINTING_TIME_RANGE = {
+    "v1": PlutusScriptData(
+        script_file=MINTING_TIME_RANGE_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=MINTING_TIME_RANGE_COST,
+    ),
+    "v3": PlutusScriptData(
+        script_file=MINTING_TIME_RANGE_PLUTUS_V3,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=MINTING_TIME_RANGE_COST,
+    ),
+}
+
+MINTING_SECP256K1_ECDSA = {
+    "v2": MINTING_SECP256K1_ECDSA_PLUTUS_V2,
+    "v3": MINTING_SECP256K1_ECDSA_PLUTUS_V3,
+}
+
+MINTING_SECP256K1_SCHNORR = {
+    "v2": MINTING_SECP256K1_SCHNORR_PLUTUS_V2,
+    "v3": MINTING_SECP256K1_SCHNORR_PLUTUS_V3,
 }
 
 
