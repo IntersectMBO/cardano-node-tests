@@ -17,6 +17,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -215,6 +216,7 @@ class TestPParamUpdate:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
+    @pytest.mark.dbsync
     def test_pparam_update(  # noqa: C901
         self,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -242,6 +244,7 @@ class TestPParamUpdate:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list.json"
+        db_errors_final = []
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
@@ -691,6 +694,16 @@ class TestPParamUpdate:
             else True,
         )
 
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                net_nodrep_prop_rec.future_pparams, net_nodrep_prop_rec.action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(net_nodrep_prop_rec.future_pparams)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync network params update error: {str_exc}")
+
         # Vote on update proposals from network group that will NOT get approved by CC
         if configuration.HAS_CC:
             reqc.cip062_02.start(url=helpers.get_vcs_link())
@@ -733,6 +746,16 @@ class TestPParamUpdate:
             if eco_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
             else True,
         )
+
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                eco_nodrep_prop_rec.future_pparams, eco_nodrep_prop_rec.action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(eco_nodrep_prop_rec.future_pparams)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync economic params update error: {str_exc}")
 
         # Vote on update proposals from economic group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -799,6 +822,16 @@ class TestPParamUpdate:
             approve_cc=True,
             approve_drep=None,
         )
+
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                tech_nodrep_prop_rec.future_pparams, tech_nodrep_prop_rec.action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(tech_nodrep_prop_rec.future_pparams)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync technical params update error: {str_exc}")
 
         # Vote on update proposals from technical group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -883,6 +916,16 @@ class TestPParamUpdate:
             else True,
         )
 
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                gov_nodrep_prop_rec.future_pparams, gov_nodrep_prop_rec.action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(gov_nodrep_prop_rec.future_pparams)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync governance params update error: {str_exc}")
+
         # Vote on update proposals from governance group that will NOT get approved by CC
         if configuration.HAS_CC:
             gov_nocc_update_proposals = list(helpers.flatten(governance_g_proposals))
@@ -934,6 +977,16 @@ class TestPParamUpdate:
             if mix_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
             else True,
         )
+
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                mix_nodrep_prop_rec.future_pparams, mix_nodrep_prop_rec.action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(mix_nodrep_prop_rec.future_pparams)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync mixed group params update error: {str_exc}")
 
         # Vote on update proposals from mix of groups that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -1006,6 +1059,17 @@ class TestPParamUpdate:
             approve_spo=True,
         )
         fin_approve_epoch = cluster.g_query.get_epoch()
+
+        # db-sync check
+        [r.start(url=_url) for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
+        try:
+            dbsync_utils.check_conway_gov_action_proposal_description(
+                fin_prop_rec.future_pparams, fin_prop_rec.action_txid
+            )
+            dbsync_utils.check_conway_param_update_proposal(fin_prop_rec.future_pparams)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync 'final' params update error: {str_exc}")
 
         # Vote on another update proposals from mix of groups. The proposal will get approved,
         # but not enacted, because it comes after the "final" action that was accepted to the chain
@@ -1121,6 +1185,13 @@ class TestPParamUpdate:
         if is_spo_total_below_threshold:
             reqc.cip064_04.success()
 
+        # db-sync check
+        try:
+            dbsync_utils.check_conway_param_update_enactment(enact_gov_state, _cur_epoch)
+        except AssertionError as exc:
+            str_exc = str(exc)
+            db_errors_final.append(f"db-sync params enactment error: {str_exc}")
+
         if proposed_pparams_errors:
             proposed_pparams_errors_str = "\n".join(proposed_pparams_errors)
             raise AssertionError(proposed_pparams_errors_str)
@@ -1144,6 +1215,10 @@ class TestPParamUpdate:
         if fin_voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
+
+        if db_errors_final:
+            raise AssertionError("\n".join(db_errors_final))
+        [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
 
 
 class TestPParamData:

@@ -325,7 +325,7 @@ class ParamProposalDBRow:
     protocol_minor: int
     min_utxo_value: int
     min_pool_cost: int
-    coins_per_utxo_word: int
+    coins_per_utxo_size: int
     cost_model_id: int
     price_mem: float
     price_step: float
@@ -357,6 +357,7 @@ class ParamProposalDBRow:
     gov_action_deposit: int
     drep_deposit: int
     drep_activity: str
+    pvtpp_security_group: float
     min_fee_ref_script_cost_per_byte: float
 
 
@@ -369,6 +370,66 @@ class EpochDBRow:
     tx_count: int
     blk_count: int
     epoch_number: int
+
+
+@dataclasses.dataclass(frozen=True)
+class EpochParamDBRow:
+    # pylint: disable=too-many-instance-attributes disable-next=invalid-name
+    id: int
+    epoch_no: int
+    min_fee_a: int
+    min_fee_b: int
+    max_block_size: int
+    max_tx_size: int
+    max_bh_size: int
+    key_deposit: int
+    pool_deposit: int
+    max_epoch: int
+    optimal_pool_count: int
+    influence: float
+    monetary_expand_rate: float
+    treasury_growth_rate: float
+    decentralisation: float
+    protocol_major: int
+    protocol_minor: int
+    min_utxo_value: int
+    min_pool_cost: int
+    nonce: memoryview
+    cost_model_id: int
+    price_mem: float
+    price_step: float
+    max_tx_ex_mem: int
+    max_tx_ex_steps: int
+    max_block_ex_mem: int
+    max_block_ex_steps: int
+    max_val_size: int
+    collateral_percent: int
+    max_collateral_inputs: int
+    block_id: int
+    extra_entropy: memoryview
+    coins_per_utxo_size: int
+    pvt_motion_no_confidence: float
+    pvt_committee_normal: float
+    pvt_committee_no_confidence: float
+    pvt_hard_fork_initiation: float
+    dvt_motion_no_confidence: float
+    dvt_committee_normal: float
+    dvt_committee_no_confidence: float
+    dvt_update_to_constitution: float
+    dvt_hard_fork_initiation: float
+    dvt_p_p_network_group: float
+    dvt_p_p_economic_group: float
+    dvt_p_p_technical_group: float
+    dvt_p_p_gov_group: float
+    dvt_treasury_withdrawal: float
+    committee_min_size: int
+    committee_max_term_length: int
+    gov_action_lifetime: int
+    gov_action_deposit: int
+    drep_deposit: int
+    drep_activity: int
+    pvtpp_security_group: float
+    min_fee_ref_script_cost_per_byte: float
 
 
 @dataclasses.dataclass(frozen=True)
@@ -416,7 +477,7 @@ class GovActionProposalDBRow:
     expiration: int
     voting_anchor_id: int
     type: str
-    description: str
+    description: dict
     param_proposal: int
     ratified_epoch: int
     enacted_epoch: int
@@ -914,6 +975,34 @@ def query_epoch_stake(
             yield EpochStakeDBRow(*result)
 
 
+def query_epoch_param(epoch_no: int = 0) -> EpochParamDBRow:
+    """Query epoch param record in db-sync."""
+    query_var = epoch_no
+
+    query = (
+        "SELECT "
+        " id, epoch_no, min_fee_a, min_fee_b, max_block_size, max_tx_size, max_bh_size, "
+        " key_deposit, pool_deposit, max_epoch, optimal_pool_count, influence, "
+        " monetary_expand_rate, treasury_growth_rate, decentralisation, protocol_major, "
+        " protocol_minor, min_utxo_value, min_pool_cost, nonce, cost_model_id, price_mem, "
+        " price_step, max_tx_ex_mem, max_tx_ex_steps, max_block_ex_mem, max_block_ex_steps, "
+        " max_val_size, collateral_percent, max_collateral_inputs, block_id, extra_entropy, "
+        " coins_per_utxo_size, pvt_motion_no_confidence, pvt_committee_normal, "
+        " pvt_committee_no_confidence, pvt_hard_fork_initiation, dvt_motion_no_confidence, "
+        " dvt_committee_normal, dvt_committee_no_confidence, dvt_update_to_constitution, "
+        " dvt_hard_fork_initiation, dvt_p_p_network_group, dvt_p_p_economic_group, "
+        " dvt_p_p_technical_group, dvt_p_p_gov_group, dvt_treasury_withdrawal, committee_min_size, "
+        " committee_max_term_length, gov_action_lifetime, gov_action_deposit, drep_deposit, "
+        " drep_activity, pvtpp_security_group, min_fee_ref_script_cost_per_byte "
+        " FROM epoch_param "
+        " WHERE epoch_no =  %s "
+    )
+
+    with execute(query=query, vars=(query_var,)) as cur:
+        results = cur.fetchone()
+        return EpochParamDBRow(*results)
+
+
 def query_blocks(
     pool_id_bech32: str = "", epoch_from: int = 0, epoch_to: int = 99999999
 ) -> tp.Generator[BlockDBRow, None, None]:
@@ -966,11 +1055,21 @@ def query_datum(datum_hash: str) -> tp.Generator[DatumDBRow, None, None]:
             yield DatumDBRow(*result)
 
 
-def query_cost_model() -> tp.Dict[str, tp.Dict[str, tp.Any]]:
-    """Query last cost-model record in db-sync."""
+def query_cost_model(model_id: int = -1) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+    """Query last cost model record (if id not specified) in db-sync."""
     query = "SELECT * FROM cost_model ORDER BY ID DESC LIMIT 1"
+    query_var: tp.Union[int, str]
 
-    with execute(query=query) as cur:
+    if model_id != -1:
+        id_query = "WHERE id = %s "
+        query_var = model_id
+    else:
+        id_query = ""
+        query_var = ""
+
+    query = f"SELECT * FROM cost_model {id_query} ORDER BY ID DESC LIMIT 1"
+
+    with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()
         cost_model: tp.Dict[str, tp.Dict[str, tp.Any]] = results[1] if results else {}
         return cost_model
@@ -1003,7 +1102,8 @@ def query_param_proposal(txhash: str = "") -> ParamProposalDBRow:
         " p.dvt_p_p_network_group, p.dvt_p_p_economic_group, p.dvt_p_p_technical_group,"
         " p.dvt_p_p_gov_group, p.dvt_treasury_withdrawal, p.committee_min_size,"
         " p.committee_max_term_length, p.gov_action_lifetime, p.gov_action_deposit,"
-        " p.drep_deposit, p.drep_activity, p.min_fee_ref_script_cost_per_byte "
+        " p.drep_deposit, p.drep_activity, p.pvtpp_security_group,"
+        " p.min_fee_ref_script_cost_per_byte "
         "FROM param_proposal AS p "
         "INNER JOIN tx ON tx.id = p.registered_tx_id "
         f"{hash_query}"
