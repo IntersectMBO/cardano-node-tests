@@ -10,7 +10,7 @@ api_484 = blockers.GH(
     issue=484,
     repo="IntersectMBO/cardano-api",
     fixed_in="8.11.0",  # Unknown yet, will be fixed/changed sometime in the future
-    message="repeated certificates stripped from Conway transaction.",
+    message="Repeated certificates stripped from Conway transaction.",
 )
 
 cli_49 = blockers.GH(issue=49, repo="IntersectMBO/cardano-cli", message="Not sending pings.")
