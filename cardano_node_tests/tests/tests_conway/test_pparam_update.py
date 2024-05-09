@@ -114,8 +114,10 @@ def pool_user_lg(
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
     key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
         cluster_manager=cluster_manager,
+        name_template=name_template,
         cluster_obj=cluster,
         caching_key=key,
         fund_amount=2000_000_000,

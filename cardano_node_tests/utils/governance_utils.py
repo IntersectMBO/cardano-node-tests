@@ -29,6 +29,8 @@ VotesAllT = tp.Union[  # pylint: disable=invalid-name
     clusterlib.VoteSPO,
 ]
 
+DRepStateT = tp.List[tp.List[tp.Dict[str, tp.Any]]]
+
 
 @dataclasses.dataclass(frozen=True, order=True)
 class DRepRegistration:
@@ -527,3 +529,15 @@ def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
     return StakeDelegation(
         spo=total_spo_stake, drep=total_drep_stake, total_lovelace=total_lovelace
     )
+
+
+def is_drep_active(
+    cluster_obj: clusterlib.ClusterLib,
+    drep_state: DRepStateT,
+    epoch: int = -1,
+) -> bool:
+    """Check if DRep is active."""
+    if epoch == -1:
+        epoch = cluster_obj.g_query.get_epoch()
+
+    return bool(drep_state[0][1].get("expiry", 0) >= epoch)
