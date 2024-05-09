@@ -102,24 +102,39 @@ def save_committee_state(committee_state: tp.Dict[str, tp.Any], name_template: s
         json.dump(committee_state, out_fp, indent=2)
 
 
-def get_pool_user(
+def save_drep_state(drep_state: governance_utils.DRepStateT, name_template: str) -> None:
+    """Save DRep state to a file."""
+    with open(f"{name_template}_drep_state.json", "w", encoding="utf-8") as out_fp:
+        json.dump(drep_state, out_fp, indent=2)
+
+
+# TODO: move this and reuse in other tests that need a registered stake address.
+def get_registered_pool_user(
     cluster_manager: cluster_management.ClusterManager,
+    name_template: str,
     cluster_obj: clusterlib.ClusterLib,
-    caching_key: str,
+    caching_key: str = "",
     fund_amount: int = 1000_000_000,
 ) -> clusterlib.PoolUser:
-    """Create a pool user."""
-    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
+    """Create a registered pool user."""
 
-        test_id = common.get_test_id(cluster_obj)
+    def _create_user() -> clusterlib.PoolUser:
         pool_user = clusterlib_utils.create_pool_users(
             cluster_obj=cluster_obj,
-            name_template=f"{test_id}_pool_user",
+            name_template=f"{name_template}_pool_user",
             no_of_addr=1,
         )[0]
-        fixture_cache.value = pool_user
+        return pool_user
+
+    if caching_key:
+        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            pool_user = _create_user()
+            fixture_cache.value = pool_user
+    else:
+        pool_user = _create_user()
 
     # Fund the payment address with some ADA
     clusterlib_utils.fund_from_faucet(
@@ -132,7 +147,7 @@ def get_pool_user(
     # Register the stake address
     stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
     stake_addr_reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-        addr_name=f"{test_id}_pool_user",
+        addr_name=f"{name_template}_pool_user",
         deposit_amt=stake_deposit_amt,
         stake_vkey_file=pool_user.stake.vkey_file,
     )
@@ -143,7 +158,7 @@ def get_pool_user(
 
     clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster_obj,
-        name_template=f"{test_id}_pool_user",
+        name_template=f"{name_template}_pool_user",
         src_address=pool_user.payment.address,
         use_build_cmd=True,
         tx_files=tx_files_action,

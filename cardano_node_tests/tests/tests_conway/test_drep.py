@@ -1,8 +1,9 @@
 """Tests for Conway governance DRep functionality."""
 
-# pylint: disable=expression-not-assigned
+import dataclasses
 import logging
 import pathlib as pl
+import pickle
 import typing as tp
 
 import allure
@@ -15,9 +16,12 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
+from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
@@ -29,6 +33,13 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
     reason="runs only with Tx era >= Conway",
 )
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class DRepStateRecord:
+    epoch_no: int
+    id: str
+    drep_state: governance_utils.DRepStateT
 
 
 def get_payment_addr(
@@ -86,6 +97,35 @@ def get_pool_user(
     return pool_user
 
 
+def create_drep(
+    name_template: str,
+    cluster_obj: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
+) -> governance_utils.DRepRegistration:
+    """Create a DRep."""
+    reg_drep = governance_utils.get_drep_reg_record(
+        cluster_obj=cluster_obj,
+        name_template=name_template,
+    )
+
+    tx_files_reg = clusterlib.TxFiles(
+        certificate_files=[reg_drep.registration_cert],
+        signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+    )
+
+    clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_drep_reg",
+        src_address=payment_addr.address,
+        submit_method=submit_utils.SubmitMethods.CLI,
+        use_build_cmd=True,
+        tx_files=tx_files_reg,
+        deposit=reg_drep.deposit,
+    )
+
+    return reg_drep
+
+
 def get_custom_drep(
     name_template: str,
     cluster_manager: cluster_management.ClusterManager,
@@ -93,7 +133,7 @@ def get_custom_drep(
     payment_addr: clusterlib.AddressRecord,
     caching_key: str,
 ) -> governance_utils.DRepRegistration:
-    """Create a custom DRep."""
+    """Create a custom DRep and cache it."""
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
         pytest.skip("runs only on local cluster")
 
@@ -101,24 +141,10 @@ def get_custom_drep(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-        reg_drep = governance_utils.get_drep_reg_record(
+        reg_drep = create_drep(
+            name_template=name_template,
             cluster_obj=cluster_obj,
-            name_template=f"drep_custom_{name_template}",
-        )
-
-        tx_files_reg = clusterlib.TxFiles(
-            certificate_files=[reg_drep.registration_cert],
-            signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
-        )
-
-        clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster_obj,
-            name_template=f"drep_custom_reg{name_template}",
-            src_address=payment_addr.address,
-            submit_method=submit_utils.SubmitMethods.CLI,
-            use_build_cmd=True,
-            tx_files=tx_files_reg,
-            deposit=reg_drep.deposit,
+            payment_addr=payment_addr,
         )
         fixture_cache.value = reg_drep
 
@@ -165,7 +191,7 @@ def custom_drep(
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
     return get_custom_drep(
-        name_template=test_id,
+        name_template=f"custom_drep_{test_id}",
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         payment_addr=payment_addr,
@@ -209,7 +235,7 @@ def custom_drep_wp(
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
     return get_custom_drep(
-        name_template=test_id,
+        name_template=f"custom_drep_{test_id}",
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         payment_addr=payment_addr_wp,
@@ -848,3 +874,420 @@ class TestDelegDReps:
             governance_utils.check_drep_delegation(
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )
+
+
+class TestDRepActivity:
+    """Tests for DReps activity."""
+
+    @pytest.fixture
+    def pool_user_lg(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_lock_governance: governance_setup.GovClusterT,
+    ) -> clusterlib.PoolUser:
+        """Create a pool user for "lock governance".
+
+        This fixture is NOT cached, as it is used only in one test.
+        """
+        cluster, __ = cluster_lock_governance
+        name_template = common.get_test_id(cluster)
+        return conway_common.get_registered_pool_user(
+            cluster_manager=cluster_manager,
+            name_template=name_template,
+            cluster_obj=cluster,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
+    def test_drep_inactivity(  # noqa: C901
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_lock_governance: governance_setup.GovClusterT,
+        pool_user_lg: clusterlib.PoolUser,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
+    ):
+        """Test DRep inactivity.
+
+        * Create the first DRep and delegate to it
+        * Update the `dRepActivity` parameter to `1`
+        * Create the second DRep and delegate to it
+        * Update DRep activity again so there is a proposal to vote for. The newly created DReps
+          will not vote.
+        * Again, update DRep activity so there is a proposal to vote for. Again, the newly
+          created DReps will not vote.
+        * Once again, update DRep activity so there is a proposal to vote for. Again, the newly
+          created DReps will not vote.
+        * Update DRep activity again so there is a proposal to vote for. The newly created DRep1
+          will vote.
+        * Update DRep activity again so there is a proposal to vote for. The newly created DRep2
+          will vote.
+        * Check DRep activity records using saved DRep status data.
+        """
+        cluster, governance_data = cluster_lock_governance
+        temp_template = common.get_test_id(cluster)
+        deposit_amt = cluster.g_query.get_address_deposit()
+
+        # Deregister stake address so it doesn't affect stake distribution
+        def _deregister_addr(name_template: str, pool_user: clusterlib.PoolUser) -> None:
+            with helpers.change_cwd(testfile_temp_dir):
+                stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+                if not stake_addr_info:
+                    return
+
+                # Deregister stake address
+                stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+                    addr_name=name_template,
+                    deposit_amt=deposit_amt,
+                    stake_vkey_file=pool_user.stake.vkey_file,
+                )
+                tx_files_dereg = clusterlib.TxFiles(
+                    certificate_files=[stake_addr_dereg_cert],
+                    signing_key_files=[
+                        pool_user.payment.skey_file,
+                        pool_user.stake.skey_file,
+                    ],
+                )
+                withdrawals = (
+                    [
+                        clusterlib.TxOut(
+                            address=pool_user.stake.address,
+                            amount=stake_addr_info.reward_account_balance,
+                        )
+                    ]
+                    if stake_addr_info.reward_account_balance
+                    else []
+                )
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=name_template,
+                    src_address=pool_user.payment.address,
+                    use_build_cmd=True,
+                    tx_files=tx_files_dereg,
+                    withdrawals=withdrawals,
+                    deposit=-deposit_amt,
+                )
+
+        # Register and delegate stake address
+        def _delegate_addr(
+            name_template: str,
+            drep_reg: governance_utils.DRepRegistration,
+            pool_user: clusterlib.PoolUser,
+        ) -> None:
+            # Create stake address registration cert
+            reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+                addr_name=name_template,
+                deposit_amt=deposit_amt,
+                stake_vkey_file=pool_user.stake.vkey_file,
+            )
+
+            # Create vote delegation cert
+            deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
+                addr_name=name_template,
+                stake_vkey_file=pool_user.stake.vkey_file,
+                drep_key_hash=drep_reg.drep_id,
+            )
+
+            tx_files = clusterlib.TxFiles(
+                certificate_files=[reg_cert, deleg_cert],
+                signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+            )
+
+            # Make sure we have enough time to finish the registration/delegation in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+            )
+
+            tx_output = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=name_template,
+                src_address=pool_user.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files,
+                deposit=deposit_amt,
+            )
+
+            request.addfinalizer(
+                lambda: _deregister_addr(
+                    name_template=f"{name_template}_dereg", pool_user=pool_user
+                )
+            )
+
+            stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+            assert (
+                stake_addr_info.address
+            ), f"Stake address is NOT registered: {pool_user.stake.address}"
+            assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+                drep_id=drep_reg.drep_id
+            ), "Votes are NOT delegated to the correct DRep"
+
+            out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+            assert (
+                clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[
+                    0
+                ].amount
+                == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+            ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+
+            # Check that stake address is delegated to the correct DRep.
+            cluster.wait_for_new_epoch(padding_seconds=5)
+            deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
+            stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
+                stake_vkey_file=pool_user.stake.vkey_file
+            )
+            governance_utils.check_drep_delegation(
+                deleg_state=deleg_state,
+                drep_id=drep_reg.drep_id,
+                stake_addr_hash=stake_addr_hash,
+            )
+
+        def _update_drep_activity(governance_data: governance_setup.DefaultGovernance) -> None:
+            rand_str = clusterlib.get_rand_str(4)
+            anchor_url = f"http://www.drep-activity-{rand_str}.com"
+            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+            prev_action_rec = governance_utils.get_prev_action(
+                action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+                gov_state=cluster.g_conway_governance.query.gov_state(),
+            )
+
+            proposals = [
+                clusterlib_utils.UpdateProposal(
+                    arg="--drep-activity",
+                    value=1,
+                    name="dRepActivity",
+                ),
+            ]
+
+            prop_rec = conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_{rand_str}_drep_activity",
+                anchor_url=anchor_url,
+                anchor_data_hash=anchor_data_hash,
+                pool_user=pool_user_lg,
+                proposals=proposals,
+                prev_action_rec=prev_action_rec,
+            )
+
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_{rand_str}_drep_activity",
+                payment_addr=pool_user_lg.payment,
+                action_txid=prop_rec.action_txid,
+                action_ix=prop_rec.action_ix,
+                approve_cc=True,
+                approve_drep=True,
+            )
+
+            # Check ratification
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=rat_gov_state,
+                name_template=f"{temp_template}_{rand_str}_drep_activity_rat_{_cur_epoch}",
+            )
+
+            rat_action = governance_utils.lookup_ratified_actions(
+                gov_state=rat_gov_state, action_txid=prop_rec.action_txid
+            )
+            assert rat_action, "Action not found in ratified actions"
+
+            # Check enactment
+            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            enact_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=enact_gov_state,
+                name_template=f"{temp_template}_{rand_str}_drep_activity_enact_{_cur_epoch}",
+            )
+            pparams = (
+                enact_gov_state.get("curPParams") or enact_gov_state.get("currentPParams") or {}
+            )
+            clusterlib_utils.check_updated_params(
+                update_proposals=proposals, protocol_params=pparams
+            )
+
+        # Save DRep states
+        drep1_state = []
+        drep2_state = []
+
+        def _save_drep_states(
+            id: str,
+            drep1: tp.Optional[governance_utils.DRepRegistration],
+            drep2: tp.Optional[governance_utils.DRepRegistration],
+        ) -> None:
+            _cur_epoch = cluster.g_query.get_epoch()
+            if drep1 is not None:
+                _drep_state = cluster.g_conway_governance.query.drep_state(
+                    drep_vkey_file=drep1.key_pair.vkey_file
+                )
+                drep1_state.append(
+                    DRepStateRecord(
+                        epoch_no=_cur_epoch,
+                        id=id,
+                        drep_state=_drep_state,
+                    )
+                )
+                conway_common.save_drep_state(
+                    drep_state=_drep_state,
+                    name_template=f"{temp_template}_drep1_{id}_{_cur_epoch}",
+                )
+            if drep2 is not None:
+                _drep_state = cluster.g_conway_governance.query.drep_state(
+                    drep_vkey_file=drep2.key_pair.vkey_file
+                )
+                drep2_state.append(
+                    DRepStateRecord(
+                        epoch_no=_cur_epoch,
+                        id=id,
+                        drep_state=_drep_state,
+                    )
+                )
+                conway_common.save_drep_state(
+                    drep_state=_drep_state,
+                    name_template=f"{temp_template}_drep2_{id}_{_cur_epoch}",
+                )
+
+        def _save_drep_records() -> None:
+            """Save debugging data in case of test failure."""
+            with open(f"{temp_template}_drep_records.pickle", "wb") as out_data:
+                _state = {"drep1": drep1_state, "drep2": drep2_state}
+                pickle.dump(_state, out_data)
+
+        def _check_drep_records() -> tp.List[blockers.GH]:
+            found_issues = []
+
+            assert drep1_state, "No DRep1 states"
+            assert drep2_state, "No DRep2 states"
+
+            drep1_init_expiry = drep1_state[0].drep_state[0][1]["expiry"]
+            assert drep1_init_expiry > drep1_state[0].epoch_no + 5, "Unexpected DRep1 init expiry"
+            assert (
+                drep1_state[1].drep_state[0][1]["expiry"] > drep1_init_expiry
+            ), "DRep1 expiry was not updated"
+
+            assert governance_utils.is_drep_active(
+                cluster_obj=cluster,
+                drep_state=drep1_state[-2].drep_state,
+                epoch=drep1_state[-2].epoch_no,
+            ), "DRep1 is not active"
+            assert not governance_utils.is_drep_active(
+                cluster_obj=cluster,
+                drep_state=drep1_state[-1].drep_state,
+                epoch=drep1_state[-1].epoch_no,
+            ), "DRep1 is still active"
+
+            drep2_init_expiry = drep2_state[0].drep_state[0][1]["expiry"]
+            assert drep2_init_expiry < drep2_state[0].epoch_no + 3, "Unexpected DRep2 init expiry"
+            assert (
+                drep2_state[1].drep_state[0][1]["expiry"] > drep2_init_expiry
+            ), "DRep2 expiry was not updated"
+            assert not governance_utils.is_drep_active(
+                cluster_obj=cluster,
+                drep_state=drep2_state[-3].drep_state,
+                epoch=drep2_state[-3].epoch_no,
+            ), "DRep2 is still active"
+            assert not governance_utils.is_drep_active(
+                cluster_obj=cluster,
+                drep_state=drep2_state[-2].drep_state,
+                epoch=drep2_state[-2].epoch_no,
+            ), "DRep2 is still active"
+            assert governance_utils.is_drep_active(
+                cluster_obj=cluster,
+                drep_state=drep2_state[-1].drep_state,
+                epoch=drep2_state[-1].epoch_no,
+            ), "DRep2 is not active"
+            if (
+                drep2_state[-2].drep_state[0][1]["expiry"]
+                > drep2_state[-3].drep_state[0][1]["expiry"]
+            ):
+                found_issues.append(issues.ledger_4346)
+
+            return found_issues
+
+        # Create stake addresses for votes delegation and fund them
+        created_users = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_pool_user",
+            no_of_addr=2,
+        )
+        clusterlib_utils.fund_from_faucet(
+            *created_users,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        # Create the first DRep
+        custom_drep1 = create_drep(
+            name_template=f"{temp_template}_drep1",
+            cluster_obj=cluster,
+            payment_addr=pool_user_lg.payment,
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=None, id="created_drep1")
+        _delegate_addr(
+            name_template=f"{temp_template}_pool_user1_deleg",
+            drep_reg=custom_drep1,
+            pool_user=created_users[0],
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=None, id="delegated_drep1")
+
+        # Update DRep activity
+        _update_drep_activity(governance_data=governance_data)
+        _save_drep_states(drep1=custom_drep1, drep2=None, id="updated_activity")
+
+        # Create the second DRep
+        custom_drep2 = create_drep(
+            name_template=f"{temp_template}_drep2",
+            cluster_obj=cluster,
+            payment_addr=pool_user_lg.payment,
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="created_drep2")
+        _delegate_addr(
+            name_template=f"{temp_template}_pool_user2_deleg",
+            drep_reg=custom_drep2,
+            pool_user=created_users[1],
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="delegated_drep2")
+
+        # Add the DReps to the governance data
+        governance_data_drep1 = dataclasses.replace(
+            governance_data, dreps_reg=[*governance_data.dreps_reg, custom_drep1]
+        )
+        governance_data_drep2 = dataclasses.replace(
+            governance_data, dreps_reg=[*governance_data.dreps_reg, custom_drep2]
+        )
+
+        # Update DRep activity again so there is a proposal to vote for. The newly created DReps
+        # will not vote.
+        _update_drep_activity(governance_data=governance_data)
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig1")
+
+        # Update DRep activity again so there is a proposal to vote for. The newly created DReps
+        # will still not vote.
+        _update_drep_activity(governance_data=governance_data)
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig2")
+
+        # Update DRep activity again so there is a proposal to vote for. The newly created DReps
+        # will still not vote.
+        _update_drep_activity(governance_data=governance_data)
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig3")
+
+        # Update DRep activity again so there is a proposal to vote for. The newly created DRep1
+        # will vote.
+        _update_drep_activity(governance_data=governance_data_drep1)
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep1")
+
+        # Update DRep activity again so there is a proposal to vote for. The newly created DRep2
+        # will vote.
+        _update_drep_activity(governance_data=governance_data_drep2)
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep2")
+
+        # Check DRep activity records
+        found_issues = []
+        try:
+            found_issues = _check_drep_records()
+        except Exception:
+            _save_drep_records()
+            raise
+
+        if found_issues:
+            blockers.finish_test(issues=found_issues)
