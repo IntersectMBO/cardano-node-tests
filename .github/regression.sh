@@ -78,9 +78,9 @@ export SCHEDULING_LOG=scheduling.log
 true > "$SCHEDULING_LOG"
 
 MARKEXPR="${MARKEXPR:-""}"
-if [ "${MARKEXPR:-""}" = "all" ]; then
+if [ "$MARKEXPR" = "all" ]; then
   unset MARKEXPR
-elif [ "${MARKEXPR:-""}" = "conway only" ]; then
+elif [ "$MARKEXPR" = "conway only" ]; then
   unset MARKEXPR
   export TESTS_DIR="cardano_node_tests/tests/tests_conway"
 fi
@@ -89,11 +89,20 @@ if [ -n "${CLUSTERS_COUNT:-""}" ]; then
   export CLUSTERS_COUNT
 fi
 
-export CLUSTER_ERA="${CLUSTER_ERA:-"$DEFAULT_CLUSTER_ERA"}"
+CLUSTER_ERA="${CLUSTER_ERA:-"$DEFAULT_CLUSTER_ERA"}"
+if [ "$CLUSTER_ERA" = "conway 9" ]; then
+  unset PV10
+  CLUSTER_ERA="conway"
+elif [ "$CLUSTER_ERA" = "conway 10" ]; then
+  export PV10=1
+  CLUSTER_ERA="conway"
+fi
+export CLUSTER_ERA
 
-if [ "${TX_ERA:-""}" = "default" ]; then
+TX_ERA="${TX_ERA:-""}"
+if [ "$TX_ERA" = "default" ]; then
   export TX_ERA=""
-elif [ "${TX_ERA:-""}" = "conway" ]; then
+elif [ "$TX_ERA" = "conway" ]; then
   unset TX_ERA
   export COMMAND_ERA="conway"
 fi
