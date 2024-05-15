@@ -182,19 +182,21 @@ When running tests, the testing framework starts and stops cluster instances as 
 1. prepare cluster scripts for starting local cluster directly in Babbage era
 
     ```sh
-    prepare-cluster-scripts -d <destination dir>/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
+    mkdir -p dev_workdir
+    prepare-cluster-scripts -c -d dev_workdir/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
     ```
 
 1. set env variables
 
     ```sh
-    export CARDANO_NODE_SOCKET_PATH=<your path to cardano-node repo>/state-cluster0/bft1.socket DEV_CLUSTER_RUNNING=1
+    export CARDANO_NODE_SOCKET_PATH="$PWD/dev_workdir/state-cluster0/bft1.socket" DEV_CLUSTER_RUNNING=1
+    mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
     ```
 
 1. start the cluster instance in development mode
 
     ```sh
-    <destination dir>/babbage_fast/start-cluster
+    ./dev_workdir/babbage_fast/start-cluster
     ```
 
 After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
