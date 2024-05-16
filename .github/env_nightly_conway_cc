@@ -1,3 +1,4 @@
 CLUSTER_ERA=conway
 COMMAND_ERA=conway
+PV10=true
 ENABLE_P2P=true
