@@ -442,6 +442,16 @@ class TestDynamicBlockProd:
             )
         )
 
+        def _save_state(curr_epoch: int) -> tp.Dict[str, int]:
+            ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+            clusterlib_utils.save_ledger_state(
+                cluster_obj=cluster,
+                state_name=f"{temp_template}_epoch{curr_epoch}",
+                ledger_state=ledger_state,
+            )
+            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+            return blocks_before
+
         # Blocks are produced by BFT node in Byron epoch and first Shelley epoch on local cluster
         # that starts in Byron era.
         curr_epoch = cluster.g_query.get_epoch()
@@ -456,22 +466,22 @@ class TestDynamicBlockProd:
         if curr_epoch < 1:
             curr_epoch = cluster.wait_for_new_epoch(new_epochs=1)
 
+        # Wait for the epoch to be at least half way through and not too close to the end.
+        # We want the original pool to have time to forge blocks in this epoch, before it becomes
+        # backup node.
+        # And we want to have enough time to replace the node's configuration before the epoch ends.
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster,
+            start=(cluster.epoch_length_sec // 2),
+            stop=-50,
+        )
+
         # The cluster needs respin after this point
         cluster_manager.set_needs_respin()
 
         # Reconfigure cluster for dynamic block production
         self.reconf_for_dynamic()
         cluster_nodes.restart_all_nodes()
-
-        def _save_state(curr_epoch: int) -> tp.Dict[str, int]:
-            ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
-            clusterlib_utils.save_ledger_state(
-                cluster_obj=cluster,
-                state_name=f"{temp_template}_epoch{curr_epoch}",
-                ledger_state=ledger_state,
-            )
-            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
-            return blocks_before
 
         tip = cluster.g_query.get_tip()
         epoch_end = cluster.time_to_epoch_end(tip)
