@@ -46,11 +46,13 @@ Nightly results
    * cluster starts directly in Babbage era
 * `nightly-conway-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-cc/>`__:  |nightly-conway-cc-badge|
    * network in Conway era
+   * protocol version 10
    * P2P network topology
    * Constitutional Commitee has 3 members
    * cluster starts directly in Conway era
 * `nightly-conway-no-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-no-cc/>`__:  |nightly-conway-nocc-badge|
    * network in Conway era
+   * protocol version 10
    * P2P network topology
    * Constitutional Commitee has 0 members
    * cluster starts directly in Conway era
