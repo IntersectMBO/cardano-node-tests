@@ -1319,7 +1319,8 @@ class TestNegative:
             txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
         )
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        err_str = ""
+        try:
             cluster.cli(
                 [
                     "transaction",
@@ -1332,7 +1333,10 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        err_str = str(excinfo.value)
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
+        else:
+            issues.cli_768.finish_test()
 
         if "Transaction _ fee not supported in" in err_str:
             issues.node_4591.finish_test()

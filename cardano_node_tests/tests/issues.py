@@ -39,6 +39,12 @@ cli_715 = blockers.GH(
     fixed_in="8.22.0.1",  # Fixed in a release after 8.22.0.0
     message="Option `--reference-script-size` required.",
 )
+cli_768 = blockers.GH(
+    issue=768,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.23.1.1",  # Fixed in a release after 8.23.1.0
+    message="Option `--fee` not required.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,
