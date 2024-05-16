@@ -11,7 +11,8 @@ on:
         description: "Cluster era"
         options:
         - babbage
-        - conway
+        - conway 9
+        - conway 10
         default: babbage
       tx_era:
         type: choice

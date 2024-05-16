@@ -42,8 +42,11 @@ class TestHardfork:
 
     @pytest.fixture(scope="class")
     def skip_hf_command(self):
-        if not clusterlib_utils.cli_has("action create-hardfork"):
-            pytest.skip("The `cardano-cli action create-hardfork` command is not available.")
+        if not clusterlib_utils.cli_has("conway governance action create-hardfork"):
+            pytest.skip(
+                "The `cardano-cli conway governance action create-hardfork` command "
+                "is not available."
+            )
 
     @pytest.fixture
     def skip_hf_version(
