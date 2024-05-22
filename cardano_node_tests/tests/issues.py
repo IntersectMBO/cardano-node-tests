@@ -104,6 +104,12 @@ ledger_4346 = blockers.GH(
     fixed_in="8.12.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="Inactive DRep expiry gets incremented.",
 )
+ledger_4349 = blockers.GH(
+    issue=4349,
+    repo="IntersectMBO/cardano-ledger",
+    fixed_in="8.12.0",  # Unknown yet, will be fixed/changed sometime in the future
+    message="Inconsistent listing of DRep expiry.",
+)
 
 node_3788 = blockers.GH(
     issue=3788,

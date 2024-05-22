@@ -875,6 +875,42 @@ class TestDelegDReps:
                 deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
             )
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    def test_cli_drep_status_consistency(
+        self,
+        cluster_use_dreps: governance_setup.GovClusterT,
+    ):
+        """Test consistency of `cardano-cli conway query drep-state` output.
+
+        * List status of all DReps
+        * List status of selected DReps
+        * Compare the output to check that it is consistent
+        """
+        cluster, governance_data = cluster_use_dreps
+        common.get_test_id(cluster)
+
+        def _get_drep_rec(
+            drep_state: governance_utils.DRepStateT,
+        ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+            return {drep[0]["keyHash"]: drep[1] for drep in drep_state}
+
+        drep_states_all = _get_drep_rec(drep_state=cluster.g_conway_governance.query.drep_state())
+        drep_states_gov_data = _get_drep_rec(
+            drep_state=[
+                cluster.g_conway_governance.query.drep_state(drep_key_hash=drep.drep_id)[0]
+                for drep in governance_data.dreps_reg
+            ]
+        )
+
+        first_key = next(iter(drep_states_gov_data))
+        if drep_states_all[first_key]["expiry"] != drep_states_gov_data[first_key]["expiry"]:
+            issues.ledger_4349.finish_test()
+
+        for key, rec in drep_states_gov_data.items():
+            assert key in drep_states_all, f"DRep '{key}' not found in DRep state"
+            assert rec == drep_states_all[key], f"DRep '{key}' state mismatch"
+
 
 class TestDRepActivity:
     """Tests for DReps activity."""
