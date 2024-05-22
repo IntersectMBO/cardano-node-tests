@@ -1251,6 +1251,9 @@ class TestDRepActivity:
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
         )
+        
+        # Testnet respin is needed after this point
+        cluster_manager.set_needs_respin()
 
         # Create the first DRep
         custom_drep1 = create_drep(
