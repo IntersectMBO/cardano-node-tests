@@ -65,6 +65,13 @@ class StakeDelegation:
     total_lovelace: int
 
 
+@dataclasses.dataclass(frozen=True, order=True)
+class VotedVotes:
+    cc: tp.List[clusterlib.VoteCC]  # pylint: disable=invalid-name
+    drep: tp.List[clusterlib.VoteDrep]
+    spo: tp.List[clusterlib.VoteSPO]
+
+
 class PrevGovActionIds(enum.Enum):
     COMMITTEE = "Committee"
     CONSTITUTION = "Constitution"

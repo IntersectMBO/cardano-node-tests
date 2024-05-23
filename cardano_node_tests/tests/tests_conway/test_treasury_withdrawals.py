@@ -168,7 +168,7 @@ class TestTreasuryWithdrawals:
 
         def _cast_vote(
             approve: bool, vote_id: str, add_spo_votes: bool = False
-        ) -> conway_common.VotedVotes:
+        ) -> governance_utils.VotedVotes:
             votes_cc = []
             votes_drep = []
             votes_spo = []
@@ -247,7 +247,7 @@ class TestTreasuryWithdrawals:
                 assert prop_vote["dRepVotes"], "No DRep votes"
                 assert not votes_spo or prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
-            return conway_common.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+            return governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
         # Check that SPOs cannot vote on treasury withdrawal action
         with pytest.raises(clusterlib.CLIError) as excinfo:

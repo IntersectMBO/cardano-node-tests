@@ -16,13 +16,6 @@ from cardano_node_tests.utils import governance_utils
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True, order=True)
-class VotedVotes:
-    cc: tp.List[clusterlib.VoteCC]  # pylint: disable=invalid-name
-    drep: tp.List[clusterlib.VoteDrep]
-    spo: tp.List[clusterlib.VoteSPO]
-
-
 @dataclasses.dataclass(frozen=True)
 class PParamPropRec:
     proposals: tp.List[clusterlib_utils.UpdateProposal]
@@ -220,7 +213,7 @@ def cast_vote(
     cc_skip_votes: bool = False,
     drep_skip_votes: bool = False,
     spo_skip_votes: bool = False,
-) -> VotedVotes:
+) -> governance_utils.VotedVotes:
     """Cast a vote."""
     # pylint: disable=too-many-arguments
     votes_cc = []
@@ -309,7 +302,7 @@ def cast_vote(
     assert not votes_drep or prop_vote["dRepVotes"], "No DRep votes"
     assert not votes_spo or prop_vote["stakePoolVotes"], "No stake pool votes"
 
-    return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+    return governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
 
 def resign_ccs(

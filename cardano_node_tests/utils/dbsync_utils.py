@@ -985,3 +985,28 @@ def check_drep_deregistration(
     ), f"Wrong deposit value for deregistered DRep {drep.drep_id} in db-sync"
 
     return drep_data
+
+
+def check_votes(votes: governance_utils.VotedVotes, txhash: str) -> None:
+    """Check votes in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    expected_votes_by_role = {
+        "ConstitutionalCommittee": [v.vote.name for v in votes.cc],
+        "DRep": [v.vote.name for v in votes.drep],
+        "SPO": [v.vote.name for v in votes.spo],
+    }
+
+    dbsync_votes = list(dbsync_queries.query_voting_procedure(txhash=txhash))
+
+    dbsync_votes_by_role: dict = {
+        "ConstitutionalCommittee": [],
+        "DRep": [],
+        "SPO": [],
+    }
+
+    for d_vote in dbsync_votes:
+        dbsync_votes_by_role[d_vote.voter_role].append(d_vote.vote.upper())
+
+    assert expected_votes_by_role == dbsync_votes_by_role, "Votes didn't match in dbsync"
