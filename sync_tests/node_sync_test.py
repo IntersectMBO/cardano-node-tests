@@ -169,7 +169,7 @@ def get_node_config_files(env, node_topology_type):
         download_config_file(env, 'topology.json')
 
     # Temporary hardcoded sanchonet conway genesis file hash:
-    conway_hash = "88b1773f4262601b8ea7a4918868e00afd4d75576c6eb4a167fbe5fd5c9c4c68"
+    conway_hash = "e8c82013a906175ee0e35fbd251b53d5a5fce8c17dfe4654bb1e8c045ed1cab7"
     #alonzo_hash = "27bd50c2318934f0886ea215dbba9a50368441629ef29a22b1f413ea4e05a954"
 
     with open('config.json', 'r') as f:
