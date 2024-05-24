@@ -26,6 +26,7 @@ cip014 = __r("CIP014")
 cip016 = __r("CIP016")
 cip017 = __r("CIP017")
 cip018 = __r("CIP018")
+cip019 = __r("CIP019")
 cip020_01 = __r("intCIP020-01")  # verification key
 cip020_02 = __r("intCIP020-02")  # Native script
 cip020_03 = __r("intCIP020-03")  # Plutus script

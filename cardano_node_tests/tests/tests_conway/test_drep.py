@@ -42,6 +42,12 @@ class DRepStateRecord:
     drep_state: governance_utils.DRepStateT
 
 
+@dataclasses.dataclass(frozen=True, order=True)
+class DRepRatRecord:
+    id: str
+    ratified: bool
+
+
 def get_payment_addr(
     name_template: str,
     cluster_manager: cluster_management.ClusterManager,
@@ -934,75 +940,43 @@ class TestDRepActivity:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(5)
     @pytest.mark.long
     def test_drep_inactivity(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
-        testfile_temp_dir: pl.Path,
-        request: FixtureRequest,
     ):
         """Test DRep inactivity.
 
-        * Create the first DRep and delegate to it
-        * Update the `dRepActivity` parameter to `1`
-        * Create the second DRep and delegate to it
+        * Create the first DRep and delegate to it.
+        * Update the `dRepActivity` parameter to `1`.
+        * Create the second DRep and delegate to it.
         * Update DRep activity again so there is a proposal to vote for. The newly created DReps
-          will not vote.
-        * Again, update DRep activity so there is a proposal to vote for. Again, the newly
-          created DReps will not vote.
-        * Once again, update DRep activity so there is a proposal to vote for. Again, the newly
-          created DReps will not vote.
+          will not vote. The action will not be ratified, because the newly created DReps didn't
+          vote and their delegated stake is > 51% (threshold).
         * Update DRep activity again so there is a proposal to vote for. The newly created DRep1
-          will vote.
+          will vote. The action will be ratified, because the newly created DRep1 voted and
+          together with the original DReps their delegated stake is > 51% (threshold).
+        * Update DRep activity again so there is a proposal to vote for. The newly created DReps
+          will not vote. The action will be ratified, because the newly created DReps are
+          inactive and so their delegated stake does not count towards the active voting stake.
+        * Wait for another epoch without submitting any proposal, to see if "expire" counters
+          are incremented.
         * Update DRep activity again so there is a proposal to vote for. The newly created DRep2
-          will vote.
+          will vote. The action will be ratified, because the newly created DRep2 voted and
+          together with the original DReps their delegated stake is > 51% (threshold).
         * Check DRep activity records using saved DRep status data.
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
 
-        # Deregister stake address so it doesn't affect stake distribution
-        def _deregister_addr(name_template: str, pool_user: clusterlib.PoolUser) -> None:
-            with helpers.change_cwd(testfile_temp_dir):
-                stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
-                if not stake_addr_info:
-                    return
-
-                # Deregister stake address
-                stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
-                    addr_name=name_template,
-                    deposit_amt=deposit_amt,
-                    stake_vkey_file=pool_user.stake.vkey_file,
-                )
-                tx_files_dereg = clusterlib.TxFiles(
-                    certificate_files=[stake_addr_dereg_cert],
-                    signing_key_files=[
-                        pool_user.payment.skey_file,
-                        pool_user.stake.skey_file,
-                    ],
-                )
-                withdrawals = (
-                    [
-                        clusterlib.TxOut(
-                            address=pool_user.stake.address,
-                            amount=stake_addr_info.reward_account_balance,
-                        )
-                    ]
-                    if stake_addr_info.reward_account_balance
-                    else []
-                )
-                clusterlib_utils.build_and_submit_tx(
-                    cluster_obj=cluster,
-                    name_template=name_template,
-                    src_address=pool_user.payment.address,
-                    use_build_cmd=True,
-                    tx_files=tx_files_dereg,
-                    withdrawals=withdrawals,
-                    deposit=-deposit_amt,
-                )
+        # Saved DRep records
+        drep1_state: tp.Dict[str, DRepStateRecord] = {}
+        drep2_state: tp.Dict[str, DRepStateRecord] = {}
+        rat_records: tp.Dict[str, DRepRatRecord] = {}
 
         # Register and delegate stake address
         def _delegate_addr(
@@ -1043,12 +1017,6 @@ class TestDRepActivity:
                 deposit=deposit_amt,
             )
 
-            request.addfinalizer(
-                lambda: _deregister_addr(
-                    name_template=f"{name_template}_dereg", pool_user=pool_user
-                )
-            )
-
             stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
             assert (
                 stake_addr_info.address
@@ -1077,9 +1045,11 @@ class TestDRepActivity:
                 stake_addr_hash=stake_addr_hash,
             )
 
-        def _update_drep_activity(governance_data: governance_setup.DefaultGovernance) -> None:
-            rand_str = clusterlib.get_rand_str(4)
-            anchor_url = f"http://www.drep-activity-{rand_str}.com"
+        def _update_drep_activity(
+            governance_data: governance_setup.DefaultGovernance,
+            action_id: str,
+        ) -> str:
+            anchor_url = f"http://www.drep-activity-{action_id}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
@@ -1096,7 +1066,7 @@ class TestDRepActivity:
 
             prop_rec = conway_common.propose_pparams_update(
                 cluster_obj=cluster,
-                name_template=f"{temp_template}_{rand_str}_drep_activity",
+                name_template=f"{temp_template}_{action_id}_drep_activity",
                 anchor_url=anchor_url,
                 anchor_data_hash=anchor_data_hash,
                 pool_user=pool_user_lg,
@@ -1104,47 +1074,77 @@ class TestDRepActivity:
                 prev_action_rec=prev_action_rec,
             )
 
-            conway_common.cast_vote(
+            votes_cc = [
+                cluster.g_conway_governance.vote.create_committee(
+                    vote_name=f"{temp_template}_{action_id}_drep_activity_cc{i}",
+                    action_txid=prop_rec.action_txid,
+                    action_ix=prop_rec.action_ix,
+                    vote=clusterlib.Votes.YES,
+                    cc_hot_vkey_file=m.hot_vkey_file,
+                )
+                for i, m in enumerate(governance_data.cc_members, start=1)
+            ]
+            votes_drep = [
+                cluster.g_conway_governance.vote.create_drep(
+                    vote_name=f"{temp_template}_{action_id}_drep_activity_drep{i}",
+                    action_txid=prop_rec.action_txid,
+                    action_ix=prop_rec.action_ix,
+                    vote=clusterlib.Votes.YES,
+                    drep_vkey_file=d.key_pair.vkey_file,
+                )
+                for i, d in enumerate(governance_data.dreps_reg, start=1)
+            ]
+
+            votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep]
+            vote_keys = [
+                *[r.hot_skey_file for r in governance_data.cc_members],
+                *[r.key_pair.skey_file for r in governance_data.dreps_reg],
+            ]
+
+            conway_common.submit_vote(
                 cluster_obj=cluster,
-                governance_data=governance_data,
-                name_template=f"{temp_template}_{rand_str}_drep_activity",
+                name_template=f"{temp_template}_{action_id}_drep_activity",
                 payment_addr=pool_user_lg.payment,
-                action_txid=prop_rec.action_txid,
-                action_ix=prop_rec.action_ix,
-                approve_cc=True,
-                approve_drep=True,
+                votes=votes,
+                keys=vote_keys,
+                use_build_cmd=True,
             )
 
-            # Check ratification
+            return prop_rec.action_txid
+
+        def _check_ratification(
+            action_txid: str,
+            action_id: str,
+        ):
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state,
-                name_template=f"{temp_template}_{rand_str}_drep_activity_rat_{_cur_epoch}",
+                name_template=f"{temp_template}_{action_id}_drep_activity_rat_{_cur_epoch}",
             )
-
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=prop_rec.action_txid
+                gov_state=rat_gov_state, action_txid=action_txid
             )
-            assert rat_action, "Action not found in ratified actions"
 
-            # Check enactment
+            rat_records[action_id] = DRepRatRecord(id=action_id, ratified=bool(rat_action))
+
+        def _check_enactment(
+            action_txid: str,
+            action_id: str,
+        ):
             _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state,
-                name_template=f"{temp_template}_{rand_str}_drep_activity_enact_{_cur_epoch}",
+                name_template=f"{temp_template}_{action_id}_drep_activity_enact_{_cur_epoch}",
             )
-            pparams = (
-                enact_gov_state.get("curPParams") or enact_gov_state.get("currentPParams") or {}
+            prev_action_rec = governance_utils.get_prev_action(
+                action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+                gov_state=cluster.g_conway_governance.query.gov_state(),
             )
-            clusterlib_utils.check_updated_params(
-                update_proposals=proposals, protocol_params=pparams
-            )
-
-        # Save DRep states
-        drep1_state = []
-        drep2_state = []
+            assert (
+                action_txid == prev_action_rec.txid
+            ), f"Unexpected action txid: {prev_action_rec.txid}"
 
         def _save_drep_states(
             id: str,
@@ -1156,12 +1156,11 @@ class TestDRepActivity:
                 _drep_state = cluster.g_conway_governance.query.drep_state(
                     drep_vkey_file=drep1.key_pair.vkey_file
                 )
-                drep1_state.append(
-                    DRepStateRecord(
-                        epoch_no=_cur_epoch,
-                        id=id,
-                        drep_state=_drep_state,
-                    )
+                assert id not in drep1_state
+                drep1_state[id] = DRepStateRecord(
+                    epoch_no=_cur_epoch,
+                    id=id,
+                    drep_state=_drep_state,
                 )
                 conway_common.save_drep_state(
                     drep_state=_drep_state,
@@ -1171,85 +1170,107 @@ class TestDRepActivity:
                 _drep_state = cluster.g_conway_governance.query.drep_state(
                     drep_vkey_file=drep2.key_pair.vkey_file
                 )
-                drep2_state.append(
-                    DRepStateRecord(
-                        epoch_no=_cur_epoch,
-                        id=id,
-                        drep_state=_drep_state,
-                    )
+                assert id not in drep2_state
+                drep2_state[id] = DRepStateRecord(
+                    epoch_no=_cur_epoch,
+                    id=id,
+                    drep_state=_drep_state,
                 )
                 conway_common.save_drep_state(
                     drep_state=_drep_state,
                     name_template=f"{temp_template}_drep2_{id}_{_cur_epoch}",
                 )
 
-        def _save_drep_records() -> None:
+        def _dump_records() -> None:
             """Save debugging data in case of test failure."""
             with open(f"{temp_template}_drep_records.pickle", "wb") as out_data:
-                _state = {"drep1": drep1_state, "drep2": drep2_state}
+                _state = {"drep1": drep1_state, "drep2": drep2_state, "rat_records": rat_records}
                 pickle.dump(_state, out_data)
 
-        def _check_drep_records() -> tp.List[blockers.GH]:
+        def _check_records() -> tp.List[blockers.GH]:
             found_issues = []
 
             assert drep1_state, "No DRep1 states"
             assert drep2_state, "No DRep2 states"
 
-            drep1_init_expiry = drep1_state[0].drep_state[0][1]["expiry"]
-            assert drep1_init_expiry > drep1_state[0].epoch_no + 5, "Unexpected DRep1 init expiry"
+            drep1_init_expiry = drep1_state["created_drep1"].drep_state[0][1]["expiry"]
             assert (
-                drep1_state[1].drep_state[0][1]["expiry"] > drep1_init_expiry
+                drep1_init_expiry > drep1_state["created_drep1"].epoch_no + 5
+            ), "Unexpected DRep1 init expiry"
+            assert (
+                drep1_state["delegated_drep1"].drep_state[0][1]["expiry"] > drep1_init_expiry
             ), "DRep1 expiry was not updated"
 
             assert governance_utils.is_drep_active(
                 cluster_obj=cluster,
-                drep_state=drep1_state[-2].drep_state,
-                epoch=drep1_state[-2].epoch_no,
+                drep_state=drep1_state["voted_drep1_voted"].drep_state,
+                epoch=drep1_state["voted_drep1_voted"].epoch_no,
             ), "DRep1 is not active"
             assert not governance_utils.is_drep_active(
                 cluster_obj=cluster,
-                drep_state=drep1_state[-1].drep_state,
-                epoch=drep1_state[-1].epoch_no,
+                drep_state=drep1_state["voted_orig2_voted"].drep_state,
+                epoch=drep1_state["voted_orig2_voted"].epoch_no,
             ), "DRep1 is still active"
-
-            drep2_init_expiry = drep2_state[0].drep_state[0][1]["expiry"]
-            assert drep2_init_expiry < drep2_state[0].epoch_no + 3, "Unexpected DRep2 init expiry"
-            assert (
-                drep2_state[1].drep_state[0][1]["expiry"] > drep2_init_expiry
-            ), "DRep2 expiry was not updated"
             assert not governance_utils.is_drep_active(
                 cluster_obj=cluster,
-                drep_state=drep2_state[-3].drep_state,
-                epoch=drep2_state[-3].epoch_no,
+                drep_state=drep1_state["voted_orig2_ratified"].drep_state,
+                epoch=drep1_state["voted_orig2_ratified"].epoch_no,
+            ), "DRep1 is still active"
+            assert not governance_utils.is_drep_active(
+                cluster_obj=cluster,
+                drep_state=drep1_state["voted_drep2_voted"].drep_state,
+                epoch=drep1_state["voted_drep2_voted"].epoch_no,
+            ), "DRep1 is still active"
+
+            drep2_init_expiry = drep2_state["created_drep2"].drep_state[0][1]["expiry"]
+            assert (
+                drep2_init_expiry < drep2_state["created_drep2"].epoch_no + 3
+            ), "Unexpected DRep2 init expiry"
+            assert (
+                drep2_state["delegated_drep2"].drep_state[0][1]["expiry"] > drep2_init_expiry
+            ), "DRep2 expiry was not updated"
+
+            assert not governance_utils.is_drep_active(
+                cluster_obj=cluster,
+                drep_state=drep2_state["voted_orig2_voted"].drep_state,
+                epoch=drep2_state["voted_orig2_voted"].epoch_no,
             ), "DRep2 is still active"
             assert not governance_utils.is_drep_active(
                 cluster_obj=cluster,
-                drep_state=drep2_state[-2].drep_state,
-                epoch=drep2_state[-2].epoch_no,
+                drep_state=drep2_state["no_proposal"].drep_state,
+                epoch=drep2_state["no_proposal"].epoch_no,
             ), "DRep2 is still active"
             assert governance_utils.is_drep_active(
                 cluster_obj=cluster,
-                drep_state=drep2_state[-1].drep_state,
-                epoch=drep2_state[-1].epoch_no,
+                drep_state=drep2_state["voted_drep2_voted"].drep_state,
+                epoch=drep2_state["voted_drep2_voted"].epoch_no,
             ), "DRep2 is not active"
+
+            assert not rat_records["voted_orig1_ratification"].ratified, "Action was not ratified"
+            assert rat_records["voted_drep1_ratification"].ratified, "Action was not ratified"
+            assert rat_records["voted_orig2_ratification"].ratified, "Action was not ratified"
+            assert rat_records["voted_drep2_ratification"].ratified, "Action was not ratified"
+
             if (
-                drep2_state[-2].drep_state[0][1]["expiry"]
-                > drep2_state[-3].drep_state[0][1]["expiry"]
+                drep1_state["voted_orig2_ratified"].drep_state[0][1]["expiry"]
+                > drep1_state["voted_orig2_voted"].drep_state[0][1]["expiry"]
             ):
                 found_issues.append(issues.ledger_4346)
 
             return found_issues
 
         # Create stake addresses for votes delegation and fund them
-        created_users = clusterlib_utils.create_pool_users(
+        drep_users = clusterlib_utils.create_pool_users(
             cluster_obj=cluster,
             name_template=f"{temp_template}_pool_user",
             no_of_addr=2,
         )
         clusterlib_utils.fund_from_faucet(
-            *created_users,
+            *drep_users,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
+            # Add a lot of funds so no action can be ratified without the new DReps
+            amount=10_000_000_000_000,
         )
 
         # Testnet respin is needed after this point
@@ -1265,13 +1286,24 @@ class TestDRepActivity:
         _delegate_addr(
             name_template=f"{temp_template}_pool_user1_deleg",
             drep_reg=custom_drep1,
-            pool_user=created_users[0],
+            pool_user=drep_users[0],
         )
         _save_drep_states(drep1=custom_drep1, drep2=None, id="delegated_drep1")
 
+        # Add the first DRep to the governance data
+        governance_data_drep1 = dataclasses.replace(
+            governance_data, dreps_reg=[*governance_data.dreps_reg, custom_drep1]
+        )
+
         # Update DRep activity
-        _update_drep_activity(governance_data=governance_data)
-        _save_drep_states(drep1=custom_drep1, drep2=None, id="updated_activity")
+        _action_txid = _update_drep_activity(
+            governance_data=governance_data_drep1, action_id="update_activity_vote"
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=None, id="updated_activity_voted")
+        _check_ratification(action_txid=_action_txid, action_id="updated_activity_ratification")
+        _save_drep_states(drep1=custom_drep1, drep2=None, id="updated_activity_ratified")
+        _check_enactment(action_txid=_action_txid, action_id="updated_activity_enacted")
+        _save_drep_states(drep1=custom_drep1, drep2=None, id="updated_activity_enacted")
 
         # Create the second DRep
         custom_drep2 = create_drep(
@@ -1283,50 +1315,80 @@ class TestDRepActivity:
         _delegate_addr(
             name_template=f"{temp_template}_pool_user2_deleg",
             drep_reg=custom_drep2,
-            pool_user=created_users[1],
+            pool_user=drep_users[1],
         )
         _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="delegated_drep2")
 
-        # Add the DReps to the governance data
-        governance_data_drep1 = dataclasses.replace(
-            governance_data, dreps_reg=[*governance_data.dreps_reg, custom_drep1]
-        )
+        # Add the second DRep to the governance data
         governance_data_drep2 = dataclasses.replace(
             governance_data, dreps_reg=[*governance_data.dreps_reg, custom_drep2]
         )
 
         # Update DRep activity again so there is a proposal to vote for. The newly created DReps
-        # will not vote.
-        _update_drep_activity(governance_data=governance_data)
-        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig1")
-
-        # Update DRep activity again so there is a proposal to vote for. The newly created DReps
-        # will still not vote.
-        _update_drep_activity(governance_data=governance_data)
-        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig2")
-
-        # Update DRep activity again so there is a proposal to vote for. The newly created DReps
-        # will still not vote.
-        _update_drep_activity(governance_data=governance_data)
-        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig3")
+        # will not vote. The action will not be ratified, because the newly created DReps didn't
+        # vote and their delegated stake is > 51%.
+        _action_txid = _update_drep_activity(
+            governance_data=governance_data, action_id="vote_orig1_vote"
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig1_voted")
+        _check_ratification(action_txid=_action_txid, action_id="voted_orig1_ratification")
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig1_ratified")
 
         # Update DRep activity again so there is a proposal to vote for. The newly created DRep1
-        # will vote.
-        _update_drep_activity(governance_data=governance_data_drep1)
-        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep1")
+        # will vote. The action will be ratified, because the newly created DRep1 voted and
+        # together with the original DReps their delegated stake is > 51%.
+        _action_txid = _update_drep_activity(
+            governance_data=governance_data_drep1,
+            action_id="vote_drep1_vote",
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep1_voted")
+        _check_ratification(
+            action_txid=_action_txid,
+            action_id="voted_drep1_ratification",
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep1_ratified")
+        _check_enactment(action_txid=_action_txid, action_id="voted_drep1_enacted")
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep1_enacted")
+
+        # Update DRep activity again so there is a proposal to vote for. The newly created DReps
+        # will not vote. The action will be ratified, because the newly created DReps are
+        # inactive and so their delegated stake does not count towards the active voting stake.
+        _action_txid = _update_drep_activity(
+            governance_data=governance_data, action_id="vote_orig2_vote"
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig2_voted")
+        _check_ratification(action_txid=_action_txid, action_id="voted_orig2_ratification")
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_orig2_ratified")
+
+        # Wait for another epoch without submitting any proposal, to see if "expire" counters
+        # are incremented.
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="no_proposal")
 
         # Update DRep activity again so there is a proposal to vote for. The newly created DRep2
-        # will vote.
-        _update_drep_activity(governance_data=governance_data_drep2)
-        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep2")
+        # will vote. The action will be ratified, because the newly created DRep2 voted and
+        # together with the original DReps their delegated stake is > 51%.
+        _action_txid = _update_drep_activity(
+            governance_data=governance_data_drep2,
+            action_id="vote_drep2_vote",
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep2_voted")
+        _check_ratification(
+            action_txid=_action_txid,
+            action_id="voted_drep2_ratification",
+        )
+        _save_drep_states(drep1=custom_drep1, drep2=custom_drep2, id="voted_drep2_ratified")
+        # We'll not check the enactment here, as we don't want to wait for another epoch
 
-        # Check DRep activity records
+        # Check DRep records
+        reqc.cip019.start(url=helpers.get_vcs_link())
         found_issues = []
         try:
-            found_issues = _check_drep_records()
+            found_issues = _check_records()
         except Exception:
-            _save_drep_records()
+            _dump_records()
             raise
+        reqc.cip019.success()
 
         if found_issues:
             blockers.finish_test(issues=found_issues)

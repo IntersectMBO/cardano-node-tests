@@ -540,4 +540,4 @@ def is_drep_active(
     if epoch == -1:
         epoch = cluster_obj.g_query.get_epoch()
 
-    return bool(drep_state[0][1].get("expiry", 0) >= epoch)
+    return bool(drep_state[0][1].get("expiry", 0) > epoch)
