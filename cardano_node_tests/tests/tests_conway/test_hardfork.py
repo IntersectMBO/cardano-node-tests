@@ -52,24 +52,11 @@ class TestHardfork:
                 "is not available."
             )
 
-    @pytest.fixture
-    def skip_hf_version(
-        self,
-        cluster_lock_governance: governance_setup.GovClusterT,
-    ):
-        cluster, __ = cluster_lock_governance
-        pv = cluster.g_conway_governance.query.gov_state()["currentPParams"]["protocolVersion"][
-            "major"
-        ]
-        if pv != 9:
-            pytest.skip("The major protocol version needs to be 9.")
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
     def test_hardfork(
         self,
         skip_hf_command: None,  # noqa: ARG002
-        skip_hf_version: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_setup.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -87,6 +74,9 @@ class TestHardfork:
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if not conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("The major protocol version needs to be 9.")
 
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address

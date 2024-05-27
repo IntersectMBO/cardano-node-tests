@@ -23,6 +23,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -266,8 +267,7 @@ class TestCommittee:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
-        _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (reqc.cip007, reqc.cip031a_01)]
+        reqc.cip031a_01.start(url=helpers.get_vcs_link())
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -289,6 +289,23 @@ class TestCommittee:
                 *[r.cold_key_pair.skey_file for r in cc_auth_records],
             ],
         )
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_bootstrap",
+                    src_address=pool_user.payment.address,
+                    submit_method=submit_method,
+                    use_build_cmd=use_build_cmd,
+                    tx_files=tx_files,
+                    deposit=deposit_amt,
+                )
+            err_str = str(excinfo.value)
+            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            return
+
+        reqc.cip007.start(url=helpers.get_vcs_link())
 
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -370,6 +387,10 @@ class TestCommittee:
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("Cannot run during bootstrap period.")
+
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         # Check if total delegated stake is below the threshold. This can be used to check that
@@ -968,7 +989,7 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    def test_empty_committee(
+    def test_empty_committee(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -999,6 +1020,10 @@ class TestCommittee:
         __: tp.Any  # mypy workaround
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("Cannot run during bootstrap period.")
+
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         xfail_ledger_3979_msgs = set()
