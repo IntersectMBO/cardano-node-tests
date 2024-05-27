@@ -32,6 +32,16 @@ class PParamPropRec:
     future_pparams: tp.Dict[str, tp.Any]
 
 
+def is_in_bootstrap(
+    cluster_obj: clusterlib.ClusterLib,
+) -> bool:
+    """Check if the cluster is in bootstrap period."""
+    pv = cluster_obj.g_conway_governance.query.gov_state()["currentPParams"]["protocolVersion"][
+        "major"
+    ]
+    return bool(pv == 9)
+
+
 def get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
     """Get the committee value from the data.
 

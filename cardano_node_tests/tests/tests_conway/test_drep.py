@@ -971,6 +971,10 @@ class TestDRepActivity:
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("Cannot run in bootstrap period.")
+
         deposit_amt = cluster.g_query.get_address_deposit()
 
         # Saved DRep records

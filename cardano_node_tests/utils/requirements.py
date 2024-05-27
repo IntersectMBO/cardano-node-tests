@@ -61,10 +61,11 @@ class Req:
         )
         return False
 
-    def start(self, url: str = "") -> bool:
+    def start(self, url: str = "") -> "Req":
         if url:
             self.url = url
-        return self.failure()
+        self.failure()
+        return self
 
     def __repr__(self) -> str:
         return f"<Req: id='{self.id}', group='{self.group}', url='{self.url}'>"

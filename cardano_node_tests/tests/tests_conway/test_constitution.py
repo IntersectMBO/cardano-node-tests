@@ -92,6 +92,21 @@ class TestConstitution:
         )
         reqc.cli002.success()
 
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                conway_common.propose_change_constitution(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_constitution_bootstrap",
+                    anchor_url=anchor_url,
+                    anchor_data_hash=anchor_data_hash,
+                    constitution_url=constitution_url,
+                    constitution_hash=constitution_hash,
+                    pool_user=pool_user_lg,
+                )
+            err_str = str(excinfo.value)
+            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            return
+
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli013, reqc.cip031a_02, reqc.cip031c_01, reqc.cip054_03)]
         (
