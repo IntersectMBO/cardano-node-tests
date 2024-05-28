@@ -40,6 +40,12 @@ Nightly results
    * P2P network topology
    * Constitutional Commitee has 3 members
    * cluster starts directly in Conway era
+* `nightly-conway-bootstrap <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-bootstrap/>`__:  |nightly-conway-bootstrap-badge|
+   * network in Conway era
+   * protocol version 9 (bootstrap phase)
+   * P2P network topology
+   * Constitutional Commitee has 3 members
+   * cluster starts directly in Conway era
 * `nightly-conway-no-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-no-cc/>`__:  |nightly-conway-nocc-badge|
    * network in Conway era
    * protocol version 10
@@ -89,6 +95,9 @@ Nightly upgrade testing
 
 .. |nightly-conway-cc-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-conway-cc%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-cc/
+
+.. |nightly-conway-bootstrap-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-conway-bootstrap%2Fbadge.json
+   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-bootstrap/
 
 .. |nightly-conway-nocc-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-conway-no-cc%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-no-cc/
