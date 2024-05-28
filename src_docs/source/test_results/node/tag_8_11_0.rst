@@ -17,6 +17,8 @@ Regression testing on a local cluster
      - |:heavy_check_mark:|
    * - Mix P2P and Legacy - `Babbage with default (Babbage) TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.11.0-default_mixed_02/>`__
      - |:heavy_check_mark:|
+   * - P2P ON - `Conway PV9 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.11.0-conway9_conway_cc_p2p_01/>`__
+     - |:heavy_check_mark:|
    * - P2P ON - `Conway PV10 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.11.0-conway10_conway_cc_p2p_02/>`__
      - |:heavy_check_mark:|
 
@@ -50,7 +52,7 @@ Release testing checklist
    * - Grafana metrics OK
      - |:hourglass_flowing_sand:|
    * - Regression testing against `shelley-qa`
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - Regression testing against `preview`
      - |:hourglass_flowing_sand:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
