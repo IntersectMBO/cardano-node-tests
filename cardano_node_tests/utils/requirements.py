@@ -1,5 +1,6 @@
 """Functionality for tracking execution of external requirements."""
 
+import enum
 import json
 import logging
 import pathlib as pl
@@ -14,11 +15,11 @@ class GroupsKnown:
     CHANG_US: tp.Final[str] = "chang_us"
 
 
-class Statuses:
-    SUCCESS: tp.Final[str] = "success"
-    FAILURE: tp.Final[str] = "failure"
-    UNCOVERED: tp.Final[str] = "uncovered"
-    PARTIAL_SUCCESS: tp.Final[str] = "partial_success"
+class Statuses(enum.Enum):
+    success = 1
+    failure = 2
+    partial_success = 3
+    uncovered = 4
 
 
 class Req:
@@ -48,14 +49,24 @@ class Req:
         return dest_dir
 
     def success(self) -> bool:
-        content = {"id": self.id, "group": self.group, "url": self.url, "status": Statuses.SUCCESS}
+        content = {
+            "id": self.id,
+            "group": self.group,
+            "url": self.url,
+            "status": Statuses.success.name,
+        }
         helpers.write_json(
             out_file=self._get_dest_dir() / f"{self.basename}_success.json", content=content
         )
         return True
 
     def failure(self) -> bool:
-        content = {"id": self.id, "group": self.group, "url": self.url, "status": Statuses.FAILURE}
+        content = {
+            "id": self.id,
+            "group": self.group,
+            "url": self.url,
+            "status": Statuses.failure.name,
+        }
         helpers.write_json(
             out_file=self._get_dest_dir() / f"{self.basename}_init.json", content=content
         )
@@ -86,7 +97,7 @@ def collect_executed_req(base_dir: pl.Path) -> dict:
 
         req_id = req_rec["id"]
         id_collected = group_collected.get(req_id)
-        if id_collected and id_collected["status"] == Statuses.SUCCESS:
+        if id_collected and id_collected["status"] == Statuses.success.name:
             continue
         if not id_collected:
             id_collected = {}
@@ -95,6 +106,22 @@ def collect_executed_req(base_dir: pl.Path) -> dict:
         id_collected["url"] = req_rec.get("url") or ""
 
     return collected
+
+
+def merge_reqs(*reqs: tp.Dict[str, dict]) -> dict:
+    """Merge requirements."""
+    merged: tp.Dict[str, dict] = {}
+    for report in reqs:
+        for gname, greqs in report.items():
+            merged_group = merged.get(gname) or {}
+            for req_id, req_data in greqs.items():
+                merged_rec = merged_group.get(req_id) or {}
+                merged_status_val = Statuses[merged_rec.get("status") or "uncovered"].value
+                req_status_val = Statuses[req_data["status"]].value
+                if not merged_rec or req_status_val < merged_status_val:
+                    merged_group[req_id] = req_data
+            merged[gname] = merged_group
+    return merged
 
 
 def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:
@@ -116,22 +143,22 @@ def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:
                 if not url:
                     url = executed_group.get(p_req, {}).get("url")
 
-                if p_status == Statuses.SUCCESS:
+                if p_status == Statuses.success.name:
                     dependencies_success.append(p_req)
-                elif p_status == Statuses.FAILURE:
+                elif p_status == Statuses.failure.name:
                     dependencies_failures.append(p_req)
 
             # If any partial requirement failed, the overall outcome would be failed
             if dependencies_failures:
-                status = Statuses.FAILURE
+                status = Statuses.failure.name
             # If none partial requirement is covered, the overall outcome would be uncovered
             elif not (dependencies_success or dependencies_failures):
-                status = Statuses.UNCOVERED
+                status = Statuses.uncovered.name
             # If all partial requirements are successful, the overall outcome would be success
             elif len(dependencies_success) == len(dependencies):
-                status = Statuses.SUCCESS
+                status = Statuses.success.name
             else:
-                status = Statuses.PARTIAL_SUCCESS
+                status = Statuses.partial_success.name
 
             executed_req[group][req_id] = {"status": status, "url": url}
 
