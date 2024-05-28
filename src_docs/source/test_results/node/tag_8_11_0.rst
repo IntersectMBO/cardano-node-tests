@@ -56,13 +56,13 @@ Release testing checklist
    * - Regression testing against `preview`
      - |:hourglass_flowing_sand:|
    * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
    * - DB re-validation testing (ledger snapshots compatibility)
      - |:heavy_check_mark:|
    * - Backward compatibility testing (Node with version N-1)
      - |:heavy_check_mark:|
    * - Check build instructions changes
-     - |:hourglass_flowing_sand:|
+     - |:heavy_check_mark:|
 
 
 New functionalities in this tag
