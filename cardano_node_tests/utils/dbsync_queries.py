@@ -424,6 +424,17 @@ class GovActionProposalDBRow:
     expired_epoch: int
 
 
+@dataclasses.dataclass(frozen=True)
+class VotingProcedureDBRow:
+    # pylint: disable-next=invalid-name
+    id: int
+    voter_role: str
+    committee_voter: int
+    drep_voter: int
+    pool_voter: int
+    vote: str
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1125,3 +1136,18 @@ def query_gov_action_proposal(
     with execute(query=query, vars=(query_var,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield GovActionProposalDBRow(*result)
+
+
+def query_voting_procedure(txhash: str) -> tp.Generator[VotingProcedureDBRow, None, None]:
+    """Query voting_procedure table in db-sync."""
+    query = (
+        "SELECT"
+        " vp.id, vp.voter_role, vp.committee_voter, vp.drep_voter, vp.pool_voter, vp.vote "
+        "FROM voting_procedure as vp "
+        "INNER JOIN tx ON tx.id = vp.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield VotingProcedureDBRow(*result)
