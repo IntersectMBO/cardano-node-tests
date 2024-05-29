@@ -19,6 +19,7 @@ Regression testing on a local cluster
 -------------------------------------
 
 .. list-table:: Regression Testsuite
+   :widths: 64 7
    :header-rows: 0
 
    * - P2P ON - Babbage with default (Babbage) TX
@@ -31,6 +32,7 @@ Regression testing on a local cluster
      - |:heavy_check_mark:|
 
 .. list-table:: Other Testing
+   :widths: 64 7
    :header-rows: 0
 
    * - Upgrade testing (8.1.2 to 8.6.0-pre)
@@ -47,6 +49,7 @@ Release testing checklist
 -------------------------
 
 .. list-table::
+   :widths: 64 7
    :header-rows: 0
 
    * - `8.6.0-pre` pushed to `shelley-qa`
