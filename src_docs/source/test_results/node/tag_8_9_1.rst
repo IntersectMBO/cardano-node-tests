@@ -11,6 +11,7 @@ Regression testing on a local cluster
 -------------------------------------
 
 .. list-table:: Regression Testsuite
+   :widths: 64 7
    :header-rows: 0
 
    * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.9.1-babbage_p2p_01/>`__
@@ -25,6 +26,7 @@ Regression testing on a local cluster
      - |:ok_hand:|
 
 .. list-table:: Other Testing
+   :widths: 64 7
    :header-rows: 0
 
    * - Upgrade testing (8.7.3 to 8.9.1)
@@ -47,6 +49,7 @@ Release testing checklist
 -------------------------
 
 .. list-table::
+   :widths: 64 7
    :header-rows: 0
 
    * - `8.9.1` pushed to `shelley-qa`

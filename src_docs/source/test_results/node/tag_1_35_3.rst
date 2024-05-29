@@ -19,6 +19,7 @@ Regression testing on a local cluster
 -------------------------------------
 
 .. list-table:: only with costModelV1
+   :widths: 64 7
    :header-rows: 0
 
    * - CDDL OFF, P2P OFF - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
@@ -42,6 +43,7 @@ Regression testing on a local cluster
 
 
 .. list-table:: both with costModelV1 and costModelV2
+   :widths: 64 7
    :header-rows: 0
 
    * - CDDL OFF, P2P OFF - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_v2_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
@@ -58,6 +60,7 @@ Regression testing on a local cluster
      - |:heavy_check_mark:|
 
 .. list-table:: other testing
+   :widths: 64 7
    :header-rows: 0
 
    * - upgrade job (1.34.1 to 1.35.3)
@@ -70,6 +73,7 @@ Release testing checklist
 ----------------------------
 
 .. list-table::
+   :widths: 64 7
    :header-rows: 0
 
    * - `1.35.3-rc1` pushed to `shelley-qa`
