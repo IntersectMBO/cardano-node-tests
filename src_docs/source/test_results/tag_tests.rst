@@ -5,6 +5,7 @@ Tag Testing
    :maxdepth: 4
 
    node/tag_8_11_0.rst
+   node/tag_8_9_3.rst
    node/tag_8_9_1.rst
    node/tag_8_9_0.rst
    node/tag_8_8_0.rst
