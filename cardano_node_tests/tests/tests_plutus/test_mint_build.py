@@ -240,7 +240,6 @@ class TestBuildMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.parametrize(
         "plutus_version",
         (
@@ -249,8 +248,9 @@ class TestBuildMinting:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
-    @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.dbsync
+    @pytest.mark.testnets
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
@@ -279,10 +279,10 @@ class TestBuildMinting:
         token_amount = 5
         script_fund = 200_000_000
 
-        plutus_script = plutus_common.MINTING_TIME_RANGE[plutus_version]
+        plutus_v_record = plutus_common.MINTING_TIME_RANGE[plutus_version]
 
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_script.execution_cost,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -312,7 +312,7 @@ class TestBuildMinting:
             + timestamp_offset_ms
         )
 
-        policyid = cluster.g_transaction.get_policyid(plutus_script.script_file)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -322,7 +322,7 @@ class TestBuildMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_script.script_file,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 redeemer_value=str(redeemer_value),
             )
@@ -390,7 +390,7 @@ class TestBuildMinting:
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
-            expected_costs=[plutus_common.MINTING_TIME_RANGE_COST],
+            expected_costs=[plutus_v_record.execution_cost],
         )
 
         # check tx_view

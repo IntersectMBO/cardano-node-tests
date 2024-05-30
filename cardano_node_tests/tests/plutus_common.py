@@ -237,7 +237,7 @@ MINTING_WITNESS_REDEEMER = {
     ),
     "v3": PlutusScriptData(
         script_file=MINTING_WITNESS_REDEEMER_PLUTUS_V3,
-        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=MINTING_WITNESS_REDEEMER_COST,
     ),
 }

@@ -124,8 +124,10 @@ class TestBuildMintingNegative:
         token_amount = 5
         script_fund = 200_000_000
 
+        plutus_v_record = plutus_common.MINTING_WITNESS_REDEEMER[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -142,9 +144,7 @@ class TestBuildMintingNegative:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.g_transaction.get_policyid(
-            plutus_common.MINTING_WITNESS_REDEEMER[plutus_version].script_file
-        )
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -154,7 +154,7 @@ class TestBuildMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_WITNESS_REDEEMER[plutus_version].script_file,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 redeemer_file=plutus_common.DATUM_WITNESS_GOLDEN_NORMAL,
             )
@@ -400,8 +400,10 @@ class TestBuildMintingNegative:
         token_amount = 5
         script_fund = 200_000_000
 
+        plutus_v_record = plutus_common.MINTING_TIME_RANGE[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_TIME_RANGE_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -427,9 +429,7 @@ class TestBuildMintingNegative:
             + timestamp_offset_ms
         )
 
-        script_file = plutus_common.MINTING_TIME_RANGE[plutus_version].script_file
-
-        policyid = cluster.g_transaction.get_policyid(script_file)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -439,7 +439,7 @@ class TestBuildMintingNegative:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=script_file,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 redeemer_value=str(redeemer_value),
             )

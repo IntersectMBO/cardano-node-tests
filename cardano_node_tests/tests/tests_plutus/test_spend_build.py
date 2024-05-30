@@ -655,13 +655,13 @@ class TestBuildLocking:
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
-        plutus_script = plutus_common.ALWAYS_FAILS[plutus_version]
+        plutus_v_record = plutus_common.ALWAYS_FAILS[plutus_version]
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_script.script_file,
+            script_file=plutus_v_record.script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_script.execution_cost,
+            execution_cost=plutus_v_record.execution_cost,
         )
 
         script_utxos, collateral_utxos, tx_output_fund = spend_build._build_fund_script(
@@ -711,13 +711,13 @@ class TestBuildLocking:
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
-        plutus_script = plutus_common.ALWAYS_FAILS[plutus_version]
+        plutus_v_record = plutus_common.ALWAYS_FAILS[plutus_version]
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_script.script_file,
+            script_file=plutus_v_record.script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
             redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_script.execution_cost,
+            execution_cost=plutus_v_record.execution_cost,
         )
 
         script_utxos, collateral_utxos, tx_output_fund = spend_build._build_fund_script(
