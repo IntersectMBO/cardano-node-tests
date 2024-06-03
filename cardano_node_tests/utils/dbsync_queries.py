@@ -435,6 +435,22 @@ class VotingProcedureDBRow:
     vote: str
 
 
+@dataclasses.dataclass(frozen=True)
+class NewCommitteeInfoDBRow:
+    # pylint: disable-next=invalid-name
+    id: int
+    quorum_numerator: str
+    quorum_denominator: int
+
+
+@dataclasses.dataclass(frozen=True)
+class NewCommitteeMemberDBRow:
+    # pylint: disable-next=invalid-name
+    gov_id: int
+    committee_hash_id: str
+    expiration_epoch: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1151,3 +1167,33 @@ def query_voting_procedure(txhash: str) -> tp.Generator[VotingProcedureDBRow, No
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield VotingProcedureDBRow(*result)
+
+
+def query_new_committee_info(txhash: str) -> tp.Generator[NewCommitteeInfoDBRow, None, None]:
+    """Query new committee proposed in db-sync."""
+    query = (
+        "SELECT"
+        " committee.id, committee.quorum_numerator, committee.quorum_denominator "
+        "FROM committee "
+        "INNER JOIN gov_action_proposal as gap ON gap.id = committee.gov_action_proposal_id "
+        "INNER JOIN tx ON tx.id = gap.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield NewCommitteeInfoDBRow(*result)
+
+
+def query_committee_members(committee_id: int) -> tp.Generator[NewCommitteeMemberDBRow, None, None]:
+    """Query committee members in db-sync."""
+    query = (
+        "SELECT"
+        " cm.id, cm.committee_hash_id, cm.expiration_epoch "
+        "FROM committee_member as cm "
+        "WHERE cm.committee_id = %s;"
+    )
+
+    with execute(query=query, vars=(committee_id,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield NewCommitteeMemberDBRow(*result)
