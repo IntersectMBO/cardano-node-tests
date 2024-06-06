@@ -240,3 +240,96 @@ class TestInfo:
             votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
             txhash=vote_txid,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_info_deposit_return_after_expiry(
+        self,
+        cluster_use_governance: governance_setup.GovClusterT,
+        pool_user_ug: clusterlib.PoolUser,
+    ):
+        """Test deposit return on info action.
+
+        * submit an "info" action
+        * Wait for govActionLifetime
+        * Check deposit is returned
+        """
+        cluster, _ = cluster_use_governance
+        temp_template = common.get_test_id(cluster)
+        action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
+
+        # Get initial return account balance
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
+
+        # Create an action
+        rand_str = helpers.get_rand_str(4)
+        anchor_url = f"http://www.info-action-{rand_str}.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+
+        reqc.cip034ex.start(url=helpers.get_vcs_link())
+        info_action = cluster.g_conway_governance.action.create_info(
+            action_name=temp_template,
+            deposit_amt=action_deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
+        )
+
+        tx_files_action = clusterlib.TxFiles(
+            proposal_files=[info_action.action_file],
+            signing_key_files=[pool_user_ug.payment.skey_file],
+        )
+
+        # Make sure we have enough time to submit the proposal in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        # Get action proposal submitted epoch for checking expiry later
+        action_prop_epoch = cluster.g_query.get_epoch()
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_action",
+            src_address=pool_user_ug.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_action,
+        )
+
+        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        # Get submitted action
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
+        assert prop_action, "Info action not found"
+
+        gov_action_lifetime = cluster.conway_genesis["govActionLifetime"]
+
+        epochs_to_expiration = (
+            gov_action_lifetime
+            + 2  # wait additional 2 epoch to ensure action is expired
+            + action_prop_epoch
+            - cluster.g_query.get_epoch()
+        )
+        cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
+
+        current_gov_state = cluster.g_conway_governance.query.gov_state()
+
+        # Check action is no longer in the governance state
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=current_gov_state, action_txid=action_txid
+        )
+        assert not prop_action, "Info action found that should have expired"
+
+        # Check deposit is returned
+        deposit_returned = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
+        assert (
+            deposit_returned == init_return_account_balance + action_deposit_amt
+        ), "Incorrect return account balance"
+        reqc.cip034ex.success()
