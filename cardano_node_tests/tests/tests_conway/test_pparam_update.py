@@ -239,6 +239,7 @@ class TestPParamUpdate:
         * check that the action is enacted
         * check that only the ratified action that got accepted first to the chain gets enacted
         * check that it's not possible to vote on enacted action
+        * check that all deposit required for action is returned back
         """
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
@@ -248,6 +249,10 @@ class TestPParamUpdate:
 
         if is_in_bootstrap and not configuration.HAS_CC:
             pytest.skip("The test doesn't work in bootstrap period without CC.")
+
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
@@ -632,13 +637,19 @@ class TestPParamUpdate:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
+        # For keeping track of how many proposals were submitted
+        # to check for all deposit required for action is returned back
+        submitted_proposal_count = 0
+
         def _propose_pparams_update(
             name_template: str,
             proposals: tp.List[clusterlib_utils.UpdateProposal],
         ) -> conway_common.PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
-
+            # Increment count
+            nonlocal submitted_proposal_count
+            submitted_proposal_count += 1
             return conway_common.propose_pparams_update(
                 cluster_obj=cluster,
                 name_template=name_template,
@@ -1175,6 +1186,16 @@ class TestPParamUpdate:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
         if fin_voted_votes.drep:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
+
+        # Check for deposit return
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        enact_deposit_returned = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+        assert (
+            enact_deposit_returned
+            == init_return_account_balance + deposit_amt * submitted_proposal_count
+        ), "Incorrect return account balance"
 
 
 class TestPParamData:
