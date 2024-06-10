@@ -594,7 +594,8 @@ def get_data_from_logs(log_file):
     print(f"current_directory: {current_directory}")
 
     tip_details_dict = OrderedDict()
-    ram_details_dict = OrderedDict()
+    heap_ram_details_dict = OrderedDict()
+    rss_ram_details_dict = OrderedDict()
     centi_cpu_dict = OrderedDict()
     cpu_details_dict = OrderedDict()
     logs_details_dict = OrderedDict()
@@ -605,9 +606,12 @@ def get_data_from_logs(log_file):
     for line in log_file_lines:
         if 'cardano.node.resources' in line:
             timestamp = re.findall(r'\d{4}-\d{2}-\d{2} \d{1,2}:\d{1,2}:\d{1,2}', line)[0]
-            ram_value = re.findall(r'"Heap",Number [-+]?[\d]+\.?[\d]*[Ee](?:[-+]?[\d]+)?', line)
-            if len(ram_value) > 0:
-                ram_details_dict[timestamp] = ram_value[0].split(' ')[1]
+            heap_ram_value = re.findall(r'"Heap",Number [-+]?[\d]+\.?[\d]*[Ee](?:[-+]?[\d]+)?', line)
+            rss_ram_value = re.findall(r'"RSS",Number [-+]?[\d]+\.?[\d]*[Ee](?:[-+]?[\d]+)?', line)
+            if len(heap_ram_value) > 0:
+                heap_ram_details_dict[timestamp] = heap_ram_value[0].split(' ')[1]
+            if len(rss_ram_value) > 0:
+                rss_ram_details_dict[timestamp] = rss_ram_value[0].split(' ')[1]
 
             centi_cpu = re.findall(r'"CentiCpu",Number \d+\.\d+', line)
             if len(centi_cpu) > 0:
@@ -632,19 +636,22 @@ def get_data_from_logs(log_file):
             current_timestamp, previous_timestamp)
         cpu_details_dict[timestamp1] = cpu_load_percent / no_of_cpu_cores
 
-    all_timestamps_list = set(list(tip_details_dict.keys()) + list(ram_details_dict.keys()) + list(
-        cpu_details_dict.keys()))
+    all_timestamps_list = set(list(tip_details_dict.keys()) + list(heap_ram_details_dict.keys()) + 
+        list(rss_ram_details_dict.keys()) + list(cpu_details_dict.keys()))
     for timestamp2 in all_timestamps_list:
         if timestamp2 not in list(tip_details_dict.keys()):
             tip_details_dict[timestamp2] = ''
-        if timestamp2 not in list(ram_details_dict.keys()):
-            ram_details_dict[timestamp2] = ''
+        if timestamp2 not in list(heap_ram_details_dict.keys()):
+            heap_ram_details_dict[timestamp2] = ''
+        if timestamp2 not in list(rss_ram_details_dict.keys()):
+            rss_ram_details_dict[timestamp2] = ''
         if timestamp2 not in list(cpu_details_dict.keys()):
             cpu_details_dict[timestamp2] = ''
 
         logs_details_dict[timestamp2] = {
             'tip': tip_details_dict[timestamp2],
-            'ram': ram_details_dict[timestamp2],
+            'heap_ram': heap_ram_details_dict[timestamp2],
+            'rss_ram': rss_ram_details_dict[timestamp2],
             'cpu': cpu_details_dict[timestamp2]
         }
 
