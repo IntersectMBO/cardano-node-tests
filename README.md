@@ -164,7 +164,7 @@ When running tests, the testing framework starts and stops cluster instances as 
 1. cd back to 'cardano-node-tests' repo
 
     ```sh
-    cd ../cardano-node-test
+    cd ../cardano-node-tests
     ```
 
 1. activate virtual env
@@ -179,18 +179,18 @@ When running tests, the testing framework starts and stops cluster instances as 
     export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages)":$PYTHONPATH
     ```
 
-1. prepare cluster scripts for starting local cluster directly in Babbage era
-
-    ```sh
-    mkdir -p dev_workdir
-    prepare-cluster-scripts -c -d dev_workdir/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
-    ```
-
 1. set env variables
 
     ```sh
     export CARDANO_NODE_SOCKET_PATH="$PWD/dev_workdir/state-cluster0/bft1.socket" DEV_CLUSTER_RUNNING=1
     mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
+    ```
+
+1. prepare cluster scripts for starting local cluster directly in Babbage era
+
+    ```sh
+    mkdir -p dev_workdir
+    prepare-cluster-scripts -c -d dev_workdir/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
     ```
 
 1. start the cluster instance in development mode
