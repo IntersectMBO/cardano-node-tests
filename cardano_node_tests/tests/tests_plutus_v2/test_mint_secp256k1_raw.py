@@ -1,4 +1,4 @@
-"""SECP256k1 tests for minting with Plutus V2 using `transaction build-raw`."""
+"""SECP256k1 tests for minting with Plutus using `transaction build-raw`."""
 
 import logging
 import pathlib as pl
@@ -198,7 +198,7 @@ class TestSECP256k1:
     ):
         """Try to mint a token with invalid test vectors.
 
-        * Expect failure.
+        Expect failure.
         """
         temp_template = common.get_test_id(cluster)
 
@@ -229,8 +229,8 @@ class TestSECP256k1:
 
         err_msg = str(excinfo.value)
 
-        # before protocol version 8 the SECP256k1 is blocked
-        # after that the usage is limited by high cost model
+        # Before protocol version 8 the SECP256k1 is blocked.
+        # After that the usage is limited by high cost model.
         is_forbidden = "MalformedScriptWitnesses" in err_msg
 
         is_overspending = (
@@ -238,7 +238,7 @@ class TestSECP256k1:
             "overspending the budget." in err_msg
         )
 
-        # from protocol version 8 the SECP256k1 functions are allowed
+        # From protocol version 8 the SECP256k1 functions are allowed
         decoding_error = f"Caused by: (verify{algorithm.capitalize()}Secp256k1Signature"
 
         validation_error = (

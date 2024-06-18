@@ -1,4 +1,4 @@
-"""SECP256k1 tests for minting with Plutus V2 using `transaction build`."""
+"""SECP256k1 tests for minting with Plutus using `transaction build`."""
 
 import logging
 import pathlib as pl
@@ -221,7 +221,7 @@ class TestSECP256k1:
     ):
         """Try to mint a token with invalid test vectors.
 
-        * Expect failure.
+        Expect failure.
         """
         temp_template = common.get_test_id(cluster)
 
@@ -252,8 +252,8 @@ class TestSECP256k1:
 
         err_msg = str(excinfo.value)
 
-        # before protocol version 8 the SECP256k1 is blocked
-        # after that the usage is limited by high cost model
+        # Before protocol version 8 the SECP256k1 is blocked.
+        # After that the usage is limited by high cost model.
         is_forbidden = (
             "Forbidden builtin function: (builtin "
             f"verify{algorithm.capitalize()}Secp256k1Signature)"
@@ -268,19 +268,32 @@ class TestSECP256k1:
             "overspending the budget." in err_msg
         )
 
-        # from protocol version 8 the SECP256k1 functions are allowed and
-        # when we provide wrong data meaningful error messages are expected
-        expected_error_messages = {
-            "invalid_sig": "validation failed",
-            "invalid_pubkey": "validation failed",
-            "no_msg": (
-                "Invalid message hash" if algorithm == "ecdsa" else "Schnorr validation failed"
-            ),
-            "no_pubkey": "Invalid verification key",
-            "no_sig": "Invalid signature",
-        }
-
         if before_pv8:
             assert is_forbidden or is_overspending, err_msg
-        else:
+        # From protocol version 8 the SECP256k1 functions are allowed and
+        # when we provide wrong data meaningful error messages are expected.
+        elif plutus_version == "v2":
+            expected_error_messages = {
+                "invalid_sig": "validation failed",
+                "invalid_pubkey": "validation failed",
+                "no_msg": (
+                    "Invalid message hash" if algorithm == "ecdsa" else "Schnorr validation failed"
+                ),
+                "no_pubkey": "Invalid verification key",
+                "no_sig": "Invalid signature",
+            }
             assert expected_error_messages[test_vector] in err_msg, err_msg
+        elif plutus_version == "v3":
+            # PT5: PlutusTx.Prelude.check: input is 'False'. The untyped script we use for
+            # PlutusV3 is different from the PlutusV2 script, and doesn't produce the same error
+            # messages.
+            expected_error_messages = {
+                "invalid_sig": "PT5",
+                "invalid_pubkey": "PT5",
+                "no_msg": ("Invalid message hash" if algorithm == "ecdsa" else "PT5"),
+                "no_pubkey": "PT5",
+                "no_sig": "PT5",
+            }
+        else:
+            _msg = f"Unsupported plutus version: {plutus_version}"
+            raise ValueError(_msg)
