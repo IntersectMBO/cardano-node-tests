@@ -135,7 +135,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -629,10 +629,12 @@ class TestLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS3_VERSION
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
@@ -649,10 +651,10 @@ class TestLocking:
         amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_FAILS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_FAILS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_FAILS_COST,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_FAILS[plutus_version].execution_cost,
         )
 
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
@@ -685,10 +687,12 @@ class TestLocking:
         assert "PlutusFailure" in err, err
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS3_VERSION
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test failing script together with the `--script-invalid` argument - collateral is taken.
 
@@ -703,10 +707,10 @@ class TestLocking:
         amount = 2_000_000
 
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_FAILS_PLUTUS_V1,
+            script_file=plutus_common.ALWAYS_FAILS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=plutus_common.REDEEMER_42_TYPED,
-            execution_cost=plutus_common.ALWAYS_FAILS_COST,
+            redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            execution_cost=plutus_common.ALWAYS_FAILS[plutus_version].execution_cost,
         )
 
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
@@ -748,7 +752,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -809,7 +813,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -899,7 +903,7 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
-    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_PLUTUS3_VERSION
     def test_collaterals(
         self,
         cluster: clusterlib.ClusterLib,

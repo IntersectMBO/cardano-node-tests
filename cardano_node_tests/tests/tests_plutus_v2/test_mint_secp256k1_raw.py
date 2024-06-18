@@ -1,4 +1,4 @@
-"""SECP256k1 tests for minting with Plutus V2 using `transaction build-raw`."""
+"""SECP256k1 tests for minting with Plutus using `transaction build-raw`."""
 
 import logging
 import pathlib as pl
@@ -136,12 +136,14 @@ class TestSECP256k1:
         common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.parametrize("algorithm", ("ecdsa", "schnorr"))
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         algorithm: str,
+        plutus_version: str,
     ):
         """Test that is possible to use the two SECP256k1 builtin functions.
 
@@ -152,9 +154,9 @@ class TestSECP256k1:
         temp_template = common.get_test_id(cluster)
 
         script_file = (
-            plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2
+            plutus_common.MINTING_SECP256K1_ECDSA[plutus_version]
             if algorithm == "ecdsa"
-            else plutus_common.MINTING_SECP256K1_SCHNORR_PLUTUS_V2
+            else plutus_common.MINTING_SECP256K1_SCHNORR[plutus_version]
         )
 
         redeemer_dir = (
@@ -180,6 +182,7 @@ class TestSECP256k1:
             raise
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.parametrize(
         "test_vector",
         ("invalid_sig", "invalid_pubkey", "no_msg", "no_pubkey", "no_sig"),
@@ -191,17 +194,18 @@ class TestSECP256k1:
         payment_addrs: tp.List[clusterlib.AddressRecord],
         test_vector: str,
         algorithm: str,
+        plutus_version: str,
     ):
         """Try to mint a token with invalid test vectors.
 
-        * Expect failure.
+        Expect failure.
         """
         temp_template = common.get_test_id(cluster)
 
         script_file = (
-            plutus_common.MINTING_SECP256K1_ECDSA_PLUTUS_V2
+            plutus_common.MINTING_SECP256K1_ECDSA[plutus_version]
             if algorithm == "ecdsa"
-            else plutus_common.MINTING_SECP256K1_SCHNORR_PLUTUS_V2
+            else plutus_common.MINTING_SECP256K1_SCHNORR[plutus_version]
         )
 
         redeemer_dir = (
@@ -225,8 +229,8 @@ class TestSECP256k1:
 
         err_msg = str(excinfo.value)
 
-        # before protocol version 8 the SECP256k1 is blocked
-        # after that the usage is limited by high cost model
+        # Before protocol version 8 the SECP256k1 is blocked.
+        # After that the usage is limited by high cost model.
         is_forbidden = "MalformedScriptWitnesses" in err_msg
 
         is_overspending = (
@@ -234,7 +238,7 @@ class TestSECP256k1:
             "overspending the budget." in err_msg
         )
 
-        # from protocol version 8 the SECP256k1 functions are allowed
+        # From protocol version 8 the SECP256k1 functions are allowed
         decoding_error = f"Caused by: (verify{algorithm.capitalize()}Secp256k1Signature"
 
         validation_error = (
