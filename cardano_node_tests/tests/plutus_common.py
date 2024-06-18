@@ -140,6 +140,12 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
 
 MINTING_V3_COST = ExecutionCost(per_time=161_100, per_space=800, fixed_cost=58)
 MINTING_V3_REF_COST = ExecutionCost(per_time=161_100, per_space=800, fixed_cost=58)
+MINTING_V3_TIME_RANGE_COST = ExecutionCost(
+    per_time=110_046_914, per_space=350_762, fixed_cost=28_174
+)
+MINTING_V3_WITNESS_REDEEMER_COST = ExecutionCost(
+    per_time=106_217_335, per_space=333_824, fixed_cost=26_920
+)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -238,7 +244,7 @@ MINTING_WITNESS_REDEEMER = {
     "v3": PlutusScriptData(
         script_file=MINTING_WITNESS_REDEEMER_PLUTUS_V3,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-        execution_cost=MINTING_WITNESS_REDEEMER_COST,
+        execution_cost=MINTING_V3_WITNESS_REDEEMER_COST,
     ),
 }
 
@@ -251,7 +257,7 @@ MINTING_TIME_RANGE = {
     "v3": PlutusScriptData(
         script_file=MINTING_TIME_RANGE_PLUTUS_V3,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-        execution_cost=MINTING_TIME_RANGE_COST,
+        execution_cost=MINTING_V3_TIME_RANGE_COST,
     ),
 }
 
