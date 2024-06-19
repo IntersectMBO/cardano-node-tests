@@ -1063,9 +1063,11 @@ def query_committee_registration(
 ) -> tp.Generator[CommitteeRegistrationDBRow, None, None]:
     """Query committee registration in db-sync."""
     query = (
-        "SELECT id, tx_id, cert_index, cold_key, hot_key "
-        "FROM committee_registration "
-        "WHERE cold_key = %s;"
+        "SELECT cr.id, cr.tx_id, cr.cert_index, chc.raw, chh.raw "
+        "FROM committee_registration as cr "
+        "INNER JOIN committee_hash as chh ON chh.id = cr.hot_key_id "
+        "INNER JOIN committee_hash as chc ON chc.id = cr.cold_key_id "
+        "WHERE chc.raw = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{cold_key}",)) as cur:
@@ -1078,9 +1080,10 @@ def query_committee_deregistration(
 ) -> tp.Generator[CommitteeDeregistrationDBRow, None, None]:
     """Query committee registration in db-sync."""
     query = (
-        "SELECT id, tx_id, cert_index, voting_anchor_id, cold_key "
-        "FROM committee_de_registration "
-        "WHERE cold_key = %s;"
+        "SELECT cd.id, cd.tx_id, cd.cert_index, cd.voting_anchor_id, committee_hash.raw "
+        "FROM committee_de_registration as cd "
+        "INNER JOIN committee_hash ON committee_hash.id = cd.cold_key_id "
+        "WHERE committee_hash.raw = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{cold_key}",)) as cur:
