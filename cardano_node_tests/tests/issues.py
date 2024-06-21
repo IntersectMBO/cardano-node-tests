@@ -57,6 +57,12 @@ cli_799 = blockers.GH(
     fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
     message="Conway era fields shown in Babbage Tx.",
 )
+cli_800 = blockers.GH(
+    issue=800,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
+    message="Datum not checked for PlutusV1 and PlutusV2 spending scripts.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,
