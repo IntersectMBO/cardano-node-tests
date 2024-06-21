@@ -236,7 +236,7 @@ class TestNegativeDatum:
         )
 
         txouts = [
-            clusterlib.TxOut(address=redeem_address, amount=amount + redeem_cost.fee),
+            clusterlib.TxOut(address=redeem_address, amount=amount + redeem_cost.fee + 5_000_000),
             clusterlib.TxOut(address=payment_addr.address, amount=redeem_cost.collateral),
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
@@ -259,7 +259,8 @@ class TestNegativeDatum:
         script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        err_str = ""
+        try:
             spend_build._build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
@@ -271,7 +272,10 @@ class TestNegativeDatum:
                 amount=amount,
                 submit_tx=False,
             )
-        err_str = str(excinfo.value)
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
+        else:
+            issues.cli_800.finish_test()
 
         if address_type == "script_address":
             assert "txin does not have a script datum" in err_str, err_str
@@ -362,7 +366,8 @@ class TestNegativeDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        err_str = ""
+        try:
             spend_build._build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
@@ -374,8 +379,11 @@ class TestNegativeDatum:
                 amount=2_000_000,
                 submit_tx=False,
             )
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
+        else:
+            issues.cli_800.finish_test()
 
-        err_str = str(excinfo.value)
         assert (
             "The Plutus script witness has the wrong datum (according to the UTxO)." in err_str
         ), err_str
