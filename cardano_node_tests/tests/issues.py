@@ -51,6 +51,12 @@ cli_796 = blockers.GH(
     fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
     message="Option `--fee` not required.",
 )
+cli_799 = blockers.GH(
+    issue=799,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
+    message="Conway era fields shown in Babbage Tx.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,
