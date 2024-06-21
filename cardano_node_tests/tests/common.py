@@ -64,9 +64,15 @@ SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
     reason="Plutus V2 is available only in Babbage+ eras",
 )
 
+_PLUTUSV3_SKIP_REASON = ""
+if VERSIONS.transaction_era < VERSIONS.CONWAY:
+    _PLUTUSV3_SKIP_REASON = "Plutus V3 is available only in Conway+ eras"
+elif VERSIONS.node >= version.parse("8.12.0"):
+    _PLUTUSV3_SKIP_REASON = "PlutusV3 scripts need to be rewritten because of CIP-69"
+PLUTUSV3_UNUSABLE = bool(_PLUTUSV3_SKIP_REASON)
 SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.CONWAY,
-    reason="Plutus V3 is available only in Conway+ eras",
+    PLUTUSV3_UNUSABLE,
+    reason=_PLUTUSV3_SKIP_REASON,
 )
 
 
