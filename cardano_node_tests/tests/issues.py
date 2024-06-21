@@ -45,6 +45,12 @@ cli_768 = blockers.GH(
     fixed_in="8.23.1.1",  # Fixed in a release after 8.23.1.0
     message="Option `--fee` not required.",
 )
+cli_796 = blockers.GH(
+    issue=796,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
+    message="Option `--fee` not required.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,
