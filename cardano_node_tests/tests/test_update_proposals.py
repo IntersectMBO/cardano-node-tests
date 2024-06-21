@@ -359,4 +359,4 @@ class TestUpdateProposals:
         # check param proposal on dbsync
         dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
-        assert protocol_params["decentralization"] is None
+        assert protocol_params.get("decentralization") is None
