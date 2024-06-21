@@ -1336,7 +1336,10 @@ class TestNegative:
         except clusterlib.CLIError as exc:
             err_str = str(exc)
         else:
-            issues.cli_768.finish_test()
+            if VERSIONS.node < version.parse("8.12.0"):
+                issues.cli_768.finish_test()
+            else:
+                issues.cli_796.finish_test()
 
         if "Transaction _ fee not supported in" in err_str:
             issues.node_4591.finish_test()
@@ -1344,6 +1347,7 @@ class TestNegative:
         assert (
             "fee must be specified" in err_str
             or "Implicit transaction fee not supported" in err_str
+            or "Missing: --fee LOVELACE" in err_str  # node >= 8.12.0
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
