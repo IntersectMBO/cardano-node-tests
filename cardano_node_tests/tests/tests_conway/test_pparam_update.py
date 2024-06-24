@@ -384,7 +384,7 @@ class TestPParamUpdate:
             ),
             clusterlib_utils.UpdateProposal(
                 arg="--number-of-pools",
-                value=random.randint(500, 400100),
+                value=random.randint(500, 65535),
                 name="stakePoolTargetNum",
             ),
             clusterlib_utils.UpdateProposal(
