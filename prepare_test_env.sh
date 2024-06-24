@@ -23,8 +23,8 @@ case "${1:-""}" in
     ;;
 esac
 
-_cur_file="${BASH_SOURCE[${#BASH_SOURCE[@]} - 1]}"
-REPODIR="$(readlink -m "${_cur_file%/*}")"
+_cur_file="$(readlink -m "${BASH_SOURCE[${#BASH_SOURCE[@]} - 1]}")"
+REPODIR="${_cur_file%/*}"
 cd "$REPODIR" || return 1
 unset _cur_file
 

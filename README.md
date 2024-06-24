@@ -161,6 +161,12 @@ When running tests, the testing framework starts and stops cluster instances as 
     nix develop .#devops
     ```
 
+1. run fresh login shell on top of the current nix shell (to get the correct environment variables)
+
+    ```sh
+    /bin/bash --login
+    ```
+
 1. cd back to 'cardano-node-tests' repo
 
     ```sh
@@ -189,7 +195,6 @@ When running tests, the testing framework starts and stops cluster instances as 
 1. prepare cluster scripts for starting local cluster directly in Babbage era
 
     ```sh
-    mkdir -p dev_workdir
     prepare-cluster-scripts -c -d dev_workdir/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
     ```
 
