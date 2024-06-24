@@ -2,6 +2,7 @@
 """Generate coverage results for external requirements."""
 
 import argparse
+import json
 import logging
 
 from cardano_node_tests.utils import helpers
@@ -14,13 +15,6 @@ def get_args() -> argparse.Namespace:
     """Get command line arguments."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
     parser.add_argument(
-        "-a",
-        "--artifacts-base-dir",
-        required=True,
-        type=helpers.check_dir_arg,
-        help="Path to a directory with testing artifacts",
-    )
-    parser.add_argument(
         "-m",
         "--requirements-mapping",
         required=True,
@@ -32,6 +26,19 @@ def get_args() -> argparse.Namespace:
         required=True,
         help="File where to save coverage results",
     )
+    parser.add_argument(
+        "-a",
+        "--artifacts-base-dir",
+        type=helpers.check_dir_arg,
+        help="Path to a directory with testing artifacts",
+    )
+    parser.add_argument(
+        "-i",
+        "--input-files",
+        nargs="+",
+        type=helpers.check_file_arg,
+        help="Path to coverage results to merge into a final result",
+    )
     return parser.parse_args()
 
 
@@ -42,9 +49,24 @@ def main() -> None:
     )
     args = get_args()
 
-    executed_req = requirements.collect_executed_req(base_dir=args.artifacts_base_dir)
+    if not (args.artifacts_base_dir or args.input_files):
+        LOGGER.error("Either `--artifacts-base-dir` or `--input-files` must be provided")
+        return
+
+    executed_req = {}
+    if args.artifacts_base_dir:
+        executed_req = requirements.collect_executed_req(base_dir=args.artifacts_base_dir)
+
+    input_reqs = []
+    if args.input_files:
+        for input_file in args.input_files:
+            with open(input_file, encoding="utf-8") as in_fp:
+                input_reqs.append(json.load(in_fp))
+
+    merged_reqs = requirements.merge_reqs(executed_req, *input_reqs)
+
     report = requirements.get_mapped_req(
-        mapping=args.requirements_mapping, executed_req=executed_req
+        mapping=args.requirements_mapping, executed_req=merged_reqs
     )
 
     helpers.write_json(out_file=args.output_file, content=report)

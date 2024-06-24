@@ -149,6 +149,7 @@ def build_and_submit_tx(
             required_signer_hashes=required_signer_hashes,
             withdrawals=withdrawals,
             script_withdrawals=script_withdrawals,
+            deposit=deposit,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             witness_count_add=witness_count_add,

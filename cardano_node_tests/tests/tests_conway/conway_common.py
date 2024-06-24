@@ -16,13 +16,6 @@ from cardano_node_tests.utils import governance_utils
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True, order=True)
-class VotedVotes:
-    cc: tp.List[clusterlib.VoteCC]  # pylint: disable=invalid-name
-    drep: tp.List[clusterlib.VoteDrep]
-    spo: tp.List[clusterlib.VoteSPO]
-
-
 @dataclasses.dataclass(frozen=True)
 class PParamPropRec:
     proposals: tp.List[clusterlib_utils.UpdateProposal]
@@ -30,6 +23,16 @@ class PParamPropRec:
     action_ix: int
     proposal_names: tp.Set[str]
     future_pparams: tp.Dict[str, tp.Any]
+
+
+def is_in_bootstrap(
+    cluster_obj: clusterlib.ClusterLib,
+) -> bool:
+    """Check if the cluster is in bootstrap period."""
+    pv = cluster_obj.g_conway_governance.query.gov_state()["currentPParams"]["protocolVersion"][
+        "major"
+    ]
+    return bool(pv == 9)
 
 
 def get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
@@ -102,24 +105,39 @@ def save_committee_state(committee_state: tp.Dict[str, tp.Any], name_template: s
         json.dump(committee_state, out_fp, indent=2)
 
 
-def get_pool_user(
+def save_drep_state(drep_state: governance_utils.DRepStateT, name_template: str) -> None:
+    """Save DRep state to a file."""
+    with open(f"{name_template}_drep_state.json", "w", encoding="utf-8") as out_fp:
+        json.dump(drep_state, out_fp, indent=2)
+
+
+# TODO: move this and reuse in other tests that need a registered stake address.
+def get_registered_pool_user(
     cluster_manager: cluster_management.ClusterManager,
+    name_template: str,
     cluster_obj: clusterlib.ClusterLib,
-    caching_key: str,
+    caching_key: str = "",
     fund_amount: int = 1000_000_000,
 ) -> clusterlib.PoolUser:
-    """Create a pool user."""
-    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
+    """Create a registered pool user."""
 
-        test_id = common.get_test_id(cluster_obj)
+    def _create_user() -> clusterlib.PoolUser:
         pool_user = clusterlib_utils.create_pool_users(
             cluster_obj=cluster_obj,
-            name_template=f"{test_id}_pool_user",
+            name_template=f"{name_template}_pool_user",
             no_of_addr=1,
         )[0]
-        fixture_cache.value = pool_user
+        return pool_user
+
+    if caching_key:
+        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            pool_user = _create_user()
+            fixture_cache.value = pool_user
+    else:
+        pool_user = _create_user()
 
     # Fund the payment address with some ADA
     clusterlib_utils.fund_from_faucet(
@@ -132,7 +150,7 @@ def get_pool_user(
     # Register the stake address
     stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
     stake_addr_reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-        addr_name=f"{test_id}_pool_user",
+        addr_name=f"{name_template}_pool_user",
         deposit_amt=stake_deposit_amt,
         stake_vkey_file=pool_user.stake.vkey_file,
     )
@@ -143,7 +161,7 @@ def get_pool_user(
 
     clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster_obj,
-        name_template=f"{test_id}_pool_user",
+        name_template=f"{name_template}_pool_user",
         src_address=pool_user.payment.address,
         use_build_cmd=True,
         tx_files=tx_files_action,
@@ -205,7 +223,7 @@ def cast_vote(
     cc_skip_votes: bool = False,
     drep_skip_votes: bool = False,
     spo_skip_votes: bool = False,
-) -> VotedVotes:
+) -> governance_utils.VotedVotes:
     """Cast a vote."""
     # pylint: disable=too-many-arguments
     votes_cc = []
@@ -294,7 +312,7 @@ def cast_vote(
     assert not votes_drep or prop_vote["dRepVotes"], "No DRep votes"
     assert not votes_spo or prop_vote["stakePoolVotes"], "No stake pool votes"
 
-    return VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+    return governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
 
 def resign_ccs(

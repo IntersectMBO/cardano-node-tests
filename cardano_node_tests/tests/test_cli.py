@@ -148,6 +148,10 @@ class TestCLI:
 
         with open(self.TX_BODY_OUT_JSON, encoding="utf-8") as infile:
             tx_body_golden = infile.read()
+
+        if '"governance actions":' in tx:
+            issues.cli_799.finish_test()
+
         assert tx_body == tx_body_golden.strip()
 
         with open(self.TX_OUT_JSON, encoding="utf-8") as infile:

@@ -1,8 +1,8 @@
-name: Nightly tests Shelley Tx
+name: Nightly tests Conway Bootstrap
 
 on:
   schedule:
-    - cron: '15 04 * * *'
+    - cron: '15 01 * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,7 @@ jobs:
     # reusable workflow from local repo and same branch as this config
     uses: ./.github/workflows/regression_reusable.yaml
     with:
-      env-path: .github/env_nightly_shelley_tx
+      env-path: .github/env_nightly_conway_bootstrap
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}

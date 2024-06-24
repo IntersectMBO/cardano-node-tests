@@ -485,6 +485,17 @@ class GovActionProposalDBRow:
     expired_epoch: int
 
 
+@dataclasses.dataclass(frozen=True)
+class VotingProcedureDBRow:
+    # pylint: disable-next=invalid-name
+    id: int
+    voter_role: str
+    committee_voter: int
+    drep_voter: int
+    pool_voter: int
+    vote: str
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1152,9 +1163,11 @@ def query_committee_registration(
 ) -> tp.Generator[CommitteeRegistrationDBRow, None, None]:
     """Query committee registration in db-sync."""
     query = (
-        "SELECT id, tx_id, cert_index, cold_key, hot_key "
-        "FROM committee_registration "
-        "WHERE cold_key = %s;"
+        "SELECT cr.id, cr.tx_id, cr.cert_index, chc.raw, chh.raw "
+        "FROM committee_registration as cr "
+        "INNER JOIN committee_hash as chh ON chh.id = cr.hot_key_id "
+        "INNER JOIN committee_hash as chc ON chc.id = cr.cold_key_id "
+        "WHERE chc.raw = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{cold_key}",)) as cur:
@@ -1167,9 +1180,10 @@ def query_committee_deregistration(
 ) -> tp.Generator[CommitteeDeregistrationDBRow, None, None]:
     """Query committee registration in db-sync."""
     query = (
-        "SELECT id, tx_id, cert_index, voting_anchor_id, cold_key "
-        "FROM committee_de_registration "
-        "WHERE cold_key = %s;"
+        "SELECT cd.id, cd.tx_id, cd.cert_index, cd.voting_anchor_id, committee_hash.raw "
+        "FROM committee_de_registration as cd "
+        "INNER JOIN committee_hash ON committee_hash.id = cd.cold_key_id "
+        "WHERE committee_hash.raw = %s;"
     )
 
     with execute(query=query, vars=(rf"\x{cold_key}",)) as cur:
@@ -1225,3 +1239,18 @@ def query_gov_action_proposal(
     with execute(query=query, vars=(query_var,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield GovActionProposalDBRow(*result)
+
+
+def query_voting_procedure(txhash: str) -> tp.Generator[VotingProcedureDBRow, None, None]:
+    """Query voting_procedure table in db-sync."""
+    query = (
+        "SELECT"
+        " vp.id, vp.voter_role, vp.committee_voter, vp.drep_voter, vp.pool_voter, vp.vote "
+        "FROM voting_procedure as vp "
+        "INNER JOIN tx ON tx.id = vp.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield VotingProcedureDBRow(*result)

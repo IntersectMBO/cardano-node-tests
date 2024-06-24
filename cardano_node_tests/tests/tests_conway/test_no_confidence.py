@@ -35,8 +35,12 @@ def pool_user_lg(
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
     key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
-        cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
     )
 
 
@@ -66,6 +70,9 @@ class TestNoConfidence:
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("We can't create a needed 'update committee' previous action in bootstrap.")
 
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
@@ -344,6 +351,9 @@ class TestNoConfidence:
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("We can't have this many CC members resign during bootstrap.")
 
         # Resign all CC Members but one
 

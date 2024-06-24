@@ -1,5 +1,7 @@
 # How to start a local cluster
 
+> :warning: **This document is outdated**. Please follow the top level README.md for the most up-to-date instructions.
+
 ## What is a local cluster
 
 A **local cluster** is a local Cardano blockchain that consists of 3 stake pools and 1 BFT node. The chain is started in Byron era and it is moved to the desired era, similarly to Mainnet, using Update Proposals. The default `testnet-magic` value is 42.

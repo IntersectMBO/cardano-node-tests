@@ -10,7 +10,7 @@ api_484 = blockers.GH(
     issue=484,
     repo="IntersectMBO/cardano-api",
     fixed_in="8.11.0",  # Unknown yet, will be fixed/changed sometime in the future
-    message="repeated certificates stripped from Conway transaction.",
+    message="Repeated certificates stripped from Conway transaction.",
 )
 
 cli_49 = blockers.GH(issue=49, repo="IntersectMBO/cardano-cli", message="Not sending pings.")
@@ -38,6 +38,30 @@ cli_715 = blockers.GH(
     repo="IntersectMBO/cardano-cli",
     fixed_in="8.22.0.1",  # Fixed in a release after 8.22.0.0
     message="Option `--reference-script-size` required.",
+)
+cli_768 = blockers.GH(
+    issue=768,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.23.1.1",  # Fixed in a release after 8.23.1.0
+    message="Option `--fee` not required.",
+)
+cli_796 = blockers.GH(
+    issue=796,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
+    message="Option `--fee` not required.",
+)
+cli_799 = blockers.GH(
+    issue=799,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
+    message="Conway era fields shown in Babbage Tx.",
+)
+cli_800 = blockers.GH(
+    issue=800,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
+    message="Datum not checked for PlutusV1 and PlutusV2 spending scripts.",
 )
 
 consensus_973 = blockers.GH(
@@ -91,6 +115,18 @@ ledger_4204 = blockers.GH(
     repo="IntersectMBO/cardano-ledger",
     fixed_in="8.11.0",
     message="Resigned CC members can approve actions.",
+)
+ledger_4346 = blockers.GH(
+    issue=4346,
+    repo="IntersectMBO/cardano-ledger",
+    fixed_in="8.12.0",  # Unknown yet, will be fixed/changed sometime in the future
+    message="Inactive DRep expiry gets incremented.",
+)
+ledger_4349 = blockers.GH(
+    issue=4349,
+    repo="IntersectMBO/cardano-ledger",
+    fixed_in="8.12.0",  # Unknown yet, will be fixed/changed sometime in the future
+    message="Inconsistent listing of DRep expiry.",
 )
 
 node_3788 = blockers.GH(

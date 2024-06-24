@@ -37,8 +37,12 @@ def pool_user_ug(
     """Create a pool user for "use governance"."""
     cluster, __ = cluster_use_governance
     key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
-        cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
     )
 
 
@@ -112,6 +116,19 @@ class TestTreasuryWithdrawals:
             signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
         )
 
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_action_bootstrap",
+                    src_address=pool_user_ug.payment.address,
+                    use_build_cmd=True,
+                    tx_files=tx_files_action,
+                )
+            err_str = str(excinfo.value)
+            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            return
+
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
@@ -164,7 +181,7 @@ class TestTreasuryWithdrawals:
 
         def _cast_vote(
             approve: bool, vote_id: str, add_spo_votes: bool = False
-        ) -> conway_common.VotedVotes:
+        ) -> governance_utils.VotedVotes:
             votes_cc = []
             votes_drep = []
             votes_spo = []
@@ -243,7 +260,7 @@ class TestTreasuryWithdrawals:
                 assert prop_vote["dRepVotes"], "No DRep votes"
                 assert not votes_spo or prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
-            return conway_common.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
+            return governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo)
 
         # Check that SPOs cannot vote on treasury withdrawal action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -368,6 +385,7 @@ class TestTreasuryWithdrawals:
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
+        is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
         actions_num = 3
 
         # Create stake address and registration certificate
@@ -392,7 +410,8 @@ class TestTreasuryWithdrawals:
 
         anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
 
-        reqc.cip030ex.start(url=helpers.get_vcs_link())
+        if not is_in_bootstrap:
+            reqc.cip030ex.start(url=helpers.get_vcs_link())
         withdrawal_actions = [
             cluster.g_conway_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_{a}",
@@ -412,13 +431,26 @@ class TestTreasuryWithdrawals:
             signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
         )
 
+        actions_deposit_combined = action_deposit_amt * len(withdrawal_actions)
+
+        if is_in_bootstrap:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_action_bootstrap",
+                    src_address=pool_user_ug.payment.address,
+                    tx_files=tx_files_action,
+                    deposit=actions_deposit_combined + stake_deposit_amt,
+                )
+            err_str = str(excinfo.value)
+            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            return
+
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         action_prop_epoch = cluster.g_query.get_epoch()
-
-        actions_deposit_combined = action_deposit_amt * len(withdrawal_actions)
 
         reqc.cli025.start(url=helpers.get_vcs_link())
         tx_output_action = clusterlib_utils.build_and_submit_tx(

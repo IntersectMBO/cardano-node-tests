@@ -23,6 +23,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -68,8 +69,12 @@ def pool_user(
 ) -> clusterlib.PoolUser:
     """Create a pool user."""
     key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
-        cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
     )
 
 
@@ -81,8 +86,12 @@ def pool_user_lg(
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
     key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
-        cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
     )
 
 
@@ -258,8 +267,7 @@ class TestCommittee:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
-        _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (reqc.cip007, reqc.cip031a_01)]
+        reqc.cip031a_01.start(url=helpers.get_vcs_link())
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
@@ -281,6 +289,23 @@ class TestCommittee:
                 *[r.cold_key_pair.skey_file for r in cc_auth_records],
             ],
         )
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_bootstrap",
+                    src_address=pool_user.payment.address,
+                    submit_method=submit_method,
+                    use_build_cmd=use_build_cmd,
+                    tx_files=tx_files,
+                    deposit=deposit_amt,
+                )
+            err_str = str(excinfo.value)
+            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            return
+
+        reqc.cip007.start(url=helpers.get_vcs_link())
 
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -362,6 +387,10 @@ class TestCommittee:
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("Cannot run during bootstrap period.")
+
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         # Check if total delegated stake is below the threshold. This can be used to check that
@@ -960,7 +989,7 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    def test_empty_committee(
+    def test_empty_committee(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_setup.GovClusterT,
@@ -991,6 +1020,10 @@ class TestCommittee:
         __: tp.Any  # mypy workaround
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("Cannot run during bootstrap period.")
+
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
         xfail_ledger_3979_msgs = set()
@@ -1321,3 +1354,178 @@ class TestCommittee:
 
         err_str = str(excinfo.value)
         assert "Please enter a value in the range [0,1]" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
+    @pytest.mark.long
+    def test_committee_zero_threshold(
+        self,
+        cluster_lock_governance: governance_setup.GovClusterT,
+        pool_user_lg: clusterlib.PoolUser,
+    ):
+        """Test that actions that requires CC approval can be ratified when threshold == 0.
+
+        Even if the CC disapprove the action.
+
+        * set CC threshold to zero
+        * submit a "create constitution" action
+        * vote to disapprove the action by the CC and approve by the DReps
+        * check that the action is ratified
+        * check that the action is enacted
+        """
+        cluster, governance_data = cluster_lock_governance
+        temp_template = common.get_test_id(cluster)
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("Cannot run during bootstrap period.")
+
+        def _check_rat_enact_state(
+            action_txid: str, action_type: governance_utils.PrevGovActionIds
+        ) -> None:
+            # Check ratification
+            _cur_epoch_rat = cluster.wait_for_new_epoch(padding_seconds=5)
+
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch_rat}"
+            )
+
+            rat_action = governance_utils.lookup_ratified_actions(
+                gov_state=rat_gov_state, action_txid=action_txid
+            )
+            assert rat_action, "Action not found in ratified actions"
+
+            # Wait for enactment
+            _cur_epoch_enact = cluster.wait_for_new_epoch(padding_seconds=5)
+
+            # Check enactment
+            assert _cur_epoch_enact == _cur_epoch_rat + 1, f"Unexpected epoch {_cur_epoch_enact}"
+            enact_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch_enact}"
+            )
+
+            prev_action_rec = governance_utils.get_prev_action(
+                action_type=action_type,
+                gov_state=enact_gov_state,
+            )
+
+            assert prev_action_rec.txid == action_txid, "Action not enacted"
+
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        anchor_url = "http://www.cc-update.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        # Set CC threshold to zero
+        update_threshold_action = cluster.g_conway_governance.action.update_committee(
+            action_name=temp_template,
+            deposit_amt=deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            threshold="0",
+            prev_action_txid=prev_action_rec.txid,
+            prev_action_ix=prev_action_rec.ix,
+            deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            proposal_files=[update_threshold_action.action_file],
+            signing_key_files=[
+                pool_user_lg.payment.skey_file,
+            ],
+        )
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_update_threshold",
+            src_address=pool_user_lg.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+        )
+
+        threshold_action_txid = cluster.g_transaction.get_txid(
+            tx_body_file=tx_output_action.out_file
+        )
+        threshold_action_gov_state = cluster.g_conway_governance.query.gov_state()
+        _cur_epoch = cluster.g_query.get_epoch()
+        conway_common.save_gov_state(
+            gov_state=threshold_action_gov_state,
+            name_template=f"{temp_template}_action_{_cur_epoch}",
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=threshold_action_gov_state, action_txid=threshold_action_txid
+        )
+        action_ix = prop_action["actionId"]["govActionIx"]
+
+        # Make sure the votes don't happen close to epoch boundary
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_add_yes",
+            payment_addr=pool_user_lg.payment,
+            action_txid=threshold_action_txid,
+            action_ix=action_ix,
+            approve_drep=True,
+            approve_spo=True,
+        )
+
+        _check_rat_enact_state(
+            action_txid=threshold_action_txid,
+            action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+        )
+
+        # Try to ratify a "create constitution" action that is expecting approval from the CC
+        anchor_url = "http://www.const-action.com"
+        constitution_url = "http://www.const-new.com"
+        (
+            const_action,
+            const_action_txid,
+            const_action_ix,
+        ) = conway_common.propose_change_constitution(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_constitution",
+            anchor_url=anchor_url,
+            anchor_data_hash=cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url),
+            constitution_url=constitution_url,
+            constitution_hash=cluster.g_conway_governance.get_anchor_data_hash(
+                text=constitution_url
+            ),
+            pool_user=pool_user_lg,
+        )
+
+        # Make sure the votes don't happen close to epoch boundary
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_constitution",
+            payment_addr=pool_user_lg.payment,
+            action_txid=const_action_txid,
+            action_ix=const_action_ix,
+            approve_cc=False,
+            approve_drep=True,
+        )
+
+        _check_rat_enact_state(
+            action_txid=const_action_txid,
+            action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
+        )
+
+        # Reinstate the original CC data
+        governance_setup.reinstate_committee(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_reinstate",
+            pool_user=pool_user_lg,
+        )

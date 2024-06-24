@@ -5,6 +5,7 @@
 
 # Workdir for running tests
 run_workdir/
+dev_workdir/
 
 # Status files of cluster instances
 /state-cluster*/

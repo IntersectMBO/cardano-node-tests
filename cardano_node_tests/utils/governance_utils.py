@@ -15,11 +15,12 @@ LOGGER = logging.getLogger(__name__)
 
 ActionsAllT = tp.Union[  # pylint: disable=invalid-name
     clusterlib.ActionConstitution,
+    clusterlib.ActionHardfork,
     clusterlib.ActionInfo,
     clusterlib.ActionNoConfidence,
     clusterlib.ActionPParamsUpdate,
-    clusterlib.ActionUpdateCommittee,
     clusterlib.ActionTreasuryWithdrawal,
+    clusterlib.ActionUpdateCommittee,
 ]
 
 VotesAllT = tp.Union[  # pylint: disable=invalid-name
@@ -27,6 +28,8 @@ VotesAllT = tp.Union[  # pylint: disable=invalid-name
     clusterlib.VoteDrep,
     clusterlib.VoteSPO,
 ]
+
+DRepStateT = tp.List[tp.List[tp.Dict[str, tp.Any]]]
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -62,6 +65,13 @@ class StakeDelegation:
     total_lovelace: int
 
 
+@dataclasses.dataclass(frozen=True, order=True)
+class VotedVotes:
+    cc: tp.List[clusterlib.VoteCC]  # pylint: disable=invalid-name
+    drep: tp.List[clusterlib.VoteDrep]
+    spo: tp.List[clusterlib.VoteSPO]
+
+
 class PrevGovActionIds(enum.Enum):
     COMMITTEE = "Committee"
     CONSTITUTION = "Constitution"
@@ -76,6 +86,7 @@ class ActionTags(enum.Enum):
     TREASURY_WITHDRAWALS = "TreasuryWithdrawals"
     INFO_ACTION = "InfoAction"
     NO_CONFIDENCE = "NoConfidence"
+    HARDFORK_INIT = "HardForkInitiation"
 
 
 def get_drep_cred_name(drep_id: str) -> str:
@@ -376,6 +387,17 @@ def check_action_view(  # noqa: C901
             else None,
             "tag": ActionTags.NO_CONFIDENCE.value,
         }
+    elif isinstance(action_data, clusterlib.ActionHardfork):
+        gov_action = {
+            "contents": [
+                None,  # TODO 8.11: what is this?
+                {
+                    "major": action_data.protocol_major_version,
+                    "minor": action_data.protocol_minor_version,
+                },
+            ],
+            "tag": ActionTags.HARDFORK_INIT.value,
+        }
     else:
         msg = f"Not implemented for action `{action_data}`"
         raise NotImplementedError(msg)
@@ -514,3 +536,15 @@ def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
     return StakeDelegation(
         spo=total_spo_stake, drep=total_drep_stake, total_lovelace=total_lovelace
     )
+
+
+def is_drep_active(
+    cluster_obj: clusterlib.ClusterLib,
+    drep_state: DRepStateT,
+    epoch: int = -1,
+) -> bool:
+    """Check if DRep is active."""
+    if epoch == -1:
+        epoch = cluster_obj.g_query.get_epoch()
+
+    return bool(drep_state[0][1].get("expiry", 0) > epoch)

@@ -202,6 +202,15 @@ if [ "$genesis_created" -eq 0 ] ; then
   echo "Failed to generate genesis files, retrying with a different genesis.conway.spec.json"
   mv "$STATE_CLUSTER/create_staked/genesis.conway.spec.json" \
     "$STATE_CLUSTER/create_staked/master-genesis.conway.spec.json"
+  mv "$STATE_CLUSTER/create_staked/release_8_9-genesis.conway.spec.json" \
+    "$STATE_CLUSTER/create_staked/genesis.conway.spec.json"
+  gen_genesis && genesis_created=1 || genesis_created=0
+fi
+
+if [ "$genesis_created" -eq 0 ] ; then
+  echo "Failed to generate genesis files, retrying with a different genesis.conway.spec.json"
+  mv "$STATE_CLUSTER/create_staked/genesis.conway.spec.json" \
+    "$STATE_CLUSTER/create_staked/release_8_9-genesis.conway.spec.json"
   mv "$STATE_CLUSTER/create_staked/release-genesis.conway.spec.json" \
     "$STATE_CLUSTER/create_staked/genesis.conway.spec.json"
   gen_genesis && genesis_created=1 || genesis_created=0

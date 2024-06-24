@@ -245,11 +245,20 @@ class TestMinting:
             "extended",
         ),
     )
+    @pytest.mark.parametrize(
+        "plutus_version",
+        (
+            "v1",
+            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+        ),
+        ids=("plutus_v1", "plutus_v3"),
+    )
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         key: str,
+        plutus_version: str,
     ):
         """Test minting a token with a Plutus script.
 
@@ -268,8 +277,10 @@ class TestMinting:
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_WITNESS_REDEEMER[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -295,9 +306,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.g_transaction.get_policyid(
-            plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1
-        )
+        policyid = cluster.g_transaction.get_policyid(script_file=plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -307,11 +316,11 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_WITNESS_REDEEMER_COST.per_time,
-                    plutus_common.MINTING_WITNESS_REDEEMER_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_file=redeemer_file,
             )
@@ -366,12 +375,21 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "plutus_version",
+        (
+            "v1",
+            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+        ),
+        ids=("plutus_v1", "plutus_v3"),
+    )
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test minting a token with a time constraints Plutus script.
 
@@ -389,8 +407,10 @@ class TestMinting:
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_TIME_RANGE[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_TIME_RANGE_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -419,7 +439,7 @@ class TestMinting:
             + timestamp_offset_ms
         )
 
-        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -429,11 +449,11 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_TIME_RANGE_COST.per_time,
-                    plutus_common.MINTING_TIME_RANGE_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_value=str(redeemer_value),
             )

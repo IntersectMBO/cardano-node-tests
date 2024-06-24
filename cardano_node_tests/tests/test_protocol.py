@@ -7,11 +7,13 @@ import typing as tp
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +60,25 @@ PROTOCOL_PARAM_KEYS = frozenset(
 )
 PROTOCOL_PARAM_KEYS_1_35_2 = frozenset(("utxoCostPerByte",))
 
+PROTOCOL_PARAM_KEYS_CONWAY = frozenset(
+    (
+        "govActionLifetime",
+        "govActionDeposit",
+        "committeeMaxTermLength",
+        "dRepDeposit",
+        "poolVotingThresholds",
+        "dRepVotingThresholds",
+        "committeeMinSize",
+        "minFeeRefScriptCostPerByte",
+        "dRepActivity",
+    )
+)
+
 PROTOCOL_PARAM_KEYS_MISSING_8_6_0 = frozenset(("utxoCostPerWord",))
+
+PROTOCOL_PARAM_KEYS_MISSING_8_12_0 = frozenset(
+    ("minUTxOValue", "decentralization", "extraPraosEntropy")
+)
 
 
 @common.SKIPIF_WRONG_ERA
@@ -108,10 +128,14 @@ class TestProtocol:
 
         union_with: tp.FrozenSet[str] = frozenset()
         if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
-            union_with = PROTOCOL_PARAM_KEYS_1_35_2
+            union_with = union_with.union(PROTOCOL_PARAM_KEYS_1_35_2)
+        if VERSIONS.cluster_era >= VERSIONS.CONWAY:
+            union_with = union_with.union(PROTOCOL_PARAM_KEYS_CONWAY)
 
         rem: tp.FrozenSet[str] = frozenset()
         if clusterlib_utils.cli_has("conway"):
-            rem = PROTOCOL_PARAM_KEYS_MISSING_8_6_0
+            rem = rem.union(PROTOCOL_PARAM_KEYS_MISSING_8_6_0)
+        if VERSIONS.node >= version.parse("8.12.0"):
+            rem = rem.union(PROTOCOL_PARAM_KEYS_MISSING_8_12_0)
 
         assert set(protocol_params) == PROTOCOL_PARAM_KEYS.union(union_with).difference(rem)

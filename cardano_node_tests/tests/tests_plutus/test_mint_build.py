@@ -240,13 +240,22 @@ class TestBuildMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "plutus_version",
+        (
+            "v1",
+            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+        ),
+        ids=("plutus_v1", "plutus_v3"),
+    )
+    @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.dbsync
     @pytest.mark.testnets
-    @submit_utils.PARAM_SUBMIT_METHOD
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
         submit_method: str,
     ):
         """Test minting a token with a time constraints Plutus script.
@@ -270,8 +279,10 @@ class TestBuildMinting:
         token_amount = 5
         script_fund = 200_000_000
 
+        plutus_v_record = plutus_common.MINTING_TIME_RANGE[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_TIME_RANGE_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -301,7 +312,7 @@ class TestBuildMinting:
             + timestamp_offset_ms
         )
 
-        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TIME_RANGE_PLUTUS_V1)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -311,7 +322,7 @@ class TestBuildMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_TIME_RANGE_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 redeemer_value=str(redeemer_value),
             )
@@ -379,7 +390,7 @@ class TestBuildMinting:
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
-            expected_costs=[plutus_common.MINTING_TIME_RANGE_COST],
+            expected_costs=[plutus_v_record.execution_cost],
         )
 
         # check tx_view
@@ -857,11 +868,20 @@ class TestBuildMinting:
             "extended",
         ),
     )
+    @pytest.mark.parametrize(
+        "plutus_version",
+        (
+            "v1",
+            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+        ),
+        ids=("plutus_v1", "plutus_v3"),
+    )
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
         key: str,
+        plutus_version: str,
         submit_method: str,
     ):
         """Test minting a token with a Plutus script.
@@ -886,8 +906,10 @@ class TestBuildMinting:
         token_amount = 5
         script_fund = 200_000_000
 
+        plutus_v_record = plutus_common.MINTING_WITNESS_REDEEMER[plutus_version]
+
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -914,9 +936,7 @@ class TestBuildMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.g_transaction.get_policyid(
-            plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1
-        )
+        policyid = cluster.g_transaction.get_policyid(script_file=plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
         mint_txouts = [
@@ -926,7 +946,7 @@ class TestBuildMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_WITNESS_REDEEMER_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 redeemer_file=redeemer_file,
             )
@@ -998,7 +1018,7 @@ class TestBuildMinting:
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
-            expected_costs=[plutus_common.MINTING_WITNESS_REDEEMER_COST],
+            expected_costs=[plutus_v_record.execution_cost],
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)

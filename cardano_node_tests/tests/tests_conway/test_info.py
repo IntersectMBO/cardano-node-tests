@@ -14,6 +14,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -35,8 +36,12 @@ def pool_user_ug(
     """Create a pool user for "use governance"."""
     cluster, __ = cluster_use_governance
     key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
-        cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
     )
 
 
@@ -175,7 +180,7 @@ class TestInfo:
         )
 
         reqc.cli024.start(url=helpers.get_vcs_link())
-        conway_common.submit_vote(
+        vote_tx_output = conway_common.submit_vote(
             cluster_obj=cluster,
             name_template=temp_template,
             payment_addr=pool_user_ug.payment,
@@ -184,6 +189,8 @@ class TestInfo:
             use_build_cmd=True,
         )
         reqc.cli024.success()
+
+        vote_txid = cluster.g_transaction.get_txid(tx_body_file=vote_tx_output.out_file)
 
         vote_gov_state = cluster.g_conway_governance.query.gov_state()
         _cur_epoch = cluster.g_query.get_epoch()
@@ -227,3 +234,9 @@ class TestInfo:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_spo[0])
         reqc.cli022.success()
+
+        # Check dbsync
+        dbsync_utils.check_votes(
+            votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
+            txhash=vote_txid,
+        )

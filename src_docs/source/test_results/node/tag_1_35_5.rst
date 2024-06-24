@@ -19,6 +19,7 @@ Regression testing on a local cluster
 -------------------------------------
 
 .. list-table:: protocol version 8 and SECP256K1 cost model
+   :widths: 64 7
    :header-rows: 0
 
    * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.5-pv8_default_p2p_02/>`__
@@ -35,6 +36,7 @@ Regression testing on a local cluster
      - |:heavy_check_mark:|
 
 .. list-table:: protocol version 7
+   :widths: 64 7
    :header-rows: 0
 
    * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/1.35.5-pv7_babbage_p2p_02/>`__
@@ -43,6 +45,7 @@ Regression testing on a local cluster
      - |:heavy_check_mark:|
 
 .. list-table:: other testing
+   :widths: 64 7
    :header-rows: 0
 
    * - upgrade job (1.35.4 to 1.35.5-rc1) (including the intra-era hard fork)
@@ -57,6 +60,7 @@ Release testing checklist
 ----------------------------
 
 .. list-table::
+   :widths: 64 7
    :header-rows: 0
 
    * - `1.35.5-rc1` pushed to `shelley-qa`

@@ -36,11 +36,11 @@ def get_args() -> argparse.Namespace:
 
 
 def _get_color(status: str) -> str:
-    if status == requirements.Statuses.SUCCESS:
+    if status == requirements.Statuses.success.name:
         return "green"
-    if status == requirements.Statuses.FAILURE:
+    if status == requirements.Statuses.failure.name:
         return "red"
-    if status == requirements.Statuses.PARTIAL_SUCCESS:
+    if status == requirements.Statuses.partial_success.name:
         return "yellow"
     return "grey"
 
@@ -62,7 +62,7 @@ def main() -> None:
 
     for req_id, req_data in chang_group.items():
         # Partial or uncovered requirements should be ignored
-        if req_id.startswith("int") or req_data["status"] == requirements.Statuses.UNCOVERED:
+        if req_id.startswith("int") or req_data["status"] == requirements.Statuses.uncovered.name:
             continue
 
         color = _get_color(req_data["status"])

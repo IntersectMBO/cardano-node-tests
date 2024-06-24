@@ -33,8 +33,12 @@ def pool_user_lg(
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
     key = helpers.get_current_line_str()
-    return conway_common.get_pool_user(
-        cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
     )
 
 
@@ -87,6 +91,21 @@ class TestConstitution:
             file_text=constitution_file
         )
         reqc.cli002.success()
+
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                conway_common.propose_change_constitution(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_constitution_bootstrap",
+                    anchor_url=anchor_url,
+                    anchor_data_hash=anchor_data_hash,
+                    constitution_url=constitution_url,
+                    constitution_hash=constitution_hash,
+                    pool_user=pool_user_lg,
+                )
+            err_str = str(excinfo.value)
+            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            return
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli013, reqc.cip031a_02, reqc.cip031c_01, reqc.cip054_03)]
