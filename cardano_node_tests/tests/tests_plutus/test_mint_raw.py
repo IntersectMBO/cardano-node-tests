@@ -48,8 +48,7 @@ def payment_addrs(
         addrs[0],
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        # amount=3_000_000_000,
-        amount=93_000_000_000,
+        amount=3_000_000_000,
     )
 
     return addrs
