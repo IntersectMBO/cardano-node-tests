@@ -19,6 +19,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
@@ -340,6 +341,28 @@ class TestCommittee:
         assert cc_key_hashes == prop_cc_key_hashes, "Incorrect CC key hashes"
 
         reqc.cip007.success()
+
+        if configuration.HAS_DBSYNC:
+            # Check dbsync
+            dbsync_committee_threshold = list(dbsync_queries.query_new_committee_info(txhash=txid))
+            assert (
+                dbsync_committee_threshold[0].quorum_denominator == 3
+            ), "Incorrect committee threshold denominator in dbsync"
+            assert (
+                dbsync_committee_threshold[0].quorum_numerator == 2
+            ), "Incorrect committee threshold numerator in dbsync"
+
+            dbsync_committee_members = list(
+                dbsync_queries.query_committee_members(
+                    committee_id=dbsync_committee_threshold[0].id
+                )
+            )
+            size_of_proposed_cm = len(prop["proposalProcedure"]["govAction"]["contents"][2]) + len(
+                gov_state["committee"]["members"]
+            )
+            assert (
+                len(dbsync_committee_members) == size_of_proposed_cm
+            ), "The number of committee members doesn't match in dbsync"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
