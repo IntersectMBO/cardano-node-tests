@@ -32,7 +32,7 @@ GUESSING_GAME_UNTYPED_PLUTUS_V2 = SCRIPTS_V2_DIR / "guess-42-datum-42-txin.plutu
 SECP256K1_LOOP_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "ecdsa-secp256k1-loop.plutus"
 SECP256K1_LOOP_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "schnorr-secp256k1-loop.plutus"
 
-ALWAYS_SUCCEEDS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedSpendScriptV3.plutus"
+ALWAYS_SUCCEEDS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedPolicyScriptV3.plutus"
 ALWAYS_FAILS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysFailsPolicyScriptV3.plutus"
 
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
@@ -108,7 +108,7 @@ SECP256K1_SCHNORR_LOOP_COST = ExecutionCost(
 )
 
 ALWAYS_FAILS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
-ALWAYS_SUCCEEDS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
+ALWAYS_SUCCEEDS_V3_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
 
 MINTING_COST = ExecutionCost(per_time=259_868_784, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
@@ -138,13 +138,13 @@ MINTING_V2_CHECK_INLINE_DATUM_COST = ExecutionCost(
     per_time=208_093_920, per_space=674_744, fixed_cost=53_937
 )
 
-MINTING_V3_COST = ExecutionCost(per_time=161_100, per_space=800, fixed_cost=58)
-MINTING_V3_REF_COST = ExecutionCost(per_time=161_100, per_space=800, fixed_cost=58)
+MINTING_V3_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
+MINTING_V3_REF_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
 MINTING_V3_TIME_RANGE_COST = ExecutionCost(
-    per_time=110_046_914, per_space=350_762, fixed_cost=28_174
+    per_time=85_986_410, per_space=350_762, fixed_cost=28_174
 )
 MINTING_V3_WITNESS_REDEEMER_COST = ExecutionCost(
-    per_time=106_217_335, per_space=333_824, fixed_cost=26_920
+    per_time=81_663_642, per_space=333_824, fixed_cost=26_920
 )
 
 
