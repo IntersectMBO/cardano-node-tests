@@ -828,7 +828,7 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
         "min_fee_a": protocol_params["txFeePerByte"],
         "min_fee_b": protocol_params["txFeeFixed"],
         "min_pool_cost": protocol_params["minPoolCost"],
-        "min_utxo_value": protocol_params["minUTxOValue"],
+        "min_utxo_value": protocol_params.get("minUTxOValue"),  # removed in node 8.12.0
         "optimal_pool_count": protocol_params["stakePoolTargetNum"],
         "pool_deposit": protocol_params["stakePoolDeposit"],
     }

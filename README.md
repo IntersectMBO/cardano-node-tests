@@ -161,6 +161,12 @@ When running tests, the testing framework starts and stops cluster instances as 
     nix develop .#devops
     ```
 
+1. run fresh login shell on top of the current nix shell (to get the correct environment variables)
+
+    ```sh
+    /bin/bash --login
+    ```
+
 1. cd back to 'cardano-node-tests' repo
 
     ```sh
@@ -189,7 +195,6 @@ When running tests, the testing framework starts and stops cluster instances as 
 1. prepare cluster scripts for starting local cluster directly in Babbage era
 
     ```sh
-    mkdir -p dev_workdir
     prepare-cluster-scripts -c -d dev_workdir/babbage_fast -s cardano_node_tests/cluster_scripts/babbage_fast/
     ```
 
@@ -199,7 +204,7 @@ When running tests, the testing framework starts and stops cluster instances as 
     ./dev_workdir/babbage_fast/start-cluster
     ```
 
-After the cluster starts, keys and configuration files are available in the `<your path to cardano-node repo>/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
+After the cluster starts, keys and configuration files are available in the `./dev_workdir/state-cluster0` directory. The pool-related files and keys are located in the `nodes` subdirectory, genesis keys in the `shelley` and `byron` subdirectories, and payment address with initial funds and related keys in the `byron` subdirectory. The local faucet address and related key files are stored in the `addrs_data` subdirectory.
 
 ### Restarting development cluster
 

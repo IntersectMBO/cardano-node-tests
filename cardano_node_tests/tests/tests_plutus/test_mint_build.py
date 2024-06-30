@@ -385,7 +385,7 @@ class TestBuildMinting:
         expected_fee_step1 = 167_349
         assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 411_175
+        expected_fee_step2 = 346_952 if plutus_version == "v3" else 411_175
         assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         plutus_common.check_plutus_costs(
@@ -458,7 +458,7 @@ class TestBuildMinting:
             per_time=185_595_199, per_space=595_446, fixed_cost=47_739
         )
         minting_cost1_v3 = plutus_common.ExecutionCost(
-            per_time=161_100, per_space=800, fixed_cost=58
+            per_time=64_100, per_space=500, fixed_cost=34
         )
 
         if plutus_version == "plutus_v1":
