@@ -860,9 +860,9 @@ def _get_float_pparam(pparam: tp.Any) -> tp.Optional[float]:
 
 def map_params_to_db_convention(pp: dict) -> tp.Dict[str, tp.Any]:
     # Get the prices of memory and steps
-    prices = pp.get("prices", {})
-    price_mem = _get_float_pparam(prices.get("prMem"))
-    price_steps = _get_float_pparam(prices.get("prSteps"))
+    prices = pp.get("executionUnitPrices", {})
+    price_mem = _get_float_pparam(prices.get("priceMemory"))
+    price_steps = _get_float_pparam(prices.get("priceSteps"))
 
     dvt = pp.get("dRepVotingThresholds", {})
     pvt = pp.get("poolVotingThresholds", {})
@@ -886,7 +886,7 @@ def map_params_to_db_convention(pp: dict) -> tp.Dict[str, tp.Any]:
         "monetary_expand_rate": _get_float_pparam(pp.get("monetaryExpansion")),
         "treasury_growth_rate": _get_float_pparam(pp.get("treasuryCut")),
         "min_pool_cost": pp.get("minPoolCost"),
-        "coins_per_utxo_size": pp.get("coinsPerUTxOByte"),
+        "coins_per_utxo_size": pp.get("utxoCostPerByte"),
         "min_fee_ref_script_cost_per_byte": pp.get("minFeeRefScriptCostPerByte"),
         "price_mem": price_mem,
         "price_step": price_steps,

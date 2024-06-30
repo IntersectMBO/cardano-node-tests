@@ -727,8 +727,7 @@ class TestPParamUpdate:
             )
             dbsync_utils.check_conway_param_update_proposal(net_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
-            str_exc = f"{exc}"
-            db_errors_final.append(f"db-sync network params update error: {str_exc}")
+            db_errors_final.append(f"db-sync network params update error: {exc}")
 
         # Vote on update proposals from network group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -781,8 +780,7 @@ class TestPParamUpdate:
             )
             dbsync_utils.check_conway_param_update_proposal(eco_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
-            str_exc = f"{exc}"
-            db_errors_final.append(f"db-sync economic params update error: {str_exc}")
+            db_errors_final.append(f"db-sync economic params update error: {exc}")
 
         # Vote on update proposals from economic group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -858,8 +856,7 @@ class TestPParamUpdate:
             )
             dbsync_utils.check_conway_param_update_proposal(tech_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
-            str_exc = f"{exc}"
-            db_errors_final.append(f"db-sync technical params update error: {str_exc}")
+            db_errors_final.append(f"db-sync technical params update error: {exc}")
 
         # Vote on update proposals from technical group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -952,8 +949,7 @@ class TestPParamUpdate:
             )
             dbsync_utils.check_conway_param_update_proposal(gov_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
-            str_exc = f"{exc}"
-            db_errors_final.append(f"db-sync governance params update error: {str_exc}")
+            db_errors_final.append(f"db-sync governance params update error: {exc}")
 
         # Vote on update proposals from governance group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -1015,8 +1011,7 @@ class TestPParamUpdate:
             )
             dbsync_utils.check_conway_param_update_proposal(mix_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
-            str_exc = f"{exc}"
-            db_errors_final.append(f"db-sync mixed group params update error: {str_exc}")
+            db_errors_final.append(f"db-sync mixed group params update error: {exc}")
 
         # Vote on update proposals from mix of groups that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -1098,8 +1093,7 @@ class TestPParamUpdate:
             )
             dbsync_utils.check_conway_param_update_proposal(fin_prop_rec.future_pparams)
         except AssertionError as exc:
-            str_exc = f"{exc}"
-            db_errors_final.append(f"db-sync 'final' params update error: {str_exc}")
+            db_errors_final.append(f"db-sync 'final' params update error: {exc}")
 
         # Vote on another update proposals from mix of groups. The proposal will get approved,
         # but not enacted, because it comes after the "final" action that was accepted to the chain
@@ -1219,8 +1213,7 @@ class TestPParamUpdate:
         try:
             dbsync_utils.check_conway_param_update_enactment(enact_gov_state, _cur_epoch)
         except AssertionError as exc:
-            str_exc = f"{exc}"
-            db_errors_final.append(f"db-sync params enactment error: {str_exc}")
+            db_errors_final.append(f"db-sync params enactment error: {exc}")
 
         if proposed_pparams_errors:
             proposed_pparams_errors_str = "\n".join(proposed_pparams_errors)
