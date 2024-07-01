@@ -279,9 +279,25 @@ class TestDReps:
 
         # Register DRep
 
-        drep_metadata_url = "https://www.the-drep.com"
+        drep_metadata_url = "https://tinyurl.com/34ywa66w"
         drep_metadata_file = f"{temp_template}_drep_metadata.json"
-        drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
+        drep_metadata_content = {
+            "hashAlgorithm": "blake2b-256",
+            "body": {
+                "paymentAddress": "addr_test1vrwhkccz0vxeffkrkuyv5vkj6ada2euhelgr83h2x32r4kq9qtek5",
+                "givenName": "Ryan Williams",
+                "objectives": "Buy myself an island.",
+                "motivations": "I really would like to own an island.",
+                "qualifications": "I have a swimming medal, so I can swim around the island.",
+                "references": [
+                    {
+                        "@type": "Link",
+                        "label": "Ryan's Twitter",
+                        "uri": "https://twitter.com/Ryun1_",
+                    }
+                ],
+            },
+        }
         helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
         reqc.cli012.start(url=helpers.get_vcs_link())
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
@@ -332,11 +348,14 @@ class TestDReps:
         assert (
             metadata_anchor["dataHash"]
             == drep_metadata_hash
-            == "592e53f74765c8c6c97dfda2fd6038236ffc7ad55800592118d9e36ad1c8140d"
+            == "864d5953c956851be67243e20e0f5fb9eb2e1b18dc0b1974df48775c0acd8b58"
         ), "Unexpected metadata hash"
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
         try:
             dbsync_utils.check_drep_registration(drep=reg_drep, drep_state=reg_drep_state)
+            dbsync_utils.check_off_chain_drep_registration(
+                drep=reg_drep, metadata=drep_metadata_content
+            )
         except AssertionError as exc:
             str_exc = str(exc)
             errors_final.append(f"DB-Sync unexpected DRep registration error: {str_exc}")
