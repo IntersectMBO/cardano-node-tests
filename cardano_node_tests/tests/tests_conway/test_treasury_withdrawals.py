@@ -15,6 +15,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -354,6 +355,21 @@ class TestTreasuryWithdrawals:
         if voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
+
+        if configuration.HAS_DBSYNC:
+            reqc.cip084.start(url=helpers.get_vcs_link())
+            # Check dbsync
+            dbsync_data = list(dbsync_queries.query_treasury_withdrawal(txhash=action_txid))
+            assert len(dbsync_data) == actions_num
+
+            for entry in dbsync_data:
+                assert (
+                    entry.addr_view == recv_stake_addr_rec.address
+                ), "Wrong stake address on dbsync"
+                assert entry.amount == transfer_amt, "Wrong transfer amount on dbsync"
+                assert entry.enacted_epoch, "Action not marked as ennacted on dbsync"
+
+            reqc.cip084.success()
 
         if xfail_ledger_3979_msgs:
             ledger_3979 = issues.ledger_3979.copy()
