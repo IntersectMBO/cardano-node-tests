@@ -120,6 +120,13 @@ cip077 = __r("CIP077")
 cip078 = __r("CIP078")
 cip079 = __r("CIP079")
 
+cli085 = __r("CLI085")
+cli086 = __r("CLI086")
+cli087 = __r("CLI087")
+cli088 = __r("CLI088")
+cli089 = __r("CLI089")
+cli090 = __r("CLI090")
+
 # https://github.com/IntersectMBO/cardano-test-plans/blob/main/docs/user-stories/02-cardano-cli.md
 cli001 = __r("CLI001")
 cli002 = __r("CLI002")
