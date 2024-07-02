@@ -533,11 +533,6 @@ sleep "$SETTLE_DELAY"
 
 echo "Re-registering pools"
 
-GENESIS_VERIFICATION=()
-for vkey in "$STATE_CLUSTER"/shelley/genesis-keys/genesis*.vkey; do
-  GENESIS_VERIFICATION+=("--genesis-verification-key-file" "$vkey")
-done
-
 GENESIS_SIGNING=()
 for skey in "$STATE_CLUSTER"/shelley/genesis-keys/genesis?.skey; do
   GENESIS_SIGNING+=("--signing-key-file" "$skey")
