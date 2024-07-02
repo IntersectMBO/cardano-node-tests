@@ -487,6 +487,8 @@ def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
             time.sleep(sleep_time)
         try:
             response = query_func()
+            if not response:
+                raise AssertionError(NO_REPONSE_STR)
             break
         except AssertionError as exc:
             if NO_REPONSE_STR in str(exc) and time.time() < end_time:
@@ -956,7 +958,7 @@ def check_drep_registration(
 
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
 
-    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registartion"
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registration"
     assert (
         drep_state[0][0]["keyHash"] == drep_data.hash_hex
     ), f"DRep {drep.drep_id} not present in registration table in db-sync"
@@ -1010,3 +1012,30 @@ def check_votes(votes: governance_utils.VotedVotes, txhash: str) -> None:
         dbsync_votes_by_role[d_vote.voter_role].append(d_vote.vote.upper())
 
     assert expected_votes_by_role == dbsync_votes_by_role, "Votes didn't match in dbsync"
+
+
+def check_off_chain_drep_registration(
+    drep: governance_utils.DRepRegistration, metadata: dict
+) -> None:
+    """Check drep off chain data in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
+
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistartion"
+
+    def _query_func() -> list:
+        return list(
+            dbsync_queries.query_off_chain_vote_drep_data(
+                voting_anchor_id=drep_data.voting_anchor_id
+            )
+        )
+
+    drep_offchain_metadata = retry_query(query_func=_query_func, timeout=300)
+
+    assert drep_offchain_metadata[0].payment_address == metadata["body"]["paymentAddress"]
+    assert drep_offchain_metadata[0].given_name == metadata["body"]["givenName"]
+    assert drep_offchain_metadata[0].objectives == metadata["body"]["objectives"]
+    assert drep_offchain_metadata[0].motivations == metadata["body"]["motivations"]
+    assert drep_offchain_metadata[0].qualifications == metadata["body"]["qualifications"]
