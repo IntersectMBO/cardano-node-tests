@@ -811,7 +811,7 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
     param_proposal_db = dbsync_queries.query_param_proposal()
 
     params_mapping = {
-        "coins_per_utxo_word": protocol_params["utxoCostPerByte"],
+        "coins_per_utxo_size": protocol_params["utxoCostPerByte"],
         "collateral_percent": protocol_params["collateralPercentage"],
         "influence": protocol_params["poolPledgeInfluence"],
         "key_deposit": protocol_params["stakeAddressDeposit"],
