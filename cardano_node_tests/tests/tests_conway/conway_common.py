@@ -1,6 +1,7 @@
 """Common functionality for Conway governance tests."""
 
 import dataclasses
+import itertools
 import json
 import logging
 import typing as tp
@@ -10,7 +11,6 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 
 LOGGER = logging.getLogger(__name__)
@@ -180,8 +180,10 @@ def submit_vote(
     payment_addr: clusterlib.AddressRecord,
     votes: tp.List[governance_utils.VotesAllT],
     keys: tp.List[clusterlib.FileType],
+    script_votes: clusterlib.OptionalScriptVotes = (),
     submit_method: str = "",
-    use_build_cmd: bool = False,
+    use_build_cmd: bool = True,
+    witness_count_add: int = 0,
 ) -> clusterlib.TxRawOutput:
     """Submit a Tx with votes."""
     tx_files = clusterlib.TxFiles(
@@ -199,6 +201,8 @@ def submit_vote(
         submit_method=submit_method,
         use_build_cmd=use_build_cmd,
         tx_files=tx_files,
+        script_votes=script_votes,
+        witness_count_add=witness_count_add,
     )
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
@@ -212,7 +216,7 @@ def submit_vote(
 
 def cast_vote(
     cluster_obj: clusterlib.ClusterLib,
-    governance_data: governance_setup.DefaultGovernance,
+    governance_data: governance_utils.GovernanceRecords,
     name_template: str,
     payment_addr: clusterlib.AddressRecord,
     action_txid: str,
@@ -223,11 +227,15 @@ def cast_vote(
     cc_skip_votes: bool = False,
     drep_skip_votes: bool = False,
     spo_skip_votes: bool = False,
+    use_build_cmd: bool = True,
+    witness_count_add: int = 0,
 ) -> governance_utils.VotedVotes:
     """Cast a vote."""
     # pylint: disable=too-many-arguments
     votes_cc = []
-    votes_drep = []
+    votes_drep = []  # All DRep votes
+    votes_drep_keys = []  # DRep votes with key
+    votes_drep_scripts = []  # DRep votes with script
     votes_spo = []
 
     if approve_cc is not None:
@@ -246,8 +254,9 @@ def cast_vote(
             for i, m in enumerate(governance_data.cc_members, start=1)
         ]
         votes_cc = [v for v in _votes_cc if v]
+
     if approve_drep is not None:
-        _votes_drep = [
+        _votes_drep_keys = [
             None  # This DRep doesn't vote, his votes count as "No"
             if drep_skip_votes and i % 3 == 0
             else cluster_obj.g_conway_governance.vote.create_drep(
@@ -261,7 +270,24 @@ def cast_vote(
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
-        votes_drep = [v for v in _votes_drep if v]
+        votes_drep_scripts = [
+            None  # This DRep doesn't vote, his votes count as "No"
+            if drep_skip_votes and i % 3 == 0
+            else cluster_obj.g_conway_governance.vote.create_drep(
+                vote_name=f"{name_template}_sdrep{i}",
+                action_txid=action_txid,
+                action_ix=action_ix,
+                vote=get_yes_abstain_vote(i) if approve_drep else get_no_abstain_vote(i),
+                drep_script_hash=d.script_hash,
+                anchor_url=f"http://www.sdrep-vote{i}.com",
+                anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+            )
+            for i, d in enumerate(governance_data.drep_scripts_reg, start=1)
+        ]
+        votes_drep_keys = [v for v in _votes_drep_keys if v]
+        _votes_drep_scripts = [v for v in votes_drep_scripts if v]
+        votes_drep = [*votes_drep_keys, *_votes_drep_scripts]
+
     if approve_spo is not None:
         _votes_spo = [
             None  # This SPO doesn't vote, his votes count as "No"
@@ -280,11 +306,33 @@ def cast_vote(
         votes_spo = [v for v in _votes_spo if v]
 
     cc_keys = [r.hot_skey_file for r in governance_data.cc_members] if votes_cc else []
-    drep_keys = [r.key_pair.skey_file for r in governance_data.dreps_reg] if votes_drep else []
+    drep_keys = [r.key_pair.skey_file for r in governance_data.dreps_reg] if votes_drep_keys else []
+    drep_script_key_pairs = itertools.chain.from_iterable(
+        [r.key_pairs for r in governance_data.drep_scripts_reg] if votes_drep_scripts else []
+    )
+    drep_script_witnesses = [r.skey_file for r in drep_script_key_pairs]
     spo_keys = [r.skey_file for r in governance_data.pools_cold] if votes_spo else []
 
-    votes_all: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
-    keys_all = [*cc_keys, *drep_keys, *spo_keys]
+    votes_simple: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep_keys, *votes_spo]
+    keys_all = [*cc_keys, *drep_keys, *drep_script_witnesses, *spo_keys]
+
+    script_votes: tp.List[clusterlib.ScriptVote] = []
+
+    if votes_drep_scripts:
+        drep_script_reg_certs = [r.registration_cert for r in governance_data.drep_scripts_reg]
+        script_votes = [
+            clusterlib.ScriptVote(
+                vote_file=v.vote_file,
+                script_file=r.script_file,
+                collaterals=r.collaterals,
+                execution_units=r.execution_units,
+                redeemer_file=r.redeemer_file,
+                redeemer_cbor_file=r.redeemer_cbor_file,
+                redeemer_value=r.redeemer_value,
+            )
+            for r, v in zip(drep_script_reg_certs, votes_drep_scripts)
+            if v
+        ]
 
     # Make sure we have enough time to submit the votes in one epoch
     clusterlib_utils.wait_for_epoch_interval(
@@ -295,9 +343,11 @@ def cast_vote(
         cluster_obj=cluster_obj,
         name_template=name_template,
         payment_addr=payment_addr,
-        votes=votes_all,
+        votes=votes_simple,
         keys=keys_all,
-        use_build_cmd=True,
+        script_votes=script_votes,
+        use_build_cmd=use_build_cmd,
+        witness_count_add=witness_count_add,
     )
 
     # Make sure the vote is included in the ledger

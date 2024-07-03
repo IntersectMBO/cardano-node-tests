@@ -12,7 +12,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture
 def cluster_use_committee(
     cluster_manager: cluster_management.ClusterManager,
-) -> governance_setup.GovClusterT:
+) -> governance_utils.GovClusterT:
     """Mark governance committee as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[
@@ -28,7 +28,7 @@ def cluster_use_committee(
 @pytest.fixture
 def cluster_use_dreps(
     cluster_manager: cluster_management.ClusterManager,
-) -> governance_setup.GovClusterT:
+) -> governance_utils.GovClusterT:
     """Mark governance DReps as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[
@@ -44,7 +44,7 @@ def cluster_use_dreps(
 @pytest.fixture
 def cluster_use_governance(
     cluster_manager: cluster_management.ClusterManager,
-) -> governance_setup.GovClusterT:
+) -> governance_utils.GovClusterT:
     """Mark governance as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[
@@ -63,7 +63,7 @@ def cluster_use_governance(
 @pytest.fixture
 def cluster_lock_governance(
     cluster_manager: cluster_management.ClusterManager,
-) -> governance_setup.GovClusterT:
+) -> governance_utils.GovClusterT:
     """Mark governance as "locked" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=cluster_management.Resources.ALL_POOLS,

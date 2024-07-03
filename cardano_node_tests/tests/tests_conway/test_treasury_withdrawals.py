@@ -15,7 +15,6 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
-from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
@@ -32,7 +31,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def pool_user_ug(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_use_governance: governance_setup.GovClusterT,
+    cluster_use_governance: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "use governance"."""
     cluster, __ = cluster_use_governance
@@ -53,7 +52,7 @@ class TestTreasuryWithdrawals:
     @pytest.mark.long
     def test_treasury_withdrawals(  # noqa: C901
         self,
-        cluster_use_governance: governance_setup.GovClusterT,
+        cluster_use_governance: governance_utils.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
     ):
         """Test enactment of multiple treasury withdrawals in single epoch.
@@ -364,7 +363,7 @@ class TestTreasuryWithdrawals:
     @pytest.mark.long
     def test_expire_treasury_withdrawals(
         self,
-        cluster_use_governance: governance_setup.GovClusterT,
+        cluster_use_governance: governance_utils.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
     ):
         """Test expiration of treasury withdrawals.

@@ -15,7 +15,6 @@ from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
-from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -31,7 +30,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def pool_user_ug(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_use_governance: governance_setup.GovClusterT,
+    cluster_use_governance: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "use governance"."""
     cluster, __ = cluster_use_governance
@@ -51,7 +50,7 @@ class TestInfo:
     @allure.link(helpers.get_vcs_link())
     def test_info(
         self,
-        cluster_use_governance: governance_setup.GovClusterT,
+        cluster_use_governance: governance_utils.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
     ):
         """Test voting on info action.
