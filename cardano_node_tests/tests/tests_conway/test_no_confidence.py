@@ -30,7 +30,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def pool_user_lg(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_setup.GovClusterT,
+    cluster_lock_governance: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
@@ -53,7 +53,7 @@ class TestNoConfidence:
     def test_no_confidence_action(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test enactment of no confidence action.
@@ -336,7 +336,7 @@ class TestNoConfidence:
     def test_committee_min_size(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test that actions cannot be ratified when the number of CC members < committeeMinSize.

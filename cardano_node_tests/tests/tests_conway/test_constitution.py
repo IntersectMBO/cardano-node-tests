@@ -1,7 +1,11 @@
 """Tests for Conway governance constitution."""
 
 # pylint: disable=expression-not-assigned
+import dataclasses
+import itertools
 import logging
+import pathlib as pl
+import typing as tp
 
 import allure
 import pytest
@@ -10,8 +14,10 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -26,12 +32,35 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
+def cluster_lock_gov_script(
+    cluster_manager: cluster_management.ClusterManager,
+) -> governance_utils.GovClusterT:
+    """Mark governance as "locked" and return instance of `clusterlib.ClusterLib`.
+
+    Lock also the PlutusV3 script that is registered as DRep in the test.
+    """
+    cluster_obj = cluster_manager.get(
+        use_resources=cluster_management.Resources.ALL_POOLS,
+        lock_resources=[
+            cluster_management.Resources.COMMITTEE,
+            cluster_management.Resources.DREPS,
+            helpers.checksum(plutus_common.ALWAYS_SUCCEEDS["v3"].script_file),
+        ],
+    )
+    governance_data = governance_setup.get_default_governance(
+        cluster_manager=cluster_manager, cluster_obj=cluster_obj
+    )
+    governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
+    return cluster_obj, governance_data
+
+
+@pytest.fixture
 def pool_user_lg(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_setup.GovClusterT,
+    cluster_lock_gov_script: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
-    cluster, __ = cluster_lock_governance
+    cluster, __ = cluster_lock_gov_script
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
     return conway_common.get_registered_pool_user(
@@ -42,6 +71,239 @@ def pool_user_lg(
     )
 
 
+@pytest.fixture
+def script_dreps_lg(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_lock_gov_script: governance_utils.GovClusterT,
+    testfile_temp_dir: pl.Path,
+) -> tp.Generator[
+    tp.Tuple[tp.List[governance_utils.DRepScriptRegistration], tp.List[clusterlib.PoolUser]],
+    None,
+    None,
+]:
+    """Create script DReps for "lock governance"."""
+    __: tp.Any  # mypy workaround
+    cluster, __ = cluster_lock_gov_script
+    temp_template = f"{common.get_test_id(cluster)}_script_dreps"
+    pool_users = governance_setup.create_vote_stake(
+        name_template=temp_template,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        no_of_addr=3,
+    )
+
+    def _simple_rec(
+        name_template: str,
+        slot: int,
+    ) -> governance_utils.DRepScriptRegInputs:
+        multisig_script = cluster.g_transaction.build_multisig_script(
+            script_name=name_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
+            payment_vkey_files=[u.payment.vkey_file for u in pool_users],
+            slot=slot,
+            slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
+        )
+        script_keys = [
+            clusterlib.KeyPair(vkey_file=u.payment.vkey_file, skey_file=u.payment.skey_file)
+            for u in pool_users
+        ]
+
+        reg_cert_script = clusterlib.ComplexCert(
+            certificate_file="",
+            script_file=multisig_script,
+        )
+        reg_cert_record = governance_utils.DRepScriptRegInputs(
+            registration_cert=reg_cert_script,
+            key_pairs=script_keys,
+            script_type=governance_utils.ScriptTypes.SIMPLE,
+        )
+
+        return reg_cert_record
+
+    def _plutus_cert_rec(
+        name_template: str,
+        script_data: plutus_common.PlutusScriptData,
+        redeemer_file: pl.Path,
+    ) -> governance_utils.DRepScriptRegInputs:
+        collateral_fund = 1_500_000_000
+
+        txouts = [
+            clusterlib.TxOut(address=pool_users[1].payment.address, amount=collateral_fund),
+        ]
+
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[pool_users[0].payment.skey_file],
+        )
+        tx_output = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=name_template,
+            src_address=pool_users[0].payment.address,
+            use_build_cmd=True,
+            txouts=txouts,
+            tx_files=tx_files,
+        )
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+        collateral_utxos = clusterlib.filter_utxos(
+            utxos=out_utxos,
+            amount=txouts[0].amount,
+            address=txouts[0].address,
+        )
+        reg_cert = clusterlib.ComplexCert(
+            certificate_file="",
+            script_file=script_data.script_file,
+            collaterals=collateral_utxos,
+            execution_units=(
+                script_data.execution_cost.per_time,
+                script_data.execution_cost.per_space,
+            ),
+            redeemer_file=redeemer_file,
+        )
+        reg_inputs = governance_utils.DRepScriptRegInputs(
+            registration_cert=reg_cert,
+            key_pairs=[
+                clusterlib.KeyPair(
+                    vkey_file=pool_users[1].payment.vkey_file,
+                    skey_file=pool_users[1].payment.skey_file,
+                )
+            ],
+            script_type=governance_utils.ScriptTypes.PLUTUS,
+        )
+        return reg_inputs
+
+    reg_cert_script1 = _simple_rec(name_template=f"{temp_template}_simple1", slot=100)
+    reg_cert_script2 = _simple_rec(name_template=f"{temp_template}_simple2", slot=101)
+    reg_cert_script3 = _plutus_cert_rec(
+        name_template=f"{temp_template}_pv3",
+        script_data=plutus_common.ALWAYS_SUCCEEDS["v3"],
+        redeemer_file=plutus_common.REDEEMER_42,
+    )
+
+    script_inputs = [reg_cert_script1, reg_cert_script2, reg_cert_script3]
+
+    script_dreps = governance_utils.create_script_dreps(
+        name_template=temp_template,
+        script_inputs=script_inputs,
+        cluster_obj=cluster,
+        payment_addr=pool_users[0].payment,
+        pool_users=pool_users,
+    )
+
+    yield script_dreps
+
+    def _dereg_stake() -> None:
+        """Deregister stake addresses and return funds."""
+        _pool_users_info = [
+            (p, cluster.g_query.get_stake_addr_info(p.stake.address)) for p in pool_users
+        ]
+        pool_users_info = [r for r in _pool_users_info if r[1]]
+
+        stake_addr_dereg_certs = [
+            cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+                addr_name=f"{temp_template}_addr{i}",
+                deposit_amt=r[1].delegation_deposit,
+                stake_vkey_file=r[0].stake.vkey_file,
+            )
+            for i, r in enumerate(pool_users_info)
+        ]
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=stake_addr_dereg_certs,
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                *[p.stake.skey_file for p, __ in pool_users_info],
+            ],
+        )
+
+        _withdrawals = [
+            (
+                clusterlib.TxOut(
+                    address=p.stake.address,
+                    amount=s.reward_account_balance,
+                )
+                if s.reward_account_balance
+                else None
+            )
+            for p, s in pool_users_info
+        ]
+        withdrawals = [w for w in _withdrawals if w is not None]
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_dereg",
+            src_address=pool_users[0].payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+            withdrawals=withdrawals,
+            deposit=-sum(s.delegation_deposit for __, s in pool_users_info),
+        )
+
+        dereg_stake_states = [
+            cluster.g_query.get_stake_addr_info(p.stake.address) for p in pool_users
+        ]
+        assert not any(dereg_stake_states), "Some stake addresses were not deregistered"
+
+    def _retire_dreps() -> None:
+        drep_script_data, drep_users = script_dreps
+
+        ret_cert_files = [
+            cluster.g_conway_governance.drep.gen_retirement_cert(
+                cert_name=f"{temp_template}_sdrep_ret{i}",
+                deposit_amt=d.deposit,
+                drep_script_hash=d.script_hash,
+            )
+            for i, d in enumerate(drep_script_data)
+        ]
+
+        ret_certs = [
+            dataclasses.replace(d.registration_cert, certificate_file=c)
+            for c, d in zip(ret_cert_files, drep_script_data)
+        ]
+
+        witness_keys = itertools.chain.from_iterable(r.key_pairs for r in drep_script_data)
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                *[r.stake.skey_file for r in drep_users],
+                *[r.skey_file for r in witness_keys],
+            ],
+        )
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_ret",
+            src_address=pool_users[0].payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+            complex_certs=ret_certs,
+            deposit=-sum(d.deposit for d in drep_script_data),
+        )
+
+        ret_drep_states = [
+            cluster.g_conway_governance.query.drep_state(drep_script_hash=d.script_hash)
+            for d in drep_script_data
+        ]
+        assert not any(ret_drep_states), "Some DRep were not retired"
+
+    with helpers.change_cwd(testfile_temp_dir):
+        _dereg_stake()
+        _retire_dreps()
+
+
+@pytest.fixture
+def governance_w_scripts_lg(
+    cluster_lock_gov_script: governance_utils.GovClusterT,
+    script_dreps_lg: tp.Tuple[
+        tp.List[governance_utils.DRepScriptRegistration], tp.List[clusterlib.PoolUser]
+    ],
+) -> governance_utils.GovernanceRecords:
+    """Create a governance records with script DReps."""
+    cluster, default_governance = cluster_lock_gov_script
+    script_dreps, script_delegators = script_dreps_lg
+    return dataclasses.replace(
+        default_governance, drep_scripts_reg=script_dreps, drep_scripts_delegators=script_delegators
+    )
+
+
 class TestConstitution:
     """Tests for constitution."""
 
@@ -49,8 +311,9 @@ class TestConstitution:
     @pytest.mark.long
     def test_change_constitution(
         self,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_gov_script: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
+        governance_w_scripts_lg: governance_utils.GovernanceRecords,
     ):
         """Test enactment of change of constitution.
 
@@ -64,12 +327,15 @@ class TestConstitution:
         * check that it's not possible to vote on enacted action
         """
         # pylint: disable=too-many-locals,too-many-statements
-        cluster, governance_data = cluster_lock_governance
-        temp_template = common.get_test_id(cluster)
+        __: tp.Any  # mypy workaround
+        cluster, __ = cluster_lock_gov_script
+        rand_str = clusterlib.get_rand_str(4)
+        governance_data = governance_w_scripts_lg
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         # Create an action
 
-        anchor_url = "http://www.const-action.com"
+        anchor_url = f"http://www.const-action-{rand_str}.com"
         anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
 
         constitution_file = f"{temp_template}_constitution.txt"
@@ -85,7 +351,7 @@ class TestConstitution:
         with open(constitution_file, "w", encoding="utf-8") as out_fp:
             out_fp.write(constitution_text)
 
-        constitution_url = "http://www.const-new.com"
+        constitution_url = f"http://www.const-new-{rand_str}.com"
         reqc.cli002.start(url=helpers.get_vcs_link())
         constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
             file_text=constitution_file
@@ -136,6 +402,7 @@ class TestConstitution:
                 approve_cc=False,
                 approve_drep=False,
                 approve_spo=False,
+                use_build_cmd=False,  # cardano-cli issue #650
             )
         err_str = str(excinfo.value)
         assert "StakePoolVoter" in err_str, err_str
@@ -150,6 +417,7 @@ class TestConstitution:
             action_ix=action_ix,
             approve_cc=False,
             approve_drep=False,
+            use_build_cmd=False,  # cardano-cli issue #650
         )
 
         # Vote & approve the action
@@ -163,6 +431,7 @@ class TestConstitution:
             action_ix=action_ix,
             approve_cc=True,
             approve_drep=True,
+            use_build_cmd=False,  # cardano-cli issue #650
         )
 
         def _assert_anchor(anchor: dict):
@@ -216,6 +485,7 @@ class TestConstitution:
             action_ix=action_ix,
             approve_cc=False,
             approve_drep=False,
+            use_build_cmd=False,  # cardano-cli issue #650
         )
 
         next_rat_state = rat_gov_state["nextRatifyState"]
@@ -261,6 +531,7 @@ class TestConstitution:
                 action_ix=action_ix,
                 approve_cc=False,
                 approve_drep=False,
+                use_build_cmd=False,  # cardano-cli issue #650
             )
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str

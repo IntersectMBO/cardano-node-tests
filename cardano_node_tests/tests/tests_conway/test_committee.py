@@ -38,7 +38,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def payment_addr_comm(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_use_committee: governance_setup.GovClusterT,
+    cluster_use_committee: governance_utils.GovClusterT,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster, __ = cluster_use_committee
@@ -81,7 +81,7 @@ def pool_user(
 @pytest.fixture
 def pool_user_lg(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_setup.GovClusterT,
+    cluster_lock_governance: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
@@ -106,7 +106,7 @@ class TestCommittee:
     @pytest.mark.smoke
     def test_register_and_resign_committee_member(
         self,
-        cluster_use_committee: governance_setup.GovClusterT,
+        cluster_use_committee: governance_utils.GovClusterT,
         payment_addr_comm: clusterlib.AddressRecord,
         use_build_cmd: bool,
         submit_method: str,
@@ -345,7 +345,7 @@ class TestCommittee:
     @pytest.mark.long
     def test_add_rm_committee_members(  # noqa: C901
         self,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
@@ -992,7 +992,7 @@ class TestCommittee:
     def test_empty_committee(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test electing empty Constitutional Committee.
@@ -1360,7 +1360,7 @@ class TestCommittee:
     @pytest.mark.long
     def test_committee_zero_threshold(
         self,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test that actions that requires CC approval can be ratified when threshold == 0.

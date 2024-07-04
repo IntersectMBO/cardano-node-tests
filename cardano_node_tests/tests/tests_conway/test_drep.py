@@ -21,7 +21,6 @@ from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
-from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
@@ -885,7 +884,7 @@ class TestDelegDReps:
     @pytest.mark.smoke
     def test_cli_drep_status_consistency(
         self,
-        cluster_use_dreps: governance_setup.GovClusterT,
+        cluster_use_dreps: governance_utils.GovClusterT,
     ):
         """Test consistency of `cardano-cli conway query drep-state` output.
 
@@ -925,7 +924,7 @@ class TestDRepActivity:
     def pool_user_lg(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
     ) -> clusterlib.PoolUser:
         """Create a pool user for "lock governance".
 
@@ -945,7 +944,7 @@ class TestDRepActivity:
     def test_drep_inactivity(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test DRep inactivity.
@@ -1050,7 +1049,7 @@ class TestDRepActivity:
             )
 
         def _update_drep_activity(
-            governance_data: governance_setup.DefaultGovernance,
+            governance_data: governance_utils.GovernanceRecords,
             action_id: str,
         ) -> str:
             anchor_url = f"http://www.drep-activity-{action_id}.com"

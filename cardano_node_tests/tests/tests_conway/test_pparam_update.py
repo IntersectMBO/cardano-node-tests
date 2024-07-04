@@ -17,7 +17,6 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
-from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -109,7 +108,7 @@ SECURITY_PPARAMS = {
 @pytest.fixture
 def pool_user_lg(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_setup.GovClusterT,
+    cluster_lock_governance: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_lock_governance
@@ -219,7 +218,7 @@ class TestPParamUpdate:
     @pytest.mark.long
     def test_pparam_update(  # noqa: C901
         self,
-        cluster_lock_governance: governance_setup.GovClusterT,
+        cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test enactment of protocol parameter update.
