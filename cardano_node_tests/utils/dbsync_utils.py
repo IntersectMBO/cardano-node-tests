@@ -811,7 +811,7 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
     param_proposal_db = dbsync_queries.query_param_proposal()
 
     params_mapping = {
-        "coins_per_utxo_word": protocol_params["utxoCostPerByte"],
+        "coins_per_utxo_size": protocol_params["utxoCostPerByte"],
         "collateral_percent": protocol_params["collateralPercentage"],
         "influence": protocol_params["poolPledgeInfluence"],
         "key_deposit": protocol_params["stakeAddressDeposit"],
@@ -846,6 +846,169 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
         raise AssertionError(msg)
 
     return param_proposal_db
+
+
+def _get_float_pparam(pparam: tp.Any) -> tp.Optional[float]:
+    if pparam is None:
+        return None
+    if isinstance(pparam, dict):
+        numerator = pparam.get("numerator", 0)
+        denominator = pparam.get("denominator", 1)
+        return float(numerator / denominator)
+    return float(pparam)
+
+
+def map_params_to_db_convention(pp: dict) -> tp.Dict[str, tp.Any]:
+    # Get the prices of memory and steps
+    prices = pp.get("executionUnitPrices", {})
+    price_mem = _get_float_pparam(prices.get("priceMemory"))
+    price_steps = _get_float_pparam(prices.get("priceSteps"))
+
+    dvt = pp.get("dRepVotingThresholds", {})
+    pvt = pp.get("poolVotingThresholds", {})
+
+    params_mapping = {
+        # Network proposals group
+        "max_block_size": pp.get("maxBlockBodySize"),
+        "max_tx_size": pp.get("maxTxSize"),
+        "max_bh_size": pp.get("maxBlockHeaderSize"),
+        "max_val_size": pp.get("maxValueSize"),
+        "max_tx_ex_mem": pp.get("maxTxExecutionUnits", {}).get("memory"),
+        "max_tx_ex_steps": pp.get("maxTxExecutionUnits", {}).get("steps"),
+        "max_block_ex_mem": pp.get("maxBlockExecutionUnits", {}).get("memory"),
+        "max_block_ex_steps": pp.get("maxBlockExecutionUnits", {}).get("steps"),
+        "max_collateral_inputs": pp.get("maxCollateralInputs"),
+        # Economic proposals group
+        "min_fee_a": pp.get("txFeePerByte"),
+        "min_fee_b": pp.get("txFeeFixed"),
+        "key_deposit": pp.get("stakeAddressDeposit"),
+        "pool_deposit": pp.get("stakePoolDeposit"),
+        "monetary_expand_rate": _get_float_pparam(pp.get("monetaryExpansion")),
+        "treasury_growth_rate": _get_float_pparam(pp.get("treasuryCut")),
+        "min_pool_cost": pp.get("minPoolCost"),
+        "coins_per_utxo_size": pp.get("utxoCostPerByte"),
+        "min_fee_ref_script_cost_per_byte": pp.get("minFeeRefScriptCostPerByte"),
+        "price_mem": price_mem,
+        "price_step": price_steps,
+        # Technical proposals group
+        "influence": _get_float_pparam(pp.get("poolPledgeInfluence")),
+        "max_epoch": pp.get("poolRetireMaxEpoch"),
+        "optimal_pool_count": pp.get("stakePoolTargetNum"),
+        "collateral_percent": pp.get("collateralPercentage"),
+        # Governance proposal group
+        # - DReps
+        "dvt_committee_no_confidence": _get_float_pparam(dvt.get("committeeNoConfidence")),
+        "dvt_committee_normal": _get_float_pparam(dvt.get("committeeNormal")),
+        "dvt_hard_fork_initiation": _get_float_pparam(dvt.get("hardForkInitiation")),
+        "dvt_motion_no_confidence": _get_float_pparam(dvt.get("motionNoConfidence")),
+        "dvt_p_p_economic_group": _get_float_pparam(dvt.get("ppEconomicGroup")),
+        "dvt_p_p_gov_group": _get_float_pparam(dvt.get("ppGovGroup")),
+        "dvt_p_p_network_group": _get_float_pparam(dvt.get("ppNetworkGroup")),
+        "dvt_p_p_technical_group": _get_float_pparam(dvt.get("ppTechnicalGroup")),
+        "dvt_treasury_withdrawal": _get_float_pparam(dvt.get("treasuryWithdrawal")),
+        "dvt_update_to_constitution": _get_float_pparam(dvt.get("updateToConstitution")),
+        # - Pools
+        "pvt_committee_no_confidence": _get_float_pparam(pvt.get("committeeNoConfidence")),
+        "pvt_committee_normal": _get_float_pparam(pvt.get("committeeNormal")),
+        "pvt_hard_fork_initiation": _get_float_pparam(pvt.get("hardForkInitiation")),
+        "pvt_motion_no_confidence": _get_float_pparam(pvt.get("motionNoConfidence")),
+        "pvtpp_security_group": _get_float_pparam(pvt.get("ppSecurityGroup")),
+        # General
+        "gov_action_lifetime": pp.get("govActionLifetime"),
+        "gov_action_deposit": pp.get("govActionDeposit"),
+        "drep_deposit": pp.get("dRepDeposit"),
+        "drep_activity": pp.get("dRepActivity"),
+        "committee_min_size": pp.get("committeeMinSize"),
+        "committee_max_term_length": pp.get("committeeMaxTermLength"),
+    }
+
+    return params_mapping
+
+
+def _check_param_proposal(
+    param_proposal_db: tp.Union[dbsync_queries.ParamProposalDBRow, dbsync_queries.EpochParamDBRow],
+    params_map: dict,
+) -> list:
+    """Check parameter proposal against db-sync."""
+    failures = []
+
+    for param_name, protocol_value in params_map.items():
+        if protocol_value:
+            db_value = getattr(param_proposal_db, param_name)
+            if db_value and (db_value != protocol_value):
+                failures.append(
+                    f"Param value for {param_name}: {db_value}. Expected: {protocol_value}"
+                )
+    return failures
+
+
+def check_conway_param_update_proposal(
+    param_proposal_ledger: dict,
+) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
+    """Check comparison for param proposal between ledger and db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    param_proposal_db = dbsync_queries.query_param_proposal()
+    params_map = map_params_to_db_convention(param_proposal_ledger)
+    failures = []
+
+    # Get cost models
+    if param_proposal_db.cost_model_id:
+        db_cost_model = dbsync_queries.query_cost_model(param_proposal_db.cost_model_id)
+        pp_cost_model = param_proposal_ledger.get("costModels")
+        if db_cost_model != pp_cost_model:
+            failures.append(f"Cost model mismatch for {db_cost_model}. Expected: {pp_cost_model}")
+    failures.extend(_check_param_proposal(param_proposal_db, params_map))
+
+    if failures:
+        failures_str = "\n".join(failures)
+        msg = f"Unexpected parameter proposal values in db-sync:\n{failures_str}"
+        raise AssertionError(msg)
+    return param_proposal_db
+
+
+def check_conway_param_update_enactment(
+    gov_state: dict, epoch_no: int
+) -> tp.Optional[dbsync_queries.EpochParamDBRow]:
+    """Check params enactment between ledger and epoch param in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    curr_params_db = dbsync_queries.query_epoch_param(epoch_no)
+    curr_params_ledger = gov_state["currentPParams"]
+    params_map = map_params_to_db_convention(curr_params_ledger)
+    failures = _check_param_proposal(curr_params_db, params_map)
+
+    if failures:
+        failures_str = "\n".join(failures)
+        msg = f"Unexpected enacted param values in db-sync:\n{failures_str}"
+        raise AssertionError(msg)
+    return curr_params_db
+
+
+def check_conway_gov_action_proposal_description(
+    update_proposal: dict, txhash: str = ""
+) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
+    """Check expected values in the param proposal table in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return None
+
+    db_gov_action = get_gov_action_proposals(txhash=txhash).pop()
+    db_gov_prop_desc = db_gov_action.description["contents"][1]
+
+    if db_gov_prop_desc != update_proposal:
+        msg = f"Comparison {db_gov_prop_desc} failed in db-sync:\n" f"Expected {update_proposal}"
+        raise AssertionError(msg)
+    return db_gov_action
+
+
+def get_gov_action_proposals(
+    txhash: str = "", type: str = ""
+) -> tp.List[dbsync_queries.GovActionProposalDBRow]:
+    """Get goverment action proposal from db-sync."""
+    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash, type))
+    return gov_action_proposals
 
 
 def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
