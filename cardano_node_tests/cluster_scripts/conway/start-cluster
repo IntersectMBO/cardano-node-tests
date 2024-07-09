@@ -233,7 +233,7 @@ if [ -z "${NO_CC:-""}" ]; then
       --signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.skey"
     cardano_cli_log conway governance committee create-hot-key-authorization-certificate \
       --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
-      --hot-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
+      --hot-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
       --out-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot_auth.cert"
     cardano_cli_log conway governance committee key-hash \
       --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \

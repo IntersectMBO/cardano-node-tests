@@ -3,12 +3,14 @@
 import dataclasses
 import enum
 import functools
+import itertools
 import logging
 import pathlib as pl
 import typing as tp
 
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -32,12 +34,53 @@ VotesAllT = tp.Union[  # pylint: disable=invalid-name
 DRepStateT = tp.List[tp.List[tp.Dict[str, tp.Any]]]
 
 
+class ScriptTypes(enum.Enum):
+    SIMPLE = "simple"
+    PLUTUS = "plutus"
+
+
 @dataclasses.dataclass(frozen=True, order=True)
 class DRepRegistration:
     registration_cert: pl.Path
     key_pair: clusterlib.KeyPair
     drep_id: str
     deposit: int
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class DRepScriptRegRecord:
+    registration_cert: pl.Path
+    script_hash: str
+    deposit: int
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class DRepScriptRegInputs:
+    registration_cert: clusterlib.ComplexCert
+    key_pairs: tp.List[clusterlib.KeyPair]
+    script_type: ScriptTypes
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class DRepScriptRegistration:
+    registration_cert: clusterlib.ComplexCert
+    key_pairs: tp.List[clusterlib.KeyPair]
+    script_hash: str
+    script_type: ScriptTypes
+    deposit: int
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class GovernanceRecords:
+    dreps_reg: tp.List[DRepRegistration]
+    drep_delegators: tp.List[clusterlib.PoolUser]
+    cc_members: tp.List[clusterlib.CCMember]
+    pools_cold: tp.List[clusterlib.ColdKeyPair]
+    drep_scripts_reg: tp.List[DRepScriptRegistration] = dataclasses.field(default_factory=list)
+    drep_scripts_delegators: tp.List[clusterlib.PoolUser] = dataclasses.field(default_factory=list)
+
+
+GovClusterT = tp.Tuple[clusterlib.ClusterLib, GovernanceRecords]
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -227,6 +270,33 @@ def get_drep_reg_record(
         registration_cert=reg_cert,
         key_pair=drep_keys,
         drep_id=drep_id,
+        deposit=deposit_amt,
+    )
+
+
+def get_script_drep_reg_record(
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    script_hash: str,
+    deposit_amt: int = -1,
+    drep_metadata_url: str = "",
+    drep_metadata_hash: str = "",
+    destination_dir: clusterlib.FileType = ".",
+) -> DRepScriptRegRecord:
+    """Get DRep script registration record."""
+    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
+    reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
+        cert_name=name_template,
+        deposit_amt=deposit_amt,
+        drep_script_hash=script_hash,
+        drep_metadata_url=drep_metadata_url,
+        drep_metadata_hash=drep_metadata_hash,
+        destination_dir=destination_dir,
+    )
+
+    return DRepScriptRegRecord(
+        registration_cert=reg_cert,
+        script_hash=script_hash,
         deposit=deposit_amt,
     )
 
@@ -548,3 +618,187 @@ def is_drep_active(
         epoch = cluster_obj.g_query.get_epoch()
 
     return bool(drep_state[0][1].get("expiry", 0) > epoch)
+
+
+def create_dreps(
+    name_template: str,
+    num: int,
+    cluster_obj: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
+    pool_users: tp.List[clusterlib.PoolUser],
+    destination_dir: clusterlib.FileType = ".",
+) -> tp.Tuple[tp.List[DRepRegistration], tp.List[clusterlib.PoolUser]]:
+    """Create DReps with keys."""
+    no_of_addrs = len(pool_users)
+
+    if no_of_addrs < num:
+        msg = "Not enough pool users to create drep registrations"
+        raise ValueError(msg)
+
+    stake_deposit = cluster_obj.g_query.get_address_deposit()
+    drep_users = pool_users[:num]
+    deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+
+    # Create DRep registration certs
+    drep_reg_records = [
+        get_drep_reg_record(
+            cluster_obj=cluster_obj,
+            name_template=f"{name_template}_{i}",
+            deposit_amt=deposit_amt,
+            destination_dir=destination_dir,
+        )
+        for i in range(1, num + 1)
+    ]
+
+    # Create stake address registration certs
+    stake_reg_certs = [
+        cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{name_template}_addr{i}",
+            deposit_amt=stake_deposit,
+            stake_vkey_file=du.stake.vkey_file,
+            destination_dir=destination_dir,
+        )
+        for i, du in enumerate(drep_users, start=1)
+    ]
+
+    # Create vote delegation cert
+    stake_deleg_certs = [
+        cluster_obj.g_stake_address.gen_vote_delegation_cert(
+            addr_name=f"{name_template}_addr{i + 1}",
+            stake_vkey_file=du.stake.vkey_file,
+            drep_key_hash=drep_reg_records[i].drep_id,
+            destination_dir=destination_dir,
+        )
+        for i, du in enumerate(drep_users)
+    ]
+
+    # Make sure we have enough time to finish the registration/delegation in one epoch
+    clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=1, stop=-15)
+
+    tx_files = clusterlib.TxFiles(
+        certificate_files=[
+            *[r.registration_cert for r in drep_reg_records],
+            *stake_reg_certs,
+            *stake_deleg_certs,
+        ],
+        signing_key_files=[
+            payment_addr.skey_file,
+            *[r.stake.skey_file for r in drep_users],
+            *[r.key_pair.skey_file for r in drep_reg_records],
+        ],
+    )
+
+    clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_reg",
+        src_address=payment_addr.address,
+        use_build_cmd=True,
+        tx_files=tx_files,
+        deposit=(drep_reg_records[0].deposit + stake_deposit) * len(drep_reg_records),
+        destination_dir=destination_dir,
+    )
+
+    return drep_reg_records, drep_users
+
+
+def create_script_dreps(
+    name_template: str,
+    script_inputs: tp.List[DRepScriptRegInputs],
+    cluster_obj: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
+    pool_users: tp.List[clusterlib.PoolUser],
+    destination_dir: clusterlib.FileType = ".",
+) -> tp.Tuple[tp.List[DRepScriptRegistration], tp.List[clusterlib.PoolUser]]:
+    """Create DReps with scripts."""
+    no_of_addrs = len(pool_users)
+    no_of_scripts = len(script_inputs)
+
+    if no_of_addrs < no_of_scripts:
+        msg = "Not enough pool users to create drep registrations"
+        raise ValueError(msg)
+
+    stake_deposit = cluster_obj.g_query.get_address_deposit()
+    drep_users = pool_users[:no_of_scripts]
+    deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+
+    # Create DRep script registration certs
+    drep_reg_records = [
+        get_script_drep_reg_record(
+            cluster_obj=cluster_obj,
+            name_template=f"{name_template}_{i}",
+            script_hash=cluster_obj.g_conway_governance.get_script_hash(
+                script_file=s.registration_cert.script_file
+            ),
+            deposit_amt=deposit_amt,
+            destination_dir=destination_dir,
+        )
+        for i, s in enumerate(script_inputs, start=1)
+    ]
+
+    drep_script_data = [
+        DRepScriptRegistration(
+            registration_cert=dataclasses.replace(
+                s.registration_cert, certificate_file=r.registration_cert
+            ),
+            key_pairs=s.key_pairs,
+            script_hash=r.script_hash,
+            script_type=s.script_type,
+            deposit=r.deposit,
+        )
+        for s, r in zip(script_inputs, drep_reg_records)
+    ]
+
+    # Create stake address registration certs
+    stake_reg_certs = [
+        clusterlib.ComplexCert(
+            certificate_file=cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
+                addr_name=f"{name_template}_addr{i}",
+                deposit_amt=stake_deposit,
+                stake_vkey_file=du.stake.vkey_file,
+                destination_dir=destination_dir,
+            )
+        )
+        for i, du in enumerate(drep_users, start=1)
+    ]
+
+    # Create vote delegation cert
+    stake_deleg_certs = [
+        clusterlib.ComplexCert(
+            certificate_file=cluster_obj.g_stake_address.gen_vote_delegation_cert(
+                addr_name=f"{name_template}_addr{i + 1}",
+                stake_vkey_file=du.stake.vkey_file,
+                drep_script_hash=drep_reg_records[i].script_hash,
+                destination_dir=destination_dir,
+            )
+        )
+        for i, du in enumerate(drep_users)
+    ]
+
+    # Make sure we have enough time to finish the registration/delegation in one epoch
+    clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=1, stop=-15)
+
+    witness_keys = itertools.chain.from_iterable(r.key_pairs for r in script_inputs)
+    tx_files = clusterlib.TxFiles(
+        signing_key_files=[
+            payment_addr.skey_file,
+            *[r.stake.skey_file for r in drep_users],
+            *[r.skey_file for r in witness_keys],
+        ],
+    )
+
+    clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_reg",
+        src_address=payment_addr.address,
+        use_build_cmd=True,
+        tx_files=tx_files,
+        complex_certs=[
+            *[c.registration_cert for c in drep_script_data],
+            *stake_reg_certs,
+            *stake_deleg_certs,
+        ],
+        deposit=(drep_reg_records[0].deposit + stake_deposit) * len(drep_reg_records),
+        destination_dir=destination_dir,
+    )
+
+    return drep_script_data, drep_users
