@@ -341,6 +341,9 @@ class TestCommittee:
 
         reqc.cip007.success()
 
+        # Check dbsync
+        dbsync_utils.check_committee_info(gov_state=gov_state, txid=txid)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
     def test_add_rm_committee_members(  # noqa: C901
