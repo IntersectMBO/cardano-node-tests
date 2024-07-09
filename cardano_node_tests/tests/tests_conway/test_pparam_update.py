@@ -245,6 +245,7 @@ class TestPParamUpdate:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list.json"
+        proposal_records = []
         db_errors_final = []
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
 
@@ -684,6 +685,7 @@ class TestPParamUpdate:
             update_proposals=net_nodrep_prop_rec.proposals,
             protocol_params=net_nodrep_prop_rec.future_pparams,
         )
+        proposal_records.append(net_nodrep_prop_rec)
 
         reqc.cip061_04.start(url=_url)
 
@@ -734,6 +736,7 @@ class TestPParamUpdate:
             net_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_net_nocc", proposals=network_g_proposals
             )
+            proposal_records.append(net_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -758,6 +761,7 @@ class TestPParamUpdate:
                 update_proposals=eco_nodrep_prop_rec.proposals,
                 protocol_params=eco_nodrep_prop_rec.future_pparams,
             )
+            proposal_records.append(eco_nodrep_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -787,6 +791,7 @@ class TestPParamUpdate:
             eco_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_eco_nocc", proposals=eco_nocc_update_proposals
             )
+            proposal_records.append(eco_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -809,6 +814,7 @@ class TestPParamUpdate:
             update_proposals=tech_nodrep_prop_rec.proposals,
             protocol_params=tech_nodrep_prop_rec.future_pparams,
         )
+        proposal_records.append(tech_nodrep_prop_rec)
 
         assert tech_nodrep_prop_rec.proposal_names.isdisjoint(
             SECURITY_PPARAMS
@@ -862,6 +868,7 @@ class TestPParamUpdate:
             tech_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_tech_nocc", proposals=technical_g_proposals
             )
+            proposal_records.append(tech_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -888,6 +895,7 @@ class TestPParamUpdate:
             update_proposals=sec_nonespo_prop_rec.proposals,
             protocol_params=sec_nonespo_prop_rec.future_pparams,
         )
+        proposal_records.append(sec_nonespo_prop_rec)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -905,6 +913,7 @@ class TestPParamUpdate:
         sec_nospo_prop_rec = _propose_pparams_update(
             name_template=f"{temp_template}_sec_nospo", proposals=security_proposals
         )
+        proposal_records.append(sec_nospo_prop_rec)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -927,6 +936,7 @@ class TestPParamUpdate:
                 update_proposals=gov_nodrep_prop_rec.proposals,
                 protocol_params=gov_nodrep_prop_rec.future_pparams,
             )
+            proposal_records.append(gov_nodrep_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -956,6 +966,7 @@ class TestPParamUpdate:
             gov_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_gov_nocc", proposals=gov_nocc_update_proposals
             )
+            proposal_records.append(gov_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -989,6 +1000,7 @@ class TestPParamUpdate:
                 update_proposals=mix_nodrep_prop_rec.proposals,
                 protocol_params=mix_nodrep_prop_rec.future_pparams,
             )
+            proposal_records.append(mix_nodrep_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -1031,6 +1043,7 @@ class TestPParamUpdate:
                 update_proposals=mix_nocc_prop_rec.proposals,
                 protocol_params=mix_nocc_prop_rec.future_pparams,
             )
+            proposal_records.append(mix_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -1054,6 +1067,7 @@ class TestPParamUpdate:
             update_proposals=fin_prop_rec.proposals,
             protocol_params=fin_prop_rec.future_pparams,
         )
+        proposal_records.append(fin_prop_rec)
 
         # Vote & disapprove the action
         conway_common.cast_vote(
@@ -1113,6 +1127,7 @@ class TestPParamUpdate:
             update_proposals=mix_approved_prop_rec.proposals,
             protocol_params=mix_approved_prop_rec.future_pparams,
         )
+        proposal_records.append(mix_approved_prop_rec)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -1238,6 +1253,12 @@ class TestPParamUpdate:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
         if fin_voted_votes.drep:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
+
+        issued_props_num = len(proposal_records)
+        try:
+            dbsync_utils.check_proposal_refunds(pool_user_lg.stake.address, issued_props_num)
+        except AssertionError as exc:
+            db_errors_final.append(f"db-sync proposal refunds error: {exc}")
 
         if db_errors_final:
             raise AssertionError("\n".join(db_errors_final))
