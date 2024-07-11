@@ -1269,7 +1269,7 @@ class TestPParamUpdate:
         total_deposit_return = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address
         ).reward_account_balance
-        # Check total deposit return accounting for both expired and enaacted actions
+        # Check total deposit return accounting for both expired and enacted actions
         assert (
             total_deposit_return
             == init_return_account_balance + deposit_amt * submitted_proposal_count
