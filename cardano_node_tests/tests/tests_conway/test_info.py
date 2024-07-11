@@ -58,11 +58,17 @@ class TestInfo:
         * submit an "info" action
         * vote on the action
         * check the votes
+        * check for deposit return
         """
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
         action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
+
+        # Get initial return account balance
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
 
         # Create an action
 
@@ -100,6 +106,10 @@ class TestInfo:
             tx_files=tx_files_action,
         )
         reqc.cli023.success()
+
+        # Get epoch where the action was submitted for keeping track of
+        # epoch to wait for the gov action expiry
+        action_epoch = cluster.g_query.get_epoch()
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
@@ -239,3 +249,21 @@ class TestInfo:
             votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
             txhash=vote_txid,
         )
+
+        # Check deposit is returned
+        reqc.cip034ex.start(url=helpers.get_vcs_link())
+
+        # First wait for gov action to expire according to gov action lifetime
+        # and epoch passed since
+        _cur_epoch = cluster.g_query.get_epoch()
+        action_lifetime_epoch = cluster.conway_genesis["govActionLifetime"]
+        epochs_to_expiration = action_lifetime_epoch + 2 + action_epoch - _cur_epoch
+        cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
+
+        deposit_returned = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
+        assert (
+            deposit_returned == init_return_account_balance + action_deposit_amt
+        ), "Incorrect return account balance"
+        reqc.cip034ex.success()

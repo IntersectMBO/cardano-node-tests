@@ -240,6 +240,8 @@ class TestPParamUpdate:
         * check that the action is enacted
         * check that only the ratified action that got accepted first to the chain gets enacted
         * check that it's not possible to vote on enacted action
+        * check that all deposit required for actions is returned back for both expired
+          and enacted actions
         """
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
@@ -250,6 +252,10 @@ class TestPParamUpdate:
 
         if is_in_bootstrap and not configuration.HAS_CC:
             pytest.skip("The test doesn't work in bootstrap period without CC.")
+
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
@@ -634,13 +640,19 @@ class TestPParamUpdate:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
+        # For keeping track of how many proposals were submitted
+        # to check for all deposit required for action is returned back
+        submitted_proposal_count = 0
+
         def _propose_pparams_update(
             name_template: str,
             proposals: tp.List[clusterlib_utils.UpdateProposal],
         ) -> conway_common.PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
-
+            # Increment count for a submitted proposal
+            nonlocal submitted_proposal_count
+            submitted_proposal_count += 1
             return conway_common.propose_pparams_update(
                 cluster_obj=cluster,
                 name_template=name_template,
@@ -1109,6 +1121,10 @@ class TestPParamUpdate:
         mix_approved_prop_rec = _propose_pparams_update(
             name_template=f"{temp_template}_mix_approved", proposals=mix_approved_update_proposals
         )
+        # Get epoch where the last action was submitted for keeping track of
+        # epoch to wait for all the gov actions expiry
+        last_action_epoch = cluster.g_query.get_epoch()
+
         _check_proposed_pparams(
             update_proposals=mix_approved_prop_rec.proposals,
             protocol_params=mix_approved_prop_rec.future_pparams,
@@ -1238,6 +1254,26 @@ class TestPParamUpdate:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
         if fin_voted_votes.drep:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
+
+        # Check deposit return for both after enactment and expiration
+        [r.start(url=helpers.get_vcs_link()) for r in (reqc.cip034ex, reqc.cip034en)]
+
+        # First wait to ensure that all proposals are expired/enacted for deposit to be retuned
+        _cur_epoch = cluster.g_query.get_epoch()
+        action_lifetime_epoch = cluster.conway_genesis["govActionLifetime"]
+        epochs_to_expiration = action_lifetime_epoch + last_action_epoch - _cur_epoch
+        cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
+
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        total_deposit_return = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+        # Check total deposit return accounting for both expired and enaacted actions
+        assert (
+            total_deposit_return
+            == init_return_account_balance + deposit_amt * submitted_proposal_count
+        ), "Incorrect return account balance"
+        [r.success() for r in (reqc.cip034ex, reqc.cip034en)]
 
         if db_errors_final:
             raise AssertionError("\n".join(db_errors_final))

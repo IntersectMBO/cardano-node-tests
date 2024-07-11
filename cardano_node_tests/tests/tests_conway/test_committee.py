@@ -386,6 +386,7 @@ class TestCommittee:
             - check that it's not possible to vote on enacted action
 
         * check output of votes and action `view` commands
+        * check deposit is returned to user reward account after enactment
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         cluster, governance_data = cluster_lock_governance
@@ -393,6 +394,10 @@ class TestCommittee:
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Cannot run during bootstrap period.")
+
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
 
@@ -983,6 +988,18 @@ class TestCommittee:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.spo[0])
         reqc.cip067.success()
+
+        reqc.cip034en.start(url=helpers.get_vcs_link())
+        enact_deposit_returned = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+
+        assert (
+            enact_deposit_returned
+            == init_return_account_balance
+            + deposit_amt * 2  # 2 * deposit_amt for add and rem actions
+        ), "Incorrect return account balance"
+        reqc.cip034en.success()
 
         if xfail_ledger_4001_msgs:
             ledger_4001 = issues.ledger_4001.copy()
