@@ -1249,12 +1249,6 @@ class TestPParamUpdate:
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
 
-        # Check vote view
-        if fin_voted_votes.cc:
-            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
-        if fin_voted_votes.drep:
-            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
-
         # Check deposit return for both after enactment and expiration
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip034ex, reqc.cip034en)]
@@ -1275,6 +1269,12 @@ class TestPParamUpdate:
             == init_return_account_balance + deposit_amt * submitted_proposal_count
         ), "Incorrect return account balance"
         [r.success() for r in (reqc.cip034ex, reqc.cip034en)]
+
+        # Check vote view
+        if fin_voted_votes.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
+        if fin_voted_votes.drep:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
 
         if db_errors_final:
             raise AssertionError("\n".join(db_errors_final))

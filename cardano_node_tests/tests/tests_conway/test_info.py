@@ -233,23 +233,6 @@ class TestInfo:
         ], "Ratification is delayed unexpectedly"
         reqc.cip038_05.success()
 
-        # Check action view
-        governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
-
-        # Check vote view
-        reqc.cli022.start(url=helpers.get_vcs_link())
-        if votes_cc:
-            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_cc[0])
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_drep[0])
-        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_spo[0])
-        reqc.cli022.success()
-
-        # Check dbsync
-        dbsync_utils.check_votes(
-            votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
-            txhash=vote_txid,
-        )
-
         # Check deposit is returned
         reqc.cip034ex.start(url=helpers.get_vcs_link())
 
@@ -267,3 +250,20 @@ class TestInfo:
             deposit_returned == init_return_account_balance + action_deposit_amt
         ), "Incorrect return account balance"
         reqc.cip034ex.success()
+
+        # Check action view
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)
+
+        # Check vote view
+        reqc.cli022.start(url=helpers.get_vcs_link())
+        if votes_cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_cc[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_drep[0])
+        governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_spo[0])
+        reqc.cli022.success()
+
+        # Check dbsync
+        dbsync_utils.check_votes(
+            votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
+            txhash=vote_txid,
+        )
