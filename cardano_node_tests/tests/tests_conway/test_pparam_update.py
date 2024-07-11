@@ -1249,14 +1249,9 @@ class TestPParamUpdate:
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
 
-        # Check vote view
-        if fin_voted_votes.cc:
-            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
-        if fin_voted_votes.drep:
-            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
-
         # Check deposit return for both after enactment and expiration
-        [r.start(url=helpers.get_vcs_link()) for r in (reqc.cip034ex, reqc.cip034en)]
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cip034ex, reqc.cip034en)]
 
         # First wait to ensure that all proposals are expired/enacted for deposit to be retuned
         _cur_epoch = cluster.g_query.get_epoch()
@@ -1268,12 +1263,18 @@ class TestPParamUpdate:
         total_deposit_return = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address
         ).reward_account_balance
-        # Check total deposit return accounting for both expired and enaacted actions
+        # Check total deposit return accounting for both expired and enacted actions
         assert (
             total_deposit_return
             == init_return_account_balance + deposit_amt * submitted_proposal_count
         ), "Incorrect return account balance"
         [r.success() for r in (reqc.cip034ex, reqc.cip034en)]
+
+        # Check vote view
+        if fin_voted_votes.cc:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
+        if fin_voted_votes.drep:
+            governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
 
         if db_errors_final:
             raise AssertionError("\n".join(db_errors_final))
