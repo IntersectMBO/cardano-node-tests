@@ -1256,7 +1256,8 @@ class TestPParamUpdate:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
 
         # Check deposit return for both after enactment and expiration
-        [r.start(url=helpers.get_vcs_link()) for r in (reqc.cip034ex, reqc.cip034en)]
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cip034ex, reqc.cip034en)]
 
         # First wait to ensure that all proposals are expired/enacted for deposit to be retuned
         _cur_epoch = cluster.g_query.get_epoch()
