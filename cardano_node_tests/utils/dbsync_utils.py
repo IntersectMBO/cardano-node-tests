@@ -1200,3 +1200,19 @@ def check_committee_info(gov_state: dict, txid: str) -> None:
     assert (
         len(dbsync_committee_members) == size_of_proposed_cm
     ), "The number of committee members doesn't match in dbsync"
+
+
+def check_treasury_withdrawal(
+    actions_num: int, stake_address: str, transfer_amt: int, txhash: str
+) -> None:
+    """Check treasury_withdrawal in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    dbsync_data = list(dbsync_queries.query_treasury_withdrawal(txhash=txhash))
+    assert len(dbsync_data) == actions_num
+
+    for entry in dbsync_data:
+        assert entry.addr_view == stake_address, "Wrong stake address on dbsync"
+        assert entry.amount == transfer_amt, "Wrong transfer amount in dbsync"
+        assert entry.enacted_epoch, "Action not marked as enacted in dbsync"

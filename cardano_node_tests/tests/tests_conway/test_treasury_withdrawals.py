@@ -15,6 +15,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
@@ -353,6 +354,17 @@ class TestTreasuryWithdrawals:
         if voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
+
+        reqc.cip084.start(url=helpers.get_vcs_link())
+        # Check dbsync
+        dbsync_utils.check_treasury_withdrawal(
+            actions_num=actions_num,
+            stake_address=recv_stake_addr_rec.address,
+            transfer_amt=transfer_amt,
+            txhash=action_txid,
+        )
+
+        reqc.cip084.success()
 
         if xfail_ledger_3979_msgs:
             ledger_3979 = issues.ledger_3979.copy()

@@ -512,6 +512,15 @@ class NewCommitteeMemberDBRow:
     expiration_epoch: int
 
 
+@dataclasses.dataclass(frozen=True)
+class TreasuryWithdrawalDBRow:
+    # pylint: disable-next=invalid-name
+    expiration: int
+    enacted_epoch: int
+    addr_view: str
+    amount: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1300,3 +1309,20 @@ def query_committee_members(committee_id: int) -> tp.Generator[NewCommitteeMembe
     with execute(query=query, vars=(committee_id,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield NewCommitteeMemberDBRow(*result)
+
+
+def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBRow, None, None]:
+    """Query treasury_withdrawal table in db-sync."""
+    query = (
+        "SELECT"
+        " gap.expiration, gap.enacted_epoch, stake_address.view, treasury_withdrawal.amount "
+        "FROM gov_action_proposal as gap "
+        "INNER JOIN treasury_withdrawal ON treasury_withdrawal.gov_action_proposal_id = gap.id "
+        "INNER JOIN stake_address ON treasury_withdrawal.stake_address_id = stake_address.id "
+        "INNER JOIN tx ON tx.id = gap.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield TreasuryWithdrawalDBRow(*result)
