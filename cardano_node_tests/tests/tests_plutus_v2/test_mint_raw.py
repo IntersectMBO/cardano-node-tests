@@ -384,3 +384,26 @@ class TestMinting:
         assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), "Reference UTxO was spent"
+
+    @allure.link(helpers.get_vcs_link())
+    def test_missing_builtin(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+    ):
+        """Test builtins added to PlutusV2 from PlutusV3.
+
+        * fund the token issuer and create a UTxO for collateral
+        * check that the expected amount was transferred to token issuer's address
+        * try to mint the tokens using a Plutus script
+        * check that the tokens were minted and collateral UTxO was not spent
+          -OR-
+          check the expected failure
+        """
+        temp_template = common.get_test_id(cluster)
+        mint_raw.check_missing_builtin(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addrs[0],
+            issuer_addr=payment_addrs[1],
+        )
