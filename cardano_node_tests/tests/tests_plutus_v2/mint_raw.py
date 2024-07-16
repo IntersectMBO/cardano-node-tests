@@ -4,6 +4,7 @@ import typing as tp
 
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 
 LOGGER = logging.getLogger(__name__)
@@ -105,3 +106,113 @@ def _fund_issuer(
     ]
 
     return mint_utxos, collateral_utxos, reference_utxo, tx_raw_output
+
+
+def check_missing_builtin(
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+    payment_addr: clusterlib.AddressRecord,
+    issuer_addr: clusterlib.AddressRecord,
+):
+    """Check builtins added to PlutusV2 from PlutusV3."""
+    lovelace_amount = 2_000_000
+    token_amount = 5
+    fee_txsize = 600_000
+
+    plutus_v_record = plutus_common.BYTE_STRING_ROUNDTRIP_V2_REC
+
+    minting_cost = plutus_common.compute_cost(
+        execution_cost=plutus_v_record.execution_cost,
+        protocol_params=cluster_obj.g_query.get_protocol_params(),
+    )
+
+    # Step 1: fund the token issuer
+
+    mint_utxos, collateral_utxos, __, tx_raw_output_step1 = _fund_issuer(
+        cluster_obj=cluster_obj,
+        temp_template=temp_template,
+        payment_addr=payment_addr,
+        issuer_addr=issuer_addr,
+        minting_cost=minting_cost,
+        amount=lovelace_amount,
+        fee_txsize=fee_txsize,
+    )
+
+    issuer_fund_balance = cluster_obj.g_query.get_address_balance(issuer_addr.address)
+
+    # Step 2: mint the "qacoin"
+
+    policyid = cluster_obj.g_transaction.get_policyid(plutus_v_record.script_file)
+    asset_name_a = f"qacoina{clusterlib.get_rand_str(4)}".encode().hex()
+    token_a = f"{policyid}.{asset_name_a}"
+    mint_txouts = [
+        clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_a),
+    ]
+
+    plutus_mint_data = [
+        clusterlib.Mint(
+            txouts=mint_txouts,
+            script_file=plutus_v_record.script_file,
+            collaterals=collateral_utxos,
+            execution_units=(
+                plutus_v_record.execution_cost.per_time,
+                plutus_v_record.execution_cost.per_space,
+            ),
+            redeemer_value="3735928559",
+        )
+    ]
+
+    tx_files_step2 = clusterlib.TxFiles(
+        signing_key_files=[issuer_addr.skey_file],
+    )
+    txouts_step2 = [
+        clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+        *mint_txouts,
+    ]
+    tx_raw_output_step2 = cluster_obj.g_transaction.build_raw_tx_bare(
+        out_file=f"{temp_template}_step2_tx.body",
+        txins=mint_utxos,
+        txouts=txouts_step2,
+        mint=plutus_mint_data,
+        tx_files=tx_files_step2,
+        fee=minting_cost.fee + fee_txsize,
+    )
+    tx_signed_step2 = cluster_obj.g_transaction.sign_tx(
+        tx_body_file=tx_raw_output_step2.out_file,
+        signing_key_files=tx_files_step2.signing_key_files,
+        tx_name=f"{temp_template}_step2",
+    )
+
+    err = ""
+    try:
+        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+    except clusterlib.CLIError as excp:
+        err = str(excp)
+
+    def _check_txout() -> None:
+        assert (
+            cluster_obj.g_query.get_address_balance(issuer_addr.address)
+            == issuer_fund_balance - tx_raw_output_step2.fee
+        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+
+        out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output_step2)
+
+        token_utxo_a = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token_a
+        )
+        assert (
+            token_utxo_a and token_utxo_a[0].amount == token_amount
+        ), "The 'token a' was not minted"
+
+        common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+
+    prot_params = cluster_obj.g_query.get_protocol_params()
+    prot_ver = prot_params["protocolVersion"]["major"]
+    cost_model_len = len(prot_params["costModels"]["PlutusV2"])
+
+    if prot_ver < 10:
+        assert "(MalformedScriptWitnesses" in err, err
+    elif cost_model_len < 185:
+        assert "overspending the budget" in err, err
+    else:
+        _check_txout()
