@@ -2,41 +2,14 @@ import logging
 import pathlib as pl
 import typing as tp
 
-import pytest
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.cluster_management import cluster_management
-from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
-from cardano_node_tests.utils import clusterlib_utils
 
 LOGGER = logging.getLogger(__name__)
 
 # approx. fee for Tx size
 FEE_MINT_TXSIZE = 400_000
-
-
-@pytest.fixture
-def payment_addrs(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
-    """Create new payment address."""
-    test_id = common.get_test_id(cluster)
-    addrs = clusterlib_utils.create_payment_addr_records(
-        *[f"{test_id}_payment_addr_{i}" for i in range(2)],
-        cluster_obj=cluster,
-    )
-
-    # fund source address
-    clusterlib_utils.fund_from_faucet(
-        addrs[0],
-        cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=3_000_000_000,
-    )
-
-    return addrs
 
 
 def _fund_issuer(
