@@ -360,3 +360,79 @@ class TestUpdateProposals:
         dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
         assert protocol_params.get("decentralization") is None
+
+
+@pytest.mark.skipif(
+    VERSIONS.cluster_era >= VERSIONS.CONWAY,
+    reason="Doesn't run on cluster era >= Conway",
+)
+class TestNegativeCostModels:
+    """Negative tests for cost models update."""
+
+    @pytest.fixture
+    def payment_addr(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> clusterlib.AddressRecord:
+        """Create new payment address."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addr = clusterlib_utils.create_payment_addr_records(
+                f"addr_test_neg_update_proposal_ci{cluster_manager.cluster_instance_num}_0",
+                cluster_obj=cluster,
+            )[0]
+            fixture_cache.value = addr
+
+        # fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addr,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addr
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("cost_model", ("pv2_185", "pv3", "dict_pv1"))
+    def test_incompatible_cost_models(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        cost_model: str,
+    ):
+        """Test incompatible Plutus cost models."""
+        common.get_test_id(cluster)
+        exp_error = ""
+
+        if cost_model == "pv2_185":
+            cm_file = "cost_models_list_185_v2.json"
+            exp_error = "Expected array with 175 entries"
+        elif cost_model == "pv3":
+            cm_file = "cost_models_list_v3.json"
+            exp_error = "Legacy CostModel decoding is not supported"
+        elif cost_model == "dict_pv1":
+            cm_file = "cost_models_dict.json"
+            exp_error = "blake2b-cpu-arguments-intercept"
+        else:
+            _verr = f"Unknown cost model: {cost_model}"
+            raise ValueError(_verr)
+
+        update_proposal = [
+            clusterlib_utils.UpdateProposal(
+                arg="--cost-model-file",
+                value=str(DATA_DIR / cm_file),
+                name="",  # needs custom check
+            ),
+        ]
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            clusterlib_utils.update_params(
+                cluster_obj=cluster,
+                src_addr_record=payment_addr,
+                update_proposals=update_proposal,
+            )
+        err_str = str(excinfo.value)
+        assert exp_error in err_str, err_str
