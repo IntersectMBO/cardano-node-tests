@@ -1209,10 +1209,43 @@ def check_treasury_withdrawal(
     if not configuration.HAS_DBSYNC:
         return
 
-    dbsync_data = list(dbsync_queries.query_treasury_withdrawal(txhash=txhash))
-    assert len(dbsync_data) == actions_num
+    db_tr_withdrawals = list(dbsync_queries.query_treasury_withdrawal(txhash=txhash))
+    assert len(db_tr_withdrawals) == actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {len(db_tr_withdrawals)}."
+        f"Data in db-sync: {db_tr_withdrawals}"
+    )
 
-    for entry in dbsync_data:
-        assert entry.addr_view == stake_address, "Wrong stake address on dbsync"
-        assert entry.amount == transfer_amt, "Wrong transfer amount in dbsync"
-        assert entry.enacted_epoch, "Action not marked as enacted in dbsync"
+    for row in db_tr_withdrawals:
+        assert row.addr_view == stake_address, "Wrong stake address in db-sync"
+        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
+        assert row.enacted_epoch, "Action not marked as enacted in db-sync"
+        assert (
+            row.enacted_epoch == row.ratified_epoch + 1
+        ), "Wrong relation between enacted and ratified epochs in db-sync"
+        assert (
+            row.enacted_epoch == row.dropped_epoch
+        ), "Wrong relation between enacted and dropped epochs in db-sync"
+
+
+def check_reward_rest(
+    actions_num: int,
+    stake_address: str,
+    transfer_amt: int,
+) -> None:
+    """Check reward_rest in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    db_rewards = list(dbsync_queries.query_address_reward_rest(stake_address))
+    assert len(db_rewards) == actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {len(db_rewards)}."
+        f"Data in db-sync: {db_rewards}"
+    )
+
+    for row in db_rewards:
+        assert row.address == stake_address, "Wrong stake address in db-sync"
+        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
+        assert (
+            row.spendable_epoch == row.earned_epoch + 1
+        ), "Wrong relation between earned and spendable epochs in db-sync"
+        assert row.type == "treasury", "Type not marked as treasury in db-sync"
