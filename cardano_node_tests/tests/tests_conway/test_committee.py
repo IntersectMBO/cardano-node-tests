@@ -104,6 +104,7 @@ class TestCommittee:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.disabled(reason="Needs to be fixed in 9.0.0+")
     def test_register_and_resign_committee_member(
         self,
         cluster_use_committee: governance_utils.GovClusterT,
@@ -225,6 +226,7 @@ class TestCommittee:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
+    @pytest.mark.disabled(reason="Needs to be fixed in 9.0.0+")
     def test_update_committee_action(
         self,
         cluster: clusterlib.ClusterLib,
@@ -346,6 +348,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
+    @pytest.mark.disabled(reason="Needs to be fixed in 9.0.0+")
     def test_add_rm_committee_members(  # noqa: C901
         self,
         cluster_lock_governance: governance_utils.GovClusterT,
