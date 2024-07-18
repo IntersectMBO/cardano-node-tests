@@ -11,6 +11,7 @@ export TX_ERA="$CLUSTER_ERA"
 
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
+NUM_CC=5
 
 # init dir for step1 binaries
 STEP1_BIN="$WORKDIR/step1-bin"
@@ -67,9 +68,9 @@ if [ "$1" = "step1" ]; then
   ln -s "$(command -v cardano-cli)" "$STEP1_BIN/cardano-cli-step1"
 
   # backup the original genesis files
-  cp -f "$STATE_CLUSTER/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo-step1.json"
+  cp -f "$STATE_CLUSTER/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.step1.json"
   if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
-    cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway-step1.json"
+    cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway.step1.json"
   fi
 
   # run smoke tests
@@ -102,6 +103,14 @@ elif [ "$1" = "step2" ]; then
   printf "STEP2 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=2
+
+  # Setup `cardano-cli` binary
+  if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
+    export CARDANO_CLI_REV="$UPGRADE_CLI_REVISION"
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_cardano_cli.sh
+    export PATH="$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
+  fi
 
   # add binaries saved in step1 to the PATH
   export PATH="${STEP1_BIN}:${PATH}"
@@ -143,9 +152,9 @@ elif [ "$1" = "step2" ]; then
     if [ "$fname" = "config-pool3.json" ]; then
       # use old Alonzo and Conway genesis on pool3
       selected_alonzo_hash="$ALONZO_GENESIS_STEP1_HASH"
-      selected_alonzo_file="shelley/genesis.alonzo-step1.json"
+      selected_alonzo_file="shelley/genesis.alonzo.step1.json"
       selected_conway_hash="$CONWAY_GENESIS_STEP1_HASH"
-      selected_conway_file="shelley/genesis.conway-step1.json"
+      selected_conway_file="shelley/genesis.conway.step1.json"
     else
       # use new Alonzo and Conway genesis on upgraded nodes
       selected_alonzo_hash="$ALONZO_GENESIS_HASH"
@@ -186,7 +195,7 @@ elif [ "$1" = "step2" ]; then
   done
 
   # run the pool3 with the original cardano-node binary
-  cp -a "$STATE_CLUSTER/cardano-node-pool3" "$STATE_CLUSTER/cardano-node-pool3.orig"
+  cp -f "$STATE_CLUSTER/cardano-node-pool3" "$STATE_CLUSTER/cardano-node-pool3.orig"
   sed -i 's/cardano-node run/cardano-node-step1 run/' "$STATE_CLUSTER/cardano-node-pool3"
 
   # Restart local cluster nodes with binaries from new cluster-node version.
@@ -233,6 +242,7 @@ elif [ "$1" = "step2" ]; then
 
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
+  err_retval="$?"
 
   # run smoke tests
   pytest \
@@ -253,6 +263,8 @@ elif [ "$1" = "step2" ]; then
   ./.github/results.sh .
   mv allure-results.tar.xz allure-results-step2.tar.xz
 
+  [ "$err_retval" -gt "$retval" ] && retval=1
+
   printf "STEP2 finish: %(%H:%M:%S)T\n" -1
 
 
@@ -265,6 +277,17 @@ elif [ "$1" = "step3" ]; then
 
   export UPGRADE_TESTS_STEP=3
 
+  # Setup `cardano-cli` binary
+  if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
+    export CARDANO_CLI_REV="$UPGRADE_CLI_REVISION"
+    # the cardano-cli binary is already built in step2
+    if [ ! -e "$WORKDIR/cardano-cli/cardano-cli-build/bin/cardano-cli" ]; then
+      echo "Failed to find the requested 'cardano-cli' binary" >&2
+      exit 6
+    fi
+    export PATH="$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
+  fi
+
   # generate config and topology files for p2p mode
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_p2p/state-cluster0/bft1.socket" \
     ENABLE_P2P=1 \
@@ -274,11 +297,42 @@ elif [ "$1" = "step3" ]; then
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_p2p/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
-  # copy newly generated config files to the cluster state dir, but use the original genesis files
+  # Create committee keys
+  mkdir -p "$STATE_CLUSTER/governance_data"
+  for i in $(seq 1 "$NUM_CC"); do
+    cardano-cli conway governance committee key-gen-cold \
+      --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+      --cold-signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.skey"
+    cardano-cli conway governance committee key-gen-hot \
+      --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
+      --signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.skey"
+    cardano-cli conway governance committee create-hot-key-authorization-certificate \
+      --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+      --hot-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
+      --out-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot_auth.cert"
+    cardano-cli conway governance committee key-hash \
+      --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
+      > "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.hash"
+  done
+
+  # Pre-register committee in genesis
+  cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway.step2.json"
+  KEY_HASH_JSON=$(jq -nR '[inputs | {("keyHash-" + .): 10000}] | add' \
+    "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.hash)
+  jq \
+    --argjson keyHashJson "$KEY_HASH_JSON" \
+    '.committee.members = $keyHashJson
+    | .committee.threshold = 0.6
+    | .committeeMinSize = 2' \
+    "$STATE_CLUSTER/shelley/genesis.conway.step2.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
+
+  # Copy newly generated config files to the cluster state dir, but use the original genesis files
   BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  # Use the new Conway genesis
+  CONWAY_GENESIS_HASH="$(cardano-cli genesis hash --genesis \
+    "$STATE_CLUSTER/shelley/genesis.conway.json")"
   for conf in "$WORKDIR"/dry_p2p/state-cluster0/config-*.json; do
     fname="${conf##*/}"
     jq \
@@ -289,12 +343,12 @@ elif [ "$1" = "step3" ]; then
       '.ByronGenesisHash = $byron_hash
       | .ShelleyGenesisHash = $shelley_hash
       | .AlonzoGenesisHash = $alonzo_hash
-      | .ConwayHash = $conway_hash' \
+      | .ConwayGenesisHash = $conway_hash' \
       "$conf" > "$STATE_CLUSTER/$fname"
   done
 
   # use the upgraded cardano-node binary for pool3
-  cp -a "$STATE_CLUSTER/cardano-node-pool3.orig" "$STATE_CLUSTER/cardano-node-pool3"
+  cp -f "$STATE_CLUSTER/cardano-node-pool3.orig" "$STATE_CLUSTER/cardano-node-pool3"
 
   # restart all nodes
   "$STATE_CLUSTER/supervisorctl" restart nodes:
@@ -315,8 +369,16 @@ elif [ "$1" = "step3" ]; then
 
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
+  err_retval="$?"
 
-  # run smoke tests
+  # Update to Conway
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_to_conway_pv9 || exit 6
+
+  # From now on, we are in the Conway era
+  unset TX_ERA
+  export CLUSTER_ERA=conway COMMAND_ERA=conway
+
+  # Run smoke tests
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
@@ -331,6 +393,8 @@ elif [ "$1" = "step3" ]; then
   # create results archive for step3
   ./.github/results.sh .
   mv allure-results.tar.xz allure-results-step3.tar.xz
+
+  [ "$err_retval" -gt "$retval" ] && retval=1
 
   printf "STEP3 finish: %(%H:%M:%S)T\n" -1
 
