@@ -141,29 +141,8 @@ def _skip_all_tests(config: tp.Any, items: list) -> bool:
     return True
 
 
-def _mark_needs_dbsync_tests(items: list) -> bool:
-    """Mark 'needs_dbsync' tests with additional markers."""
-    skip_marker = pytest.mark.skip(reason="db-sync not available")
-    dbsync_marker = pytest.mark.dbsync
-
-    for item in items:
-        if "needs_dbsync" not in item.keywords:
-            continue
-
-        # all tests marked with 'needs_dbsync' are db-sync tests, and should be marked
-        # with the 'dbsync' marker as well
-        if "dbsync" not in item.keywords:
-            item.add_marker(dbsync_marker)
-
-        # skip all tests that require db-sync when db-sync is not available
-        if not configuration.HAS_DBSYNC:
-            item.add_marker(skip_marker)
-
-    return True
-
-
 @pytest.hookimpl(tryfirst=True)
-def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:
+def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa: C901
     # prevent on slave nodes (xdist)
     if hasattr(config, "slaveinput"):
         return
@@ -171,7 +150,37 @@ def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:
     if _skip_all_tests(config=config, items=items):
         return
 
-    _mark_needs_dbsync_tests(items=items)
+    skip_dbsync_marker = pytest.mark.skip(reason="db-sync not available")
+
+    def _mark_needs_dbsync(item: tp.Any) -> None:
+        """Mark 'needs_dbsync' test with additional markers."""
+        if "needs_dbsync" not in item.keywords:
+            return
+
+        # all tests marked with 'needs_dbsync' are db-sync tests, and should be marked
+        # with the 'dbsync' marker as well
+        if "dbsync" not in item.keywords:
+            item.add_marker(pytest.mark.dbsync)
+
+        # skip all tests that require db-sync when db-sync is not available
+        if not configuration.HAS_DBSYNC:
+            item.add_marker(skip_dbsync_marker)
+
+    def _skip_disabled(item: tp.Any) -> None:
+        """Skip disabled test."""
+        if "disabled" not in item.keywords:
+            return
+
+        disabled_marker = list(item.iter_markers(name="disabled"))
+        if not disabled_marker:
+            return
+
+        disabled_reason = disabled_marker[0].kwargs.get("reason") or "disabled test"
+        item.add_marker(pytest.mark.skip(reason=f"DISABLED: {disabled_reason}"))
+
+    for item in items:
+        _mark_needs_dbsync(item)
+        _skip_disabled(item)
 
 
 @pytest.fixture(scope="session")
