@@ -734,7 +734,8 @@ class TestPParamUpdate:
         # db-sync check
         try:
             dbsync_utils.check_conway_gov_action_proposal_description(
-                net_nodrep_prop_rec.future_pparams, net_nodrep_prop_rec.action_txid
+                update_proposal=net_nodrep_prop_rec.future_pparams,
+                txhash=net_nodrep_prop_rec.action_txid,
             )
             dbsync_utils.check_conway_param_update_proposal(net_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
@@ -784,14 +785,15 @@ class TestPParamUpdate:
                 else True,
             )
 
-        # db-sync check
-        try:
-            dbsync_utils.check_conway_gov_action_proposal_description(
-                eco_nodrep_prop_rec.future_pparams, eco_nodrep_prop_rec.action_txid
-            )
-            dbsync_utils.check_conway_param_update_proposal(eco_nodrep_prop_rec.future_pparams)
-        except AssertionError as exc:
-            db_errors_final.append(f"db-sync economic params update error: {exc}")
+            # db-sync check
+            try:
+                dbsync_utils.check_conway_gov_action_proposal_description(
+                    update_proposal=eco_nodrep_prop_rec.future_pparams,
+                    txhash=eco_nodrep_prop_rec.action_txid,
+                )
+                dbsync_utils.check_conway_param_update_proposal(eco_nodrep_prop_rec.future_pparams)
+            except AssertionError as exc:
+                db_errors_final.append(f"db-sync economic params update error: {exc}")
 
         # Vote on update proposals from economic group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -863,7 +865,8 @@ class TestPParamUpdate:
         # db-sync check
         try:
             dbsync_utils.check_conway_gov_action_proposal_description(
-                tech_nodrep_prop_rec.future_pparams, tech_nodrep_prop_rec.action_txid
+                update_proposal=tech_nodrep_prop_rec.future_pparams,
+                txhash=tech_nodrep_prop_rec.action_txid,
             )
             dbsync_utils.check_conway_param_update_proposal(tech_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
@@ -953,14 +956,15 @@ class TestPParamUpdate:
                 else True,
             )
 
-        # db-sync check
-        try:
-            dbsync_utils.check_conway_gov_action_proposal_description(
-                gov_nodrep_prop_rec.future_pparams, gov_nodrep_prop_rec.action_txid
-            )
-            dbsync_utils.check_conway_param_update_proposal(gov_nodrep_prop_rec.future_pparams)
-        except AssertionError as exc:
-            db_errors_final.append(f"db-sync governance params update error: {exc}")
+            # db-sync check
+            try:
+                dbsync_utils.check_conway_gov_action_proposal_description(
+                    update_proposal=gov_nodrep_prop_rec.future_pparams,
+                    txhash=gov_nodrep_prop_rec.action_txid,
+                )
+                dbsync_utils.check_conway_param_update_proposal(gov_nodrep_prop_rec.future_pparams)
+            except AssertionError as exc:
+                db_errors_final.append(f"db-sync governance params update error: {exc}")
 
         # Vote on update proposals from governance group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -1015,14 +1019,15 @@ class TestPParamUpdate:
                 else True,
             )
 
-        # db-sync check
-        try:
-            dbsync_utils.check_conway_gov_action_proposal_description(
-                mix_nodrep_prop_rec.future_pparams, mix_nodrep_prop_rec.action_txid
-            )
-            dbsync_utils.check_conway_param_update_proposal(mix_nodrep_prop_rec.future_pparams)
-        except AssertionError as exc:
-            db_errors_final.append(f"db-sync mixed group params update error: {exc}")
+            # db-sync check
+            try:
+                dbsync_utils.check_conway_gov_action_proposal_description(
+                    update_proposal=mix_nodrep_prop_rec.future_pparams,
+                    txhash=mix_nodrep_prop_rec.action_txid,
+                )
+                dbsync_utils.check_conway_param_update_proposal(mix_nodrep_prop_rec.future_pparams)
+            except AssertionError as exc:
+                db_errors_final.append(f"db-sync mixed group params update error: {exc}")
 
         # Vote on update proposals from mix of groups that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -1100,7 +1105,7 @@ class TestPParamUpdate:
         [r.start(url=_url) for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
         try:
             dbsync_utils.check_conway_gov_action_proposal_description(
-                fin_prop_rec.future_pparams, fin_prop_rec.action_txid
+                update_proposal=fin_prop_rec.future_pparams, txhash=fin_prop_rec.action_txid
             )
             dbsync_utils.check_conway_param_update_proposal(fin_prop_rec.future_pparams)
         except AssertionError as exc:
