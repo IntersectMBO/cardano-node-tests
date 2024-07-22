@@ -962,7 +962,7 @@ class TestMIRCerts:
 
             # deregister the stake address before submitting the Tx with MIR cert
             if fund_src == TREASURY:
-                tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
+                tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
                 )
 
@@ -985,13 +985,14 @@ class TestMIRCerts:
 
         # deregister the stake address after submitting the Tx with MIR cert
         if addr_history == "addr_known" and fund_src != TREASURY:
-            tx_raw_out_withdrawal, tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
+            tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
                 cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
             )
 
         reg_dereg_fees = 0
         if addr_history == "addr_known":
-            reg_dereg_fees = tx_raw_out_reg.fee + tx_raw_out_withdrawal.fee + tx_raw_out_dereg.fee
+            assert tx_raw_out_dereg
+            reg_dereg_fees = tx_raw_out_reg.fee + tx_raw_out_dereg.fee
 
         assert (
             cluster.g_query.get_address_balance(pool_user.payment.address)
