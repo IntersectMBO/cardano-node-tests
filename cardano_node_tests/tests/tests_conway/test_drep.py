@@ -583,6 +583,8 @@ class TestNegativeDReps:
         cluster_manager: cluster_management.ClusterManager,
         payment_addr: clusterlib.AddressRecord,
         pool_user: clusterlib.PoolUser,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
     ):
         """Test No multiple delegation to different dreps.
 
@@ -656,6 +658,19 @@ class TestNegativeDReps:
             tx_files=tx_files,
             deposit=deposit_amt,
         )
+
+        # Deregister stake address so it doesn't affect stake distribution
+        def _deregister():
+            with helpers.change_cwd(testfile_temp_dir):
+                clusterlib_utils.deregister_stake_address(
+                    cluster_obj=cluster,
+                    pool_user=pool_user,
+                    name_template=temp_template,
+                    deposit_amt=deposit_amt,
+                )
+
+        request.addfinalizer(_deregister)
+
         stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
 
         assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
@@ -1185,6 +1200,8 @@ class TestDelegDReps:
         cluster_manager: cluster_management.ClusterManager,
         payment_addr: clusterlib.AddressRecord,
         pool_user: clusterlib.PoolUser,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
     ):
         """Test Change delegation to different dreps.
 
@@ -1251,6 +1268,19 @@ class TestDelegDReps:
             tx_files=tx_files,
             deposit=deposit_amt,
         )
+
+        # Deregister stake address so it doesn't affect stake distribution
+        def _deregister():
+            with helpers.change_cwd(testfile_temp_dir):
+                clusterlib_utils.deregister_stake_address(
+                    cluster_obj=cluster,
+                    pool_user=pool_user,
+                    name_template=temp_template,
+                    deposit_amt=deposit_amt,
+                )
+
+        request.addfinalizer(_deregister)
+
         stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
         assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
             drep_id=drep1.drep_id
