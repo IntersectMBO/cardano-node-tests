@@ -1,12 +1,16 @@
 """Tests for Conway governance DRep functionality."""
 
+import binascii
 import dataclasses
+import hashlib
+import json
 import logging
 import pathlib as pl
 import pickle
 import typing as tp
 
 import allure
+import cbor2
 import pytest
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
@@ -23,6 +27,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -250,6 +255,49 @@ def custom_drep_wp(
 
 class TestDReps:
     """Tests for DReps."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_drep_id_is_blake2b_224_of_drep_vkey(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test proper drep id is being generated.
+
+        * Register a drep
+        * Hash drep vkey using blake2b_224
+        * Check drep ID generated from cli is same as blake2b_224 hash of drep vkey
+        """
+        reqc.cip085.start(url=helpers.get_vcs_link())
+        temp_template = common.get_test_id(cluster)
+        drep_metadata_url = "https://www.the-drep.com"
+        drep_metadata_file = f"{temp_template}_drep_metadata.json"
+        drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
+        helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
+        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+            drep_metadata_file=drep_metadata_file
+        )
+        # Get a drep registration record
+        reg_drep = governance_utils.get_drep_reg_record(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            drep_metadata_url=drep_metadata_url,
+            drep_metadata_hash=drep_metadata_hash,
+        )
+        vkey_file_path = reg_drep.key_pair.vkey_file
+        # Get drep vkey from vkey file
+        with open(vkey_file_path) as vkey_file:
+            vkey_file_json = json.loads(vkey_file.read())
+            cbor_hex = vkey_file_json["cborHex"]
+            cbor_binary = binascii.unhexlify(cbor_hex)
+            decoded_data = cbor2.loads(cbor_binary)
+            blake2b_224 = hashlib.blake2b(digest_size=28)
+            blake2b_224.update(decoded_data)
+            # Obtain blake2b_224 hash of drep vkey
+            hash_digest = blake2b_224.hexdigest()
+            assert reg_drep.drep_id == hash_digest, "Drep ID hash is not blake2b_224."
+            reqc.cip085.success()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -526,6 +574,279 @@ class TestNegativeDReps:
 
         if errors_final:
             raise AssertionError("\n".join(errors_final))
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_no_multiple_delegation(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+        payment_addr: clusterlib.AddressRecord,
+        pool_user: clusterlib.PoolUser,
+    ):
+        """Test No multiple delegation to different dreps.
+
+        * Create 2 Dreps
+        * Create vote delegation certifcate to both dreps
+        * Submit both certificates
+        * check that the Drep certificate placed at last of the certificates is delegated to
+        """
+        temp_template = common.get_test_id(cluster)
+        deposit_amt = cluster.g_query.get_address_deposit()
+        key1 = helpers.get_current_line_str()
+        drep1 = get_custom_drep(
+            name_template=f"custom_drep_1_{temp_template}",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            caching_key=key1,
+        )
+
+        key2 = helpers.get_current_line_str()
+        drep2 = get_custom_drep(
+            name_template=f"custom_drep_2_{temp_template}",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            caching_key=key2,
+        )
+
+        # Create stake address registration cert
+        reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=deposit_amt,
+            stake_vkey_file=pool_user.stake.vkey_file,
+        )
+
+        reqc.cip087.start(url=helpers.get_vcs_link())
+        # Create vote delegation cert for drep 1
+        deleg_cert_1 = cluster.g_stake_address.gen_vote_delegation_cert(
+            addr_name=f"{temp_template}_addr1",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            drep_key_hash=drep1.drep_id,
+            always_abstain=False,
+            always_no_confidence=False,
+        )
+
+        # Create vote delegation cert for drep 2
+        deleg_cert_2 = cluster.g_stake_address.gen_vote_delegation_cert(
+            addr_name=f"{temp_template}_addr2",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            drep_key_hash=drep2.drep_id,
+            always_abstain=False,
+            always_no_confidence=False,
+        )
+
+        # Submit two vote delegation certificate at once
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[reg_cert, deleg_cert_2, deleg_cert_1],
+            signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
+        )
+
+        # Make sure we have enough time to finish the registration/delegation in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+        )
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            src_address=payment_addr.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+            deposit=deposit_amt,
+        )
+        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+
+        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+            drep_id=drep1.drep_id
+        ), "Votes are NOT delegated to the correct DRep 1 placed at last of certificates list."
+        reqc.cip087.success()
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("drep", ("always_abstain", "always_no_confidence", "custom"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_no_delegation_without_stake_registration(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        pool_user: clusterlib.PoolUser,
+        custom_drep: governance_utils.DRepRegistration,
+        drep: str,
+    ):
+        """Test No voting delegation without registering stake address first.
+
+        * Use a wallet without registered stake address
+        * Create vote delegation certifcate using unregistered wallet stake key
+        * Submit the certificate
+        * Expect error StakeKeyNotRegisteredDELEG
+        """
+        temp_template = common.get_test_id(cluster)
+        deposit_amt = cluster.g_query.get_address_deposit()
+
+        reqc.cip088.start(url=helpers.get_vcs_link())
+        # Create vote delegation cert
+        deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
+            addr_name=f"{temp_template}_addr1",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            drep_key_hash=custom_drep.drep_id if drep == "custom" else "",
+            always_abstain=drep == "always_abstain",
+            always_no_confidence=drep == "always_no_confidence",
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[deleg_cert],
+            signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
+        )
+
+        # Make sure we have enough time to finish the delegation in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+        )
+
+        # Expecting error as stake address is not registered
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=temp_template,
+                src_address=payment_addr.address,
+                use_build_cmd=True,
+                tx_files=tx_files,
+                deposit=deposit_amt,
+            )
+
+        err_msg = str(excinfo.value)
+        assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
+        reqc.cip088.success()
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_drep_no_retirement_before_register(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        use_build_cmd: bool,
+        submit_method: str,
+    ):
+        """Test No Drep retirement before register.
+
+        * Create a retirement certificate without registering
+        * Submit certificate
+        * check it is not possible to retire before register
+        """
+        temp_template = common.get_test_id(cluster)
+        drep_keys = cluster.g_conway_governance.drep.gen_key_pair(
+            key_name=temp_template, destination_dir="."
+        )
+        deposit = cluster.conway_genesis["dRepDeposit"]
+
+        reqc.cip089.start(url=helpers.get_vcs_link())
+        ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+            cert_name=temp_template,
+            deposit_amt=deposit,
+            drep_vkey_file=drep_keys.vkey_file,
+        )
+        tx_files_ret = clusterlib.TxFiles(
+            certificate_files=[ret_cert],
+            signing_key_files=[payment_addr.skey_file, drep_keys.skey_file],
+        )
+
+        # Expecting error for both cases as drep is not registered
+        with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_reg2",
+                src_address=payment_addr.address,
+                submit_method=submit_method,
+                use_build_cmd=use_build_cmd,
+                tx_files=tx_files_ret,
+                deposit=deposit,
+            )
+
+        err_msg = str(excinfo.value)
+        assert "ConwayDRepNotRegistered" in err_msg, err_msg
+        reqc.cip089.success()
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_drep_no_multiple_registration(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        use_build_cmd: bool,
+        submit_method: str,
+    ):
+        """Test Drep cannot be registered multiple time.
+
+        * Generate drep keys
+        * Create a drep registration certificate
+        * Submit the registration certificate twice
+        * Expect ConwayDRepAlreadyRegistered on the second time
+        """
+        temp_template = common.get_test_id(cluster)
+        drep_metadata_url = "https://www.the-drep.com"
+        drep_metadata_file = f"{temp_template}_drep_metadata.json"
+        drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
+        helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
+        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+            drep_metadata_file=drep_metadata_file
+        )
+        deposit_amt = cluster.conway_genesis["dRepDeposit"]
+        drep_keys = cluster.g_conway_governance.drep.gen_key_pair(
+            key_name=temp_template, destination_dir="."
+        )
+        reqc.cip090.start(url=helpers.get_vcs_link())
+        # Obtain drep registration certificate
+        reg_cert = cluster.g_conway_governance.drep.gen_registration_cert(
+            cert_name=temp_template,
+            deposit_amt=deposit_amt,
+            drep_vkey_file=drep_keys.vkey_file,
+            drep_metadata_url=drep_metadata_url,
+            drep_metadata_hash=drep_metadata_hash,
+            destination_dir=".",
+        )
+        tx_files_reg = clusterlib.TxFiles(
+            certificate_files=[reg_cert],
+            signing_key_files=[payment_addr.skey_file, drep_keys.skey_file],
+        )
+
+        # Submit drep registration certificate
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg",
+            src_address=payment_addr.address,
+            submit_method=submit_method,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files_reg,
+            deposit=deposit_amt,
+        )
+
+        # Wait for some blocks and again submit drep registration certificate
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # Expecting error as drep is already registered
+        with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_reg2",
+                src_address=payment_addr.address,
+                submit_method=submit_method,
+                use_build_cmd=use_build_cmd,
+                tx_files=tx_files_reg,
+                deposit=deposit_amt,
+            )
+
+        err_msg = str(excinfo.value)
+        assert "ConwayDRepAlreadyRegistered" in err_msg, err_msg
+        reqc.cip090.success()
 
 
 class TestDelegDReps:
@@ -915,6 +1236,120 @@ class TestDelegDReps:
         for key, rec in drep_states_gov_data.items():
             assert key in drep_states_all, f"DRep '{key}' not found in DRep state"
             assert rec == drep_states_all[key], f"DRep '{key}' state mismatch"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_change_delegation(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+        payment_addr: clusterlib.AddressRecord,
+        pool_user: clusterlib.PoolUser,
+    ):
+        """Test Change delegation to different dreps.
+
+        * Create 2 Dreps
+        * Create vote delegation certifcate for first drep
+        * Submit certificate
+        * check that the delegation is of correct drep id
+        * Change delegation to drep2 and submit certificate
+        * Check vote delegation is updated to second drep
+        """
+        temp_template = common.get_test_id(cluster)
+        deposit_amt = cluster.g_query.get_address_deposit()
+        key1 = helpers.get_current_line_str()
+        # Get first drep
+        drep1 = get_custom_drep(
+            name_template=f"custom_drep_1_{temp_template}",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            caching_key=key1,
+        )
+
+        key2 = helpers.get_current_line_str()
+        # Get second drep
+        drep2 = get_custom_drep(
+            name_template=f"custom_drep_2_{temp_template}",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            payment_addr=payment_addr,
+            caching_key=key2,
+        )
+
+        # Create stake address registration cert
+        reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=deposit_amt,
+            stake_vkey_file=pool_user.stake.vkey_file,
+        )
+
+        # Create vote delegation cert
+        deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
+            addr_name=f"{temp_template}_addr1",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            drep_key_hash=drep1.drep_id,
+            always_abstain=False,
+            always_no_confidence=False,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[reg_cert, deleg_cert],
+            signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
+        )
+
+        # Make sure we have enough time to finish the registration/delegation in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+        )
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            src_address=payment_addr.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+            deposit=deposit_amt,
+        )
+        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+            drep_id=drep1.drep_id
+        ), "Votes are NOT delegated to the correct DRep 1"
+
+        reqc.cip086.start(url=helpers.get_vcs_link())
+        # Change delegation to drep2
+        deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
+            addr_name=f"{temp_template}_addr2",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            drep_key_hash=drep2.drep_id,
+            always_abstain=False,
+            always_no_confidence=False,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[deleg_cert],
+            signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
+        )
+
+        # Make sure we have enough time to finish the delegation in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+        )
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            src_address=payment_addr.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+            deposit=deposit_amt,
+        )
+        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+            drep_id=drep2.drep_id
+        ), "Votes are NOT changed to the correct DRep 2"
+        reqc.cip086.success()
 
 
 class TestDRepActivity:

@@ -4,6 +4,7 @@ NetworkName: localnet
 
 EnableLogMetrics: False
 EnableLogging: True
+EnableFutureGenesis: True
 
 # The default port is 8080
 # PrometheusPort: 8080

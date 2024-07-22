@@ -31,6 +31,7 @@ GUESSING_GAME_PLUTUS_V2 = SCRIPTS_V2_DIR / "custom-guess-42-datum-42.plutus"
 GUESSING_GAME_UNTYPED_PLUTUS_V2 = SCRIPTS_V2_DIR / "guess-42-datum-42-txin.plutus"
 SECP256K1_LOOP_ECDSA_PLUTUS_V2 = SCRIPTS_V2_DIR / "ecdsa-secp256k1-loop.plutus"
 SECP256K1_LOOP_SCHNORR_PLUTUS_V2 = SCRIPTS_V2_DIR / "schnorr-secp256k1-loop.plutus"
+BYTE_STRING_ROUNDTRIP = SCRIPTS_V2_DIR / "byteStringToIntegerRoundtripPolicyV2.plutus"
 
 ALWAYS_SUCCEEDS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedPolicyScriptV3.plutus"
 ALWAYS_FAILS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysFailsPolicyScriptV3.plutus"
@@ -100,6 +101,9 @@ GUESSING_GAME_V2_COST = ExecutionCost(per_time=168_868_800, per_space=540_612, f
 GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(
     per_time=4_985_806, per_space=11_368, fixed_cost=1_016
 )
+BYTE_STRING_ROUNDTRIP_V2_COST = ExecutionCost(
+    per_time=168_868_800, per_space=540_612, fixed_cost=43_369
+)
 SECP256K1_ECDSA_LOOP_COST = ExecutionCost(
     per_time=397_863_996, per_space=128_584, fixed_cost=36_106
 )
@@ -153,6 +157,13 @@ class PlutusScriptData:
     script_file: pl.Path
     script_type: str
     execution_cost: ExecutionCost
+
+
+BYTE_STRING_ROUNDTRIP_V2_REC = PlutusScriptData(
+    script_file=BYTE_STRING_ROUNDTRIP,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V2,
+    execution_cost=BYTE_STRING_ROUNDTRIP_V2_COST,
+)
 
 
 ALWAYS_FAILS = {

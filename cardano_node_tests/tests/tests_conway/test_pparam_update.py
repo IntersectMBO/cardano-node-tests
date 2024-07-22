@@ -240,17 +240,22 @@ class TestPParamUpdate:
         * check that the action is enacted
         * check that only the ratified action that got accepted first to the chain gets enacted
         * check that it's not possible to vote on enacted action
+        * check that all deposit required for actions is returned back for both expired
+          and enacted actions
         """
         # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
-        cost_proposal_file = DATA_DIR / "cost_models_list.json"
-        proposal_records = []
+        cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
         db_errors_final = []
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
 
         if is_in_bootstrap and not configuration.HAS_CC:
             pytest.skip("The test doesn't work in bootstrap period without CC.")
+
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
@@ -635,13 +640,19 @@ class TestPParamUpdate:
             gov_state=cluster.g_conway_governance.query.gov_state(),
         )
 
+        # For keeping track of how many proposals were submitted
+        # to check for all deposit required for action is returned back
+        submitted_proposal_count = 0
+
         def _propose_pparams_update(
             name_template: str,
             proposals: tp.List[clusterlib_utils.UpdateProposal],
         ) -> conway_common.PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
-
+            # Increment count for a submitted proposal
+            nonlocal submitted_proposal_count
+            submitted_proposal_count += 1
             return conway_common.propose_pparams_update(
                 cluster_obj=cluster,
                 name_template=name_template,
@@ -685,7 +696,6 @@ class TestPParamUpdate:
             update_proposals=net_nodrep_prop_rec.proposals,
             protocol_params=net_nodrep_prop_rec.future_pparams,
         )
-        proposal_records.append(net_nodrep_prop_rec)
 
         reqc.cip061_04.start(url=_url)
 
@@ -724,7 +734,8 @@ class TestPParamUpdate:
         # db-sync check
         try:
             dbsync_utils.check_conway_gov_action_proposal_description(
-                net_nodrep_prop_rec.future_pparams, net_nodrep_prop_rec.action_txid
+                update_proposal=net_nodrep_prop_rec.future_pparams,
+                txhash=net_nodrep_prop_rec.action_txid,
             )
             dbsync_utils.check_conway_param_update_proposal(net_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
@@ -736,7 +747,6 @@ class TestPParamUpdate:
             net_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_net_nocc", proposals=network_g_proposals
             )
-            proposal_records.append(net_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -761,7 +771,6 @@ class TestPParamUpdate:
                 update_proposals=eco_nodrep_prop_rec.proposals,
                 protocol_params=eco_nodrep_prop_rec.future_pparams,
             )
-            proposal_records.append(eco_nodrep_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -776,14 +785,15 @@ class TestPParamUpdate:
                 else True,
             )
 
-        # db-sync check
-        try:
-            dbsync_utils.check_conway_gov_action_proposal_description(
-                eco_nodrep_prop_rec.future_pparams, eco_nodrep_prop_rec.action_txid
-            )
-            dbsync_utils.check_conway_param_update_proposal(eco_nodrep_prop_rec.future_pparams)
-        except AssertionError as exc:
-            db_errors_final.append(f"db-sync economic params update error: {exc}")
+            # db-sync check
+            try:
+                dbsync_utils.check_conway_gov_action_proposal_description(
+                    update_proposal=eco_nodrep_prop_rec.future_pparams,
+                    txhash=eco_nodrep_prop_rec.action_txid,
+                )
+                dbsync_utils.check_conway_param_update_proposal(eco_nodrep_prop_rec.future_pparams)
+            except AssertionError as exc:
+                db_errors_final.append(f"db-sync economic params update error: {exc}")
 
         # Vote on update proposals from economic group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -791,7 +801,6 @@ class TestPParamUpdate:
             eco_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_eco_nocc", proposals=eco_nocc_update_proposals
             )
-            proposal_records.append(eco_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -814,7 +823,6 @@ class TestPParamUpdate:
             update_proposals=tech_nodrep_prop_rec.proposals,
             protocol_params=tech_nodrep_prop_rec.future_pparams,
         )
-        proposal_records.append(tech_nodrep_prop_rec)
 
         assert tech_nodrep_prop_rec.proposal_names.isdisjoint(
             SECURITY_PPARAMS
@@ -857,7 +865,8 @@ class TestPParamUpdate:
         # db-sync check
         try:
             dbsync_utils.check_conway_gov_action_proposal_description(
-                tech_nodrep_prop_rec.future_pparams, tech_nodrep_prop_rec.action_txid
+                update_proposal=tech_nodrep_prop_rec.future_pparams,
+                txhash=tech_nodrep_prop_rec.action_txid,
             )
             dbsync_utils.check_conway_param_update_proposal(tech_nodrep_prop_rec.future_pparams)
         except AssertionError as exc:
@@ -868,7 +877,6 @@ class TestPParamUpdate:
             tech_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_tech_nocc", proposals=technical_g_proposals
             )
-            proposal_records.append(tech_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -895,7 +903,6 @@ class TestPParamUpdate:
             update_proposals=sec_nonespo_prop_rec.proposals,
             protocol_params=sec_nonespo_prop_rec.future_pparams,
         )
-        proposal_records.append(sec_nonespo_prop_rec)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -913,7 +920,6 @@ class TestPParamUpdate:
         sec_nospo_prop_rec = _propose_pparams_update(
             name_template=f"{temp_template}_sec_nospo", proposals=security_proposals
         )
-        proposal_records.append(sec_nospo_prop_rec)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -936,7 +942,6 @@ class TestPParamUpdate:
                 update_proposals=gov_nodrep_prop_rec.proposals,
                 protocol_params=gov_nodrep_prop_rec.future_pparams,
             )
-            proposal_records.append(gov_nodrep_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -951,14 +956,15 @@ class TestPParamUpdate:
                 else True,
             )
 
-        # db-sync check
-        try:
-            dbsync_utils.check_conway_gov_action_proposal_description(
-                gov_nodrep_prop_rec.future_pparams, gov_nodrep_prop_rec.action_txid
-            )
-            dbsync_utils.check_conway_param_update_proposal(gov_nodrep_prop_rec.future_pparams)
-        except AssertionError as exc:
-            db_errors_final.append(f"db-sync governance params update error: {exc}")
+            # db-sync check
+            try:
+                dbsync_utils.check_conway_gov_action_proposal_description(
+                    update_proposal=gov_nodrep_prop_rec.future_pparams,
+                    txhash=gov_nodrep_prop_rec.action_txid,
+                )
+                dbsync_utils.check_conway_param_update_proposal(gov_nodrep_prop_rec.future_pparams)
+            except AssertionError as exc:
+                db_errors_final.append(f"db-sync governance params update error: {exc}")
 
         # Vote on update proposals from governance group that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -966,7 +972,6 @@ class TestPParamUpdate:
             gov_nocc_prop_rec = _propose_pparams_update(
                 name_template=f"{temp_template}_gov_nocc", proposals=gov_nocc_update_proposals
             )
-            proposal_records.append(gov_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -1000,7 +1005,6 @@ class TestPParamUpdate:
                 update_proposals=mix_nodrep_prop_rec.proposals,
                 protocol_params=mix_nodrep_prop_rec.future_pparams,
             )
-            proposal_records.append(mix_nodrep_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -1015,14 +1019,15 @@ class TestPParamUpdate:
                 else True,
             )
 
-        # db-sync check
-        try:
-            dbsync_utils.check_conway_gov_action_proposal_description(
-                mix_nodrep_prop_rec.future_pparams, mix_nodrep_prop_rec.action_txid
-            )
-            dbsync_utils.check_conway_param_update_proposal(mix_nodrep_prop_rec.future_pparams)
-        except AssertionError as exc:
-            db_errors_final.append(f"db-sync mixed group params update error: {exc}")
+            # db-sync check
+            try:
+                dbsync_utils.check_conway_gov_action_proposal_description(
+                    update_proposal=mix_nodrep_prop_rec.future_pparams,
+                    txhash=mix_nodrep_prop_rec.action_txid,
+                )
+                dbsync_utils.check_conway_param_update_proposal(mix_nodrep_prop_rec.future_pparams)
+            except AssertionError as exc:
+                db_errors_final.append(f"db-sync mixed group params update error: {exc}")
 
         # Vote on update proposals from mix of groups that will NOT get approved by CC
         if configuration.HAS_CC:
@@ -1043,7 +1048,6 @@ class TestPParamUpdate:
                 update_proposals=mix_nocc_prop_rec.proposals,
                 protocol_params=mix_nocc_prop_rec.future_pparams,
             )
-            proposal_records.append(mix_nocc_prop_rec)
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
@@ -1067,7 +1071,6 @@ class TestPParamUpdate:
             update_proposals=fin_prop_rec.proposals,
             protocol_params=fin_prop_rec.future_pparams,
         )
-        proposal_records.append(fin_prop_rec)
 
         # Vote & disapprove the action
         conway_common.cast_vote(
@@ -1102,7 +1105,7 @@ class TestPParamUpdate:
         [r.start(url=_url) for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
         try:
             dbsync_utils.check_conway_gov_action_proposal_description(
-                fin_prop_rec.future_pparams, fin_prop_rec.action_txid
+                update_proposal=fin_prop_rec.future_pparams, txhash=fin_prop_rec.action_txid
             )
             dbsync_utils.check_conway_param_update_proposal(fin_prop_rec.future_pparams)
         except AssertionError as exc:
@@ -1123,11 +1126,14 @@ class TestPParamUpdate:
         mix_approved_prop_rec = _propose_pparams_update(
             name_template=f"{temp_template}_mix_approved", proposals=mix_approved_update_proposals
         )
+        # Get epoch where the last action was submitted for keeping track of
+        # epoch to wait for all the gov actions expiry
+        last_action_epoch = cluster.g_query.get_epoch()
+
         _check_proposed_pparams(
             update_proposals=mix_approved_prop_rec.proposals,
             protocol_params=mix_approved_prop_rec.future_pparams,
         )
-        proposal_records.append(mix_approved_prop_rec)
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -1248,15 +1254,37 @@ class TestPParamUpdate:
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
 
+        # Check deposit return for both after enactment and expiration
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cip034ex, reqc.cip034en)]
+
+        # First wait to ensure that all proposals are expired/enacted for deposit to be retuned
+        _cur_epoch = cluster.g_query.get_epoch()
+        action_lifetime_epoch = cluster.conway_genesis["govActionLifetime"]
+        epochs_to_expiration = action_lifetime_epoch + last_action_epoch - _cur_epoch
+        cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
+
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        total_deposit_return = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+        # Check total deposit return accounting for both expired and enacted actions
+        assert (
+            total_deposit_return
+            == init_return_account_balance + deposit_amt * submitted_proposal_count
+        ), "Incorrect return account balance"
+        [r.success() for r in (reqc.cip034ex, reqc.cip034en)]
+
         # Check vote view
         if fin_voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.cc[0])
         if fin_voted_votes.drep:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
 
-        issued_props_num = len(proposal_records)
         try:
-            dbsync_utils.check_proposal_refunds(pool_user_lg.stake.address, issued_props_num)
+            dbsync_utils.check_proposal_refunds(
+                stake_address=pool_user_lg.stake.address, refunds_num=submitted_proposal_count
+            )
         except AssertionError as exc:
             db_errors_final.append(f"db-sync proposal refunds error: {exc}")
 

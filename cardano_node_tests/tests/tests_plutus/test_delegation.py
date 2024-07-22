@@ -785,7 +785,11 @@ class TestDelegateAddr:
                 or "points to a script hash that is not known" in str_exc
             ):
                 issues.cli_297.finish_test()
-            if use_build_cmd and "overspent budget" in str_exc:
+            if (
+                use_build_cmd
+                and "overspent budget" in str_exc
+                and VERSIONS.transaction_era >= VERSIONS.CONWAY
+            ):
                 issues.cli_650.finish_test()
             raise
 

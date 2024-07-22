@@ -271,7 +271,7 @@ def refresh_cc_keys(
     cc_members: tp.List[clusterlib.CCMember],
     governance_data: governance_utils.GovernanceRecords,
 ) -> governance_utils.GovernanceRecords:
-    """Refresh ho certs for original CC members."""
+    """Refresh hot certs for original CC members."""
     gov_data_dir = pl.Path(cc_members[0].hot_vkey_file).parent
 
     new_cc_members = []
