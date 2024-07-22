@@ -248,33 +248,44 @@ def deregister_stake_address(
     pool_user: clusterlib.PoolUser,
     name_template: str,
     deposit_amt: int = -1,
-) -> tp.Tuple[clusterlib.TxRawOutput, clusterlib.TxRawOutput]:
+) -> tp.Optional[clusterlib.TxRawOutput]:
     """Deregister stake address."""
-    # files for deregistering stake address
+    stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
+    if not stake_addr_info:
+        return None
+
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
-        addr_name=f"{name_template}_addr0_dereg",
+        addr_name=f"{name_template}_addr0",
         deposit_amt=deposit_amt,
         stake_vkey_file=pool_user.stake.vkey_file,
     )
-    tx_files_deregister = clusterlib.TxFiles(
+    tx_files_dereg = clusterlib.TxFiles(
         certificate_files=[stake_addr_dereg_cert],
-        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        signing_key_files=[
+            pool_user.payment.skey_file,
+            pool_user.stake.skey_file,
+        ],
     )
-
-    # withdraw rewards to payment address
-    tx_raw_output_withdrawal = cluster_obj.g_stake_address.withdraw_reward(
-        stake_addr_record=pool_user.stake,
-        dst_addr_record=pool_user.payment,
-        tx_name=name_template,
+    withdrawals = (
+        [
+            clusterlib.TxOut(
+                address=pool_user.stake.address,
+                amount=stake_addr_info.reward_account_balance,
+            )
+        ]
+        if stake_addr_info.reward_account_balance
+        else []
     )
-
-    # deregister the stake address
-    tx_raw_output_dereg = cluster_obj.g_transaction.send_tx(
+    tx_output = build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_dereg",
         src_address=pool_user.payment.address,
-        tx_name=f"{name_template}_dereg_stake_addr",
-        tx_files=tx_files_deregister,
+        tx_files=tx_files_dereg,
+        withdrawals=withdrawals,
+        deposit=None if deposit_amt == -1 else -deposit_amt,
     )
-    return tx_raw_output_withdrawal, tx_raw_output_dereg
+
+    return tx_output
 
 
 def fund_from_genesis(

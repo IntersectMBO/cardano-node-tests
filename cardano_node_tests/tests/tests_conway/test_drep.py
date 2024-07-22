@@ -102,7 +102,6 @@ def get_pool_user(
         pool_user.payment,
         cluster_obj=cluster_obj,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=1_500_000,
     )
     return pool_user
 
@@ -942,42 +941,12 @@ class TestDelegDReps:
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
             with helpers.change_cwd(testfile_temp_dir):
-                stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
-                if not stake_addr_info:
-                    return
-
-                # Deregister stake address
                 reqc.cli028.start(url=helpers.get_vcs_link())
-                stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
-                    addr_name=f"{temp_template}_addr0",
-                    deposit_amt=deposit_amt,
-                    stake_vkey_file=pool_user.stake.vkey_file,
-                )
-                tx_files_dereg = clusterlib.TxFiles(
-                    certificate_files=[stake_addr_dereg_cert],
-                    signing_key_files=[
-                        payment_addr.skey_file,
-                        pool_user.stake.skey_file,
-                    ],
-                )
-                withdrawals = (
-                    [
-                        clusterlib.TxOut(
-                            address=pool_user.stake.address,
-                            amount=stake_addr_info.reward_account_balance,
-                        )
-                    ]
-                    if stake_addr_info.reward_account_balance
-                    else []
-                )
-                clusterlib_utils.build_and_submit_tx(
+                clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
-                    name_template=f"{temp_template}_dereg",
-                    src_address=payment_addr.address,
-                    use_build_cmd=use_build_cmd,
-                    tx_files=tx_files_dereg,
-                    withdrawals=withdrawals,
-                    deposit=-deposit_amt,
+                    pool_user=pool_user,
+                    name_template=temp_template,
+                    deposit_amt=deposit_amt,
                 )
                 reqc.cli028.success()
 
@@ -1128,41 +1097,11 @@ class TestDelegDReps:
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
             with helpers.change_cwd(testfile_temp_dir):
-                stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_wp.stake.address)
-                if not stake_addr_info:
-                    return
-
-                # Deregister stake address
-                stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
-                    addr_name=f"{temp_template}_addr0",
-                    deposit_amt=deposit_amt,
-                    stake_vkey_file=pool_user_wp.stake.vkey_file,
-                )
-                tx_files_dereg = clusterlib.TxFiles(
-                    certificate_files=[stake_addr_dereg_cert],
-                    signing_key_files=[
-                        payment_addr_wp.skey_file,
-                        pool_user_wp.stake.skey_file,
-                    ],
-                )
-                withdrawals = (
-                    [
-                        clusterlib.TxOut(
-                            address=pool_user_wp.stake.address,
-                            amount=stake_addr_info.reward_account_balance,
-                        )
-                    ]
-                    if stake_addr_info.reward_account_balance
-                    else []
-                )
-                clusterlib_utils.build_and_submit_tx(
+                clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
-                    name_template=f"{temp_template}_dereg",
-                    src_address=payment_addr_wp.address,
-                    use_build_cmd=use_build_cmd,
-                    tx_files=tx_files_dereg,
-                    withdrawals=withdrawals,
-                    deposit=-deposit_amt,
+                    pool_user=pool_user_wp,
+                    name_template=temp_template,
+                    deposit_amt=deposit_amt,
                 )
 
         request.addfinalizer(_deregister)
