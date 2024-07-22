@@ -1,2 +1,3 @@
 BASE_TAR_URL=https://github.com/IntersectMBO/cardano-node/releases/download/8.12.2/cardano-node-8.12.2-linux.tar.gz
 CI_BYRON_CLUSTER=true
+UPGRADE_CLI_REVISION=release/cardano-cli-9.0.0.1
