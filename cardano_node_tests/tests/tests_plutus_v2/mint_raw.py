@@ -208,11 +208,15 @@ def check_missing_builtin(
 
     prot_params = cluster_obj.g_query.get_protocol_params()
     prot_ver = prot_params["protocolVersion"]["major"]
-    cost_model_len = len(prot_params["costModels"]["PlutusV2"])
+    pv2_cost_model = prot_params["costModels"]["PlutusV2"]
+    cost_model_len = len(pv2_cost_model)
 
     if prot_ver < 10:
         assert "(MalformedScriptWitnesses" in err, err
-    elif cost_model_len < 185:
+    elif cost_model_len < 185 or pv2_cost_model[-1] == 9223372036854775807:
         assert "overspending the budget" in err, err
-    else:
+    elif not err:
         _check_txout()
+    else:
+        _msg = f"Unexpected error: {err}"
+        raise AssertionError(_msg)
