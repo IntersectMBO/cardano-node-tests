@@ -108,17 +108,18 @@ def simple_script_policyid(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-    temp_template = f"test_native_tokens_simple_ci{cluster_manager.cluster_instance_num}"
-    issuer_addr = issuers_addrs[1]
+        temp_template = f"test_native_tokens_simple_ci{cluster_manager.cluster_instance_num}"
+        issuer_addr = issuers_addrs[1]
 
-    # create simple script
-    keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
-    script_content = {"keyHash": keyhash, "type": "sig"}
-    script = pl.Path(f"{temp_template}.script")
-    with open(script, "w", encoding="utf-8") as out_json:
-        json.dump(script_content, out_json)
+        # create simple script
+        keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
+        script_content = {"keyHash": keyhash, "type": "sig"}
+        script = pl.Path(f"{temp_template}.script")
+        with open(script, "w", encoding="utf-8") as out_json:
+            json.dump(script_content, out_json)
 
-    policyid = cluster.g_transaction.get_policyid(script)
+        policyid = cluster.g_transaction.get_policyid(script)
+        fixture_cache.value = script, policyid
 
     return script, policyid
 
@@ -134,16 +135,17 @@ def multisig_script_policyid(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-    temp_template = f"test_native_tokens_multisig_ci{cluster_manager.cluster_instance_num}"
-    payment_vkey_files = [p.vkey_file for p in issuers_addrs]
+        temp_template = f"test_native_tokens_multisig_ci{cluster_manager.cluster_instance_num}"
+        payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-    # create multisig script
-    multisig_script = cluster.g_transaction.build_multisig_script(
-        script_name=temp_template,
-        script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
-        payment_vkey_files=payment_vkey_files[1:],
-    )
-    policyid = cluster.g_transaction.get_policyid(multisig_script)
+        # create multisig script
+        multisig_script = cluster.g_transaction.build_multisig_script(
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            payment_vkey_files=payment_vkey_files[1:],
+        )
+        policyid = cluster.g_transaction.get_policyid(multisig_script)
+        fixture_cache.value = multisig_script, policyid
 
     return multisig_script, policyid
 
