@@ -769,11 +769,12 @@ class TestRewards:
             # check that rewards are coming from multiple sources where expected
             # ("LeaderReward" and "MemberReward")
             if init_epoch + 3 <= this_epoch <= init_epoch + 7:
-                assert ["LeaderReward", "MemberReward"] == _get_rew_type_for_cred_hash(
-                    reward_addr_dec, rs_record
-                )
+                assert _get_rew_type_for_cred_hash(reward_addr_dec, rs_record) == [
+                    "LeaderReward",
+                    "MemberReward",
+                ]
             else:
-                assert ["LeaderReward"] == _get_rew_type_for_cred_hash(reward_addr_dec, rs_record)
+                assert _get_rew_type_for_cred_hash(reward_addr_dec, rs_record) == ["LeaderReward"]
 
         def _mir_tx(fund_src: str) -> clusterlib.TxRawOutput:
             mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(

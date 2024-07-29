@@ -33,9 +33,7 @@ def is_running() -> bool:
     # TODO: `--metrics-port` is not available in older cardano-node releases, see node issue #4280
     # If the metrics port is not available, we can start the `cardano-submit-api` only on the first
     # cluster instance.
-    if cluster_nodes.services_status(service_names=["submit_api"])[0].status != "RUNNING":
-        return False
-    return True
+    return cluster_nodes.services_status(service_names=["submit_api"])[0].status == "RUNNING"
 
 
 def tx2cbor(tx_file: clusterlib.FileType, destination_dir: clusterlib.FileType = ".") -> pl.Path:

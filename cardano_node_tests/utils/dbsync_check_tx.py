@@ -182,9 +182,7 @@ def _sanitize_txout(
 
 
 def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
-    if txout.inline_datum_cbor_file or txout.inline_datum_file or txout.inline_datum_value:
-        return True
-    return False
+    return bool(txout.inline_datum_cbor_file or txout.inline_datum_file or txout.inline_datum_value)
 
 
 def utxodata2txout(
