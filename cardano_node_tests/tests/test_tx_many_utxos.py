@@ -26,6 +26,7 @@ LOGGER = logging.getLogger(__name__)
 )
 @pytest.mark.order(5)
 @pytest.mark.long
+# Make sure the tests are all scheduled to the same pytest worker
 @pytest.mark.xdist_group(name="many_utxos")
 class TestManyUTXOs:
     """Test transaction with many UTxOs and small amounts of Lovelace."""
