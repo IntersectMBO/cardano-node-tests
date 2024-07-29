@@ -243,7 +243,7 @@ class ClusterGetter:
                 netstat_out,
             )
             if not configuration.IS_XDIST:
-                pytest.exit(msg="Failed to start cluster", returncode=1)
+                pytest.exit(reason="Failed to start cluster", returncode=1)
             (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
             return False
 
@@ -274,7 +274,9 @@ class ClusterGetter:
                 excp,
             )
             if not configuration.IS_XDIST:
-                pytest.exit(msg=f"Failed to setup test addresses, exception: {err}", returncode=1)
+                pytest.exit(
+                    reason=f"Failed to setup test addresses, exception: {err}", returncode=1
+                )
             (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
             return False
 
