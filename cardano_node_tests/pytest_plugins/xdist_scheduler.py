@@ -102,7 +102,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         """Assign a work unit to a node."""
         assert self.workqueue
 
-        assigned_to_node = self.assigned_work.setdefault(node, default=collections.OrderedDict())
+        assigned_to_node = self.assigned_work.setdefault(node, collections.OrderedDict())
         scope, work_unit = None, None
 
         # check if there are any long-running tests already pending
