@@ -287,9 +287,7 @@ class ClusterGetter:
     def _is_dev_cluster_ready(self) -> bool:
         """Check if development cluster instance is ready to be used."""
         state_dir = cluster_nodes.get_cluster_env().state_dir
-        if (state_dir / cluster_nodes.ADDRS_DATA).exists():
-            return True
-        return False
+        return (state_dir / cluster_nodes.ADDRS_DATA).exists()
 
     def _setup_dev_cluster(self) -> None:
         """Set up cluster instance that was already started outside of test framework."""
@@ -330,7 +328,7 @@ class ClusterGetter:
         # If a service failed on cluster instance.
         # Check only if we are really able to restart the cluster instance, because the check
         # is expensive.
-        if not (configuration.FORBID_RESTART or self._is_healthy(instance_num)):
+        if not (configuration.FORBID_RESTART or self._is_healthy(instance_num)):  # noqa:SIM103
             return True
 
         return False
@@ -344,10 +342,7 @@ class ClusterGetter:
             return False
 
         # respin is needed when custom start command was specified
-        if cget_status.start_cmd:
-            return True
-
-        return False
+        return bool(cget_status.start_cmd)
 
     def _on_marked_test_stop(self, instance_num: int, mark: str) -> None:
         """Perform actions after all marked tests are finished."""
@@ -548,11 +543,7 @@ class ClusterGetter:
         respin_in_progress = list(
             cget_status.instance_dir.glob(f"{common.RESPIN_IN_PROGRESS_GLOB}_*")
         )
-        if respin_in_progress:
-            # no log message here, it would be too many of them
-            return True
-
-        return False
+        return bool(respin_in_progress)
 
     def _marked_select_instance(self, cget_status: _ClusterGetStatus) -> bool:
         """Select this cluster instance for running marked tests if possible."""
