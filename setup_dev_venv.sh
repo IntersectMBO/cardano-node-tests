@@ -4,9 +4,6 @@
 
 PYTHON_VERSION="3.10"
 
-# TODO: for pylint and mypy, see https://github.com/PyCQA/pylint/issues/7306
-export SETUPTOOLS_ENABLE_FEATURES="legacy-editable"
-
 abort_install=0
 
 set -eu
