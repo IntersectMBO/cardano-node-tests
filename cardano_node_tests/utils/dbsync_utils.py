@@ -12,6 +12,7 @@ from cardano_node_tests.utils import dbsync_check_tx
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import governance_utils
+from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1216,3 +1217,131 @@ def check_treasury_withdrawal(
         assert entry.addr_view == stake_address, "Wrong stake address on dbsync"
         assert entry.amount == transfer_amt, "Wrong transfer amount in dbsync"
         assert entry.enacted_epoch, "Action not marked as enacted in dbsync"
+
+
+def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteDataRecord]:  # noqa: C901
+    """Get pool data from db-sync."""
+    votes = list(dbsync_queries.query_off_chain_vote_data(data_hash))
+    if not votes:
+        return None
+
+    authors = []
+    references = []
+    external_updates = []
+
+    latest_vot_anchor_id = votes[-1].data_vot_anchor_id
+    latest_votes = [vote for vote in votes if vote.data_vot_anchor_id == latest_vot_anchor_id]
+
+    for vote in latest_votes:
+        if vote.auth_name:
+            author = {
+                "name": vote.auth_name,
+                "witness": {
+                    "witnessAlgorithm": vote.auth_wit_alg,
+                    "publicKey": vote.auth_pub_key,
+                    "signature": vote.auth_signature,
+                },
+                "warning": vote.auth_warning,
+            }
+            if author not in authors:
+                authors.append(author)
+        if vote.gov_act_id:
+            gov_action = {
+                "title": vote.gov_act_title,
+                "abstract": vote.gov_act_abstract,
+                "motivation": vote.gov_act_motivation,
+                "rationale": vote.gov_act_rationale,
+            }
+        if vote.ref_id:
+            reference = {"label": vote.ref_label, "uri": vote.ref_uri}
+            if vote.ref_hash_digest and vote.ref_hash_alg:
+                reference["referenceHash"] = {
+                    "hashDigest": vote.ref_hash_digest,
+                    "hashAlgorithm": vote.ref_hash_alg,
+                }
+            if reference not in references:
+                references.append(reference)
+        if vote.ext_update_id:
+            external_update = {"title": vote.ext_update_title, "uri": vote.ext_update_uri}
+            if external_update not in external_updates:
+                external_updates.append(external_update)
+        if vote.data_vot_anchor_id:
+            voting_anchor = {
+                "url": vote.vot_anchor_url,
+                "data_hash": vote.vot_anchor_data_hash.hex(),
+                "type": vote.vot_anchor_type,
+                "block_id": vote.vot_anchor_block_id,
+            }
+
+    # pylint: disable=undefined-loop-variable
+    vote_data = dbsync_types.OffChainVoteDataRecord(
+        id=vote.data_id,
+        vot_anchor_id=vote.data_vot_anchor_id,
+        hash=vote.data_hash.hex(),
+        json=vote.data_json,
+        bytes=vote.data_bytes.hex(),
+        warning=vote.data_warning,
+        language=vote.data_language,
+        comment=vote.data_comment,
+        is_valid=vote.data_is_valid,
+        authors=list(authors),
+        references=list(references),
+        gov_action_data=gov_action,
+        external_updates=list(external_updates),
+        voting_anchor=voting_anchor,
+    )
+
+    return vote_data
+
+
+def check_action_data(
+    json_anchor_file: tp.Dict[str, tp.Any],
+    anchor_data_hash: str,
+) -> None:
+    """Compare actual json file with data from db-sync."""
+    errors = []
+    db_action_data = get_action_data(anchor_data_hash)
+
+    if db_action_data is None:
+        msg = f"No data for action with anchor hash: {anchor_data_hash} in db-sync"
+        raise AssertionError(msg)
+
+    if json_anchor_file != db_action_data.json:
+        errors.append(
+            "There are discrepancies between json file and its representation in db-sync."
+        )
+    errors.extend(
+        helpers.compare_dicts(
+            json_anchor_file["body"],
+            db_action_data.gov_action_data,
+            ["title", "abstract", "motivation", "rationale"],
+        )
+    )
+    if len(json_anchor_file["authors"]) != len(db_action_data.authors):
+        errors.append("Author lists must be of the same length.")
+    else:
+        for json_author, db_author in zip(json_anchor_file["authors"], db_action_data.authors):
+            errors.extend(helpers.compare_dicts(json_author, db_author, ["name", "witness"]))
+    if len(json_anchor_file["body"]["references"]) != len(db_action_data.references):
+        errors.append("References lists must be of the same length.")
+    else:
+        sorted_json_refs = sorted(
+            json_anchor_file["body"]["references"], key=lambda x: x.get("label")
+        )
+        sorted_db_refs = sorted(db_action_data.references, key=lambda x: x.get("label"))
+        for json_ref, db_ref in zip(sorted_json_refs, sorted_db_refs):
+            errors.extend(
+                helpers.compare_dicts(json_ref, db_ref, ["label", "uri", "referenceHash"])
+            )
+    if len(json_anchor_file["body"]["externalUpdates"]) != len(db_action_data.external_updates):
+        errors.append("External updates lists must be of the same length.")
+    else:
+        sorted_json_updates = sorted(
+            json_anchor_file["body"]["externalUpdates"], key=lambda x: x.get("title")
+        )
+        sorted_db_updates = sorted(db_action_data.external_updates, key=lambda x: x.get("title"))
+        for json_update, db_update in zip(sorted_json_updates, sorted_db_updates):
+            errors.extend(helpers.compare_dicts(json_update, db_update, ["title", "uri"]))
+
+    if errors:
+        raise AssertionError("\n".join(errors))

@@ -1,7 +1,9 @@
 """Tests for Conway governance info."""
 
 # pylint: disable=expression-not-assigned
+import json
 import logging
+import pathlib as pl
 import typing as tp
 
 import allure
@@ -20,6 +22,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
@@ -47,6 +50,8 @@ def pool_user_ug(
 class TestInfo:
     """Tests for info."""
 
+    INFO_ACTION_ANCHOR_FILE = DATA_DIR / "info_action_anchor.json"
+
     @allure.link(helpers.get_vcs_link())
     def test_info(
         self,
@@ -71,10 +76,13 @@ class TestInfo:
         ).reward_account_balance
 
         # Create an action
-
-        rand_str = helpers.get_rand_str(4)
-        anchor_url = f"http://www.info-action-{rand_str}.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        # Shortened url for info_action_anchor.json
+        anchor_url = "https://tinyurl.com/bddbaftp"
+        anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(
+            file_text=self.INFO_ACTION_ANCHOR_FILE
+        )
+        with open(self.INFO_ACTION_ANCHOR_FILE, encoding="utf-8") as anchor_fp:
+            json_anchor_file = json.load(anchor_fp)
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli016, reqc.cip031a_03, reqc.cip054_06)]
@@ -266,4 +274,7 @@ class TestInfo:
         dbsync_utils.check_votes(
             votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
             txhash=vote_txid,
+        )
+        dbsync_utils.check_action_data(
+            json_anchor_file=json_anchor_file, anchor_data_hash=anchor_data_hash
         )
