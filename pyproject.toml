@@ -56,10 +56,10 @@ ipython = "^8.14.0"
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-Sphinx = "^4.5.0"
-m2r2 = "^0.3.2"
-sphinx-rtd-theme = "^1.2.0"
-sphinxemoji = "^0.2.0"
+Sphinx = "7.4.7"
+m2r2 = "^0.3.3.post2"
+sphinx-rtd-theme = "^2.0.0"
+sphinxemoji = "^0.3.1"
 
 [tool.poetry.scripts]
 testnet-cleanup = "cardano_node_tests.testnet_cleanup:main"
