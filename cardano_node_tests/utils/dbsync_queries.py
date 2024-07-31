@@ -516,7 +516,10 @@ class NewCommitteeMemberDBRow:
 class TreasuryWithdrawalDBRow:
     # pylint: disable-next=invalid-name
     expiration: int
+    ratified_epoch: int
     enacted_epoch: int
+    dropped_epoch: int
+    expired_epoch: int
     addr_view: str
     amount: int
 
@@ -1350,10 +1353,12 @@ def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBR
     """Query treasury_withdrawal table in db-sync."""
     query = (
         "SELECT"
-        " gap.expiration, gap.enacted_epoch, stake_address.view, treasury_withdrawal.amount "
-        "FROM gov_action_proposal as gap "
-        "INNER JOIN treasury_withdrawal ON treasury_withdrawal.gov_action_proposal_id = gap.id "
-        "INNER JOIN stake_address ON treasury_withdrawal.stake_address_id = stake_address.id "
+        " gap.expiration, gap.ratified_epoch, gap.enacted_epoch, "
+        " gap.dropped_epoch, gap.expired_epoch, "
+        " sa.view AS addr_view, tw.amount "
+        "FROM gov_action_proposal AS gap "
+        "INNER JOIN treasury_withdrawal AS tw ON tw.gov_action_proposal_id = gap.id "
+        "INNER JOIN stake_address AS sa ON tw.stake_address_id = sa.id "
         "INNER JOIN tx ON tx.id = gap.tx_id "
         "WHERE tx.hash = %s;"
     )
@@ -1364,7 +1369,7 @@ def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBR
 
 
 def query_off_chain_vote_data(data_hash: str) -> tp.Generator[OffChainVoteDataDBRow, None, None]:
-    """Query the off-chain vote data from db-sync."""
+    """Query the off chain vote data in db-sync."""
     query = (
         "SELECT"
         " data.id, data.voting_anchor_id, data.hash, data.json, data.bytes, "
@@ -1381,7 +1386,7 @@ def query_off_chain_vote_data(data_hash: str) -> tp.Generator[OffChainVoteDataDB
         "LEFT JOIN off_chain_vote_reference ref ON data.id = ref.off_chain_vote_data_id "
         "LEFT JOIN voting_anchor va ON data.voting_anchor_id = va.id "
         "WHERE data.hash = %s "
-        "ORDER BY va.id;"
+        "ORDER BY va.id, ref.id, auth.id, updt.id;"
     )
 
     with execute(query=query, vars=(rf"\x{data_hash}",)) as cur:

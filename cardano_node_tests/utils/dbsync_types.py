@@ -213,15 +213,15 @@ class DrepRegistrationRecord:
 class OffChainVoteDataRecord:
     id: int
     vot_anchor_id: int
-    hash: memoryview
+    hash: str
     json: dict
-    bytes: memoryview
+    bytes: str
     warning: tp.Optional[str]
     language: str
     comment: tp.Optional[str]
     is_valid: tp.Optional[bool]
-    authors: tp.List[tp.Dict[str, tp.Optional[str]]]
-    references: tp.List[tp.Dict[str, tp.Optional[str]]]
-    gov_action_data: tp.Dict[str, str]
-    external_updates: tp.List[tp.Dict[str, str]]
-    voting_anchor: tp.Dict[str, str]
+    authors: tp.List[tp.Dict[str, tp.Any]]
+    references: tp.List[tp.Dict[str, tp.Any]]
+    gov_action_data: tp.Dict[str, tp.Any]
+    external_updates: tp.List[tp.Dict[str, tp.Any]]
+    voting_anchor: tp.Dict[str, tp.Any]

@@ -1210,17 +1210,50 @@ def check_treasury_withdrawal(
     if not configuration.HAS_DBSYNC:
         return
 
-    dbsync_data = list(dbsync_queries.query_treasury_withdrawal(txhash=txhash))
-    assert len(dbsync_data) == actions_num
+    db_tr_withdrawals = list(dbsync_queries.query_treasury_withdrawal(txhash=txhash))
+    assert len(db_tr_withdrawals) == actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {len(db_tr_withdrawals)}."
+        f"Data in db-sync: {db_tr_withdrawals}"
+    )
 
-    for entry in dbsync_data:
-        assert entry.addr_view == stake_address, "Wrong stake address on dbsync"
-        assert entry.amount == transfer_amt, "Wrong transfer amount in dbsync"
-        assert entry.enacted_epoch, "Action not marked as enacted in dbsync"
+    for row in db_tr_withdrawals:
+        assert row.addr_view == stake_address, "Wrong stake address in db-sync"
+        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
+        assert row.enacted_epoch, "Action not marked as enacted in db-sync"
+        assert (
+            row.enacted_epoch == row.ratified_epoch + 1
+        ), "Wrong relation between enacted and ratified epochs in db-sync"
+        assert (
+            row.enacted_epoch == row.dropped_epoch
+        ), "Wrong relation between enacted and dropped epochs in db-sync"
+
+
+def check_reward_rest(
+    actions_num: int,
+    stake_address: str,
+    transfer_amt: int,
+) -> None:
+    """Check reward_rest in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    db_rewards = list(dbsync_queries.query_address_reward_rest(stake_address))
+    assert len(db_rewards) == actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {len(db_rewards)}."
+        f"Data in db-sync: {db_rewards}"
+    )
+
+    for row in db_rewards:
+        assert row.address == stake_address, "Wrong stake address in db-sync"
+        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
+        assert (
+            row.spendable_epoch == row.earned_epoch + 1
+        ), "Wrong relation between earned and spendable epochs in db-sync"
+        assert row.type == "treasury", "Type not marked as treasury in db-sync"
 
 
 def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteDataRecord]:  # noqa: C901
-    """Get pool data from db-sync."""
+    """Get off chain action data from db-sync."""
     votes = list(dbsync_queries.query_off_chain_vote_data(data_hash))
     if not votes:
         return None
@@ -1253,6 +1286,7 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
                 "rationale": vote.gov_act_rationale,
             }
         if vote.ref_id:
+            reference: tp.Dict[str, tp.Union[str, tp.Optional[tp.Dict[str, str]]]]
             reference = {"label": vote.ref_label, "uri": vote.ref_uri}
             if vote.ref_hash_digest and vote.ref_hash_alg:
                 reference["referenceHash"] = {
@@ -1273,7 +1307,6 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
                 "block_id": vote.vot_anchor_block_id,
             }
 
-    # pylint: disable=undefined-loop-variable
     vote_data = dbsync_types.OffChainVoteDataRecord(
         id=vote.data_id,
         vot_anchor_id=vote.data_vot_anchor_id,
@@ -1294,11 +1327,14 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
     return vote_data
 
 
-def check_action_data(
+def check_action_data(  # noqa: C901
     json_anchor_file: tp.Dict[str, tp.Any],
     anchor_data_hash: str,
 ) -> None:
-    """Compare actual json file with data from db-sync."""
+    """Compare anchor json file with off chain action's data from db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
     errors = []
     db_action_data = get_action_data(anchor_data_hash)
 
@@ -1325,22 +1361,18 @@ def check_action_data(
     if len(json_anchor_file["body"]["references"]) != len(db_action_data.references):
         errors.append("References lists must be of the same length.")
     else:
-        sorted_json_refs = sorted(
-            json_anchor_file["body"]["references"], key=lambda x: x.get("label")
-        )
-        sorted_db_refs = sorted(db_action_data.references, key=lambda x: x.get("label"))
-        for json_ref, db_ref in zip(sorted_json_refs, sorted_db_refs):
+        for json_ref, db_ref in zip(
+            json_anchor_file["body"]["references"], db_action_data.references
+        ):
             errors.extend(
                 helpers.compare_dicts(json_ref, db_ref, ["label", "uri", "referenceHash"])
             )
     if len(json_anchor_file["body"]["externalUpdates"]) != len(db_action_data.external_updates):
         errors.append("External updates lists must be of the same length.")
     else:
-        sorted_json_updates = sorted(
-            json_anchor_file["body"]["externalUpdates"], key=lambda x: x.get("title")
-        )
-        sorted_db_updates = sorted(db_action_data.external_updates, key=lambda x: x.get("title"))
-        for json_update, db_update in zip(sorted_json_updates, sorted_db_updates):
+        for json_update, db_update in zip(
+            json_anchor_file["body"]["externalUpdates"], db_action_data.external_updates
+        ):
             errors.extend(helpers.compare_dicts(json_update, db_update, ["title", "uri"]))
 
     if errors:

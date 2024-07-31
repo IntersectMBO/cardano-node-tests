@@ -50,7 +50,7 @@ def pool_user_ug(
 class TestInfo:
     """Tests for info."""
 
-    INFO_ACTION_ANCHOR_FILE = DATA_DIR / "info_action_anchor.json"
+    GOV_ACTION_ANCHOR_FILE = DATA_DIR / "governance_action_anchor.json"
 
     @allure.link(helpers.get_vcs_link())
     def test_info(
@@ -77,11 +77,11 @@ class TestInfo:
 
         # Create an action
         # Shortened url for info_action_anchor.json
-        anchor_url = "https://tinyurl.com/bddbaftp"
+        anchor_url = "https://tinyurl.com/cardano-qa-anchor"
         anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(
-            file_text=self.INFO_ACTION_ANCHOR_FILE
+            file_text=self.GOV_ACTION_ANCHOR_FILE
         )
-        with open(self.INFO_ACTION_ANCHOR_FILE, encoding="utf-8") as anchor_fp:
+        with open(self.GOV_ACTION_ANCHOR_FILE, encoding="utf-8") as anchor_fp:
             json_anchor_file = json.load(anchor_fp)
 
         _url = helpers.get_vcs_link()
