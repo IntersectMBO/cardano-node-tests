@@ -1,0 +1,5 @@
+CLUSTER_ERA=conway
+COMMAND_ERA=conway
+PV10=true
+DBSYNC_REV=sancho-5.1.0
+DBSYNC_SKIP_INDEXES=true
