@@ -205,7 +205,7 @@ class TestCommittee:
         )
 
         # Try to submit a Hot Credential Authorization certificate without being a CC member
-        with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_auth",
@@ -220,6 +220,7 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.dbsync
     @pytest.mark.smoke
     @pytest.mark.disabled(reason="Needs to be fixed in 9.0.0+")
     def test_update_committee_action(
