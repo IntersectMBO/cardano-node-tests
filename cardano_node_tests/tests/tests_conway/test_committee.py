@@ -205,7 +205,7 @@ class TestCommittee:
         )
 
         # Try to submit a Hot Credential Authorization certificate without being a CC member
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_auth",
