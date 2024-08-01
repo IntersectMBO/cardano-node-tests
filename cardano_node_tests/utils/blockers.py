@@ -67,7 +67,7 @@ class GH:
 
         # The issue is blocked if it was fixed in a node version that is greater than
         # the node version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:
+        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:  # noqa:SIM103
             return True
 
         return False
@@ -89,7 +89,7 @@ class GH:
 
         # The issue is blocked if it was fixed in a cli version that is greater than
         # the cli version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.cli:
+        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.cli:  # noqa:SIM103
             return True
 
         return False
@@ -111,7 +111,7 @@ class GH:
 
         # The issue is blocked if it was fixed in a dbsync version that is greater than
         # the dbsync version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.dbsync:
+        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.dbsync:  # noqa:SIM103
             return True
 
         return False
@@ -133,7 +133,7 @@ class GH:
 
         # The issue is blocked if the fix was integrated into a node version that is greater than
         # the node version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:
+        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:  # noqa:SIM103
             return True
 
         return False

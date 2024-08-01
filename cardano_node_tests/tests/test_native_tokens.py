@@ -99,19 +99,14 @@ def issuers_addrs(
 
 @pytest.fixture
 def simple_script_policyid(
-    cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
     issuers_addrs: tp.List[clusterlib.AddressRecord],
 ) -> tp.Tuple[pl.Path, str]:
     """Return script and its PolicyId."""
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-    temp_template = f"test_native_tokens_simple_ci{cluster_manager.cluster_instance_num}"
+    temp_template = common.get_test_id(cluster)
     issuer_addr = issuers_addrs[1]
 
-    # create simple script
+    # Create simple script
     keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = pl.Path(f"{temp_template}.script")
@@ -125,19 +120,14 @@ def simple_script_policyid(
 
 @pytest.fixture
 def multisig_script_policyid(
-    cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
     issuers_addrs: tp.List[clusterlib.AddressRecord],
 ) -> tp.Tuple[pl.Path, str]:
     """Return multisig script and it's PolicyId."""
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-    temp_template = f"test_native_tokens_multisig_ci{cluster_manager.cluster_instance_num}"
+    temp_template = common.get_test_id(cluster)
     payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-    # create multisig script
+    # Create multisig script
     multisig_script = cluster.g_transaction.build_multisig_script(
         script_name=temp_template,
         script_type_arg=clusterlib.MultiSigTypeArgs.ALL,

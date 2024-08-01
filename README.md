@@ -292,12 +292,6 @@ To install cardano-clusterlib in development mode:
     poetry shell
     ```
 
-1. enable legacy behavior (needed by `mypy` and `pylint` linters)
-
-    ```sh
-    export SETUPTOOLS_ENABLE_FEATURES="legacy-editable"
-    ```
-
 1. update virtual env (answer 'y' to question "Install into the current virtual env? [y/N]")
 
     ```sh
@@ -319,7 +313,7 @@ To install cardano-clusterlib in development mode:
 1. install `cardano-clusterlib` in development mode
 
     ```sh
-    pip install -e .
+    pip install -e . --config-settings editable_mode=compat
     ```
 
 1. cd back to 'cardano-node-tests' repo
