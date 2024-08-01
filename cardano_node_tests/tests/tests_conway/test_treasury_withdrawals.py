@@ -50,6 +50,7 @@ class TestTreasuryWithdrawals:
     """Tests for treasury withdrawals."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.long
     def test_treasury_withdrawals(  # noqa: C901
         self,
