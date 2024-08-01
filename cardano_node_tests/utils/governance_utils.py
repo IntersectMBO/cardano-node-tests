@@ -620,6 +620,18 @@ def is_drep_active(
     return bool(drep_state[0][1].get("expiry", 0) > epoch)
 
 
+def is_cc_active(cc_member_state: tp.Dict[str, tp.Any]) -> bool:
+    """Check if CC member is active."""
+    if not cc_member_state:
+        return False
+    if cc_member_state["hotCredsAuthStatus"] != "MemberAuthorized":
+        return False
+    if cc_member_state["status"] != "Active":  # noqa: SIM103
+        return False
+
+    return True
+
+
 def create_dreps(
     name_template: str,
     num: int,
