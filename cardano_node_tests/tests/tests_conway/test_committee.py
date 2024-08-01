@@ -221,7 +221,6 @@ class TestCommittee:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
-    @pytest.mark.disabled(reason="Needs to be fixed in 9.0.0+")
     def test_update_committee_action(
         self,
         cluster: clusterlib.ClusterLib,

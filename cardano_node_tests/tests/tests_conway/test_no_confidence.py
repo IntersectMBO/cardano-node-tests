@@ -333,7 +333,6 @@ class TestNoConfidence:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    @pytest.mark.disabled(reason="Needs to be fixed in 9.0.0+")
     def test_committee_min_size(
         self,
         cluster_manager: cluster_management.ClusterManager,
