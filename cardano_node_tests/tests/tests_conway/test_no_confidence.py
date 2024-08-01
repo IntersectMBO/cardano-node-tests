@@ -1,6 +1,7 @@
 """Tests for Conway governance state of no confidence."""
 
 # pylint: disable=expression-not-assigned
+import dataclasses
 import logging
 
 import allure
@@ -333,7 +334,6 @@ class TestNoConfidence:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    @pytest.mark.disabled(reason="Needs to be fixed in 9.0.0+")
     def test_committee_min_size(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -368,6 +368,9 @@ class TestNoConfidence:
             ccs_to_resign=cc_members_to_resign,
             payment_addr=pool_user_lg.payment,
         )
+        new_governance_data = dataclasses.replace(
+            governance_data, cc_members=governance_data.cc_members[:1]
+        )
 
         # Testnet will be in (sort of) state of no confidence, respin is needed in case of
         # failure.
@@ -390,9 +393,25 @@ class TestNoConfidence:
                 ),
                 pool_user=pool_user_lg,
             )
+
+            # Try to vote with the resigned CC members
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                conway_common.cast_vote(
+                    cluster_obj=cluster,
+                    governance_data=governance_data,
+                    name_template=f"{temp_template}_resigned_voters",
+                    payment_addr=pool_user_lg.payment,
+                    action_txid=const_action_txid,
+                    action_ix=const_action_ix,
+                    approve_cc=True,
+                    approve_drep=True,
+                )
+            err_str = str(excinfo.value)
+            assert "(VotersDoNotExist" in err_str, err_str
+
             conway_common.cast_vote(
                 cluster_obj=cluster,
-                governance_data=governance_data,
+                governance_data=new_governance_data,
                 name_template=f"{temp_template}_constitution",
                 payment_addr=pool_user_lg.payment,
                 action_txid=const_action_txid,
