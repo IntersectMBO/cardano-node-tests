@@ -101,83 +101,6 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
-    @pytest.mark.smoke
-    def test_resign_committee_member(
-        self,
-        cluster_lock_governance: governance_utils.GovClusterT,
-        pool_user_lg: clusterlib.PoolUser,
-        use_build_cmd: bool,
-        submit_method: str,
-    ):
-        """Test Constitutional Committee Member resignation.
-
-        * resign from CC Member position
-        * check that CC Member resigned
-        """
-        cluster, governance_data = cluster_lock_governance
-        temp_template = common.get_test_id(cluster)
-
-        # Resignation of CC Member
-
-        _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (reqc.cli007, reqc.cip012)]
-
-        cc_auth_record = governance_data.cc_members[0]
-        auth_committee_state = cluster.g_conway_governance.query.committee_state()
-
-        res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
-            key_name=temp_template,
-            cold_vkey_file=cc_auth_record.cold_vkey_file,
-            resignation_metadata_url="http://www.cc-resign.com",
-            resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
-        )
-        reqc.cli007.success()
-
-        tx_files_res = clusterlib.TxFiles(
-            certificate_files=[res_cert],
-            signing_key_files=[pool_user_lg.payment.skey_file, cc_auth_record.cold_skey_file],
-        )
-
-        tx_output_res = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_res",
-            src_address=pool_user_lg.payment.address,
-            submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
-            tx_files=tx_files_res,
-        )
-
-        cluster.wait_for_new_block(new_blocks=2)
-        res_committee_state = cluster.g_conway_governance.query.committee_state()
-        member_key = f"keyHash-{cc_auth_record.hot_vkey_hash}"
-        res_member_rec = res_committee_state["committee"].get(member_key)
-        assert (
-            not res_member_rec or res_member_rec["hotCredsAuthStatus"]["tag"] == "MemberResigned"
-        ), "CC Member not resigned"
-        reqc.cip012.success()
-
-        res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
-        assert (
-            clusterlib.filter_utxos(utxos=res_out_utxos, address=pool_user_lg.payment.address)[
-                0
-            ].amount
-            == clusterlib.calculate_utxos_balance(tx_output_res.txins) - tx_output_res.fee
-        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
-
-        # Check CC member in db-sync
-        dbsync_utils.check_committee_member_registration(
-            cc_member_cold_key=cc_auth_record.cold_vkey_hash, committee_state=auth_committee_state
-        )
-        dbsync_utils.check_committee_member_deregistration(
-            cc_member_cold_key=cc_auth_record.cold_vkey_hash
-        )
-        cluster.wait_for_new_epoch()
-
-    @allure.link(helpers.get_vcs_link())
-    @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_register_hot_key_no_cc_member(
@@ -340,6 +263,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
+    @pytest.mark.dbsync
     def test_add_rm_committee_members(  # noqa: C901
         self,
         cluster_lock_governance: governance_utils.GovClusterT,
@@ -354,7 +278,7 @@ class TestCommittee:
 
             - the first CC member is listed twice to test that it's not possible to add the same
               member multiple times
-            - the first CC member expires in 3 epochs, the second in 5 epochs
+            - the first CC member expires in 3 epochs, the second and third in 5 epochs
             - vote to disapprove the action
             - vote to approve the action
             - check that CC members votes have no effect
@@ -364,6 +288,7 @@ class TestCommittee:
             - check that the new CC members were added
             - check that it's not possible to vote on enacted action
 
+        * check that the first CC member has expired as expected
         * create the second "update committee" action to remove the second CC member
 
             - propose the action at the same epoch as the first action
@@ -376,11 +301,12 @@ class TestCommittee:
             - check that the action is enacted one epoch after the first action, due to the
               ratification delay
             - check that the second CC member was removed
-            - check that the first CC member has expired as expected
             - check that it's not possible to vote on enacted action
 
+        * resign the third CC member
         * check output of votes and action `view` commands
         * check deposit is returned to user reward account after enactment
+        * (optional) check committee members in db-sync
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         cluster, governance_data = cluster_lock_governance
@@ -449,6 +375,11 @@ class TestCommittee:
                 cold_vkey_file=cc_auth_record2.cold_key_pair.vkey_file,
                 cold_skey_file=cc_auth_record2.cold_key_pair.skey_file,
             ),
+            clusterlib.CCMember(
+                epoch=cluster.g_query.get_epoch() + 5,
+                cold_vkey_file=cc_auth_record3.cold_key_pair.vkey_file,
+                cold_skey_file=cc_auth_record3.cold_key_pair.skey_file,
+            ),
         ]
 
         def _auth_hot_keys() -> None:
@@ -457,11 +388,13 @@ class TestCommittee:
                 certificate_files=[
                     cc_auth_record1.auth_cert,
                     cc_auth_record2.auth_cert,
+                    cc_auth_record3.auth_cert,
                 ],
                 signing_key_files=[
                     pool_user_lg.payment.skey_file,
                     cc_auth_record1.cold_key_pair.skey_file,
                     cc_auth_record2.cold_key_pair.skey_file,
+                    cc_auth_record3.cold_key_pair.skey_file,
                 ],
             )
 
@@ -489,7 +422,7 @@ class TestCommittee:
                 committee_state=auth_committee_state,
                 name_template=f"{temp_template}_auth_{_cur_epoch}",
             )
-            for mk in (cc_member1_key, cc_member2_key):
+            for mk in (cc_member1_key, cc_member2_key, cc_member3_key):
                 auth_member_rec = auth_committee_state["committee"][mk]
                 assert (
                     auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
@@ -571,10 +504,53 @@ class TestCommittee:
 
             return add_cc_action, action_add_txid, action_add_ix
 
-        def _rem_member(
-            prev_action_txid: str, prev_action_ix: int
+        def _resign_member(res_member: clusterlib.CCMember) -> None:
+            """Resign a CC member."""
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (reqc.cli007, reqc.cip012)]
+
+            res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
+                key_name=temp_template,
+                cold_vkey_file=res_member.cold_vkey_file,
+                resignation_metadata_url="http://www.cc-resign.com",
+                resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+            )
+            reqc.cli007.success()
+
+            tx_files_res = clusterlib.TxFiles(
+                certificate_files=[res_cert],
+                signing_key_files=[pool_user_lg.payment.skey_file, res_member.cold_skey_file],
+            )
+
+            tx_output_res = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_res",
+                src_address=pool_user_lg.payment.address,
+                tx_files=tx_files_res,
+            )
+
+            cluster.wait_for_new_block(new_blocks=2)
+            res_committee_state = cluster.g_conway_governance.query.committee_state()
+            member_key = f"keyHash-{res_member.hot_vkey_hash}"
+            res_member_rec = res_committee_state["committee"].get(member_key)
+            assert (
+                not res_member_rec
+                or res_member_rec["hotCredsAuthStatus"]["tag"] == "MemberResigned"
+            ), "CC Member not resigned"
+            reqc.cip012.success()
+
+            res_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_res)
+            assert (
+                clusterlib.filter_utxos(utxos=res_out_utxos, address=pool_user_lg.payment.address)[
+                    0
+                ].amount
+                == clusterlib.calculate_utxos_balance(tx_output_res.txins) - tx_output_res.fee
+            ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+
+        def _remove_member(
+            rem_member: clusterlib.CCMember, prev_action_txid: str, prev_action_ix: int
         ) -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
-            """Remove the CC member."""
+            """Remove a CC member."""
             anchor_url_rem = "http://www.cc-rem.com"
             anchor_data_hash_rem = (
                 "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
@@ -587,7 +563,7 @@ class TestCommittee:
                 anchor_url=anchor_url_rem,
                 anchor_data_hash=anchor_data_hash_rem,
                 threshold=str(cluster.conway_genesis["committee"]["threshold"]),
-                rem_cc_members=[cc_members[1]],
+                rem_cc_members=[rem_member],
                 prev_action_txid=prev_action_txid,
                 prev_action_ix=prev_action_ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
@@ -639,9 +615,15 @@ class TestCommittee:
 
             return rem_cc_action, action_rem_txid, action_rem_ix
 
-        def _resign():
-            """Resign the CC members so it doesn't affect voting."""
+        def _resign_active():
+            """Resign the new CC members so they don't affect voting."""
             with helpers.change_cwd(testfile_temp_dir):
+                # Make sure we have enough time to finish in one epoch
+                clusterlib_utils.wait_for_epoch_interval(
+                    cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+                )
+
+                auth_committee_state = cluster.g_conway_governance.query.committee_state()
                 res_certs = [
                     cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
                         key_name=f"{temp_template}_res{i}",
@@ -649,7 +631,10 @@ class TestCommittee:
                         resignation_metadata_url="http://www.cc-resign.com",
                         resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
                     )
-                    for i, r in enumerate((cc_auth_record1, cc_auth_record2))
+                    for i, r in enumerate((cc_auth_record1, cc_auth_record2, cc_auth_record3))
+                    if governance_utils.is_cc_active(
+                        auth_committee_state["committee"].get(f"keyHash-{r.key_hash}") or {}
+                    )
                 ]
 
                 tx_files_res = clusterlib.TxFiles(
@@ -682,19 +667,29 @@ class TestCommittee:
             elif curr_epoch > cc_member1_expire:
                 assert member_rec["status"] == "Expired", "CC Member should be expired"
 
+        def _check_cc_member2_removed(gov_state: tp.Dict[str, tp.Any]):
+            cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
+                cc_member2_key
+            )
+            assert not cc_member_val, "Removed committee member still present"
+
         def _check_add_state(gov_state: tp.Dict[str, tp.Any]):
-            for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
+            for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key, cc_member3_key)):
                 cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
                     _cc_member_key
                 )
                 assert cc_member_val, "New committee member not found"
                 assert cc_member_val == cc_members[i].epoch
 
-        def _check_rem_state(gov_state: tp.Dict[str, tp.Any]):
-            cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
-                cc_member2_key
+        def _check_resign_dbsync(res_member: clusterlib.CCMember) -> None:
+            auth_committee_state = cluster.g_conway_governance.query.committee_state()
+            dbsync_utils.check_committee_member_registration(
+                cc_member_cold_key=res_member.cold_vkey_hash,
+                committee_state=auth_committee_state,
             )
-            assert not cc_member_val, "Removed committee member still present"
+            dbsync_utils.check_committee_member_deregistration(
+                cc_member_cold_key=res_member.cold_vkey_hash
+            )
 
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -707,14 +702,17 @@ class TestCommittee:
 
         # Create an action to remove CC member. Use add action as previous action, as the add
         # action will be ratified first.
-        rem_cc_action, action_rem_txid, action_rem_ix = _rem_member(
-            prev_action_txid=action_add_txid, prev_action_ix=action_add_ix
+        rem_cc_action, action_rem_txid, action_rem_ix = _remove_member(
+            rem_member=cc_members[1], prev_action_txid=action_add_txid, prev_action_ix=action_add_ix
         )
 
         _cur_epoch = cluster.g_query.get_epoch()
         assert _cur_epoch == actions_epoch, "Haven't managed to submit the proposals in one epoch"
 
         reqc.cip067.start(url=helpers.get_vcs_link())
+
+        # Make sure the voting happens in next epoch
+        cluster.wait_for_new_epoch(padding_seconds=5)
 
         # Vote & disapprove the add action
         conway_common.cast_vote(
@@ -730,7 +728,7 @@ class TestCommittee:
         )
 
         # Vote & approve the add action
-        request.addfinalizer(_resign)
+        request.addfinalizer(_resign_active)
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip061_01, reqc.cip061_03, reqc.cip040)]
         if is_drep_total_below_threshold:
@@ -830,7 +828,7 @@ class TestCommittee:
         _check_cc_member1_expired(committee_state=rat_add_committee_state, curr_epoch=_cur_epoch)
 
         xfail_ledger_4001_msgs = set()
-        for _cc_member_key in (cc_member1_key, cc_member2_key):
+        for _cc_member_key in (cc_member1_key, cc_member2_key, cc_member3_key):
             rat_add_member_rec = rat_add_committee_state["committee"].get(_cc_member_key) or {}
             if rat_add_member_rec:
                 assert (
@@ -840,10 +838,6 @@ class TestCommittee:
                 xfail_ledger_4001_msgs.add(
                     "Newly elected CC members are removed during ratification"
                 )
-
-        assert not rat_add_committee_state["committee"].get(
-            cc_member3_key
-        ), "Non-elected unrecognized CC member was not removed"
 
         # Authorize hot keys of new CC members. The members were elected and they can already place
         # "prevotes" that will take effect next epoch when the CC members are enacted.
@@ -859,7 +853,7 @@ class TestCommittee:
         )
 
         reqc.cip073_03.start(url=helpers.get_vcs_link())
-        _check_add_state(enact_add_gov_state)
+        _check_add_state(gov_state=enact_add_gov_state)
         [r.success() for r in (reqc.cip040, reqc.cip061_01, reqc.cip061_03, reqc.cip073_03)]
         if is_drep_total_below_threshold:
             reqc.cip064_01.success()
@@ -876,7 +870,7 @@ class TestCommittee:
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip009, reqc.cip010)]
-        for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key)):
+        for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key, cc_member3_key)):
             enact_add_member_rec = enact_add_committee_state["committee"][_cc_member_key]
             assert (
                 xfail_ledger_4001_msgs
@@ -912,20 +906,24 @@ class TestCommittee:
         assert rat_action, "Action not found in ratified actions"
         reqc.cip038_01.success()
 
-        # Disapprove ratified removal action, the voting shouldn't have any effect
-        conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_rem_after_ratification",
-            payment_addr=pool_user_lg.payment,
-            action_txid=action_rem_txid,
-            action_ix=action_rem_ix,
-            approve_drep=False,
-            approve_spo=False,
-        )
+        # The proposal was enacted, but it is already expired
+        assert _cur_epoch == actions_epoch + 3, "Unexpected epoch"
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_rem_after_ratification",
+                payment_addr=pool_user_lg.payment,
+                action_txid=action_rem_txid,
+                action_ix=action_rem_ix,
+                approve_drep=False,
+                approve_spo=False,
+            )
+        err_str = str(excinfo.value)
+        assert "(VotingOnExpiredGovAction" in err_str, err_str
 
         next_rat_rem_state = enact_add_gov_state["nextRatifyState"]
-        _check_rem_state(gov_state=next_rat_rem_state["nextEnactState"])
+        _check_cc_member2_removed(gov_state=next_rat_rem_state["nextEnactState"])
         assert next_rat_rem_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after ratification
@@ -940,7 +938,7 @@ class TestCommittee:
         conway_common.save_gov_state(
             gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{_cur_epoch}"
         )
-        _check_rem_state(gov_state=enact_rem_gov_state)
+        _check_cc_member2_removed(gov_state=enact_rem_gov_state)
 
         # Check committee state after enactment of removal action
         enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
@@ -968,6 +966,14 @@ class TestCommittee:
             )
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
+
+        # Resign CC member
+        _resign_member(res_member=cc_members[2])
+        dbsync_resign_err = ""
+        try:
+            _check_resign_dbsync(res_member=cc_members[2])
+        except Exception as excp:
+            dbsync_resign_err = str(excp)
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=add_cc_action)
@@ -1000,6 +1006,10 @@ class TestCommittee:
             ledger_4001 = issues.ledger_4001.copy()
             ledger_4001.message = "; ".join(xfail_ledger_4001_msgs)
             ledger_4001.finish_test()
+
+        if dbsync_resign_err:
+            _msg = f"db-sync error: {dbsync_resign_err}"
+            raise AssertionError(_msg)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
