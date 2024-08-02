@@ -143,6 +143,7 @@ class TxRecord:
     size: int
     invalid_before: tp.Optional[int]
     invalid_hereafter: tp.Optional[int]
+    treasury_donation: int
     txins: tp.List[UTxORecord]
     txouts: tp.List[UTxORecord]
     mint: tp.List[UTxORecord]
