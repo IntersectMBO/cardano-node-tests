@@ -524,6 +524,13 @@ class TreasuryWithdrawalDBRow:
     amount: int
 
 
+@dataclasses.dataclass(frozen=True)
+class OffChainVoteFetchErrorDBRow:
+    id: int
+    voting_anchor_id: int
+    fetch_error: str
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1331,3 +1338,19 @@ def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBR
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield TreasuryWithdrawalDBRow(*result)
+
+
+def query_off_chain_vote_fetch_error(
+    voting_anchor_id: int,
+) -> tp.Generator[OffChainVoteFetchErrorDBRow, None, None]:
+    """Query off_chain_vote_fetch_error table in db-sync."""
+    query = (
+        "SELECT"
+        " id, voting_anchor_id, fetch_error "
+        "FROM off_chain_vote_fetch_error "
+        "WHERE off_chain_vote_fetch_error.voting_anchor_id = %s;"
+    )
+
+    with execute(query=query, vars=(voting_anchor_id,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield OffChainVoteFetchErrorDBRow(*result)
