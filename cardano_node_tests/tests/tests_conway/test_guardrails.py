@@ -166,7 +166,7 @@ def cluster_with_constitution(
     collaterals = clusterlib_utils.create_collaterals(
         cluster=cluster,
         payment_addr=pool_user_lg.payment,
-        temp_template=f"{temp_template}_step1",
+        temp_template=f"{temp_template}_collateral",
         tx_outs=collateral_tx_outs,
     )
 
