@@ -817,7 +817,8 @@ class TestGovernanceGuardrails:
             _get_param_max_value(cluster_with_constitution, "20[1]")
         )
 
-        [r.start(url=helpers.get_vcs_link()) for r in [reqc.gr009a, reqc.gr009b]]
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.gr009a, reqc.gr009b)]
 
         # "maxTxExecutionUnits must not be negative"
         # Note: Negative value is not allowed by the CLI before reaching the plutus script
@@ -884,7 +885,8 @@ class TestGovernanceGuardrails:
             _get_param_max_value(cluster_with_constitution, "21[1]")
         )
 
-        [r.start(url=helpers.get_vcs_link()) for r in [reqc.gr010a, reqc.gr010b]]
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.gr010a, reqc.gr010b)]
         # "maxBlockExecutionUnits must not be negative"
         # Note: Negative value is not allowed by the CLI before reaching the plutus script
         # so we can't test this case as guardrails from CLI it should be tested in the ledger level
@@ -1587,7 +1589,8 @@ class TestGovernanceGuardrails:
         cost_proposal_file = data_dir / "cost_models_list_v3.json"
 
         # Check that guardrails script accepts cost models
-        [r.start(url=helpers.get_vcs_link()) for r in [reqc.cip028, reqc.cip036]]
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cip028, reqc.cip036)]
         valid_proposals = [
             clusterlib_utils.UpdateProposal(
                 arg="--cost-model-file",
