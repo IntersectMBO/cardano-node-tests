@@ -1,13 +1,13 @@
 """Tests for Conway governance guardrails."""
 
 # pylint: disable=expression-not-assigned
+import dataclasses
 import fractions
 import json
 import logging
+import pathlib as pl
 import random
 import typing as tp
-from dataclasses import dataclass
-from pathlib import Path
 
 import allure
 import pytest
@@ -104,12 +104,12 @@ def payment_addr(
     return addr
 
 
-@dataclass
+@dataclasses.dataclass(frozen=True)
 class ClusterWithConstitutionRecord:
     """Class to store the cluster with constitution record."""
 
     cluster: clusterlib.ClusterLib
-    constitution_script_file: Path
+    constitution_script_file: pl.Path
     constitution_script_hash: str
     default_constitution: tp.Dict[str, tp.Any]
     pool_user: clusterlib.PoolUser
@@ -136,7 +136,7 @@ def cluster_with_constitution(
             constitution_script_file
         )
 
-        data_dir = Path(__file__).parent.parent / "data"
+        data_dir = pl.Path(__file__).parent.parent / "data"
         default_constitution_file = data_dir / "defaultConstitution.json"
         default_constitution = json.loads(default_constitution_file.read_text())
 
@@ -395,7 +395,7 @@ def _get_param_max_value(
     return min_of_max_values
 
 
-@dataclass
+@dataclasses.dataclass(frozen=True)
 class GuardrailTestParam:
     """Class to store parameter information for the guardrail test."""
 
@@ -1583,7 +1583,7 @@ class TestGovernanceGuardrails:
     def test_guardrail_cost_models(self, cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test costModels guardrails defined in the key "18" of default constitution."""
         # Sample cost model data file
-        data_dir = Path(__file__).parent.parent / "data"
+        data_dir = pl.Path(__file__).parent.parent / "data"
         cost_proposal_file = data_dir / "cost_models_list_v3.json"
 
         # Check that guardrails script accepts cost models
