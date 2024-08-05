@@ -70,7 +70,7 @@ def payment_addr(
         addr,
         cluster_obj=cluster,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
-        amount=100000_000_000,
+        amount=10_000_000_000,
     )
 
     return addr
@@ -133,7 +133,7 @@ def cluster_with_constitution(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_yes",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=payment_addr,
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=True,
@@ -165,7 +165,7 @@ def cluster_with_constitution(
     ]
     collaterals = clusterlib_utils.create_collaterals(
         cluster=cluster,
-        payment_addr=pool_user_lg.payment,
+        payment_addr=payment_addr,
         temp_template=f"{temp_template}_collateral",
         tx_outs=collateral_tx_outs,
     )
@@ -228,7 +228,10 @@ def propose_param_changes(
     )
 
     tx_files = clusterlib.TxFiles(
-        signing_key_files=[pool_user_lg.payment.skey_file, payment_addr.skey_file],
+        signing_key_files=[
+            pool_user_lg.payment.skey_file,  # For collaterals
+            payment_addr.skey_file,
+        ],
     )
 
     # Make sure we have enough time to submit the proposal in one epoch
