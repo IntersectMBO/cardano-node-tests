@@ -20,8 +20,11 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -33,12 +36,36 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def pool_user_lg(
+def cluster_guardrails(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_utils.GovClusterT,
+) -> governance_utils.GovClusterT:
+    """Mark governance as "locked" and return instance of `clusterlib.ClusterLib`.
+
+    Also mark guardrails tests with "guardrails" marker. As such, all the tests will run
+    on a the same cluster instance where the initial setup was already done (by the first test).
+
+    Clenup (== respin the cluster instance) after the tests are finished.
+    """
+    cluster_obj = cluster_manager.get(
+        mark="guardrails",
+        use_resources=cluster_management.Resources.ALL_POOLS,
+        lock_resources=[cluster_management.Resources.COMMITTEE, cluster_management.Resources.DREPS],
+        cleanup=True,
+    )
+    governance_data = governance_setup.get_default_governance(
+        cluster_manager=cluster_manager, cluster_obj=cluster_obj
+    )
+    governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
+    return cluster_obj, governance_data
+
+
+@pytest.fixture
+def pool_user(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_guardrails: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
-    cluster, __ = cluster_lock_governance
+    cluster, __ = cluster_guardrails
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
     return conway_common.get_registered_pool_user(
@@ -52,10 +79,10 @@ def pool_user_lg(
 @pytest.fixture
 def payment_addr(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_utils.GovClusterT,
+    cluster_guardrails: governance_utils.GovClusterT,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
-    cluster, __ = cluster_lock_governance
+    cluster, __ = cluster_guardrails
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
@@ -85,103 +112,108 @@ class ClusterWithConstitutionRecord:
     constitution_script_file: Path
     constitution_script_hash: str
     default_constitution: tp.Dict[str, tp.Any]
-    pool_user_lg: clusterlib.PoolUser
+    pool_user: clusterlib.PoolUser
     payment_addr: clusterlib.AddressRecord
     collaterals: tp.List[clusterlib.UTXOData]
 
 
 @pytest.fixture
 def cluster_with_constitution(
-    cluster_lock_governance: governance_utils.GovClusterT,
-    pool_user_lg: clusterlib.PoolUser,
+    cluster_guardrails: governance_utils.GovClusterT,
+    pool_user: clusterlib.PoolUser,
     payment_addr: clusterlib.AddressRecord,
 ) -> ClusterWithConstitutionRecord:
     """Enact the constitution with guardrails plutus script and return constitution data."""
-    cluster, governance_data = cluster_lock_governance
-    temp_template = common.get_test_id(cluster)
+    # Make sure the setup is executed only by the first worker when running in parallel
+    shared_tmp = temptools.get_pytest_shared_tmp()
+    with locking.FileLockIfXdist(f"{shared_tmp}/constitution_script.lock"):
+        cluster, governance_data = cluster_guardrails
+        temp_template = common.get_test_id(cluster)
 
-    constitution_script_file = plutus_common.SCRIPTS_V3_DIR / "constitutionScriptV3.plutus"
-    # Obtain script hash
-    constitution_script_hash = cluster.g_conway_governance.get_script_hash(constitution_script_file)
-
-    data_dir = Path(__file__).parent.parent / "data"
-    default_constitution_file = data_dir / "defaultConstitution.json"
-    default_constitution = json.loads(default_constitution_file.read_text())
-
-    def _enact_script_constitution():
-        """Enact a new constitution with a plutus script."""
-        anchor_url = "http://www.const-action.com"
-        anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
-
-        constitution_url = "http://www.const-with-plutus.com"
-        constitution_hash = "0000000000000000000000000000000000000000000000000000000000000000"
-
-        _, action_txid, action_ix = conway_common.propose_change_constitution(
-            cluster_obj=cluster,
-            name_template=temp_template,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
-            constitution_url=constitution_url,
-            constitution_hash=constitution_hash,
-            pool_user=pool_user_lg,
-            constitution_script_hash=constitution_script_hash,
+        constitution_script_file = plutus_common.SCRIPTS_V3_DIR / "constitutionScriptV3.plutus"
+        # Obtain script hash
+        constitution_script_hash = cluster.g_conway_governance.get_script_hash(
+            constitution_script_file
         )
 
-        conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_yes",
+        data_dir = Path(__file__).parent.parent / "data"
+        default_constitution_file = data_dir / "defaultConstitution.json"
+        default_constitution = json.loads(default_constitution_file.read_text())
+
+        def _enact_script_constitution():
+            """Enact a new constitution with a plutus script."""
+            anchor_url = "http://www.const-action.com"
+            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+
+            constitution_url = "http://www.const-with-plutus.com"
+            constitution_hash = "0000000000000000000000000000000000000000000000000000000000000000"
+
+            _, action_txid, action_ix = conway_common.propose_change_constitution(
+                cluster_obj=cluster,
+                name_template=temp_template,
+                anchor_url=anchor_url,
+                anchor_data_hash=anchor_data_hash,
+                constitution_url=constitution_url,
+                constitution_hash=constitution_hash,
+                pool_user=pool_user,
+                constitution_script_hash=constitution_script_hash,
+            )
+
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_yes",
+                payment_addr=payment_addr,
+                action_txid=action_txid,
+                action_ix=action_ix,
+                approve_cc=True,
+                approve_drep=True,
+            )
+
+            # Wait for the action to be ratified
+            cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            rat_action = governance_utils.lookup_ratified_actions(
+                gov_state=rat_gov_state, action_txid=action_txid
+            )
+            assert rat_action, "Action not found in ratified actions"
+
+            # Wait for the action to be enacted
+            cluster.wait_for_new_epoch(padding_seconds=5)
+            new_constitution = cluster.g_conway_governance.query.constitution()
+            assert new_constitution["script"] == constitution_script_hash
+
+        cur_constitution = cluster.g_conway_governance.query.constitution()
+
+        # Enact the new constitution if the current one is not the one we expect
+        if cur_constitution.get("script") != constitution_script_hash:
+            if conway_common.is_in_bootstrap(cluster_obj=cluster):
+                pytest.skip("Cannot run update consitution during bootstrap period.")
+            if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
+                pytest.skip("Cannot run update constitution on non-local testnet.")
+
+            _enact_script_constitution()
+
+        # Create collateral utxo for plutus script
+        collateral_tx_outs = [
+            clusterlib.TxOut(address=pool_user.payment.address, amount=5_000_000),
+        ]
+        collaterals = clusterlib_utils.create_collaterals(
+            cluster=cluster,
             payment_addr=payment_addr,
-            action_txid=action_txid,
-            action_ix=action_ix,
-            approve_cc=True,
-            approve_drep=True,
+            temp_template=f"{temp_template}_collateral",
+            tx_outs=collateral_tx_outs,
         )
 
-        # Wait for the action to be ratified
-        cluster.wait_for_new_epoch(padding_seconds=5)
-        rat_gov_state = cluster.g_conway_governance.query.gov_state()
-        rat_action = governance_utils.lookup_ratified_actions(
-            gov_state=rat_gov_state, action_txid=action_txid
+        return ClusterWithConstitutionRecord(
+            cluster=cluster,
+            constitution_script_file=constitution_script_file,
+            constitution_script_hash=constitution_script_hash,
+            default_constitution=default_constitution,
+            pool_user=pool_user,
+            payment_addr=payment_addr,
+            collaterals=collaterals,
         )
-        assert rat_action, "Action not found in ratified actions"
-
-        # Wait for the action to be enacted
-        cluster.wait_for_new_epoch(padding_seconds=5)
-        new_constitution = cluster.g_conway_governance.query.constitution()
-        assert new_constitution["script"] == constitution_script_hash
-
-    cur_constitution = cluster.g_conway_governance.query.constitution()
-
-    # Enact the new constitution if the current one is not the one we expect
-    if cur_constitution.get("script") != constitution_script_hash:
-        if conway_common.is_in_bootstrap(cluster_obj=cluster):
-            pytest.skip("Cannot run update consitution during bootstrap period.")
-        if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
-            pytest.skip("Cannot run update constitution on non-local testnet.")
-
-        _enact_script_constitution()
-
-    # Create collateral utxo for plutus script
-    collateral_tx_outs = [
-        clusterlib.TxOut(address=pool_user_lg.payment.address, amount=5_000_000),
-    ]
-    collaterals = clusterlib_utils.create_collaterals(
-        cluster=cluster,
-        payment_addr=payment_addr,
-        temp_template=f"{temp_template}_collateral",
-        tx_outs=collateral_tx_outs,
-    )
-
-    return ClusterWithConstitutionRecord(
-        cluster=cluster,
-        constitution_script_file=constitution_script_file,
-        constitution_script_hash=constitution_script_hash,
-        default_constitution=default_constitution,
-        pool_user_lg=pool_user_lg,
-        payment_addr=payment_addr,
-        collaterals=collaterals,
-    )
 
 
 def propose_param_changes(
@@ -190,7 +222,7 @@ def propose_param_changes(
 ) -> str:
     """Build and submit update pparams action with specified proposals."""
     cluster = cluster_with_constitution.cluster
-    pool_user_lg = cluster_with_constitution.pool_user_lg
+    pool_user = cluster_with_constitution.pool_user
     payment_addr = cluster_with_constitution.payment_addr
 
     temp_template = common.get_test_id(cluster)
@@ -216,7 +248,7 @@ def propose_param_changes(
         cli_args=update_args,
         prev_action_txid=prev_action_rec.txid,
         prev_action_ix=prev_action_rec.ix,
-        deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+        deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
     )
 
     execution_units = (740000000, 8000000)
@@ -232,7 +264,7 @@ def propose_param_changes(
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[
-            pool_user_lg.payment.skey_file,  # For collaterals
+            pool_user.payment.skey_file,  # For collaterals
             payment_addr.skey_file,
         ],
     )
