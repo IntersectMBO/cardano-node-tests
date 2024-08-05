@@ -18,6 +18,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -112,9 +113,6 @@ def cluster_with_constitution(
         anchor_url = "http://www.const-action.com"
         anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
 
-        if conway_common.is_in_bootstrap(cluster_obj=cluster):
-            pytest.skip("Cannot run update consitution during bootstrap period.")
-
         constitution_url = "http://www.const-with-plutus.com"
         constitution_hash = "0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -157,6 +155,11 @@ def cluster_with_constitution(
 
     # Enact the new constitution if the current one is not the one we expect
     if cur_constitution.get("script") != constitution_script_hash:
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            pytest.skip("Cannot run update consitution during bootstrap period.")
+        if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
+            pytest.skip("Cannot run update constitution on non-local testnet.")
+
         _enact_script_constitution()
 
     # Create collateral utxo for plutus script
