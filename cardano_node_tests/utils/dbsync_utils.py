@@ -487,6 +487,8 @@ def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
             time.sleep(sleep_time)
         try:
             response = query_func()
+            if not response:
+                raise AssertionError(NO_REPONSE_STR)
             break
         except AssertionError as exc:
             if NO_REPONSE_STR in str(exc) and time.time() < end_time:
@@ -1119,7 +1121,7 @@ def check_drep_registration(
 
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
 
-    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registartion"
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registration"
     assert (
         drep_state[0][0]["keyHash"] == drep_data.hash_hex
     ), f"DRep {drep.drep_id} not present in registration table in db-sync"
@@ -1139,7 +1141,7 @@ def check_drep_deregistration(
 
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=-drep.deposit)
 
-    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistartion"
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistration"
     assert (
         drep.drep_id == drep_data.hash_hex
     ), f"Deregistered DRep {drep.drep_id} not present in registration table in db-sync"
@@ -1249,3 +1251,45 @@ def check_reward_rest(
             row.spendable_epoch == row.earned_epoch + 1
         ), "Wrong relation between earned and spendable epochs in db-sync"
         assert row.type == "treasury", "Type not marked as treasury in db-sync"
+
+
+def check_off_chain_drep_registration(
+    drep: governance_utils.DRepRegistration, metadata: dict
+) -> None:
+    """Check drep off chain data in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    errors = []
+
+    drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
+
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistration"
+
+    def _query_func() -> list:
+        return list(
+            dbsync_queries.query_off_chain_vote_drep_data(
+                voting_anchor_id=drep_data.voting_anchor_id
+            )
+        )
+
+    drep_off_chain_metadata = retry_query(query_func=_query_func, timeout=300)[0]
+    expected_metadata = metadata["body"]
+
+    if drep_off_chain_metadata.payment_address != expected_metadata["paymentAddress"]:
+        errors.append("'paymentAddress' value is different than expected;")
+
+    if drep_off_chain_metadata.given_name != expected_metadata["givenName"]:
+        errors.append("'givenName' value is different than expected;")
+
+    if drep_off_chain_metadata.objectives != expected_metadata["objectives"]:
+        errors.append("'objectives' value is different than expected;")
+
+    if drep_off_chain_metadata.motivations != expected_metadata["motivations"]:
+        errors.append("'motivations' value is different than expected;")
+
+    if drep_off_chain_metadata.qualifications != expected_metadata["qualifications"]:
+        errors.append("'qualifications' value is different than expected;")
+
+    if errors:
+        raise AssertionError("\n".join(errors))
