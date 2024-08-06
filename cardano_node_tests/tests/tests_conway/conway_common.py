@@ -456,6 +456,7 @@ def propose_change_constitution(
         src_address=pool_user.payment.address,
         use_build_cmd=True,
         tx_files=tx_files,
+        fee_buffer=2_000_000,
     )
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
