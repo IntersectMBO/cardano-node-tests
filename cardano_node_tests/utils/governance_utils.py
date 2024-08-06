@@ -574,9 +574,9 @@ def check_vote_view(  # noqa: C901
         }
     }
 
-    action_view_out = cluster_obj.g_conway_governance.vote.view(vote_file=vote_data.vote_file)
+    vote_view_out = cluster_obj.g_conway_governance.vote.view(vote_file=vote_data.vote_file)
 
-    assert action_view_out == expected_vote_out, f"{action_view_out} != {expected_vote_out}"
+    assert vote_view_out == expected_vote_out, f"{vote_view_out} != {expected_vote_out}"
 
 
 def wait_delayed_ratification(
