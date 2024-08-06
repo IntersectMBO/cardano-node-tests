@@ -808,7 +808,7 @@ class TestGovernanceGuardrails:
         """
         Test maxTxExecutionUnits guardrail defined in the key "20" of default constitution.
 
-        * Note: Special case for Tx Execution units where parameter value is of format
+        Note: Special case for Tx Execution units where parameter value is of format
         (steps, memory) which is incompatible with perform_predicates_check function.
         """
         # Find the upper bound for the maxTxExecutionUnits[memory] from the default constitution
@@ -876,7 +876,7 @@ class TestGovernanceGuardrails:
         """
         Test maxBlockExecutionUnits guardrails defined in the key "21" of default constitution.
 
-        * Note: Special case for Block Execution units where parameter value is of format
+        Note: Special case for Block Execution units where parameter value is of format
         (steps, memory) which is incompatible with perform_predicates_check function.
         """
         # Find the upper bound for the maxBlockExecutionUnits[memory] from the default constitution
