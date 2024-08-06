@@ -15,6 +15,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
@@ -291,17 +292,20 @@ def propose_param_changes(
     return action_txid
 
 
-def check_invalid_proposals(
+def check_invalid_proposals(  # noqa: C901
     cluster_with_constitution: ClusterWithConstitutionRecord,
     proposals: tp.List[clusterlib_utils.UpdateProposal],
 ):
     """Check that the guardrails are enforced."""
-    with pytest.raises(clusterlib.CLIError) as excinfo:
-        propose_param_changes(
+    action_txid = ""
+    err_msg = ""
+    try:
+        action_txid = propose_param_changes(
             cluster_with_constitution=cluster_with_constitution,
             proposals=proposals,
         )
-    err_msg = str(excinfo.value)
+    except Exception as excp:
+        err_msg = str(excp)
 
     if "expecting digit" in err_msg:
         # In case cli throws error beforehand due to invalid input
@@ -324,6 +328,14 @@ def check_invalid_proposals(
     elif "Failed reading" in err_msg:
         # In case of invalid value
         assert "Failed reading" in err_msg, err_msg
+    elif err_msg == "":
+        action_gov_state = cluster_with_constitution.cluster.g_conway_governance.query.gov_state()
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
+        if prop_action:
+            issues.cli_860.finish_test()
+        assert err_msg, "Expected an error from cardano-cli"
     else:
         assert "The machine terminated because of an error" in err_msg, err_msg
 
