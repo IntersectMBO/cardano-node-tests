@@ -963,13 +963,13 @@ Governance guardrails User Stories
    -
 
       - |image-GR007a|
-      - Prevent an unconstitutional `executionUnitPrices[priceMemory]` value
+      - Prevent an unconstitutional `executionUnitPrices [priceMemory]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.007a>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `executionUnitPrices[priceMemory]`.
    -
 
       - |image-GR007b|
-      - Prevent an unconstitutional `executionUnitPrices[priceSteps]` value
+      - Prevent an unconstitutional `executionUnitPrices [priceSteps]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.007b>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `executionUnitPrices[priceSteps]`.
    -
@@ -981,25 +981,25 @@ Governance guardrails User Stories
    -
 
       - |image-GR009a|
-      - Prevent an unconstitutional `maxTxExecutionUnits[memory]` value
+      - Prevent an unconstitutional `maxTxExecutionUnits [memory]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.009a>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `maxTxExecutionUnits[memory]`.
    -
 
       - |image-GR009b|
-      - Prevent an unconstitutional `maxTxExecutionUnits[steps]` value
+      - Prevent an unconstitutional `maxTxExecutionUnits [steps]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.009b>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `maxTxExecutionUnits[steps]`.
    -
 
       - |image-GR010a|
-      - Prevent an unconstitutional `maxBlockExecutionUnits[memory]` value
+      - Prevent an unconstitutional `maxBlockExecutionUnits [memory]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.010a>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `maxBlockExecutionUnits[memory]`.
    -
 
       - |image-GR010b|
-      - Prevent an unconstitutional `maxBlockExecutionUnits[steps]` value
+      - Prevent an unconstitutional `maxBlockExecutionUnits [steps]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.010b>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `maxBlockExecutionUnits[steps]`.
    -
@@ -1023,91 +1023,91 @@ Governance guardrails User Stories
    -
 
       - |image-GR014a|
-      - Prevent an unconstitutional `poolVotingThresholds[motionNoConfidence]` value
+      - Prevent an unconstitutional `poolVotingThresholds [motionNoConfidence]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.014a>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `poolVotingThresholds[motionNoConfidence]`.
    -
 
       - |image-GR014b|
-      - Prevent an unconstitutional `poolVotingThresholds[committeeNormal]` value
+      - Prevent an unconstitutional `poolVotingThresholds [committeeNormal]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.014b>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `poolVotingThresholds[committeeNormal]`.
    -
 
       - |image-GR014c|
-      - Prevent an unconstitutional `poolVotingThresholds[committeeNoConfidence]` value
+      - Prevent an unconstitutional `poolVotingThresholds [committeeNoConfidence]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.014c>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `poolVotingThresholds[committeeNoConfidence]`.
    -
 
       - |image-GR014d|
-      - Prevent an unconstitutional `poolVotingThresholds[hardForkInitiation]` value
+      - Prevent an unconstitutional `poolVotingThresholds [hardForkInitiation]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.014d>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `poolVotingThresholds[hardForkInitiation]`.
    -
 
       - |image-GR014e|
-      - Prevent an unconstitutional `poolVotingThresholds[ppSecurityGroup]` value
+      - Prevent an unconstitutional `poolVotingThresholds [ppSecurityGroup]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.014e>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `poolVotingThresholds[ppSecurityGroup]`.
    -
 
       - |image-GR015a|
-      - Prevent an unconstitutional `dRepVotingThresholds[motionNoConfidence]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [motionNoConfidence]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015a>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[motionNoConfidence]`.
    -
 
       - |image-GR015b|
-      - Prevent an unconstitutional `dRepVotingThresholds[committeeNormal]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [committeeNormal]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015b>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[committeeNormal]`.
    -
 
       - |image-GR015c|
-      - Prevent an unconstitutional `dRepVotingThresholds[committeeNoConfidence]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [committeeNoConfidence]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015c>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[committeeNoConfidence]`.
    -
 
       - |image-GR015d|
-      - Prevent an unconstitutional `dRepVotingThresholds[updateToConstitution]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [updateToConstitution]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015d>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[updateToConstitution]`.
    -
 
       - |image-GR015e|
-      - Prevent an unconstitutional `dRepVotingThresholds[hardForkInitiation]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [hardForkInitiation]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015e>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[hardForkInitiation]`.
    -
 
       - |image-GR015f|
-      - Prevent an unconstitutional `dRepVotingThresholds[ppNetworkGroup]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [ppNetworkGroup]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015f>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[ppNetworkGroup]`.
    -
 
       - |image-GR015g|
-      - Prevent an unconstitutional `dRepVotingThresholds[ppEconomicGroup]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [ppEconomicGroup]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015g>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[ppEconomicGroup]`.
    -
 
       - |image-GR015h|
-      - Prevent an unconstitutional `dRepVotingThresholds[ppTechnicalGroup]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [ppTechnicalGroup]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015h>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[ppTechnicalGroup]`.
    -
 
       - |image-GR015i|
-      - Prevent an unconstitutional `dRepVotingThresholds[ppGovGroup]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [ppGovGroup]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015i>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[ppGovGroup]`.
    -
 
       - |image-GR015j|
-      - Prevent an unconstitutional `dRepVotingThresholds[treasuryWithdrawal]` value
+      - Prevent an unconstitutional `dRepVotingThresholds [treasuryWithdrawal]` value
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.015j>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `dRepVotingThresholds[treasuryWithdrawal]`.
    -
