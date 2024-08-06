@@ -192,7 +192,10 @@ def cluster_with_constitution(
             if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
                 pytest.skip("Cannot run update constitution on non-local testnet.")
 
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (reqc.cip015, reqc.cip031c_02)]
             _enact_script_constitution()
+            [r.success() for r in (reqc.cip015, reqc.cip031c_02)]
 
         # Create collateral utxo for plutus script
         collateral_tx_outs = [
@@ -651,7 +654,8 @@ class TestGovernanceGuardrails:
         self, cluster_with_constitution: ClusterWithConstitutionRecord
     ):
         """Test txFeePerByte guardrails defined in the key "0" of default constitution."""
-        reqc.gr001.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.gr001, reqc.cip066)]
         perform_predicates_check(
             cluster_with_constitution=cluster_with_constitution,
             param=GuardrailTestParam(
@@ -660,7 +664,7 @@ class TestGovernanceGuardrails:
                 param_name="txFeePerByte",
             ),
         )
-        reqc.gr001.success()
+        [r.success() for r in (reqc.gr001, reqc.cip066)]
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -862,7 +866,7 @@ class TestGovernanceGuardrails:
             cluster_with_constitution=cluster_with_constitution,
             proposals=valid_max_tx_execution_units_proposal,
         )
-        [r.success() for r in [reqc.gr009a, reqc.gr009b]]
+        [r.success() for r in (reqc.gr009a, reqc.gr009b)]
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -930,7 +934,7 @@ class TestGovernanceGuardrails:
             cluster_with_constitution=cluster_with_constitution,
             proposals=valid_max_block_execution_units_proposal,
         )
-        [r.success() for r in [reqc.gr010a, reqc.gr010b]]
+        [r.success() for r in (reqc.gr010a, reqc.gr010b)]
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -1601,4 +1605,4 @@ class TestGovernanceGuardrails:
         check_valid_proposals(
             cluster_with_constitution=cluster_with_constitution, proposals=valid_proposals
         )
-        [r.success() for r in [reqc.cip028, reqc.cip036]]
+        [r.success() for r in (reqc.cip028, reqc.cip036)]
