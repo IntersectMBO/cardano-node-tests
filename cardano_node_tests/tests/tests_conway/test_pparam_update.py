@@ -13,6 +13,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -1284,6 +1285,42 @@ class TestPParamUpdate:
         if db_errors_final:
             raise AssertionError("\n".join(db_errors_final))
         [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
+
+    @allure.link(helpers.get_vcs_link())
+    def test_pparam_negative_value(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test creation of pparam update with negative value."""
+        temp_template = common.get_test_id(cluster)
+
+        proposal = clusterlib_utils.UpdateProposal(
+            arg="--max-block-header-size", value=-3161913232, name="maxBlockHeaderSize"
+        )
+
+        update_args = clusterlib_utils.get_pparams_update_args(update_proposals=[proposal])
+        try:
+            action_data = cluster.g_conway_governance.action.create_pparams_update(
+                action_name=temp_template,
+                deposit_amt=100000000,
+                anchor_url="http://www.pparam-action.com",
+                anchor_data_hash="fb013f4b7ddb08fa20dd2974b8a4447598477886f544d71033da53390325cd37",
+                cli_args=update_args,
+                deposit_return_stake_vkey_file=DATA_DIR / "golden_stake.vkey",
+            )
+        except clusterlib.CLIError:
+            # TODO: check expected error message once cli issue 860 is fixed
+            return
+
+        action_view_out = cluster.g_conway_governance.action.view(
+            action_file=action_data.action_file
+        )
+        action_contents = action_view_out["governance action"]["contents"]
+        if action_contents[1]["maxBlockHeaderSize"] == 2160:
+            issues.cli_860.finish_test()
+
+        _msg = f"Unexpected action content:\n{action_contents}"
+        raise AssertionError(_msg)
 
 
 class TestPParamData:
