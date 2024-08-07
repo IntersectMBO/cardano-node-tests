@@ -507,6 +507,74 @@ class TestDReps:
         if errors_final:
             raise AssertionError("\n".join(errors_final))
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.needs_dbsync
+    @pytest.mark.smoke
+    def test_register_wrong_metadata(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+    ):
+        """Register a DRep with wrong metadata url.
+
+        * register DRep with mismatch url metadata vs metadata file
+        * check that DRep was registered
+        * verify that dbsync is returning an error
+        """
+        temp_template = common.get_test_id(cluster)
+
+        drep_metadata_file = DATA_DIR / "governance_action_anchor.json"
+
+        # Register DRep
+        drep_metadata_url = "https://tinyurl.com/w7vd3ek6"
+        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+            drep_metadata_file=drep_metadata_file
+        )
+
+        reg_drep = governance_utils.get_drep_reg_record(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            drep_metadata_url=drep_metadata_url,
+            drep_metadata_hash=drep_metadata_hash,
+        )
+
+        tx_files_reg = clusterlib.TxFiles(
+            certificate_files=[reg_drep.registration_cert],
+            signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+        )
+
+        tx_output_reg = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg",
+            src_address=payment_addr.address,
+            tx_files=tx_files_reg,
+            deposit=reg_drep.deposit,
+        )
+
+        reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_reg)
+        assert (
+            clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output_reg.txins)
+            - tx_output_reg.fee
+            - reg_drep.deposit
+        ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        reg_drep_state = cluster.g_conway_governance.query.drep_state(
+            drep_vkey_file=reg_drep.key_pair.vkey_file
+        )
+        assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
+
+        drep_data = dbsync_utils.get_drep(drep_hash=reg_drep.drep_id, drep_deposit=reg_drep.deposit)
+
+        def _query_func():
+            dbsync_utils.check_off_chain_vote_fetch_error(
+                voting_anchor_id=drep_data.voting_anchor_id
+            )
+
+        reqc.db021.start(url=helpers.get_vcs_link())
+        dbsync_utils.retry_query(query_func=_query_func, timeout=300)
+        reqc.db021.success()
+
 
 class TestNegativeDReps:
     """Tests for DReps where we test failing condition."""
