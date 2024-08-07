@@ -1282,6 +1282,13 @@ class TestPParamUpdate:
         if fin_voted_votes.drep:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
 
+        try:
+            dbsync_utils.check_proposal_refunds(
+                stake_address=pool_user_lg.stake.address, refunds_num=submitted_proposal_count
+            )
+        except AssertionError as exc:
+            db_errors_final.append(f"db-sync proposal refunds error: {exc}")
+
         if db_errors_final:
             raise AssertionError("\n".join(db_errors_final))
         [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]

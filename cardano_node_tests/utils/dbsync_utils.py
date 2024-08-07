@@ -987,6 +987,28 @@ def check_conway_param_update_enactment(
     return curr_params_db
 
 
+def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
+    """Check proposal refunds in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    failures = []
+    rewards_rest = list(dbsync_queries.query_address_reward_rest(stake_address))
+    assert refunds_num == len(
+        rewards_rest
+    ), f"Expected {refunds_num} refunds, got: {len(rewards_rest)}"
+    for reward in rewards_rest:
+        if reward.type != "proposal_refund":
+            failures.append(f"Expected proposal refund, got: {reward.type}")
+        if reward.spendable_epoch != reward.earned_epoch + 1:
+            failures.append("Incorrect relation between spendable and earned epochs")
+
+    if failures:
+        failures_str = "\n".join(failures)
+        msg = f"Wrong values for proposal refunds in db-sync:\n{failures_str}"
+        raise AssertionError(msg)
+
+
 def check_conway_gov_action_proposal_description(
     update_proposal: dict, txhash: str = ""
 ) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
