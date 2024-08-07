@@ -24,6 +24,7 @@ from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -32,6 +33,7 @@ from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
@@ -436,6 +438,85 @@ class TestDReps:
             errors_final.append(f"DB-Sync unexpected DRep deregistration error: {str_exc}")
         if errors_final:
             raise AssertionError("\n".join(errors_final))
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.needs_dbsync
+    @pytest.mark.smoke
+    def test_register_wrong_metadata(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+    ):
+        """Register a DRep with wrong metadata url.
+
+        * register DRep with mismatch url metadata vs metadata file
+        * check that DRep was registered
+        * verify that dbsync is returning an error
+        """
+        # pylint: disable=too-many-locals
+        temp_template = common.get_test_id(cluster)
+
+        drep_metadata_file = DATA_DIR / "governance_action_anchor.json"
+
+        # Register DRep
+        drep_metadata_url = "https://tinyurl.com/w7vd3ek6"
+        reqc.cli012.start(url=helpers.get_vcs_link())
+        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+            drep_metadata_file=drep_metadata_file
+        )
+
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cli008, reqc.cli009, reqc.cli010, reqc.cip021)]
+        reg_drep = governance_utils.get_drep_reg_record(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            drep_metadata_url=drep_metadata_url,
+            drep_metadata_hash=drep_metadata_hash,
+        )
+        [r.success() for r in (reqc.cli008, reqc.cli009, reqc.cli010, reqc.cip021)]
+
+        tx_files_reg = clusterlib.TxFiles(
+            certificate_files=[reg_drep.registration_cert],
+            signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+        )
+
+        tx_output_reg = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg",
+            src_address=payment_addr.address,
+            tx_files=tx_files_reg,
+            deposit=reg_drep.deposit,
+        )
+
+        reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_reg)
+        assert (
+            clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output_reg.txins)
+            - tx_output_reg.fee
+            - reg_drep.deposit
+        ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        reqc.cli033.start(url=helpers.get_vcs_link())
+        reg_drep_state = cluster.g_conway_governance.query.drep_state(
+            drep_vkey_file=reg_drep.key_pair.vkey_file
+        )
+        assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
+        reqc.cli033.success()
+
+        drep_data = dbsync_utils.get_drep(drep_hash=reg_drep.drep_id, drep_deposit=reg_drep.deposit)
+
+        def _query_func():
+            return list(
+                dbsync_queries.query_off_chain_vote_fetch_error(
+                    voting_anchor_id=drep_data.voting_anchor_id
+                )
+            )
+
+        off_chain_error = dbsync_utils.retry_query(query_func=_query_func, timeout=300)
+
+        fetch_error_str = off_chain_error[-1].fetch_error or ""
+
+        assert "Hash mismatch when fetching metadata" in fetch_error_str
 
 
 class TestNegativeDReps:
