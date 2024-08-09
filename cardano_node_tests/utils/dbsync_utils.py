@@ -990,7 +990,7 @@ def check_conway_param_update_enactment(
 def check_conway_gov_action_proposal_description(
     update_proposal: dict, txhash: str = ""
 ) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
-    """Check expected values in the param proposal table in db-sync."""
+    """Check expected values in the gov_action_proposal table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
@@ -1006,7 +1006,7 @@ def check_conway_gov_action_proposal_description(
 def get_gov_action_proposals(
     txhash: str = "", type: str = ""
 ) -> tp.List[dbsync_queries.GovActionProposalDBRow]:
-    """Get goverment action proposal from db-sync."""
+    """Get government action proposal from db-sync."""
     gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash, type))
     return gov_action_proposals
 
