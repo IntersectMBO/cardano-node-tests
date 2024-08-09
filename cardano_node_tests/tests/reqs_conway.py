@@ -221,3 +221,11 @@ gr026 = __r("GR026")
 gr027 = __r("GR027")
 gr028 = __r("GR028")
 gr029 = __r("GR029")
+
+# DB Sync Conway related tables
+# https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md
+db001 = __r("drep_hash")
+db002 = __r("committee_hash")
+db003 = __r("delegation_vote")
+db004 = __r("committee_registration")
+db005 = __r("committee_de_registration")
