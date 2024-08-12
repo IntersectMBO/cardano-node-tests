@@ -1287,6 +1287,7 @@ class TestPParamUpdate:
         [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_pparam_negative_value(
         self,
         cluster: clusterlib.ClusterLib,
