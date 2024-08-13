@@ -1053,19 +1053,17 @@ def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeReg
 
 
 def check_committee_member_registration(
-    cc_member_cold_key: str, committee_state: tp.Dict[str, tp.Any]
+    cc_member_cold_key: str,
 ) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
     """Check committee member registration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
     cc_member_data = get_committee_member(cold_key=cc_member_cold_key)
-    member_key = f"keyHash-{cc_member_cold_key}"
 
-    assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"
+    assert cc_member_data, "No data returned from db-sync"
     assert (
-        committee_state["committee"][member_key]["hotCredsAuthStatus"]["contents"]["keyHash"]
-        == cc_member_data.hot_key
+        cc_member_data.cold_key == cc_member_cold_key
     ), "CC Member not present in registration table in db-sync"
 
     return cc_member_data

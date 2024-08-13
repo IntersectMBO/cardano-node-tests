@@ -369,16 +369,19 @@ class TestCommittee:
                 epoch=cc_member1_expire,
                 cold_vkey_file=cc_auth_record1.cold_key_pair.vkey_file,
                 cold_skey_file=cc_auth_record1.cold_key_pair.skey_file,
+                cold_vkey_hash=cc_auth_record1.key_hash,
             ),
             clusterlib.CCMember(
                 epoch=cluster.g_query.get_epoch() + 5,
                 cold_vkey_file=cc_auth_record2.cold_key_pair.vkey_file,
                 cold_skey_file=cc_auth_record2.cold_key_pair.skey_file,
+                cold_vkey_hash=cc_auth_record2.key_hash,
             ),
             clusterlib.CCMember(
                 epoch=cluster.g_query.get_epoch() + 5,
                 cold_vkey_file=cc_auth_record3.cold_key_pair.vkey_file,
                 cold_skey_file=cc_auth_record3.cold_key_pair.skey_file,
+                cold_vkey_hash=cc_auth_record3.key_hash,
             ),
         ]
 
@@ -682,10 +685,8 @@ class TestCommittee:
                 assert cc_member_val == cc_members[i].epoch
 
         def _check_resign_dbsync(res_member: clusterlib.CCMember) -> None:
-            auth_committee_state = cluster.g_conway_governance.query.committee_state()
             dbsync_utils.check_committee_member_registration(
-                cc_member_cold_key=res_member.cold_vkey_hash,
-                committee_state=auth_committee_state,
+                cc_member_cold_key=res_member.cold_vkey_hash
             )
             dbsync_utils.check_committee_member_deregistration(
                 cc_member_cold_key=res_member.cold_vkey_hash
