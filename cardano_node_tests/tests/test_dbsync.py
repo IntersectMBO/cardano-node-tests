@@ -238,14 +238,21 @@ class TestDBSync:
 
         # TODO: `PlutusScriptV1` was replaced with `PlutusV1` in node version 8.0.0
         pp_cost_model_v1 = pp_cost_models.get("PlutusV1") or pp_cost_models.get("PlutusScriptV1")
-        pp_cost_model_v2 = pp_cost_models.get("PlutusV2") or pp_cost_models.get("PlutusScriptV2")
-
         assert (
             pp_cost_model_v1 == db_cost_models["PlutusV1"]
-        ), "PlutusV1 cost model is not the expected"
+        ), "PlutusV1 cost model is not the expected one"
+
+        pp_cost_model_v2 = pp_cost_models.get("PlutusV2") or pp_cost_models.get("PlutusScriptV2")
+        # Cost models in Conway can have variable length. If the cost model is shorter than the max
+        # expected length, cardano-cli appends max integer values to the end of the list.
+        # When comparing with db-sync, we need to strip those appended values.
+        if len(pp_cost_model_v2) - 10 == len(db_cost_models["PlutusV2"]):
+            last_10_unique = set(pp_cost_model_v2[-10:])
+            if len(last_10_unique) == 1 and next(iter(last_10_unique)) == 9223372036854775807:
+                pp_cost_model_v2 = pp_cost_model_v2[:-10]
         assert (
             pp_cost_model_v2 == db_cost_models["PlutusV2"]
-        ), "PlutusV2 cost model is not the expected"
+        ), "PlutusV2 cost model is not the expected one"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
