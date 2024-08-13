@@ -15,7 +15,7 @@ from cardano_node_tests.utils import governance_utils
 
 LOGGER = logging.getLogger(__name__)
 
-NO_REPONSE_STR = "No response returned from db-sync:"
+NO_RESPONSE_STR = "No response returned from db-sync:"
 
 
 def get_address_reward(
@@ -475,7 +475,7 @@ def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
     """Wait a bit and retry a query until response is returned.
 
     A generic function that can be used by any query/check that raises `AssertionError` with
-    `NO_REPONSE_STR` until the expected data is returned.
+    `NO_RESPONSE_STR` until the expected data is returned.
     """
     end_time = time.time() + timeout
     repeat = 0
@@ -489,7 +489,7 @@ def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
             response = query_func()
             break
         except AssertionError as exc:
-            if NO_REPONSE_STR in str(exc) and time.time() < end_time:
+            if NO_RESPONSE_STR in str(exc) and time.time() < end_time:
                 repeat += 1
                 continue
             raise
@@ -711,7 +711,7 @@ def check_pool_off_chain_data(
 ) -> dbsync_queries.PoolOffChainDataDBRow:
     """Check comparison for pool off chain data between ledger and db-sync."""
     db_pool_off_chain_data = list(dbsync_queries.query_off_chain_pool_data(pool_id))
-    assert db_pool_off_chain_data, f"{NO_REPONSE_STR} no off chain data for pool {pool_id}"
+    assert db_pool_off_chain_data, f"{NO_RESPONSE_STR} no off chain data for pool {pool_id}"
 
     metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
     db_metadata_hash = db_pool_off_chain_data[0].hash.hex()
@@ -731,7 +731,7 @@ def check_pool_off_chain_fetch_error(
     db_pool_off_chain_fetch_error = list(dbsync_queries.query_off_chain_pool_fetch_error(pool_id))
     assert (
         db_pool_off_chain_fetch_error
-    ), f"{NO_REPONSE_STR} no off chain fetch error for pool {pool_id}"
+    ), f"{NO_RESPONSE_STR} no off chain fetch error for pool {pool_id}"
 
     fetch_error_str = db_pool_off_chain_fetch_error[0].fetch_error or ""
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
@@ -1141,7 +1141,7 @@ def check_drep_registration(
 
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
 
-    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registartion"
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registration"
     assert (
         drep_state[0][0]["keyHash"] == drep_data.hash_hex
     ), f"DRep {drep.drep_id} not present in registration table in db-sync"
@@ -1161,7 +1161,7 @@ def check_drep_deregistration(
 
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=-drep.deposit)
 
-    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistartion"
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistration"
     assert (
         drep.drep_id == drep_data.hash_hex
     ), f"Deregistered DRep {drep.drep_id} not present in registration table in db-sync"
@@ -1271,3 +1271,42 @@ def check_reward_rest(
             row.spendable_epoch == row.earned_epoch + 1
         ), "Wrong relation between earned and spendable epochs in db-sync"
         assert row.type == "treasury", "Type not marked as treasury in db-sync"
+
+
+def check_off_chain_drep_registration(
+    drep_data: dbsync_types.DrepRegistrationRecord, metadata: dict
+) -> None:
+    """Check DRep off chain data in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    errors = []
+
+    drep_off_chain_metadata = list(
+        dbsync_queries.query_off_chain_vote_drep_data(voting_anchor_id=drep_data.voting_anchor_id)
+    )
+
+    assert (
+        drep_off_chain_metadata
+    ), f"{NO_RESPONSE_STR} no off chain drep metadata for drep {drep_data.id}"
+
+    db_metadata = drep_off_chain_metadata[0]
+    expected_metadata = metadata["body"]
+
+    if db_metadata.payment_address != expected_metadata["paymentAddress"]:
+        errors.append("'paymentAddress' value is different than expected;")
+
+    if db_metadata.given_name != expected_metadata["givenName"]:
+        errors.append("'givenName' value is different than expected;")
+
+    if db_metadata.objectives != expected_metadata["objectives"]:
+        errors.append("'objectives' value is different than expected;")
+
+    if db_metadata.motivations != expected_metadata["motivations"]:
+        errors.append("'motivations' value is different than expected;")
+
+    if db_metadata.qualifications != expected_metadata["qualifications"]:
+        errors.append("'qualifications' value is different than expected;")
+
+    if errors:
+        raise AssertionError("\n".join(errors))
