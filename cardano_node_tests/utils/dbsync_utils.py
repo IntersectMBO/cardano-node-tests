@@ -1010,26 +1010,30 @@ def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
 
 
 def check_conway_gov_action_proposal_description(
-    update_proposal: dict, txhash: str = ""
+    update_proposal: dict, txhash: str = "", action_ix: int = 0
 ) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
     """Check expected values in the gov_action_proposal table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
-    db_gov_action = get_gov_action_proposals(txhash=txhash).pop()
-    db_gov_prop_desc = db_gov_action.description["contents"][1]
+    gov_actions_all = get_gov_action_proposals(txhash=txhash)
+    assert gov_actions_all, "No data returned from db-sync for gov action proposal"
+    assert len(gov_actions_all) >= action_ix + 1, "Unexpected number of gov actions"
+
+    gov_action = gov_actions_all[action_ix]
+    db_gov_prop_desc = gov_action.description["contents"][1]
 
     if db_gov_prop_desc != update_proposal:
         msg = f"Comparison {db_gov_prop_desc} failed in db-sync:\n" f"Expected {update_proposal}"
         raise AssertionError(msg)
-    return db_gov_action
+    return gov_action
 
 
 def get_gov_action_proposals(
     txhash: str = "", type: str = ""
 ) -> tp.List[dbsync_queries.GovActionProposalDBRow]:
     """Get government action proposal from db-sync."""
-    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash, type))
+    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash=txhash, type=type))
     return gov_action_proposals
 
 
