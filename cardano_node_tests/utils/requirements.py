@@ -36,12 +36,14 @@ class Req:
         id: str,
         group: str = "",
         url: str = "",
+        enabled: bool = True,
     ) -> None:
         # pylint: disable=invalid-name,redefined-builtin
         self.id = str(id)
         self.group = group
         self.url = url
         self.basename = f"req-{helpers.get_rand_str(8)}"
+        self.enabled = enabled
 
     def _get_dest_dir(self) -> pl.Path:
         dest_dir = pl.Path.cwd() / "requirements"
@@ -49,6 +51,9 @@ class Req:
         return dest_dir
 
     def success(self) -> bool:
+        if not self.enabled:
+            return True
+
         content = {
             "id": self.id,
             "group": self.group,
@@ -61,6 +66,9 @@ class Req:
         return True
 
     def failure(self) -> bool:
+        if not self.enabled:
+            return False
+
         content = {
             "id": self.id,
             "group": self.group,
@@ -73,6 +81,9 @@ class Req:
         return False
 
     def start(self, url: str = "") -> "Req":
+        if not self.enabled:
+            return self
+
         if url:
             self.url = url
         self.failure()
