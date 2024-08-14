@@ -225,12 +225,13 @@ class TestDBSync:
     def test_cost_model(self, cluster: clusterlib.ClusterLib):
         """Check expected values in the `cost_model` table in db-sync."""
         common.get_test_id(cluster)
+        curr_epoch = cluster.g_query.get_epoch()
 
-        db_cost_models = dbsync_queries.query_cost_model()
-        # wait till next epoch if the cost models are not yet available
+        db_cost_models = dbsync_queries.query_cost_model(epoch_no=curr_epoch)
+        # Wait till next epoch if the cost models are not yet available
         if not db_cost_models:
-            cluster.wait_for_new_epoch(padding_seconds=5)
-            db_cost_models = dbsync_queries.query_cost_model()
+            curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            db_cost_models = dbsync_queries.query_cost_model(epoch_no=curr_epoch)
 
         protocol_params = cluster.g_query.get_protocol_params()
 
