@@ -1195,6 +1195,124 @@ Governance guardrails User Stories
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/07-governance-guardrails.md#GR.029>`__
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `poolPledgeInfluence`.
 
+
+DB Sync - Conway related tables
+-------------------------------
+
+.. list-table::
+   :widths: 18 53
+   :header-rows: 1
+
+   -
+
+      - Status for table
+      - Description
+   -
+
+      - |image-drep_hash|
+      - A table for every unique drep key hash. The existence of an entry doesn't mean the DRep is registered.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#drep_hash>`__
+   -
+
+      - |image-committee_hash|
+      - A table for all committee credentials hot or cold.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#committee_hash>`__
+   -
+
+      - |image-delegation_vote|
+      - A table containing delegations from a stake address to a stake pool.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#delegation_vote>`__
+   -
+
+      - |image-committee_registration|
+      - A table for every committee hot key registration.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#committee_registration>`__
+   -
+
+      - |image-committee_de_registration|
+      - A table for every committee key de-registration.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#committee_de_registration>`__
+   -
+
+      - |image-drep_registration|
+      - A table for DRep registrations, deregistrations or updates. Registration have positive deposit values, deregistrations have negative and updates have null. Based on this distinction, for a specific DRep, getting the latest entry gives its registration state.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#drep_registration>`__
+   -
+
+      - |image-voting_anchor|
+      - A table for every Anchor that appears on Governance Actions. These are pointers to offchain metadata. The tuple of url and hash is unique.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#voting_anchor>`__
+   -
+
+      - |image-gov_action_proposal|
+      - A table for proposed GovActionProposal, aka ProposalProcedure, GovAction or GovProposal. This table may be referenced by TreasuryWithdrawal or NewCommittee.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#gov_action_proposal>`__
+   -
+
+      - |image-treasury_withdrawal|
+      - A table for all treasury withdrawals proposed on a GovActionProposal.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#treasury_withdrawal>`__
+   -
+
+      - |image-committee|
+      - A table for new committee proposed on a GovActionProposal.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#committee>`__
+   -
+
+      - |image-committee_member|
+      - A table for members of the committee. A committee can have multiple members.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#committee_member>`__
+   -
+
+      - |image-constitution|
+      - A table for constitution attached to a GovActionProposal.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#constitution>`__
+   -
+
+      - |image-voting_procedure|
+      - A table for voting procedures, aka GovVote. A Vote can be Yes No or Abstain.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#voting_procedure>`__
+   -
+
+      - |image-drep_distr|
+      - The table for the distribution of voting power per DRep per. Currently this has a single entry per DRep and doesn't show every delegator. This may change.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#drep_distr>`__
+   -
+
+      - |image-off_chain_vote_data|
+      - The table with the offchain metadata related to Vote Anchors. It accepts metadata in a more lenient way than what's described in CIP-100.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_data>`__
+   -
+
+      - |image-off_chain_vote_gov_action_data|
+      - The table with offchain metadata for Governance Actions. Implements CIP-108.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_gov_action_data>`__
+   -
+
+      - |image-off_chain_vote_drep_data|
+      - The table with offchain metadata for Drep Registrations. Implements CIP-119.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_drep_data>`__
+   -
+
+      - |image-off_chain_vote_author|
+      - The table with offchain metadata authors, as described in CIP-100.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_author>`__
+
+   -
+
+      - |image-off_chain_vote_reference|
+      - The table with offchain metadata references, as described in CIP-100.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_reference>`__
+   -
+
+      - |image-off_chain_vote_external_update|
+      - The table with offchain metadata external updates, as described in CIP-100.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_external_update>`__
+   -
+
+      - |image-off_chain_vote_fetch_error|
+      - Errors while fetching or validating offchain Voting Anchor metadata.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_fetch_error>`__
 .. |Success Badge| image:: https://img.shields.io/badge/success-green
 .. |Failure Badge| image:: https://img.shields.io/badge/failure-red
 .. |Partial Coverage Badge| image:: https://img.shields.io/badge/partial_coverage-yellow
@@ -1545,3 +1663,47 @@ Governance guardrails User Stories
    :target: https://github.com/GR028-404
 .. |image-GR029| image:: https://img.shields.io/badge/GR029-grey
    :target: https://github.com/GR029-404
+
+
+.. |image-drep_hash| image:: https://img.shields.io/badge/drep_hash-grey
+   :target: https://github.com/drep_hash-404
+.. |image-committee_hash| image:: https://img.shields.io/badge/committee_hash-grey
+   :target: https://github.com/committe_hash-404
+.. |image-delegation_vote| image:: https://img.shields.io/badge/delegation_vote-grey
+   :target: https://github.com/delegation_vote-404
+.. |image-committee_registration| image:: https://img.shields.io/badge/committee_registration-grey
+   :target: https://github.com/committee_registration-404
+.. |image-committee_de_registration| image:: https://img.shields.io/badge/committee_de_registration-grey
+   :target: https://github.com/committee_de_registration-404
+.. |image-drep_registration| image:: https://img.shields.io/badge/drep_registration-grey
+   :target: https://github.com/drep_registration-404
+.. |image-voting_anchor| image:: https://img.shields.io/badge/voting_anchor-grey
+   :target: https://github.com/voting_anchor-404
+.. |image-gov_action_proposal| image:: https://img.shields.io/badge/gov_action_proposal-grey
+   :target: https://github.com/gov_action_proposal-404
+.. |image-treasury_withdrawal| image:: https://img.shields.io/badge/treasury_withdrawal-grey
+   :target: https://github.com/treasury_withdrawal-404
+.. |image-committee| image:: https://img.shields.io/badge/committee-grey
+   :target: https://github.com/committee-404
+.. |image-committee_member| image:: https://img.shields.io/badge/committee_member-grey
+   :target: https://github.com/committee_member-404
+.. |image-constitution| image:: https://img.shields.io/badge/constitution-grey
+   :target: https://github.com/constitution-404
+.. |image-voting_procedure| image:: https://img.shields.io/badge/voting_procedure-grey
+   :target: https://github.com/voting_procedure-404
+.. |image-drep_distr| image:: https://img.shields.io/badge/drep_distr-grey
+   :target: https://github.com/drep_distr-404
+.. |image-off_chain_vote_data| image:: https://img.shields.io/badge/off_chain_vote_data-grey
+   :target: https://github.com/off_chain_vote_data-404
+.. |image-off_chain_vote_gov_action_data| image:: https://img.shields.io/badge/off_chain_vote_gov_action_data-grey
+   :target: https://github.com/off_chain_vote_gov_action_data-404
+.. |image-off_chain_vote_drep_data| image:: https://img.shields.io/badge/off_chain_vote_drep_data-grey
+   :target: https://github.com/off_chain_vote_drep_data-404
+.. |image-off_chain_vote_author| image:: https://img.shields.io/badge/off_chain_vote_author-grey
+   :target: https://github.com/off_chain_vote_author-404
+.. |image-off_chain_vote_reference| image:: https://img.shields.io/badge/off_chain_vote_reference-grey
+   :target: https://github.com/off_chain_vote_reference-404
+.. |image-off_chain_vote_external_update| image:: https://img.shields.io/badge/off_chain_vote_external_update-grey
+   :target: https://github.com/off_chain_vote_external_update-404
+.. |image-off_chain_vote_fetch_error| image:: https://img.shields.io/badge/off_chain_vote_fetch_error-grey
+   :target: https://github.com/off_chain_vote_fetch_error-404

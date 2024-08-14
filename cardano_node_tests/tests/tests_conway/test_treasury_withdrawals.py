@@ -356,7 +356,8 @@ class TestTreasuryWithdrawals:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
-        reqc.cip084.start(url=helpers.get_vcs_link())
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cip084, reqc.db009, reqc.db022)]
         # Check dbsync
         dbsync_utils.check_treasury_withdrawal(
             actions_num=actions_num,
@@ -370,7 +371,7 @@ class TestTreasuryWithdrawals:
             transfer_amt=transfer_amt,
         )
 
-        reqc.cip084.success()
+        [r.success() for r in (reqc.cip084, reqc.db009, reqc.db022)]
 
         if xfail_ledger_3979_msgs:
             ledger_3979 = issues.ledger_3979.copy()
