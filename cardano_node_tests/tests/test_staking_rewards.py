@@ -1001,13 +1001,19 @@ class TestRewards:
 
             if repoch <= init_epoch + 1:
                 assert rtypes_set == {"leader"}
-            if repoch == init_epoch + 2:
-                assert rtypes_set == {"reserves", "leader", "member"}
-            if repoch == init_epoch + 3:
-                assert rtypes_set == {"treasury", "leader", "member"}
-            if init_epoch + 4 <= repoch <= 6:
+            elif repoch == init_epoch + 2:
+                expected_set = (
+                    {"reserves", "leader", "member"} if mir_reward else {"leader", "member"}
+                )
+                assert rtypes_set == expected_set
+            elif repoch == init_epoch + 3:
+                expected_set = (
+                    {"treasury", "leader", "member"} if mir_reward else {"leader", "member"}
+                )
+                assert rtypes_set == expected_set
+            elif init_epoch + 4 <= repoch <= 6:
                 assert rtypes_set == {"leader", "member"}
-            if repoch > init_epoch + 6:
+            elif repoch > init_epoch + 6:
                 assert rtypes_set == {"leader"}
 
     @allure.link(helpers.get_vcs_link())
