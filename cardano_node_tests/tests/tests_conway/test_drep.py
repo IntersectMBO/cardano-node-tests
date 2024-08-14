@@ -32,6 +32,7 @@ from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
@@ -323,16 +324,16 @@ class TestDReps:
         temp_template = common.get_test_id(cluster)
         errors_final = []
 
-        # Register DRep
+        drep_metadata_file = DATA_DIR / "drep_metadata.json"
 
-        drep_metadata_url = "https://www.the-drep.com"
-        drep_metadata_file = f"{temp_template}_drep_metadata.json"
-        drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
-        helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
+        # Register DRep
+        drep_metadata_url = "https://tinyurl.com/w7vd3ek6"
         reqc.cli012.start(url=helpers.get_vcs_link())
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
+        with open(drep_metadata_file, encoding="utf-8") as anchor_fp:
+            drep_metadata_content = json.load(anchor_fp)
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli008, reqc.cli009, reqc.cli010, reqc.cip021)]
@@ -378,14 +379,24 @@ class TestDReps:
         assert (
             metadata_anchor["dataHash"]
             == drep_metadata_hash
-            == "592e53f74765c8c6c97dfda2fd6038236ffc7ad55800592118d9e36ad1c8140d"
+            == "18b4b10150eab04ba66c8f9cb497ff05c6c31b9c9825388481c1790ce76b6b90"
         ), "Unexpected metadata hash"
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
         try:
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.db001, reqc.db006)]
-            dbsync_utils.check_drep_registration(drep=reg_drep, drep_state=reg_drep_state)
+            drep_data = dbsync_utils.check_drep_registration(
+                drep=reg_drep, drep_state=reg_drep_state
+            )
             [r.success() for r in (reqc.db002, reqc.db006)]
+
+            def _query_func():
+                dbsync_utils.check_off_chain_drep_registration(
+                    drep_data=drep_data, metadata=drep_metadata_content
+                )
+
+            dbsync_utils.retry_query(query_func=_query_func, timeout=300)
+
         except AssertionError as exc:
             str_exc = str(exc)
             errors_final.append(f"DB-Sync unexpected DRep registration error: {str_exc}")

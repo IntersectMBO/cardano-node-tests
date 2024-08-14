@@ -531,6 +531,26 @@ class OffChainVoteFetchErrorDBRow:
     fetch_error: str
 
 
+@dataclasses.dataclass(frozen=True)
+class OffChainVoteDrepDataDBRow:
+    # pylint: disable-next=invalid-name
+    id: int
+    hash: memoryview
+    language: str
+    comment: str
+    json: dict
+    bytes: memoryview
+    warning: str
+    is_valid: bool
+    payment_address: str
+    given_name: str
+    objectives: str
+    motivations: str
+    qualifications: str
+    image_url: str
+    image_hash: str
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1364,3 +1384,22 @@ def query_off_chain_vote_fetch_error(
     with execute(query=query, vars=(voting_anchor_id,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield OffChainVoteFetchErrorDBRow(*result)
+
+
+def query_off_chain_vote_drep_data(
+    voting_anchor_id: int,
+) -> tp.Generator[OffChainVoteDrepDataDBRow, None, None]:
+    """Query off_chain_vote_drep_data table in db-sync."""
+    query = (
+        "SELECT"
+        " vd.id, vd.hash, vd.language, vd.comment, vd.json, vd.bytes, vd.warning, vd.is_valid,"
+        " drep.payment_address, drep.given_name, drep.objectives, drep.motivations,"
+        " drep.qualifications, drep.image_url, drep.image_hash "
+        "FROM off_chain_vote_drep_data as drep "
+        "INNER JOIN off_chain_vote_data as vd ON vd.id = drep.off_chain_vote_data_id "
+        "WHERE vd.voting_anchor_id = %s;"
+    )
+
+    with execute(query=query, vars=(voting_anchor_id,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield OffChainVoteDrepDataDBRow(*result)
