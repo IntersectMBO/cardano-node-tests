@@ -955,7 +955,7 @@ def check_conway_param_update_proposal(
 
     # Get cost models
     if param_proposal_db.cost_model_id:
-        db_cost_model = dbsync_queries.query_cost_model(param_proposal_db.cost_model_id)
+        db_cost_model = dbsync_queries.query_cost_model(model_id=param_proposal_db.cost_model_id)
         pp_cost_model = param_proposal_ledger.get("costModels")
         if db_cost_model != pp_cost_model:
             failures.append(f"Cost model mismatch for {db_cost_model}. Expected: {pp_cost_model}")
