@@ -1,10 +1,19 @@
 """Conway User Stories."""
 
+import os
+
 from cardano_node_tests.utils import requirements
+
+HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 
 
 def __r(id: str) -> requirements.Req:
     return requirements.Req(id=id, group=requirements.GroupsKnown.CHANG_US)
+
+
+# db-sync related requirement
+def __dr(id: str) -> requirements.Req:
+    return requirements.Req(id=id, group=requirements.GroupsKnown.CHANG_US, enabled=HAS_DBSYNC)
 
 
 # https://github.com/IntersectMBO/cardano-test-plans/blob/main/docs/user-stories/01-cip1694.md
@@ -124,11 +133,11 @@ cip076 = __r("CIP076")
 cip077 = __r("CIP077")
 cip078 = __r("CIP078")
 cip079 = __r("CIP079")
-cip080 = __r("CIP080")
-cip081 = __r("CIP081")
-cip082 = __r("CIP082")
-cip083 = __r("CIP083")
-cip084 = __r("CIP084")
+cip080 = __dr("CIP080")
+cip081 = __dr("CIP081")
+cip082 = __dr("CIP082")
+cip083 = __dr("CIP083")
+cip084 = __dr("CIP084")
 cip085 = __r("CIP085")
 cip086 = __r("CIP086")
 cip087 = __r("CIP087")
@@ -224,25 +233,25 @@ gr029 = __r("GR029")
 
 # DB Sync Conway related tables
 # https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md
-db001 = __r("drep_hash")
-db002 = __r("committee_hash")
-db003 = __r("delegation_vote")
-db004 = __r("committee_registration")
-db005 = __r("committee_de_registration")
-db006 = __r("drep_registration")
-db007 = __r("voting_anchor")
-db008 = __r("gov_action_proposal")
-db009 = __r("treasury_withdrawal")
-db010 = __r("committee")
-db011 = __r("committee_member")
-db012 = __r("constitution")
-db013 = __r("voting_procedure")
-db014 = __r("drep_distr")
-db015 = __r("off_chain_vote_data")
-db016 = __r("off_chain_vote_drep_data")
-db017 = __r("off_chain_vote_author")
-db018 = __r("off_chain_vote_reference")
-db019 = __r("off_chain_vote_data")
-db020 = __r("off_chain_vote_external_update")
-db021 = __r("off_chain_vote_fetch_error")
-db022 = __r("reward_rest")
+db001 = __dr("drep_hash")
+db002 = __dr("committee_hash")
+db003 = __dr("delegation_vote")
+db004 = __dr("committee_registration")
+db005 = __dr("committee_de_registration")
+db006 = __dr("drep_registration")
+db007 = __dr("voting_anchor")
+db008 = __dr("gov_action_proposal")
+db009 = __dr("treasury_withdrawal")
+db010 = __dr("committee")
+db011 = __dr("committee_member")
+db012 = __dr("constitution")
+db013 = __dr("voting_procedure")
+db014 = __dr("drep_distr")
+db015 = __dr("off_chain_vote_data")
+db016 = __dr("off_chain_vote_drep_data")
+db017 = __dr("off_chain_vote_author")
+db018 = __dr("off_chain_vote_reference")
+db019 = __dr("off_chain_vote_data")
+db020 = __dr("off_chain_vote_external_update")
+db021 = __dr("off_chain_vote_fetch_error")
+db022 = __dr("reward_rest")
