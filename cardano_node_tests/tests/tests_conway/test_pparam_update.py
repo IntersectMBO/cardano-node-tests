@@ -734,11 +734,13 @@ class TestPParamUpdate:
 
         # db-sync check
         try:
+            reqc.db008.start(url=helpers.get_vcs_link())
             dbsync_utils.check_conway_gov_action_proposal_description(
                 update_proposal=net_nodrep_prop_rec.future_pparams,
                 txhash=net_nodrep_prop_rec.action_txid,
             )
             dbsync_utils.check_conway_param_update_proposal(net_nodrep_prop_rec.future_pparams)
+            reqc.db008.success()
         except AssertionError as exc:
             db_errors_final.append(f"db-sync network params update error: {exc}")
 

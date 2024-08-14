@@ -259,7 +259,10 @@ class TestCommittee:
         reqc.cip007.success()
 
         # Check dbsync
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.db010, reqc.db011)]
         dbsync_utils.check_committee_info(gov_state=gov_state, txid=txid)
+        [r.success() for r in (reqc.db010, reqc.db011)]
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -369,16 +372,19 @@ class TestCommittee:
                 epoch=cc_member1_expire,
                 cold_vkey_file=cc_auth_record1.cold_key_pair.vkey_file,
                 cold_skey_file=cc_auth_record1.cold_key_pair.skey_file,
+                cold_vkey_hash=cc_auth_record1.key_hash,
             ),
             clusterlib.CCMember(
                 epoch=cluster.g_query.get_epoch() + 5,
                 cold_vkey_file=cc_auth_record2.cold_key_pair.vkey_file,
                 cold_skey_file=cc_auth_record2.cold_key_pair.skey_file,
+                cold_vkey_hash=cc_auth_record2.key_hash,
             ),
             clusterlib.CCMember(
                 epoch=cluster.g_query.get_epoch() + 5,
                 cold_vkey_file=cc_auth_record3.cold_key_pair.vkey_file,
                 cold_skey_file=cc_auth_record3.cold_key_pair.skey_file,
+                cold_vkey_hash=cc_auth_record3.key_hash,
             ),
         ]
 
@@ -682,10 +688,8 @@ class TestCommittee:
                 assert cc_member_val == cc_members[i].epoch
 
         def _check_resign_dbsync(res_member: clusterlib.CCMember) -> None:
-            auth_committee_state = cluster.g_conway_governance.query.committee_state()
             dbsync_utils.check_committee_member_registration(
-                cc_member_cold_key=res_member.cold_vkey_hash,
-                committee_state=auth_committee_state,
+                cc_member_cold_key=res_member.cold_vkey_hash
             )
             dbsync_utils.check_committee_member_deregistration(
                 cc_member_cold_key=res_member.cold_vkey_hash
@@ -971,7 +975,10 @@ class TestCommittee:
         _resign_member(res_member=cc_members[2])
         dbsync_resign_err = ""
         try:
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (reqc.db002, reqc.db004, reqc.db005)]
             _check_resign_dbsync(res_member=cc_members[2])
+            [r.success() for r in (reqc.db002, reqc.db004, reqc.db005)]
         except Exception as excp:
             dbsync_resign_err = str(excp)
 

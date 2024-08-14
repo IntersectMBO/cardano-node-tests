@@ -1121,19 +1121,29 @@ def query_datum(datum_hash: str) -> tp.Generator[DatumDBRow, None, None]:
             yield DatumDBRow(*result)
 
 
-def query_cost_model(model_id: int = -1) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
-    """Query last cost model record (if id not specified) in db-sync."""
-    query = "SELECT * FROM cost_model ORDER BY ID DESC LIMIT 1"
+def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+    """Query cost model record in db-sync.
+
+    If `model_id` is specified, query the cost model that corresponds to the given id.
+    If `epoch_no` is specified, query the cost model used in the given epoch.
+    Otherwise query the latest cost model.
+    """
     query_var: tp.Union[int, str]
 
     if model_id != -1:
-        id_query = "WHERE id = %s "
+        subquery = "WHERE cm.id = %s "
         query_var = model_id
+    elif epoch_no != -1:
+        subquery = (
+            "INNER JOIN epoch_param ON epoch_param.cost_model_id = cm.id "
+            "WHERE epoch_param.epoch_no = %s "
+        )
+        query_var = epoch_no
     else:
-        id_query = ""
+        subquery = ""
         query_var = ""
 
-    query = f"SELECT * FROM cost_model {id_query} ORDER BY ID DESC LIMIT 1"
+    query = f"SELECT * FROM cost_model AS cm {subquery} ORDER BY cm.id DESC LIMIT 1"
 
     with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()

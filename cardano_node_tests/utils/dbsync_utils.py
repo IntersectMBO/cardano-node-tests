@@ -955,7 +955,7 @@ def check_conway_param_update_proposal(
 
     # Get cost models
     if param_proposal_db.cost_model_id:
-        db_cost_model = dbsync_queries.query_cost_model(param_proposal_db.cost_model_id)
+        db_cost_model = dbsync_queries.query_cost_model(model_id=param_proposal_db.cost_model_id)
         pp_cost_model = param_proposal_ledger.get("costModels")
         if db_cost_model != pp_cost_model:
             failures.append(f"Cost model mismatch for {db_cost_model}. Expected: {pp_cost_model}")
@@ -1010,26 +1010,30 @@ def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
 
 
 def check_conway_gov_action_proposal_description(
-    update_proposal: dict, txhash: str = ""
+    update_proposal: dict, txhash: str = "", action_ix: int = 0
 ) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
-    """Check expected values in the param proposal table in db-sync."""
+    """Check expected values in the gov_action_proposal table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
-    db_gov_action = get_gov_action_proposals(txhash=txhash).pop()
-    db_gov_prop_desc = db_gov_action.description["contents"][1]
+    gov_actions_all = get_gov_action_proposals(txhash=txhash)
+    assert gov_actions_all, "No data returned from db-sync for gov action proposal"
+    assert len(gov_actions_all) >= action_ix + 1, "Unexpected number of gov actions"
+
+    gov_action = gov_actions_all[action_ix]
+    db_gov_prop_desc = gov_action.description["contents"][1]
 
     if db_gov_prop_desc != update_proposal:
         msg = f"Comparison {db_gov_prop_desc} failed in db-sync:\n" f"Expected {update_proposal}"
         raise AssertionError(msg)
-    return db_gov_action
+    return gov_action
 
 
 def get_gov_action_proposals(
     txhash: str = "", type: str = ""
 ) -> tp.List[dbsync_queries.GovActionProposalDBRow]:
-    """Get goverment action proposal from db-sync."""
-    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash, type))
+    """Get government action proposal from db-sync."""
+    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash=txhash, type=type))
     return gov_action_proposals
 
 
@@ -1053,19 +1057,17 @@ def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeReg
 
 
 def check_committee_member_registration(
-    cc_member_cold_key: str, committee_state: tp.Dict[str, tp.Any]
+    cc_member_cold_key: str,
 ) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
     """Check committee member registration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
     cc_member_data = get_committee_member(cold_key=cc_member_cold_key)
-    member_key = f"keyHash-{cc_member_cold_key}"
 
-    assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"
+    assert cc_member_data, "No data returned from db-sync"
     assert (
-        committee_state["committee"][member_key]["hotCredsAuthStatus"]["contents"]["keyHash"]
-        == cc_member_data.hot_key
+        cc_member_data.cold_key == cc_member_cold_key
     ), "CC Member not present in registration table in db-sync"
 
     return cc_member_data
