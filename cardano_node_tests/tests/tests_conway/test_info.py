@@ -264,7 +264,9 @@ class TestInfo:
         reqc.cli022.success()
 
         # Check dbsync
+        reqc.db013.start(url=helpers.get_vcs_link())
         dbsync_utils.check_votes(
             votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
             txhash=vote_txid,
         )
+        reqc.db013.success()

@@ -259,7 +259,10 @@ class TestCommittee:
         reqc.cip007.success()
 
         # Check dbsync
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.db010, reqc.db011)]
         dbsync_utils.check_committee_info(gov_state=gov_state, txid=txid)
+        [r.success() for r in (reqc.db010, reqc.db011)]
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -972,7 +975,10 @@ class TestCommittee:
         _resign_member(res_member=cc_members[2])
         dbsync_resign_err = ""
         try:
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (reqc.db002, reqc.db004, reqc.db005)]
             _check_resign_dbsync(res_member=cc_members[2])
+            [r.success() for r in (reqc.db002, reqc.db004, reqc.db005)]
         except Exception as excp:
             dbsync_resign_err = str(excp)
 

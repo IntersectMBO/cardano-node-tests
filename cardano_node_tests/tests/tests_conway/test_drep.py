@@ -382,7 +382,10 @@ class TestDReps:
         ), "Unexpected metadata hash"
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
         try:
+            _url = helpers.get_vcs_link()
+            [r.start(url=_url) for r in (reqc.db001, reqc.db006)]
             dbsync_utils.check_drep_registration(drep=reg_drep, drep_state=reg_drep_state)
+            [r.success() for r in (reqc.db002, reqc.db006)]
         except AssertionError as exc:
             str_exc = str(exc)
             errors_final.append(f"DB-Sync unexpected DRep registration error: {str_exc}")
