@@ -649,22 +649,14 @@ class TestStakePool:
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
         pool_name = "test_stake_pool_metadata"
-        pool_metadata = {
-            "name": "test_stake_pool_metadata",
-            "description": "cardano-node-tests E2E tests",
-            "ticker": "IOG1",
-            "homepage": "https://github.com/input-output-hk/cardano-node-tests",
-        }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
-        )
+        pool_metadata_file = DATA_DIR / "pool_metadata.json"
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1_000,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
-            pool_metadata_url="https://bit.ly/3HvWQAy",
+            pool_metadata_url="https://tinyurl.com/yvkfs7pr",
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -699,7 +691,7 @@ class TestStakePool:
 
         # check dbsync `PoolOfflineData` table
         if configuration.HAS_DBSYNC:
-            pool_params = cluster.g_query.get_pool_params(
+            pool_params = cluster.g_query.get_pool_state(
                 stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params
 
