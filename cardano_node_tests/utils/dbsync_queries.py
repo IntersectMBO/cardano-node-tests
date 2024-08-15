@@ -471,6 +471,7 @@ class GovActionProposalDBRow:
     # pylint: disable-next=invalid-name
     id: int
     tx_id: int
+    action_ix: int
     prev_gov_action_proposal: int
     deposit: int
     return_address: int
@@ -1295,9 +1296,10 @@ def query_gov_action_proposal(
 
     query = (
         "SELECT"
-        " gap.id, gap.tx_id, gap.prev_gov_action_proposal, gap.deposit, gap.return_address,"
-        " gap.expiration, gap.voting_anchor_id, gap.type, gap.description, gap.param_proposal,"
-        " gap.ratified_epoch, gap.enacted_epoch, gap.dropped_epoch, gap.expired_epoch "
+        " gap.id, gap.tx_id, gap.index, gap.prev_gov_action_proposal, gap.deposit,"
+        " gap.return_address, gap.expiration, gap.voting_anchor_id, gap.type, gap.description,"
+        " gap.param_proposal, gap.ratified_epoch, gap.enacted_epoch, gap.dropped_epoch,"
+        " gap.expired_epoch "
         "FROM gov_action_proposal as gap "
         "INNER JOIN tx ON tx.id = gap.tx_id "
         f"WHERE {gap_query};"
