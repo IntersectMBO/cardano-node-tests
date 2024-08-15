@@ -388,7 +388,7 @@ class TestDReps:
             drep_data = dbsync_utils.check_drep_registration(
                 drep=reg_drep, drep_state=reg_drep_state
             )
-            [r.success() for r in (reqc.db002, reqc.db006)]
+            [r.success() for r in (reqc.db001, reqc.db006)]
 
             def _query_func():
                 dbsync_utils.check_off_chain_drep_registration(
