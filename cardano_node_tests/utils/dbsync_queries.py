@@ -518,13 +518,16 @@ class NewCommitteeMemberDBRow:
 @dataclasses.dataclass(frozen=True)
 class TreasuryWithdrawalDBRow:
     # pylint: disable-next=invalid-name
+    id: int
+    tx_id: int
+    action_ix: int
     expiration: int
     ratified_epoch: int
     enacted_epoch: int
     dropped_epoch: int
     expired_epoch: int
     addr_view: str
-    amount: int
+    amount: decimal.Decimal
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1360,7 +1363,7 @@ def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBR
     """Query treasury_withdrawal table in db-sync."""
     query = (
         "SELECT"
-        " gap.expiration, gap.ratified_epoch, gap.enacted_epoch, "
+        " gap.id, gap.tx_id, gap.index, gap.expiration, gap.ratified_epoch, gap.enacted_epoch, "
         " gap.dropped_epoch, gap.expired_epoch, "
         " sa.view AS addr_view, tw.amount "
         "FROM gov_action_proposal AS gap "
