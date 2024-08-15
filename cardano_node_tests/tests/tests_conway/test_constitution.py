@@ -170,6 +170,8 @@ def script_dreps_lg(
         )
         return reg_inputs
 
+    _url = helpers.get_vcs_link()
+    [r.start(url=_url) for r in (reqc.cip020_02, reqc.cip020_03)]
     reg_cert_script1 = _simple_rec(name_template=f"{temp_template}_simple1", slot=100)
     reg_cert_script2 = _simple_rec(name_template=f"{temp_template}_simple2", slot=101)
     reg_cert_script3 = _plutus_cert_rec(
@@ -187,6 +189,7 @@ def script_dreps_lg(
         payment_addr=pool_users[0].payment,
         pool_users=pool_users,
     )
+    [r.success() for r in (reqc.cip020_02, reqc.cip020_03)]
 
     yield script_dreps
 

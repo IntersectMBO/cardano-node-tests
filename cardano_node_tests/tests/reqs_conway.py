@@ -4,7 +4,7 @@ import os
 
 from cardano_node_tests.utils import requirements
 
-HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
+__HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
 
 
 def __r(id: str) -> requirements.Req:
@@ -13,7 +13,7 @@ def __r(id: str) -> requirements.Req:
 
 # db-sync related requirement
 def __dr(id: str) -> requirements.Req:
-    return requirements.Req(id=id, group=requirements.GroupsKnown.CHANG_US, enabled=HAS_DBSYNC)
+    return requirements.Req(id=id, group=requirements.GroupsKnown.CHANG_US, enabled=__HAS_DBSYNC)
 
 
 # https://github.com/IntersectMBO/cardano-test-plans/blob/main/docs/user-stories/01-cip1694.md
