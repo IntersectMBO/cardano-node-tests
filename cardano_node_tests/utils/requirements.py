@@ -135,15 +135,25 @@ def merge_reqs(*reqs: tp.Dict[str, dict]) -> dict:
     return merged
 
 
-def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:
+def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C901
     """Get mapped requirements."""
     with open(mapping, encoding="utf-8") as in_fp:
         requirements_mapping = json.load(in_fp)
 
+    errors: tp.Dict[str, tp.Set[str]] = {}
     for group, reqs in requirements_mapping.items():
+        reqs_set = set(reqs.keys())
         executed_group = executed_req.get(group) or {}
 
+        group_errors: tp.Set[str] = set()
         for req_id, dependencies in reqs.items():
+            deps_in_reqs = reqs_set.intersection(dependencies)
+            if deps_in_reqs:
+                group_errors.update(deps_in_reqs)
+            # If there are already any errors, we'll just validate the rest of the mappings
+            if errors or group_errors:
+                continue
+
             url = None
             dependencies_success = []
             dependencies_failures = []
@@ -172,5 +182,17 @@ def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:
                 status = Statuses.partial_success.name
 
             executed_req[group][req_id] = {"status": status, "url": url}
+
+        if group_errors:
+            errors[group] = group_errors
+
+    if errors:
+        err_msgs = [
+            f"Mapping error in group '{g}': "
+            f"the following dependencies are also top level keys: {d}"
+            for g, d in errors.items()
+        ]
+        err_str = "\n".join(err_msgs)
+        raise ValueError(err_str)
 
     return executed_req

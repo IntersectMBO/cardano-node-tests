@@ -4,6 +4,7 @@
 import argparse
 import json
 import logging
+import sys
 
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import requirements
@@ -42,7 +43,7 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> int:
     logging.basicConfig(
         format="%(name)s:%(levelname)s:%(message)s",
         level=logging.INFO,
@@ -51,7 +52,7 @@ def main() -> None:
 
     if not (args.artifacts_base_dir or args.input_files):
         LOGGER.error("Either `--artifacts-base-dir` or `--input-files` must be provided")
-        return
+        return 1
 
     executed_req = {}
     if args.artifacts_base_dir:
@@ -65,12 +66,18 @@ def main() -> None:
 
     merged_reqs = requirements.merge_reqs(executed_req, *input_reqs)
 
-    report = requirements.get_mapped_req(
-        mapping=args.requirements_mapping, executed_req=merged_reqs
-    )
+    try:
+        report = requirements.get_mapped_req(
+            mapping=args.requirements_mapping, executed_req=merged_reqs
+        )
+    except ValueError as excp:
+        LOGGER.error(str(excp))  # noqa: TRY400
+        return 1
 
     helpers.write_json(out_file=args.output_file, content=report)
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
