@@ -118,6 +118,7 @@ class TestTreasuryWithdrawals:
         )
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            reqc.cip026_03.start(url=helpers.get_vcs_link())
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
@@ -128,6 +129,7 @@ class TestTreasuryWithdrawals:
                 )
             err_str = str(excinfo.value)
             assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            reqc.cip026_03.success()
             return
 
         # Make sure we have enough time to submit the proposals in one epoch
