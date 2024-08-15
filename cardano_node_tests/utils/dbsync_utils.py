@@ -1229,22 +1229,28 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
     ), "The number of committee members doesn't match in dbsync"
 
 
-def check_treasury_withdrawal(
-    actions_num: int, stake_address: str, transfer_amt: int, txhash: str
-) -> None:
+def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], txhash: str) -> None:
     """Check treasury_withdrawal in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
 
-    db_tr_withdrawals = list(dbsync_queries.query_treasury_withdrawal(txhash=txhash))
-    assert len(db_tr_withdrawals) == actions_num, (
-        f"Assertion failed: Expected {actions_num} records but got {len(db_tr_withdrawals)}."
+    actions_num = len(transfer_amts)
+    db_tr_withdrawals = [
+        r
+        for r in dbsync_queries.query_treasury_withdrawal(txhash=txhash)
+        if r.addr_view == stake_address
+    ]
+    db_tr_withdrawals_len = len(db_tr_withdrawals)
+    assert db_tr_withdrawals_len == actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {db_tr_withdrawals_len}."
         f"Data in db-sync: {db_tr_withdrawals}"
     )
 
+    rem_amts = transfer_amts[:]
     for row in db_tr_withdrawals:
-        assert row.addr_view == stake_address, "Wrong stake address in db-sync"
-        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
+        r_amount = int(row.amount)
+        assert r_amount in rem_amts, "Wrong transfer amount in db-sync"
+        rem_amts.remove(r_amount)
         assert row.enacted_epoch, "Action not marked as enacted in db-sync"
         assert (
             row.enacted_epoch == row.ratified_epoch + 1

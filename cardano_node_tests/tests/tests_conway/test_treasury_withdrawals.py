@@ -358,13 +358,13 @@ class TestTreasuryWithdrawals:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
+        # Check dbsync
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip084, reqc.db009, reqc.db022)]
-        # Check dbsync
+        transfer_amts = [transfer_amt] * actions_num
         dbsync_utils.check_treasury_withdrawal(
-            actions_num=actions_num,
             stake_address=recv_stake_addr_rec.address,
-            transfer_amt=transfer_amt,
+            transfer_amts=transfer_amts,
             txhash=action_txid,
         )
         dbsync_utils.check_reward_rest(
