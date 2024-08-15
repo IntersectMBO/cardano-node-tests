@@ -362,6 +362,7 @@ class TestConstitution:
         reqc.cli002.success()
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            reqc.cip026_02.start(url=helpers.get_vcs_link())
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 conway_common.propose_change_constitution(
                     cluster_obj=cluster,
@@ -374,6 +375,7 @@ class TestConstitution:
                 )
             err_str = str(excinfo.value)
             assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            reqc.cip026_02.success()
             return
 
         _url = helpers.get_vcs_link()

@@ -208,6 +208,7 @@ class TestCommittee:
         )
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            reqc.cip026_01.start(url=helpers.get_vcs_link())
             with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
@@ -220,6 +221,7 @@ class TestCommittee:
                 )
             err_str = str(excinfo.value)
             assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            reqc.cip026_01.success()
             return
 
         reqc.cip007.start(url=helpers.get_vcs_link())

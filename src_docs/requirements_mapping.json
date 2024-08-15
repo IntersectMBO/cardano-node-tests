@@ -1,6 +1,7 @@
 {
     "chang_us": {
         "CIP020": ["intCIP020-01", "intCIP020-02", "intCIP020-03"],
+        "CIP026": ["intCIP026-01", "intCIP026-02", "intCIP026-03", "intCIP026-04"],
         "CIP028": ["CLI013", "CLI014", "CLI015", "CLI016", "CLI017", "CLI018", "CLI019"],
         "CIP030": ["intCIP030en", "intCIP030ex"],
         "CIP031a": [

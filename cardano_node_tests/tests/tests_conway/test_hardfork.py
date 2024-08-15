@@ -157,6 +157,7 @@ class TestHardfork:
         action_ix = prop_action["actionId"]["govActionIx"]
 
         # Check that DReps cannot vote
+        reqc.cip026_04.start(url=helpers.get_vcs_link())
         with pytest.raises(clusterlib.CLIError) as excinfo:
             conway_common.cast_vote(
                 cluster_obj=cluster,
@@ -171,6 +172,7 @@ class TestHardfork:
             )
         err_str = str(excinfo.value)
         assert "(DisallowedVotesDuringBootstrap ((DRepVoter" in err_str, err_str
+        reqc.cip026_04.success()
 
         # Vote & disapprove the action
         reqc.cip043_01.start(url=helpers.get_vcs_link())
