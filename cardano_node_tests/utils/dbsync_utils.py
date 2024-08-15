@@ -1199,24 +1199,28 @@ def check_votes(votes: governance_utils.VotedVotes, txhash: str) -> None:
     assert expected_votes_by_role == dbsync_votes_by_role, "Votes didn't match in dbsync"
 
 
-def check_committee_info(gov_state: dict, txid: str) -> None:
+def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None:
     """Check committee info in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
 
-    prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
+    prop = governance_utils.lookup_proposal(
+        gov_state=gov_state, action_txid=txid, action_ix=action_ix
+    )
+    quorum = prop["proposalProcedure"]["govAction"]["contents"][-1]
 
-    # Check dbsync
-    dbsync_committee_threshold = list(dbsync_queries.query_new_committee_info(txhash=txid))
+    dbsync_commitee_info = [
+        r for r in dbsync_queries.query_new_committee_info(txhash=txid) if r.action_ix == action_ix
+    ].pop()
     assert (
-        dbsync_committee_threshold[0].quorum_denominator == 3
+        dbsync_commitee_info.quorum_denominator == quorum["denominator"]
     ), "Incorrect committee threshold denominator in dbsync"
     assert (
-        dbsync_committee_threshold[0].quorum_numerator == 2
+        dbsync_commitee_info.quorum_numerator == quorum["numerator"]
     ), "Incorrect committee threshold numerator in dbsync"
 
     dbsync_committee_members = list(
-        dbsync_queries.query_committee_members(committee_id=dbsync_committee_threshold[0].id)
+        dbsync_queries.query_committee_members(committee_id=dbsync_commitee_info.id)
     )
     size_of_proposed_cm = len(prop["proposalProcedure"]["govAction"]["contents"][2]) + len(
         gov_state["committee"]["members"]
