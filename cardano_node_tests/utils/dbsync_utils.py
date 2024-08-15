@@ -1018,9 +1018,8 @@ def check_conway_gov_action_proposal_description(
 
     gov_actions_all = get_gov_action_proposals(txhash=txhash)
     assert gov_actions_all, "No data returned from db-sync for gov action proposal"
-    assert len(gov_actions_all) >= action_ix + 1, "Unexpected number of gov actions"
 
-    gov_action = gov_actions_all[action_ix]
+    gov_action = [r for r in gov_actions_all if r.action_ix == action_ix].pop()
     db_gov_prop_desc = gov_action.description["contents"][1]
 
     if db_gov_prop_desc != update_proposal:
