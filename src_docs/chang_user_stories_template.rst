@@ -910,6 +910,42 @@ CIP1694 User Stories
       - Auditor needs access to the history of treasury withdrawals
         `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/01-cip1694.md#CIP084>`__
       - **As** an Auditor, **I want** to audit the history of treasury withdrawals, including amounts, dates, and recipient wallet addresses, **so that** I can ensure transparency and accountability.
+   -
+
+      - |image-CIP85|
+      - DRep Id is blake2b-224 of drep vkey
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/01-cip1694.md#CIP085>`__
+      - **As** a DRep, **I want** to verify proper Drep Id is being generated that is it should be outcome of blake2b-224 hash of DRep verification key.
+   -
+
+      - |image-CIP86|
+      - Change delegation
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/01-cip1694.md#CIP086>`__
+      - **As** a stakeholder, **I want** to change my voting delegation to a different Drep. After I have first delegate to a DRep say DRep 1 I want to change my delegation to another Drep 2, my vote delegation should be updated to Drep2.
+   -
+
+      - |image-CIP87|
+      - No multiple delegation
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/01-cip1694.md#CIP087>`__
+      - **As** a stakeholder, I should not be able to submit multiple voting delegations to different Dreps. The voting rights should be delegated to a single DRep only, even If I submit multiple voting delegation certificates.
+   -
+
+      - |image-CIP88|
+      - No delegation without stake registration
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/01-cip1694.md#CIP088>`__
+      - **As** a stakeholder, I should not be able to delegate my votes without registering my stake address first.
+   -
+
+      - |image-CIP89|
+      - No retirement before register
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/01-cip1694.md#CIP089>`__
+      - **As** a DRep, I should not be able to retire my DRep before registering it.
+   -
+
+      - |image-CIP90|
+      - No multiple DRep registration
+        `→ <https://github.com/IntersectMBO/cardano-test-plans/blob/322b28b65dadec1d8d4d78165588fd66550da4ac/docs/inventory/01-cip1694.md#CIP090>`__
+      - **As** As a DRep, I should not be able to register my DRep multiple times using the same DRep credentials.
 
 
 Governance guardrails User Stories
@@ -1313,6 +1349,7 @@ DB Sync - Conway related tables
       - |image-off_chain_vote_fetch_error|
       - Errors while fetching or validating offchain Voting Anchor metadata.
         `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_fetch_error>`__
+
 .. |Success Badge| image:: https://img.shields.io/badge/success-green
 .. |Failure Badge| image:: https://img.shields.io/badge/failure-red
 .. |Partial Coverage Badge| image:: https://img.shields.io/badge/partial_coverage-yellow
@@ -1571,7 +1608,18 @@ DB Sync - Conway related tables
    :target: https://github.com/CIP083-404
 .. |image-CIP84| image:: https://img.shields.io/badge/CIP084-grey
    :target: https://github.com/CIP084-404
-
+.. |image-CIP85| image:: https://img.shields.io/badge/CIP085-grey
+   :target: https://github.com/CIP085-404
+.. |image-CIP86| image:: https://img.shields.io/badge/CIP086-grey
+   :target: https://github.com/CIP086-404
+.. |image-CIP87| image:: https://img.shields.io/badge/CIP087-grey
+   :target: https://github.com/CIP087-404
+.. |image-CIP88| image:: https://img.shields.io/badge/CIP088-grey
+   :target: https://github.com/CIP088-404
+.. |image-CIP89| image:: https://img.shields.io/badge/CIP089-grey
+   :target: https://github.com/CIP089-404
+.. |image-CIP90| image:: https://img.shields.io/badge/CIP090-grey
+   :target: https://github.com/CIP090-404
 
 .. |image-GR001| image:: https://img.shields.io/badge/GR001-grey
    :target: https://github.com/GR001-404
@@ -1663,7 +1711,6 @@ DB Sync - Conway related tables
    :target: https://github.com/GR028-404
 .. |image-GR029| image:: https://img.shields.io/badge/GR029-grey
    :target: https://github.com/GR029-404
-
 
 .. |image-drep_hash| image:: https://img.shields.io/badge/drep_hash-grey
    :target: https://github.com/drep_hash-404
