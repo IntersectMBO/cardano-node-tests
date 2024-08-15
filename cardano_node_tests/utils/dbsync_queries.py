@@ -500,6 +500,8 @@ class VotingProcedureDBRow:
 class NewCommitteeInfoDBRow:
     # pylint: disable-next=invalid-name
     id: int
+    tx_id: int
+    action_ix: int
     quorum_numerator: str
     quorum_denominator: int
 
@@ -1325,7 +1327,8 @@ def query_new_committee_info(txhash: str) -> tp.Generator[NewCommitteeInfoDBRow,
     """Query new committee proposed in db-sync."""
     query = (
         "SELECT"
-        " committee.id, committee.quorum_numerator, committee.quorum_denominator "
+        " committee.id, gap.tx_id, gap.index, committee.quorum_numerator,"
+        " committee.quorum_denominator "
         "FROM committee "
         "INNER JOIN gov_action_proposal as gap ON gap.id = committee.gov_action_proposal_id "
         "INNER JOIN tx ON tx.id = gap.tx_id "
