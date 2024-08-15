@@ -52,7 +52,7 @@ class TestTreasuryWithdrawals:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.long
-    def test_treasury_withdrawals(  # noqa: C901
+    def test_enact_treasury_withdrawals(  # noqa: C901
         self,
         cluster_use_governance: governance_utils.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
