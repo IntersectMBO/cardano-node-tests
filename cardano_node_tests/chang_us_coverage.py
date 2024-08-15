@@ -5,6 +5,7 @@ import argparse
 import datetime
 import json
 import logging
+import sys
 
 from cardano_node_tests.utils import requirements
 
@@ -45,7 +46,7 @@ def _get_color(status: str) -> str:
     return "grey"
 
 
-def main() -> None:
+def main() -> int:
     logging.basicConfig(
         format="%(name)s:%(levelname)s:%(message)s",
         level=logging.INFO,
@@ -75,6 +76,8 @@ def main() -> None:
     with open(args.output_report, "w", encoding="utf-8") as out_fp:
         out_fp.write(report)
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
