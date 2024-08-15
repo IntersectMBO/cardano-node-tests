@@ -1260,24 +1260,29 @@ def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], t
         ), "Wrong relation between enacted and dropped epochs in db-sync"
 
 
-def check_reward_rest(
-    actions_num: int,
-    stake_address: str,
-    transfer_amt: int,
-) -> None:
+def check_reward_rest(stake_address: str, transfer_amts: tp.List[int], type: str = "") -> None:
     """Check reward_rest in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
 
-    db_rewards = list(dbsync_queries.query_address_reward_rest(stake_address))
-    assert len(db_rewards) == actions_num, (
-        f"Assertion failed: Expected {actions_num} records but got {len(db_rewards)}."
+    actions_num = len(transfer_amts)
+    db_rewards = [
+        r
+        for r in dbsync_queries.query_address_reward_rest(stake_address)
+        if not type or r.type == type
+    ]
+    db_rewards_len = len(db_rewards)
+    assert db_rewards_len >= actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {db_rewards_len}."
         f"Data in db-sync: {db_rewards}"
     )
 
+    rem_amts = transfer_amts[:]
     for row in db_rewards:
         assert row.address == stake_address, "Wrong stake address in db-sync"
-        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
+        r_amount = int(row.amount)
+        assert r_amount in rem_amts, "Wrong transfer amount in db-sync"
+        rem_amts.remove(r_amount)
         assert (
             row.spendable_epoch == row.earned_epoch + 1
         ), "Wrong relation between earned and spendable epochs in db-sync"

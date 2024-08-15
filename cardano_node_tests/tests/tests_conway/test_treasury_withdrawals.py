@@ -368,9 +368,9 @@ class TestTreasuryWithdrawals:
             txhash=action_txid,
         )
         dbsync_utils.check_reward_rest(
-            actions_num=actions_num,
             stake_address=recv_stake_addr_rec.address,
-            transfer_amt=transfer_amt,
+            transfer_amts=transfer_amts,
+            type="treasury",
         )
 
         [r.success() for r in (reqc.cip084, reqc.db009, reqc.db022)]
