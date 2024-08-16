@@ -5,7 +5,7 @@ The page is updated every Tuesday and Friday until the coverage is complete.
 
 Latest update: **TODAY**  
 
-**Legend:** |Success Badge| |Failure Badge| |Partial Coverage Badge| |Uncovered Badge|  
+**Legend:** |Success Badge| |Failure Badge| |Partial Coverage Badge| |Uncovered Badge| |Unplanned Badge|  
 
 CLI User Stories
 ----------------
@@ -1354,6 +1354,7 @@ DB Sync - Conway related tables
 .. |Failure Badge| image:: https://img.shields.io/badge/failure-red
 .. |Partial Coverage Badge| image:: https://img.shields.io/badge/partial_coverage-yellow
 .. |Uncovered Badge| image:: https://img.shields.io/badge/uncovered-grey
+.. |Unplanned Badge| image:: https://img.shields.io/badge/unplanned-silver
 
 .. |image-CLI1| image:: https://img.shields.io/badge/CLI001-grey
    :target: https://github.com/CLI001-404
@@ -1508,7 +1509,7 @@ DB Sync - Conway related tables
    :target: https://github.com/CIP033-404
 .. |image-CIP34| image:: https://img.shields.io/badge/CIP034-grey
    :target: https://github.com/CIP034-404
-.. |image-CIP35| image:: https://img.shields.io/badge/CIP035-grey
+.. |image-CIP35| image:: https://img.shields.io/badge/CIP035-silver
    :target: https://github.com/CIP035-404
 .. |image-CIP36| image:: https://img.shields.io/badge/CIP036-grey
    :target: https://github.com/CIP036-404
@@ -1564,7 +1565,7 @@ DB Sync - Conway related tables
    :target: https://github.com/CIP061-404
 .. |image-CIP62| image:: https://img.shields.io/badge/CIP062-grey
    :target: https://github.com/CIP062-404
-.. |image-CIP63| image:: https://img.shields.io/badge/CIP063-grey
+.. |image-CIP63| image:: https://img.shields.io/badge/CIP063-silver
    :target: https://github.com/CIP063-404
 .. |image-CIP64| image:: https://img.shields.io/badge/CIP064-grey
    :target: https://github.com/CIP064-404
