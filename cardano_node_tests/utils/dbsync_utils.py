@@ -449,6 +449,7 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
         invalid_hereafter=int(txdata.last_row.invalid_hereafter)
         if txdata.last_row.invalid_hereafter
         else None,
+        treasury_donation=int(txdata.last_row.treasury_donation),
         txins=txins,
         txouts=[*txdata.utxo_out, *txdata.ma_utxo_out],
         mint=txdata.mint_utxo_out,

@@ -83,6 +83,7 @@ class TxDBRow:
     size: int
     invalid_before: tp.Optional[decimal.Decimal]
     invalid_hereafter: tp.Optional[decimal.Decimal]
+    treasury_donation: int
     tx_out_id: int
     tx_out_tx_id: int
     utxo_ix: int
@@ -606,7 +607,7 @@ def query_tx(txhash: str) -> tp.Generator[TxDBRow, None, None]:
     query = (
         "SELECT"
         " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
-        " tx.invalid_before, tx.invalid_hereafter,"
+        " tx.invalid_before, tx.invalid_hereafter, tx.treasury_donation,"
         " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.address_has_script,"
         " tx_out.value, tx_out.data_hash, datum.hash, script.hash,"
         " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
