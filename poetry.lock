@@ -105,13 +105,13 @@ dev = ["freezegun (>=1.0,<2.0)", "pytest (>=6.0)", "pytest-cov"]
 
 [[package]]
 name = "cardano-clusterlib"
-version = "0.6.0a22"
+version = "0.6.0a23"
 description = "Python wrapper for cardano-cli for working with cardano cluster"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "cardano_clusterlib-0.6.0a22-py3-none-any.whl", hash = "sha256:72e1b1b52af75458dbfdbbe7088ab45b005380ac39e958ce405c2e229cbb0649"},
-    {file = "cardano_clusterlib-0.6.0a22.tar.gz", hash = "sha256:5e24a0938dc0e7d8259d25908e199c5b88fadb19e234b7eab059e31c13081aa4"},
+    {file = "cardano_clusterlib-0.6.0a23-py3-none-any.whl", hash = "sha256:ec096705d284596fbf1f1fa85a636d587d1f341ade3422f31eb497feff8f6452"},
+    {file = "cardano_clusterlib-0.6.0a23.tar.gz", hash = "sha256:b3f7ad3e4c5741156da06d7a5f31483914f8f1220b9bf06009be3c3df7cf91b0"},
 ]
 
 [package.dependencies]
@@ -1920,4 +1920,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "b7f96562deb2f9a0a14fe90f63d320f0e8ec8a56a8af60c2b49940fb3b9fa15b"
+content-hash = "98feba511896fbf7497c33022a8738df7eb6480b7bea3027573eb220184039f6"
