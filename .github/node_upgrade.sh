@@ -127,7 +127,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
 
   echo "::group::Pytest step3"
   df -h .
-  # update to Babbage, run smoke tests
+  # update to Conway, run smoke tests
   ./.github/node_upgrade_pytest.sh step3
   retval="$?"
   echo "::endgroup::"  # end group for "Pytest step3"
