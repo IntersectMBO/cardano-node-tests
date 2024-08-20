@@ -137,6 +137,8 @@ nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
   printf "finish: %(%H:%M:%S)T\n" -1
+  pwd
+  df -h .
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
@@ -156,6 +158,8 @@ nix develop --accept-flake-config .#venv --command bash -c '
   exit "$retval"
 '
 retval="$?"
+
+df -h .
 
 # move reports to root dir
 mv .reports/testrun-report.* ./

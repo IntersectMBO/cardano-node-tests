@@ -75,6 +75,7 @@ nix flake update --accept-flake-config $NODE_OVERRIDE
 nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step1"
   printf "finish: %(%H:%M:%S)T\n" -1
+  pwd
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
@@ -82,6 +83,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   echo "::endgroup::"  # end group for "Python venv setup"
 
   echo "::group::Pytest step1"
+  df -h .
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
   ./.github/node_upgrade_pytest.sh step1
 '
@@ -110,6 +112,7 @@ nix flake update --accept-flake-config $NODE_OVERRIDE
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step2"
+  df -h .
 
   echo "::group::Python venv setup"
   . .github/setup_venv.sh clean
@@ -123,6 +126,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   echo "::endgroup::"  # end group for "Pytest step2"
 
   echo "::group::Pytest step3"
+  df -h .
   # update to Babbage, run smoke tests
   ./.github/node_upgrade_pytest.sh step3
   retval="$?"
@@ -134,6 +138,8 @@ nix develop --accept-flake-config .#venv --command bash -c '
   exit $retval
 '
 retval="$?"
+
+df -h .
 
 if [ ! -e "$WORKDIR/.nix_step2" ]; then
   echo "Nix env setup failed, exiting"
