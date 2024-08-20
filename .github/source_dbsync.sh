@@ -3,7 +3,7 @@
 echo "::group::db-sync setup"
 
 TEST_THREADS="${TEST_THREADS:-15}"
-CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
+CLUSTERS_COUNT="${CLUSTERS_COUNT:-4}"
 export TEST_THREADS CLUSTERS_COUNT
 
 pushd "$WORKDIR" || exit 1
