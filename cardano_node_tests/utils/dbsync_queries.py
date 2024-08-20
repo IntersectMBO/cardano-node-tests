@@ -7,6 +7,8 @@ import typing as tp
 
 import psycopg2
 
+from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 
 
@@ -1412,3 +1414,13 @@ def query_off_chain_vote_drep_data(
     with execute(query=query, vars=(voting_anchor_id,)) as cur:
         while (result := cur.fetchone()) is not None:
             yield OffChainVoteDrepDataDBRow(*result)
+
+
+def query_db_size() -> int:
+    """Query database size in MB in db-sync."""
+    instance_num = cluster_nodes.get_instance_num()
+    query = f"SELECT pg_database_size('{configuration.DBSYNC_DB}{instance_num}')/1024/1024;"
+
+    with execute(query=query) as cur:
+        result = cur.fetchone()
+        return int(result[0])
