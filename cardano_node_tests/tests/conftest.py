@@ -21,6 +21,7 @@ from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import submit_utils
@@ -337,21 +338,6 @@ def testfile_temp_dir() -> pl.Path:
     return p
 
 
-@pytest.fixture
-def cd_testfile_temp_dir(testfile_temp_dir: pl.Path) -> tp.Generator[pl.Path, None, None]:
-    """Change to a temporary dir specific to a test file."""
-    with helpers.change_cwd(testfile_temp_dir):
-        yield testfile_temp_dir
-
-
-@pytest.fixture(autouse=True)
-def function_autouse(
-    cd_testfile_temp_dir: tp.Generator[pl.Path, None, None],  # noqa: ARG001
-) -> None:
-    """Autouse function fixtures that are required for each test setup and teardown."""
-    # pylint: disable=unused-argument,unnecessary-pass
-
-
 def _raise_logs_error(errors: str) -> None:
     """Report errors found in cluster log files by raising `LogsError` with errors details."""
     if not errors:
@@ -378,6 +364,40 @@ def cluster_manager(
     errors = cluster_manager_obj.get_logfiles_errors()
     cluster_manager_obj.on_test_stop()
     _raise_logs_error(errors)
+
+
+@pytest.fixture
+def cd_testfile_temp_dir(testfile_temp_dir: pl.Path) -> tp.Generator[pl.Path, None, None]:
+    """Change to a temporary dir specific to a test file."""
+    with helpers.change_cwd(testfile_temp_dir):
+        yield testfile_temp_dir
+
+
+@pytest.fixture
+def respin_on_large_db(
+    cluster_manager: cluster_management.ClusterManager,
+) -> tp.Generator[None, None, None]:
+    """Respin a cluster instance running on CI when db-sync database size is over 256 MB."""
+    yield
+    if (
+        os.environ.get("GITHUB_ACTIONS")
+        and configuration.HAS_DBSYNC
+        and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+        and cluster_manager._cluster_instance_num != -1
+    ):
+        db_size = dbsync_queries.query_db_size()
+        cluster_manager.log(f"c{cluster_manager._cluster_instance_num}: db size {db_size} MB")
+        if db_size > 256:
+            cluster_manager.set_needs_respin()
+
+
+@pytest.fixture(autouse=True)
+def function_autouse(
+    cd_testfile_temp_dir: tp.Generator[pl.Path, None, None],  # noqa: ARG001
+    respin_on_large_db: tp.Generator[None, None, None],  # noqa: ARG001
+) -> None:
+    """Autouse function fixtures that are required for each test setup and teardown."""
+    # pylint: disable=unused-argument,unnecessary-pass
 
 
 @pytest.fixture
