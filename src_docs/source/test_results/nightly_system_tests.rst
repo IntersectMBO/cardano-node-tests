@@ -28,6 +28,7 @@ Nightly results
    * network in Babbage era
    * Babbage transaction era
    * default (legacy) network topology
+   * cluster starts directly in Babbage era
    * DB Sync testing enabled
 * `nightly-p2p <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-p2p/>`__:  |nightly-p2p-badge|
    * network in Babbage era
@@ -44,7 +45,7 @@ Nightly results
    * network in Conway era
    * protocol version 9 (bootstrap phase)
    * P2P network topology
-   * Constitutional Commitee has 3 members
+   * Constitutional Commitee has 5 members
    * cluster starts directly in Conway era
 * `nightly-conway-no-cc <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-no-cc/>`__:  |nightly-conway-nocc-badge|
    * network in Conway era
@@ -52,6 +53,13 @@ Nightly results
    * P2P network topology
    * Constitutional Commitee has 0 members
    * cluster starts directly in Conway era
+* `nightly-conway-dbsync <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-dbsync/>`__:  |nightly-conway-dbsync-badge|
+   * network in Conway era
+   * protocol version 10
+   * P2P network topology
+   * Constitutional Commitee has 5 members
+   * cluster starts directly in Conway era
+   * DB Sync testing enabled
 
 Nightly upgrade testing
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -101,3 +109,6 @@ Nightly upgrade testing
 
 .. |nightly-conway-nocc-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-conway-no-cc%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-no-cc/
+
+.. |nightly-conway-dbsync-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-conway-dbsync%2Fbadge.json
+   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-conway-dbsync/
