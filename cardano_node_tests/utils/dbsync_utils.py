@@ -1222,12 +1222,10 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
     dbsync_committee_members = list(
         dbsync_queries.query_committee_members(committee_id=dbsync_commitee_info.id)
     )
-    size_of_proposed_cm = len(prop["proposalProcedure"]["govAction"]["contents"][2]) + len(
-        gov_state["committee"]["members"]
-    )
+    size_of_proposed_cm = len(prop["proposalProcedure"]["govAction"]["contents"][2])
     assert (
         len(dbsync_committee_members) == size_of_proposed_cm
-    ), "The number of committee members doesn't match in dbsync"
+    ), "The number of proposed committee members doesn't match in dbsync"
 
 
 def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], txhash: str) -> None:
