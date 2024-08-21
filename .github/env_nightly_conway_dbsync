@@ -5,4 +5,5 @@ ENABLE_P2P=true
 MARKEXPR=dbsync
 CLUSTERS_COUNT=4
 DBSYNC_REV=13.4.0.1
+DBSYNC_TAR_URL=https://github.com/IntersectMBO/cardano-db-sync/releases/download/13.4.0.0/cardano-db-sync-13.4.0.0-linux.tar.gz
 DBSYNC_SKIP_INDEXES=true
