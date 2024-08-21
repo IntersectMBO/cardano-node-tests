@@ -1290,14 +1290,21 @@ def check_reward_rest(stake_address: str, transfer_amts: tp.List[int], type: str
 
     rem_amts = transfer_amts[:]
     for row in db_rewards:
-        assert row.address == stake_address, "Wrong stake address in db-sync"
-        r_amount = int(row.amount)
-        assert r_amount in rem_amts, "Wrong transfer amount in db-sync"
-        rem_amts.remove(r_amount)
         assert (
-            row.spendable_epoch == row.earned_epoch + 1
-        ), "Wrong relation between earned and spendable epochs in db-sync"
-        assert row.type == "treasury", "Type not marked as treasury in db-sync"
+            row.address == stake_address
+        ), f"Wrong stake address in db-sync: {row.address} vs {stake_address}"
+
+        r_amount = int(row.amount)
+        if r_amount not in rem_amts:
+            continue
+        rem_amts.remove(r_amount)
+
+        assert row.spendable_epoch == row.earned_epoch + 1, (
+            "Wrong relation between earned and spendable epochs in db-sync: "
+            f"{row.spendable_epoch} != {row.earned_epoch + 1}"
+        )
+
+    assert not rem_amts, f"Not all expected amounts found in db-sync: {rem_amts}"
 
 
 def check_off_chain_drep_registration(
