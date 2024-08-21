@@ -4,6 +4,7 @@
 set -xeuo pipefail
 
 nix --version
+df -h .
 
 DEFAULT_CLUSTER_ERA="babbage"
 
@@ -35,6 +36,7 @@ case "${DBSYNC_REV:-""}" in
   * )
     # shellcheck disable=SC1090,SC1091
     . .github/source_dbsync.sh
+    df -h .
     ;;
 esac
 
@@ -137,7 +139,6 @@ nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
   printf "finish: %(%H:%M:%S)T\n" -1
-  pwd
   df -h .
   echo "::endgroup::"  # end group for "Nix env setup"
 
