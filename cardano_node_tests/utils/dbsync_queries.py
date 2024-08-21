@@ -1239,9 +1239,9 @@ def query_committee_registration(
     """Query committee registration in db-sync."""
     query = (
         "SELECT cr.id, cr.tx_id, cr.cert_index, chc.raw, chh.raw "
-        "FROM committee_registration as cr "
-        "INNER JOIN committee_hash as chh ON chh.id = cr.hot_key_id "
-        "INNER JOIN committee_hash as chc ON chc.id = cr.cold_key_id "
+        "FROM committee_registration AS cr "
+        "INNER JOIN committee_hash AS chh ON chh.id = cr.hot_key_id "
+        "INNER JOIN committee_hash AS chc ON chc.id = cr.cold_key_id "
         "WHERE chc.raw = %s;"
     )
 
@@ -1256,7 +1256,7 @@ def query_committee_deregistration(
     """Query committee registration in db-sync."""
     query = (
         "SELECT cd.id, cd.tx_id, cd.cert_index, cd.voting_anchor_id, committee_hash.raw "
-        "FROM committee_de_registration as cd "
+        "FROM committee_de_registration AS cd "
         "INNER JOIN committee_hash ON committee_hash.id = cd.cold_key_id "
         "WHERE committee_hash.raw = %s;"
     )
@@ -1275,7 +1275,7 @@ def query_drep_registration(
         " dr.id, dr.tx_id, dr.cert_index, dr.deposit, "
         " dr.drep_hash_id, dr.voting_anchor_id, "
         " dh.raw, dh.view, dh.has_script "
-        "FROM drep_registration as dr "
+        "FROM drep_registration AS dr "
         "INNER JOIN drep_hash dh on dh.id = dr.drep_hash_id "
         "WHERE dh.raw = %s "
         "AND dr.deposit = %s "
@@ -1307,7 +1307,7 @@ def query_gov_action_proposal(
         " gap.return_address, gap.expiration, gap.voting_anchor_id, gap.type, gap.description,"
         " gap.param_proposal, gap.ratified_epoch, gap.enacted_epoch, gap.dropped_epoch,"
         " gap.expired_epoch "
-        "FROM gov_action_proposal as gap "
+        "FROM gov_action_proposal AS gap "
         "INNER JOIN tx ON tx.id = gap.tx_id "
         f"WHERE {gap_query};"
     )
@@ -1322,7 +1322,7 @@ def query_voting_procedure(txhash: str) -> tp.Generator[VotingProcedureDBRow, No
     query = (
         "SELECT"
         " vp.id, vp.voter_role, vp.committee_voter, vp.drep_voter, vp.pool_voter, vp.vote "
-        "FROM voting_procedure as vp "
+        "FROM voting_procedure AS vp "
         "INNER JOIN tx ON tx.id = vp.tx_id "
         "WHERE tx.hash = %s;"
     )
@@ -1339,7 +1339,7 @@ def query_new_committee_info(txhash: str) -> tp.Generator[NewCommitteeInfoDBRow,
         " committee.id, gap.tx_id, gap.index, committee.quorum_numerator,"
         " committee.quorum_denominator "
         "FROM committee "
-        "INNER JOIN gov_action_proposal as gap ON gap.id = committee.gov_action_proposal_id "
+        "INNER JOIN gov_action_proposal AS gap ON gap.id = committee.gov_action_proposal_id "
         "INNER JOIN tx ON tx.id = gap.tx_id "
         "WHERE tx.hash = %s;"
     )
@@ -1408,8 +1408,8 @@ def query_off_chain_vote_drep_data(
         " vd.id, vd.hash, vd.language, vd.comment, vd.json, vd.bytes, vd.warning, vd.is_valid,"
         " drep.payment_address, drep.given_name, drep.objectives, drep.motivations,"
         " drep.qualifications, drep.image_url, drep.image_hash "
-        "FROM off_chain_vote_drep_data as drep "
-        "INNER JOIN off_chain_vote_data as vd ON vd.id = drep.off_chain_vote_data_id "
+        "FROM off_chain_vote_drep_data AS drep "
+        "INNER JOIN off_chain_vote_data AS vd ON vd.id = drep.off_chain_vote_data_id "
         "WHERE vd.voting_anchor_id = %s;"
     )
 
