@@ -144,6 +144,8 @@ def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C901
     for group, reqs in requirements_mapping.items():
         reqs_set = set(reqs.keys())
         executed_group = executed_req.get(group) or {}
+        if not executed_group:
+            executed_req[group] = executed_group
 
         group_errors: tp.Set[str] = set()
         for req_id, dependencies in reqs.items():
