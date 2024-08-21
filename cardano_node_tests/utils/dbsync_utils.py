@@ -1207,25 +1207,37 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
     prop = governance_utils.lookup_proposal(
         gov_state=gov_state, action_txid=txid, action_ix=action_ix
     )
-    quorum = prop["proposalProcedure"]["govAction"]["contents"][-1]
-
-    dbsync_commitee_info = [
+    dbsync_cm_info = [
         r for r in dbsync_queries.query_new_committee_info(txhash=txid) if r.action_ix == action_ix
     ].pop()
-    assert (
-        dbsync_commitee_info.quorum_denominator == quorum["denominator"]
-    ), "Incorrect committee threshold denominator in dbsync"
-    assert (
-        dbsync_commitee_info.quorum_numerator == quorum["numerator"]
-    ), "Incorrect committee threshold numerator in dbsync"
 
-    dbsync_committee_members = list(
-        dbsync_queries.query_committee_members(committee_id=dbsync_commitee_info.id)
+    # Check quorum
+    quorum = prop["proposalProcedure"]["govAction"]["contents"][-1]
+    assert dbsync_cm_info.quorum_denominator == quorum["denominator"], (
+        "Incorrect committee threshold denominator in dbsync: "
+        f"{dbsync_cm_info.quorum_denominator} vs {quorum['denominator']}"
     )
-    size_of_proposed_cm = len(prop["proposalProcedure"]["govAction"]["contents"][2])
-    assert (
-        len(dbsync_committee_members) == size_of_proposed_cm
-    ), "The number of proposed committee members doesn't match in dbsync"
+    assert dbsync_cm_info.quorum_numerator == quorum["numerator"], (
+        "Incorrect committee threshold numerator in dbsync: "
+        f"{dbsync_cm_info.quorum_numerator} vs {quorum['numerator']}"
+    )
+
+    # Check new committee members
+    dbsync_cm_last = {
+        r.committee_hash.hex()
+        for r in dbsync_queries.query_committee_members(committee_id=dbsync_cm_info.id)
+    }
+    dbsync_cm_prev = {
+        r.committee_hash.hex()
+        for r in dbsync_queries.query_committee_members(committee_id=dbsync_cm_info.id - 1)
+    }
+    # Filter out committee members that were already present in the previous committee
+    dbsync_cm_diff = dbsync_cm_last.difference(dbsync_cm_prev)
+    proposed_cm = prop["proposalProcedure"]["govAction"]["contents"][2]
+    assert len(dbsync_cm_diff) == len(proposed_cm), (
+        "The number of proposed committee members doesn't match the number in dbsync:\n"
+        f"{dbsync_cm_diff}\nvs\n{proposed_cm}"
+    )
 
 
 def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], txhash: str) -> None:

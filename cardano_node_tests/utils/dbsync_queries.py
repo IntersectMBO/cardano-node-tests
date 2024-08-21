@@ -513,8 +513,9 @@ class NewCommitteeInfoDBRow:
 @dataclasses.dataclass(frozen=True)
 class NewCommitteeMemberDBRow:
     # pylint: disable-next=invalid-name
-    gov_id: int
-    committee_hash_id: str
+    id: int
+    committee_id: int
+    committee_hash: memoryview
     expiration_epoch: int
 
 
@@ -1352,8 +1353,9 @@ def query_committee_members(committee_id: int) -> tp.Generator[NewCommitteeMembe
     """Query committee members in db-sync."""
     query = (
         "SELECT"
-        " cm.id, cm.committee_hash_id, cm.expiration_epoch "
-        "FROM committee_member as cm "
+        " cm.id, cm.committee_id, ch.raw, cm.expiration_epoch "
+        "FROM committee_member AS cm "
+        "INNER JOIN committee_hash AS ch ON ch.id = cm.committee_hash_id "
         "WHERE cm.committee_id = %s;"
     )
 
