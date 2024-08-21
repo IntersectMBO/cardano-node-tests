@@ -40,10 +40,12 @@ case "${DBSYNC_REV:-""}" in
     ;;
 esac
 
-# setup plutus-apps (enabled by default)
+# Setup plutus-apps (disabled by default).
 # The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
 # Plutus tests that are testing script context.
-case "${PLUTUS_APPS_REV:="main"}" in
+# TODO: The `create-script-context` tool is broken for a very long time, hence disabled.
+# See https://github.com/IntersectMBO/plutus-apps/issues/1107
+case "${PLUTUS_APPS_REV:="none"}" in
   "none" )
     unset PLUTUS_APPS_REV
     ;;
