@@ -14,6 +14,7 @@ if [[ -z "${BASE_TAR_URL:-""}" && -z "${BASE_REVISION:-""}" ]]; then
 fi
 
 nix --version
+df -h .
 
 REPODIR="$(readlink -m "${0%/*}/..")"
 export REPODIR
@@ -75,7 +76,6 @@ nix flake update --accept-flake-config $NODE_OVERRIDE
 nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step1"
   printf "finish: %(%H:%M:%S)T\n" -1
-  pwd
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
