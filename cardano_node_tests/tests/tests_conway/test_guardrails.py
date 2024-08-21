@@ -43,9 +43,9 @@ def cluster_guardrails(
     """Mark governance as "locked" and return instance of `clusterlib.ClusterLib`.
 
     Also mark guardrails tests with "guardrails" marker. As such, all the tests will run
-    on a the same cluster instance where the initial setup was already done (by the first test).
+    on the same cluster instance where the initial setup was already done (by the first test).
 
-    Clenup (== respin the cluster instance) after the tests are finished.
+    Cleanup (== respin the cluster instance) after the tests are finished.
     """
     cluster_obj = cluster_manager.get(
         mark="guardrails",
@@ -189,7 +189,7 @@ def cluster_with_constitution(
         # Enact the new constitution if the current one is not the one we expect
         if cur_constitution.get("script") != constitution_script_hash:
             if conway_common.is_in_bootstrap(cluster_obj=cluster):
-                pytest.skip("Cannot run update consitution during bootstrap period.")
+                pytest.skip("Cannot run update constitution during bootstrap period.")
             if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
                 pytest.skip("Cannot run update constitution on non-local testnet.")
 
@@ -198,7 +198,7 @@ def cluster_with_constitution(
             _enact_script_constitution()
             [r.success() for r in (reqc.cip015, reqc.cip031c_02)]
 
-        # Create collateral utxo for plutus script
+        # Create collateral UTxO for plutus script
         collateral_tx_outs = [
             clusterlib.TxOut(address=pool_user.payment.address, amount=5_000_000),
         ]
@@ -650,7 +650,7 @@ def perform_predicates_check(
 
 
 class TestGovernanceGuardrails:
-    """Test  governance guardrails using plutus script constitution.
+    """Test governance guardrails using plutus script constitution.
 
     * Enact a new constitution with a plutus script
     * Propose parameter change for different guardrail checks
