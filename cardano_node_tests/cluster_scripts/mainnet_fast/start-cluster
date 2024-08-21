@@ -533,7 +533,7 @@ for skey in "$STATE_CLUSTER"/shelley/delegate-keys/delegate?.skey; do
   DELEGATE_SIGNING+=("--signing-key-file" "$skey")
 done
 
-# Tranfer funds, register stake addresses and pools, all in one big transaction:
+# Transfer funds, register stake addresses and pools, all in one big transaction:
 
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
