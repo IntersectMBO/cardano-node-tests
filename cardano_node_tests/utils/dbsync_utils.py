@@ -1442,17 +1442,21 @@ def check_action_data(  # noqa: C901
             "There are discrepancies between json file and its representation in db-sync."
         )
     errors.extend(
-        helpers.compare_dicts(
-            json_anchor_file["body"],
-            db_action_data.gov_action_data,
-            ["title", "abstract", "motivation", "rationale"],
+        helpers.validate_dict_values(
+            dict1=json_anchor_file["body"],
+            dict2=db_action_data.gov_action_data,
+            keys=["title", "abstract", "motivation", "rationale"],
         )
     )
     if len(json_anchor_file["authors"]) != len(db_action_data.authors):
         errors.append("Author lists must be of the same length.")
     else:
         for json_author, db_author in zip(json_anchor_file["authors"], db_action_data.authors):
-            errors.extend(helpers.compare_dicts(json_author, db_author, ["name", "witness"]))
+            errors.extend(
+                helpers.validate_dict_values(
+                    dict1=json_author, dict2=db_author, keys=["name", "witness"]
+                )
+            )
     if len(json_anchor_file["body"]["references"]) != len(db_action_data.references):
         errors.append("References lists must be of the same length.")
     else:
@@ -1460,7 +1464,9 @@ def check_action_data(  # noqa: C901
             json_anchor_file["body"]["references"], db_action_data.references
         ):
             errors.extend(
-                helpers.compare_dicts(json_ref, db_ref, ["label", "uri", "referenceHash"])
+                helpers.validate_dict_values(
+                    dict1=json_ref, dict2=db_ref, keys=["label", "uri", "referenceHash"]
+                )
             )
     if len(json_anchor_file["body"]["externalUpdates"]) != len(db_action_data.external_updates):
         errors.append("External updates lists must be of the same length.")
@@ -1468,7 +1474,11 @@ def check_action_data(  # noqa: C901
         for json_update, db_update in zip(
             json_anchor_file["body"]["externalUpdates"], db_action_data.external_updates
         ):
-            errors.extend(helpers.compare_dicts(json_update, db_update, ["title", "uri"]))
+            errors.extend(
+                helpers.validate_dict_values(
+                    dict1=json_update, dict2=db_update, keys=["title", "uri"]
+                )
+            )
 
     if errors:
         raise AssertionError("\n".join(errors))

@@ -305,8 +305,8 @@ def flatten(
             yield first
 
 
-def compare_dicts(
-    dict1: tp.Dict[str, tp.Any], dict2: tp.Dict[str, tp.Any], keys: tp.List[str]
+def validate_dict_values(
+    dict1: tp.Dict[str, tp.Any], dict2: tp.Dict[str, tp.Any], keys: tp.Iterable[str]
 ) -> tp.List[str]:
     """Compare values for specified keys between two dictionaries and return discrepancies.
 
