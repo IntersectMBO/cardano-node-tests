@@ -1,5 +1,7 @@
-CLUSTER_ERA=babbage
-TX_ERA=babbage
+CLUSTER_ERA=conway
+COMMAND_ERA=conway
+PV10=true
+ENABLE_P2P=true
 MARKEXPR=dbsync
 CLUSTERS_COUNT=4
 DBSYNC_REV=13.4.0.1

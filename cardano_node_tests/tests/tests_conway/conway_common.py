@@ -417,6 +417,7 @@ def propose_change_constitution(
     constitution_url: str,
     constitution_hash: str,
     pool_user: clusterlib.PoolUser,
+    constitution_script_hash: str = "",
 ) -> tp.Tuple[clusterlib.ActionConstitution, str, int]:
     """Propose a constitution change."""
     deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
@@ -433,6 +434,7 @@ def propose_change_constitution(
         anchor_data_hash=anchor_data_hash,
         constitution_url=constitution_url,
         constitution_hash=constitution_hash,
+        constitution_script_hash=constitution_script_hash,
         prev_action_txid=prev_action_rec.txid,
         prev_action_ix=prev_action_rec.ix,
         deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
@@ -454,6 +456,7 @@ def propose_change_constitution(
         src_address=pool_user.payment.address,
         use_build_cmd=True,
         tx_files=tx_files,
+        fee_buffer=2_000_000,
     )
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)

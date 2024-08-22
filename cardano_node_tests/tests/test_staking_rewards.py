@@ -648,7 +648,8 @@ class TestRewards:
         # make sure there are rewards already available
         clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
 
-        mir_reward = 50_000_000_000
+        # MIR rewards doesn't work on Conway+
+        mir_reward = 50_000_000_000 if VERSIONS.transaction_era < VERSIONS.CONWAY else 0
 
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -884,14 +885,16 @@ class TestRewards:
                     )
                 )
 
-                if this_epoch == init_epoch + 2:
+                mir_tx_raw_reserves: tp.Optional[clusterlib.TxRawOutput] = None
+                if mir_reward and this_epoch == init_epoch + 2:
                     mir_tx_raw_reserves = _mir_tx("reserves")
 
-                if this_epoch == init_epoch + 3:
+                mir_tx_raw_treasury: tp.Optional[clusterlib.TxRawOutput] = None
+                if mir_reward and this_epoch == init_epoch + 3:
                     assert reward_per_epoch > mir_reward
                     mir_tx_raw_treasury = _mir_tx("treasury")
 
-                if this_epoch == init_epoch + 4:
+                if mir_reward and this_epoch == init_epoch + 4:
                     assert reward_per_epoch > mir_reward
 
                 # undelegate rewards address
@@ -961,8 +964,12 @@ class TestRewards:
         # check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_deleg)
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)
-        assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=mir_tx_raw_reserves)
-        assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=mir_tx_raw_treasury)
+        assert not mir_tx_raw_reserves or dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=mir_tx_raw_reserves
+        )
+        assert not mir_tx_raw_treasury or dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=mir_tx_raw_treasury
+        )
 
         # check pool records in db-sync
         pool_params: dict = clusterlib_utils.get_pool_state(
@@ -994,13 +1001,19 @@ class TestRewards:
 
             if repoch <= init_epoch + 1:
                 assert rtypes_set == {"leader"}
-            if repoch == init_epoch + 2:
-                assert rtypes_set == {"reserves", "leader", "member"}
-            if repoch == init_epoch + 3:
-                assert rtypes_set == {"treasury", "leader", "member"}
-            if init_epoch + 4 <= repoch <= 6:
+            elif repoch == init_epoch + 2:
+                expected_set = (
+                    {"reserves", "leader", "member"} if mir_reward else {"leader", "member"}
+                )
+                assert rtypes_set == expected_set
+            elif repoch == init_epoch + 3:
+                expected_set = (
+                    {"treasury", "leader", "member"} if mir_reward else {"leader", "member"}
+                )
+                assert rtypes_set == expected_set
+            elif init_epoch + 4 <= repoch <= 6:
                 assert rtypes_set == {"leader", "member"}
-            if repoch > init_epoch + 6:
+            elif repoch > init_epoch + 6:
                 assert rtypes_set == {"leader"}
 
     @allure.link(helpers.get_vcs_link())

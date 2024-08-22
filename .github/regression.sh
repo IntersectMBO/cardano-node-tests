@@ -4,6 +4,7 @@
 set -xeuo pipefail
 
 nix --version
+df -h .
 
 DEFAULT_CLUSTER_ERA="babbage"
 
@@ -35,13 +36,16 @@ case "${DBSYNC_REV:-""}" in
   * )
     # shellcheck disable=SC1090,SC1091
     . .github/source_dbsync.sh
+    df -h .
     ;;
 esac
 
-# setup plutus-apps (enabled by default)
+# Setup plutus-apps (disabled by default).
 # The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
 # Plutus tests that are testing script context.
-case "${PLUTUS_APPS_REV:="main"}" in
+# TODO: The `create-script-context` tool is broken for a very long time, hence disabled.
+# See https://github.com/IntersectMBO/plutus-apps/issues/1107
+case "${PLUTUS_APPS_REV:="none"}" in
   "none" )
     unset PLUTUS_APPS_REV
     ;;
@@ -137,6 +141,7 @@ nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
   printf "finish: %(%H:%M:%S)T\n" -1
+  df -h .
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
@@ -156,6 +161,8 @@ nix develop --accept-flake-config .#venv --command bash -c '
   exit "$retval"
 '
 retval="$?"
+
+df -h .
 
 # move reports to root dir
 mv .reports/testrun-report.* ./

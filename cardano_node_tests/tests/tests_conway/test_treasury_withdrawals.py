@@ -50,8 +50,9 @@ class TestTreasuryWithdrawals:
     """Tests for treasury withdrawals."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.long
-    def test_treasury_withdrawals(  # noqa: C901
+    def test_enact_treasury_withdrawals(  # noqa: C901
         self,
         cluster_use_governance: governance_utils.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
@@ -117,6 +118,7 @@ class TestTreasuryWithdrawals:
         )
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            reqc.cip026_03.start(url=helpers.get_vcs_link())
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
@@ -127,6 +129,7 @@ class TestTreasuryWithdrawals:
                 )
             err_str = str(excinfo.value)
             assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            reqc.cip026_03.success()
             return
 
         # Make sure we have enough time to submit the proposals in one epoch
@@ -355,21 +358,22 @@ class TestTreasuryWithdrawals:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
 
-        reqc.cip084.start(url=helpers.get_vcs_link())
         # Check dbsync
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.cip084, reqc.db009, reqc.db022)]
+        transfer_amts = [transfer_amt] * actions_num
         dbsync_utils.check_treasury_withdrawal(
-            actions_num=actions_num,
             stake_address=recv_stake_addr_rec.address,
-            transfer_amt=transfer_amt,
+            transfer_amts=transfer_amts,
             txhash=action_txid,
         )
         dbsync_utils.check_reward_rest(
-            actions_num=actions_num,
             stake_address=recv_stake_addr_rec.address,
-            transfer_amt=transfer_amt,
+            transfer_amts=transfer_amts,
+            type="treasury",
         )
 
-        reqc.cip084.success()
+        [r.success() for r in (reqc.cip084, reqc.db009, reqc.db022)]
 
         if xfail_ledger_3979_msgs:
             ledger_3979 = issues.ledger_3979.copy()

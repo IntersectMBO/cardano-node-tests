@@ -16,7 +16,7 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
-NO_REPONSE_STR = "No response returned from db-sync:"
+NO_RESPONSE_STR = "No response returned from db-sync:"
 
 
 def get_address_reward(
@@ -450,6 +450,7 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
         invalid_hereafter=int(txdata.last_row.invalid_hereafter)
         if txdata.last_row.invalid_hereafter
         else None,
+        treasury_donation=int(txdata.last_row.treasury_donation),
         txins=txins,
         txouts=[*txdata.utxo_out, *txdata.ma_utxo_out],
         mint=txdata.mint_utxo_out,
@@ -476,7 +477,7 @@ def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
     """Wait a bit and retry a query until response is returned.
 
     A generic function that can be used by any query/check that raises `AssertionError` with
-    `NO_REPONSE_STR` until the expected data is returned.
+    `NO_RESPONSE_STR` until the expected data is returned.
     """
     end_time = time.time() + timeout
     repeat = 0
@@ -490,7 +491,7 @@ def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
             response = query_func()
             break
         except AssertionError as exc:
-            if NO_REPONSE_STR in str(exc) and time.time() < end_time:
+            if NO_RESPONSE_STR in str(exc) and time.time() < end_time:
                 repeat += 1
                 continue
             raise
@@ -712,7 +713,7 @@ def check_pool_off_chain_data(
 ) -> dbsync_queries.PoolOffChainDataDBRow:
     """Check comparison for pool off chain data between ledger and db-sync."""
     db_pool_off_chain_data = list(dbsync_queries.query_off_chain_pool_data(pool_id))
-    assert db_pool_off_chain_data, f"{NO_REPONSE_STR} no off chain data for pool {pool_id}"
+    assert db_pool_off_chain_data, f"{NO_RESPONSE_STR} no off chain data for pool {pool_id}"
 
     metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
     db_metadata_hash = db_pool_off_chain_data[0].hash.hex()
@@ -732,7 +733,7 @@ def check_pool_off_chain_fetch_error(
     db_pool_off_chain_fetch_error = list(dbsync_queries.query_off_chain_pool_fetch_error(pool_id))
     assert (
         db_pool_off_chain_fetch_error
-    ), f"{NO_REPONSE_STR} no off chain fetch error for pool {pool_id}"
+    ), f"{NO_RESPONSE_STR} no off chain fetch error for pool {pool_id}"
 
     fetch_error_str = db_pool_off_chain_fetch_error[0].fetch_error or ""
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
@@ -956,7 +957,7 @@ def check_conway_param_update_proposal(
 
     # Get cost models
     if param_proposal_db.cost_model_id:
-        db_cost_model = dbsync_queries.query_cost_model(param_proposal_db.cost_model_id)
+        db_cost_model = dbsync_queries.query_cost_model(model_id=param_proposal_db.cost_model_id)
         pp_cost_model = param_proposal_ledger.get("costModels")
         if db_cost_model != pp_cost_model:
             failures.append(f"Cost model mismatch for {db_cost_model}. Expected: {pp_cost_model}")
@@ -988,27 +989,52 @@ def check_conway_param_update_enactment(
     return curr_params_db
 
 
+def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
+    """Check proposal refunds in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    failures = []
+    rewards_rest = list(dbsync_queries.query_address_reward_rest(stake_address))
+    assert refunds_num == len(
+        rewards_rest
+    ), f"Expected {refunds_num} refunds, got: {len(rewards_rest)}"
+    for reward in rewards_rest:
+        if reward.type != "proposal_refund":
+            failures.append(f"Expected proposal refund, got: {reward.type}")
+        if reward.spendable_epoch != reward.earned_epoch + 1:
+            failures.append("Incorrect relation between spendable and earned epochs")
+
+    if failures:
+        failures_str = "\n".join(failures)
+        msg = f"Wrong values for proposal refunds in db-sync:\n{failures_str}"
+        raise AssertionError(msg)
+
+
 def check_conway_gov_action_proposal_description(
-    update_proposal: dict, txhash: str = ""
+    update_proposal: dict, txhash: str = "", action_ix: int = 0
 ) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
-    """Check expected values in the param proposal table in db-sync."""
+    """Check expected values in the gov_action_proposal table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
-    db_gov_action = get_gov_action_proposals(txhash=txhash).pop()
-    db_gov_prop_desc = db_gov_action.description["contents"][1]
+    gov_actions_all = get_gov_action_proposals(txhash=txhash)
+    assert gov_actions_all, "No data returned from db-sync for gov action proposal"
+
+    gov_action = [r for r in gov_actions_all if r.action_ix == action_ix].pop()
+    db_gov_prop_desc = gov_action.description["contents"][1]
 
     if db_gov_prop_desc != update_proposal:
         msg = f"Comparison {db_gov_prop_desc} failed in db-sync:\n" f"Expected {update_proposal}"
         raise AssertionError(msg)
-    return db_gov_action
+    return gov_action
 
 
 def get_gov_action_proposals(
     txhash: str = "", type: str = ""
 ) -> tp.List[dbsync_queries.GovActionProposalDBRow]:
-    """Get goverment action proposal from db-sync."""
-    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash, type))
+    """Get government action proposal from db-sync."""
+    gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash=txhash, type=type))
     return gov_action_proposals
 
 
@@ -1032,19 +1058,17 @@ def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeReg
 
 
 def check_committee_member_registration(
-    cc_member_cold_key: str, committee_state: tp.Dict[str, tp.Any]
+    cc_member_cold_key: str,
 ) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
     """Check committee member registration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
     cc_member_data = get_committee_member(cold_key=cc_member_cold_key)
-    member_key = f"keyHash-{cc_member_cold_key}"
 
-    assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"
+    assert cc_member_data, "No data returned from db-sync"
     assert (
-        committee_state["committee"][member_key]["hotCredsAuthStatus"]["contents"]["keyHash"]
-        == cc_member_data.hot_key
+        cc_member_data.cold_key == cc_member_cold_key
     ), "CC Member not present in registration table in db-sync"
 
     return cc_member_data
@@ -1120,7 +1144,7 @@ def check_drep_registration(
 
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
 
-    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registartion"
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registration"
     assert (
         drep_state[0][0]["keyHash"] == drep_data.hash_hex
     ), f"DRep {drep.drep_id} not present in registration table in db-sync"
@@ -1140,7 +1164,7 @@ def check_drep_deregistration(
 
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=-drep.deposit)
 
-    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistartion"
+    assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistration"
     assert (
         drep.drep_id == drep_data.hash_hex
     ), f"Deregistered DRep {drep.drep_id} not present in registration table in db-sync"
@@ -1176,49 +1200,69 @@ def check_votes(votes: governance_utils.VotedVotes, txhash: str) -> None:
     assert expected_votes_by_role == dbsync_votes_by_role, "Votes didn't match in dbsync"
 
 
-def check_committee_info(gov_state: dict, txid: str) -> None:
+def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None:
     """Check committee info in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
 
-    prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
-
-    # Check dbsync
-    dbsync_committee_threshold = list(dbsync_queries.query_new_committee_info(txhash=txid))
-    assert (
-        dbsync_committee_threshold[0].quorum_denominator == 3
-    ), "Incorrect committee threshold denominator in dbsync"
-    assert (
-        dbsync_committee_threshold[0].quorum_numerator == 2
-    ), "Incorrect committee threshold numerator in dbsync"
-
-    dbsync_committee_members = list(
-        dbsync_queries.query_committee_members(committee_id=dbsync_committee_threshold[0].id)
+    prop = governance_utils.lookup_proposal(
+        gov_state=gov_state, action_txid=txid, action_ix=action_ix
     )
-    size_of_proposed_cm = len(prop["proposalProcedure"]["govAction"]["contents"][2]) + len(
-        gov_state["committee"]["members"]
+    dbsync_cm_info = [
+        r for r in dbsync_queries.query_new_committee_info(txhash=txid) if r.action_ix == action_ix
+    ].pop()
+
+    # Check quorum
+    quorum = prop["proposalProcedure"]["govAction"]["contents"][-1]
+    assert dbsync_cm_info.quorum_denominator == quorum["denominator"], (
+        "Incorrect committee threshold denominator in dbsync: "
+        f"{dbsync_cm_info.quorum_denominator} vs {quorum['denominator']}"
     )
-    assert (
-        len(dbsync_committee_members) == size_of_proposed_cm
-    ), "The number of committee members doesn't match in dbsync"
+    assert dbsync_cm_info.quorum_numerator == quorum["numerator"], (
+        "Incorrect committee threshold numerator in dbsync: "
+        f"{dbsync_cm_info.quorum_numerator} vs {quorum['numerator']}"
+    )
+
+    # Check new committee members
+    dbsync_cm_last = {
+        r.committee_hash.hex()
+        for r in dbsync_queries.query_committee_members(committee_id=dbsync_cm_info.id)
+    }
+    dbsync_cm_prev = {
+        r.committee_hash.hex()
+        for r in dbsync_queries.query_committee_members(committee_id=dbsync_cm_info.id - 1)
+    }
+    # Filter out committee members that were already present in the previous committee
+    dbsync_cm_diff = dbsync_cm_last.difference(dbsync_cm_prev)
+    proposed_cm = prop["proposalProcedure"]["govAction"]["contents"][2]
+    assert len(dbsync_cm_diff) == len(proposed_cm), (
+        "The number of proposed committee members doesn't match the number in dbsync:\n"
+        f"{dbsync_cm_diff}\nvs\n{proposed_cm}"
+    )
 
 
-def check_treasury_withdrawal(
-    actions_num: int, stake_address: str, transfer_amt: int, txhash: str
-) -> None:
+def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], txhash: str) -> None:
     """Check treasury_withdrawal in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
 
-    db_tr_withdrawals = list(dbsync_queries.query_treasury_withdrawal(txhash=txhash))
-    assert len(db_tr_withdrawals) == actions_num, (
-        f"Assertion failed: Expected {actions_num} records but got {len(db_tr_withdrawals)}."
+    actions_num = len(transfer_amts)
+    db_tr_withdrawals = [
+        r
+        for r in dbsync_queries.query_treasury_withdrawal(txhash=txhash)
+        if r.addr_view == stake_address
+    ]
+    db_tr_withdrawals_len = len(db_tr_withdrawals)
+    assert db_tr_withdrawals_len == actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {db_tr_withdrawals_len}."
         f"Data in db-sync: {db_tr_withdrawals}"
     )
 
+    rem_amts = transfer_amts[:]
     for row in db_tr_withdrawals:
-        assert row.addr_view == stake_address, "Wrong stake address in db-sync"
-        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
+        r_amount = int(row.amount)
+        assert r_amount in rem_amts, "Wrong transfer amount in db-sync"
+        rem_amts.remove(r_amount)
         assert row.enacted_epoch, "Action not marked as enacted in db-sync"
         assert (
             row.enacted_epoch == row.ratified_epoch + 1
@@ -1228,28 +1272,79 @@ def check_treasury_withdrawal(
         ), "Wrong relation between enacted and dropped epochs in db-sync"
 
 
-def check_reward_rest(
-    actions_num: int,
-    stake_address: str,
-    transfer_amt: int,
-) -> None:
+def check_reward_rest(stake_address: str, transfer_amts: tp.List[int], type: str = "") -> None:
     """Check reward_rest in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
 
-    db_rewards = list(dbsync_queries.query_address_reward_rest(stake_address))
-    assert len(db_rewards) == actions_num, (
-        f"Assertion failed: Expected {actions_num} records but got {len(db_rewards)}."
+    actions_num = len(transfer_amts)
+    db_rewards = [
+        r
+        for r in dbsync_queries.query_address_reward_rest(stake_address)
+        if not type or r.type == type
+    ]
+    db_rewards_len = len(db_rewards)
+    assert db_rewards_len >= actions_num, (
+        f"Assertion failed: Expected {actions_num} records but got {db_rewards_len}."
         f"Data in db-sync: {db_rewards}"
     )
 
+    rem_amts = transfer_amts[:]
     for row in db_rewards:
-        assert row.address == stake_address, "Wrong stake address in db-sync"
-        assert row.amount == transfer_amt, "Wrong transfer amount in db-sync"
         assert (
-            row.spendable_epoch == row.earned_epoch + 1
-        ), "Wrong relation between earned and spendable epochs in db-sync"
-        assert row.type == "treasury", "Type not marked as treasury in db-sync"
+            row.address == stake_address
+        ), f"Wrong stake address in db-sync: {row.address} vs {stake_address}"
+
+        r_amount = int(row.amount)
+        if r_amount not in rem_amts:
+            continue
+        rem_amts.remove(r_amount)
+
+        assert row.spendable_epoch == row.earned_epoch + 1, (
+            "Wrong relation between earned and spendable epochs in db-sync: "
+            f"{row.spendable_epoch} != {row.earned_epoch + 1}"
+        )
+
+    assert not rem_amts, f"Not all expected amounts found in db-sync: {rem_amts}"
+
+
+def check_off_chain_drep_registration(
+    drep_data: dbsync_types.DrepRegistrationRecord, metadata: dict
+) -> None:
+    """Check DRep off chain data in db-sync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    errors = []
+
+    drep_off_chain_metadata = list(
+        dbsync_queries.query_off_chain_vote_drep_data(voting_anchor_id=drep_data.voting_anchor_id)
+    )
+
+    assert (
+        drep_off_chain_metadata
+    ), f"{NO_RESPONSE_STR} no off chain drep metadata for drep {drep_data.id}"
+
+    db_metadata = drep_off_chain_metadata[0]
+    expected_metadata = metadata["body"]
+
+    if db_metadata.payment_address != expected_metadata["paymentAddress"]:
+        errors.append("'paymentAddress' value is different than expected;")
+
+    if db_metadata.given_name != expected_metadata["givenName"]:
+        errors.append("'givenName' value is different than expected;")
+
+    if db_metadata.objectives != expected_metadata["objectives"]:
+        errors.append("'objectives' value is different than expected;")
+
+    if db_metadata.motivations != expected_metadata["motivations"]:
+        errors.append("'motivations' value is different than expected;")
+
+    if db_metadata.qualifications != expected_metadata["qualifications"]:
+        errors.append("'qualifications' value is different than expected;")
+
+    if errors:
+        raise AssertionError("\n".join(errors))
 
 
 def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteDataRecord]:  # noqa: C901

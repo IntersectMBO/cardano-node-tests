@@ -574,9 +574,9 @@ def check_vote_view(  # noqa: C901
         }
     }
 
-    action_view_out = cluster_obj.g_conway_governance.vote.view(vote_file=vote_data.vote_file)
+    vote_view_out = cluster_obj.g_conway_governance.vote.view(vote_file=vote_data.vote_file)
 
-    assert action_view_out == expected_vote_out, f"{action_view_out} != {expected_vote_out}"
+    assert vote_view_out == expected_vote_out, f"{vote_view_out} != {expected_vote_out}"
 
 
 def wait_delayed_ratification(
@@ -618,6 +618,18 @@ def is_drep_active(
         epoch = cluster_obj.g_query.get_epoch()
 
     return bool(drep_state[0][1].get("expiry", 0) > epoch)
+
+
+def is_cc_active(cc_member_state: tp.Dict[str, tp.Any]) -> bool:
+    """Check if CC member is active."""
+    if not cc_member_state:
+        return False
+    if cc_member_state["hotCredsAuthStatus"] != "MemberAuthorized":
+        return False
+    if cc_member_state["status"] != "Active":  # noqa: SIM103
+        return False
+
+    return True
 
 
 def create_dreps(

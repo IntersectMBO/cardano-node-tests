@@ -225,12 +225,13 @@ class TestDBSync:
     def test_cost_model(self, cluster: clusterlib.ClusterLib):
         """Check expected values in the `cost_model` table in db-sync."""
         common.get_test_id(cluster)
+        curr_epoch = cluster.g_query.get_epoch()
 
-        db_cost_models = dbsync_queries.query_cost_model()
-        # wait till next epoch if the cost models are not yet available
+        db_cost_models = dbsync_queries.query_cost_model(epoch_no=curr_epoch)
+        # Wait till next epoch if the cost models are not yet available
         if not db_cost_models:
-            cluster.wait_for_new_epoch(padding_seconds=5)
-            db_cost_models = dbsync_queries.query_cost_model()
+            curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            db_cost_models = dbsync_queries.query_cost_model(epoch_no=curr_epoch)
 
         protocol_params = cluster.g_query.get_protocol_params()
 
@@ -238,14 +239,21 @@ class TestDBSync:
 
         # TODO: `PlutusScriptV1` was replaced with `PlutusV1` in node version 8.0.0
         pp_cost_model_v1 = pp_cost_models.get("PlutusV1") or pp_cost_models.get("PlutusScriptV1")
-        pp_cost_model_v2 = pp_cost_models.get("PlutusV2") or pp_cost_models.get("PlutusScriptV2")
-
         assert (
             pp_cost_model_v1 == db_cost_models["PlutusV1"]
-        ), "PlutusV1 cost model is not the expected"
+        ), "PlutusV1 cost model is not the expected one"
+
+        pp_cost_model_v2 = pp_cost_models.get("PlutusV2") or pp_cost_models.get("PlutusScriptV2")
+        # Cost models in Conway can have variable length. If the cost model is shorter than the max
+        # expected length, cardano-cli appends max integer values to the end of the list.
+        # When comparing with db-sync, we need to strip those appended values.
+        if len(pp_cost_model_v2) - 10 == len(db_cost_models["PlutusV2"]):
+            last_10_unique = set(pp_cost_model_v2[-10:])
+            if len(last_10_unique) == 1 and next(iter(last_10_unique)) == 9223372036854775807:
+                pp_cost_model_v2 = pp_cost_model_v2[:-10]
         assert (
             pp_cost_model_v2 == db_cost_models["PlutusV2"]
-        ), "PlutusV2 cost model is not the expected"
+        ), "PlutusV2 cost model is not the expected one"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -308,7 +316,7 @@ class TestDBSync:
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        time.sleep(60)
+        time.sleep(120)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 

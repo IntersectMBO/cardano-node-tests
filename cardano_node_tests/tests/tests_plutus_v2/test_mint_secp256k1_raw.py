@@ -2,6 +2,7 @@
 
 import logging
 import pathlib as pl
+import re
 import typing as tp
 
 import allure
@@ -239,7 +240,7 @@ class TestSECP256k1:
         )
 
         # From protocol version 8 the SECP256k1 functions are allowed
-        decoding_error = f"Caused by: (verify{algorithm.capitalize()}Secp256k1Signature"
+        decoding_error = rf"Caused by: \(?verify{algorithm.capitalize()}Secp256k1Signature"
 
         validation_error = (
             "The machine terminated because of an error, "
@@ -257,4 +258,5 @@ class TestSECP256k1:
         if before_pv8:
             assert is_forbidden or is_overspending, err_msg
         else:
-            assert expected_error_messages[test_vector] in err_msg, err_msg
+            assert re.search(expected_error_messages[test_vector], err_msg), err_msg
+            # assert expected_error_messages[test_vector] in err_msg, err_msg

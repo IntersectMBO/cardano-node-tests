@@ -7,6 +7,8 @@ import typing as tp
 
 import psycopg2
 
+from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 
 
@@ -83,6 +85,7 @@ class TxDBRow:
     size: int
     invalid_before: tp.Optional[decimal.Decimal]
     invalid_hereafter: tp.Optional[decimal.Decimal]
+    treasury_donation: int
     tx_out_id: int
     tx_out_tx_id: int
     utxo_ix: int
@@ -471,6 +474,7 @@ class GovActionProposalDBRow:
     # pylint: disable-next=invalid-name
     id: int
     tx_id: int
+    action_ix: int
     prev_gov_action_proposal: int
     deposit: int
     return_address: int
@@ -500,6 +504,8 @@ class VotingProcedureDBRow:
 class NewCommitteeInfoDBRow:
     # pylint: disable-next=invalid-name
     id: int
+    tx_id: int
+    action_ix: int
     quorum_numerator: str
     quorum_denominator: int
 
@@ -507,21 +513,52 @@ class NewCommitteeInfoDBRow:
 @dataclasses.dataclass(frozen=True)
 class NewCommitteeMemberDBRow:
     # pylint: disable-next=invalid-name
-    gov_id: int
-    committee_hash_id: str
+    id: int
+    committee_id: int
+    committee_hash: memoryview
     expiration_epoch: int
 
 
 @dataclasses.dataclass(frozen=True)
 class TreasuryWithdrawalDBRow:
     # pylint: disable-next=invalid-name
+    id: int
+    tx_id: int
+    action_ix: int
     expiration: int
     ratified_epoch: int
     enacted_epoch: int
     dropped_epoch: int
     expired_epoch: int
     addr_view: str
-    amount: int
+    amount: decimal.Decimal
+
+
+@dataclasses.dataclass(frozen=True)
+class OffChainVoteFetchErrorDBRow:
+    id: int
+    voting_anchor_id: int
+    fetch_error: str
+
+
+@dataclasses.dataclass(frozen=True)
+class OffChainVoteDrepDataDBRow:
+    # pylint: disable-next=invalid-name
+    id: int
+    hash: memoryview
+    language: str
+    comment: str
+    json: dict
+    bytes: memoryview
+    warning: str
+    is_valid: bool
+    payment_address: str
+    given_name: str
+    objectives: str
+    motivations: str
+    qualifications: str
+    image_url: str
+    image_hash: str
 
 
 @dataclasses.dataclass(frozen=True)
@@ -608,7 +645,7 @@ def query_tx(txhash: str) -> tp.Generator[TxDBRow, None, None]:
     query = (
         "SELECT"
         " tx.id, tx.hash, tx.block_id, tx.block_index, tx.out_sum, tx.fee, tx.deposit, tx.size,"
-        " tx.invalid_before, tx.invalid_hereafter,"
+        " tx.invalid_before, tx.invalid_hereafter, tx.treasury_donation,"
         " tx_out.id, tx_out.tx_id, tx_out.index, tx_out.address, tx_out.address_has_script,"
         " tx_out.value, tx_out.data_hash, datum.hash, script.hash,"
         " (SELECT COUNT(id) FROM tx_metadata WHERE tx_id=tx.id) AS metadata_count,"
@@ -1129,19 +1166,29 @@ def query_datum(datum_hash: str) -> tp.Generator[DatumDBRow, None, None]:
             yield DatumDBRow(*result)
 
 
-def query_cost_model(model_id: int = -1) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
-    """Query last cost model record (if id not specified) in db-sync."""
-    query = "SELECT * FROM cost_model ORDER BY ID DESC LIMIT 1"
+def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+    """Query cost model record in db-sync.
+
+    If `model_id` is specified, query the cost model that corresponds to the given id.
+    If `epoch_no` is specified, query the cost model used in the given epoch.
+    Otherwise query the latest cost model.
+    """
     query_var: tp.Union[int, str]
 
     if model_id != -1:
-        id_query = "WHERE id = %s "
+        subquery = "WHERE cm.id = %s "
         query_var = model_id
+    elif epoch_no != -1:
+        subquery = (
+            "INNER JOIN epoch_param ON epoch_param.cost_model_id = cm.id "
+            "WHERE epoch_param.epoch_no = %s "
+        )
+        query_var = epoch_no
     else:
-        id_query = ""
+        subquery = ""
         query_var = ""
 
-    query = f"SELECT * FROM cost_model {id_query} ORDER BY ID DESC LIMIT 1"
+    query = f"SELECT * FROM cost_model AS cm {subquery} ORDER BY cm.id DESC LIMIT 1"
 
     with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()
@@ -1227,9 +1274,9 @@ def query_committee_registration(
     """Query committee registration in db-sync."""
     query = (
         "SELECT cr.id, cr.tx_id, cr.cert_index, chc.raw, chh.raw "
-        "FROM committee_registration as cr "
-        "INNER JOIN committee_hash as chh ON chh.id = cr.hot_key_id "
-        "INNER JOIN committee_hash as chc ON chc.id = cr.cold_key_id "
+        "FROM committee_registration AS cr "
+        "INNER JOIN committee_hash AS chh ON chh.id = cr.hot_key_id "
+        "INNER JOIN committee_hash AS chc ON chc.id = cr.cold_key_id "
         "WHERE chc.raw = %s;"
     )
 
@@ -1244,7 +1291,7 @@ def query_committee_deregistration(
     """Query committee registration in db-sync."""
     query = (
         "SELECT cd.id, cd.tx_id, cd.cert_index, cd.voting_anchor_id, committee_hash.raw "
-        "FROM committee_de_registration as cd "
+        "FROM committee_de_registration AS cd "
         "INNER JOIN committee_hash ON committee_hash.id = cd.cold_key_id "
         "WHERE committee_hash.raw = %s;"
     )
@@ -1263,7 +1310,7 @@ def query_drep_registration(
         " dr.id, dr.tx_id, dr.cert_index, dr.deposit, "
         " dr.drep_hash_id, dr.voting_anchor_id, "
         " dh.raw, dh.view, dh.has_script "
-        "FROM drep_registration as dr "
+        "FROM drep_registration AS dr "
         "INNER JOIN drep_hash dh on dh.id = dr.drep_hash_id "
         "WHERE dh.raw = %s "
         "AND dr.deposit = %s "
@@ -1291,10 +1338,11 @@ def query_gov_action_proposal(
 
     query = (
         "SELECT"
-        " gap.id, gap.tx_id, gap.prev_gov_action_proposal, gap.deposit, gap.return_address,"
-        " gap.expiration, gap.voting_anchor_id, gap.type, gap.description, gap.param_proposal,"
-        " gap.ratified_epoch, gap.enacted_epoch, gap.dropped_epoch, gap.expired_epoch "
-        "FROM gov_action_proposal as gap "
+        " gap.id, gap.tx_id, gap.index, gap.prev_gov_action_proposal, gap.deposit,"
+        " gap.return_address, gap.expiration, gap.voting_anchor_id, gap.type, gap.description,"
+        " gap.param_proposal, gap.ratified_epoch, gap.enacted_epoch, gap.dropped_epoch,"
+        " gap.expired_epoch "
+        "FROM gov_action_proposal AS gap "
         "INNER JOIN tx ON tx.id = gap.tx_id "
         f"WHERE {gap_query};"
     )
@@ -1309,7 +1357,7 @@ def query_voting_procedure(txhash: str) -> tp.Generator[VotingProcedureDBRow, No
     query = (
         "SELECT"
         " vp.id, vp.voter_role, vp.committee_voter, vp.drep_voter, vp.pool_voter, vp.vote "
-        "FROM voting_procedure as vp "
+        "FROM voting_procedure AS vp "
         "INNER JOIN tx ON tx.id = vp.tx_id "
         "WHERE tx.hash = %s;"
     )
@@ -1323,9 +1371,10 @@ def query_new_committee_info(txhash: str) -> tp.Generator[NewCommitteeInfoDBRow,
     """Query new committee proposed in db-sync."""
     query = (
         "SELECT"
-        " committee.id, committee.quorum_numerator, committee.quorum_denominator "
+        " committee.id, gap.tx_id, gap.index, committee.quorum_numerator,"
+        " committee.quorum_denominator "
         "FROM committee "
-        "INNER JOIN gov_action_proposal as gap ON gap.id = committee.gov_action_proposal_id "
+        "INNER JOIN gov_action_proposal AS gap ON gap.id = committee.gov_action_proposal_id "
         "INNER JOIN tx ON tx.id = gap.tx_id "
         "WHERE tx.hash = %s;"
     )
@@ -1339,8 +1388,9 @@ def query_committee_members(committee_id: int) -> tp.Generator[NewCommitteeMembe
     """Query committee members in db-sync."""
     query = (
         "SELECT"
-        " cm.id, cm.committee_hash_id, cm.expiration_epoch "
-        "FROM committee_member as cm "
+        " cm.id, cm.committee_id, ch.raw, cm.expiration_epoch "
+        "FROM committee_member AS cm "
+        "INNER JOIN committee_hash AS ch ON ch.id = cm.committee_hash_id "
         "WHERE cm.committee_id = %s;"
     )
 
@@ -1353,7 +1403,7 @@ def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBR
     """Query treasury_withdrawal table in db-sync."""
     query = (
         "SELECT"
-        " gap.expiration, gap.ratified_epoch, gap.enacted_epoch, "
+        " gap.id, gap.tx_id, gap.index, gap.expiration, gap.ratified_epoch, gap.enacted_epoch, "
         " gap.dropped_epoch, gap.expired_epoch, "
         " sa.view AS addr_view, tw.amount "
         "FROM gov_action_proposal AS gap "
@@ -1392,3 +1442,48 @@ def query_off_chain_vote_data(data_hash: str) -> tp.Generator[OffChainVoteDataDB
     with execute(query=query, vars=(rf"\x{data_hash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield OffChainVoteDataDBRow(*result)
+
+
+def query_off_chain_vote_fetch_error(
+    voting_anchor_id: int,
+) -> tp.Generator[OffChainVoteFetchErrorDBRow, None, None]:
+    """Query off_chain_vote_fetch_error table in db-sync."""
+    query = (
+        "SELECT"
+        " id, voting_anchor_id, fetch_error "
+        "FROM off_chain_vote_fetch_error "
+        "WHERE off_chain_vote_fetch_error.voting_anchor_id = %s;"
+    )
+
+    with execute(query=query, vars=(voting_anchor_id,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield OffChainVoteFetchErrorDBRow(*result)
+
+
+def query_off_chain_vote_drep_data(
+    voting_anchor_id: int,
+) -> tp.Generator[OffChainVoteDrepDataDBRow, None, None]:
+    """Query off_chain_vote_drep_data table in db-sync."""
+    query = (
+        "SELECT"
+        " vd.id, vd.hash, vd.language, vd.comment, vd.json, vd.bytes, vd.warning, vd.is_valid,"
+        " drep.payment_address, drep.given_name, drep.objectives, drep.motivations,"
+        " drep.qualifications, drep.image_url, drep.image_hash "
+        "FROM off_chain_vote_drep_data AS drep "
+        "INNER JOIN off_chain_vote_data AS vd ON vd.id = drep.off_chain_vote_data_id "
+        "WHERE vd.voting_anchor_id = %s;"
+    )
+
+    with execute(query=query, vars=(voting_anchor_id,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield OffChainVoteDrepDataDBRow(*result)
+
+
+def query_db_size() -> int:
+    """Query database size in MB in db-sync."""
+    instance_num = cluster_nodes.get_instance_num()
+    query = f"SELECT pg_database_size('{configuration.DBSYNC_DB}{instance_num}')/1024/1024;"
+
+    with execute(query=query) as cur:
+        result = cur.fetchone()
+        return int(result[0])

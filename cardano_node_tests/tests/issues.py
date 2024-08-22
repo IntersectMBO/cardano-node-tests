@@ -63,6 +63,12 @@ cli_800 = blockers.GH(
     fixed_in="8.24.0.1",  # Fixed in a release after 8.24.0.0
     message="Datum not checked for PlutusV1 and PlutusV2 spending scripts.",
 )
+cli_860 = blockers.GH(
+    issue=860,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="9.10.0.0",  # Fixed in some release after 9.2.1.0
+    message="Negative pparam proposal values overflow to positive.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,

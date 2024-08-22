@@ -62,6 +62,7 @@ def build_and_submit_tx(
     mint: clusterlib.OptionalMint = (),
     tx_files: tp.Optional[clusterlib.TxFiles] = None,
     complex_certs: clusterlib.OptionalScriptCerts = (),
+    complex_proposals: clusterlib.OptionalScriptProposals = (),
     change_address: str = "",
     fee_buffer: tp.Optional[int] = None,
     raw_fee: tp.Optional[int] = None,
@@ -71,6 +72,8 @@ def build_and_submit_tx(
     script_withdrawals: clusterlib.OptionalScriptWithdrawals = (),
     script_votes: clusterlib.OptionalScriptVotes = (),
     deposit: tp.Optional[int] = None,
+    current_treasury_value: tp.Optional[int] = None,
+    treasury_donation: tp.Optional[int] = None,
     invalid_hereafter: tp.Optional[int] = None,
     invalid_before: tp.Optional[int] = None,
     witness_override: tp.Optional[int] = None,
@@ -109,6 +112,7 @@ def build_and_submit_tx(
             mint=mint,
             tx_files=tx_files,
             complex_certs=complex_certs,
+            complex_proposals=complex_proposals,
             change_address=change_address,
             fee_buffer=fee_buffer,
             required_signers=required_signers,
@@ -117,6 +121,7 @@ def build_and_submit_tx(
             script_withdrawals=script_withdrawals,
             script_votes=script_votes,
             deposit=deposit,
+            treasury_donation=treasury_donation,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             witness_override=witness_override,
@@ -147,12 +152,15 @@ def build_and_submit_tx(
             mint=mint,
             tx_files=tx_files,
             complex_certs=complex_certs,
+            complex_proposals=complex_proposals,
             required_signers=required_signers,
             required_signer_hashes=required_signer_hashes,
             withdrawals=withdrawals,
             script_withdrawals=script_withdrawals,
             script_votes=script_votes,
             deposit=deposit,
+            current_treasury_value=current_treasury_value,
+            treasury_donation=treasury_donation,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             witness_count_add=witness_count_add,
@@ -171,6 +179,7 @@ def build_and_submit_tx(
             mint=mint,
             tx_files=tx_files,
             complex_certs=complex_certs,
+            complex_proposals=complex_proposals,
             fee=fee,
             required_signers=required_signers,
             required_signer_hashes=required_signer_hashes,
@@ -178,6 +187,8 @@ def build_and_submit_tx(
             script_withdrawals=script_withdrawals,
             script_votes=script_votes,
             deposit=deposit,
+            current_treasury_value=current_treasury_value,
+            treasury_donation=treasury_donation,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
             join_txouts=join_txouts,
@@ -1422,3 +1433,35 @@ def get_snapshot_delegations(ledger_snapshot: dict) -> tp.Dict[str, tp.List[str]
             delegations[r_pool_id] = [r_hash]
 
     return delegations
+
+
+def create_collaterals(
+    cluster: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
+    temp_template: str,
+    tx_outs: tp.List[clusterlib.TxOut],
+) -> tp.List[clusterlib.UTXOData]:
+    """Create collateral UTxOs as required."""
+    tx_files = clusterlib.TxFiles(
+        signing_key_files=[payment_addr.skey_file],
+    )
+    tx_output = cluster.g_transaction.build_tx(
+        src_address=payment_addr.address,
+        tx_name=f"{temp_template}_collaterals_tx",
+        tx_files=tx_files,
+        txouts=tx_outs,
+        fee_buffer=2_000_000,
+        # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
+        join_txouts=False,
+    )
+    tx_signed = cluster.g_transaction.sign_tx(
+        tx_body_file=tx_output.out_file,
+        signing_key_files=tx_files.signing_key_files,
+        tx_name=f"{temp_template}_collaterals_signed",
+    )
+    cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
+
+    utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+    utxo_ix_offset = get_utxo_ix_offset(utxos=utxos, txouts=tx_output.txouts)
+    # Return collateral UTxOs according to the order in `tx_outs`
+    return utxos[utxo_ix_offset : utxo_ix_offset + len(tx_outs)]

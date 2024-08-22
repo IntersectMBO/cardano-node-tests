@@ -2,4 +2,3 @@ CLUSTER_ERA=conway
 COMMAND_ERA=conway
 PV10=true
 ENABLE_P2P=true
-CARDANO_CLI_REV=release/cardano-cli-9.0.0.1

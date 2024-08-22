@@ -662,7 +662,7 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
 fi
 
 sleep "$PROPOSAL_DELAY"
-echo "Submitting update proposal to transfer to Allegra, transfering funds to pool owners, registering pools and delegations"
+echo "Submitting update proposal to transfer to Allegra, transferring funds to pool owners, registering pools and delegations"
 
 ALLEGRA_HF_PROPOSAL_FILE="$STATE_CLUSTER/shelley/update-proposal-allegra.proposal"
 ALLEGRA_TX_BASE="$STATE_CLUSTER/shelley/transfer-register-delegate"
@@ -674,7 +674,7 @@ cardano_cli_log governance create-update-proposal \
   --protocol-major-version 3 \
   --protocol-minor-version 0
 
-# Tranfer funds, register pools and delegations, submit update proposal, all in one big transaction:
+# Transfer funds, register pools and delegations, submit update proposal, all in one big transaction:
 
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \

@@ -13,6 +13,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -733,11 +734,13 @@ class TestPParamUpdate:
 
         # db-sync check
         try:
+            reqc.db008.start(url=helpers.get_vcs_link())
             dbsync_utils.check_conway_gov_action_proposal_description(
                 update_proposal=net_nodrep_prop_rec.future_pparams,
                 txhash=net_nodrep_prop_rec.action_txid,
             )
             dbsync_utils.check_conway_param_update_proposal(net_nodrep_prop_rec.future_pparams)
+            reqc.db008.success()
         except AssertionError as exc:
             db_errors_final.append(f"db-sync network params update error: {exc}")
 
@@ -1281,9 +1284,53 @@ class TestPParamUpdate:
         if fin_voted_votes.drep:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=fin_voted_votes.drep[0])
 
+        try:
+            dbsync_utils.check_proposal_refunds(
+                stake_address=pool_user_lg.stake.address, refunds_num=submitted_proposal_count
+            )
+        except AssertionError as exc:
+            db_errors_final.append(f"db-sync proposal refunds error: {exc}")
+
         if db_errors_final:
             raise AssertionError("\n".join(db_errors_final))
         [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    def test_pparam_negative_value(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test creation of pparam update with negative value."""
+        temp_template = common.get_test_id(cluster)
+
+        proposal = clusterlib_utils.UpdateProposal(
+            arg="--max-block-header-size", value=-3161913232, name="maxBlockHeaderSize"
+        )
+
+        update_args = clusterlib_utils.get_pparams_update_args(update_proposals=[proposal])
+        try:
+            action_data = cluster.g_conway_governance.action.create_pparams_update(
+                action_name=temp_template,
+                deposit_amt=100000000,
+                anchor_url="http://www.pparam-action.com",
+                anchor_data_hash="fb013f4b7ddb08fa20dd2974b8a4447598477886f544d71033da53390325cd37",
+                cli_args=update_args,
+                deposit_return_stake_vkey_file=DATA_DIR / "golden_stake.vkey",
+            )
+        except clusterlib.CLIError:
+            # TODO: check expected error message once cli issue 860 is fixed
+            return
+
+        action_view_out = cluster.g_conway_governance.action.view(
+            action_file=action_data.action_file
+        )
+        action_contents = action_view_out["governance action"]["contents"]
+        if action_contents[1]["maxBlockHeaderSize"] == 2160:
+            issues.cli_860.finish_test()
+
+        _msg = f"Unexpected action content:\n{action_contents}"
+        raise AssertionError(_msg)
 
 
 class TestPParamData:

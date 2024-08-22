@@ -53,6 +53,7 @@ class TestInfo:
     GOV_ACTION_ANCHOR_FILE = DATA_DIR / "governance_action_anchor.json"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     def test_info(
         self,
         cluster_use_governance: governance_utils.GovClusterT,
@@ -271,10 +272,12 @@ class TestInfo:
         reqc.cli022.success()
 
         # Check dbsync
+        reqc.db013.start(url=helpers.get_vcs_link())
         dbsync_utils.check_votes(
             votes=governance_utils.VotedVotes(cc=votes_cc, drep=votes_drep, spo=votes_spo),
             txhash=vote_txid,
         )
+        reqc.db013.success()
         dbsync_utils.check_action_data(
             json_anchor_file=json_anchor_file, anchor_data_hash=anchor_data_hash
         )

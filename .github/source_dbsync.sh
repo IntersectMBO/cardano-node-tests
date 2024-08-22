@@ -3,7 +3,7 @@
 echo "::group::db-sync setup"
 
 TEST_THREADS="${TEST_THREADS:-15}"
-CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
+CLUSTERS_COUNT="${CLUSTERS_COUNT:-4}"
 export TEST_THREADS CLUSTERS_COUNT
 
 pushd "$WORKDIR" || exit 1
@@ -64,10 +64,23 @@ if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
   rm -f schema/migration-4-000*
 fi
 
-# build db-sync
-nix build --accept-flake-config .#cardano-db-sync -o db-sync-node \
-  || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o db-sync-node \
-  || exit 1
+if [ -n "${DBSYNC_TAR_URL:-""}" ]; then
+  # download db-sync
+  DBSYNC_TAR_FILE="$WORKDIR/dbsync_bins.tar.gz"
+  curl -sSL "$DBSYNC_TAR_URL" > "$DBSYNC_TAR_FILE" || exit 1
+  rm -rf "${WORKDIR}/dbsync_download"
+  mkdir -p "${WORKDIR}/dbsync_download/bin"
+  tar -C "${WORKDIR}/dbsync_download/bin" -xzf "$DBSYNC_TAR_FILE" || exit 1
+  rm -f "$DBSYNC_TAR_FILE"
+  rm -f db-sync-node
+  ln -s "${WORKDIR}/dbsync_download" db-sync-node || exit 1
+else
+  # build db-sync
+  nix build --accept-flake-config .#cardano-db-sync -o db-sync-node \
+    || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o db-sync-node \
+    || exit 1
+fi
+
 [ -e db-sync-node/bin/cardano-db-sync ] || exit 1
 export DBSYNC_REPO="$PWD"
 

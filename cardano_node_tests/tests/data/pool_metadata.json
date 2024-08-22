@@ -1,0 +1,6 @@
+{
+    "name": "test_stake_pool_metadata",
+    "description": "cardano-node-tests E2E tests",
+    "ticker": "IOG1",
+    "homepage": "https://github.com/input-output-hk/cardano-node-tests"
+}
