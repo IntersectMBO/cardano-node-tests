@@ -208,3 +208,21 @@ class DrepRegistrationRecord:
     hash_hex: str
     hash_bech32: str
     has_script: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class OffChainVoteDataRecord:
+    id: int
+    vot_anchor_id: int
+    hash: str
+    json: dict
+    bytes: str
+    warning: tp.Optional[str]
+    language: str
+    comment: tp.Optional[str]
+    is_valid: tp.Optional[bool]
+    authors: tp.List[tp.Dict[str, tp.Any]]
+    references: tp.List[tp.Dict[str, tp.Any]]
+    gov_action_data: tp.Dict[str, tp.Any]
+    external_updates: tp.List[tp.Dict[str, tp.Any]]
+    voting_anchor: tp.Dict[str, tp.Any]

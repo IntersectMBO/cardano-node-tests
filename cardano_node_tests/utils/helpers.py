@@ -303,3 +303,30 @@ def flatten(
             remainder = itertools.chain(first, remainder)
         else:
             yield first
+
+
+def validate_dict_values(
+    dict1: tp.Dict[str, tp.Any], dict2: tp.Dict[str, tp.Any], keys: tp.Iterable[str]
+) -> tp.List[str]:
+    """Compare values for specified keys between two dictionaries and return discrepancies.
+
+    Args:
+        dict1: First dictionary to compare. This represents the expected data.
+        dict2: Second dictionary to compare. This represents the actual data.
+        keys: List of keys to compare between the two dictionaries.
+
+    Returns:
+        A list of discrepancies, with each discrepancy describing a mismatch
+        between the values in dict1 and dict2 for the specified keys.
+    """
+    errors = []
+
+    for key in keys:
+        expected_value = dict1.get(key)
+        actual_value = dict2.get(key)
+
+        if expected_value != actual_value:
+            msg = f"Discrepancy in '{key}': {actual_value}. Expected: {expected_value}"
+            errors.append(msg)
+
+    return errors

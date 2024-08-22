@@ -561,6 +561,41 @@ class OffChainVoteDrepDataDBRow:
     image_hash: str
 
 
+@dataclasses.dataclass(frozen=True)
+class OffChainVoteDataDBRow:
+    data_id: int
+    data_vot_anchor_id: int
+    data_hash: memoryview
+    data_json: dict
+    data_bytes: memoryview
+    data_warning: tp.Optional[str]
+    data_language: str
+    data_comment: tp.Optional[str]
+    data_is_valid: tp.Optional[bool]
+    auth_name: tp.Optional[str]
+    auth_wit_alg: tp.Optional[str]
+    auth_pub_key: tp.Optional[str]
+    auth_signature: tp.Optional[str]
+    auth_warning: tp.Optional[str]
+    ext_update_id: tp.Optional[int]
+    ext_update_title: tp.Optional[str]
+    ext_update_uri: tp.Optional[str]
+    gov_act_id: tp.Optional[int]
+    gov_act_title: tp.Optional[str]
+    gov_act_abstract: tp.Optional[str]
+    gov_act_motivation: tp.Optional[str]
+    gov_act_rationale: tp.Optional[str]
+    ref_id: tp.Optional[int]
+    ref_label: tp.Optional[str]
+    ref_uri: tp.Optional[str]
+    ref_hash_digest: tp.Optional[str]
+    ref_hash_alg: tp.Optional[str]
+    vot_anchor_url: str
+    vot_anchor_data_hash: memoryview
+    vot_anchor_type: str
+    vot_anchor_block_id: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1381,6 +1416,32 @@ def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBR
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield TreasuryWithdrawalDBRow(*result)
+
+
+def query_off_chain_vote_data(data_hash: str) -> tp.Generator[OffChainVoteDataDBRow, None, None]:
+    """Query the off chain vote data in db-sync."""
+    query = (
+        "SELECT"
+        " data.id, data.voting_anchor_id, data.hash, data.json, data.bytes, "
+        "data.warning, data.language, data.comment, data.is_valid, "
+        "auth.name, auth.witness_algorithm, auth.public_key, auth.signature, auth.warning, "
+        "updt.id, updt.title, updt.uri, "
+        "gov.id, gov.title, gov.abstract, gov.motivation, gov.rationale, "
+        "ref.id, ref.label, ref.uri, ref.hash_digest, ref.hash_algorithm, "
+        "va.url, va.data_hash, va.type, va.block_id "
+        "FROM off_chain_vote_data data "
+        "LEFT JOIN off_chain_vote_author auth ON data.id = auth.off_chain_vote_data_id "
+        "LEFT JOIN off_chain_vote_external_update updt ON data.id = updt.off_chain_vote_data_id "
+        "LEFT JOIN off_chain_vote_gov_action_data gov ON data.id = gov.off_chain_vote_data_id "
+        "LEFT JOIN off_chain_vote_reference ref ON data.id = ref.off_chain_vote_data_id "
+        "LEFT JOIN voting_anchor va ON data.voting_anchor_id = va.id "
+        "WHERE data.hash = %s "
+        "ORDER BY va.id, ref.id, auth.id, updt.id;"
+    )
+
+    with execute(query=query, vars=(rf"\x{data_hash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield OffChainVoteDataDBRow(*result)
 
 
 def query_off_chain_vote_fetch_error(
