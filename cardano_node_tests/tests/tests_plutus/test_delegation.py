@@ -763,7 +763,7 @@ class TestDelegateAddr:
 
         # Submit registration certificate and delegate to pool
         try:
-            tx_raw_delegation_out, plutus_cost_deleg = register_delegate_stake_addr(
+            tx_delegation_out, plutus_cost_deleg = register_delegate_stake_addr(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 txins=deleg_utxos,
@@ -797,9 +797,7 @@ class TestDelegateAddr:
             cluster.g_query.get_epoch() == init_epoch
         ), "Delegation took longer than expected and would affect other checks"
 
-        tx_db_record = dbsync_utils.check_tx(
-            cluster_obj=cluster, tx_raw_output=tx_raw_delegation_out
-        )
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_delegation_out)
         delegation.db_check_delegation(
             pool_user=pool_user,
             db_record=tx_db_record,
@@ -831,7 +829,7 @@ class TestDelegateAddr:
 
         # Submit deregistration certificate and withdraw rewards
         try:
-            tx_raw_deregister_out, __ = deregister_stake_addr(
+            tx_deregister_out, __ = deregister_stake_addr(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 txins=dereg_utxos,
@@ -850,14 +848,24 @@ class TestDelegateAddr:
             raise AssertionError(reward_error)
 
         # Check tx_view of step 2 and step 3
-        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_delegation_out)
-        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_deregister_out)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_delegation_out)
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_deregister_out)
 
         # Compare cost of Plutus script with data from db-sync
-        if tx_db_record and use_build_cmd:
-            dbsync_utils.check_plutus_costs(
-                redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost_deleg
-            )
+        if tx_db_record and plutus_cost_deleg:
+            try:
+                dbsync_utils.check_plutus_costs(
+                    redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost_deleg
+                )
+            except AssertionError as exc:
+                if (
+                    VERSIONS.transaction_era >= VERSIONS.CONWAY
+                    and len(tx_db_record.redeemers) == 2
+                    and tx_db_record.redeemers[0].unit_steps == tx_db_record.redeemers[1].unit_steps
+                    and "space:" in str(exc)
+                ):
+                    issues.dbsync_1825.finish_test()
+                raise
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
