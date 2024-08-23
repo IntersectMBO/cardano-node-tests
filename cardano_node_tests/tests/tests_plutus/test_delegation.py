@@ -853,9 +853,19 @@ class TestDelegateAddr:
 
         # Compare cost of Plutus script with data from db-sync
         if tx_db_record and plutus_cost_deleg:
-            dbsync_utils.check_plutus_costs(
-                redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost_deleg
-            )
+            try:
+                dbsync_utils.check_plutus_costs(
+                    redeemer_records=tx_db_record.redeemers, cost_records=plutus_cost_deleg
+                )
+            except AssertionError as exc:
+                if (
+                    VERSIONS.transaction_era >= VERSIONS.CONWAY
+                    and len(tx_db_record.redeemers) == 2
+                    and tx_db_record.redeemers[0].unit_steps == tx_db_record.redeemers[1].unit_steps
+                    and "space:" in str(exc)
+                ):
+                    issues.dbsync_1825.finish_test()
+                raise
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

@@ -88,6 +88,11 @@ dbsync_1363 = blockers.GH(
     repo="IntersectMBO/cardano-db-sync",
     message="Blocks count don't match between tables.",
 )
+dbsync_1825 = blockers.GH(
+    issue=1825,
+    repo="IntersectMBO/cardano-db-sync",
+    message="Wrong PlutusV2 script cost when the same script is used twice.",
+)
 
 ledger_3731 = blockers.GH(
     issue=3731,
