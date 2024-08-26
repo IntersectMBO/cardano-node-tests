@@ -579,6 +579,16 @@ class DelegationVoteDBRow:
     drep_hash_view: str
 
 
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
+class NewConstitutionInfoDBRow:
+    id: int
+    script_hash: tp.Optional[memoryview]
+    gov_action_type: str
+    gap_id: int
+    tx_id: int
+    action_ix: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1487,3 +1497,20 @@ def query_delegation_vote(txhash: str) -> tp.Generator[DelegationVoteDBRow, None
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield DelegationVoteDBRow(*result)
+
+
+def query_new_constitution(txhash: str) -> tp.Generator[NewConstitutionInfoDBRow, None, None]:
+    """Query new constitution proposed in db-sync."""
+    query = (
+        "SELECT"
+        " constitution.id, constitution.script_hash, gap.type,"
+        " gap.id, gap.tx_id, gap.index "
+        "FROM constitution "
+        "INNER JOIN gov_action_proposal AS gap ON gap.id = constitution.gov_action_proposal_id "
+        "INNER JOIN tx ON tx.id = gap.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield NewConstitutionInfoDBRow(*result)
