@@ -1,20 +1,21 @@
 """SQL queries to db-sync database."""
 
 import contextlib
-import dataclasses
 import decimal
 import typing as tp
 
 import psycopg2
+import pydantic
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 
+_CONF_ARBITRARY_T_ALLOWED: pydantic.ConfigDict = {"arbitrary_types_allowed": True}
 
-@dataclasses.dataclass(frozen=True)
+
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class PoolDataDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     hash: memoryview
     view: str
@@ -24,27 +25,26 @@ class PoolDataDBRow:
     reward_addr: memoryview
     reward_addr_view: str
     active_epoch_no: int
-    meta_id: int
+    meta_id: tp.Optional[int]
     margin: decimal.Decimal
     fixed_cost: int
-    deposit: decimal.Decimal
+    deposit: tp.Optional[decimal.Decimal]
     registered_tx_id: int
-    metadata_url: str
-    metadata_hash: memoryview
+    metadata_url: tp.Optional[str]
+    metadata_hash: tp.Optional[memoryview]
     owner_stake_address_id: int
     owner: memoryview
-    ipv4: str
-    ipv6: str
-    dns_name: str
-    port: int
-    retire_cert_index: int
-    retire_announced_tx_id: int
-    retiring_epoch: int
+    ipv4: tp.Optional[str]
+    ipv6: tp.Optional[str]
+    dns_name: tp.Optional[str]
+    port: tp.Optional[int]
+    retire_cert_index: tp.Optional[int]
+    retire_announced_tx_id: tp.Optional[int]
+    retiring_epoch: tp.Optional[int]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class PoolOffChainDataDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     ticker_name: str
     hash: memoryview
@@ -53,18 +53,16 @@ class PoolOffChainDataDBRow:
     pmr_id: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class PoolOffChainFetchErrorDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     pmr_id: int
     fetch_error: str
     retry_count: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class EpochStakeDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     hash: memoryview
     view: str
@@ -72,9 +70,8 @@ class EpochStakeDBRow:
     epoch_number: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class TxDBRow:
-    # pylint: disable=too-many-instance-attributes
     tx_id: int
     tx_hash: memoryview
     block_id: int
@@ -86,12 +83,12 @@ class TxDBRow:
     invalid_before: tp.Optional[decimal.Decimal]
     invalid_hereafter: tp.Optional[decimal.Decimal]
     treasury_donation: int
-    tx_out_id: int
-    tx_out_tx_id: int
-    utxo_ix: int
-    tx_out_addr: str
-    tx_out_addr_has_script: bool
-    tx_out_value: decimal.Decimal
+    tx_out_id: tp.Optional[int]
+    tx_out_tx_id: tp.Optional[int]
+    utxo_ix: tp.Optional[int]
+    tx_out_addr: tp.Optional[str]
+    tx_out_addr_has_script: tp.Optional[bool]
+    tx_out_value: tp.Optional[decimal.Decimal]
     tx_out_data_hash: tp.Optional[memoryview]
     tx_out_inline_datum_hash: tp.Optional[memoryview]
     tx_out_reference_script_hash: tp.Optional[memoryview]
@@ -119,9 +116,8 @@ class TxDBRow:
     ma_tx_mint_quantity: tp.Optional[decimal.Decimal]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class MetadataDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     key: decimal.Decimal
     json: tp.Any
@@ -129,9 +125,8 @@ class MetadataDBRow:
     tx_id: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class ADAStashDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     addr_view: str
     cert_index: int
@@ -139,9 +134,8 @@ class ADAStashDBRow:
     tx_id: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class PotTransferDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     cert_index: int
     treasury: decimal.Decimal
@@ -149,15 +143,14 @@ class PotTransferDBRow:
     tx_id: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class StakeAddrDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     view: str
     tx_id: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class StakeDelegDBRow:
     tx_id: int
     active_epoch_no: tp.Optional[int]
@@ -165,14 +158,14 @@ class StakeDelegDBRow:
     address: tp.Optional[str]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class WithdrawalDBRow:
     tx_id: int
     address: str
     amount: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class TxInDBRow:
     tx_out_id: int
     utxo_ix: int
@@ -189,7 +182,7 @@ class TxInDBRow:
     ma_tx_out_quantity: tp.Optional[decimal.Decimal]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class TxInNoMADBRow:
     tx_out_id: int
     utxo_ix: int
@@ -202,7 +195,7 @@ class TxInNoMADBRow:
     reference_script_type: tp.Optional[str]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class CollateralTxOutDBRow:
     tx_out_id: int
     utxo_ix: int
@@ -211,9 +204,8 @@ class CollateralTxOutDBRow:
     tx_hash: memoryview
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class ScriptDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     hash: memoryview
@@ -221,9 +213,8 @@ class ScriptDBRow:
     serialised_size: tp.Optional[int]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class RedeemerDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     unit_mem: int
@@ -234,9 +225,8 @@ class RedeemerDBRow:
     value: dict
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class ADAPotsDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     slot_no: int
     epoch_no: int
@@ -251,7 +241,7 @@ class ADAPotsDBRow:
     block_id: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class RewardDBRow:
     address: str
     type: str
@@ -261,20 +251,19 @@ class RewardDBRow:
     pool_id: tp.Optional[str] = ""
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class UTxODBRow:
     tx_hash: memoryview
     utxo_ix: int
     payment_address: str
-    stake_address: str
+    stake_address: tp.Optional[str]
     has_script: bool
     value: int
     data_hash: tp.Optional[memoryview]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class BlockDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     epoch_no: tp.Optional[int]
     slot_no: tp.Optional[int]
@@ -287,9 +276,8 @@ class BlockDBRow:
     pool_id: tp.Optional[str]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class DatumDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     datum_hash: memoryview
     tx_id: int
@@ -297,76 +285,74 @@ class DatumDBRow:
     bytes: memoryview
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class SchemaVersionStages:
     one: int
     two: int
     three: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class ParamProposalDBRow:
-    # pylint: disable=too-many-instance-attributes disable-next=invalid-name
     id: int
-    epoch_no: int
-    key: memoryview
-    min_fee_a: int
-    min_fee_b: int
-    max_block_size: int
-    max_tx_size: int
-    max_bh_size: int
-    key_deposit: int
-    pool_deposit: int
-    max_epoch: int
-    optimal_pool_count: int
-    influence: float
-    monetary_expand_rate: float
-    treasury_growth_rate: float
-    decentralisation: float
-    entropy: memoryview
-    protocol_major: int
-    protocol_minor: int
-    min_utxo_value: int
-    min_pool_cost: int
-    coins_per_utxo_size: int
-    cost_model_id: int
-    price_mem: float
-    price_step: float
-    max_tx_ex_mem: int
-    max_tx_ex_steps: int
-    max_block_ex_mem: int
-    max_block_ex_steps: int
-    max_val_size: int
-    collateral_percent: int
-    max_collateral_inputs: int
-    registered_tx_id: int
-    pvt_motion_no_confidence: int
-    pvt_committee_normal: int
-    pvt_committee_no_confidence: int
-    pvt_hard_fork_initiation: int
-    dvt_motion_no_confidence: int
-    dvt_committee_normal: int
-    dvt_committee_no_confidence: int
-    dvt_update_to_constitution: int
-    dvt_hard_fork_initiation: int
-    dvt_p_p_network_group: int
-    dvt_p_p_economic_group: int
-    dvt_p_p_technical_group: int
-    dvt_p_p_gov_group: int
-    dvt_treasury_withdrawal: int
-    committee_min_size: int
-    committee_max_term_length: int
-    gov_action_lifetime: int
-    gov_action_deposit: int
-    drep_deposit: int
-    drep_activity: str
-    pvtpp_security_group: float
-    min_fee_ref_script_cost_per_byte: float
+    epoch_no: tp.Optional[int]
+    key: tp.Optional[memoryview]
+    min_fee_a: tp.Optional[int]
+    min_fee_b: tp.Optional[int]
+    max_block_size: tp.Optional[int]
+    max_tx_size: tp.Optional[int]
+    max_bh_size: tp.Optional[int]
+    key_deposit: tp.Optional[int]
+    pool_deposit: tp.Optional[int]
+    max_epoch: tp.Optional[int]
+    optimal_pool_count: tp.Optional[int]
+    influence: tp.Optional[float]
+    monetary_expand_rate: tp.Optional[float]
+    treasury_growth_rate: tp.Optional[float]
+    decentralisation: tp.Optional[float]
+    entropy: tp.Optional[memoryview]
+    protocol_major: tp.Optional[int]
+    protocol_minor: tp.Optional[int]
+    min_utxo_value: tp.Optional[int]
+    min_pool_cost: tp.Optional[int]
+    coins_per_utxo_size: tp.Optional[int]
+    cost_model_id: tp.Optional[int]
+    price_mem: tp.Optional[float]
+    price_step: tp.Optional[float]
+    max_tx_ex_mem: tp.Optional[int]
+    max_tx_ex_steps: tp.Optional[int]
+    max_block_ex_mem: tp.Optional[int]
+    max_block_ex_steps: tp.Optional[int]
+    max_val_size: tp.Optional[int]
+    collateral_percent: tp.Optional[int]
+    max_collateral_inputs: tp.Optional[int]
+    registered_tx_id: tp.Optional[int]
+    pvt_motion_no_confidence: tp.Optional[float]
+    pvt_committee_normal: tp.Optional[float]
+    pvt_committee_no_confidence: tp.Optional[float]
+    pvt_hard_fork_initiation: tp.Optional[float]
+    dvt_motion_no_confidence: tp.Optional[float]
+    dvt_committee_normal: tp.Optional[float]
+    dvt_committee_no_confidence: tp.Optional[float]
+    dvt_update_to_constitution: tp.Optional[float]
+    dvt_hard_fork_initiation: tp.Optional[float]
+    dvt_p_p_network_group: tp.Optional[float]
+    dvt_p_p_economic_group: tp.Optional[float]
+    dvt_p_p_technical_group: tp.Optional[float]
+    dvt_p_p_gov_group: tp.Optional[float]
+    dvt_treasury_withdrawal: tp.Optional[float]
+    committee_min_size: tp.Optional[int]
+    committee_max_term_length: tp.Optional[int]
+    gov_action_lifetime: tp.Optional[int]
+    gov_action_deposit: tp.Optional[int]
+    drep_deposit: tp.Optional[int]
+    drep_activity: tp.Optional[decimal.Decimal]
+    pvtpp_security_group: tp.Optional[float]
+    min_fee_ref_script_cost_per_byte: tp.Optional[float]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class EpochDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     out_sum: int
     fees: int
@@ -375,9 +361,8 @@ class EpochDBRow:
     epoch_number: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class EpochParamDBRow:
-    # pylint: disable=too-many-instance-attributes disable-next=invalid-name
     id: int
     epoch_no: int
     min_fee_a: int
@@ -409,7 +394,7 @@ class EpochParamDBRow:
     collateral_percent: int
     max_collateral_inputs: int
     block_id: int
-    extra_entropy: memoryview
+    extra_entropy: tp.Optional[memoryview]
     coins_per_utxo_size: int
     pvt_motion_no_confidence: float
     pvt_committee_normal: float
@@ -435,9 +420,8 @@ class EpochParamDBRow:
     min_fee_ref_script_cost_per_byte: float
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class CommitteeRegistrationDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int
@@ -445,9 +429,8 @@ class CommitteeRegistrationDBRow:
     hot_key: memoryview
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class CommitteeDeregistrationDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int
@@ -455,27 +438,25 @@ class CommitteeDeregistrationDBRow:
     cold_key: memoryview
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class DrepRegistrationDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int
     deposit: int
     drep_hash_id: int
-    voting_anchor_id: int
+    voting_anchor_id: tp.Optional[int]
     hash_raw: memoryview
     hash_view: str
     has_script: bool
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class GovActionProposalDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     action_ix: int
-    prev_gov_action_proposal: int
+    prev_gov_action_proposal: tp.Optional[int]
     deposit: int
     return_address: int
     expiration: int
@@ -483,75 +464,70 @@ class GovActionProposalDBRow:
     type: str
     description: dict
     param_proposal: int
-    ratified_epoch: int
-    enacted_epoch: int
-    dropped_epoch: int
-    expired_epoch: int
+    ratified_epoch: tp.Optional[int]
+    enacted_epoch: tp.Optional[int]
+    dropped_epoch: tp.Optional[int]
+    expired_epoch: tp.Optional[int]
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class VotingProcedureDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     voter_role: str
-    committee_voter: int
-    drep_voter: int
-    pool_voter: int
+    committee_voter: tp.Optional[int]
+    drep_voter: tp.Optional[int]
+    pool_voter: tp.Optional[int]
     vote: str
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class NewCommitteeInfoDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     action_ix: int
-    quorum_numerator: str
+    quorum_numerator: int
     quorum_denominator: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class NewCommitteeMemberDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     committee_id: int
     committee_hash: memoryview
     expiration_epoch: int
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class TreasuryWithdrawalDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     action_ix: int
     expiration: int
-    ratified_epoch: int
-    enacted_epoch: int
-    dropped_epoch: int
-    expired_epoch: int
+    ratified_epoch: tp.Optional[int]
+    enacted_epoch: tp.Optional[int]
+    dropped_epoch: tp.Optional[int]
+    expired_epoch: tp.Optional[int]
     addr_view: str
     amount: decimal.Decimal
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True)
 class OffChainVoteFetchErrorDBRow:
     id: int
     voting_anchor_id: int
     fetch_error: str
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class OffChainVoteDrepDataDBRow:
-    # pylint: disable-next=invalid-name
     id: int
     hash: memoryview
     language: str
-    comment: str
+    comment: tp.Optional[str]
     json: dict
     bytes: memoryview
-    warning: str
-    is_valid: bool
+    warning: tp.Optional[str]
+    is_valid: tp.Optional[bool]
     payment_address: str
     given_name: str
     objectives: str
@@ -561,7 +537,7 @@ class OffChainVoteDrepDataDBRow:
     image_hash: str
 
 
-@dataclasses.dataclass(frozen=True)
+@pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class OffChainVoteDataDBRow:
     data_id: int
     data_vot_anchor_id: int

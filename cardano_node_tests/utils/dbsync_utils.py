@@ -192,12 +192,14 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
 
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
+            assert query_row.utxo_ix is not None
+            assert query_row.tx_out_value is not None
             seen_tx_out_ids.add(query_row.tx_out_id)
             out_rec = dbsync_types.UTxORecord(
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.tx_out_value),
-                address=str(query_row.tx_out_addr),
+                address=str(query_row.tx_out_addr or ""),
                 datum_hash=query_row.tx_out_data_hash.hex() if query_row.tx_out_data_hash else "",
                 inline_datum_hash=query_row.tx_out_inline_datum_hash.hex()
                 if query_row.tx_out_inline_datum_hash
@@ -210,6 +212,7 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
 
         # MA outputs
         if query_row.ma_tx_out_id and query_row.ma_tx_out_id not in seen_ma_tx_out_ids:
+            assert query_row.utxo_ix is not None
             seen_ma_tx_out_ids.add(query_row.ma_tx_out_id)
             asset_name = query_row.ma_tx_out_name.hex() if query_row.ma_tx_out_name else None
             policyid = query_row.ma_tx_out_policy.hex() if query_row.ma_tx_out_policy else ""
@@ -218,7 +221,7 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
                 utxo_hash=str(txhash),
                 utxo_ix=int(query_row.utxo_ix),
                 amount=int(query_row.ma_tx_out_quantity or 0),
-                address=str(query_row.tx_out_addr),
+                address=str(query_row.tx_out_addr or ""),
                 coin=coin,
                 datum_hash=query_row.tx_out_data_hash.hex() if query_row.tx_out_data_hash else "",
             )
@@ -226,6 +229,7 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
 
         # MA minting
         if query_row.ma_tx_mint_id and query_row.ma_tx_mint_id not in seen_ma_tx_mint_ids:
+            assert query_row.utxo_ix is not None
             seen_ma_tx_mint_ids.add(query_row.ma_tx_mint_id)
             asset_name = query_row.ma_tx_mint_name.hex() if query_row.ma_tx_mint_name else None
             policyid = query_row.ma_tx_mint_policy.hex() if query_row.ma_tx_mint_policy else ""
@@ -1263,6 +1267,7 @@ def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], t
         r_amount = int(row.amount)
         assert r_amount in rem_amts, "Wrong transfer amount in db-sync"
         rem_amts.remove(r_amount)
+        assert row.ratified_epoch, "Action not marked as ratified in db-sync"
         assert row.enacted_epoch, "Action not marked as enacted in db-sync"
         assert (
             row.enacted_epoch == row.ratified_epoch + 1
@@ -1314,6 +1319,8 @@ def check_off_chain_drep_registration(
     """Check DRep off chain data in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
+
+    assert drep_data.voting_anchor_id, "The record is missing voting anchor id"
 
     errors = []
 
