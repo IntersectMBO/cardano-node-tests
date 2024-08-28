@@ -1228,20 +1228,15 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
     )
 
     # Check new committee members
-    dbsync_cm_last = {
+    dbsync_cm_hashes = {
         r.committee_hash.hex()
         for r in dbsync_queries.query_committee_members(committee_id=dbsync_cm_info.id)
     }
-    dbsync_cm_prev = {
-        r.committee_hash.hex()
-        for r in dbsync_queries.query_committee_members(committee_id=dbsync_cm_info.id - 1)
-    }
-    # Filter out committee members that were already present in the previous committee
-    dbsync_cm_diff = dbsync_cm_last.difference(dbsync_cm_prev)
     proposed_cm = prop["proposalProcedure"]["govAction"]["contents"][2]
-    assert len(dbsync_cm_diff) == len(proposed_cm), (
-        "The number of proposed committee members doesn't match the number in dbsync:\n"
-        f"{dbsync_cm_diff}\nvs\n{proposed_cm}"
+    proposed_cm_hashes = {r.split("-")[1] for r in proposed_cm}
+    assert proposed_cm_hashes.issubset(dbsync_cm_hashes), (
+        "Some of the proposed committee members are not present in dbsync:\n"
+        f"{proposed_cm_hashes}\nvs\n{dbsync_cm_hashes}"
     )
 
 
