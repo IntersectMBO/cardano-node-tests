@@ -152,4 +152,6 @@ class TestTreasuryDonation:
             - pot_aft_tx.reserves
             - pot_aft_tx.rewards
         )
-        assert pot_aft_tx.treasury == current_treasury + amount
+        # Any unclaimed ADA (rewards, deposits) go to the treasury, so we can't expect
+        # the precise amount, we can only expect the minimal amount.
+        assert pot_aft_tx.treasury >= current_treasury + amount
