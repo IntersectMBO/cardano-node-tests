@@ -100,7 +100,7 @@ class PoolDataRecord:
     pledge: int
     reward_addr: str
     active_epoch_no: int
-    meta_id: int
+    meta_id: tp.Optional[int]
     margin: float
     fixed_cost: int
     registered_tx_id: int
@@ -108,9 +108,9 @@ class PoolDataRecord:
     metadata_hash: str
     owners: tp.List[str]
     relays: tp.List[tp.Dict[str, tp.Dict[str, tp.Any]]]
-    retire_cert_index: int
-    retire_announced_tx_id: int
-    retiring_epoch: int
+    retire_cert_index: tp.Optional[int]
+    retire_announced_tx_id: tp.Optional[int]
+    retiring_epoch: tp.Optional[int]
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -204,7 +204,7 @@ class DrepRegistrationRecord:
     cert_index: int
     deposit: int
     drep_hash_id: int
-    voting_anchor_id: int
+    voting_anchor_id: tp.Optional[int]
     hash_hex: str
     hash_bech32: str
     has_script: bool
