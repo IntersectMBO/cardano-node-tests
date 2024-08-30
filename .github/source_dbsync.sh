@@ -29,6 +29,21 @@ stop_postgres() {
   rm -f "$psql_pid_file"
 }
 
+file_is_available() {
+  local url="${1:?"URL parameter is required"}"
+  local status_code
+  status_code="$(curl -o /dev/null -s -w "%{http_code}" -I "$url")"
+
+  case "$status_code" in
+      200|302)
+          return 0
+          ;;
+      *)
+          return 1
+          ;;
+  esac
+}
+
 case "${DBSYNC_REV:-""}" in
   "" )
     echo "The value for DBSYNC_REV cannot be empty" >&2
@@ -64,7 +79,20 @@ if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
   rm -f schema/migration-4-000*
 fi
 
-if [ -n "${DBSYNC_TAR_URL:-""}" ]; then
+DBSYNC_TAR_URL="${DBSYNC_TAR_URL:-""}"
+
+# Check if DBSYNC_TAR_URL is empty and DBSYNC_REV is a version number
+if [[ -z "$DBSYNC_TAR_URL" && "$DBSYNC_REV" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+  DBSYNC_TAR_URL="https://github.com/IntersectMBO/cardano-db-sync/releases/download/${DBSYNC_REV}/cardano-db-sync-${DBSYNC_REV}-linux.tar.gz"
+  if file_is_available "$DBSYNC_TAR_URL"; then
+    echo "Using db-sync tarball from $DBSYNC_TAR_URL"
+  else
+    DBSYNC_TAR_URL=""
+  fi
+fi
+
+
+if [ -n "$DBSYNC_TAR_URL" ]; then
   # download db-sync
   DBSYNC_TAR_FILE="$WORKDIR/dbsync_bins.tar.gz"
   curl -sSL "$DBSYNC_TAR_URL" > "$DBSYNC_TAR_FILE" || exit 1
