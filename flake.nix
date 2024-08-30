@@ -96,7 +96,7 @@
               nativeBuildInputs = with pkgs; [ poetry cardano-nodes-tests-env ];
             };
             base = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; [ bash gnugrep gnumake gnutar coreutils git xz python3Packages.supervisor ];
+              nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnumake gnutar python3Packages.supervisor xz ];
             };
             python = pkgs.mkShell {
               nativeBuildInputs = with pkgs; with python39Packages; [ python39Full virtualenv pip matplotlib pandas requests xmltodict psutil GitPython pymysql ];
