@@ -50,6 +50,7 @@ def get_pool_id(
 
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
+    use_resources: resources_management.ResourcesType = (),
 ) -> tp.Tuple[clusterlib.ClusterLib, str]:
     """Return instance of `clusterlib.ClusterLib`, and pool id to delegate to.
 
@@ -59,7 +60,7 @@ def cluster_and_pool(
     """
     cluster_type = cluster_nodes.get_cluster_type()
     if cluster_type.type == cluster_nodes.ClusterType.TESTNET:
-        cluster_obj: clusterlib.ClusterLib = cluster_manager.get()
+        cluster_obj: clusterlib.ClusterLib = cluster_manager.get(use_resources=use_resources)
 
         # getting ledger state on official testnet is too expensive,
         # use one of hardcoded pool IDs if possible
@@ -83,6 +84,7 @@ def cluster_and_pool(
         cluster_obj = cluster_manager.get(
             use_resources=[
                 resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+                *use_resources,
             ]
         )
         pool_name = cluster_manager.get_used_resources(

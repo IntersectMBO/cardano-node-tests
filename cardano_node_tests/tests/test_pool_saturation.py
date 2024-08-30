@@ -43,7 +43,11 @@ class PoolRecord:
 
 @pytest.fixture
 def cluster_lock_pools(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
-    return cluster_manager.get(lock_resources=cluster_management.Resources.ALL_POOLS, prio=True)
+    return cluster_manager.get(
+        lock_resources=cluster_management.Resources.ALL_POOLS,
+        use_resources=[cluster_management.Resources.REWARDS],
+        prio=True,
+    )
 
 
 def _get_saturation_threshold(
