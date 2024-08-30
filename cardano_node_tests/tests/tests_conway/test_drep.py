@@ -296,7 +296,7 @@ def pool_user_rewards(
 def custom_drep_rewards(
     cluster_manager: cluster_management.ClusterManager,
     cluster_rewards: clusterlib.ClusterLib,
-    payment_addr: clusterlib.AddressRecord,
+    payment_addr_rewards: clusterlib.AddressRecord,
 ) -> governance_utils.DRepRegistration:
     test_id = common.get_test_id(cluster_rewards)
     key = helpers.get_current_line_str()
@@ -304,7 +304,7 @@ def custom_drep_rewards(
         name_template=f"custom_drep_{test_id}",
         cluster_manager=cluster_manager,
         cluster_obj=cluster_rewards,
-        payment_addr=payment_addr,
+        payment_addr=payment_addr_rewards,
         caching_key=key,
     )
 
