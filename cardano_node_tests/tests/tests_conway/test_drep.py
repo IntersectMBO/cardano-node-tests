@@ -659,11 +659,6 @@ class TestNegativeDReps:
             signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
         )
 
-        # Make sure we have enough time to finish the registration/delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
-        )
-
         clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=temp_template,
@@ -727,11 +722,6 @@ class TestNegativeDReps:
         tx_files = clusterlib.TxFiles(
             certificate_files=[deleg_cert],
             signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
-        )
-
-        # Make sure we have enough time to finish the delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
         )
 
         # Expecting error as stake address is not registered
@@ -1269,11 +1259,6 @@ class TestDelegDReps:
             signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
         )
 
-        # Make sure we have enough time to finish the registration/delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
-        )
-
         clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=temp_template,
@@ -1313,11 +1298,6 @@ class TestDelegDReps:
         tx_files = clusterlib.TxFiles(
             certificate_files=[deleg_cert],
             signing_key_files=[payment_addr.skey_file, pool_user.stake.skey_file],
-        )
-
-        # Make sure we have enough time to finish the delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
         )
 
         clusterlib_utils.build_and_submit_tx(
