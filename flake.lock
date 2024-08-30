@@ -3,11 +3,11 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1719609872,
-        "narHash": "sha256-a6M9mYbJh4ctk4aOpkyztmFOt0H72GK1Gg4BbV8atTU=",
+        "lastModified": 1721831314,
+        "narHash": "sha256-I1j5HPSbbh3l1D0C9oP/59YB4e+64K9NDRl7ueD1c/Y=",
         "owner": "intersectmbo",
         "repo": "cardano-haskell-packages",
-        "rev": "9ad99f2c3fb290ceab85c98b4761622cd9e2d97c",
+        "rev": "8815ee7598bc39a02db8896b788f69accf892790",
         "type": "github"
       },
       "original": {
@@ -219,11 +219,11 @@
         "utils": "utils_2"
       },
       "locked": {
-        "lastModified": 1719663747,
-        "narHash": "sha256-jwDUgaysZXf2kSf3muAHyAnyTzSa8uwhMhrOYe1ti70=",
+        "lastModified": 1721843629,
+        "narHash": "sha256-F5wgRA820x16f+8c/LlEEBG0rMJIA1XWw6X0ZwX5UWs=",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "71f8c71fada068097dc4e62e2f94756576df8135",
+        "rev": "176f99e51155cb3eaa0711db1c3c969d67438958",
         "type": "github"
       },
       "original": {
@@ -647,11 +647,11 @@
     "hackageNix": {
       "flake": false,
       "locked": {
-        "lastModified": 1718757495,
-        "narHash": "sha256-xviuxucDjsQ2HbqzfwVyB4ZmDIyzOnf2oDbVtwBHIco=",
+        "lastModified": 1719794527,
+        "narHash": "sha256-qHo/KumtwAzPkfLWODu/6EFY/LeK+C7iPJyAUdT8tGA=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "0bb764772a383a926e3f945397a0e59ab3c64d6d",
+        "rev": "da2a3bc9bd1b3dd41bb147279529c471c615fd3e",
         "type": "github"
       },
       "original": {
@@ -965,11 +965,11 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1719237167,
-        "narHash": "sha256-ifW5Jfwu/iwYs0r7f8AdiWDQK+Pr1gZLz+p5u8OtOgo=",
+        "lastModified": 1721825987,
+        "narHash": "sha256-PPcma4tjozwXJAWf+YtHUQUulmxwulVlwSQzKItx/n8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "577f4d5072945a88dda6f5cfe205e6b4829a0423",
+        "rev": "eb61f2c14e1f610ec59117ad40f8690cddbf80cb",
         "type": "github"
       },
       "original": {
@@ -1602,11 +1602,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1719850884,
-        "narHash": "sha256-UU/lVTHFx0GpEkihoLJrMuM9DcuhZmNe3db45vshSyI=",
+        "lastModified": 1724417163,
+        "narHash": "sha256-gD0N0pnKxWJcKtbetlkKOIumS0Zovgxx/nMfOIJIzoI=",
         "owner": "nix-community",
         "repo": "poetry2nix",
-        "rev": "42262f382c68afab1113ebd1911d0c93822d756e",
+        "rev": "7619e43c2b48c29e24b88a415256f09df96ec276",
         "type": "github"
       },
       "original": {
