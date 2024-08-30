@@ -1541,9 +1541,9 @@ class TestDRepActivity:
                     action_txid=prop_rec.action_txid,
                     action_ix=prop_rec.action_ix,
                     vote=clusterlib.Votes.YES,
-                    cc_hot_vkey_file=m.hot_vkey_file,
+                    cc_hot_vkey_file=m.hot_keys.hot_vkey_file,
                 )
-                for i, m in enumerate(governance_data.cc_members, start=1)
+                for i, m in enumerate(governance_data.cc_key_members, start=1)
             ]
             votes_drep = [
                 cluster.g_conway_governance.vote.create_drep(
@@ -1558,7 +1558,7 @@ class TestDRepActivity:
 
             votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep]
             vote_keys = [
-                *[r.hot_skey_file for r in governance_data.cc_members],
+                *[r.hot_keys.hot_skey_file for r in governance_data.cc_key_members],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
             ]
 

@@ -247,11 +247,11 @@ def cast_vote(
                 action_txid=action_txid,
                 action_ix=action_ix,
                 vote=get_yes_abstain_vote(i) if approve_cc else get_no_abstain_vote(i),
-                cc_hot_vkey_file=m.hot_vkey_file,
+                cc_hot_vkey_file=m.hot_keys.hot_vkey_file,
                 anchor_url=f"http://www.cc-vote{i}.com",
                 anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
             )
-            for i, m in enumerate(governance_data.cc_members, start=1)
+            for i, m in enumerate(governance_data.cc_key_members, start=1)
         ]
         votes_cc = [v for v in _votes_cc if v]
 
@@ -305,7 +305,7 @@ def cast_vote(
         ]
         votes_spo = [v for v in _votes_spo if v]
 
-    cc_keys = [r.hot_skey_file for r in governance_data.cc_members] if votes_cc else []
+    cc_keys = [r.hot_keys.hot_skey_file for r in governance_data.cc_key_members] if votes_cc else []
     drep_keys = [r.key_pair.skey_file for r in governance_data.dreps_reg] if votes_drep_keys else []
     drep_script_key_pairs = itertools.chain.from_iterable(
         [r.key_pairs for r in governance_data.drep_scripts_reg] if votes_drep_scripts else []

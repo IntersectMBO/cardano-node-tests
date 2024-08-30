@@ -196,9 +196,9 @@ class TestTreasuryWithdrawals:
                             action_txid=action_txid,
                             action_ix=action_ix,
                             vote=clusterlib.Votes.YES if approve else clusterlib.Votes.NO,
-                            cc_hot_vkey_file=m.hot_vkey_file,
+                            cc_hot_vkey_file=m.hot_keys.hot_vkey_file,
                         )
-                        for i, m in enumerate(governance_data.cc_members, start=1)
+                        for i, m in enumerate(governance_data.cc_key_members, start=1)
                     ]
                 )
                 votes_drep.extend(
@@ -230,7 +230,7 @@ class TestTreasuryWithdrawals:
             votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
             spo_keys = [r.skey_file for r in governance_data.pools_cold] if votes_spo else []
             vote_keys = [
-                *[r.hot_skey_file for r in governance_data.cc_members],
+                *[r.hot_keys.hot_skey_file for r in governance_data.cc_key_members],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
                 *spo_keys,
             ]
@@ -531,9 +531,9 @@ class TestTreasuryWithdrawals:
                         vote=conway_common.get_yes_abstain_vote(i)
                         if approve_cc
                         else conway_common.get_no_abstain_vote(i),
-                        cc_hot_vkey_file=m.hot_vkey_file,
+                        cc_hot_vkey_file=m.hot_keys.hot_vkey_file,
                     )
-                    for i, m in enumerate(governance_data.cc_members, start=1)
+                    for i, m in enumerate(governance_data.cc_key_members, start=1)
                 ]
             )
             votes.extend(
@@ -552,7 +552,7 @@ class TestTreasuryWithdrawals:
             )
 
         vote_keys = [
-            *[r.hot_skey_file for r in governance_data.cc_members],
+            *[r.hot_keys.hot_skey_file for r in governance_data.cc_key_members],
             *[r.key_pair.skey_file for r in governance_data.dreps_reg],
         ]
 

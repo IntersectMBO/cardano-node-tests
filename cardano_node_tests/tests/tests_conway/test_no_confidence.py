@@ -360,16 +360,16 @@ class TestNoConfidence:
 
         reqc.cip014.start(url=helpers.get_vcs_link())
 
-        cc_members_to_resign = governance_data.cc_members[1:]
+        cc_members_to_resign = governance_data.cc_key_members[1:]
         _cur_epoch = cluster.g_query.get_epoch()
         conway_common.resign_ccs(
             cluster_obj=cluster,
             name_template=f"{temp_template}_{_cur_epoch}",
-            ccs_to_resign=cc_members_to_resign,
+            ccs_to_resign=[r.cc_member for r in cc_members_to_resign],
             payment_addr=pool_user_lg.payment,
         )
         new_governance_data = dataclasses.replace(
-            governance_data, cc_members=governance_data.cc_members[:1]
+            governance_data, cc_key_members=governance_data.cc_key_members[:1]
         )
 
         # Testnet will be in (sort of) state of no confidence, respin is needed in case of
