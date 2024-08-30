@@ -27,6 +27,15 @@ def cluster_and_pool(
 
 
 @pytest.fixture
+def cluster_and_pool_and_rewards(
+    cluster_manager: cluster_management.ClusterManager,
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
+    return delegation.cluster_and_pool(
+        cluster_manager=cluster_manager, use_resources=[cluster_management.Resources.REWARDS]
+    )
+
+
+@pytest.fixture
 def cluster_and_two_pools(
     cluster_manager: cluster_management.ClusterManager,
 ) -> tp.Tuple[clusterlib.ClusterLib, str, str]:
@@ -401,7 +410,7 @@ class TestDelegateAddr:
     def test_deregister_delegated(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_and_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Deregister a delegated stake address.
 
@@ -414,7 +423,7 @@ class TestDelegateAddr:
         * check that the stake address is no longer delegated
         * (optional) check records in db-sync
         """
-        cluster, pool_id = cluster_and_pool
+        cluster, pool_id = cluster_and_pool_and_rewards
         temp_template = common.get_test_id(cluster)
 
         # create two payment addresses that share single stake address (just to test that
@@ -569,7 +578,7 @@ class TestDelegateAddr:
     def test_undelegate(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_and_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Undelegate stake address.
 
@@ -587,7 +596,7 @@ class TestDelegateAddr:
         * check that the stake address is no longer delegated
         * (optional) check records in db-sync
         """
-        cluster, pool_id = cluster_and_pool
+        cluster, pool_id = cluster_and_pool_and_rewards
         temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(

@@ -20,6 +20,8 @@ class Resources:
     POOL_FOR_OFFLINE: tp.Final[str] = POOL2
     RESERVES: tp.Final[str] = "reserves"
     TREASURY: tp.Final[str] = "treasury"
+    REWARDS: tp.Final[str] = "rewards"
+    POTS: tp.Final[tp.Tuple[str, ...]] = (RESERVES, TREASURY, REWARDS)
     PERF: tp.Final[str] = "performance"
     DREPS: tp.Final[str] = "dreps"
     COMMITTEE: tp.Final[str] = "committee"

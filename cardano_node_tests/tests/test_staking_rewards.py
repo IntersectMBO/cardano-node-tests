@@ -44,13 +44,31 @@ def cluster_and_pool(
 
 
 @pytest.fixture
-def cluster_use_two_pools(
+def cluster_use_pool_and_rewards(
+    cluster_manager: cluster_management.ClusterManager,
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
+    """Mark any pool and all pots as "in use" and return instance of `clusterlib.ClusterLib`."""
+    cluster_obj = cluster_manager.get(
+        use_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+            cluster_management.Resources.REWARDS,
+        ]
+    )
+    pool_name = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)[
+        0
+    ]
+    return cluster_obj, pool_name
+
+
+@pytest.fixture
+def cluster_use_two_pools_and_rewards(
     cluster_manager: cluster_management.ClusterManager,
 ) -> tp.Tuple[clusterlib.ClusterLib, str, str]:
     cluster_obj = cluster_manager.get(
         use_resources=[
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+            cluster_management.Resources.REWARDS,
         ]
     )
     pool_names = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)
@@ -79,8 +97,7 @@ def cluster_lock_pool_and_pots(
 ) -> tp.Tuple[clusterlib.ClusterLib, str]:
     cluster_obj = cluster_manager.get(
         lock_resources=[
-            cluster_management.Resources.RESERVES,
-            cluster_management.Resources.TREASURY,
+            *cluster_management.Resources.POTS,
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
         ]
     )
@@ -301,7 +318,7 @@ class TestRewards:
     def test_reward_amount(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
@@ -319,7 +336,7 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: tp.Any  # mypy workaround
-        cluster, pool_name = cluster_use_pool
+        cluster, pool_name = cluster_use_pool_and_rewards
 
         # make sure there are rewards already available
         clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
@@ -1020,7 +1037,7 @@ class TestRewards:
     def test_decreasing_reward_transferred_funds(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that rewards are gradually decreasing when funds are being transferred.
 
@@ -1035,7 +1052,7 @@ class TestRewards:
         * keep withdrawing new rewards so reward balance is 0
         * check that reward amount is decreasing epoch after epoch
         """
-        cluster, pool_name = cluster_use_pool
+        cluster, pool_name = cluster_use_pool_and_rewards
 
         temp_template = common.get_test_id(cluster)
 
@@ -1385,7 +1402,7 @@ class TestRewards:
     def test_redelegation(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_two_pools: tp.Tuple[clusterlib.ClusterLib, str, str],
+        cluster_use_two_pools_and_rewards: tp.Tuple[clusterlib.ClusterLib, str, str],
     ):
         """Check rewards received by stake address over multiple epochs.
 
@@ -1405,7 +1422,7 @@ class TestRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: tp.Any  # mypy workaround
-        cluster, pool1_name, pool2_name = cluster_use_two_pools
+        cluster, pool1_name, pool2_name = cluster_use_two_pools_and_rewards
 
         temp_template = common.get_test_id(cluster)
         address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)

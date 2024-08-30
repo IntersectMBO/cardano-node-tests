@@ -53,7 +53,8 @@ def cluster_lock_42stake(
     cluster_obj = cluster_manager.get(
         lock_resources=[helpers.checksum(plutus_script)],
         use_resources=[
-            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS)
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+            cluster_management.Resources.REWARDS,
         ],
     )
     pool_name = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)[

@@ -10,6 +10,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import kes
@@ -17,6 +18,23 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture
+def cluster_lock_pool_use_rewards(
+    cluster_manager: cluster_management.ClusterManager,
+) -> tp.Tuple[clusterlib.ClusterLib, str]:
+    """Lock any pool, use pots, and return instance of `clusterlib.ClusterLib`."""
+    cluster_obj = cluster_manager.get(
+        lock_resources=[
+            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+        ],
+        use_resources=[cluster_management.Resources.REWARDS],
+    )
+    pool_name = cluster_manager.get_locked_resources(
+        from_set=cluster_management.Resources.ALL_POOLS
+    )[0]
+    return cluster_obj, pool_name
 
 
 @pytest.mark.order(6)
@@ -352,7 +370,7 @@ class TestNoRewards:
     def test_no_reward_deregistered_stake_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool_use_rewards: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the pool is not receiving rewards when owner's stake address is deregistered.
 
@@ -370,7 +388,7 @@ class TestNoRewards:
         * check that new rewards were received by those delegating to the pool
         * check that pool owner is also receiving rewards
         """
-        cluster, pool_name = cluster_lock_pool
+        cluster, pool_name = cluster_lock_pool_use_rewards
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -551,7 +569,7 @@ class TestNoRewards:
     def test_no_reward_deregistered_reward_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool_use_rewards: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the reward address is not receiving rewards when deregistered.
 
@@ -568,7 +586,7 @@ class TestNoRewards:
         * return the pool to the original state - reregister reward address
         * check that pool owner is receiving rewards
         """
-        cluster, pool_name = cluster_lock_pool
+        cluster, pool_name = cluster_lock_pool_use_rewards
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -742,7 +760,7 @@ class TestNoRewards:
     def test_deregister_reward_addr_retire_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool_use_rewards: tp.Tuple[clusterlib.ClusterLib, str],
     ):
         """Test deregistering reward address and retiring stake pool.
 
@@ -762,7 +780,7 @@ class TestNoRewards:
         """
         # pylint: disable=too-many-statements,too-many-locals
         __: tp.Any  # mypy workaround
-        cluster, pool_name = cluster_lock_pool
+        cluster, pool_name = cluster_lock_pool_use_rewards
         pool_num = int(pool_name.replace("node-pool", ""))
 
         kes_period_info_errors_list: tp.List[str] = []

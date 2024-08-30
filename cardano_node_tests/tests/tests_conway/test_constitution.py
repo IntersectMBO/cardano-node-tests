@@ -40,7 +40,10 @@ def cluster_lock_gov_script(
     Lock also the PlutusV3 script that is registered as DRep in the test.
     """
     cluster_obj = cluster_manager.get(
-        use_resources=cluster_management.Resources.ALL_POOLS,
+        use_resources=[
+            *cluster_management.Resources.ALL_POOLS,
+            cluster_management.Resources.REWARDS,
+        ],
         lock_resources=[
             cluster_management.Resources.COMMITTEE,
             cluster_management.Resources.DREPS,
