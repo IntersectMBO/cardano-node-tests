@@ -539,7 +539,7 @@ class TestCommittee:
 
             cluster.wait_for_new_block(new_blocks=2)
             res_committee_state = cluster.g_conway_governance.query.committee_state()
-            member_key = f"keyHash-{res_member.hot_vkey_hash}"
+            member_key = f"keyHash-{res_member.cold_vkey_hash}"
             res_member_rec = res_committee_state["committee"].get(member_key)
             assert (
                 not res_member_rec
@@ -1101,7 +1101,7 @@ class TestCommittee:
                 anchor_url=anchor_url_rem,
                 anchor_data_hash=anchor_data_hash_rem,
                 threshold="0.0",
-                rem_cc_members=governance_data.cc_members,
+                rem_cc_members=[r.cc_member for r in governance_data.cc_key_members],
                 prev_action_txid=prev_action_rec.txid,
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
@@ -1239,7 +1239,9 @@ class TestCommittee:
 
         # Create an action to remove CC member
         __, action_rem_txid, action_rem_ix = _rem_committee()
-        removed_members_hashes = {f"keyHash-{r.cold_vkey_hash}" for r in governance_data.cc_members}
+        removed_members_hashes = {
+            f"keyHash-{r.cc_member.cold_vkey_hash}" for r in governance_data.cc_key_members
+        }
 
         # Vote & approve the action
         conway_common.cast_vote(

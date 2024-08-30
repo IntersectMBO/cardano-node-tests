@@ -121,7 +121,7 @@ def create_vote_stake(
     return pool_users
 
 
-def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[clusterlib.CCMember]:
+def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_utils.CCKeyMember]:
     genesis_cc_members = cluster_obj.conway_genesis.get("committee", {}).get("members") or {}
     if not genesis_cc_members:
         return []
@@ -136,16 +136,20 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[clusterlib.CCM
         cold_vkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(vkey_file=vkey_file)
         genesis_epoch = genesis_cc_members[f"keyHash-{cold_vkey_hash}"]
         cc_members.append(
-            clusterlib.CCMember(
-                epoch=genesis_epoch,
-                cold_vkey_file=vkey_file,
-                cold_vkey_hash=cold_vkey_hash,
-                cold_skey_file=fpath / f"{fbase}cold.skey",
-                hot_vkey_file=hot_vkey_file,
-                hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
-                    vkey_file=hot_vkey_file
+            governance_utils.CCKeyMember(
+                cc_member=clusterlib.CCMember(
+                    epoch=genesis_epoch,
+                    cold_vkey_file=vkey_file,
+                    cold_vkey_hash=cold_vkey_hash,
+                    cold_skey_file=fpath / f"{fbase}cold.skey",
                 ),
-                hot_skey_file=fpath / f"{fbase}hot.skey",
+                hot_keys=governance_utils.CCHotKeys(
+                    hot_vkey_file=hot_vkey_file,
+                    hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                        vkey_file=hot_vkey_file
+                    ),
+                    hot_skey_file=fpath / f"{fbase}hot.skey",
+                ),
             )
         )
 
@@ -240,7 +244,7 @@ def get_default_governance(
 def save_default_governance(
     dreps_reg: tp.List[governance_utils.DRepRegistration],
     drep_delegators: tp.List[clusterlib.PoolUser],
-    cc_members: tp.List[clusterlib.CCMember],
+    cc_members: tp.List[governance_utils.CCKeyMember],
     pools_cold: tp.List[clusterlib.ColdKeyPair],
 ) -> governance_utils.GovernanceRecords:
     """Save governance data to a pickle, so it can be reused.
@@ -255,7 +259,7 @@ def save_default_governance(
     gov_data = governance_utils.GovernanceRecords(
         dreps_reg=dreps_reg,
         drep_delegators=drep_delegators,
-        cc_members=cc_members,
+        cc_key_members=cc_members,
         pools_cold=pools_cold,
     )
 
@@ -268,15 +272,15 @@ def save_default_governance(
 
 def refresh_cc_keys(
     cluster_obj: clusterlib.ClusterLib,
-    cc_members: tp.List[clusterlib.CCMember],
+    cc_members: tp.List[governance_utils.CCKeyMember],
     governance_data: governance_utils.GovernanceRecords,
 ) -> governance_utils.GovernanceRecords:
     """Refresh hot certs for original CC members."""
-    gov_data_dir = pl.Path(cc_members[0].hot_vkey_file).parent
+    gov_data_dir = pl.Path(cc_members[0].hot_keys.hot_vkey_file).parent
 
     new_cc_members = []
     for c in cc_members:
-        key_name = pl.Path(c.hot_vkey_file).stem.replace("_committee_hot", "")
+        key_name = pl.Path(c.hot_keys.hot_vkey_file).stem.replace("_committee_hot", "")
         # Until it is possible to revive resigned CC member, we need to create also
         # new cold keys and thus create a completely new CC member.
         committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
@@ -289,27 +293,31 @@ def refresh_cc_keys(
         )
         cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
             key_name=key_name,
-            cold_vkey_file=c.cold_vkey_file,
+            cold_vkey_file=c.cc_member.cold_vkey_file,
             hot_key_file=committee_hot_keys.vkey_file,
             destination_dir=gov_data_dir,
         )
         new_cc_members.append(
-            clusterlib.CCMember(
-                epoch=c.epoch,
-                cold_vkey_file=committee_cold_keys.vkey_file,
-                cold_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
-                    vkey_file=committee_cold_keys.vkey_file,
+            governance_utils.CCKeyMember(
+                cc_member=clusterlib.CCMember(
+                    epoch=c.cc_member.epoch,
+                    cold_vkey_file=committee_cold_keys.vkey_file,
+                    cold_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                        vkey_file=committee_cold_keys.vkey_file,
+                    ),
+                    cold_skey_file=committee_cold_keys.skey_file,
                 ),
-                cold_skey_file=committee_cold_keys.skey_file,
-                hot_vkey_file=committee_hot_keys.vkey_file,
-                hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
-                    vkey_file=committee_hot_keys.vkey_file
+                hot_keys=governance_utils.CCHotKeys(
+                    hot_vkey_file=committee_hot_keys.vkey_file,
+                    hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                        vkey_file=committee_hot_keys.vkey_file
+                    ),
+                    hot_skey_file=committee_hot_keys.skey_file,
                 ),
-                hot_skey_file=committee_hot_keys.skey_file,
             )
         )
 
-    unchanged_cc_members = set(governance_data.cc_members).difference(cc_members)
+    unchanged_cc_members = set(governance_data.cc_key_members).difference(cc_members)
 
     recreated_gov_data = save_default_governance(
         dreps_reg=governance_data.dreps_reg,
@@ -323,24 +331,24 @@ def refresh_cc_keys(
 
 def auth_cc_members(
     cluster_obj: clusterlib.ClusterLib,
-    cc_members: tp.List[clusterlib.CCMember],
+    cc_members: tp.List[governance_utils.CCKeyMember],
     name_template: str,
     payment_addr: clusterlib.AddressRecord,
 ) -> None:
     """Authorize the original CC members."""
     assert cc_members, "No CC members found"
-    gov_data_dir = pl.Path(cc_members[0].hot_vkey_file).parent
+    gov_data_dir = pl.Path(cc_members[0].hot_keys.hot_vkey_file).parent
 
     hot_auth_certs = []
     for c in cc_members:
-        stem = pl.Path(c.hot_vkey_file).stem
+        stem = pl.Path(c.hot_keys.hot_vkey_file).stem
         hot_auth_certs.append(gov_data_dir / f"{stem}_auth.cert")
 
     tx_files = clusterlib.TxFiles(
         certificate_files=hot_auth_certs,
         signing_key_files=[
             payment_addr.skey_file,
-            *[r.cold_skey_file for r in cc_members],
+            *[r.cc_member.cold_skey_file for r in cc_members],
         ],
     )
 
@@ -360,7 +368,7 @@ def auth_cc_members(
 
     cluster_obj.wait_for_new_block(new_blocks=2)
     reg_committee_state = cluster_obj.g_conway_governance.query.committee_state()
-    member_key = f"keyHash-{cc_members[0].cold_vkey_hash}"
+    member_key = f"keyHash-{cc_members[0].cc_member.cold_vkey_hash}"
     assert (
         _get_committee_val(data=reg_committee_state)[member_key]["hotCredsAuthStatus"]["tag"]
         == "MemberAuthorized"
@@ -391,7 +399,7 @@ def reinstate_committee(
         anchor_url=anchor_url,
         anchor_data_hash=anchor_data_hash,
         threshold=str(cluster_obj.conway_genesis["committee"]["threshold"]),
-        add_cc_members=governance_data.cc_members,
+        add_cc_members=[r.cc_member for r in governance_data.cc_key_members],
         prev_action_txid=prev_action_rec.txid,
         prev_action_ix=prev_action_rec.ix,
         deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
@@ -446,12 +454,12 @@ def reinstate_committee(
     )
 
     def _check_state(state: dict) -> None:
-        cc_member = governance_data.cc_members[0]
+        cc_key_member = governance_data.cc_key_members[0]
         cc_member_val = _get_committee_val(data=state)["members"].get(
-            f"keyHash-{cc_member.cold_vkey_hash}"
+            f"keyHash-{cc_key_member.cc_member.cold_vkey_hash}"
         )
         assert cc_member_val, "New committee member not found"
-        assert cc_member_val == cc_member.epoch
+        assert cc_member_val == cc_key_member.cc_member.epoch
 
     # Check ratification
     _cur_epoch = cluster_obj.wait_for_new_epoch(padding_seconds=5)
@@ -472,7 +480,7 @@ def reinstate_committee(
 
     auth_cc_members(
         cluster_obj=cluster_obj,
-        cc_members=governance_data.cc_members,
+        cc_members=governance_data.cc_key_members,
         name_template=name_template,
         payment_addr=pool_user.payment,
     )

@@ -10,6 +10,7 @@ import typing as tp
 
 from cardano_clusterlib import clusterlib
 
+import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -71,10 +72,26 @@ class DRepScriptRegistration:
 
 
 @dataclasses.dataclass(frozen=True, order=True)
+class CCHotKeys:
+    hot_vkey: str = ""
+    hot_vkey_file: ttypes.FileType = ""
+    hot_vkey_hash: str = ""
+    hot_skey: str = ""
+    hot_skey_file: ttypes.FileType = ""
+    hot_skey_hash: str = ""
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class CCKeyMember:
+    cc_member: clusterlib.CCMember
+    hot_keys: CCHotKeys
+
+
+@dataclasses.dataclass(frozen=True, order=True)
 class GovernanceRecords:
     dreps_reg: tp.List[DRepRegistration]
     drep_delegators: tp.List[clusterlib.PoolUser]
-    cc_members: tp.List[clusterlib.CCMember]
+    cc_key_members: tp.List[CCKeyMember]
     pools_cold: tp.List[clusterlib.ColdKeyPair]
     drep_scripts_reg: tp.List[DRepScriptRegistration] = dataclasses.field(default_factory=list)
     drep_scripts_delegators: tp.List[clusterlib.PoolUser] = dataclasses.field(default_factory=list)
