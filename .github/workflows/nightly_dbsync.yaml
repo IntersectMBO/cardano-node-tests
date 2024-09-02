@@ -2,7 +2,7 @@ name: Nightly tests dbsync
 
 on:
   schedule:
-    - cron: '15 02 * * *'
+    - cron: '15 01 * * *'
   workflow_dispatch:
 
 jobs:

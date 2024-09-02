@@ -2,7 +2,7 @@ name: Nightly tests upgrade
 
 on:
   schedule:
-    - cron: '15 05 * * *'
+    - cron: '15 03 * * *'
   workflow_dispatch:
 
 jobs:
