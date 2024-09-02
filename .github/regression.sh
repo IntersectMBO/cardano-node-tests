@@ -6,7 +6,7 @@ set -xeuo pipefail
 nix --version
 df -h .
 
-DEFAULT_CLUSTER_ERA="babbage"
+DEFAULT_CLUSTER_ERA="conway"
 
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"

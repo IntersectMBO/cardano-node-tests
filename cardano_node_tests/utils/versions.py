@@ -19,8 +19,8 @@ class Versions:
     BABBAGE: tp.Final[int] = 8
     CONWAY: tp.Final[int] = 9
 
-    DEFAULT_CLUSTER_ERA: tp.Final[int] = 8
-    DEFAULT_TX_ERA: tp.Final[int] = 8
+    DEFAULT_CLUSTER_ERA: tp.Final[int] = 9
+    DEFAULT_TX_ERA: tp.Final[int] = 9
     LAST_KNOWN_ERA: tp.Final[int] = 9
 
     MAP: tp.ClassVar[tp.Dict[int, str]] = {
