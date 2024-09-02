@@ -104,11 +104,11 @@ fi
 export CLUSTER_ERA
 
 TX_ERA="${TX_ERA:-""}"
-if [ "$TX_ERA" = "default" ]; then
-  export TX_ERA=""
-elif [ "$TX_ERA" = "conway" ]; then
+if [ "$TX_ERA" = "conway" ] || [ "$CLUSTER_ERA" = "conway" ]; then
   unset TX_ERA
   export COMMAND_ERA="conway"
+elif [ "$TX_ERA" = "default" ]; then
+  export TX_ERA=""
 fi
 
 if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
