@@ -143,12 +143,12 @@ class TestBasicTransactions:
 
         if is_era_explicit:
             default_tx_era = VERSIONS.MAP[VERSIONS.DEFAULT_TX_ERA]
-            if cluster.tx_era != default_tx_era:
+            if cluster.command_era != default_tx_era:
                 cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(
-                    tx_era=default_tx_era
+                    command_era=default_tx_era
                 )
         elif cluster.tx_era:
-            cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(tx_era="")
+            cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(command_era="")
 
         return cluster_default
 

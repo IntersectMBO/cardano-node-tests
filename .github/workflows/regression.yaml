@@ -10,10 +10,10 @@ on:
         type: choice
         description: "Cluster era"
         options:
-        - babbage
         - conway 9
         - conway 10
-        default: babbage
+        - babbage
+        default: conway 9
       tx_era:
         type: choice
         description: "Tx era"

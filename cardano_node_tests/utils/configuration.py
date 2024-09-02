@@ -119,6 +119,6 @@ if SCRIPTS_DIRNAME:
 elif BOOTSTRAP_DIR:
     SCRIPTS_DIRNAME = "testnets"
 else:
-    SCRIPTS_DIRNAME = f"{CLUSTER_ERA or 'babbage'}_fast"
+    SCRIPTS_DIRNAME = f"{CLUSTER_ERA or 'conway'}_fast"
 
 SCRIPTS_DIR = pl.Path(__file__).parent.parent / "cluster_scripts" / SCRIPTS_DIRNAME
