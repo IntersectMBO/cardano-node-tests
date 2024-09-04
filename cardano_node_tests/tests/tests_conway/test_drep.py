@@ -931,6 +931,7 @@ class TestDelegDReps:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("drep", ("always_abstain", "always_no_confidence", "custom"))
+    @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_dreps_delegation(
@@ -1098,6 +1099,14 @@ class TestDelegDReps:
             [r.success() for r in (reqc.cli034, reqc.cip025)]
 
         reqc_deleg.success()
+
+        # Check delegation vote on dbsync
+        reqc.db003.start(url=helpers.get_vcs_link())
+        txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
+        dbsync_utils.check_delegation_vote(
+            txhash=txid, stake_address=stake_addr_info.address, drep=drep
+        )
+        reqc.db003.success()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD

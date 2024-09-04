@@ -572,6 +572,13 @@ class OffChainVoteDataDBRow:
     vot_anchor_block_id: int
 
 
+@pydantic.dataclasses.dataclass(frozen=True)
+class DelegationVoteDBRow:
+    id: int
+    stake_address_hash_view: str
+    drep_hash_view: str
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1463,3 +1470,20 @@ def query_db_size() -> int:
     with execute(query=query) as cur:
         result = cur.fetchone()
         return int(result[0])
+
+
+def query_delegation_vote(txhash: str) -> tp.Generator[DelegationVoteDBRow, None, None]:
+    """Query delegation_vote table in db-sync."""
+    query = (
+        "SELECT"
+        " delegation_vote.id, stake_address.view, drep_hash.view "
+        "FROM delegation_vote "
+        "INNER JOIN stake_address ON stake_address.id = delegation_vote.addr_id "
+        "INNER JOIN drep_hash ON drep_hash.id = delegation_vote.drep_hash_id "
+        "INNER JOIN tx ON tx.id = delegation_vote.tx_id "
+        "WHERE tx.hash = %s;"
+    )
+
+    with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield DelegationVoteDBRow(*result)

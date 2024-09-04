@@ -1484,3 +1484,26 @@ def check_action_data(  # noqa: C901
 
     if errors:
         raise AssertionError("\n".join(errors))
+
+
+def check_delegation_vote(txhash: str, stake_address: str, drep: str) -> None:
+    """Check delegation vote in dbsync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    delegation_vote = list(dbsync_queries.query_delegation_vote(txhash=txhash))
+
+    if not delegation_vote:
+        msg = "No delegation vote found in db-sync"
+        raise AssertionError(msg)
+
+    delegation_vote_data = delegation_vote[0]
+
+    assert delegation_vote_data.stake_address_hash_view == stake_address, (
+        "Incorrect delegation vote stake address in dbsync: "
+        f"{delegation_vote_data.stake_address_hash_view} vs {stake_address}"
+    )
+
+    assert delegation_vote_data.stake_address_hash_view == stake_address, (
+        "Incorrect delegation DRep: " f"{delegation_vote_data.drep_hash_view} vs {drep}"
+    )
