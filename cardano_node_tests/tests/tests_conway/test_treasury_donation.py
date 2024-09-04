@@ -145,4 +145,6 @@ class TestTreasuryDonation:
             + pot_bef_tx.deposits_proposal
             - pot_aft_tx.deposits_proposal  # Delta of deposits that are returned to rewards pot
         )
-        assert pot_aft_tx.treasury == updated_treasury + amount
+        # Other tests running in parallel to this test on the same local testnet can create
+        # new deposits, so we cannot expect a precise treasury balance.
+        assert pot_aft_tx.treasury >= updated_treasury + amount

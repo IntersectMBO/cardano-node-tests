@@ -16,6 +16,7 @@ from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
@@ -27,6 +28,29 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
     reason="runs only with Tx era >= Conway",
 )
+
+
+@pytest.fixture
+def cluster_use_governance_lock_treasury(
+    cluster_manager: cluster_management.ClusterManager,
+) -> governance_utils.GovClusterT:
+    """Mark governance as "in use", treasury pot as locked.
+
+    Return instance of `clusterlib.ClusterLib`.
+    """
+    cluster_obj = cluster_manager.get(
+        lock_resources=[cluster_management.Resources.TREASURY],
+        use_resources=[
+            cluster_management.Resources.COMMITTEE,
+            cluster_management.Resources.DREPS,
+            *cluster_management.Resources.ALL_POOLS,
+        ],
+    )
+    governance_data = governance_setup.get_default_governance(
+        cluster_manager=cluster_manager, cluster_obj=cluster_obj
+    )
+    governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
+    return cluster_obj, governance_data
 
 
 @pytest.fixture
@@ -46,6 +70,23 @@ def pool_user_ug(
     )
 
 
+@pytest.fixture
+def pool_user_ug_treasury(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_use_governance_lock_treasury: governance_utils.GovClusterT,
+) -> clusterlib.PoolUser:
+    """Create a pool user for "use governance, lock treasury"."""
+    cluster, __ = cluster_use_governance_lock_treasury
+    key = helpers.get_current_line_str()
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
+    )
+
+
 class TestTreasuryWithdrawals:
     """Tests for treasury withdrawals."""
 
@@ -54,8 +95,8 @@ class TestTreasuryWithdrawals:
     @pytest.mark.long
     def test_enact_treasury_withdrawals(  # noqa: C901
         self,
-        cluster_use_governance: governance_utils.GovClusterT,
-        pool_user_ug: clusterlib.PoolUser,
+        cluster_use_governance_lock_treasury: governance_utils.GovClusterT,
+        pool_user_ug_treasury: clusterlib.PoolUser,
     ):
         """Test enactment of multiple treasury withdrawals in single epoch.
 
@@ -71,7 +112,7 @@ class TestTreasuryWithdrawals:
         * check that it's not possible to vote on enacted action
         """
         # pylint: disable=too-many-locals,too-many-statements
-        cluster, governance_data = cluster_use_governance
+        cluster, governance_data = cluster_use_governance_lock_treasury
         temp_template = common.get_test_id(cluster)
         actions_num = 3
 
@@ -105,7 +146,7 @@ class TestTreasuryWithdrawals:
                 anchor_url=f"http://www.withdrawal-action{a}.com",
                 anchor_data_hash=anchor_data_hash,
                 funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
-                deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
+                deposit_return_stake_vkey_file=pool_user_ug_treasury.stake.vkey_file,
             )
             for a in range(actions_num)
         ]
@@ -114,7 +155,10 @@ class TestTreasuryWithdrawals:
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
             proposal_files=[w.action_file for w in withdrawal_actions],
-            signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
+            signing_key_files=[
+                pool_user_ug_treasury.payment.skey_file,
+                recv_stake_addr_rec.skey_file,
+            ],
         )
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
@@ -123,7 +167,7 @@ class TestTreasuryWithdrawals:
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_action_bootstrap",
-                    src_address=pool_user_ug.payment.address,
+                    src_address=pool_user_ug_treasury.payment.address,
                     use_build_cmd=True,
                     tx_files=tx_files_action,
                 )
@@ -140,7 +184,7 @@ class TestTreasuryWithdrawals:
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
-            src_address=pool_user_ug.payment.address,
+            src_address=pool_user_ug_treasury.payment.address,
             submit_method=submit_utils.SubmitMethods.API
             if submit_utils.is_submit_api_available()
             else submit_utils.SubmitMethods.CLI,
@@ -156,14 +200,14 @@ class TestTreasuryWithdrawals:
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_ug.payment.address)[
-                0
-            ].amount
+            clusterlib.filter_utxos(
+                utxos=out_utxos_action, address=pool_user_ug_treasury.payment.address
+            )[0].amount
             == clusterlib.calculate_utxos_balance(tx_output_action.txins)
             - tx_output_action.fee
             - actions_deposit_combined
             - stake_deposit_amt
-        ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
+        ), f"Incorrect balance for source address `{pool_user_ug_treasury.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_conway_governance.query.gov_state()
@@ -243,7 +287,7 @@ class TestTreasuryWithdrawals:
             conway_common.submit_vote(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_{vote_id}",
-                payment_addr=pool_user_ug.payment,
+                payment_addr=pool_user_ug_treasury.payment,
                 votes=votes,
                 keys=vote_keys,
             )
