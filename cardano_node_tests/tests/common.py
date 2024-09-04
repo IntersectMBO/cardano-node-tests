@@ -4,7 +4,6 @@ import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import issues
@@ -72,9 +71,6 @@ SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
     PLUTUSV3_UNUSABLE,
     reason=_PLUTUSV3_SKIP_REASON,
 )
-
-
-SKIP_ASSET_BALANCING = VERSIONS.node >= version.parse("1.36.0")
 
 
 # common parametrization
