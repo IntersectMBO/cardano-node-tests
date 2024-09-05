@@ -514,6 +514,8 @@ class TestDReps:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
     ):
         """Register a DRep with wrong metadata url.
 
@@ -551,6 +553,40 @@ class TestDReps:
             deposit=reg_drep.deposit,
         )
 
+        reg_drep_state = cluster.g_conway_governance.query.drep_state(
+            drep_vkey_file=reg_drep.key_pair.vkey_file
+        )
+        assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
+
+        def _retire_drep() -> None:
+            """Retire the new DRep so it doesn't affect voting."""
+            with helpers.change_cwd(testfile_temp_dir):
+                ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+                    cert_name=temp_template,
+                    deposit_amt=reg_drep.deposit,
+                    drep_vkey_file=reg_drep.key_pair.vkey_file,
+                )
+
+                tx_files_ret = clusterlib.TxFiles(
+                    certificate_files=[ret_cert],
+                    signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
+                )
+
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_ret",
+                    src_address=payment_addr.address,
+                    tx_files=tx_files_ret,
+                    deposit=-reg_drep.deposit,
+                )
+
+                ret_drep_state = cluster.g_conway_governance.query.drep_state(
+                    drep_vkey_file=reg_drep.key_pair.vkey_file
+                )
+                assert not ret_drep_state, "DRep was not retired"
+
+        request.addfinalizer(_retire_drep)
+
         reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_reg)
         assert (
             clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
@@ -558,11 +594,6 @@ class TestDReps:
             - tx_output_reg.fee
             - reg_drep.deposit
         ), f"Incorrect balance for source address `{payment_addr.address}`"
-
-        reg_drep_state = cluster.g_conway_governance.query.drep_state(
-            drep_vkey_file=reg_drep.key_pair.vkey_file
-        )
-        assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
 
         drep_data = dbsync_utils.get_drep(drep_hash=reg_drep.drep_id, drep_deposit=reg_drep.deposit)
 
