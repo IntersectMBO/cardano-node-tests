@@ -24,16 +24,16 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def cluster_pots(
+def cluster_treasury(
     cluster_manager: cluster_management.ClusterManager,
 ) -> clusterlib.ClusterLib:
     return cluster_manager.get(lock_resources=cluster_management.Resources.POTS)
 
 
 @pytest.fixture
-def payment_addr_pots(
+def payment_addr_treasury(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_pots: clusterlib.ClusterLib,
+    cluster_treasury: clusterlib.ClusterLib,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     with cluster_manager.cache_fixture() as fixture_cache:
@@ -42,14 +42,37 @@ def payment_addr_pots(
 
         addr = clusterlib_utils.create_payment_addr_records(
             f"addr_treasury_donation_ci{cluster_manager.cluster_instance_num}_0",
-            cluster_obj=cluster_pots,
+            cluster_obj=cluster_treasury,
         )[0]
         fixture_cache.value = addr
 
     # Fund source address
     clusterlib_utils.fund_from_faucet(
         addr,
-        cluster_obj=cluster_pots,
+        cluster_obj=cluster_treasury,
+        faucet_data=cluster_manager.cache.addrs_data["user1"],
+    )
+    return addr
+
+
+@pytest.fixture
+def payment_addr_singleton(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_singleton: clusterlib.ClusterLib,
+) -> clusterlib.AddressRecord:
+    """Create new payment address.
+
+    This fixture is used by single test, so it is not cached.
+    """
+    addr = clusterlib_utils.create_payment_addr_records(
+        f"addr_dbsync_treasury_donation_ci{cluster_manager.cluster_instance_num}_0",
+        cluster_obj=cluster_singleton,
+    )[0]
+
+    # Fund source address
+    clusterlib_utils.fund_from_faucet(
+        addr,
+        cluster_obj=cluster_singleton,
         faucet_data=cluster_manager.cache.addrs_data["user1"],
     )
     return addr
@@ -59,71 +82,110 @@ class TestTreasuryDonation:
     """Test treasury donation - transferring donation, check treasury state in pots."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.needs_dbsync
+    @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     def test_transfer_treasury_donation(
         self,
-        cluster_pots: clusterlib.ClusterLib,
-        payment_addr_pots: clusterlib.AddressRecord,
+        cluster_treasury: clusterlib.ClusterLib,
+        payment_addr_treasury: clusterlib.AddressRecord,
         use_build_cmd: bool,
+        submit_method: str,
     ):
         """Send funds from payment address to the treasury.
 
+        The test doesn't check the actual treasury balance, only that the transaction can be
+        built and submitted.
+
         * send funds from 1 source address to to the treasury
-        * check expected balances for both source addresses and treasury
-        * check transactions and ADA pots in db-sync
+        * check expected balances
         """
-        cluster = cluster_pots
+        cluster = cluster_treasury
         temp_template = common.get_test_id(cluster)
 
         amount = 2_000_000
 
-        cur_epoch = cluster.g_query.get_epoch()
-        if cur_epoch < 1:
-            cluster.wait_for_new_epoch(padding_seconds=10)
-
-        # Make sure we have enough time to query the treasury and submit the Tx in the same epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
-        cur_epoch = cluster.g_query.get_epoch()
-
-        pot_bef_tx = next(dbsync_queries.query_ada_pots(epoch_from=cur_epoch, epoch_to=cur_epoch))
-        assert pot_bef_tx.epoch_no == cur_epoch
-
         treasury_val = cluster.g_conway_governance.query.treasury()
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr_pots.skey_file])
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr_treasury.skey_file])
 
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=temp_template,
-            src_address=payment_addr_pots.address,
+            src_address=payment_addr_treasury.address,
             current_treasury_value=treasury_val,
             treasury_donation=amount,
-            # Use submit-api when available and when we are using `transaction build`.
-            # This test is long and while we don't need to test all combination of build commands /
-            # submit methods, we want to test all of them at least once.
-            submit_method=submit_utils.SubmitMethods.API
-            if use_build_cmd and submit_utils.is_submit_api_available()
-            else submit_utils.SubmitMethods.CLI,
-            change_address=payment_addr_pots.address,
+            submit_method=submit_method,
+            change_address=payment_addr_treasury.address,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files,
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr_pots.address)[0].amount
+            clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr_treasury.address)[
+                0
+            ].amount
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
-        ), f"Incorrect balance for source address `{payment_addr_pots.address}`"
+        ), f"Incorrect balance for source address `{payment_addr_treasury.address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.needs_dbsync
+    def test_dbsync_transfer_treasury_donation(
+        self,
+        cluster_singleton: clusterlib.ClusterLib,
+        payment_addr_singleton: clusterlib.AddressRecord,
+    ):
+        """Send funds from payment address to the treasury and check the amounts in db-sync.
+
+        The test is a singleton (the only test that can run on a testnet at a time) so that
+        the pots are not modified by other tests.
+
+        * send funds from 1 source address to to the treasury
+        * check expected balances for both source addresses and treasury
+        * check transactions and ADA pots in db-sync
+        """
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+
+        amount = 2_000_000
+
+        # Wait for next epoch to make sure all deposits and withdrawals are settled
+        cur_epoch = cluster.wait_for_new_epoch(padding_seconds=10)
+
+        pot_bef_tx = next(dbsync_queries.query_ada_pots(epoch_from=cur_epoch, epoch_to=cur_epoch))
+        assert pot_bef_tx.epoch_no == cur_epoch
+
+        treasury_val = cluster.g_conway_governance.query.treasury()
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr_singleton.skey_file])
+
+        tx_output = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            src_address=payment_addr_singleton.address,
+            current_treasury_value=treasury_val,
+            treasury_donation=amount,
+            change_address=payment_addr_singleton.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+        )
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr_singleton.address)[
+                0
+            ].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
+        ), f"Incorrect balance for source address `{payment_addr_singleton.address}`"
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         assert (
-            cluster.g_query.get_address_balance(payment_addr_pots.address)
-            == dbsync_utils.get_utxo(address=payment_addr_pots.address).amount_sum
-        ), f"Unexpected balance for source address `{payment_addr_pots.address}` in db-sync"
+            cluster.g_query.get_address_balance(payment_addr_singleton.address)
+            == dbsync_utils.get_utxo(address=payment_addr_singleton.address).amount_sum
+        ), f"Unexpected balance for source address `{payment_addr_singleton.address}` in db-sync"
 
         donation_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
         db_tx_data = dbsync_utils.get_tx_record(txhash=donation_txid)
@@ -145,6 +207,4 @@ class TestTreasuryDonation:
             + pot_bef_tx.deposits_proposal
             - pot_aft_tx.deposits_proposal  # Delta of deposits that are returned to rewards pot
         )
-        # Other tests running in parallel to this test on the same local testnet can create
-        # new deposits, so we cannot expect a precise treasury balance.
-        assert pot_aft_tx.treasury >= updated_treasury + amount
+        assert pot_aft_tx.treasury == updated_treasury + amount
