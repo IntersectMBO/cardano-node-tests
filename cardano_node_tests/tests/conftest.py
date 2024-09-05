@@ -308,10 +308,10 @@ def testenv_setup_teardown(
 
 @pytest.fixture(scope="session", autouse=True)
 def session_autouse(
-    init_pytest_temp_dirs: None,  # noqa: ARG001
-    change_dir: None,  # noqa: ARG001
-    close_dbconn: tp.Any,  # noqa: ARG001
-    testenv_setup_teardown: tp.Any,  # noqa: ARG001
+    init_pytest_temp_dirs: None,
+    change_dir: None,
+    close_dbconn: tp.Any,
+    testenv_setup_teardown: tp.Any,
 ) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
@@ -393,8 +393,8 @@ def respin_on_large_db(
 
 @pytest.fixture(autouse=True)
 def function_autouse(
-    cd_testfile_temp_dir: tp.Generator[pl.Path, None, None],  # noqa: ARG001
-    respin_on_large_db: tp.Generator[None, None, None],  # noqa: ARG001
+    cd_testfile_temp_dir: tp.Generator[pl.Path, None, None],
+    respin_on_large_db: tp.Generator[None, None, None],
 ) -> None:
     """Autouse function fixtures that are required for each test setup and teardown."""
     # pylint: disable=unused-argument,unnecessary-pass
