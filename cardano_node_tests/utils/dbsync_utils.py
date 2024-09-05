@@ -1507,3 +1507,20 @@ def check_delegation_vote(txhash: str, stake_address: str, drep: str) -> None:
     assert delegation_vote_data.stake_address_hash_view == stake_address, (
         "Incorrect delegation DRep: " f"{delegation_vote_data.drep_hash_view} vs {drep}"
     )
+
+
+def check_off_chain_vote_fetch_error(voting_anchor_id: int) -> None:
+    """Check expected error in off_chain_vote_fetch_error."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    db_off_chain_vote_fetch_error = list(
+        dbsync_queries.query_off_chain_vote_fetch_error(voting_anchor_id)
+    )
+
+    assert (
+        db_off_chain_vote_fetch_error
+    ), f"{NO_RESPONSE_STR} no off chain vote fetch error for {voting_anchor_id}"
+
+    fetch_error_str = db_off_chain_vote_fetch_error[-1].fetch_error or ""
+    assert "Hash mismatch when fetching metadata" in fetch_error_str
