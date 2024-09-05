@@ -379,8 +379,7 @@ def _get_param_min_value(
         min_val = min_val_dict["minValue"]
         if not isinstance(min_val, int) and "numerator" in min_val:
             min_val = min_val["numerator"] / min_val["denominator"]
-        if min_val > max_of_min_values:
-            max_of_min_values = min_val
+        max_of_min_values = max(min_val, max_of_min_values)
     return max_of_min_values
 
 
@@ -405,8 +404,7 @@ def _get_param_max_value(
         max_val = max_val_dict["maxValue"]
         if not isinstance(max_val, int) and "numerator" in max_val:
             max_val = max_val["numerator"] / max_val["denominator"]
-        if max_val < min_of_max_values:
-            min_of_max_values = max_val
+        min_of_max_values = min(max_val, min_of_max_values)
     return min_of_max_values
 
 
@@ -584,8 +582,7 @@ def perform_predicates_check(
             if not isinstance(min_value, int) and "numerator" in min_value:
                 min_value = min_value["numerator"] / min_value["denominator"]
 
-            if min_value > max_of_min_values:
-                max_of_min_values = min_value
+            max_of_min_values = max(min_value, max_of_min_values)
 
             check_min_value_proposals(
                 cluster_with_constitution=cluster_with_constitution,
@@ -600,8 +597,7 @@ def perform_predicates_check(
             if not isinstance(max_value, int) and "numerator" in max_value:
                 max_value = max_value["numerator"] / max_value["denominator"]
 
-            if max_value < min_of_max_values:
-                min_of_max_values = max_value
+            min_of_max_values = min(max_value, min_of_max_values)
 
             check_max_value_proposals(
                 cluster_with_constitution=cluster_with_constitution,

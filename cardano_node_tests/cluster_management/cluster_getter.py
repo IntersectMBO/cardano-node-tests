@@ -32,7 +32,7 @@ if configuration.IS_XDIST:
 else:
 
     def _xdist_sleep(
-        secs: float,  # noqa: ARG001
+        secs: float,
     ) -> None:
         """No need to sleep if tests are running on a single worker."""
 
@@ -818,8 +818,7 @@ class ClusterGetter:
             # sleep for a while to avoid too many checks in a short time
             _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
             # pylint: disable=consider-using-max-builtin
-            if cget_status.sleep_delay < 1:
-                cget_status.sleep_delay = 1
+            cget_status.sleep_delay = max(cget_status.sleep_delay, 1)
 
             # nothing time consuming can go under this lock as all other workers will need to wait
             with locking.FileLockIfXdist(self.cluster_lock):
