@@ -18,6 +18,8 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -314,8 +316,9 @@ class TestConstitution:
     """Tests for constitution."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.dbsync
     @pytest.mark.long
-    def test_change_constitution(
+    def test_change_constitution(  # noqa: C901
         self,
         cluster_lock_gov_script: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -332,7 +335,6 @@ class TestConstitution:
         * check that the action is enacted
         * check that it's not possible to vote on enacted action
         """
-        # pylint: disable=too-many-locals,too-many-statements
         __: tp.Any  # mypy workaround
         cluster, __ = cluster_lock_gov_script
         rand_str = clusterlib.get_rand_str(4)
@@ -558,3 +560,11 @@ class TestConstitution:
             ledger_3979 = issues.ledger_3979.copy()
             ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
             ledger_3979.finish_test()
+
+        # Check new constitution proposal in dbsync
+        if configuration.HAS_DBSYNC:
+            reqc.db012.start(url=helpers.get_vcs_link())
+            constitution_db = list(dbsync_queries.query_new_constitution(txhash=action_txid))
+            assert constitution_db, "No new constitution proposal found in dbsync"
+            assert constitution_db[0].gov_action_type == "NewConstitution"
+            reqc.db012.success()
