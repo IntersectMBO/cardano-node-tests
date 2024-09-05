@@ -131,6 +131,17 @@ fi
 # shellcheck disable=SC1090,SC1091
 . .github/nix_override_cardano_node.sh
 
+_cleanup() {
+  # stop all running cluster instances
+  stop_instances "$WORKDIR"
+
+  # stop postgres if running
+  stop_postgres || true
+}
+
+# cleanup on Ctrl+C
+trap 'set +e; _cleanup; exit 130' SIGINT
+
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
 
@@ -183,11 +194,7 @@ if [ "${KEEP_CLUSTERS_RUNNING:-""}" = 1 ]; then
   set -"$sets"
 fi
 
-# stop all running cluster instances
-stop_instances "$WORKDIR"
-
-# stop postgres if running
-stop_postgres || true
+_cleanup
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
