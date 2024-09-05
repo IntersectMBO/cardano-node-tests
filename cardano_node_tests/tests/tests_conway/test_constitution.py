@@ -18,6 +18,7 @@ from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -587,3 +588,10 @@ class TestConstitution:
             assert constitution_db, "No new constitution proposal found in dbsync"
             assert constitution_db[0].gov_action_type == "NewConstitution"
             reqc.db012.success()
+
+        # Check epoch state in dbsync
+        reqc.db025_02.start(url=helpers.get_vcs_link())
+        dbsync_utils.check_epoch_state(
+            epoch_no=cluster.g_query.get_epoch(), txid=action_txid, change_type="constitution"
+        )
+        reqc.db025_02.success()
