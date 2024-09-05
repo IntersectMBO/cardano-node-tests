@@ -82,7 +82,7 @@ def build_and_submit_tx(
     calc_script_cost_file: tp.Optional[cl_types.FileType] = None,
     join_txouts: bool = True,
     destination_dir: cl_types.FileType = ".",
-    skip_asset_balancing: bool = False,
+    cli_asset_balancing: tp.Optional[bool] = None,
 ) -> clusterlib.TxRawOutput:
     """
     Build and submit a transaction.
@@ -95,6 +95,7 @@ def build_and_submit_tx(
     submit_method = submit_method or submit_utils.SubmitMethods.CLI
 
     if use_build_cmd:
+        skip_asset_balancing = True if cli_asset_balancing is None else cli_asset_balancing
         witness_override = (
             len(tx_files.signing_key_files) + witness_count_add
             if witness_override is None
