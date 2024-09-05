@@ -509,7 +509,6 @@ class TestDReps:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.needs_dbsync
-    @pytest.mark.smoke
     def test_register_wrong_metadata(
         self,
         cluster: clusterlib.ClusterLib,
