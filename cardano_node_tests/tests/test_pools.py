@@ -99,14 +99,13 @@ def _check_staking(
         cluster_obj=cluster_obj, pool_id=stake_pool_id
     ).pool_params
 
-    LOGGER.info("Waiting up to 3 full epochs for stake pool to be registered.")
     for i in range(4):
         if i > 0:
-            cluster_obj.wait_for_new_epoch(padding_seconds=10)
+            cluster_obj.wait_for_new_block(new_blocks=2)
         if stake_pool_id in cluster_obj.g_query.get_stake_distribution():
             break
     else:
-        msg = f"Stake pool `{stake_pool_id}` not registered even after 3 epochs."
+        msg = f"Stake pool `{stake_pool_id}` not registered."
         raise AssertionError(msg)
 
     for owner in pool_owners:
