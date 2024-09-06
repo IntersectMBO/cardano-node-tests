@@ -25,8 +25,15 @@ export WORKDIR="$REPODIR/run_workdir"
 # shellcheck disable=SC1090,SC1091
 . .github/stop_cluster_instances.sh
 
-# stop all running cluster instances
-stop_instances "$WORKDIR"
+_cleanup() {
+  # stop all running cluster instances
+  stop_instances "$WORKDIR"
+}
+
+_cleanup
+
+# cleanup on Ctrl+C
+trap 'set +e; _cleanup; exit 130' SIGINT
 
 # create clean workdir
 rm -rf "${WORKDIR:?}"
@@ -150,8 +157,7 @@ fi
 # shellcheck disable=SC1090,SC1091
 . .github/grep_errors.sh
 
-# stop all running cluster instances
-stop_instances "$WORKDIR"
+_cleanup
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
