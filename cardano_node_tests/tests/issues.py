@@ -27,6 +27,12 @@ cli_299 = blockers.GH(
     repo="IntersectMBO/cardano-cli",
     message="Cannot de-register Plutus stake address.",
 )
+cli_614 = blockers.GH(
+    issue=614,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="9.3.0.1",  # Unknown yet, will be fixed sometime in the future
+    message="Overspent budget when minting assets and autobalancing a transaction.",
+)
 cli_650 = blockers.GH(
     issue=650,
     repo="IntersectMBO/cardano-cli",
