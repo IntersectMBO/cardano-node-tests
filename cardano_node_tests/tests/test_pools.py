@@ -624,15 +624,14 @@ def _create_register_pool_tx_delegate_stake_tx(
     return pool_creation_out
 
 
-@pytest.mark.order(7)
 @pytest.mark.testnets
-@pytest.mark.long
 @pytest.mark.dbsync
 class TestStakePool:
     """General tests for stake pools."""
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     def test_stake_pool_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -703,6 +702,7 @@ class TestStakePool:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     def test_stake_pool_not_avail_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -782,6 +782,7 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("no_of_addr", (1, 3))
+    @pytest.mark.smoke
     def test_create_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1128,6 +1129,8 @@ class TestStakePool:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(7)
+    @pytest.mark.long
     def test_cancel_stake_pool_deregistration(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1517,6 +1520,7 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_sign_in_multiple_stages(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1652,6 +1656,8 @@ class TestStakePool:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(7)
+    @pytest.mark.long
     def test_pool_registration_deregistration(
         self,
         cluster_manager: cluster_management.ClusterManager,

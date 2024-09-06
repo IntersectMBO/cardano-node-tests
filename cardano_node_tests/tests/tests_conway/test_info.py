@@ -53,6 +53,7 @@ class TestInfo:
     GOV_ACTION_ANCHOR_FILE = DATA_DIR / "governance_action_anchor.json"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     @pytest.mark.dbsync
     def test_info(
         self,
