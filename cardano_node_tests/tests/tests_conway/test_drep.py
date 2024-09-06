@@ -460,7 +460,6 @@ class TestDReps:
 
         # Retire DRep
 
-        reqc.cli011.start(url=helpers.get_vcs_link())
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli011, reqc.cip023)]
         ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
