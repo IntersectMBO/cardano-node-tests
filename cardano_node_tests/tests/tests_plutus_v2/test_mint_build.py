@@ -105,29 +105,24 @@ class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "use_reference_script", (True, False), ids=("reference_script", "script_file")
-    )
     @common.PARAM_PLUTUS2ONWARDS_VERSION
-    def test_minting_one_token(
+    def test_minting_ref_one_token(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
-        use_reference_script: bool,
         plutus_version: str,
     ):
-        """Test minting a token with a Plutus script.
+        """Test minting a token with reference Plutus script.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral and possibly reference script
+        * fund the token issuer and create a UTxO for collateral and reference script
         * check that the expected amount was transferred to token issuer's address
         * mint the token using a Plutus script
         * check that the token was minted and collateral UTxO was not spent
         * check expected fees
         * check expected Plutus cost
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -154,9 +149,9 @@ class TestBuildMinting:
             issuer_addr=issuer_addr,
             minting_cost=minting_cost,
             amount=script_fund,
-            reference_script=plutus_v_record.script_file if use_reference_script else None,
+            reference_script=plutus_v_record.script_file,
         )
-        assert reference_utxo or not use_reference_script, "No reference script UTxO"
+        assert reference_utxo, "No reference script UTxO"
 
         # Step 2: mint the "qacoin"
 
@@ -170,9 +165,9 @@ class TestBuildMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_v_record.script_file if not use_reference_script else "",
-                reference_txin=reference_utxo if use_reference_script else None,
-                reference_type=plutus_v_record.script_type if use_reference_script else "",
+                script_file="",
+                reference_txin=reference_utxo,
+                reference_type=plutus_v_record.script_type,
                 collaterals=collateral_utxos,
                 redeemer_file=plutus_common.REDEEMER_42,
                 policyid=policyid,
@@ -223,33 +218,26 @@ class TestBuildMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check that reference UTxO was NOT spent
+        # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), "Reference UTxO was spent"
 
         # check expected fees
         expected_fees: dict = {
-            "reference_script": {
-                "v2": {
-                    "fee_1": 252_929,
-                    "fee_2": 230_646,
-                    "cost": plutus_common.MINTING_V2_REF_COST,
-                },
-                "v3": {
-                    "fee_1": 169_769,
-                    "fee_2": 182_235,
-                    "cost": plutus_common.MINTING_V3_REF_COST,
-                },
+            "v2": {
+                "fee_1": 252_929,
+                "fee_2": 230_646,
+                "cost": plutus_common.MINTING_V2_REF_COST,
             },
-            "script_file": {
-                "v2": {"fee_1": 167_437, "fee_2": 304_694, "cost": plutus_v_record.execution_cost},
-                "v3": {"fee_1": 167_437, "fee_2": 181_003, "cost": plutus_v_record.execution_cost},
+            "v3": {
+                "fee_1": 169_769,
+                "fee_2": 182_235,
+                "cost": plutus_common.MINTING_V3_REF_COST,
             },
         }
 
-        script_type = "reference_script" if use_reference_script else "script_file"
-        script_expected_fee = expected_fees[script_type][plutus_version]
+        script_expected_fee = expected_fees[plutus_version]
 
         assert helpers.is_in_interval(tx_output_step2.fee, script_expected_fee["fee_2"], frac=0.15)
         assert helpers.is_in_interval(tx_output_step1.fee, script_expected_fee["fee_1"], frac=0.15)
