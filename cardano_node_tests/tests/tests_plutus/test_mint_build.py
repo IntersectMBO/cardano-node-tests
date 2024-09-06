@@ -20,6 +20,7 @@ from cardano_node_tests.tests.tests_plutus import mint_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -238,6 +239,115 @@ class TestBuildMinting:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_PLUTUS3_VERSION
+    def test_minting_missing_txout(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_version: str,
+        submit_method: str,
+    ):
+        """Test minting a token with a Plutus script without providing TxOut for the token.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * fund the token issuer and create a UTxO for collateral
+        * check that the expected amount was transferred to token issuer's address
+        * mint the token using a Plutus script
+        * check that the token was minted and collateral UTxO was not spent
+        """
+        temp_template = common.get_test_id(cluster)
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        token_amount = 5
+        script_fund = 200_000_000
+
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.g_query.get_protocol_params(),
+        )
+
+        issuer_init_balance = cluster.g_query.get_address_balance(issuer_addr.address)
+
+        # Step 1: fund the token issuer and create UTXO for collaterals
+
+        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=script_fund,
+            collateral_utxo_num=2,
+            submit_method=submit_method,
+        )
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_v_record.script_file,
+                collaterals=collateral_utxos,
+                redeemer_file=plutus_common.REDEEMER_42,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        tx_output_step2 = cluster.g_transaction.build_tx(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            mint=plutus_mint_data,
+        )
+        tx_signed_step2 = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        try:
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=tx_signed_step2,
+                txins=mint_utxos,
+            )
+        except (clusterlib.CLIError, submit_api.SubmitApiError) as excp:
+            if "due to overspending the budget" in str(excp):
+                issues.cli_614.finish_test()
+            raise
+
+        assert (
+            cluster.g_query.get_address_balance(issuer_addr.address)
+            == issuer_init_balance + minting_cost.collateral
+        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
+        # When token txout was not specified, the token will end up on change address
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=payment_addr.address, coin=token
+        )
+        assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
