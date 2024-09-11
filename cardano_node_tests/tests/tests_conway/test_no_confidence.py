@@ -136,6 +136,7 @@ class TestNoConfidence:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
+        init_epoch = cluster.g_query.get_epoch()
 
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -203,6 +204,10 @@ class TestNoConfidence:
 
         # Testnet will be in state of no confidence, respin is needed
         with cluster_manager.respin_on_failure():
+            assert (
+                cluster.g_query.get_epoch() == init_epoch
+            ), "Epoch changed and it would affect other checks"
+
             # Check that CC cannot vote on "no confidence" action
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 conway_common.cast_vote(
@@ -220,29 +225,15 @@ class TestNoConfidence:
             assert "CommitteeVoter" in err_str, err_str
 
             # Check ratification
-            xfail_ledger_3979_msgs = set()
-            for __ in range(3):
-                _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-                rat_gov_state = cluster.g_conway_governance.query.gov_state()
-                conway_common.save_gov_state(
-                    gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
-                )
-                rat_action = governance_utils.lookup_ratified_actions(
-                    gov_state=rat_gov_state, action_txid=action_txid
-                )
-                if rat_action:
-                    break
-
-                # Known ledger issue where only one expired action gets removed in one epoch.
-                # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-                if not rat_action and conway_common.possible_rem_issue(
-                    gov_state=rat_gov_state, epoch=_cur_epoch
-                ):
-                    xfail_ledger_3979_msgs.add("Only single expired action got removed")
-                    continue
-
-                msg = "Action not found in ratified actions"
-                raise AssertionError(msg)
+            rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+            )
+            rat_action = governance_utils.lookup_ratified_actions(
+                gov_state=rat_gov_state, action_txid=action_txid
+            )
+            assert rat_action, "Action not found in ratified actions"
 
             # Disapprove ratified action, the voting shouldn't have any effect
             conway_common.cast_vote(
@@ -265,10 +256,10 @@ class TestNoConfidence:
             # Check enactment
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cip032en, reqc.cip057)]
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+                gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
             )
             assert not conway_common.get_committee_val(
                 data=enact_gov_state
@@ -283,7 +274,7 @@ class TestNoConfidence:
             assert enact_prev_action_rec.ix == action_ix, "Incorrect previous action index"
             [r.success() for r in (reqc.cip032en, reqc.cip069en)]
 
-            reqc.cip034en.start(url=helpers.get_vcs_link())
+            # Check that deposit was returned immediately after enactment
             enact_deposit_returned = cluster.g_query.get_stake_addr_info(
                 pool_user_lg.stake.address
             ).reward_account_balance
@@ -291,7 +282,7 @@ class TestNoConfidence:
             assert (
                 enact_deposit_returned == init_return_account_balance + deposit_amt
             ), "Incorrect return account balance"
-            [r.success() for r in (reqc.cip030en, reqc.cip034en)]
+            reqc.cip030en.success()
 
             # Try to vote on enacted action
             with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -325,11 +316,6 @@ class TestNoConfidence:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.spo[0])
-
-        if xfail_ledger_3979_msgs:
-            ledger_3979 = issues.ledger_3979.copy()
-            ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
-            ledger_3979.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
@@ -419,11 +405,13 @@ class TestNoConfidence:
                 approve_cc=True,
                 approve_drep=True,
             )
+            vote_epoch = cluster.g_query.get_epoch()
 
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            approved_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
             approved_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=approved_gov_state, name_template=f"{temp_template}_approved_{_cur_epoch}"
+                gov_state=approved_gov_state,
+                name_template=f"{temp_template}_approved_{approved_epoch}",
             )
             prop_const_action = governance_utils.lookup_proposal(
                 gov_state=approved_gov_state,
@@ -442,13 +430,12 @@ class TestNoConfidence:
             assert not rat_const_action, "Action found in ratified actions"
 
             # Check that the action expired
-            expire_epoch = prop_const_action["expiresAfter"] + 1
-            _cur_epoch = cluster.wait_for_new_epoch(
-                new_epochs=expire_epoch - _cur_epoch, padding_seconds=5
+            expire_epoch = cluster.wait_for_epoch(
+                epoch_no=prop_const_action["expiresAfter"] + 1, padding_seconds=5
             )
             expire_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{_cur_epoch}"
+                gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
             )
             exp_const_action = governance_utils.lookup_expired_actions(
                 gov_state=expire_gov_state, action_txid=const_action_txid, action_ix=const_action_ix

@@ -170,9 +170,10 @@ def cluster_with_constitution(
                 approve_cc=True,
                 approve_drep=True,
             )
+            approve_epoch = cluster.g_query.get_epoch()
 
             # Wait for the action to be ratified
-            cluster.wait_for_new_epoch(padding_seconds=5)
+            cluster.wait_for_epoch(epoch_no=approve_epoch + 1, padding_seconds=5)
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_gov_state, action_txid=action_txid
@@ -180,7 +181,7 @@ def cluster_with_constitution(
             assert rat_action, "Action not found in ratified actions"
 
             # Wait for the action to be enacted
-            cluster.wait_for_new_epoch(padding_seconds=5)
+            cluster.wait_for_epoch(epoch_no=approve_epoch + 2, padding_seconds=5)
             new_constitution = cluster.g_conway_governance.query.constitution()
             assert new_constitution["script"] == constitution_script_hash
 

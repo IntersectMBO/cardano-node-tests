@@ -712,13 +712,14 @@ class TestCommittee:
             rem_member=cc_members[1], prev_action_txid=action_add_txid, prev_action_ix=action_add_ix
         )
 
-        _cur_epoch = cluster.g_query.get_epoch()
-        assert _cur_epoch == actions_epoch, "Haven't managed to submit the proposals in one epoch"
+        assert (
+            cluster.g_query.get_epoch() == actions_epoch
+        ), "Haven't managed to submit the proposals in one epoch"
 
         reqc.cip067.start(url=helpers.get_vcs_link())
 
         # Make sure the voting happens in next epoch
-        cluster.wait_for_new_epoch(padding_seconds=5)
+        cluster.wait_for_epoch(epoch_no=actions_epoch + 1, padding_seconds=5)
 
         # Vote & disapprove the add action
         conway_common.cast_vote(
@@ -795,12 +796,13 @@ class TestCommittee:
             approve_spo=True,
             drep_skip_votes=True,
         )
+        vote_epoch = cluster.g_query.get_epoch()
 
         # Check ratification of add action
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
         rat_add_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{_cur_epoch}"
+            gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{rat_epoch}"
         )
         rat_action = governance_utils.lookup_ratified_actions(
             gov_state=rat_add_gov_state, action_txid=action_add_txid
@@ -828,10 +830,10 @@ class TestCommittee:
         rat_add_committee_state = cluster.g_conway_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=rat_add_committee_state,
-            name_template=f"{temp_template}_rat_add_{_cur_epoch}",
+            name_template=f"{temp_template}_rat_add_{rat_epoch}",
         )
         reqc.cip011.start(url=helpers.get_vcs_link())
-        _check_cc_member1_expired(committee_state=rat_add_committee_state, curr_epoch=_cur_epoch)
+        _check_cc_member1_expired(committee_state=rat_add_committee_state, curr_epoch=rat_epoch)
 
         xfail_ledger_4001_msgs = set()
         for _cc_member_key in (cc_member1_key, cc_member2_key, cc_member3_key):
@@ -852,10 +854,10 @@ class TestCommittee:
         reqc.cip003.success()
 
         # Check enactment of add action
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_epoch = cluster.wait_for_epoch(epoch_no=rat_epoch + 1, padding_seconds=5)
         enact_add_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{_cur_epoch}"
+            gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{enact_epoch}"
         )
 
         reqc.cip073_03.start(url=helpers.get_vcs_link())
@@ -870,9 +872,9 @@ class TestCommittee:
         enact_add_committee_state = cluster.g_conway_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_add_committee_state,
-            name_template=f"{temp_template}_enact_add_{_cur_epoch}",
+            name_template=f"{temp_template}_enact_add_{enact_epoch}",
         )
-        _check_cc_member1_expired(committee_state=enact_add_committee_state, curr_epoch=_cur_epoch)
+        _check_cc_member1_expired(committee_state=enact_add_committee_state, curr_epoch=enact_epoch)
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip009, reqc.cip010)]
@@ -913,7 +915,7 @@ class TestCommittee:
         reqc.cip038_01.success()
 
         # The proposal was enacted, but it is already expired
-        assert _cur_epoch == actions_epoch + 3, "Unexpected epoch"
+        assert enact_epoch == actions_epoch + 3, "Unexpected epoch"
         with pytest.raises(clusterlib.CLIError) as excinfo:
             conway_common.cast_vote(
                 cluster_obj=cluster,
@@ -939,10 +941,10 @@ class TestCommittee:
         ), "CC Member is not marked for removal"
 
         # Check enactment of removal action
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        rem_epoch = cluster.wait_for_epoch(epoch_no=enact_epoch + 1, padding_seconds=5)
         enact_rem_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{_cur_epoch}"
+            gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{rem_epoch}"
         )
         _check_cc_member2_removed(gov_state=enact_rem_gov_state)
 
@@ -950,13 +952,26 @@ class TestCommittee:
         enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_rem_committee_state,
-            name_template=f"{temp_template}_enact_rem_{_cur_epoch}",
+            name_template=f"{temp_template}_enact_rem_{rem_epoch}",
         )
         enact_rem_member_rec = enact_rem_committee_state["committee"].get(cc_member2_key)
         assert not enact_rem_member_rec, "Removed committee member still present"
 
-        _check_cc_member1_expired(committee_state=enact_rem_committee_state, curr_epoch=_cur_epoch)
+        _check_cc_member1_expired(committee_state=enact_rem_committee_state, curr_epoch=rem_epoch)
         reqc.cip011.success()
+
+        # Check that deposit was returned immediately after enactment
+        reqc.cip034en.start(url=helpers.get_vcs_link())
+        enact_deposit_returned = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+
+        assert (
+            enact_deposit_returned
+            == init_return_account_balance
+            + deposit_amt * 2  # 2 * deposit_amt for add and rem actions
+        ), "Incorrect return account balance"
+        reqc.cip034en.success()
 
         # Try to vote on enacted removal action
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -999,18 +1014,6 @@ class TestCommittee:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes_rem.spo[0])
         reqc.cip067.success()
 
-        reqc.cip034en.start(url=helpers.get_vcs_link())
-        enact_deposit_returned = cluster.g_query.get_stake_addr_info(
-            pool_user_lg.stake.address
-        ).reward_account_balance
-
-        assert (
-            enact_deposit_returned
-            == init_return_account_balance
-            + deposit_amt * 2  # 2 * deposit_amt for add and rem actions
-        ), "Incorrect return account balance"
-        reqc.cip034en.success()
-
         if xfail_ledger_4001_msgs:
             ledger_4001 = issues.ledger_4001.copy()
             ledger_4001.message = "; ".join(xfail_ledger_4001_msgs)
@@ -1023,7 +1026,7 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    def test_empty_committee(  # noqa: C901
+    def test_empty_committee(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_utils.GovClusterT,
@@ -1059,8 +1062,6 @@ class TestCommittee:
             pytest.skip("Cannot run during bootstrap period.")
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-
-        xfail_ledger_3979_msgs = set()
 
         def _set_zero_committee_pparam() -> conway_common.PParamPropRec:
             """Set the `committeeMinSize` pparam to 0."""
@@ -1139,10 +1140,10 @@ class TestCommittee:
 
             action_rem_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
             action_rem_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
+            curr_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=action_rem_gov_state,
-                name_template=f"{temp_template}_action_rem_{_cur_epoch}",
+                name_template=f"{temp_template}_action_rem_{curr_epoch}",
             )
             prop_action_rem = governance_utils.lookup_proposal(
                 gov_state=action_rem_gov_state, action_txid=action_rem_txid
@@ -1158,32 +1159,17 @@ class TestCommittee:
             return rem_cc_action, action_rem_txid, action_rem_ix
 
         def _check_rat_gov_state(
-            name_template: str, action_txid: str, action_ix: int
+            name_template: str, action_txid: str, action_ix: int, epoch_no: int
         ) -> tp.Dict[str, tp.Any]:
-            for __ in range(3):
-                _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-                gov_state = cluster.g_conway_governance.query.gov_state()
-                conway_common.save_gov_state(
-                    gov_state=gov_state, name_template=f"{name_template}_{_cur_epoch}"
-                )
-                rat_action = governance_utils.lookup_ratified_actions(
-                    gov_state=gov_state, action_txid=action_txid, action_ix=action_ix
-                )
-                if rat_action:
-                    return gov_state
-
-                # Known ledger issue where only one expired action gets removed in one epoch.
-                # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-                if not rat_action and conway_common.possible_rem_issue(
-                    gov_state=gov_state, epoch=_cur_epoch
-                ):
-                    xfail_ledger_3979_msgs.add("Only single expired action got removed")
-                    continue
-
-                msg = "Action not found in ratified actions"
-                raise AssertionError(msg)
-
-            return {}
+            gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=gov_state, name_template=f"{name_template}_{epoch_no}"
+            )
+            rat_action = governance_utils.lookup_ratified_actions(
+                gov_state=gov_state, action_txid=action_txid, action_ix=action_ix
+            )
+            assert rat_action, "Action not found in ratified actions"
+            return gov_state
 
         reqc.cip008.start(url=helpers.get_vcs_link())
 
@@ -1203,6 +1189,7 @@ class TestCommittee:
             approve_cc=True,
             approve_drep=True,
         )
+        vote_zero_cc_epoch = cluster.g_query.get_epoch()
 
         def _check_zero_cc_state(state: dict):
             pparams = state.get("curPParams") or state.get("currentPParams") or {}
@@ -1211,10 +1198,14 @@ class TestCommittee:
             )
 
         # Check ratification
+        rat_zero_cc_epoch = cluster.wait_for_epoch(
+            epoch_no=vote_zero_cc_epoch + 1, padding_seconds=5
+        )
         rat_zero_cc_gov_state = _check_rat_gov_state(
             name_template=f"{temp_template}_rat_zero_cc",
             action_txid=zero_cc_proposal.action_txid,
             action_ix=zero_cc_proposal.action_ix,
+            epoch_no=rat_zero_cc_epoch,
         )
         next_rat_zero_cc_state = rat_zero_cc_gov_state["nextRatifyState"]
         _check_zero_cc_state(next_rat_zero_cc_state["nextEnactState"])
@@ -1227,11 +1218,13 @@ class TestCommittee:
         ], "Ratification is delayed unexpectedly"
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_zero_cc_epoch = cluster.wait_for_epoch(
+            epoch_no=rat_zero_cc_epoch + 1, padding_seconds=5
+        )
         enact_zero_cc_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_zero_cc_gov_state,
-            name_template=f"{temp_template}_enact_zero_cc_{_cur_epoch}",
+            name_template=f"{temp_template}_enact_zero_cc_{enact_zero_cc_epoch}",
         )
         _check_zero_cc_state(enact_zero_cc_gov_state)
 
@@ -1254,12 +1247,15 @@ class TestCommittee:
             approve_drep=True,
             approve_spo=True,
         )
+        vote_rem_epoch = cluster.g_query.get_epoch()
 
         # Check ratification
+        rat_rem_epoch = cluster.wait_for_epoch(epoch_no=vote_rem_epoch + 1, padding_seconds=5)
         rat_rem_gov_state = _check_rat_gov_state(
             name_template=f"{temp_template}_rat_rem",
             action_txid=action_rem_txid,
             action_ix=action_rem_ix,
+            epoch_no=rat_rem_epoch,
         )
         next_rat_rem_state = rat_rem_gov_state["nextRatifyState"]
         assert set(next_rat_rem_state["nextEnactState"]["committee"]["members"].keys()).isdisjoint(
@@ -1268,10 +1264,11 @@ class TestCommittee:
         assert next_rat_rem_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_rem_epoch = cluster.wait_for_epoch(epoch_no=rat_rem_epoch + 1, padding_seconds=5)
         enact_rem_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{_cur_epoch}"
+            gov_state=enact_rem_gov_state,
+            name_template=f"{temp_template}_enact_rem_{enact_rem_epoch}",
         )
         assert set(
             conway_common.get_committee_val(data=enact_rem_gov_state)["members"].keys()
@@ -1281,7 +1278,7 @@ class TestCommittee:
         enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_rem_committee_state,
-            name_template=f"{temp_template}_enact_rem_{_cur_epoch}",
+            name_template=f"{temp_template}_enact_rem_{enact_rem_epoch}",
         )
         assert set(enact_rem_committee_state["committee"].keys()).isdisjoint(
             removed_members_hashes
@@ -1322,6 +1319,7 @@ class TestCommittee:
             action_ix=action_const_ix,
             approve_drep=True,
         )
+        vote_const_epoch = cluster.g_query.get_epoch()
 
         def _check_const_state(state: dict):
             anchor = state["constitution"]["anchor"]
@@ -1331,30 +1329,27 @@ class TestCommittee:
             assert anchor["url"] == const_action.constitution_url, "Incorrect constitution data URL"
 
         # Check ratification
+        rat_const_epoch = cluster.wait_for_epoch(epoch_no=vote_const_epoch + 1, padding_seconds=5)
         rat_const_gov_state = _check_rat_gov_state(
             name_template=f"{temp_template}_rat_const",
             action_txid=action_const_txid,
             action_ix=action_const_ix,
+            epoch_no=rat_const_epoch,
         )
         next_rat_const_state = rat_const_gov_state["nextRatifyState"]
         _check_const_state(next_rat_const_state["nextEnactState"])
         assert next_rat_const_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_const_epoch = cluster.wait_for_epoch(epoch_no=rat_const_epoch + 1, padding_seconds=5)
         enact_const_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_const_gov_state,
-            name_template=f"{temp_template}_enact_const_{_cur_epoch}",
+            name_template=f"{temp_template}_enact_const_{enact_const_epoch}",
         )
         _check_const_state(enact_const_gov_state)
 
         reqc.cip008.success()
-
-        if xfail_ledger_3979_msgs:
-            ledger_3979 = issues.ledger_3979.copy()
-            ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
-            ledger_3979.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(threshold=st.floats(min_value=1, exclude_min=True, allow_infinity=False))
@@ -1399,7 +1394,7 @@ class TestCommittee:
         cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
-        """Test that actions that requires CC approval can be ratified when threshold == 0.
+        """Test that actions that require CC approval can be ratified when threshold == 0.
 
         Even if the CC disapprove the action.
 
@@ -1416,14 +1411,17 @@ class TestCommittee:
             pytest.skip("Cannot run during bootstrap period.")
 
         def _check_rat_enact_state(
-            action_txid: str, action_type: governance_utils.PrevGovActionIds
+            name_template: str,
+            action_txid: str,
+            action_type: governance_utils.PrevGovActionIds,
+            approval_epoch: int,
         ) -> None:
             # Check ratification
-            _cur_epoch_rat = cluster.wait_for_new_epoch(padding_seconds=5)
+            epoch_rat = cluster.wait_for_epoch(epoch_no=approval_epoch + 1, padding_seconds=5)
 
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch_rat}"
+                gov_state=rat_gov_state, name_template=f"{name_template}_rat_{epoch_rat}"
             )
 
             rat_action = governance_utils.lookup_ratified_actions(
@@ -1432,13 +1430,12 @@ class TestCommittee:
             assert rat_action, "Action not found in ratified actions"
 
             # Wait for enactment
-            _cur_epoch_enact = cluster.wait_for_new_epoch(padding_seconds=5)
+            epoch_enact = cluster.wait_for_epoch(epoch_no=epoch_rat + 1, padding_seconds=5)
 
             # Check enactment
-            assert _cur_epoch_enact == _cur_epoch_rat + 1, f"Unexpected epoch {_cur_epoch_enact}"
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch_enact}"
+                gov_state=enact_gov_state, name_template=f"{name_template}_enact_{epoch_enact}"
             )
 
             prev_action_rec = governance_utils.get_prev_action(
@@ -1505,17 +1502,20 @@ class TestCommittee:
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
-            name_template=f"{temp_template}_add_yes",
+            name_template=f"{temp_template}_threshold",
             payment_addr=pool_user_lg.payment,
             action_txid=threshold_action_txid,
             action_ix=action_ix,
             approve_drep=True,
             approve_spo=True,
         )
+        vote_threshold_epoch = cluster.g_query.get_epoch()
 
         _check_rat_enact_state(
+            name_template=f"{temp_template}_threshold",
             action_txid=threshold_action_txid,
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+            approval_epoch=vote_threshold_epoch,
         )
 
         # Try to ratify a "create constitution" action that is expecting approval from the CC
@@ -1552,10 +1552,13 @@ class TestCommittee:
             approve_cc=False,
             approve_drep=True,
         )
+        vote_const_epoch = cluster.g_query.get_epoch()
 
         _check_rat_enact_state(
+            name_template=f"{temp_template}_constitution",
             action_txid=const_action_txid,
             action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
+            approval_epoch=vote_const_epoch,
         )
 
         # Reinstate the original CC data

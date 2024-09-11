@@ -293,20 +293,14 @@ class TestRewards:
             cluster.g_query.get_epoch() == init_epoch
         ), "Delegation took longer than expected and would affect other checks"
 
-        LOGGER.info("Waiting up to 4 full epochs for first reward.")
-        for i in range(5):
-            if i > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-            if cluster.g_query.get_stake_addr_info(
-                delegation_out.pool_user.stake.address
-            ).reward_account_balance:
-                break
-        else:
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=40)
+        if not cluster.g_query.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
 
-        # withdraw rewards to payment address, make sure we have enough time to finish
-        # the withdrawal in one epoch
-        clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
+        # Withdraw rewards to payment address
         cluster.g_stake_address.withdraw_reward(
             stake_addr_record=delegation_out.pool_user.stake,
             dst_addr_record=delegation_out.pool_user.payment,
@@ -518,9 +512,7 @@ class TestRewards:
             prev_owner_epoch = prev_owner_rec.epoch_no
             prev_owner_reward = prev_owner_rec.reward_total
 
-            # wait for new epoch
-            if cluster.g_query.get_epoch() == prev_owner_epoch:
-                cluster.wait_for_new_epoch()
+            this_epoch = cluster.wait_for_epoch(epoch_no=prev_owner_epoch + 1, future_is_ok=False)
 
             # sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(
@@ -529,7 +521,6 @@ class TestRewards:
                 stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
                 force_epoch=True,
             )
-            this_epoch = cluster.g_query.get_epoch()
 
             # current reward balance
             user_reward = cluster.g_query.get_stake_addr_info(
@@ -571,13 +562,8 @@ class TestRewards:
 
             _check_ledger_state(this_epoch=this_epoch)
 
-        # withdraw rewards to payment address
-        if this_epoch == cluster.g_query.get_epoch():
-            cluster.wait_for_new_epoch()
-
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
+        # Withdraw rewards to payment address
+        this_epoch = cluster.wait_for_epoch(epoch_no=this_epoch + 1, padding_seconds=10)
 
         withdraw_out = cluster.g_stake_address.withdraw_reward(
             stake_addr_record=delegation_out.pool_user.stake,
@@ -692,7 +678,6 @@ class TestRewards:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-
         init_epoch = cluster.g_query.get_epoch()
 
         # rewards each epoch
@@ -870,15 +855,9 @@ class TestRewards:
                 prev_epoch = prev_reward_rec.epoch_no
                 prev_reward_total = prev_reward_rec.reward_total
 
-                # wait for new epoch
-                if cluster.g_query.get_epoch() == prev_epoch:
-                    cluster.wait_for_new_epoch()
-
-                # wait before recording reward
-                clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=10, stop=50, force_epoch=True
+                this_epoch = cluster.wait_for_epoch(
+                    epoch_no=prev_epoch + 1, padding_seconds=10, future_is_ok=False
                 )
-                this_epoch = cluster.g_query.get_epoch()
 
                 # current reward balance
                 reward_total = cluster.g_query.get_stake_addr_info(
@@ -1077,7 +1056,7 @@ class TestRewards:
         ), "Delegation took longer than expected and would affect other checks"
 
         LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
         if not cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance:
@@ -1093,11 +1072,6 @@ class TestRewards:
             dst_addr_record,
             cluster_obj=cluster,
             faucet_data=cluster_manager.cache.addrs_data["user1"],
-        )
-
-        # make sure we have enough time to finish the transfer in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
         # transfer all funds from payment address back to faucet, so no funds are staked
@@ -1191,6 +1165,9 @@ class TestRewards:
             cluster_obj=cluster, pool_name=f"changed_{pool2_name}", pool_id=pool2_id
         )
 
+        # Make sure we are at least in epoch 4 so the pools are receiving rewards
+        cluster.wait_for_epoch(epoch_no=4, padding_seconds=10)
+
         LOGGER.info("Waiting up to 4 full epochs for first rewards.")
         for i in range(5):
             if i > 0:
@@ -1204,7 +1181,7 @@ class TestRewards:
             if pool1_amount and pool2_amount:
                 break
         else:
-            pytest.skip("Pools haven't received any rewards, cannot continue.")
+            pytest.xfail("Pools haven't received any rewards, cannot continue.")
 
         # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
         # are deducted
@@ -1261,8 +1238,11 @@ class TestRewards:
         # check rewards
         for ep in range(6):
             if ep > 0:
-                cluster.wait_for_new_epoch(padding_seconds=10)
-                this_epoch = cluster.g_query.get_epoch()
+                # Check that we are in the expected epoch
+                prev_epoch = rewards_ledger_pool1[-1].epoch_no
+                this_epoch = cluster.wait_for_epoch(
+                    epoch_no=prev_epoch + 1, padding_seconds=10, future_is_ok=False
+                )
 
             pool1_amount = cluster.g_query.get_stake_addr_info(
                 pool1_reward.stake.address
@@ -1537,15 +1517,9 @@ class TestRewards:
             prev_epoch = prev_reward_rec.epoch_no
             prev_reward_total = prev_reward_rec.reward_total
 
-            # wait for new epoch
-            if cluster.g_query.get_epoch() == prev_epoch:
-                cluster.wait_for_new_epoch()
-
-            # wait before recording reward
-            clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=10, stop=50, force_epoch=True
+            this_epoch = cluster.wait_for_epoch(
+                epoch_no=prev_epoch + 1, padding_seconds=10, future_is_ok=False
             )
-            this_epoch = cluster.g_query.get_epoch()
 
             # current reward balance
             reward_total = cluster.g_query.get_stake_addr_info(

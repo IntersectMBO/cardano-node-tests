@@ -817,7 +817,7 @@ class TestDelegateAddr:
 
         if not skip_rewards_check:
             LOGGER.info("Waiting 4 epochs for first reward.")
-            cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+            cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
             if not cluster.g_query.get_stake_addr_info(
                 pool_user.stake.address
             ).reward_account_balance:
@@ -1048,7 +1048,7 @@ class TestDelegateAddr:
         reward_error = ""
 
         LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
         if not cluster.g_query.get_stake_addr_info(pool_user.stake.address).reward_account_balance:
             reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
 

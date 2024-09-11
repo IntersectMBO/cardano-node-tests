@@ -931,7 +931,7 @@ class TestStakePool:
         )
 
         # check that the pool was deregistered
-        cluster.wait_for_new_epoch()
+        cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
         assert not (
             clusterlib_utils.get_pool_state(
                 cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
@@ -1046,7 +1046,7 @@ class TestStakePool:
         )
 
         # check that the pool was deregistered
-        cluster.wait_for_new_epoch()
+        cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
         assert not (
             clusterlib_utils.get_pool_state(
                 cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
@@ -1103,27 +1103,16 @@ class TestStakePool:
             f"({src_init_balance}, {tx_raw_output.fee}, {cluster.g_query.get_pool_deposit()})"
         )
 
-        LOGGER.info("Waiting up to 5 full epochs for stake pool to be reregistered.")
-        for __ in range(5):
-            cluster.wait_for_new_epoch(padding_seconds=10)
-            if pool_creation_out.stake_pool_id in cluster.g_query.get_stake_distribution():
-                break
-        else:
-            msg = (
-                f"Stake pool `{pool_creation_out.stake_pool_id}` not registered "
-                "even after 5 epochs."
-            )
-            raise AssertionError(msg)
-        # check that pool was correctly setup
-        _check_pool(
-            cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
-        )
-
         # check that the stake addresses were delegated
         _check_staking(
             pool_owners=pool_owners,
             cluster_obj=cluster,
             stake_pool_id=pool_creation_out.stake_pool_id,
+        )
+
+        # check that pool was correctly setup
+        _check_pool(
+            cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -1211,7 +1200,7 @@ class TestStakePool:
             == depoch
         )
 
-        cluster.wait_for_new_epoch()
+        cluster.wait_for_epoch(epoch_no=depoch - 1, padding_seconds=5)
 
         src_address = pool_owners[0].payment.address
         src_init_balance = cluster.g_query.get_address_balance(src_address)
@@ -1364,6 +1353,7 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
         )
+        update_epoch = cluster.g_query.get_epoch()
 
         # update the pool metadata by resubmitting the pool registration certificate
         if use_build_cmd:
@@ -1395,7 +1385,7 @@ class TestStakePool:
             pool_params=future_params, pool_creation_data=pool_data_updated
         )
 
-        cluster.wait_for_new_epoch()
+        cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
 
         # check that the pool metadata hash was correctly updated on chain
         _check_pool(
@@ -1479,6 +1469,7 @@ class TestStakePool:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
         )
+        update_epoch = cluster.g_query.get_epoch()
 
         # update the pool parameters by resubmitting the pool registration certificate
         if use_build_cmd:
@@ -1510,7 +1501,7 @@ class TestStakePool:
             pool_params=future_params, pool_creation_data=pool_data_updated
         )
 
-        cluster.wait_for_new_epoch()
+        cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
 
         # check that the pool parameters were correctly updated on chain
         _check_pool(
@@ -1643,7 +1634,7 @@ class TestStakePool:
             == src_init_balance - tx_raw_output.fee - cluster.g_query.get_pool_deposit()
         ), f"Incorrect balance for source address `{src_address}`"
 
-        cluster.wait_for_new_epoch()
+        cluster.wait_for_block(2)
 
         # check that the pool was correctly registered on chain
         stake_pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
@@ -1712,10 +1703,13 @@ class TestStakePool:
             owner_stake_vkey_files=[pool_owner.stake.vkey_file],
         )
 
-        # create pool deregistration cert
+        # Make sure we have enough time to finish the deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
+        dereg_epoch = cluster.g_query.get_epoch()
+
+        # create pool deregistration cert
         pool_dereg_cert_file = cluster.g_stake_pool.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
@@ -1745,7 +1739,7 @@ class TestStakePool:
 
         # check that the pool deposit was NOT returned to reward account as the reward address
         # is not registered (deposit is lost)
-        cluster.wait_for_new_epoch(3, padding_seconds=30)
+        cluster.wait_for_epoch(epoch_no=dereg_epoch + 3, padding_seconds=30)
         assert (
             cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
             == src_init_reward

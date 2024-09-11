@@ -1102,6 +1102,7 @@ class TestDelegDReps:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
         )
+        init_epoch = cluster.g_query.get_epoch()
 
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -1112,6 +1113,10 @@ class TestDelegDReps:
             tx_files=tx_files,
             deposit=deposit_amt,
         )
+
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Epoch changed and it would affect other checks"
 
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
@@ -1153,7 +1158,7 @@ class TestDelegDReps:
             and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
             and "smoke" not in request.config.getoption("-m")
         ):
-            cluster.wait_for_new_epoch(padding_seconds=5)
+            cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user_rewards.stake.vkey_file
@@ -1267,6 +1272,7 @@ class TestDelegDReps:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
         )
+        init_epoch = cluster.g_query.get_epoch()
 
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -1277,6 +1283,10 @@ class TestDelegDReps:
             tx_files=tx_files,
             deposit=deposit_amt,
         )
+
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Epoch changed and it would affect other checks"
 
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
@@ -1315,7 +1325,7 @@ class TestDelegDReps:
             and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
             and "smoke" not in request.config.getoption("-m")
         ):
-            cluster.wait_for_new_epoch(padding_seconds=5)
+            cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user_wpr.stake.vkey_file
@@ -1574,6 +1584,7 @@ class TestDRepActivity:
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
             )
+            init_epoch = cluster.g_query.get_epoch()
 
             tx_output = clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
@@ -1583,6 +1594,10 @@ class TestDRepActivity:
                 tx_files=tx_files,
                 deposit=deposit_amt,
             )
+
+            assert (
+                cluster.g_query.get_epoch() == init_epoch
+            ), "Epoch changed and it would affect other checks"
 
             stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
             assert (
@@ -1601,7 +1616,7 @@ class TestDRepActivity:
             ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
             # Check that stake address is delegated to the correct DRep.
-            cluster.wait_for_new_epoch(padding_seconds=5)
+            cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user.stake.vkey_file

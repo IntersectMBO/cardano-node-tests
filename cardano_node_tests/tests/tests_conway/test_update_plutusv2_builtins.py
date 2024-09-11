@@ -121,6 +121,8 @@ class TestUpdateBuiltIns:
                 proposals=update_proposals,
             )
 
+            prop_epoch = cluster.g_query.get_epoch()
+
             # Vote & approve the action
             conway_common.cast_vote(
                 cluster_obj=cluster,
@@ -132,8 +134,12 @@ class TestUpdateBuiltIns:
                 approve_cc=True,
             )
 
+            assert (
+                cluster.g_query.get_epoch() == prop_epoch
+            ), "Epoch changed and it would affect other checks"
+
             # Wait for ratification
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            _cur_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 1, padding_seconds=5)
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{_name_template}_{_cur_epoch}"
@@ -146,7 +152,7 @@ class TestUpdateBuiltIns:
             assert rat_action, "Action not found in ratified actions"
 
             # Wait for enactment
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            _cur_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 2, padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"

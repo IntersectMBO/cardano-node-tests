@@ -120,6 +120,7 @@ class TestHardfork:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 20
         )
+        init_epoch = cluster.g_query.get_epoch()
 
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -203,8 +204,12 @@ class TestHardfork:
         # Testnet will be using an unexpected protocol version, respin is needed
         cluster_manager.set_needs_respin()
 
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Epoch changed and it would affect other checks"
+
         # Check ratification
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
@@ -231,7 +236,7 @@ class TestHardfork:
         reqc.cip038_07.success()
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        _cur_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"

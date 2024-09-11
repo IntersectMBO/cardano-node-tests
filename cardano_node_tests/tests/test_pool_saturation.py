@@ -328,22 +328,17 @@ class TestPoolSaturation:
         try:
             for __ in range(10):
                 prev_epoch = pool_records[2].owner_rewards[-1].epoch_no
-
-                # wait for new epoch if needed
-                if cluster.g_query.get_epoch() == prev_epoch:
-                    cluster.wait_for_new_epoch()
+                this_epoch = cluster.wait_for_epoch(epoch_no=prev_epoch + 1, future_is_ok=False)
 
                 # make sure we have enough time to finish everything in single epoch
                 clusterlib_utils.wait_for_epoch_interval(
                     cluster_obj=cluster, start=10, stop=50, force_epoch=True
                 )
-                tip = cluster.g_query.get_tip()
-                this_epoch = int(tip["epoch"])
 
-                # double check that we are still in the expected epoch
-                assert this_epoch == prev_epoch + 1, "We are not in the expected epoch"
-
-                helpers.write_json(out_file=f"{temp_template}_{this_epoch}_tip.json", content=tip)
+                helpers.write_json(
+                    out_file=f"{temp_template}_{this_epoch}_tip.json",
+                    content=cluster.g_query.get_tip(),
+                )
                 ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
                 clusterlib_utils.save_ledger_state(
                     cluster_obj=cluster,
