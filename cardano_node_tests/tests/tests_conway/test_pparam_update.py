@@ -259,7 +259,7 @@ class TestPParamUpdate:
         ).reward_account_balance
 
         # Check if total delegated stake is below the threshold. This can be used to check that
-        # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, than
+        # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, then
         # missing votes would approve the action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
         cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
@@ -935,6 +935,7 @@ class TestPParamUpdate:
             approve_spo=False,
         )
 
+        reqc.db023.start(url=helpers.get_vcs_link())
         # Vote on update proposals from governance group that will NOT get approved by DReps
         if not is_in_bootstrap:
             gov_nodrep_update_proposals = list(helpers.flatten(governance_g_proposals))
@@ -1134,6 +1135,8 @@ class TestPParamUpdate:
             update_proposals=mix_approved_prop_rec.proposals,
             protocol_params=mix_approved_prop_rec.future_pparams,
         )
+        reqc.db023.success()
+
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
@@ -1239,9 +1242,9 @@ class TestPParamUpdate:
 
         # db-sync check
         try:
-            dbsync_utils.check_conway_param_update_enactment(
-                gov_state=enact_gov_state, epoch_no=enact_epoch
-            )
+            reqc.db024.start(url=helpers.get_vcs_link())
+            dbsync_utils.check_conway_param_update_enactment(enact_gov_state, enact_epoch)
+            reqc.db024.success()
         except AssertionError as exc:
             db_errors_final.append(f"db-sync params enactment error: {exc}")
 
