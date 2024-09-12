@@ -158,9 +158,9 @@ class TestNoConfidence:
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
+        action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
         prop_action = governance_utils.lookup_proposal(
             gov_state=action_gov_state, action_txid=action_txid
@@ -347,10 +347,10 @@ class TestNoConfidence:
         reqc.cip014.start(url=helpers.get_vcs_link())
 
         cc_members_to_resign = governance_data.cc_key_members[1:]
-        _cur_epoch = cluster.g_query.get_epoch()
+        resign_epoch = cluster.g_query.get_epoch()
         conway_common.resign_ccs(
             cluster_obj=cluster,
-            name_template=f"{temp_template}_{_cur_epoch}",
+            name_template=f"{temp_template}_{resign_epoch}",
             ccs_to_resign=[r.cc_member for r in cc_members_to_resign],
             payment_addr=pool_user_lg.payment,
         )

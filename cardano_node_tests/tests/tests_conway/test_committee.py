@@ -425,10 +425,10 @@ class TestCommittee:
             cluster.wait_for_new_block(new_blocks=2)
             [r.start(url=_url) for r in (reqc.cli032, reqc.cip002, reqc.cip004)]
             auth_committee_state = cluster.g_conway_governance.query.committee_state()
-            _cur_epoch = cluster.g_query.get_epoch()
+            auth_epoch = cluster.g_query.get_epoch()
             conway_common.save_committee_state(
                 committee_state=auth_committee_state,
-                name_template=f"{temp_template}_auth_{_cur_epoch}",
+                name_template=f"{temp_template}_auth_{auth_epoch}",
             )
             for mk in (cc_member1_key, cc_member2_key, cc_member3_key):
                 auth_member_rec = auth_committee_state["committee"][mk]
@@ -494,10 +494,10 @@ class TestCommittee:
 
             action_add_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
             action_add_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
+            action_add_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=action_add_gov_state,
-                name_template=f"{temp_template}_action_add_{_cur_epoch}",
+                name_template=f"{temp_template}_action_add_{action_add_epoch}",
             )
             prop_action_add = governance_utils.lookup_proposal(
                 gov_state=action_add_gov_state, action_txid=action_add_txid
@@ -605,10 +605,10 @@ class TestCommittee:
 
             action_rem_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
             action_rem_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
+            action_rem_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=action_rem_gov_state,
-                name_template=f"{temp_template}_action_rem_{_cur_epoch}",
+                name_template=f"{temp_template}_action_rem_{action_rem_epoch}",
             )
             prop_action_rem = governance_utils.lookup_proposal(
                 gov_state=action_rem_gov_state, action_txid=action_rem_txid
@@ -1140,10 +1140,10 @@ class TestCommittee:
 
             action_rem_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
             action_rem_gov_state = cluster.g_conway_governance.query.gov_state()
-            curr_epoch = cluster.g_query.get_epoch()
+            action_rem_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=action_rem_gov_state,
-                name_template=f"{temp_template}_action_rem_{curr_epoch}",
+                name_template=f"{temp_template}_action_rem_{action_rem_epoch}",
             )
             prop_action_rem = governance_utils.lookup_proposal(
                 gov_state=action_rem_gov_state, action_txid=action_rem_txid
@@ -1484,10 +1484,10 @@ class TestCommittee:
             tx_body_file=tx_output_action.out_file
         )
         threshold_action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
+        threshold_action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=threshold_action_gov_state,
-            name_template=f"{temp_template}_action_{_cur_epoch}",
+            name_template=f"{temp_template}_action_{threshold_action_epoch}",
         )
         prop_action = governance_utils.lookup_proposal(
             gov_state=threshold_action_gov_state, action_txid=threshold_action_txid

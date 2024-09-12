@@ -139,10 +139,10 @@ class TestUpdateBuiltIns:
             ), "Epoch changed and it would affect other checks"
 
             # Wait for ratification
-            _cur_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 1, padding_seconds=5)
+            rat_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 1, padding_seconds=5)
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{_name_template}_{_cur_epoch}"
+                gov_state=rat_gov_state, name_template=f"{_name_template}_{rat_epoch}"
             )
             rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_gov_state,
@@ -152,10 +152,10 @@ class TestUpdateBuiltIns:
             assert rat_action, "Action not found in ratified actions"
 
             # Wait for enactment
-            _cur_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 2, padding_seconds=5)
+            enact_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 2, padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+                gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
             )
             pparams = (
                 enact_gov_state.get("curPParams") or enact_gov_state.get("currentPParams") or {}

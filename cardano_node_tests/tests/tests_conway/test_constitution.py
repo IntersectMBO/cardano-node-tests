@@ -466,10 +466,10 @@ class TestConstitution:
             _assert_anchor(anchor)
 
         # Check ratification
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
         rat_action = governance_utils.lookup_ratified_actions(
             gov_state=rat_gov_state, action_txid=action_txid
@@ -509,10 +509,10 @@ class TestConstitution:
         reqc.cip038_02.success()
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
+        enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
         _check_state(enact_gov_state)
         [r.success() for r in (reqc.cip042, reqc.cip072, reqc.cip073_04)]

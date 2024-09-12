@@ -210,9 +210,9 @@ class TestTreasuryWithdrawals:
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
+        action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
 
         for action_ix in range(actions_num):
@@ -331,10 +331,10 @@ class TestTreasuryWithdrawals:
         ]["treasury"]
 
         # Check ratification
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=approved_epoch + 1, padding_seconds=5)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=approved_epoch + 1, padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
         for action_ix in range(actions_num):
             rat_action = governance_utils.lookup_ratified_actions(
@@ -354,7 +354,7 @@ class TestTreasuryWithdrawals:
         reqc.cip033.start(url=helpers.get_vcs_link())
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=approved_epoch + 2, padding_seconds=5)
+        cluster.wait_for_epoch(epoch_no=approved_epoch + 2, padding_seconds=5)
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
             == transfer_amt * actions_num
@@ -518,9 +518,9 @@ class TestTreasuryWithdrawals:
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
+        action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
 
         votes: tp.List[governance_utils.VotesAllT] = []
@@ -614,10 +614,10 @@ class TestTreasuryWithdrawals:
             assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
         # Check that the actions are not ratified
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
+        nonrat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
         nonrat_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{_cur_epoch}"
+            gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{nonrat_epoch}"
         )
         for action_ix in range(actions_num):
             assert not governance_utils.lookup_ratified_actions(
@@ -625,10 +625,11 @@ class TestTreasuryWithdrawals:
             ), f"Action {action_txid}#{action_ix} got ratified unexpectedly"
 
         # Check that the actions are not enacted
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 2, padding_seconds=5)
+        nonenacted_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 2, padding_seconds=5)
         nonenacted_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=nonenacted_gov_state, name_template=f"{temp_template}_nonenact_{_cur_epoch}"
+            gov_state=nonenacted_gov_state,
+            name_template=f"{temp_template}_nonenact_{nonenacted_epoch}",
         )
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
@@ -638,10 +639,10 @@ class TestTreasuryWithdrawals:
         # Check that the actions expired
         reqc.cip032ex.start(url=helpers.get_vcs_link())
         epochs_to_expiration = action_prop_epoch + cluster.conway_genesis["govActionLifetime"] + 1
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration, padding_seconds=5)
+        expire_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration, padding_seconds=5)
         expire_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{_cur_epoch}"
+            gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
         )
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
@@ -655,10 +656,10 @@ class TestTreasuryWithdrawals:
         ), f"Incorrect return account balance {expire_return_account_balance}"
 
         # Check that the proposals were removed and the actions deposits were returned
-        _cur_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
+        rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
         rem_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{_cur_epoch}"
+            gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{rem_epoch}"
         )
         rem_deposit_returned = cluster.g_query.get_stake_addr_info(
             pool_user_ug.stake.address

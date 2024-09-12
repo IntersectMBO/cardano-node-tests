@@ -1156,12 +1156,12 @@ class TestPParamUpdate:
 
         # Check ratification
         reqc.cip068.start(url=helpers.get_vcs_link())
-        curr_epoch = cluster.wait_for_epoch(epoch_no=fin_approve_epoch + 1, padding_seconds=5)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=fin_approve_epoch + 1, padding_seconds=5)
 
-        if curr_epoch == fin_approve_epoch + 1:
+        if rat_epoch == fin_approve_epoch + 1:
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{curr_epoch}"
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
             )
 
             rat_action = governance_utils.lookup_ratified_actions(
@@ -1187,12 +1187,10 @@ class TestPParamUpdate:
             assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
             reqc.cip038_04.success()
 
-            # Wait for enactment
-            curr_epoch = cluster.wait_for_epoch(epoch_no=fin_approve_epoch + 2, padding_seconds=5)
-
         # Check enactment
-        enact_epoch = fin_approve_epoch + 2
-        assert curr_epoch == enact_epoch, f"Unexpected epoch {curr_epoch}"
+        enact_epoch = cluster.wait_for_epoch(
+            epoch_no=fin_approve_epoch + 2, padding_seconds=5, future_is_ok=False
+        )
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"

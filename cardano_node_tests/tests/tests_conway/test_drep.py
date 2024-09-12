@@ -1698,11 +1698,11 @@ class TestDRepActivity:
             action_txid: str,
             action_id: str,
         ):
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            rat_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state,
-                name_template=f"{temp_template}_{action_id}_drep_activity_rat_{_cur_epoch}",
+                name_template=f"{temp_template}_{action_id}_drep_activity_rat_{rat_epoch}",
             )
             rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_gov_state, action_txid=action_txid
@@ -1714,11 +1714,11 @@ class TestDRepActivity:
             action_txid: str,
             action_id: str,
         ):
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+            enact_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
             enact_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state,
-                name_template=f"{temp_template}_{action_id}_drep_activity_enact_{_cur_epoch}",
+                name_template=f"{temp_template}_{action_id}_drep_activity_enact_{enact_epoch}",
             )
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
@@ -1733,20 +1733,20 @@ class TestDRepActivity:
             drep1: tp.Optional[governance_utils.DRepRegistration],
             drep2: tp.Optional[governance_utils.DRepRegistration],
         ) -> None:
-            _cur_epoch = cluster.g_query.get_epoch()
+            curr_epoch = cluster.g_query.get_epoch()
             if drep1 is not None:
                 _drep_state = cluster.g_conway_governance.query.drep_state(
                     drep_vkey_file=drep1.key_pair.vkey_file
                 )
                 assert id not in drep1_state
                 drep1_state[id] = DRepStateRecord(
-                    epoch_no=_cur_epoch,
+                    epoch_no=curr_epoch,
                     id=id,
                     drep_state=_drep_state,
                 )
                 conway_common.save_drep_state(
                     drep_state=_drep_state,
-                    name_template=f"{temp_template}_drep1_{id}_{_cur_epoch}",
+                    name_template=f"{temp_template}_drep1_{id}_{curr_epoch}",
                 )
             if drep2 is not None:
                 _drep_state = cluster.g_conway_governance.query.drep_state(
@@ -1754,13 +1754,13 @@ class TestDRepActivity:
                 )
                 assert id not in drep2_state
                 drep2_state[id] = DRepStateRecord(
-                    epoch_no=_cur_epoch,
+                    epoch_no=curr_epoch,
                     id=id,
                     drep_state=_drep_state,
                 )
                 conway_common.save_drep_state(
                     drep_state=_drep_state,
-                    name_template=f"{temp_template}_drep2_{id}_{_cur_epoch}",
+                    name_template=f"{temp_template}_drep2_{id}_{curr_epoch}",
                 )
 
         def _dump_records() -> None:
