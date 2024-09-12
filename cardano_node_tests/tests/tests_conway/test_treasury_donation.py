@@ -105,6 +105,11 @@ class TestTreasuryDonation:
 
         amount = 2_000_000
 
+        # Make sure we have enough time to submit the Tx in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
         treasury_val = cluster.g_conway_governance.query.treasury()
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr_treasury.skey_file])
 
