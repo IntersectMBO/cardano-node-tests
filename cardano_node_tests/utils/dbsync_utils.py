@@ -1520,7 +1520,7 @@ def check_off_chain_vote_fetch_error(voting_anchor_id: int) -> None:
 
     assert (
         db_off_chain_vote_fetch_error
-    ), f"{NO_RESPONSE_STR} no off chain vote fetch error for {voting_anchor_id}"
+    ), f"{NO_RESPONSE_STR} no off chain vote fetch error for voting anchor id {voting_anchor_id}"
 
     fetch_error_str = db_off_chain_vote_fetch_error[-1].fetch_error or ""
     assert "Hash mismatch when fetching metadata" in fetch_error_str
