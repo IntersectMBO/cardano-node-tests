@@ -1304,7 +1304,7 @@ def query_drep_registration(
         " dr.drep_hash_id, dr.voting_anchor_id, "
         " dh.raw, dh.view, dh.has_script "
         "FROM drep_registration AS dr "
-        "INNER JOIN drep_hash dh on dh.id = dr.drep_hash_id "
+        "INNER JOIN drep_hash dh ON dh.id = dr.drep_hash_id "
         "WHERE dh.raw = %s "
         "AND dr.deposit = %s "
         "ORDER BY dr.tx_id;"
