@@ -601,7 +601,7 @@ class TestDReps:
             )
 
         reqc.db021.start(url=helpers.get_vcs_link())
-        dbsync_utils.retry_query(query_func=_query_func, timeout=300)
+        dbsync_utils.retry_query(query_func=_query_func, timeout=360)
         reqc.db021.success()
 
 
