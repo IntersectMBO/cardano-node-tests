@@ -124,24 +124,12 @@ def _check_block_production(
     pool_id_dec: str,
     in_epoch: int,
 ) -> tp.Tuple[int, bool]:
-    epoch = cluster_obj.g_query.get_epoch()
-    if epoch < in_epoch:
-        new_epochs = in_epoch - epoch
-        LOGGER.info(
-            f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
-            f"Waiting for {new_epochs} new epoch(s)."
-        )
-        cluster_obj.wait_for_new_epoch(new_epochs=new_epochs)
-
-    LOGGER.info(
-        f"{datetime.datetime.now(tz=datetime.timezone.utc)}: Waiting for the end of current epoch."
-    )
+    cluster_obj.wait_for_epoch(epoch_no=in_epoch)
     clusterlib_utils.wait_for_epoch_interval(
         cluster_obj=cluster_obj,
         start=common.EPOCH_START_SEC_LEDGER_STATE,
         stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
     )
-
     epoch = cluster_obj.g_query.get_epoch()
 
     ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster_obj)

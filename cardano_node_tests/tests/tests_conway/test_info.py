@@ -134,9 +134,8 @@ class TestInfo:
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         reqc.cli031.start(url=helpers.get_vcs_link())
         action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
         prop_action = governance_utils.lookup_proposal(
             gov_state=action_gov_state, action_txid=action_txid
@@ -209,12 +208,13 @@ class TestInfo:
         )
         reqc.cli024.success()
 
+        vote_epoch = cluster.g_query.get_epoch()
+
         vote_txid = cluster.g_transaction.get_txid(tx_body_file=vote_tx_output.out_file)
 
         vote_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{vote_epoch}"
         )
         prop_vote = governance_utils.lookup_proposal(
             gov_state=vote_gov_state, action_txid=action_txid, action_ix=action_ix
@@ -224,10 +224,10 @@ class TestInfo:
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
 
         # Check that the Info action cannot be ratified
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        approved_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
         approved_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=approved_gov_state, name_template=f"{temp_template}_approved_{_cur_epoch}"
+            gov_state=approved_gov_state, name_template=f"{temp_template}_approved_{approved_epoch}"
         )
         rat_info_action = governance_utils.lookup_ratified_actions(
             gov_state=approved_gov_state,
@@ -247,11 +247,25 @@ class TestInfo:
         reqc.cip034ex.start(url=helpers.get_vcs_link())
 
         # First wait for gov action to expire according to gov action lifetime
-        # and epoch passed since
-        _cur_epoch = cluster.g_query.get_epoch()
-        action_lifetime_epoch = cluster.conway_genesis["govActionLifetime"]
-        epochs_to_expiration = action_lifetime_epoch + 2 + action_epoch - _cur_epoch
-        cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
+        epochs_to_expiration = action_epoch + cluster.conway_genesis["govActionLifetime"] + 1
+        expire_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration, padding_seconds=5)
+        expire_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
+        )
+        expire_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_ug.stake.address
+        ).reward_account_balance
+        assert (
+            expire_return_account_balance == init_return_account_balance
+        ), f"Incorrect return account balance {expire_return_account_balance}"
+
+        # Check that the proposals were removed and the actions deposits were returned
+        rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
+        rem_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{rem_epoch}"
+        )
 
         deposit_returned = cluster.g_query.get_stake_addr_info(
             pool_user_ug.stake.address
@@ -260,6 +274,10 @@ class TestInfo:
             deposit_returned == init_return_account_balance + action_deposit_amt
         ), "Incorrect return account balance"
         reqc.cip034ex.success()
+
+        assert not governance_utils.lookup_proposal(
+            gov_state=rem_gov_state, action_txid=action_txid, action_ix=action_ix
+        ), f"Action {action_txid}#{action_ix} not removed from proposals"
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=info_action)

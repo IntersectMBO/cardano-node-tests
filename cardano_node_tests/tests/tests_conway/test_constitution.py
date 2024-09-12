@@ -13,7 +13,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
@@ -318,7 +317,7 @@ class TestConstitution:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.long
-    def test_change_constitution(  # noqa: C901
+    def test_change_constitution(
         self,
         cluster_lock_gov_script: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
@@ -400,6 +399,8 @@ class TestConstitution:
         )
         [r.success() for r in (reqc.cli013, reqc.cip031a_02, reqc.cip031c_01, reqc.cip054_03)]
 
+        init_epoch = cluster.g_query.get_epoch()
+
         # Check that SPOs cannot vote on change of constitution action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             conway_common.cast_vote(
@@ -444,6 +445,10 @@ class TestConstitution:
             use_build_cmd=False,  # cardano-cli issue #650
         )
 
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Epoch changed and it would affect other checks"
+
         def _assert_anchor(anchor: dict):
             assert (
                 anchor["dataHash"]
@@ -461,29 +466,15 @@ class TestConstitution:
             _assert_anchor(anchor)
 
         # Check ratification
-        xfail_ledger_3979_msgs = set()
-        for __ in range(3):
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
-            conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
-            )
-            rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=action_txid
-            )
-            if rat_action:
-                break
-
-            # Known ledger issue where only one expired action gets removed in one epoch.
-            # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-            if not rat_action and conway_common.possible_rem_issue(
-                gov_state=rat_gov_state, epoch=_cur_epoch
-            ):
-                xfail_ledger_3979_msgs.add("Only single expired action got removed")
-                continue
-
-            msg = "Action not found in removed actions"
-            raise AssertionError(msg)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+        )
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=rat_gov_state, action_txid=action_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
 
         # Disapprove ratified action, the voting shouldn't have any effect
         conway_common.cast_vote(
@@ -518,10 +509,10 @@ class TestConstitution:
         reqc.cip038_02.success()
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
         _check_state(enact_gov_state)
         [r.success() for r in (reqc.cip042, reqc.cip072, reqc.cip073_04)]
@@ -555,11 +546,6 @@ class TestConstitution:
         if voted_votes.cc:
             governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.cc[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=voted_votes.drep[0])
-
-        if xfail_ledger_3979_msgs:
-            ledger_3979 = issues.ledger_3979.copy()
-            ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
-            ledger_3979.finish_test()
 
         # Check new constitution proposal in dbsync
         if configuration.HAS_DBSYNC:

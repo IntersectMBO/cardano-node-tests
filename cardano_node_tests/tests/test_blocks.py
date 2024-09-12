@@ -86,7 +86,7 @@ class TestLeadershipSchedule:
         )
 
         # wait for epoch that comes after the queried epoch
-        cluster.wait_for_new_epoch(new_epochs=1 if for_epoch == "current" else 2)
+        cluster.wait_for_epoch(epoch_no=queried_epoch + 1)
 
         # get info about minted blocks in queried epoch for the selected pool
         minted_blocks = list(
@@ -454,17 +454,14 @@ class TestDynamicBlockProd:
 
         # Blocks are produced by BFT node in Byron epoch and first Shelley epoch on local cluster
         # that starts in Byron era.
-        curr_epoch = cluster.g_query.get_epoch()
         if (
             cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
             and not cluster_nodes.get_cluster_type().uses_shortcut
-            and curr_epoch < 2
         ):
-            curr_epoch = cluster.wait_for_new_epoch(new_epochs=2 - curr_epoch)
+            cluster.wait_for_epoch(epoch_no=2)
 
         # The network needs to be at least in epoch 1
-        if curr_epoch < 1:
-            curr_epoch = cluster.wait_for_new_epoch(new_epochs=1)
+        cluster.wait_for_epoch(epoch_no=1)
 
         # Wait for the epoch to be at least half way through and not too close to the end.
         # We want the original pool to have time to forge blocks in this epoch, before it becomes

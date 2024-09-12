@@ -390,7 +390,7 @@ class TestDelegateAddr:
         # Step: Check that the stake addresses received rewards
 
         LOGGER.info("Waiting 4 epochs for first rewards.")
-        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
+        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
 
         failures = [
             f"Address '{d[0].stake.address}' delegated to pool '{d[1]}' hasn't received rewards."
@@ -489,11 +489,10 @@ class TestDelegateAddr:
         src_address = delegation_out.pool_user.payment.address
 
         LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
-        if not cluster.g_query.get_stake_addr_info(
+        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
+        assert cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
-        ).reward_account_balance:
-            pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
+        ).reward_account_balance, f"User of pool '{pool_id}' hasn't received any rewards"
 
         # make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -630,16 +629,10 @@ class TestDelegateAddr:
         src_address = delegation_out.pool_user.payment.address
 
         LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_new_epoch(new_epochs=4, padding_seconds=10)
-        if not cluster.g_query.get_stake_addr_info(
+        undeleg_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
+        assert cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
-        ).reward_account_balance:
-            pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
-
-        # make sure we have enough time to finish deregistration in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
+        ).reward_account_balance, f"User of pool '{pool_id}' hasn't received any rewards"
 
         # files for deregistering / re-registering stake address
         address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
@@ -692,7 +685,8 @@ class TestDelegateAddr:
             not stake_addr_info.delegation
         ), f"Stake address is still delegated: {stake_addr_info}"
 
-        this_epoch = cluster.wait_for_new_epoch(padding_seconds=20)
+        still_rewards_epoch = cluster.wait_for_epoch(epoch_no=undeleg_epoch + 1, padding_seconds=20)
+
         assert cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         ).reward_account_balance, "No reward was received next epoch after undelegation"
@@ -712,7 +706,7 @@ class TestDelegateAddr:
             assert db_rewards
             db_reward_epochs = sorted(r.spendable_epoch for r in db_rewards.rewards)
             assert db_reward_epochs[0] == init_epoch + 4
-            assert this_epoch in db_reward_epochs
+            assert still_rewards_epoch in db_reward_epochs
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD

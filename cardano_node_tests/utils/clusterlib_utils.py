@@ -408,7 +408,7 @@ def wait_for_rewards(cluster_obj: clusterlib.ClusterLib) -> None:
 
     new_epochs = 4 - epoch
     LOGGER.info(f"Waiting {new_epochs} epoch(s) to get first rewards.")
-    cluster_obj.wait_for_new_epoch(new_epochs, padding_seconds=10)
+    cluster_obj.wait_for_epoch(epoch_no=4, padding_seconds=10)
 
 
 def load_registered_pool_data(

@@ -10,7 +10,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -93,7 +92,7 @@ class TestTreasuryWithdrawals:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.long
-    def test_enact_treasury_withdrawals(  # noqa: C901
+    def test_enact_treasury_withdrawals(
         self,
         cluster_use_governance_lock_treasury: governance_utils.GovClusterT,
         pool_user_ug_treasury: clusterlib.PoolUser,
@@ -211,9 +210,9 @@ class TestTreasuryWithdrawals:
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
+        action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
 
         for action_ix in range(actions_num):
@@ -283,6 +282,7 @@ class TestTreasuryWithdrawals:
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
             )
+            _cast_vote_epoch = cluster.g_query.get_epoch()
 
             conway_common.submit_vote(
                 cluster_obj=cluster,
@@ -293,11 +293,14 @@ class TestTreasuryWithdrawals:
             )
 
             vote_gov_state = cluster.g_conway_governance.query.gov_state()
-            _cur_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=vote_gov_state,
-                name_template=f"{temp_template}_vote_{vote_id}_{_cur_epoch}",
+                name_template=f"{temp_template}_vote_{vote_id}_{_cast_vote_epoch}",
             )
+
+            assert (
+                cluster.g_query.get_epoch() == _cast_vote_epoch
+            ), "Epoch changed and it would affect other checks"
 
             for action_ix in range(actions_num):
                 prop_vote = governance_utils.lookup_proposal(
@@ -321,46 +324,23 @@ class TestTreasuryWithdrawals:
         # Vote & approve the action
         reqc.cip048.start(url=helpers.get_vcs_link())
         voted_votes = _cast_vote(approve=True, vote_id="yes")
+        approved_epoch = cluster.g_query.get_epoch()
 
         treasury_init = clusterlib_utils.get_ledger_state(cluster_obj=cluster)["stateBefore"][
             "esAccountState"
         ]["treasury"]
 
         # Check ratification
-        xfail_ledger_3979_msgs = set()
-        ratified_actions: tp.Set[int] = set()
-        remaining_actions: tp.Set[int] = set(range(actions_num))
-        for __ in range(4):
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
-            conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+        rat_epoch = cluster.wait_for_epoch(epoch_no=approved_epoch + 1, padding_seconds=5)
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+        )
+        for action_ix in range(actions_num):
+            rat_action = governance_utils.lookup_ratified_actions(
+                gov_state=rat_gov_state, action_txid=action_txid, action_ix=action_ix
             )
-            for action_ix in remaining_actions:
-                rat_action = governance_utils.lookup_ratified_actions(
-                    gov_state=rat_gov_state, action_txid=action_txid, action_ix=action_ix
-                )
-                if rat_action:
-                    ratified_actions.add(action_ix)
-                    continue
-
-                # Known ledger issue where only one expired action gets removed in one epoch.
-                # See https://github.com/IntersectMBO/cardano-ledger/issues/3979
-                if not rat_action and conway_common.possible_rem_issue(
-                    gov_state=rat_gov_state, epoch=_cur_epoch
-                ):
-                    xfail_ledger_3979_msgs.add("Only single expired action got removed")
-                    continue
-                # Maybe known ledger issue that no action gets removed. Wait until actions removal
-                # rewrite in ledger code is finished.
-                xfail_ledger_3979_msgs.add("The action haven't got ratified")
-
-            remaining_actions = ratified_actions.symmetric_difference(range(actions_num))
-            if not remaining_actions:
-                break
-        else:
-            msg = "Not all actions got removed"
-            raise AssertionError(msg)
+            assert rat_action, f"Action with ix {action_ix} not found in ratified actions"
 
         reqc.cip038_06.start(url=helpers.get_vcs_link())
         assert not rat_gov_state["nextRatifyState"][
@@ -374,7 +354,7 @@ class TestTreasuryWithdrawals:
         reqc.cip033.start(url=helpers.get_vcs_link())
 
         # Check enactment
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        cluster.wait_for_epoch(epoch_no=approved_epoch + 2, padding_seconds=5)
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
             == transfer_amt * actions_num
@@ -418,11 +398,6 @@ class TestTreasuryWithdrawals:
         )
 
         [r.success() for r in (reqc.cip084, reqc.db009, reqc.db022)]
-
-        if xfail_ledger_3979_msgs:
-            ledger_3979 = issues.ledger_3979.copy()
-            ledger_3979.message = " ;".join(xfail_ledger_3979_msgs)
-            ledger_3979.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -543,9 +518,9 @@ class TestTreasuryWithdrawals:
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
+        action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{_cur_epoch}"
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
 
         votes: tp.List[governance_utils.VotesAllT] = []
@@ -604,6 +579,7 @@ class TestTreasuryWithdrawals:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
+        vote_epoch = cluster.g_query.get_epoch()
 
         reqc.cli026.start(url=helpers.get_vcs_link())
         conway_common.submit_vote(
@@ -619,10 +595,13 @@ class TestTreasuryWithdrawals:
         reqc.cli026.success()
 
         vote_gov_state = cluster.g_conway_governance.query.gov_state()
-        _cur_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{_cur_epoch}"
+            gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{vote_epoch}"
         )
+
+        assert (
+            cluster.g_query.get_epoch() == vote_epoch
+        ), "Epoch changed and it would affect other checks"
 
         reqc.cip069ex.start(url=helpers.get_vcs_link())
 
@@ -635,10 +614,10 @@ class TestTreasuryWithdrawals:
             assert not prop_vote["stakePoolVotes"], "Unexpected stake pool votes"
 
         # Check that the actions are not ratified
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        nonrat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
         nonrat_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{_cur_epoch}"
+            gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{nonrat_epoch}"
         )
         for action_ix in range(actions_num):
             assert not governance_utils.lookup_ratified_actions(
@@ -646,10 +625,11 @@ class TestTreasuryWithdrawals:
             ), f"Action {action_txid}#{action_ix} got ratified unexpectedly"
 
         # Check that the actions are not enacted
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        nonenacted_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 2, padding_seconds=5)
         nonenacted_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=nonenacted_gov_state, name_template=f"{temp_template}_nonenact_{_cur_epoch}"
+            gov_state=nonenacted_gov_state,
+            name_template=f"{temp_template}_nonenact_{nonenacted_epoch}",
         )
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
@@ -658,16 +638,11 @@ class TestTreasuryWithdrawals:
 
         # Check that the actions expired
         reqc.cip032ex.start(url=helpers.get_vcs_link())
-        epochs_to_expiration = (
-            cluster.conway_genesis["govActionLifetime"]
-            + 1
-            + action_prop_epoch
-            - cluster.g_query.get_epoch()
-        )
-        _cur_epoch = cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
+        epochs_to_expiration = action_prop_epoch + cluster.conway_genesis["govActionLifetime"] + 1
+        expire_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration, padding_seconds=5)
         expire_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{_cur_epoch}"
+            gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
         )
         assert (
             cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
@@ -681,29 +656,20 @@ class TestTreasuryWithdrawals:
         ), f"Incorrect return account balance {expire_return_account_balance}"
 
         # Check that the proposals were removed and the actions deposits were returned
-        _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
         rem_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{_cur_epoch}"
+            gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{rem_epoch}"
         )
         rem_deposit_returned = cluster.g_query.get_stake_addr_info(
             pool_user_ug.stake.address
         ).reward_account_balance
 
-        # Known ledger issue where only one expired action gets removed in one epoch
-        if (
-            rem_deposit_returned < init_return_account_balance + actions_deposit_combined
-        ) and conway_common.possible_rem_issue(gov_state=rem_gov_state, epoch=_cur_epoch):
-            ledger_3979 = issues.ledger_3979.copy()
-            ledger_3979.message = "Only single expired action got removed"
-            ledger_3979.finish_test()
-
-        reqc.cip034ex.start(url=helpers.get_vcs_link())
         assert (
             rem_deposit_returned == init_return_account_balance + actions_deposit_combined
         ), "Incorrect return account balance"
 
-        [r.success() for r in (reqc.cip030ex, reqc.cip034ex)]
+        reqc.cip030ex.success()
 
         # Additional checks of governance state output
         for action_ix in range(actions_num):

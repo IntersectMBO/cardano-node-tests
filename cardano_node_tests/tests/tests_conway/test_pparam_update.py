@@ -1129,9 +1129,6 @@ class TestPParamUpdate:
         mix_approved_prop_rec = _propose_pparams_update(
             name_template=f"{temp_template}_mix_approved", proposals=mix_approved_update_proposals
         )
-        # Get epoch where the last action was submitted for keeping track of
-        # epoch to wait for all the gov actions expiry
-        last_action_epoch = cluster.g_query.get_epoch()
 
         _check_proposed_pparams(
             update_proposals=mix_approved_prop_rec.proposals,
@@ -1159,14 +1156,12 @@ class TestPParamUpdate:
 
         # Check ratification
         reqc.cip068.start(url=helpers.get_vcs_link())
-        _cur_epoch = cluster.g_query.get_epoch()
-        if _cur_epoch == fin_approve_epoch:
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=fin_approve_epoch + 1, padding_seconds=5)
 
-        if _cur_epoch == fin_approve_epoch + 1:
+        if rat_epoch == fin_approve_epoch + 1:
             rat_gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{_cur_epoch}"
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
             )
 
             rat_action = governance_utils.lookup_ratified_actions(
@@ -1192,15 +1187,25 @@ class TestPParamUpdate:
             assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
             reqc.cip038_04.success()
 
-            # Wait for enactment
-            _cur_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-
         # Check enactment
-        assert _cur_epoch == fin_approve_epoch + 2, f"Unexpected epoch {_cur_epoch}"
+        enact_epoch = cluster.wait_for_epoch(
+            epoch_no=fin_approve_epoch + 2, padding_seconds=5, future_is_ok=False
+        )
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
-            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{_cur_epoch}"
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
+        # Check that all pparam proposals that are no longer valid are removed (all the remaining
+        # pparam proposals in our case).
+        enact_pparam_proposals = [
+            p
+            for p in enact_gov_state["proposals"]
+            if p["proposalProcedure"]["govAction"]["tag"]
+            == governance_utils.ActionTags.PARAMETER_CHANGE.value
+        ]
+        assert (
+            not enact_pparam_proposals
+        ), "All pparam proposals should have been removed after enactment"
         _check_state(enact_gov_state)
         [
             r.success()
@@ -1234,7 +1239,9 @@ class TestPParamUpdate:
 
         # db-sync check
         try:
-            dbsync_utils.check_conway_param_update_enactment(enact_gov_state, _cur_epoch)
+            dbsync_utils.check_conway_param_update_enactment(
+                gov_state=enact_gov_state, epoch_no=enact_epoch
+            )
         except AssertionError as exc:
             db_errors_final.append(f"db-sync params enactment error: {exc}")
 
@@ -1257,16 +1264,9 @@ class TestPParamUpdate:
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
 
-        # Check deposit return for both after enactment and expiration
-        _url = helpers.get_vcs_link()
-        [r.start(url=_url) for r in (reqc.cip034ex, reqc.cip034en)]
-
-        # First wait to ensure that all proposals are expired/enacted for deposit to be retuned
-        _cur_epoch = cluster.g_query.get_epoch()
-        action_lifetime_epoch = cluster.conway_genesis["govActionLifetime"]
-        epochs_to_expiration = action_lifetime_epoch + last_action_epoch - _cur_epoch
-        cluster.wait_for_new_epoch(new_epochs=epochs_to_expiration, padding_seconds=5)
-
+        # Check that deposit is returned for the enacted pparam proposal right after enactment.
+        # Check that deposit is returned also for pparam proposals that are no longer valid
+        # (all the remaining pparam proposals in our case).
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
         total_deposit_return = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address
@@ -1276,7 +1276,6 @@ class TestPParamUpdate:
             total_deposit_return
             == init_return_account_balance + deposit_amt * submitted_proposal_count
         ), "Incorrect return account balance"
-        [r.success() for r in (reqc.cip034ex, reqc.cip034en)]
 
         # Check vote view
         if fin_voted_votes.cc:

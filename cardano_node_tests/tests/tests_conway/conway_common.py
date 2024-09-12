@@ -352,10 +352,10 @@ def cast_vote(
 
     # Make sure the vote is included in the ledger
     gov_state = cluster_obj.g_conway_governance.query.gov_state()
-    _cur_epoch = cluster_obj.g_query.get_epoch()
+    vote_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=gov_state,
-        name_template=f"{name_template}_vote_{_cur_epoch}",
+        name_template=f"{name_template}_vote_{vote_epoch}",
     )
     prop_vote = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=action_txid)
     assert not votes_cc or prop_vote["committeeVotes"], "No committee votes"
@@ -467,10 +467,10 @@ def propose_change_constitution(
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output.out_file)
     action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
-    _cur_epoch = cluster_obj.g_query.get_epoch()
+    action_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=action_gov_state,
-        name_template=f"{name_template}_constitution_action_{_cur_epoch}",
+        name_template=f"{name_template}_constitution_action_{action_epoch}",
     )
     prop_action = governance_utils.lookup_proposal(
         gov_state=action_gov_state, action_txid=action_txid
@@ -543,8 +543,10 @@ def propose_pparams_update(
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
     action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
-    _cur_epoch = cluster_obj.g_query.get_epoch()
-    save_gov_state(gov_state=action_gov_state, name_template=f"{name_template}_action_{_cur_epoch}")
+    action_epoch = cluster_obj.g_query.get_epoch()
+    save_gov_state(
+        gov_state=action_gov_state, name_template=f"{name_template}_action_{action_epoch}"
+    )
     prop_action = governance_utils.lookup_proposal(
         gov_state=action_gov_state, action_txid=action_txid
     )

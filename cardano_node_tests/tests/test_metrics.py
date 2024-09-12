@@ -23,9 +23,7 @@ pytestmark = pytest.mark.skip(reason="metrics data are not stable yet")
 @pytest.fixture
 def wait_epochs(cluster: clusterlib.ClusterLib):
     """Make sure we are not checking metrics in epoch < 4."""
-    epochs_to_wait = 4 - cluster.g_query.get_epoch()
-    if epochs_to_wait > 0:
-        cluster.wait_for_new_epoch(new_epochs=epochs_to_wait)
+    cluster.wait_for_epoch(epoch_no=4)
 
 
 def get_prometheus_metrics(port: int) -> requests.Response:

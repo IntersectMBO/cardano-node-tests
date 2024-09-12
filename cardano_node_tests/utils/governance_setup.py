@@ -412,6 +412,7 @@ def reinstate_committee(
 
     # Make sure we have enough time to submit the proposal in one epoch
     clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster_obj, start=1, stop=-40)
+    init_epoch = cluster_obj.g_query.get_epoch()
 
     tx_output_action = clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster_obj,
@@ -431,7 +432,6 @@ def reinstate_committee(
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
     action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
-    _cur_epoch = cluster_obj.g_query.get_epoch()
     prop_action = governance_utils.lookup_proposal(
         gov_state=action_gov_state, action_txid=action_txid
     )
@@ -453,6 +453,8 @@ def reinstate_committee(
         action_ix=action_ix,
     )
 
+    assert cluster_obj.g_query.get_epoch() == init_epoch, "Epoch changed"
+
     def _check_state(state: dict) -> None:
         cc_key_member = governance_data.cc_key_members[0]
         cc_member_val = _get_committee_val(data=state)["members"].get(
@@ -462,7 +464,7 @@ def reinstate_committee(
         assert cc_member_val == cc_key_member.cc_member.epoch
 
     # Check ratification
-    _cur_epoch = cluster_obj.wait_for_new_epoch(padding_seconds=5)
+    cluster_obj.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
     rat_gov_state = cluster_obj.g_conway_governance.query.gov_state()
     rat_action = governance_utils.lookup_ratified_actions(
         gov_state=rat_gov_state, action_txid=action_txid
@@ -474,7 +476,7 @@ def reinstate_committee(
     assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
 
     # Check enactment
-    _cur_epoch = cluster_obj.wait_for_new_epoch(padding_seconds=5)
+    cluster_obj.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
     enact_gov_state = cluster_obj.g_conway_governance.query.gov_state()
     _check_state(enact_gov_state)
 
