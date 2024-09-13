@@ -1,8 +1,6 @@
 System Tests Coverage
 =====================
 
-The page is updated every Tuesday and Friday until the coverage is complete.
-
 Latest update: **TODAY**  
 
 **Legend:** |Success Badge| |Failure Badge| |Partial Coverage Badge| |Uncovered Badge| |Unplanned Badge|  
