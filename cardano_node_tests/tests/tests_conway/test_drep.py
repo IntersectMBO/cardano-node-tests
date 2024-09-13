@@ -24,6 +24,8 @@ from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -1152,13 +1154,15 @@ class TestDelegDReps:
         # This takes one epoch, so test this only for selected combinations of build command
         # and submit method, only when we are running on local testnet, and only if we are not
         # running smoke tests.
-        if (
+        check_delegation = (
             use_build_cmd
             and submit_method == submit_utils.SubmitMethods.CLI
             and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
             and "smoke" not in request.config.getoption("-m")
-        ):
-            cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+        )
+
+        if check_delegation:
+            deleg_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey_file=pool_user_rewards.stake.vkey_file
@@ -1209,6 +1213,28 @@ class TestDelegDReps:
             txhash=txid, stake_address=stake_addr_info.address, drep=drep
         )
         reqc.db003.success()
+
+        # Check DRep distribution in dbsync.
+        # A new entry is created for each DRep for each epoch in drep_distr table.
+        if check_delegation and configuration.HAS_DBSYNC:
+            reqc.db014.start(url=helpers.get_vcs_link())
+            cluster.wait_for_new_epoch()
+            if drep == "custom":
+                drep_id_bech32 = helpers.encode_bech32(prefix="drep", data=drep_id)
+            else:
+                drep_id_bech32 = f"drep_{drep_id}"
+            db_drep_distr = list(
+                dbsync_queries.query_drep_distr(drep_hash=drep_id_bech32, epoch_no=deleg_epoch)
+            )
+
+            assert (
+                db_drep_distr
+            ), f"No Drep distribution found for Drep {drep_id_bech32} and epoch {deleg_epoch}"
+            assert (
+                db_drep_distr[0].amount >= deleg_amount
+            ), f"Unexpected delegated amount in dbsync: {db_drep_distr[0].amount} < {deleg_amount}"
+
+            reqc.db014.success()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD

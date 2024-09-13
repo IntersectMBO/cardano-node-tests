@@ -589,6 +589,15 @@ class NewConstitutionInfoDBRow:
     action_ix: int
 
 
+@pydantic.dataclasses.dataclass(frozen=True)
+class DrepDistributionDBRow:
+    id: int
+    hash_id: int
+    amount: int
+    epoch_no: int
+    drep_hash_view: str
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     # pylint: disable=redefined-builtin
@@ -1514,3 +1523,21 @@ def query_new_constitution(txhash: str) -> tp.Generator[NewConstitutionInfoDBRow
     with execute(query=query, vars=(rf"\x{txhash}",)) as cur:
         while (result := cur.fetchone()) is not None:
             yield NewConstitutionInfoDBRow(*result)
+
+
+def query_drep_distr(
+    drep_hash: str, epoch_no: int
+) -> tp.Generator[DrepDistributionDBRow, None, None]:
+    """Query drep voting power in db-sync."""
+    query = (
+        "SELECT"
+        " drep_distr.id, drep_distr.hash_id, drep_distr.amount, drep_distr.epoch_no,"
+        " drep_hash.view "
+        "FROM drep_distr "
+        "INNER JOIN drep_hash ON drep_hash.id = drep_distr.hash_id "
+        "WHERE drep_hash.view = %s AND drep_distr.epoch_no = %s "
+    )
+
+    with execute(query=query, vars=(drep_hash, epoch_no)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield DrepDistributionDBRow(*result)
