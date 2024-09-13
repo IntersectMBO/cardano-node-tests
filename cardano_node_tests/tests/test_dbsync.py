@@ -338,7 +338,8 @@ class TestDBSync:
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        time.sleep(120)
+        # Leave plenty of time to db-sync to catch up
+        time.sleep(300)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
