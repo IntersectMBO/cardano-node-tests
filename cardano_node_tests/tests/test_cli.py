@@ -1322,6 +1322,9 @@ class TestPing:
         err_str = cli_out.stderr.rstrip().decode("utf-8")
         if "UnknownVersionInRsp" in err_str:
             issues.node_5324.finish_test()
+        # cardano-ping reports user friendly error on misconfiguration on cardano-cli 9.4.1.1+
+        if "Unix sockets only support queries" in err_str:
+            return
 
         out_str = cli_out.stdout.rstrip().decode("utf-8")
         if not (out_str and out_str[0] == "{"):

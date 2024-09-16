@@ -13,7 +13,12 @@ api_484 = blockers.GH(
     message="Repeated certificates stripped from Conway transaction.",
 )
 
-cli_49 = blockers.GH(issue=49, repo="IntersectMBO/cardano-cli", message="Not sending pings.")
+cli_49 = blockers.GH(
+    issue=49,
+    fixed_in="9.4.1.1",  # Fixed in version after 9.4.1.0
+    repo="IntersectMBO/cardano-cli",
+    message="Not sending pings.",
+)
 cli_268 = blockers.GH(
     issue=268, repo="IntersectMBO/cardano-cli", message="Internal query mismatch."
 )
