@@ -6,10 +6,10 @@ fi
 
 case "${DB_BACKEND:-""}" in
   mem)
-    DB_BACKEND_ARGS=("--in-memory-ledger-db-backend")
+    DB_BACKEND_ARGS=("--utxos-in-memory")
     ;;
   lmdb)
-    DB_BACKEND_ARGS=("--lmdb-ledger-db-backend")
+    DB_BACKEND_ARGS=("--utxos-on-disk")
     ;;
   *)
     DB_BACKEND_ARGS=()
