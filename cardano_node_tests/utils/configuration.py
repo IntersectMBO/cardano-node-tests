@@ -43,9 +43,9 @@ HAS_CC = (os.environ.get("NO_CC") or "") == ""
 PV10 = (os.environ.get("PV10") or "") == ""
 
 # used also in startup scripts
-DB_BACKEND = os.environ.get("DB_BACKEND") or ""
-if DB_BACKEND not in ("", "mem", "lmdb"):
-    msg = f"Invalid DB_BACKEND: {DB_BACKEND}"
+UTXO_BACKEND = os.environ.get("UTXO_BACKEND") or ""
+if UTXO_BACKEND not in ("", "mem", "disk"):
+    msg = f"Invalid UTXO_BACKEND: {UTXO_BACKEND}"
     raise RuntimeError(msg)
 
 TESTNET_POOL_IDS = (
