@@ -77,7 +77,7 @@ cardano_cli_log() {
 }
 
 enable_submit_api() {
-  type cardano-submit-api >/dev/null 2>&1 || return 1
+  command -v cardano-submit-api >/dev/null 2>&1 || return 1
 
   # TODO: `--metrics-port` is not available in older cardano-node releases, see node issue #4280
   # If the metrics port is not available, we can start the `cardano-submit-api` only on the first
