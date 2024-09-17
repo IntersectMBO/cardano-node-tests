@@ -8,7 +8,7 @@ if [ -n "${IN_NIX_SHELL:-""}" ]; then
   echo "This script is not supposed to run inside nix shell." >&2
   abort_install=1
 fi
-if ! type poetry >/dev/null 2>&1; then
+if ! command -v poetry >/dev/null 2>&1; then
   echo "Poetry is not installed. Please install it first." >&2
   abort_install=1
 fi

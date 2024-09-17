@@ -78,7 +78,7 @@ EoF
 fi
 
 # enable cardano-submit-api service
-if type cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ]; then
+if command -v cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ]; then
   # copy cardano-submit-api config file
   cp "$TESTNET_CONF_DIR/submit-api-config.json" "$STATE_CLUSTER/submit-api-config.json"
 
@@ -174,7 +174,7 @@ done
 [ "$sync_progress" = "100.00" ] || { echo "Failed to sync the realy node, line $LINENO" >&2; exit 1; }  # assert
 
 # start cardano-submit-api
-if type cardano-submit-api >/dev/null 2>&1 && [ -e "$STATE_CLUSTER/submit-api-config.json" ]; then
+if command -v cardano-submit-api >/dev/null 2>&1 && [ -e "$STATE_CLUSTER/submit-api-config.json" ]; then
   echo "Starting cardano-submit-api"
   supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start submit_api
 fi

@@ -12,7 +12,7 @@ if [ -n "${IN_NIX_SHELL:-""}" ]; then
   echo "This script is not supposed to run inside nix shell." >&2
   abort_install=1
 fi
-if ! type poetry >/dev/null 2>&1; then
+if ! command -v poetry >/dev/null 2>&1; then
   echo "Poetry is not installed. Please install it first." >&2
   abort_install=1
 fi
@@ -38,7 +38,7 @@ if [ -n "${VIRTUAL_ENV:-""}" ]; then
 fi
 
 # use the same python version as in nix shell
-if ! type "python$PYTHON_VERSION" >/dev/null 2>&1; then
+if ! command -v "python$PYTHON_VERSION" >/dev/null 2>&1; then
   echo "Python $PYTHON_VERSION is not installed. Please install it first." >&2
   abort_install=1
 fi
