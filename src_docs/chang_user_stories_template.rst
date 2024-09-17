@@ -1347,6 +1347,16 @@ DB Sync - Conway related tables
       - |image-off_chain_vote_fetch_error|
       - Errors while fetching or validating offchain Voting Anchor metadata.
         `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#off_chain_vote_fetch_error>`__
+   -
+
+      - |image-param_proposal|
+      - A table containing block chain parameter change proposals.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#param_proposal>`__
+   -
+
+      - |image-epoch_param|
+      - The accepted protocol parameters for an epoch.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#epoch_param>`__
 
 .. |Success Badge| image:: https://img.shields.io/badge/success-green
 .. |Failure Badge| image:: https://img.shields.io/badge/failure-red
@@ -1753,3 +1763,7 @@ DB Sync - Conway related tables
    :target: https://github.com/off_chain_vote_external_update-404
 .. |image-off_chain_vote_fetch_error| image:: https://img.shields.io/badge/off_chain_vote_fetch_error-grey
    :target: https://github.com/off_chain_vote_fetch_error-404
+.. |image-param_proposal| image:: https://img.shields.io/badge/param_proposal-grey
+   :target: https://github.com/param_proposal-404
+.. |image-epoch_param| image:: https://img.shields.io/badge/epoch_param-grey
+   :target: https://github.com/epoch_param-404
