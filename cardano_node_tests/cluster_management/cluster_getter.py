@@ -875,10 +875,6 @@ class ClusterGetter:
                         cget_status.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}_*")
                     )
 
-                    # Does the cluster instance needs respin to continue?
-                    # Cache the result as the check itself can be expensive.
-                    cget_status.cluster_needs_respin = self._cluster_needs_respin(instance_num)
-
                     # "marked tests" = group of tests marked with my mark
                     cget_status.marked_ready_sfiles = list(
                         cget_status.instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_@@{mark}@@_*")
@@ -888,6 +884,10 @@ class ClusterGetter:
                     self._update_marked_tests(
                         marked_tests_cache=marked_tests_cache, cget_status=cget_status
                     )
+
+                    # Does the cluster instance needs respin to continue?
+                    # Cache the result as the check itself can be expensive.
+                    cget_status.cluster_needs_respin = self._cluster_needs_respin(instance_num)
 
                     # select this instance for running marked tests if possible
                     if mark and not self._marked_select_instance(cget_status):
