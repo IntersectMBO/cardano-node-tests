@@ -121,6 +121,8 @@ class TestUpdateBuiltIns:
                 proposals=update_proposals,
             )
 
+            # Make sure we have enough time to submit the votes in one epoch
+            clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=1, stop=-40)
             prop_epoch = cluster.g_query.get_epoch()
 
             # Vote & approve the action
