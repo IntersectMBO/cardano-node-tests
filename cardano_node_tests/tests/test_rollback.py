@@ -436,7 +436,7 @@ class TestRollback:
         )
 
         # After both clusters has produced more than `securityParam` number of blocks while the
-        # topology was fragmented, it is not possible to bring the the clusters back
+        # topology was fragmented, it is not possible to bring the network back
         # into global consensus.
         self.node_wait_for_block(cluster_obj=cluster, node="pool1", block_no=final_block)
         self.node_wait_for_block(cluster_obj=cluster, node=LAST_POOL_NAME, block_no=final_block)

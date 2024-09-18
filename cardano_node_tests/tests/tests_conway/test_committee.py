@@ -143,8 +143,8 @@ class TestCommittee:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
-    @pytest.mark.dbsync
     @pytest.mark.parametrize("threshold_type", ("fraction", "decimal"))
+    @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_update_committee_action(
         self,
