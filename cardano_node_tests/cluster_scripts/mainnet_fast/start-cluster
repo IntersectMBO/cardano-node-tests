@@ -4,7 +4,7 @@
 # DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
 # ENABLE_P2P - if set, local cluster will use P2P
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
-# DB_BACKEND - 'mem' or 'lmdb', default is 'mem' (or legacy) if unset
+# UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
 # DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
@@ -119,12 +119,12 @@ else
   cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 fi
 
-case "${DB_BACKEND:=""}" in
-  "" | mem | lmdb)
-    echo "$DB_BACKEND" > "$STATE_CLUSTER/db_backend"
+case "${UTXO_BACKEND:=""}" in
+  "" | mem | disk)
+    echo "$UTXO_BACKEND" > "$STATE_CLUSTER/utxo_backend"
     ;;
   *)
-    echo "Unknown \`DB_BACKEND\`: '$DB_BACKEND', line $LINENO" >&2
+    echo "Unknown \`UTXO_BACKEND\`: '$UTXO_BACKEND', line $LINENO" >&2
     exit 1
     ;;
 esac
