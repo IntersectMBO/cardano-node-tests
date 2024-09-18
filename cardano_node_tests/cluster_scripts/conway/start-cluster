@@ -26,6 +26,7 @@ NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
 NUM_CC=5
 PROPOSAL_DELAY=5
+SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
 
 FEE=5000000
@@ -33,6 +34,8 @@ FEE=5000000
 SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
 NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
+SLOT_LENGTH="$(jq '.slotLength' < "$SCRIPT_DIR/genesis.spec.json")"
+EPOCH_SEC="$(jq '.epochLength * .slotLength | ceil' < "$STATE_CLUSTER/shelley/genesis.json")"
 
 if [ -n "${MIXED_P2P:-""}" ]; then
   export ENABLE_P2P=1
@@ -49,6 +52,9 @@ if [ "$NUM_POOLS" -lt 3 ]; then
 fi
 
 cardano_cli_log() {
+  local out
+  local retval
+
   echo cardano-cli "$@" >> "$STATE_CLUSTER/start_cluster_cmds.log"
 
   for _ in {1..3}; do
@@ -77,7 +83,7 @@ get_epoch() {
 }
 
 get_slot() {
-  future_offset="${1:-0}"
+  local future_offset="${1:-0}"
   cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r ".slot + $future_offset"
 }
 
@@ -85,13 +91,20 @@ get_era() {
   cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" | jq -r ".era"
 }
 
+get_sec_to_epoch_end() {
+  cardano_cli_log query tip --testnet-magic "$NETWORK_MAGIC" |
+    jq -r "$SLOT_LENGTH * .slotsToEpochEnd | ceil"
+}
+
 wait_for_era() {
+  local era
+
   for _ in {1..10}; do
     era="$(get_era)"
     if [ "$era" = "$1" ]; then
       return
     fi
-    sleep 2
+    sleep 3
   done
 
   echo "Unexpected era '$era' instead of '$1'" >&2
@@ -99,16 +112,45 @@ wait_for_era() {
 }
 
 wait_for_epoch() {
+  local start_epoch
+  local target_epoch="$1"
+  local epochs_to_go=1
+  local sec_to_epoch_end
+  local sec_to_sleep
+  local curr_epoch
+
+  start_epoch="$(get_epoch)"
+
+  if [ "$start_epoch" -ge "$target_epoch" ]; then
+    return
+  else
+    epochs_to_go="$((target_epoch - start_epoch))"
+  fi
+
+  sec_to_epoch_end="$(get_sec_to_epoch_end)"
+  sec_to_sleep="$(( sec_to_epoch_end + ((epochs_to_go - 1) * EPOCH_SEC) ))"
+  sleep "$sec_to_sleep"
+
   for _ in {1..10}; do
-    epoch="$(get_epoch)"
-    if [ "$epoch" -ge "$1" ]; then
+    curr_epoch="$(get_epoch)"
+    if [ "$curr_epoch" -ge "$target_epoch" ]; then
       return
     fi
-    sleep 2
+    sleep 3
   done
 
-  echo "Unexpected epoch '$epoch' instead of '$1'" >&2
+  echo "Unexpected epoch '$curr_epoch' instead of '$target_epoch'" >&2
   exit 1
+}
+
+check_spend_success() {
+  for _ in {1..10}; do
+    if ! cardano_cli_log query utxo "$@" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
+      return 0
+    fi
+    sleep 3
+  done
+  return 1
 }
 
 ENABLE_SUBMIT_API="$(type cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
@@ -603,6 +645,7 @@ FAUCET_SKEY="$STATE_CLUSTER/byron/payment-keys.000-converted.skey"
 
 
 wait_for_era "Shelley"
+SHELLEY_EPOCH="$(get_epoch)"
 
 # start db-sync
 if [ -n "${DBSYNC_REPO:-""}" ]; then
@@ -696,11 +739,14 @@ cardano_cli_log transaction submit \
   --tx-file "${ALLEGRA_TX_BASE}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-EPOCH_SEC="$(jq '.epochLength * .slotLength' < "$STATE_CLUSTER/shelley/genesis.json")"
-NEXT_EPOCH_SLEEP="$((EPOCH_SEC - PROPOSAL_DELAY))"
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
 
-echo "Waiting $NEXT_EPOCH_SLEEP sec for Allegra era to start"
-sleep "$NEXT_EPOCH_SLEEP"
+echo "Waiting for Allegra era to start"
+wait_for_epoch "$((SHELLEY_EPOCH + 1))"
 
 
 #
@@ -709,6 +755,7 @@ sleep "$NEXT_EPOCH_SLEEP"
 
 
 wait_for_era "Allegra"
+ALLEGRA_EPOCH="$(get_epoch)"
 
 sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Mary, set d = 0"
@@ -765,8 +812,14 @@ cardano_cli_log transaction submit \
   --tx-file "${MARY_HF_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-echo "Waiting $NEXT_EPOCH_SLEEP sec for Mary era to start"
-sleep "$NEXT_EPOCH_SLEEP"
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
+
+echo "Waiting for Mary era to start"
+wait_for_epoch "$((ALLEGRA_EPOCH + 1))"
 
 
 #
@@ -775,6 +828,7 @@ sleep "$NEXT_EPOCH_SLEEP"
 
 
 wait_for_era "Mary"
+MARY_EPOCH="$(get_epoch)"
 
 sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to transfer to Alonzo"
@@ -830,8 +884,14 @@ cardano_cli_log transaction submit \
   --tx-file "${ALONZO_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-echo "Waiting $NEXT_EPOCH_SLEEP sec for Alonzo era to start"
-sleep "$NEXT_EPOCH_SLEEP"
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
+
+echo "Waiting for Alonzo era to start"
+wait_for_epoch "$((MARY_EPOCH + 1))"
 
 
 #
@@ -840,6 +900,7 @@ sleep "$NEXT_EPOCH_SLEEP"
 
 
 wait_for_era "Alonzo"
+ALONZO_EPOCH="$(get_epoch)"
 
 sleep "$PROPOSAL_DELAY"
 echo "Submitting update proposal to update to PV6"
@@ -896,18 +957,22 @@ cardano_cli_log transaction submit \
   --tx-file "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
 
-ALONZO_EPOCH="$(get_epoch)"
 
-echo "Waiting $NEXT_EPOCH_SLEEP sec for Alonzo era with PV6 to start"
-sleep "$NEXT_EPOCH_SLEEP"
+echo "Waiting for Alonzo era with PV6 to start"
+wait_for_epoch "$((ALONZO_EPOCH + 1))"
 
 
 #
 # In Alonzo era with PV6
 #
 
-wait_for_epoch "$((ALONZO_EPOCH + 1))"
+ALONZO_PV6_EPOCH="$(get_epoch)"
 
 # start cardano-submit-api
 if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
@@ -978,8 +1043,14 @@ cardano_cli_log transaction submit \
   --tx-file "${BABBAGE_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-echo "Waiting $NEXT_EPOCH_SLEEP sec for Babbage era to start"
-sleep "$NEXT_EPOCH_SLEEP"
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
+
+echo "Waiting for Babbage era to start"
+wait_for_epoch "$((ALONZO_PV6_EPOCH + 1))"
 
 
 #
@@ -987,6 +1058,7 @@ sleep "$NEXT_EPOCH_SLEEP"
 #
 
 wait_for_era "Babbage"
+BABBAGE_EPOCH="$(get_epoch)"
 
 # update to PV8
 sleep "$PROPOSAL_DELAY"
@@ -1044,17 +1116,21 @@ cardano_cli_log transaction submit \
   --tx-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-BABBAGE_EPOCH="$(get_epoch)"
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
 
-echo "Waiting $NEXT_EPOCH_SLEEP sec for Babbage era with PV8 to start"
-sleep "$NEXT_EPOCH_SLEEP"
+echo "Waiting for Babbage era with PV8 to start"
+wait_for_epoch "$((BABBAGE_EPOCH + 1))"
 
 
 #
 # In Babbage era with PV8
 #
 
-wait_for_epoch "$((BABBAGE_EPOCH + 1))"
+BABBAGE_PV8_EPOCH="$(get_epoch)"
 
 cardano_cli_log query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
@@ -1120,8 +1196,14 @@ cardano_cli_log transaction submit \
   --tx-file "${CONWAY_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
-echo "Waiting $NEXT_EPOCH_SLEEP sec for Conway to start"
-sleep "$NEXT_EPOCH_SLEEP"
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
+
+echo "Waiting for Conway to start"
+wait_for_epoch "$((BABBAGE_PV8_EPOCH + 1))"
 
 
 #
@@ -1188,6 +1270,17 @@ if [ -z "${NO_CC:-""}" ]; then
   cardano_cli_log transaction submit \
     --tx-file "${V9_TX_NAME}-tx.tx" \
     --testnet-magic "$NETWORK_MAGIC"
+
+  sleep "$SUBMIT_DELAY"
+  if ! check_spend_success "${TXINS[@]}"; then
+    echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+    exit 1
+  fi
+
+  cc_size="$(cardano-cli conway query committee-state --active --testnet-magic "$NETWORK_MAGIC" |
+    grep -c '"status": "Active"')"
+  [ "$cc_size" -ge "$NUM_CC" ] || \
+    { echo "The CC members were not registered, line $LINENO" >&2; exit 1; }  # assert
 fi
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
