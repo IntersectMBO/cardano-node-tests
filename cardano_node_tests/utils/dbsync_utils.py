@@ -1218,14 +1218,21 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
 
     # Check quorum
     quorum = prop["proposalProcedure"]["govAction"]["contents"][-1]
-    assert dbsync_cm_info.quorum_denominator == quorum["denominator"], (
-        "Incorrect committee threshold denominator in dbsync: "
-        f"{dbsync_cm_info.quorum_denominator} vs {quorum['denominator']}"
-    )
-    assert dbsync_cm_info.quorum_numerator == quorum["numerator"], (
-        "Incorrect committee threshold numerator in dbsync: "
-        f"{dbsync_cm_info.quorum_numerator} vs {quorum['numerator']}"
-    )
+
+    if not isinstance(quorum, dict):
+        dbsync_threshold_float = dbsync_cm_info.quorum_numerator / dbsync_cm_info.quorum_denominator
+        assert float(quorum) == dbsync_threshold_float, (
+            "Incorrect committee threshold in dbsync: " f"{dbsync_threshold_float} vs {quorum}"
+        )
+    else:
+        assert dbsync_cm_info.quorum_denominator == quorum["denominator"], (
+            "Incorrect committee threshold denominator in dbsync: "
+            f"{dbsync_cm_info.quorum_denominator} vs {quorum['denominator']}"
+        )
+        assert dbsync_cm_info.quorum_numerator == quorum["numerator"], (
+            "Incorrect committee threshold numerator in dbsync: "
+            f"{dbsync_cm_info.quorum_numerator} vs {quorum['numerator']}"
+        )
 
     # Check new committee members
     dbsync_cm_hashes = {

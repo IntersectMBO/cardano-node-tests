@@ -144,6 +144,7 @@ class TestCommittee:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
+    @pytest.mark.parametrize("threshold_type", ("fraction", "decimal"))
     @pytest.mark.smoke
     def test_update_committee_action(
         self,
@@ -151,6 +152,7 @@ class TestCommittee:
         pool_user: clusterlib.PoolUser,
         use_build_cmd: bool,
         submit_method: str,
+        threshold_type: str,
     ):
         """Test update committee action.
 
@@ -160,6 +162,7 @@ class TestCommittee:
         """
         temp_template = common.get_test_id(cluster)
         cc_size = 3
+        threshold = "2/3" if threshold_type == "fraction" else "0.8457565493"
 
         cc_auth_records = [
             governance_utils.get_cc_member_auth_record(
@@ -191,7 +194,7 @@ class TestCommittee:
             deposit_amt=deposit_amt,
             anchor_url=anchor_url,
             anchor_data_hash=anchor_data_hash,
-            threshold="2/3",
+            threshold=threshold,
             add_cc_members=cc_members,
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
@@ -250,10 +253,17 @@ class TestCommittee:
             prop["proposalProcedure"]["govAction"]["tag"]
             == governance_utils.ActionTags.UPDATE_COMMITTEE.value
         ), "Incorrect action tag"
-        assert prop["proposalProcedure"]["govAction"]["contents"][3] == {
-            "denominator": 3,
-            "numerator": 2,
-        }
+
+        if threshold_type == "fraction":
+            assert prop["proposalProcedure"]["govAction"]["contents"][3] == {
+                "denominator": 3,
+                "numerator": 2,
+            }, "Incorrect threshold"
+        else:
+            assert (
+                str(prop["proposalProcedure"]["govAction"]["contents"][3]) == threshold
+            ), "Incorrect threshold"
+
         cc_key_hashes = {f"keyHash-{c.key_hash}" for c in cc_auth_records}
         prop_cc_key_hashes = set(prop["proposalProcedure"]["govAction"]["contents"][2].keys())
         assert cc_key_hashes == prop_cc_key_hashes, "Incorrect CC key hashes"
