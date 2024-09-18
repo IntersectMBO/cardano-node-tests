@@ -21,6 +21,8 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -105,24 +107,6 @@ SECURITY_PPARAMS = {
     "govActionDeposit",
     "minFeeRefScriptsCoinsPerByte",  # not in 8.8 release yet
 }
-
-
-@pytest.fixture
-def pool_user_lg(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_utils.GovClusterT,
-) -> clusterlib.PoolUser:
-    """Create a pool user for "lock governance"."""
-    cluster, __ = cluster_lock_governance
-    key = helpers.get_current_line_str()
-    name_template = common.get_test_id(cluster)
-    return conway_common.get_registered_pool_user(
-        cluster_manager=cluster_manager,
-        name_template=name_template,
-        cluster_obj=cluster,
-        caching_key=key,
-        fund_amount=2000_000_000,
-    )
 
 
 def _get_rational_str(value: float) -> str:
@@ -215,6 +199,24 @@ def _check_drep_thresholds(
 
 class TestPParamUpdate:
     """Tests for protocol parameters update."""
+
+    @pytest.fixture
+    def pool_user_lg(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_lock_governance: governance_utils.GovClusterT,
+    ) -> clusterlib.PoolUser:
+        """Create a pool user for "lock governance"."""
+        cluster, __ = cluster_lock_governance
+        key = helpers.get_current_line_str()
+        name_template = common.get_test_id(cluster)
+        return conway_common.get_registered_pool_user(
+            cluster_manager=cluster_manager,
+            name_template=name_template,
+            cluster_obj=cluster,
+            caching_key=key,
+            fund_amount=2000_000_000,
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -1371,3 +1373,140 @@ class TestPParamData:
         assert not missing_pool_thresholds, f"Missing pool thresholds: {missing_pool_thresholds}"
 
         [r.success() for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
+
+
+class TestLegacyProposals:
+    """Tests for legacy update proposals in Conway."""
+
+    @pytest.fixture
+    def payment_addr(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> clusterlib.AddressRecord:
+        """Create new payment address."""
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addr = clusterlib_utils.create_payment_addr_records(
+                f"addr_test_conway_update_proposal_ci{cluster_manager.cluster_instance_num}_0",
+                cluster_obj=cluster,
+            )[0]
+            fixture_cache.value = addr
+
+        # Fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addr,
+            cluster_obj=cluster,
+            faucet_data=cluster_manager.cache.addrs_data["user1"],
+        )
+
+        return addr
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
+    def test_legacy_proposal_submit(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        submit_method: str,
+    ):
+        """Test submitting a legacy update proposal in Conway.
+
+        Expect failure as the legacy update proposals are not supported in Conway.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        update_proposals = [
+            clusterlib_utils.UpdateProposal(
+                arg="--max-collateral-inputs",
+                value=4,
+                name="maxCollateralInputs",
+            ),
+        ]
+
+        cli_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
+        out_file = f"{temp_template}_update.proposal"
+
+        cluster.cli(
+            [
+                "cardano-cli",
+                "legacy",
+                "governance",
+                "create-update-proposal",
+                *cli_args,
+                "--out-file",
+                str(out_file),
+                "--epoch",
+                str(cluster.g_query.get_epoch()),
+                *helpers.prepend_flag(
+                    "--genesis-verification-key-file",
+                    cluster.g_genesis.genesis_keys.genesis_vkeys,
+                ),
+            ],
+            add_default_args=False,
+        )
+
+        with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_submit_proposal",
+                src_address=payment_addr.address,
+                submit_method=submit_method,
+                tx_files=clusterlib.TxFiles(
+                    proposal_files=[out_file],
+                    signing_key_files=[
+                        *cluster.g_genesis.genesis_keys.delegate_skeys,
+                        pl.Path(payment_addr.skey_file),
+                    ],
+                ),
+            )
+        err_str = str(excinfo.value)
+        assert 'TextEnvelopeType "UpdateProposalShelley"' in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    def test_legacy_proposal_build(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test building a legacy update proposal with Conway cardano-cli.
+
+        Expect failure as the legacy update proposals are not supported in Conway.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        update_proposals = [
+            clusterlib_utils.UpdateProposal(
+                arg="--max-collateral-inputs",
+                value=4,
+                name="maxCollateralInputs",
+            ),
+        ]
+
+        cli_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
+        out_file = f"{temp_template}_update.proposal"
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.cli(
+                [
+                    "cardano-cli",
+                    "conway",
+                    "governance",
+                    "create-update-proposal",
+                    *cli_args,
+                    "--out-file",
+                    str(out_file),
+                    "--epoch",
+                    str(cluster.g_query.get_epoch()),
+                    *helpers.prepend_flag(
+                        "--genesis-verification-key-file",
+                        cluster.g_genesis.genesis_keys.genesis_vkeys,
+                    ),
+                ],
+                add_default_args=False,
+            )
+        err_str = str(excinfo.value)
+        assert "Invalid argument `create-update-proposal'" in err_str, err_str
