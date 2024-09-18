@@ -27,6 +27,7 @@ NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
 NUM_CC=5
 SETTLE_DELAY=20
+SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
 BYRON_INIT_SUPPLY=10020000000
 PROTOCOL_VERSION=9
@@ -80,6 +81,16 @@ cardano_cli_log() {
   done
 
   return "$retval"
+}
+
+check_spend_success() {
+  for _ in {1..10}; do
+    if ! cardano_cli_log query utxo "$@" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
+      return 0
+    fi
+    sleep 3
+  done
+  return 1
 }
 
 ENABLE_SUBMIT_API="$(type cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
@@ -597,17 +608,8 @@ if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
   supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start submit_api
 fi
 
-sleep 3
-
-query_spend_success=0
-for _ in {1..20}; do
-  if ! cardano_cli_log query utxo "${TXINS[@]}" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
-    query_spend_success=1
-    break
-  fi
-  sleep 3
-done
-if [ "$query_spend_success" -eq 0 ]; then
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
   echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
   exit 1
 fi
