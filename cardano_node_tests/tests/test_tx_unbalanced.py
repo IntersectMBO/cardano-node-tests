@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -159,6 +160,9 @@ class TestUnbalanced:
             or "Negative quantity" in exc_val  # cardano-node >= 8.7.0
             or "Illegal Value in TxOut" in exc_val  # cardano-node >= 9.2.0
         )
+
+        if "CallStack" in exc_val:
+            issues.cli_904.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
