@@ -59,7 +59,10 @@ class TestUnbalanced:
             err_str = str(err)
 
         if amount < 0:
-            assert "Negative quantity" in err_str, err_str
+            assert (
+                "Negative quantity" in err_str
+                or "Illegal Value in TxOut" in err_str  # In node version 9.2.0+
+            ), err_str
         else:
             assert "Minimum UTxO threshold not met for tx output" in err_str, err_str
 
@@ -154,6 +157,7 @@ class TestUnbalanced:
             or "TxOutAdaOnly" in exc_val
             or "AdaAssetId,-1" in exc_val
             or "Negative quantity" in exc_val  # cardano-node >= 8.7.0
+            or "Illegal Value in TxOut" in exc_val  # cardano-node >= 9.2.0
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -194,7 +198,10 @@ class TestUnbalanced:
                 tx_files=tx_files,
             )
         exc_val = str(excinfo.value)
-        assert "The net balance of the transaction is negative" in exc_val, exc_val
+        assert (
+            "The net balance of the transaction is negative" in exc_val
+            or "Illegal Value in TxOut" in exc_val  # In node 9.2.0+
+        ), exc_val
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(change_amount=st.integers(min_value=2_000_000, max_value=MAX_LOVELACE_AMOUNT))
@@ -469,4 +476,7 @@ class TestUnbalanced:
         with pytest.raises(clusterlib.CLIError) as excinfo_build:
             cluster.cli(build_args)
         err_str_build = str(excinfo_build.value)
-        assert "Negative quantity" in err_str_build, err_str_build
+        assert (
+            "Negative quantity" in err_str_build
+            or "Illegal Value in TxOut" in err_str_build  # In node 9.2.0+
+        ), err_str_build
