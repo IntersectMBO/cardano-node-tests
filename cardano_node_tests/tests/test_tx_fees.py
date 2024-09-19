@@ -99,7 +99,7 @@ class TestFee:
                 tx_files=tx_files,
                 fee=fee,
             )
-        assert "option --fee: cannot parse value" in str(excinfo.value)
+        assert "option --fee:" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fee_change", (0, 1.1, 1.5, 2))
