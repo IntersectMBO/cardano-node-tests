@@ -935,15 +935,18 @@ class TestLocking:
 
         if scenario == "max":
             collateral_num = max_collateral_ins
-            exp_err = ""
+            exp_errors: tp.Tuple[str, ...] = ()
             collateral_fraction_offset = 250_000.0
         elif scenario == "max+1":
             collateral_num = max_collateral_ins + 1
-            exp_err = "TooManyCollateralInputs"
+            exp_errors = ("TooManyCollateralInputs",)
             collateral_fraction_offset = 250_000.0
         else:
             collateral_num = 0
-            exp_err = "Transaction body has no collateral inputs"
+            exp_errors = (
+                "Transaction body has no collateral inputs",
+                "NoCollateralInputs",  # In cardano-node 9.2.0+
+            )
             collateral_fraction_offset = 1.0
 
         payment_addr = payment_addrs[0]
@@ -991,7 +994,7 @@ class TestLocking:
             ]
             collateral_utxos = list(itertools.chain.from_iterable(_utxos_nested))
 
-        if exp_err:
+        if exp_errors:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 spend_raw._spend_locked_txin(
                     temp_template=temp_template,
@@ -1003,7 +1006,7 @@ class TestLocking:
                     amount=amount,
                 )
             err_str = str(excinfo.value)
-            assert exp_err in err_str, err_str
+            assert any(e in err_str for e in exp_errors), err_str
         else:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
