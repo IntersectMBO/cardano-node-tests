@@ -392,7 +392,9 @@ def get_cluster_env() -> ClusterEnv:
     return cluster_env
 
 
-def reload_supervisor_config(instance_num: tp.Optional[int] = None) -> None:
+def reload_supervisor_config(
+    instance_num: tp.Optional[int] = None, delay: int = configuration.TX_SUBMISSION_DELAY
+) -> None:
     """Reload supervisor configuration."""
     LOGGER.info("Reloading supervisor configuration.")
 
@@ -409,7 +411,8 @@ def reload_supervisor_config(instance_num: tp.Optional[int] = None) -> None:
         ) from exc
 
     # Wait for potential nodes restart
-    time.sleep(5)
+    if delay > 0:
+        time.sleep(delay)
 
 
 def start_cluster(cmd: str, args: tp.List[str]) -> clusterlib.ClusterLib:
@@ -422,7 +425,9 @@ def start_cluster(cmd: str, args: tp.List[str]) -> clusterlib.ClusterLib:
     return get_cluster_type().get_cluster_obj()
 
 
-def restart_all_nodes(instance_num: tp.Optional[int] = None) -> None:
+def restart_all_nodes(
+    instance_num: tp.Optional[int] = None, delay: int = configuration.TX_SUBMISSION_DELAY
+) -> None:
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
 
@@ -438,8 +443,9 @@ def restart_all_nodes(instance_num: tp.Optional[int] = None) -> None:
             msg
         ) from exc
 
-    # wait for nodes to start
-    time.sleep(5)
+    # Wait for nodes to start
+    if delay > 0:
+        time.sleep(delay)
 
 
 def services_action(
@@ -476,13 +482,18 @@ def stop_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) 
     services_action(service_names=service_names, action="stop", instance_num=instance_num)
 
 
-def restart_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) -> None:
+def restart_nodes(
+    node_names: tp.List[str],
+    instance_num: tp.Optional[int] = None,
+    delay: int = configuration.TX_SUBMISSION_DELAY,
+) -> None:
     """Restart list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="restart", instance_num=instance_num)
 
-    # wait for nodes to start
-    time.sleep(5)
+    # Wait for nodes to start
+    if delay > 0:
+        time.sleep(delay)
 
 
 def services_status(

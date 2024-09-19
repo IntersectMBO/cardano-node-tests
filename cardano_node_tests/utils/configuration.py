@@ -28,6 +28,7 @@ _check_cardano_node_socket_path()
 LAUNCH_PATH = pl.Path.cwd()
 
 NETWORK_MAGIC_LOCAL = 42
+TX_SUBMISSION_DELAY = 60
 DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 

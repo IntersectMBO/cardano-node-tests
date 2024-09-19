@@ -25,6 +25,7 @@ fi
 NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
 NUM_CC=5
+TX_SUBMISSION_DELAY=60
 PROPOSAL_DELAY=5
 SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
@@ -605,8 +606,8 @@ for _ in {1..5}; do
 done
 [ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the bft node, line $LINENO" >&2; exit 1; }  # assert
 
-# give nodes time to establish connections with each other
-sleep 5
+echo "Sleeping for initial Tx submission delay of $TX_SUBMISSION_DELAY seconds"
+sleep "$TX_SUBMISSION_DELAY"
 
 echo "Moving funds out of Byron genesis"
 for i in $(seq 1 $NUM_BFT_NODES); do
@@ -615,9 +616,9 @@ for i in $(seq 1 $NUM_BFT_NODES); do
     --tx "$STATE_CLUSTER/byron/tx$i.tx"
 done
 
-# length of Byron era is hardcoded to 200 sec (and we already slept for at least 5 sec)
-echo "Waiting 195 sec for Shelley era to start"
-sleep 195
+echo "Waiting for Shelley era to start"
+# length of Byron era is hardcoded to 200 sec
+sleep "$((200 - TX_SUBMISSION_DELAY))"
 
 
 #

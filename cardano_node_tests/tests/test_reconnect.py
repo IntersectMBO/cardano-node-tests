@@ -273,7 +273,7 @@ class TestNodeReconnect:
                 LOGGER.info(f"Running restart number {restart_no}")
 
                 # Restart node2
-                cluster_nodes.restart_nodes([node2])
+                cluster_nodes.restart_nodes([node2], delay=5)
                 self._node_synced(cluster_obj=cluster, node=node2)
 
                 for check_no in range(1, 11):
