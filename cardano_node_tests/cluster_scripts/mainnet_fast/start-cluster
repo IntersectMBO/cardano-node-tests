@@ -23,7 +23,7 @@ fi
 
 NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
-SETTLE_DELAY=20
+TX_SUBMISSION_DELAY=60
 POOL_PLEDGE=1000000000000
 BYRON_INIT_SUPPLY=10020000000
 
@@ -518,8 +518,8 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
   supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start dbsync
 fi
 
-echo "Sleeping for $SETTLE_DELAY seconds to allow the chain to progress..."
-sleep "$SETTLE_DELAY"
+echo "Sleeping for initial Tx submission delay of $TX_SUBMISSION_DELAY seconds"
+sleep "$TX_SUBMISSION_DELAY"
 
 echo "Re-registering pools"
 

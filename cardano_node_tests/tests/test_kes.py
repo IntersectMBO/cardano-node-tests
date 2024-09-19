@@ -234,7 +234,7 @@ class TestKES:
                 shutil.copy(refreshed_opcert_file, refreshed_pool_rec["pool_operational_cert"])
                 refreshed_nodes_kes_period[n] = kes_period
 
-            cluster_nodes.restart_all_nodes()
+            cluster_nodes.restart_all_nodes(delay=5)
             return refreshed_nodes_kes_period
 
         this_epoch = cluster.g_query.get_epoch()
@@ -424,7 +424,7 @@ class TestKES:
                 # restart the node with the new operational certificate (restart all nodes so
                 # the connection is established again)
                 shutil.copy(invalid_opcert_file, opcert_file)
-                cluster_nodes.restart_all_nodes()
+                cluster_nodes.restart_all_nodes(delay=5)
 
                 LOGGER.info("Checking blocks production for 4 epochs.")
                 this_epoch = cluster.g_query.get_epoch()
@@ -475,7 +475,7 @@ class TestKES:
                         # copy the new certificate and restart the node (restart all nodes so
                         # the connection is established again)
                         shutil.copy(overincrement_opcert_file, opcert_file)
-                        cluster_nodes.restart_all_nodes()
+                        cluster_nodes.restart_all_nodes(delay=5)
 
                         kes_period_info = cluster.g_query.get_kes_period_info(
                             overincrement_opcert_file
@@ -530,7 +530,7 @@ class TestKES:
             # copy the new certificate and restart the node (restart all nodes so
             # the connection is established again)
             shutil.copy(valid_opcert_file, opcert_file)
-            cluster_nodes.restart_all_nodes()
+            cluster_nodes.restart_all_nodes(delay=5)
 
             LOGGER.info("Checking blocks production for up to 6 epochs.")
             updated_epoch = cluster.g_query.get_epoch()
@@ -699,7 +699,7 @@ class TestKES:
 
             # start the node with the new operational certificate (restart all nodes so
             # the connection is established again)
-            cluster_nodes.restart_all_nodes()
+            cluster_nodes.restart_all_nodes(delay=5)
 
             LOGGER.info("Checking blocks production for up to 6 epochs.")
             updated_epoch = cluster.g_query.get_epoch()
