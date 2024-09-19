@@ -35,7 +35,7 @@ SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
 NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
 SLOT_LENGTH="$(jq '.slotLength' < "$SCRIPT_DIR/genesis.spec.json")"
-EPOCH_SEC="$(jq '.epochLength * .slotLength | ceil' < "$STATE_CLUSTER/shelley/genesis.json")"
+EPOCH_SEC="$(jq '.epochLength * .slotLength | ceil' < "$SCRIPT_DIR/genesis.spec.json")"
 
 if [ -n "${MIXED_P2P:-""}" ]; then
   export ENABLE_P2P=1
