@@ -2096,8 +2096,10 @@ class TestTransfer:
                     logging.disable(logging.NOTSET)
 
             exc_val = str(excinfo.value)
-            assert "Non-Ada assets are unbalanced" in exc_val or re.search(
-                r"Negative quantity \(-[0-9]*\) in transaction output", exc_val
+            assert (
+                "Non-Ada assets are unbalanced" in exc_val
+                or "Illegal Value in TxOut" in exc_val  # In node 9.2.0+
+                or re.search(r"Negative quantity \(-[0-9]*\) in transaction output", exc_val)
             ), exc_val
         else:
             with pytest.raises(clusterlib.CLIError) as excinfo:
