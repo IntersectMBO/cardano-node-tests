@@ -764,6 +764,14 @@ class TestMinting:
                 ignore_file_id=worker_id,
             )
 
+            # Add more funds to mint address
+            clusterlib_utils.fund_from_faucet(
+                token_mint_addr,
+                cluster_obj=cluster,
+                faucet_data=cluster_manager.cache.addrs_data["user1"],
+                amount=300_000_000,
+            )
+
             try:
                 # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
@@ -898,6 +906,14 @@ class TestMinting:
                 files_glob="*.stdout",
                 regex="Too many asset ids in the tx output",
                 ignore_file_id=worker_id,
+            )
+
+            # Add more funds to mint address
+            clusterlib_utils.fund_from_faucet(
+                token_mint_addr,
+                cluster_obj=cluster,
+                faucet_data=cluster_manager.cache.addrs_data["user1"],
+                amount=300_000_000,
             )
 
             try:
