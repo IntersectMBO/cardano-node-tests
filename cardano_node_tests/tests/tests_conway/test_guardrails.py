@@ -308,7 +308,10 @@ def check_invalid_proposals(  # noqa: C901
     except Exception as excp:
         err_msg = str(excp)
 
-    if "expecting digit" in err_msg:
+    if (
+        "expecting digit" in err_msg
+        or "expecting white space or digit" in err_msg  # In node 9.2.0+
+    ):
         # In case cli throws error beforehand due to invalid input
         assert 'unexpected "-"' in err_msg, err_msg
     elif "toUnitIntervalOrError" in err_msg or "toNonNegativeIntervalOrErr" in err_msg:
