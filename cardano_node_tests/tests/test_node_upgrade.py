@@ -12,9 +12,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
@@ -103,115 +101,6 @@ class TestSetup:
                 ".*expected list len or indef",
                 ignore_file_id=worker_id,
             )
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
-    def test_update_to_conway_pv9(
-        self,
-        cluster_singleton: clusterlib.ClusterLib,
-        payment_addr_locked: clusterlib.AddressRecord,
-    ):
-        """Update cluster to Conway PV9."""
-        cluster = cluster_singleton
-        temp_template = common.get_test_id(cluster)
-
-        def _update_to_pv9() -> None:
-            cluster.wait_for_new_epoch()
-
-            update_proposal_pv9 = [
-                clusterlib_utils.UpdateProposal(
-                    arg="--protocol-major-version",
-                    value=9,
-                    name="",  # needs custom check
-                ),
-                clusterlib_utils.UpdateProposal(
-                    arg="--protocol-minor-version",
-                    value=0,
-                    name="",  # needs custom check
-                ),
-            ]
-
-            clusterlib_utils.update_params(
-                cluster_obj=cluster,
-                src_addr_record=payment_addr_locked,
-                update_proposals=update_proposal_pv9,
-            )
-
-            cluster.wait_for_new_epoch(padding_seconds=3)
-
-            prot_ver = cluster.g_query.get_protocol_params()["protocolVersion"]
-            assert prot_ver["major"] == 9
-            assert prot_ver["minor"] == 0
-
-        def _load_cc_members(
-            cluster_obj: clusterlib.ClusterLib,
-        ) -> tp.List[governance_utils.CCMemberAuth]:
-            data_dir = cluster_obj.state_dir / GOV_DATA_DIR
-
-            cc_members = []
-            for vkey_file in sorted(data_dir.glob("cc_member*_committee_cold.vkey")):
-                fpath = vkey_file.parent
-                fbase = vkey_file.name.replace("cold.vkey", "")
-                hot_vkey_file = fpath / f"{fbase}hot.vkey"
-                cold_vkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
-                    vkey_file=vkey_file
-                )
-                auth_cert = fpath / f"{fbase}hot_auth.cert"
-                cold_key_pair = clusterlib.KeyPair(
-                    vkey_file=vkey_file, skey_file=fpath / f"{fbase}cold.skey"
-                )
-                hot_key_pair = clusterlib.KeyPair(
-                    vkey_file=hot_vkey_file, skey_file=fpath / f"{fbase}hot.skey"
-                )
-                cc_members.append(
-                    governance_utils.CCMemberAuth(
-                        auth_cert=auth_cert,
-                        cold_key_pair=cold_key_pair,
-                        hot_key_pair=hot_key_pair,
-                        key_hash=cold_vkey_hash,
-                    )
-                )
-
-            return cc_members
-
-        def _reg_cc_members(
-            cluster_obj: clusterlib.ClusterLib, cc_members: tp.List[governance_utils.CCMemberAuth]
-        ) -> None:
-            tx_files = clusterlib.TxFiles(
-                certificate_files=[c.auth_cert for c in cc_members],
-                signing_key_files=[
-                    payment_addr_locked.skey_file,
-                    *[c.cold_key_pair.skey_file for c in cc_members],
-                ],
-            )
-
-            tx_output_auth = clusterlib_utils.build_and_submit_tx(
-                cluster_obj=cluster_obj,
-                name_template=f"{temp_template}_auth",
-                src_address=payment_addr_locked.address,
-                tx_files=tx_files,
-            )
-
-            auth_out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_auth)
-            assert (
-                clusterlib.filter_utxos(utxos=auth_out_utxos, address=payment_addr_locked.address)[
-                    0
-                ].amount
-                == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
-            ), f"Incorrect balance for source address `{payment_addr_locked.address}`"
-
-            auth_committee_state = cluster_obj.g_conway_governance.query.committee_state()
-            for cm in cc_members:
-                member_key = f"keyHash-{cm.key_hash}"
-                member_rec = auth_committee_state["committee"][member_key]
-                assert (
-                    member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
-                ), "CC Member was NOT authorized"
-
-        _update_to_pv9()
-        cluster_conway = cluster_nodes.get_cluster_type().get_cluster_obj(command_era="conway")
-        cc_members = _load_cc_members(cluster_obj=cluster_conway)
-        _reg_cc_members(cluster_obj=cluster_conway, cc_members=cc_members)
 
 
 @pytest.mark.upgrade

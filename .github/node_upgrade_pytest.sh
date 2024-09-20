@@ -6,12 +6,11 @@ retval=1
 
 export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
 
-export CLUSTER_ERA="${CLUSTER_ERA:-"babbage"}"
-export TX_ERA="$CLUSTER_ERA"
+export CLUSTER_ERA="${CLUSTER_ERA:-"conway"}"
+export COMMAND_ERA="$CLUSTER_ERA"
 
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
-NUM_CC=5
 
 # init dir for step1 binaries
 STEP1_BIN="$WORKDIR/step1-bin"
@@ -163,35 +162,20 @@ elif [ "$1" = "step2" ]; then
       selected_conway_file="shelley/genesis.conway.json"
     fi
 
-    # If the base revision doesn't have Conway genesis and the config file is for pool3,
-    # then don't add Conway genesis records.
-    if [[ "$fname" = "config-pool3.json" && "$selected_conway_hash" = "" ]]; then
-      jq \
-        --arg byron_hash "$BYRON_GENESIS_HASH" \
-        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
-        --arg alonzo_file "$selected_alonzo_file" \
-        --arg alonzo_hash "$selected_alonzo_hash" \
-        '.ByronGenesisHash = $byron_hash
-        | .ShelleyGenesisHash = $shelley_hash
-        | .AlonzoGenesisFile = $alonzo_file
-        | .AlonzoGenesisHash = $alonzo_hash' \
-        "$conf" > "$STATE_CLUSTER/$fname"
-    else
-      jq \
-        --arg byron_hash "$BYRON_GENESIS_HASH" \
-        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
-        --arg alonzo_file "$selected_alonzo_file" \
-        --arg alonzo_hash "$selected_alonzo_hash" \
-        --arg conway_file "$selected_conway_file" \
-        --arg conway_hash "$selected_conway_hash" \
-        '.ByronGenesisHash = $byron_hash
-        | .ShelleyGenesisHash = $shelley_hash
-        | .AlonzoGenesisFile = $alonzo_file
-        | .AlonzoGenesisHash = $alonzo_hash
-        | .ConwayGenesisFile = $conway_file
-        | .ConwayGenesisHash = $conway_hash' \
-        "$conf" > "$STATE_CLUSTER/$fname"
-    fi
+    jq \
+      --arg byron_hash "$BYRON_GENESIS_HASH" \
+      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+      --arg alonzo_file "$selected_alonzo_file" \
+      --arg alonzo_hash "$selected_alonzo_hash" \
+      --arg conway_file "$selected_conway_file" \
+      --arg conway_hash "$selected_conway_hash" \
+      '.ByronGenesisHash = $byron_hash
+      | .ShelleyGenesisHash = $shelley_hash
+      | .AlonzoGenesisFile = $alonzo_file
+      | .AlonzoGenesisHash = $alonzo_hash
+      | .ConwayGenesisFile = $conway_file
+      | .ConwayGenesisHash = $conway_hash' \
+      "$conf" > "$STATE_CLUSTER/$fname"
   done
 
   # run the pool3 with the original cardano-node binary
@@ -297,42 +281,11 @@ elif [ "$1" = "step3" ]; then
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_p2p/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
-  # Create committee keys
-  mkdir -p "$STATE_CLUSTER/governance_data"
-  for i in $(seq 1 "$NUM_CC"); do
-    cardano-cli conway governance committee key-gen-cold \
-      --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
-      --cold-signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.skey"
-    cardano-cli conway governance committee key-gen-hot \
-      --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
-      --signing-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.skey"
-    cardano-cli conway governance committee create-hot-key-authorization-certificate \
-      --cold-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
-      --hot-verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot.vkey" \
-      --out-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_hot_auth.cert"
-    cardano-cli conway governance committee key-hash \
-      --verification-key-file "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.vkey" \
-      > "$STATE_CLUSTER/governance_data/cc_member${i}_committee_cold.hash"
-  done
-
-  # Pre-register committee in genesis
-  cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway.step2.json"
-  KEY_HASH_JSON=$(jq -nR '[inputs | {("keyHash-" + .): 10000}] | add' \
-    "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.hash)
-  jq \
-    --argjson keyHashJson "$KEY_HASH_JSON" \
-    '.committee.members = $keyHashJson
-    | .committee.threshold = 0.6
-    | .committeeMinSize = 2' \
-    "$STATE_CLUSTER/shelley/genesis.conway.step2.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
-
   # Copy newly generated config files to the cluster state dir, but use the original genesis files
   BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  # Use the new Conway genesis
-  CONWAY_GENESIS_HASH="$(cardano-cli genesis hash --genesis \
-    "$STATE_CLUSTER/shelley/genesis.conway.json")"
+  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   for conf in "$WORKDIR"/dry_p2p/state-cluster0/config-*.json; do
     fname="${conf##*/}"
     jq \
@@ -370,13 +323,6 @@ elif [ "$1" = "step3" ]; then
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
   err_retval="$?"
-
-  # Update to Conway
-  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_to_conway_pv9 || exit 6
-
-  # From now on, we are in the Conway era
-  unset TX_ERA
-  export CLUSTER_ERA=conway COMMAND_ERA=conway
 
   # Run smoke tests
   pytest \

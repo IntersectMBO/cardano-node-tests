@@ -52,20 +52,17 @@ Nightly upgrade testing
 
 * `Step 1 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step1/>`__:  |nightly-upgrade-step1-badge|
    * use the `latest cardano-node release <https://github.com/IntersectMBO/cardano-node-tests/blob/master/.github/env_nightly_upgrade>`__ for Mainnet
-   * network in Babbage era
-   * Babbage transaction era
+   * network in Conway era
+   * protocol version 9 (bootstrap phase)
+   * Constitutional Commitee has 5 members
    * default (legacy) network topology
    * smoke tests
 * `Step 2 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step2/>`__:  |nightly-upgrade-step2-badge|
    * upgrade all nodes except one to latest cardano-node master
-   * network in Babbage era
-   * Babbage transaction era
    * mixed network topology (half nodes P2P, half nodes legacy topology)
    * smoke tests
 * `Step 3 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step3/>`__:  |nightly-upgrade-step3-badge|
    * upgrade the last remaining node to latest cardano-node master
-   * network in Babbage era
-   * Babbage transaction era
    * P2P network topology
    * smoke tests
 
