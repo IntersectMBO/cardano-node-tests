@@ -20,7 +20,7 @@ export NUM_POOLS="${NUM_POOLS:-"10"}"
 if [ -n "${INTERACTIVE:-""}" ]; then
   export ROLLBACK_PAUSE=1 SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-mainnet_fast}" PYTEST_ARGS="-s -k test_consensus_reached"
 else
-  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-babbage_fast}" PYTEST_ARGS="-k TestRollback"
+  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-conway_fast}" PYTEST_ARGS="-k TestRollback"
 fi
 
 export CLUSTERS_COUNT=1 TEST_THREADS=0
