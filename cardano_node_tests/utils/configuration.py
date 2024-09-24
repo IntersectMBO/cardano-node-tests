@@ -77,7 +77,7 @@ if CLUSTER_ERA not in ("", "babbage", "conway"):
     raise RuntimeError(msg)
 
 COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
-if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "conway"):
+if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "conway", "latest"):
     msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
     raise RuntimeError(msg)
 

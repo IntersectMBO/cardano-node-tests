@@ -150,7 +150,7 @@ class LocalCluster(ClusterType):
             state_dir=cluster_env.state_dir,
             protocol=protocol or clusterlib.Protocols.CARDANO,
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
-            command_era=command_era or cluster_env.command_era,
+            command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
@@ -299,7 +299,7 @@ class TestnetCluster(ClusterType):
             state_dir=cluster_env.state_dir,
             protocol=protocol or clusterlib.Protocols.CARDANO,
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
-            command_era=command_era or cluster_env.command_era,
+            command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
         cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
