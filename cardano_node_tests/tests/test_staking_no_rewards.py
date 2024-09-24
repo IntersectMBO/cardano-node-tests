@@ -881,16 +881,13 @@ class TestNoRewards:
                 pool_name=pool_name,
                 tx_name=temp_template,
             )
-            assert (
-                clusterlib_utils.get_pool_state(cluster_obj=cluster, pool_id=pool_id).retiring
-                == depoch
-            )
+            assert cluster.g_query.get_pool_state(stake_pool_id=pool_id).retiring == depoch
 
             cluster.wait_for_epoch(epoch_no=dereg_pool_epoch + 1, padding_seconds=5)
 
             # check that the pool was deregistered
-            assert not clusterlib_utils.get_pool_state(
-                cluster_obj=cluster, pool_id=pool_id
+            assert not cluster.g_query.get_pool_state(
+                stake_pool_id=pool_id
             ).pool_params, f"The pool {pool_id} was not deregistered"
 
             # check command kes-period-info case: de-register pool
