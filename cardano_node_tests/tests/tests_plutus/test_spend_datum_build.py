@@ -147,7 +147,6 @@ class TestDatum:
             out_file,
             "--testnet-magic",
             str(cluster.network_magic),
-            *cluster.g_transaction.tx_era_arg,
         ]
 
         cluster.cli(cli_args)
