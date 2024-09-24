@@ -147,7 +147,7 @@ class TestBasicTransactions:
                 cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(
                     command_era=default_tx_era
                 )
-        elif cluster.tx_era:
+        elif cluster.command_era:
             cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(command_era="")
 
         return cluster_default
@@ -849,7 +849,6 @@ class TestBasicTransactions:
                 str(tx_raw_output.out_file),
                 *helpers.prepend_flag("--tx-in", txins),
                 *helpers.prepend_flag("--tx-out", txouts),
-                *cluster.g_transaction.tx_era_arg,
             ]
         )
 
@@ -913,7 +912,6 @@ class TestBasicTransactions:
                 str(txins[0]),
                 *helpers.prepend_flag("--tx-in", txins),
                 *helpers.prepend_flag("--tx-out", txouts),
-                *cluster.g_transaction.tx_era_arg,
             ]
         )
 
@@ -978,7 +976,6 @@ class TestBasicTransactions:
                 str(txins[0]),
                 *helpers.prepend_flag("--tx-in", txins),
                 *helpers.prepend_flag("--tx-out", txouts),
-                *cluster.g_transaction.tx_era_arg,
             ]
         )
         assert tx_raw_output.out_file.exists()

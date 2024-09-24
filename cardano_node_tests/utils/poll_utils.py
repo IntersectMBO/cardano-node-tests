@@ -8,7 +8,6 @@ import typing as tp
 
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -29,6 +28,8 @@ def create_poll(
 
     cli_out = cluster_obj.cli(
         [
+            "cardano-cli",
+            "babbage",
             "governance",
             "create-poll",
             "--question",
@@ -36,7 +37,8 @@ def create_poll(
             *helpers.prepend_flag("--answer", answers),
             "--out-file",
             poll_file,
-        ]
+        ],
+        add_default_args=False,
     )
 
     stderr_out = cli_out.stderr.decode("utf-8")
@@ -58,13 +60,16 @@ def answer_poll(
 
     cli_out = cluster_obj.cli(
         [
+            "cardano-cli",
+            "babbage",
             "governance",
             "answer-poll",
             "--poll-file",
             str(poll_file),
             "--answer",
             str(answer),
-        ]
+        ],
+        add_default_args=False,
     )
 
     stderr_out = cli_out.stderr.decode("utf-8")
@@ -82,24 +87,18 @@ def verify_poll(
     cluster_obj: clusterlib.ClusterLib, poll_file: pl.Path, tx_signed: pl.Path
 ) -> tp.Tuple[str, ...]:
     """Verify an answer to the poll."""
-    # TODO: Node 8.0.0-rc1 uses the old `--signed-tx-file` argument.
-    # Can be removed if 8.0.0 is released with the new `--tx-file` argument,
-    # as there is no other release that uses the old argument.
-    verify_poll_tx_arg = (
-        "--tx-file"
-        if clusterlib_utils.cli_has(command="governance verify-poll --tx-file")
-        else "--signed-tx-file"
-    )
-
     cli_out = cluster_obj.cli(
         [
+            "cardano-cli",
+            "babbage",
             "governance",
             "verify-poll",
             "--poll-file",
             str(poll_file),
-            verify_poll_tx_arg,
+            "--tx-file",
             str(tx_signed),
-        ]
+        ],
+        add_default_args=False,
     )
 
     stderr_out = cli_out.stderr.decode("utf-8")

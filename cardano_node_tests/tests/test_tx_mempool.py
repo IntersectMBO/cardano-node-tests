@@ -56,15 +56,13 @@ class TestMempool:
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
-        has_query_mempool = clusterlib_utils.cli_has("query tx-mempool")
 
         init_next_txid = ""
-        if has_query_mempool:
-            # Make sure existing Txs are removed from mempool before submitting the new Tx
-            cluster.wait_for_new_block(new_blocks=2)
-            # Get the current `nextTx` before submitting the new Tx. There can be an earlier Tx
-            # that is still "stuck" in mempool.
-            init_next_txid = cluster.g_query.get_mempool_next_tx().get("nextTx") or ""
+        # Make sure existing Txs are removed from mempool before submitting the new Tx
+        cluster.wait_for_new_block(new_blocks=2)
+        # Get the current `nextTx` before submitting the new Tx. There can be an earlier Tx
+        # that is still "stuck" in mempool.
+        init_next_txid = cluster.g_query.get_mempool_next_tx().get("nextTx") or ""
 
         src_addr = payment_addrs_locked[0]
         dst_addr = payment_addrs_locked[1]
@@ -113,9 +111,6 @@ class TestMempool:
             pytest.skip("the Tx was removed from mempool before running `query utxo`")
 
         def _check_query_mempool() -> None:
-            if not has_query_mempool:
-                return
-
             # Check 'query tx-mempool next-tx'
             mempool_next_tx = cluster.g_query.get_mempool_next_tx()
             next_txid = mempool_next_tx["nextTx"]

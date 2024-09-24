@@ -52,7 +52,6 @@ class TestUnbalanced:
                     f"{dst_address}+{amount}",
                     "--out-file",
                     f"{temp_template}_tx.body",
-                    *cluster.g_transaction.tx_era_arg,
                     *cluster.magic_args,
                 ]
             )
@@ -406,7 +405,6 @@ class TestUnbalanced:
             f"{dst_address}+{amount}",
             "--tx-out",
             f"{src_address}+{pbt_highest_utxo.amount - amount - fee}",
-            *cluster.g_transaction.tx_era_arg,
             "--out-file",
             out_file,
         ]
@@ -468,7 +466,6 @@ class TestUnbalanced:
             f"{dst_address}+{amount}",
             "--tx-out",
             f"{src_address}+2000000",
-            *cluster.g_transaction.tx_era_arg,
             "--out-file",
             out_file,
         ]

@@ -51,10 +51,8 @@ class TestNegative:
     @pytest.fixture(scope="class")
     def skip_unknown_last_era(self) -> None:
         last_known_era_name = VERSIONS.MAP[VERSIONS.LAST_KNOWN_ERA]
-        if not clusterlib_utils.cli_has(f"transaction build-raw --{last_known_era_name}-era"):
-            pytest.skip(
-                f"`transaction build-raw --{last_known_era_name}-era` command is not available"
-            )
+        if not clusterlib_utils.cli_has(last_known_era_name):
+            pytest.skip(f"`{last_known_era_name} transaction build-raw` command is not available")
 
     @pytest.fixture
     def cluster_wrong_tx_era(
@@ -68,7 +66,7 @@ class TestNegative:
         # in order to have an actual cluster instance assigned at the time this fixture
         # is executed
         return cluster_nodes.get_cluster_type().get_cluster_obj(
-            tx_era=VERSIONS.MAP[VERSIONS.cluster_era + 1]
+            command_era=VERSIONS.MAP[VERSIONS.cluster_era + 1]
         )
 
     @pytest.fixture
@@ -1387,7 +1385,6 @@ class TestNegative:
                     str(tx_raw_output.out_file),
                     *helpers.prepend_flag("--tx-in", txins),
                     *helpers.prepend_flag("--tx-out", txouts),
-                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         err_str = str(excinfo.value)
@@ -1515,7 +1512,6 @@ class TestNegative:
                     "--testnet-magic",
                     str(cluster.network_magic),
                     *helpers.prepend_flag("--tx-out", txouts),
-                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
@@ -1557,7 +1553,6 @@ class TestNegative:
                     str(cluster.network_magic),
                     *helpers.prepend_flag("--tx-in", txins),
                     *helpers.prepend_flag("--tx-out", txouts),
-                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         assert re.search(r"Missing:.* --change-address ADDRESS", str(excinfo.value))
@@ -1603,7 +1598,6 @@ class TestNegative:
                         "--change-address",
                         [pool_users[0].payment.address, pool_users[2].payment.address],
                     ),
-                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         assert re.search(r"Invalid option.*--change-address", str(excinfo.value))

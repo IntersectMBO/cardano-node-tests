@@ -687,6 +687,7 @@ class TestTreasuryWithdrawals:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("mir_cert", ("treasury", "rewards", "stake_addr"))
+    @pytest.mark.disabled  # TODO: test that the certs cannot be submitted
     @pytest.mark.smoke
     def test_mir_certificates(
         self,

@@ -127,7 +127,9 @@ class TestProtocol:
         protocol_params = cluster.g_query.get_protocol_params()
 
         union_with: tp.FrozenSet[str] = frozenset()
-        if clusterlib_utils.cli_has("governance create-update-proposal --utxo-cost-per-byte"):
+        if clusterlib_utils.cli_has(
+            "legacy governance create-update-proposal --utxo-cost-per-byte"
+        ):
             union_with = union_with.union(PROTOCOL_PARAM_KEYS_1_35_2)
         if VERSIONS.cluster_era >= VERSIONS.CONWAY:
             union_with = union_with.union(PROTOCOL_PARAM_KEYS_CONWAY)

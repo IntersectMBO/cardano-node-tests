@@ -56,7 +56,6 @@ def cluster_guardrails(
     governance_data = governance_setup.get_default_governance(
         cluster_manager=cluster_manager, cluster_obj=cluster_obj
     )
-    governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
     return cluster_obj, governance_data
 
 

@@ -38,11 +38,7 @@ class Versions:
         self.cluster_era = getattr(self, self.cluster_era_name.upper())
 
         self.command_era_name = configuration.COMMAND_ERA
-        self.transaction_era_name = (
-            self.command_era_name
-            if self.command_era_name
-            else (configuration.TX_ERA or self.MAP[self.DEFAULT_TX_ERA])
-        )
+        self.transaction_era_name = self.command_era_name
         self.transaction_era = getattr(self, self.transaction_era_name.upper())
 
         node_version_db = self.get_cardano_node_version()

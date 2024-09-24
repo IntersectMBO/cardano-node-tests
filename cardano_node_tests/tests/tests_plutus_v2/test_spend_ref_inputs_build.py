@@ -640,7 +640,6 @@ class TestNegativeReadonlyReferenceInputs:
                     f"{temp_template}_tx.body",
                     "--testnet-magic",
                     str(cluster.network_magic),
-                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         err_str = str(excinfo.value)

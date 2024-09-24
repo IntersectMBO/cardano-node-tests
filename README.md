@@ -84,7 +84,6 @@ Tests execution can be configured using env variables.
 * `TEST_THREADS` – specifies the number of pytest workers (default: 20)
 * `CLUSTERS_COUNT` – number of cluster instances that will be started (default: 9)
 * `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script (default: babbage)
-* `TX_ERA` (deprecated) – era for transactions – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
 * `COMMAND_ERA` – era for cardano-cli commands – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
 * `NUM_POOLS` – number of stake pools created in each cluster instance (default: 3)
 * `ENABLE_P2P` – use P2P networking instead of the default legacy networking (default: unset)
@@ -111,10 +110,10 @@ For example:
     NUM_POOLS=6 MIXED_P2P=1 ./.github/regression.sh
     ```
 
-* running tests on local cluster intances using 15 pytest workers, Babbage cluster era, Alonzo transaction era, cluster scripts that start a cluster directly in Babbage era, and selecting only tests without 'long' marker that also match the given `-k` pytest argument
+* running tests on local cluster intances using 15 pytest workers, Babbage cluster era, cluster scripts that start a cluster directly in Babbage era, and selecting only tests without 'long' marker that also match the given `-k` pytest argument
 
     ```sh
-    TEST_THREADS=15 CLUSTER_ERA=babbage TX_ERA=alonzo SCRIPTS_DIRNAME=babbage_fast PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./.github/regression.sh
+    TEST_THREADS=15 CLUSTER_ERA=babbage SCRIPTS_DIRNAME=babbage_fast PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./.github/regression.sh
     ```
 
 * running tests on Shelley-qa testnet with '8.0.0' release of `cardano-node`

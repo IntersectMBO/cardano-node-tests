@@ -277,6 +277,12 @@ class TestRewards:
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
+        if cluster.epoch_length_sec > 2 * 60 * 60:
+            pytest.skip(
+                "Testnet epoch is longer than 2 hours "
+                f"(epoch length: {cluster.epoch_length_sec / 60 / 60} hours)"
+            )
+
         # make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
         init_epoch = cluster.g_query.get_epoch()

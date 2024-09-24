@@ -42,7 +42,7 @@ class TestPoll:
 
     @pytest.fixture(scope="class")
     def governance_poll_available(self) -> None:
-        if not clusterlib_utils.cli_has("governance create-poll"):
+        if not clusterlib_utils.cli_has("babbage governance create-poll"):
             pytest.skip("The `cardano-cli governance` poll commands are not available.")
 
     @pytest.fixture
