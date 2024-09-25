@@ -148,7 +148,6 @@ def pool_users_disposable_cluster_and_pool(
     return pool_users
 
 
-@pytest.mark.order(8)
 class TestDelegateAddr:
     """Tests for stake address delegation."""
 
