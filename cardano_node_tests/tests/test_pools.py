@@ -35,6 +35,7 @@ from cardano_node_tests.utils import tx_view
 DATA_DIR = pl.Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
 DEREG_BUFFER_SEC = 30
+TWO_HOURS_SEC = 2 * 60 * 60
 
 
 @pytest.fixture(scope="module")
@@ -620,14 +621,14 @@ def _create_register_pool_tx_delegate_stake_tx(
     return pool_creation_out
 
 
-@pytest.mark.testnets
-@pytest.mark.dbsync
 class TestStakePool:
     """General tests for stake pools."""
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.dbsync
     def test_stake_pool_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -698,7 +699,9 @@ class TestStakePool:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.dbsync
     def test_stake_pool_not_avail_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -778,7 +781,9 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("no_of_addr", (1, 3))
+    @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.dbsync
     def test_create_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -829,6 +834,8 @@ class TestStakePool:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_deregister_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -924,41 +931,44 @@ class TestStakePool:
             == depoch
         )
 
-        # check that the pool was deregistered
-        cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
-        assert not (
-            cluster.g_query.get_pool_state(
-                stake_pool_id=pool_creation_out.stake_pool_id
-            ).pool_params
-        ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
-
-        # check that the balance for source address was correctly updated
+        # Check that the balance for source address was correctly updated
         assert (
             cluster.g_query.get_address_balance(pool_owner.payment.address)
             == src_register_balance - tx_raw_output.fee
         )
 
-        # check that the stake addresses are no longer delegated
-        for owner_rec in pool_owners:
-            stake_addr_info = cluster.g_query.get_stake_addr_info(owner_rec.stake.address)
-            assert (
-                not stake_addr_info.delegation
-            ), f"Stake address is still delegated: {stake_addr_info}"
+        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+            # Check that the pool was deregistered
+            cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
+            assert not (
+                cluster.g_query.get_pool_state(
+                    stake_pool_id=pool_creation_out.stake_pool_id
+                ).pool_params
+            ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
-        # check that the pool deposit was returned to reward account
-        assert (
-            cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
-            == src_register_reward + cluster.g_query.get_pool_deposit()
-        )
+            # Check that the stake addresses are no longer delegated
+            for owner_rec in pool_owners:
+                stake_addr_info = cluster.g_query.get_stake_addr_info(owner_rec.stake.address)
+                assert (
+                    not stake_addr_info.delegation
+                ), f"Stake address is still delegated: {stake_addr_info}"
+
+            # Check that the pool deposit was returned to reward account
+            assert (
+                cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
+                == src_register_reward + cluster.g_query.get_pool_deposit()
+            )
+
+            dbsync_utils.check_pool_deregistration(
+                pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
+            )
 
         # check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
-        dbsync_utils.check_pool_deregistration(
-            pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
-        )
-
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_reregister_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -977,6 +987,12 @@ class TestStakePool:
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+
+        if cluster.epoch_length_sec > TWO_HOURS_SEC:
+            pytest.skip(
+                "Testnet epoch is longer than 2 hours "
+                f"(epoch length: {cluster.epoch_length_sec / 60 / 60} hours)"
+            )
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1112,6 +1128,8 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
     @pytest.mark.long
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_cancel_stake_pool_deregistration(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1130,6 +1148,12 @@ class TestStakePool:
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+
+        if cluster.epoch_length_sec > TWO_HOURS_SEC:
+            pytest.skip(
+                "Testnet epoch is longer than 2 hours "
+                f"(epoch length: {cluster.epoch_length_sec / 60 / 60} hours)"
+            )
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1256,6 +1280,7 @@ class TestStakePool:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_update_stake_pool_metadata(
         self,
@@ -1375,17 +1400,20 @@ class TestStakePool:
             pool_params=future_params, pool_creation_data=pool_data_updated
         )
 
-        cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
+        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+            cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
 
-        # check that the pool metadata hash was correctly updated on chain
-        _check_pool(
-            cluster_obj=cluster,
-            stake_pool_id=pool_creation_out.stake_pool_id,
-            pool_data=pool_data_updated,
-        )
+            # Check that the pool metadata hash was correctly updated on chain
+            _check_pool(
+                cluster_obj=cluster,
+                stake_pool_id=pool_creation_out.stake_pool_id,
+                pool_data=pool_data_updated,
+            )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_update_stake_pool_parameters(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1491,17 +1519,20 @@ class TestStakePool:
             pool_params=future_params, pool_creation_data=pool_data_updated
         )
 
-        cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
+        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+            cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
 
-        # check that the pool parameters were correctly updated on chain
-        _check_pool(
-            cluster_obj=cluster,
-            stake_pool_id=pool_creation_out.stake_pool_id,
-            pool_data=pool_data_updated,
-        )
+            # Check that the pool parameters were correctly updated on chain
+            _check_pool(
+                cluster_obj=cluster,
+                stake_pool_id=pool_creation_out.stake_pool_id,
+                pool_data=pool_data_updated,
+            )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.dbsync
     def test_sign_in_multiple_stages(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1639,6 +1670,8 @@ class TestStakePool:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
     @pytest.mark.long
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_pool_registration_deregistration(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1727,13 +1760,14 @@ class TestStakePool:
             == src_init_balance - tx_raw_output.fee - cluster.g_query.get_pool_deposit()
         ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
-        # check that the pool deposit was NOT returned to reward account as the reward address
-        # is not registered (deposit is lost)
-        cluster.wait_for_epoch(epoch_no=dereg_epoch + 3, padding_seconds=30)
-        assert (
-            cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
-            == src_init_reward
-        )
+        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+            # Check that the pool deposit was NOT returned to reward account as the reward address
+            # is not registered (deposit is lost).
+            cluster.wait_for_epoch(epoch_no=dereg_epoch + 3, padding_seconds=30)
+            assert (
+                cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
+                == src_init_reward
+            )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
