@@ -85,7 +85,7 @@ cardano_cli_log() {
 
 check_spend_success() {
   for _ in {1..10}; do
-    if ! cardano_cli_log query utxo "$@" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
+    if ! cardano_cli_log conway query utxo "$@" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
       return 0
     fi
     sleep 3
@@ -93,7 +93,7 @@ check_spend_success() {
   return 1
 }
 
-ENABLE_SUBMIT_API="$(type cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
+ENABLE_SUBMIT_API="$(command -v cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
 
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
   # shellcheck disable=SC1090,SC1091
@@ -187,7 +187,7 @@ cardano_cli_log byron genesis genesis \
 
 mv "$STATE_CLUSTER/byron-params.json" "$STATE_CLUSTER/byron/params.json"
 
-cardano_cli_log genesis create-staked \
+cardano_cli_log legacy genesis create-staked \
   --genesis-dir "$STATE_CLUSTER/create_staked" \
   --testnet-magic "$NETWORK_MAGIC" \
   --gen-pools "$NUM_POOLS" \
@@ -242,7 +242,7 @@ mv "$STATE_CLUSTER"/create_staked/genesis*.json "$STATE_CLUSTER/shelley/"
 
 mv "$STATE_CLUSTER/create_staked/utxo-keys/utxo1.skey" "$STATE_CLUSTER/shelley/genesis-utxo.skey"
 mv "$STATE_CLUSTER/create_staked/utxo-keys/utxo1.vkey" "$STATE_CLUSTER/shelley/genesis-utxo.vkey"
-cardano_cli_log address build --payment-verification-key-file \
+cardano_cli_log conway address build --payment-verification-key-file \
   "$STATE_CLUSTER/shelley/genesis-utxo.vkey" \
   --out-file "$STATE_CLUSTER/shelley/genesis-utxo.addr" \
   --testnet-magic "$NETWORK_MAGIC"
@@ -251,11 +251,11 @@ mv "$STATE_CLUSTER/create_staked/stake-delegator-keys" "$STATE_CLUSTER/shelley/s
 
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "$STATE_CLUSTER/byron/genesis.json")"
-SHELLEY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+SHELLEY_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.json")"
-ALONZO_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+ALONZO_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
-CONWAY_GENESIS_HASH="$(cardano_cli_log genesis hash --genesis \
+CONWAY_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
   "$STATE_CLUSTER/shelley/genesis.conway.json")"
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
@@ -540,7 +540,7 @@ while read -r txhash txix amount _; do
   if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
     break
   fi
-done <<< "$(cardano_cli_log query utxo --testnet-magic \
+done <<< "$(cardano_cli_log conway query utxo --testnet-magic \
             "$NETWORK_MAGIC" \
             --address "$TXIN_ADDR" |
             grep -E "lovelace$|[0-9]$|lovelace \+ TxOutDatumNone$")"

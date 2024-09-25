@@ -112,7 +112,7 @@ if [ "$SOCKET_PATH_SET" = "$true" ]; then
 fi
 
 printf "cluster era: %s\n" "${CLUSTER_ERA:-"default"}"
-printf "transaction era: %s\n" "${TX_ERA:-"default"}"
+printf "command era: %s\n" "${COMMAND_ERA:-"latest"}"
 
 printf "using dbsync (optional): $USE_DBSYNC\n"
 if [ "$USE_DBSYNC" = "$true" ]; then

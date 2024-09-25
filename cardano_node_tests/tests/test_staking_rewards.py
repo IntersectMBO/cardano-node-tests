@@ -277,6 +277,12 @@ class TestRewards:
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
+        if cluster.epoch_length_sec > 2 * 60 * 60:
+            pytest.skip(
+                "Testnet epoch is longer than 2 hours "
+                f"(epoch length: {cluster.epoch_length_sec / 60 / 60} hours)"
+            )
+
         # make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
         init_epoch = cluster.g_query.get_epoch()
@@ -968,9 +974,7 @@ class TestRewards:
         )
 
         # check pool records in db-sync
-        pool_params: dict = clusterlib_utils.get_pool_state(
-            cluster_obj=cluster, pool_id=pool_id
-        ).pool_params
+        pool_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
         dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=pool_id)
 
         # check rewards in db-sync
@@ -1326,13 +1330,9 @@ class TestRewards:
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_update_pool)
 
         # check pool records in db-sync
-        pool1_params: dict = clusterlib_utils.get_pool_state(
-            cluster_obj=cluster, pool_id=pool1_id
-        ).pool_params
+        pool1_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool1_id).pool_params
         dbsync_utils.check_pool_data(ledger_pool_data=pool1_params, pool_id=pool1_id)
-        pool2_params: dict = clusterlib_utils.get_pool_state(
-            cluster_obj=cluster, pool_id=pool2_id
-        ).pool_params
+        pool2_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool2_id).pool_params
         dbsync_utils.check_pool_data(ledger_pool_data=pool2_params, pool_id=pool2_id)
 
         # check rewards in db-sync

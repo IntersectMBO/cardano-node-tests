@@ -66,12 +66,6 @@ def _assert_expected_err(env_scenario: str, socket_scenario: str, err_msg: str) 
     assert any(msg in err_msg for msg in expected_err), f"{expected_err} not in {err_msg}"
 
 
-@pytest.fixture(scope="module")
-def has_socket_path() -> None:
-    if not clusterlib_utils.cli_has("query tip --socket-path"):
-        pytest.skip("CLI argument `--socket-path` is not available")
-
-
 @pytest.fixture
 def set_socket_path(
     cluster_manager: cluster_management.ClusterManager,
@@ -94,7 +88,6 @@ def set_socket_path(
 
 @pytest.fixture
 def payment_addrs(
-    has_socket_path: None,  # noqa: ARG001
     set_socket_path: None,  # noqa: ARG001
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
@@ -131,7 +124,6 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     def test_query_protocol_state(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -149,7 +141,6 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     def test_query_stake_distribution(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -167,7 +158,6 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     def test_query_protocol_params(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -185,7 +175,6 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     def test_query_pool_state(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -202,7 +191,6 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     def test_query_stake_addr_info(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -220,7 +208,6 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     def test_build_transfer_funds(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],
@@ -287,7 +274,6 @@ class TestNegativeSocketPath:
     @PARAM_SOCKET_SCENARIO
     def test_neg_query_protocol_state(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -315,7 +301,6 @@ class TestNegativeSocketPath:
     @PARAM_SOCKET_SCENARIO
     def test_neg_query_stake_distribution(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -343,7 +328,6 @@ class TestNegativeSocketPath:
     @PARAM_SOCKET_SCENARIO
     def test_neg_query_protocol_params(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -371,7 +355,6 @@ class TestNegativeSocketPath:
     @PARAM_SOCKET_SCENARIO
     def test_neg_query_pool_state(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -399,7 +382,6 @@ class TestNegativeSocketPath:
     @PARAM_SOCKET_SCENARIO
     def test_neg_query_stake_addr_info(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
@@ -428,7 +410,6 @@ class TestNegativeSocketPath:
     @PARAM_SOCKET_SCENARIO
     def test_neg_build_transfer_funds(
         self,
-        has_socket_path: None,  # noqa: ARG002
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: tp.List[clusterlib.AddressRecord],

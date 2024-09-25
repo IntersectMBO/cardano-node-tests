@@ -109,7 +109,7 @@ class TestCLI:
 
         cmd = (
             f"txFileJSON=$(cat {DATA_DIR / 'unwitnessed.tx'});"
-            'cardano-cli transaction txid --tx-file <(echo "${txFileJSON}")'
+            'cardano-cli latest transaction txid --tx-file <(echo "${txFileJSON}")'
         )
 
         try:
@@ -128,7 +128,7 @@ class TestCLI:
 
         cmd = (
             f"tmpKey=$(cat {plutus_common.SIGNING_KEY_GOLDEN});"
-            f'cardano-cli transaction sign --tx-file {DATA_DIR / "unwitnessed.tx"}'
+            f'cardano-cli latest transaction sign --tx-file {DATA_DIR / "unwitnessed.tx"}'
             ' --signing-key-file <(echo "${tmpKey}")'
             f" --out-file {temp_template}.signed"
         )
@@ -347,10 +347,6 @@ class TestAddressInfo:
 class TestAddressBuild:
     """Tests for cardano-cli address build."""
 
-    @pytest.fixture(scope="class")
-    def stake_address_option_unusable(self) -> bool:
-        return not clusterlib_utils.cli_has("address build --stake-address")
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("payment", ("vkey", "vkey_file", "script_file"))
     @pytest.mark.parametrize(
@@ -368,12 +364,8 @@ class TestAddressBuild:
         cluster: clusterlib.ClusterLib,
         payment: str,
         stake: str,
-        stake_address_option_unusable: bool,
     ):
         """Check `address build` with all valid input options."""
-        if stake == "address" and stake_address_option_unusable:
-            pytest.skip("`stake-address` option is not available on `address build` command")
-
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         payment_vkey_file = DATA_DIR / "golden_payment.vkey"
@@ -493,15 +485,11 @@ class TestAddressBuild:
         cluster: clusterlib.ClusterLib,
         option: str,
         key: str,
-        stake_address_option_unusable: bool,
     ):
         """Try to use 'address build' with invalid stake address information (property-based test).
 
         Expect failure.
         """
-        if option == "address" and stake_address_option_unusable:
-            pytest.skip("`stake-address` option is not available on `address build` command")
-
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         if option == "vkey_file":
@@ -1181,9 +1169,6 @@ class TestAdvancedQueries:
         * check that the expected fields are returned
         * check that the slot number returned is the last applied on the ledger plus one
         """
-        if not clusterlib_utils.cli_has("query tx-mempool"):
-            pytest.skip("CLI command `query tx-mempool` is not available")
-
         common.get_test_id(cluster)
 
         for __ in range(5):
@@ -1210,9 +1195,6 @@ class TestAdvancedQueries:
     @pytest.mark.testnets
     def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: tp.List[str]):
         """Test `query pool-state`."""
-        if not clusterlib_utils.cli_has("query pool-state"):
-            pytest.skip("CLI command `query pool-state` is not available")
-
         common.get_test_id(cluster)
 
         pool_params = cluster.g_query.get_pool_state(stake_pool_id=pool_ids[0])
@@ -1224,17 +1206,11 @@ class TestAdvancedQueries:
 class TestPing:
     """Tests for `cardano-cli ping`."""
 
-    @pytest.fixture(scope="class")
-    def ping_available(self) -> None:
-        if not clusterlib_utils.cli_has("ping"):
-            pytest.skip("CLI command `ping` is not available")
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     def test_ping_localhost(
         self,
         cluster: clusterlib.ClusterLib,
-        ping_available: None,  # noqa: ARG002
     ):
         """Test `cardano-cli ping` on local node using host and port."""
         # pylint: disable=unused-argument
@@ -1279,7 +1255,6 @@ class TestPing:
     def test_ping_unix_socket(
         self,
         cluster: clusterlib.ClusterLib,
-        ping_available: None,  # noqa: ARG002
     ):
         """Test `cardano-cli ping` on local node using unix socket."""
         # pylint: disable=unused-argument
@@ -1313,18 +1288,19 @@ class TestPing:
                 add_default_args=False,
             )
         except clusterlib.CLIError as exc:
-            if "MuxError MuxBearerClosed" not in str(exc):
-                raise
-            issues.node_5245.finish_test()
+            exc_str = str(exc)
+            if "MuxError MuxBearerClosed" in exc_str:
+                issues.node_5245.finish_test()
+            # cardano-ping reports user friendly error on misconfiguration on cardano-cli 9.4.1.1+
+            if "Unix sockets only support queries" in exc_str:
+                return
+            raise
         else:
             logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
 
         err_str = cli_out.stderr.rstrip().decode("utf-8")
         if "UnknownVersionInRsp" in err_str:
             issues.node_5324.finish_test()
-        # cardano-ping reports user friendly error on misconfiguration on cardano-cli 9.4.1.1+
-        if "Unix sockets only support queries" in err_str:
-            return
 
         out_str = cli_out.stdout.rstrip().decode("utf-8")
         if not (out_str and out_str[0] == "{"):
@@ -1340,16 +1316,10 @@ class TestPing:
 class TestQuerySlotNumber:
     """Tests for `cardano-cli query slot-number`."""
 
-    @pytest.fixture(scope="class")
-    def query_slot_number_available(self) -> None:
-        if not clusterlib_utils.cli_has("query slot-number"):
-            pytest.skip("CLI command `query slot-number` is not available")
-
     @allure.link(helpers.get_vcs_link())
     def test_slot_number(
         self,
         cluster: clusterlib.ClusterLib,
-        query_slot_number_available: None,  # noqa: ARG002
     ):
         """Test `query slot-number`."""
         # pylint: disable=unused-argument
@@ -1370,7 +1340,6 @@ class TestQuerySlotNumber:
     def test_slot_number_invalid_format(
         self,
         cluster: clusterlib.ClusterLib,
-        query_slot_number_available: None,  # noqa: ARG002
     ):
         """Test `query slot-number` with a timestamp invalid format.
 
@@ -1393,7 +1362,6 @@ class TestQuerySlotNumber:
         self,
         cluster: clusterlib.ClusterLib,
         time_val: str,
-        query_slot_number_available: None,  # noqa: ARG002
     ):
         """Test `query slot-number` with a timestamp out of range.
 

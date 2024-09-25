@@ -148,15 +148,6 @@ def pool_users_disposable_cluster_and_pool(
     return pool_users
 
 
-@pytest.fixture(scope="module")
-def stake_address_option_unusable() -> bool:
-    return not (
-        clusterlib_utils.cli_has("stake-address registration-certificate --stake-address")
-        or clusterlib_utils.cli_has("stake-address deregistration-certificate --stake-address")
-        or clusterlib_utils.cli_has("stake-address delegation-certificate --stake-address")
-    )
-
-
 @pytest.mark.order(8)
 class TestDelegateAddr:
     """Tests for stake address delegation."""
@@ -724,7 +715,6 @@ class TestDelegateAddr:
         pool_users_disposable_cluster_and_pool: tp.List[clusterlib.PoolUser],
         stake_cert: str,
         use_build_cmd: bool,
-        stake_address_option_unusable: bool,
     ):
         """Submit delegation and deregistration certificates in single TX.
 
@@ -738,11 +728,6 @@ class TestDelegateAddr:
         * check that the stake address was NOT delegated
         * (optional) check records in db-sync
         """
-        if stake_cert == "stake_address" and stake_address_option_unusable:
-            pytest.skip(
-                "`stake-address` option is not available on `stake-address` certificates commands"
-            )
-
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 

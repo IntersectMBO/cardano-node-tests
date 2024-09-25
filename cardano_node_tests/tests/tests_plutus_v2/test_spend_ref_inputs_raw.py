@@ -548,7 +548,6 @@ class TestNegativeReadonlyReferenceInputs:
                     f"{payment_addrs[1].address}+{2_000_000}",
                     "--out-file",
                     f"{temp_template}_tx.body",
-                    *cluster.g_transaction.tx_era_arg,
                 ]
             )
         err_str = str(excinfo.value)

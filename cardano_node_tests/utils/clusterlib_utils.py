@@ -212,18 +212,6 @@ def build_and_submit_tx(
     return tx_output
 
 
-def get_pool_state(
-    cluster_obj: clusterlib.ClusterLib,
-    pool_id: str,
-) -> clusterlib.PoolParamsTop:
-    """Get pool state using the available command."""
-    return (
-        cluster_obj.g_query.get_pool_state(pool_id)
-        if cli_has("query pool-state")
-        else cluster_obj.g_query.get_pool_params(pool_id)
-    )
-
-
 def register_stake_address(
     cluster_obj: clusterlib.ClusterLib,
     pool_user: clusterlib.PoolUser,
@@ -418,7 +406,7 @@ def load_registered_pool_data(
     if pool_id.startswith("pool"):
         pool_id = helpers.decode_bech32(pool_id)
 
-    pool_state: dict = get_pool_state(cluster_obj=cluster_obj, pool_id=pool_id).pool_params
+    pool_state: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
     metadata = pool_state.get("metadata") or {}
 
     # TODO: extend to handle more relays records
@@ -963,6 +951,7 @@ def _get_ledger_state_cmd(
 ) -> str:
     cardano_cli_args = [
         "cardano-cli",
+        "latest",
         "query",
         "ledger-state",
         *cluster_obj.magic_args,

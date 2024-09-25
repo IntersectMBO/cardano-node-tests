@@ -72,9 +72,7 @@ def _check_pool(
     pool_data: clusterlib.PoolData,
 ):
     """Check and return ledger state of the pool, and optionally also db-sync records."""
-    pool_params: dict = clusterlib_utils.get_pool_state(
-        cluster_obj=cluster_obj, pool_id=stake_pool_id
-    ).pool_params
+    pool_params: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=stake_pool_id).pool_params
 
     assert pool_params, (
         "The newly created stake pool id is not shown inside the available stake pools;\n"
@@ -95,9 +93,7 @@ def _check_staking(
     stake_pool_id: str,
 ):
     """Check that staking was correctly setup."""
-    pool_params: dict = clusterlib_utils.get_pool_state(
-        cluster_obj=cluster_obj, pool_id=stake_pool_id
-    ).pool_params
+    pool_params: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=stake_pool_id).pool_params
 
     for i in range(4):
         if i > 0:
@@ -924,17 +920,15 @@ class TestStakePool:
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         assert (
-            clusterlib_utils.get_pool_state(
-                cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
-            ).retiring
+            cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id).retiring
             == depoch
         )
 
         # check that the pool was deregistered
         cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
         assert not (
-            clusterlib_utils.get_pool_state(
-                cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
+            cluster.g_query.get_pool_state(
+                stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
@@ -1039,17 +1033,15 @@ class TestStakePool:
             tx_name=temp_template,
         )
         assert (
-            clusterlib_utils.get_pool_state(
-                cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
-            ).retiring
+            cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id).retiring
             == depoch
         )
 
         # check that the pool was deregistered
         cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
         assert not (
-            clusterlib_utils.get_pool_state(
-                cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
+            cluster.g_query.get_pool_state(
+                stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params
         ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
@@ -1194,9 +1186,7 @@ class TestStakePool:
             tx_name=temp_template,
         )
         assert (
-            clusterlib_utils.get_pool_state(
-                cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
-            ).retiring
+            cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id).retiring
             == depoch
         )
 
@@ -1244,8 +1234,8 @@ class TestStakePool:
         LOGGER.info("Checking for 3 epochs that the stake pool will NOT get deregistered.")
         for __ in range(3):
             cluster.wait_for_new_epoch(padding_seconds=10)
-            if not clusterlib_utils.get_pool_state(
-                cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
+            if not cluster.g_query.get_pool_state(
+                stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params:
                 msg = "Pool `{pool_creation_out.stake_pool_id}` got deregistered."
                 raise AssertionError(msg)
@@ -1378,8 +1368,8 @@ class TestStakePool:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # check that pool is going to be updated with correct data
-        future_params = clusterlib_utils.get_pool_state(
-            cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
+        future_params = cluster.g_query.get_pool_state(
+            stake_pool_id=pool_creation_out.stake_pool_id
         ).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated
@@ -1494,8 +1484,8 @@ class TestStakePool:
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # check that pool is going to be updated with correct data
-        future_params = clusterlib_utils.get_pool_state(
-            cluster_obj=cluster, pool_id=pool_creation_out.stake_pool_id
+        future_params = cluster.g_query.get_pool_state(
+            stake_pool_id=pool_creation_out.stake_pool_id
         ).future_pool_params
         assert not clusterlib_utils.check_pool_data(
             pool_params=future_params, pool_creation_data=pool_data_updated

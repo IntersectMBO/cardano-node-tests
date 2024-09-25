@@ -76,13 +76,8 @@ if CLUSTER_ERA not in ("", "babbage", "conway"):
     msg = f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}"
     raise RuntimeError(msg)
 
-TX_ERA = os.environ.get("TX_ERA") or ""
-if TX_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage"):
-    msg = f"Invalid TX_ERA: {TX_ERA}"
-    raise RuntimeError(msg)
-
 COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
-if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "conway"):
+if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "conway", "latest"):
     msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
     raise RuntimeError(msg)
 
