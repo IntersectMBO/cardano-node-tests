@@ -49,9 +49,6 @@ class TestCLI:
     @pytest.mark.testnets
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
-        if cluster.protocol != clusterlib.Protocols.CARDANO:
-            pytest.skip("runs on cluster in full cardano mode")
-
         common.get_test_id(cluster)
 
         cluster.cli(
@@ -672,9 +669,6 @@ class TestQueryUTxO:
     @allure.link(helpers.get_vcs_link())
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on local cluster."""
-        if cluster.protocol != clusterlib.Protocols.CARDANO:
-            pytest.skip("runs on cluster in full cardano mode")
-
         common.get_test_id(cluster)
 
         cluster.cli(
