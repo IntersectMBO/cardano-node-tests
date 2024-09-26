@@ -16,7 +16,6 @@ from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import slots_offset
 
 LOGGER = logging.getLogger(__name__)
 
@@ -76,9 +75,7 @@ class ClusterType:
         msg = f"Not implemented for cluster type '{self.type}'."
         raise NotImplementedError(msg)
 
-    def get_cluster_obj(
-        self, slots_offset: int = 0, command_era: str = ""
-    ) -> clusterlib.ClusterLib:
+    def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         msg = f"Not implemented for cluster type '{self.type}'."
         raise NotImplementedError(msg)
@@ -115,40 +112,11 @@ class LocalCluster(ClusterType):
         _uses_shortcut = not (byron_dir / "address-000-converted").exists()
         return _uses_shortcut
 
-    def _get_slots_offset(self, state_dir: pl.Path) -> int:
-        """Get offset of blocks from Byron era vs current configuration.
-
-        Unlike in `TestnetCluster`, don't cache slots offset value, we might
-        test different configurations of slot length etc.
-        """
-        with open(state_dir / "config-pool1.json", encoding="utf-8") as in_fp:
-            config_json = json.load(in_fp)
-
-        shelley_hf_epoch = config_json.get("TestShelleyHardForkAtEpoch")
-
-        # if the testnet wasn't HF to Shelley in config, assume there was single Byron epoch
-        byron_epochs = int(shelley_hf_epoch) if shelley_hf_epoch is not None else 1
-
-        # no slots offset if the testnet was started in Shelley-based era
-        if byron_epochs == 0:
-            return 0
-
-        offset = slots_offset.get_slots_offset(
-            genesis_byron=state_dir / "byron" / "genesis.json",
-            genesis_shelley=state_dir / "shelley" / "genesis.json",
-            byron_epochs=byron_epochs,
-        )
-
-        return offset
-
-    def get_cluster_obj(
-        self, slots_offset: int = 0, command_era: str = ""
-    ) -> clusterlib.ClusterLib:
+    def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
@@ -236,7 +204,6 @@ class TestnetCluster(ClusterType):
 
         # cached values
         self._testnet_type = ""
-        self._slots_offset = -1
 
     @property
     def uses_shortcut(self) -> bool:
@@ -260,43 +227,11 @@ class TestnetCluster(ClusterType):
         self._testnet_type = testnet_type
         return testnet_type
 
-    def _get_slots_offset(self, state_dir: pl.Path) -> int:
-        """Get offset of blocks from Byron era vs current configuration."""
-        if self._slots_offset != -1:
-            return self._slots_offset
-
-        genesis_byron = state_dir / "genesis-byron.json"
-        genesis_shelley = state_dir / "genesis-shelley.json"
-
-        with open(genesis_byron, encoding="utf-8") as in_json:
-            byron_dict = json.load(in_json)
-        start_timestamp: int = byron_dict["startTime"]
-
-        testnet_dict: tp.Dict[str, tp.Any] = self.TESTNETS.get(start_timestamp) or {}
-        shelley_start: str = testnet_dict.get("shelley_start") or ""
-        byron_epochs: int = testnet_dict.get("byron_epochs") or 0
-        if not (shelley_start or byron_epochs):
-            self._slots_offset = 0
-            return 0
-
-        offset = slots_offset.get_slots_offset(
-            genesis_byron=genesis_byron,
-            genesis_shelley=genesis_shelley,
-            shelley_start=shelley_start,
-            byron_epochs=byron_epochs,
-        )
-
-        self._slots_offset = offset
-        return offset
-
-    def get_cluster_obj(
-        self, slots_offset: int = 0, command_era: str = ""
-    ) -> clusterlib.ClusterLib:
+    def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
