@@ -13,10 +13,17 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_types
 
 LOGGER = logging.getLogger(__name__)
+
+PREVIEW_POOL_IDS = (
+    "pool1ynfnjspgckgxjf2zeye8s33jz3e3ndk9pcwp0qzaupzvvd8ukwt",  # GRADA
+    "pool18pn6p9ef58u4ga3wagp44qhzm8f6zncl57g6qgh0pk3yytwz54h",  # ADACT
+    "pool1vhdl0z496gxlkfpdzxhk80t4363puea6awp6hd0w0qwnw75auae",  # RABIT
+    "pool1vzqtn3mtfvvuy8ghksy34gs9g97tszj5f8mr3sn7asy5vk577ec",  # PSBT
+    "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7",  # HODLr
+)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -62,11 +69,11 @@ def cluster_and_pool(
     if cluster_type.type == cluster_nodes.ClusterType.TESTNET:
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get(use_resources=use_resources)
 
-        # getting ledger state on official testnet is too expensive,
+        # Getting ledger state on official testnet is too expensive,
         # use one of hardcoded pool IDs if possible
-        if cluster_type.testnet_type == cluster_nodes.Testnets.testnet:  # type: ignore
+        if cluster_type.testnet_type == cluster_nodes.Testnets.preview:
             stake_pools = cluster_obj.g_query.get_stake_pools()
-            for pool_id in configuration.TESTNET_POOL_IDS:
+            for pool_id in PREVIEW_POOL_IDS:
                 if pool_id in stake_pools:
                     return cluster_obj, pool_id
 
