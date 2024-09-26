@@ -702,7 +702,6 @@ class TestNegative:
                     str(cluster.network_magic + 100),
                     "--tx-file",
                     str(out_file_signed),
-                    f"--{cluster.protocol}-mode",
                 ]
             )
         assert "HandshakeError" in str(excinfo.value)

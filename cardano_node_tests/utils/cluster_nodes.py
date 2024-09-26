@@ -77,7 +77,7 @@ class ClusterType:
         raise NotImplementedError(msg)
 
     def get_cluster_obj(
-        self, protocol: str = "", slots_offset: int = 0, command_era: str = ""
+        self, slots_offset: int = 0, command_era: str = ""
     ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         msg = f"Not implemented for cluster type '{self.type}'."
@@ -142,13 +142,12 @@ class LocalCluster(ClusterType):
         return offset
 
     def get_cluster_obj(
-        self, protocol: str = "", slots_offset: int = 0, command_era: str = ""
+        self, slots_offset: int = 0, command_era: str = ""
     ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            protocol=protocol or clusterlib.Protocols.CARDANO,
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
@@ -291,13 +290,12 @@ class TestnetCluster(ClusterType):
         return offset
 
     def get_cluster_obj(
-        self, protocol: str = "", slots_offset: int = 0, command_era: str = ""
+        self, slots_offset: int = 0, command_era: str = ""
     ) -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
-            protocol=protocol or clusterlib.Protocols.CARDANO,
             slots_offset=slots_offset or self._get_slots_offset(cluster_env.state_dir),
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )

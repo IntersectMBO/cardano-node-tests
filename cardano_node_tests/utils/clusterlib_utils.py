@@ -955,7 +955,6 @@ def _get_ledger_state_cmd(
         "query",
         "ledger-state",
         *cluster_obj.magic_args,
-        f"--{cluster_obj.protocol}-mode",
     ]
     ledger_state_cmd = " ".join(cardano_cli_args)
 
@@ -1220,7 +1219,6 @@ def create_script_context(
             "--generate-tx",
             str(tx_file),
             version_arg,
-            f"--{cluster_obj.protocol}-mode",
             *cluster_obj.magic_args,
             "--out-file",
             str(redeemer_file),
