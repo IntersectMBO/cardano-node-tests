@@ -49,12 +49,6 @@ if UTXO_BACKEND not in ("", "mem", "disk"):
     msg = f"Invalid UTXO_BACKEND: {UTXO_BACKEND}"
     raise RuntimeError(msg)
 
-TESTNET_POOL_IDS = (
-    "pool18yslg3q320jex6gsmetukxvzm7a20qd90wsll9anlkrfua38flr",
-    "pool15sfcpy4tps5073gmra0e6tm2dgtrn004yr437qmeh44sgjlg2ex",
-    "pool1csh8x6227uphxz67nr8qhmd8c7nsyct2ptn7t0yjkhqu7neauwu",
-)
-
 # resolve CARDANO_NODE_SOCKET_PATH
 STARTUP_CARDANO_NODE_SOCKET_PATH = (
     pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
