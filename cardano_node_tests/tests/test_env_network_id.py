@@ -49,7 +49,7 @@ def _setup_scenarios(
         os.environ["CARDANO_NODE_NETWORK_ID"] = "424242"
 
     if arg_scenario == "arg_missing":
-        cluster_obj.magic_args = []
+        cluster_obj.magic_args = ["--cardano-mode"]
     elif arg_scenario == "arg_wrong":
         cluster_obj.magic_args = ["--testnet-magic", "424242"]
 
