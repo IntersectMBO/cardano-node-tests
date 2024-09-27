@@ -67,6 +67,7 @@ class TestCLI:
         """Check the `calculate-min-fee` command."""
         common.get_test_id(cluster)
         max_fee = 172_000
+        cluster.create_pparams_file()
 
         try:
             out = (
