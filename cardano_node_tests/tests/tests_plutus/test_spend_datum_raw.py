@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -55,6 +54,7 @@ class TestDatum:
     """Tests for datum."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_datum_on_key_credential_address(
@@ -133,6 +133,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_no_datum_txout(
         self,
@@ -216,6 +217,7 @@ class TestNegativeDatum:
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
         self,
@@ -260,6 +262,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     def test_unlock_tx_wrong_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -320,6 +323,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     def test_unlock_non_script_utxo(
         self,
         cluster: clusterlib.ClusterLib,
@@ -411,6 +415,7 @@ class TestNegativeDatum:
     @hypothesis.given(datum_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,

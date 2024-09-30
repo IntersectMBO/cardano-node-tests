@@ -20,7 +20,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -135,6 +134,7 @@ class TestSECP256k1:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.parametrize("algorithm", ("ecdsa", "schnorr"))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_use_secp_builtin_functions(
         self,
@@ -211,6 +211,7 @@ class TestSECP256k1:
         ("invalid_sig", "invalid_pubkey", "no_msg", "no_pubkey", "no_sig"),
     )
     @pytest.mark.parametrize("algorithm", ("ecdsa", "schnorr"))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_negative_secp_builtin_functions(
         self,

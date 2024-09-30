@@ -22,7 +22,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -58,6 +57,7 @@ class TestBuildLocking:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_txout_locking(
@@ -213,6 +213,7 @@ class TestBuildLocking:
         (True, False),
         ids=("with_reference_script", "without_reference_script"),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_min_required_utxo(
         self,

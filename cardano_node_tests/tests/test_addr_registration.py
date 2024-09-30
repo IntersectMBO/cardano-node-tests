@@ -61,12 +61,12 @@ def pool_users_disposable(
     return pool_users
 
 
-@pytest.mark.smoke
 class TestRegisterAddr:
     """Tests for stake address registration and deregistration."""
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_deregister_registered(
@@ -194,6 +194,7 @@ class TestRegisterAddr:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_addr_registration_deregistration(
@@ -287,6 +288,7 @@ class TestRegisterAddr:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_addr_registration_certificate_order(
@@ -378,11 +380,11 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
 
-@pytest.mark.smoke
 class TestNegative:
     """Tests that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_registration_cert_with_wrong_key(
         self,
@@ -406,6 +408,7 @@ class TestNegative:
         assert "Expected: StakeVerificationKeyShelley" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_register_addr_with_wrong_key(
         self,
@@ -444,6 +447,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_deregister_not_registered_addr(
         self,

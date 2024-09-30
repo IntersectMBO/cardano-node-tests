@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -86,6 +85,7 @@ class TestNegativeInlineDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings()
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
         self,
@@ -136,6 +136,7 @@ class TestNegativeInlineDatum:
         assert "JSON object expected. Unexpected value" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_v1_script(
@@ -225,6 +226,7 @@ class TestNegativeInlineDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_content=st.text(alphabet=string.ascii_letters, min_size=65))
     @common.hypothesis_settings(max_examples=200)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_lock_tx_big_datum(
         self,
@@ -280,6 +282,7 @@ class TestNegativeInlineDatum:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_datum_as_witness(

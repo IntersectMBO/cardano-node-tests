@@ -115,12 +115,12 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.smoke
 class TestSocketPath:
     """Tests for `cardano-cli ... --socket-path`."""
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_query_protocol_state(
         self,
@@ -139,6 +139,7 @@ class TestSocketPath:
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_query_stake_distribution(
         self,
@@ -157,6 +158,7 @@ class TestSocketPath:
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_query_protocol_params(
         self,
@@ -175,6 +177,7 @@ class TestSocketPath:
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_query_pool_state(
         self,
@@ -192,6 +195,7 @@ class TestSocketPath:
 
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_query_stake_addr_info(
         self,
@@ -210,6 +214,7 @@ class TestSocketPath:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @PARAM_ENV_SCENARIO
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_transfer_funds(
         self,

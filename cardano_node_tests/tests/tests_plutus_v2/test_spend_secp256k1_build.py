@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -134,6 +133,7 @@ class TestSECP256k1:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("build_fund_script_secp", ("ecdsa", "schnorr"), indirect=True)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_use_secp_builtin_functions(
         self,
@@ -231,6 +231,7 @@ class TestSECP256k1:
         number_of_iterations=st.integers(min_value=1000300, max_value=common.MAX_UINT64)
     )
     @common.hypothesis_settings(max_examples=200)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_overspending_execution_budget(
         self,

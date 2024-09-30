@@ -30,7 +30,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
     common.SKIPIF_PLUTUS_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -102,6 +101,7 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_one_token(
@@ -243,6 +243,7 @@ class TestBuildMinting:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_missing_txout(
         self,
@@ -359,6 +360,7 @@ class TestBuildMinting:
         ids=("plutus_v1", "plutus_v3"),
     )
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_time_range_minting(
@@ -519,6 +521,7 @@ class TestBuildMinting:
             pytest.param("mix_v3_v1", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_two_scripts_minting(
@@ -784,6 +787,7 @@ class TestBuildMinting:
     )
     @common.SKIPIF_MISMATCHED_ERAS
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_context_equivalence(
@@ -984,6 +988,7 @@ class TestBuildMinting:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_witness_redeemer(
@@ -1144,6 +1149,7 @@ class TestBuildMinting:
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1262,6 +1268,7 @@ class TestCollateralOutput:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_duplicated_collateral(
         self,

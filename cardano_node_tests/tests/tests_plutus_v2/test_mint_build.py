@@ -22,7 +22,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -105,6 +104,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_ref_one_token(
         self,
@@ -249,6 +249,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_ref_missing_txout(
         self,
@@ -360,6 +361,7 @@ class TestBuildMinting:
     @pytest.mark.parametrize(
         "valid_redeemer", (True, False), ids=("right_redeemer", "wrong_redeemer")
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_reference_inputs_visibility(
         self,
@@ -506,6 +508,7 @@ class TestBuildMinting:
     @pytest.mark.parametrize(
         "valid_redeemer", (True, False), ids=("right_redeemer", "wrong_redeemer")
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_reference_scripts_visibility(
         self,
@@ -636,6 +639,7 @@ class TestBuildMinting:
         "scenario",
         ("reference_script", "readonly_reference_input", "different_datum"),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_inline_datum_visibility(
         self,

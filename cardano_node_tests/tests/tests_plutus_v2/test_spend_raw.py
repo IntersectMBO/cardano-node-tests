@@ -21,7 +21,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -57,6 +56,7 @@ class TestLockingV2:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_txout_locking(
@@ -181,6 +181,7 @@ class TestLockingV2:
         assert helpers.is_in_interval(fee, expected_fee_redeem, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.needs_dbsync
     def test_datum_bytes_in_dbsync(

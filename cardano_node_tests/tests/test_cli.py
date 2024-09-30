@@ -36,7 +36,6 @@ ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 pytestmark = common.SKIPIF_WRONG_ERA
 
 
-@pytest.mark.smoke
 class TestCLI:
     """Tests for cardano-cli."""
 
@@ -46,6 +45,7 @@ class TestCLI:
     TX_OUT_JSON = DATA_DIR / "test_tx_metadata_both_tx_json.out"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check the default protocol mode - command works even without specifying protocol mode."""
@@ -62,6 +62,7 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_calculate_min_fee(self, cluster: clusterlib.ClusterLib):
         """Check the `calculate-min-fee` command."""
@@ -101,6 +102,7 @@ class TestCLI:
         assert coin == "Lovelace", f"Unexpected coin: {coin} != Lovelace"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass Tx file using process substitution."""
         common.get_test_id(cluster)
@@ -120,6 +122,7 @@ class TestCLI:
             raise
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_sign_tx_with_process_substitution(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to pass skey file using process substitution."""
         temp_template = common.get_test_id(cluster)
@@ -134,6 +137,7 @@ class TestCLI:
         helpers.run_in_bash(command=cmd)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """Check that the output of `transaction view` is as expected."""
         common.get_test_id(cluster)
@@ -157,6 +161,7 @@ class TestCLI:
         assert tx == tx_golden.strip()
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_query_tip(self, cluster: clusterlib.ClusterLib):
         """Test `query tip`."""
@@ -218,12 +223,12 @@ class TestCLI:
             raise AssertionError(errors_str)
 
 
-@pytest.mark.smoke
 class TestAddressInfo:
     """Tests for cardano-cli address info."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
+    @pytest.mark.smoke
     def test_address_info_payment(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check payment address info."""
         temp_template = common.get_test_id(cluster)
@@ -247,6 +252,7 @@ class TestAddressInfo:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
+    @pytest.mark.smoke
     def test_address_info_stake(self, cluster: clusterlib.ClusterLib, addr_gen: str):
         """Check stake address info."""
         temp_template = common.get_test_id(cluster)
@@ -269,6 +275,7 @@ class TestAddressInfo:
             assert addr_info.base16 == "e0a9b82c30b12e1c33ae5667f4d8e9ed2d18d3016bfe916b176d30a307"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_address_info_script(self, cluster: clusterlib.ClusterLib):
         """Check script address info."""
         temp_template = common.get_test_id(cluster)
@@ -300,6 +307,7 @@ class TestAddressInfo:
         assert addr_info.type == "payment"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_address_info_payment_with_outfile(self, cluster: clusterlib.ClusterLib):
         """Compare payment address info with and without outfile provided."""
         common.get_test_id(cluster)
@@ -326,6 +334,7 @@ class TestAddressInfo:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(address=st.text(alphabet=ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_address_info_with_invalid_address(self, cluster: clusterlib.ClusterLib, address: str):
         """Try to use 'address info' with invalid address (property-based test).
 
@@ -341,7 +350,6 @@ class TestAddressInfo:
         assert "Invalid address" in err_str, err_str
 
 
-@pytest.mark.smoke
 class TestAddressBuild:
     """Tests for cardano-cli address build."""
 
@@ -357,6 +365,7 @@ class TestAddressBuild:
             "address",
         ),
     )
+    @pytest.mark.smoke
     def test_address_build(
         self,
         cluster: clusterlib.ClusterLib,
@@ -421,6 +430,7 @@ class TestAddressBuild:
     @pytest.mark.parametrize("option", ("vkey", "vkey_file", "script_file"))
     @hypothesis.given(key=st.text(alphabet=ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_invalid_payment_info(
         self,
         cluster: clusterlib.ClusterLib,
@@ -478,6 +488,7 @@ class TestAddressBuild:
     )
     @hypothesis.given(key=st.text(alphabet=ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_invalid_stake_info(
         self,
         cluster: clusterlib.ClusterLib,
@@ -530,12 +541,12 @@ class TestAddressBuild:
         ), err_str
 
 
-@pytest.mark.smoke
 class TestAddressKeyHash:
     """Tests for cardano-cli address key-hash."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
+    @pytest.mark.smoke
     def test_valid_verification_key(self, cluster: clusterlib.ClusterLib, option: str):
         """Check `address key-hash` with valid verification key."""
         common.get_test_id(cluster)
@@ -562,6 +573,7 @@ class TestAddressKeyHash:
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
     @hypothesis.given(vkey=st.text(alphabet=ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_invalid_verification_key(self, cluster: clusterlib.ClusterLib, option: str, vkey: str):
         """Try to use `address key-hash` with invalid verification key (property-based test).
 
@@ -591,11 +603,11 @@ class TestAddressKeyHash:
         assert "Invalid key" in err_str, err_str
 
 
-@pytest.mark.smoke
 class TestKey:
     """Tests for cardano-cli key."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_non_extended_key_valid(self, cluster: clusterlib.ClusterLib):
         """Check that the non-extended verification key is according the verification key."""
         temp_template = common.get_test_id(cluster)
@@ -621,6 +633,7 @@ class TestKey:
         assert extended_vkey.startswith(non_extended_vkey)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_stake_non_extended_key(self, cluster: clusterlib.ClusterLib):
         """Get a stake non-extended-key from a stake extended key."""
         temp_template = common.get_test_id(cluster)
@@ -638,6 +651,7 @@ class TestKey:
             raise
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_non_extended_key_error(self, cluster: clusterlib.ClusterLib):
         """Try to get a non-extended verification key with a signing key file.
 
@@ -663,11 +677,11 @@ class TestKey:
         ), err_str
 
 
-@pytest.mark.smoke
 class TestQueryUTxO:
     """Tests for cardano-cli query utxo."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
         """Check that it is possible to return the whole UTxO on local cluster."""
         common.get_test_id(cluster)
@@ -682,11 +696,12 @@ class TestQueryUTxO:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @pytest.mark.skipif(
         VERSIONS.transaction_era != VERSIONS.DEFAULT_CLUSTER_ERA,
         reason="works only with the latest TX era",
     )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_pretty_utxo(
         self, cluster_manager: cluster_management.ClusterManager, cluster: clusterlib.ClusterLib
     ):
@@ -767,6 +782,7 @@ class TestQueryUTxO:
     @pytest.mark.parametrize("invalid_param", ("tx_hash", "tx_ix"))
     @hypothesis.given(filter_str=st.text(alphabet=string.ascii_letters, min_size=1))
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_tx_in_invalid_data(
         self, cluster: clusterlib.ClusterLib, filter_str: str, invalid_param: str
     ):
@@ -802,6 +818,7 @@ class TestQueryUTxO:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(filter_str=st.text(alphabet=ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_address_invalid_data(self, cluster: clusterlib.ClusterLib, filter_str: str):
         """Try to use 'query utxo' with invalid 'address' (property-based test).
 
@@ -824,12 +841,12 @@ class TestQueryUTxO:
         assert "invalid address" in err_str, err_str
 
 
-@pytest.mark.smoke
 class TestStakeAddressKeyHash:
     """Tests for cardano-cli stake-address key-hash."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
+    @pytest.mark.smoke
     def test_valid_verification_key(self, cluster: clusterlib.ClusterLib, option: str):
         """Check `stake-address key-hash` with valid verification key."""
         common.get_test_id(cluster)
@@ -856,6 +873,7 @@ class TestStakeAddressKeyHash:
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
     @hypothesis.given(vkey=st.text(alphabet=ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_invalid_verification_key(self, cluster: clusterlib.ClusterLib, option: str, vkey: str):
         """Try to use `stake-address key-hash` with invalid verification key (property-based test).
 
@@ -1111,9 +1129,9 @@ class TestAdvancedQueries:
             ),
         ),
     )
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_stake_snapshot(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1133,8 +1151,8 @@ class TestAdvancedQueries:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: tp.List[str]):
         """Test `query pool-params`."""
         common.get_test_id(cluster)
@@ -1147,13 +1165,13 @@ class TestAdvancedQueries:
         assert hasattr(pool_params, "retiring")
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    @pytest.mark.smoke
     @pytest.mark.parametrize(
         "with_out_file",
         (True, False),
         ids=("with_out_file", "without_out_file"),
     )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_tx_mempool_info(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1187,6 +1205,7 @@ class TestAdvancedQueries:
         assert {"capacityInBytes", "numberOfTxs", "sizeInBytes", "slot"}.issubset(tx_mempool)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: tp.List[str]):
         """Test `query pool-state`."""
@@ -1197,11 +1216,11 @@ class TestAdvancedQueries:
         assert hasattr(pool_params, "retiring")
 
 
-@pytest.mark.smoke
 class TestPing:
     """Tests for `cardano-cli ping`."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_ping_localhost(
         self,
@@ -1246,6 +1265,7 @@ class TestPing:
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_ping_unix_socket(
         self,
@@ -1307,11 +1327,11 @@ class TestPing:
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
 
-@pytest.mark.smoke
 class TestQuerySlotNumber:
     """Tests for `cardano-cli query slot-number`."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_slot_number(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1332,6 +1352,7 @@ class TestQuerySlotNumber:
         assert slot_number <= (tip_out["epoch"] + 1) * cluster.epoch_length - cluster.slots_offset
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_slot_number_invalid_format(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1353,6 +1374,7 @@ class TestQuerySlotNumber:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("time_val", ("above", "bellow"))
+    @pytest.mark.smoke
     def test_slot_number_out_of_range(
         self,
         cluster: clusterlib.ClusterLib,

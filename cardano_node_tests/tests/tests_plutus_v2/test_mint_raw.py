@@ -22,7 +22,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -98,6 +97,7 @@ class TestMinting:
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
     @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_two_tokens(
         self,
@@ -234,6 +234,7 @@ class TestMinting:
     @pytest.mark.parametrize(
         "scenario", ("reference_script", "readonly_reference_input", "different_datum")
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_datum_hash_visibility(
         self,
@@ -387,6 +388,7 @@ class TestMinting:
         ), "Reference UTxO was spent"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_missing_builtin(
         self,
         cluster: clusterlib.ClusterLib,

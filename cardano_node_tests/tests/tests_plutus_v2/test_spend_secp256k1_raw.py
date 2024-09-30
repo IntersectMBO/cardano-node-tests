@@ -19,7 +19,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -118,6 +117,7 @@ class TestSECP256k1:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fund_script_secp", ("ecdsa", "schnorr"), indirect=True)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_use_secp_builtin_functions(
         self,

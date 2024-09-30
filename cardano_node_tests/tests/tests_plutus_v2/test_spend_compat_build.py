@@ -20,7 +20,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -56,6 +55,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.BABBAGE,
         reason="runs only with Tx era < Babbage",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_inline_datum_old_tx_era(
         self,
@@ -101,6 +101,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.BABBAGE,
         reason="runs only with Tx era < Babbage",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_reference_script_old_tx_era(
@@ -149,6 +150,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.BABBAGE,
         reason="runs only with Tx era < Babbage",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_ro_reference_old_tx_era(
         self,

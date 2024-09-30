@@ -848,11 +848,11 @@ class TestDelegateAddr:
             assert pool_id == tx_db_deleg.stake_delegation[0].pool_id
 
 
-@pytest.mark.smoke
 class TestNegative:
     """Tests that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegation_cert_with_wrong_key(
         self,
@@ -880,6 +880,7 @@ class TestNegative:
         ), err_msg
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_addr_with_wrong_key(
         self,
@@ -942,6 +943,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_unknown_addr(
         self,
@@ -1001,6 +1003,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_deregistered_addr(
         self,
@@ -1105,6 +1108,7 @@ class TestNegative:
         ), err_msg
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegatee_not_registered(
         self,

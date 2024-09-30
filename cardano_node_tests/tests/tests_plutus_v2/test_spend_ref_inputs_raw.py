@@ -22,7 +22,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -55,6 +54,7 @@ class TestReadonlyReferenceInputs:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("reference_input_scenario", ("single", "duplicated"))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_use_reference_input(
@@ -153,6 +153,7 @@ class TestReadonlyReferenceInputs:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_same_input_as_reference_input(
@@ -255,6 +256,7 @@ class TestReadonlyReferenceInputs:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_reference_input_non_plutus(
@@ -319,6 +321,7 @@ class TestNegativeReadonlyReferenceInputs:
     """Tests for Tx with readonly reference inputs that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_reference_spent_output(
@@ -425,6 +428,7 @@ class TestNegativeReadonlyReferenceInputs:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_v1_script_with_reference_input(
@@ -517,6 +521,7 @@ class TestNegativeReadonlyReferenceInputs:
                 raise
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_reference_input_without_spend_anything(
         self,

@@ -26,7 +26,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -104,9 +103,10 @@ class TestMinting:
     """Tests for minting using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -236,8 +236,6 @@ class TestMinting:
             pytest.fail(utxo_err)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @pytest.mark.parametrize(
         "key",
         (
@@ -253,6 +251,9 @@ class TestMinting:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
@@ -383,8 +384,9 @@ class TestMinting:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
-    @pytest.mark.dbsync
+    @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
@@ -502,8 +504,6 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @pytest.mark.parametrize(
         "plutus_version",
         (
@@ -512,6 +512,9 @@ class TestMinting:
             pytest.param("mix_v3_v1", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
     )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_two_scripts_minting(
         self,
         cluster: clusterlib.ClusterLib,
@@ -732,8 +735,9 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
+    @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_minting_policy_executed_once1(
         self,
         cluster: clusterlib.ClusterLib,
@@ -889,8 +893,9 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
+    @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_minting_policy_executed_once2(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1049,8 +1054,9 @@ class TestMinting:
         reason="cannot find `create-script-context` on the PATH",
     )
     @common.SKIPIF_MISMATCHED_ERAS
-    @pytest.mark.dbsync
+    @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_minting_context_equivalence(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
@@ -1204,6 +1210,7 @@ class TestMinting:
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1347,6 +1354,7 @@ class TestCollateralOutput:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_duplicated_collateral(
         self,

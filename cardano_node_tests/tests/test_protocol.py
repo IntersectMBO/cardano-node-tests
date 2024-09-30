@@ -82,11 +82,11 @@ PROTOCOL_PARAM_KEYS_MISSING_8_12_0 = frozenset(
 
 
 @common.SKIPIF_WRONG_ERA
-@pytest.mark.smoke
 class TestProtocol:
     """Basic tests for protocol."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_protocol_state_keys(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-state`."""
@@ -107,6 +107,7 @@ class TestProtocol:
         assert set(protocol_state) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_protocol_state_outfile(self, cluster: clusterlib.ClusterLib):
         """Check output file produced by `query protocol-state`."""
@@ -122,6 +123,7 @@ class TestProtocol:
         assert set(protocol_state) == PROTOCOL_STATE_KEYS
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_protocol_params(self, cluster: clusterlib.ClusterLib):
         """Check output of `query protocol-parameters`."""
