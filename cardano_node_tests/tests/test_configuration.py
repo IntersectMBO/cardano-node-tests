@@ -125,8 +125,11 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     assert epoch + 1 == cluster_obj.g_query.get_epoch()
 
 
-@pytest.mark.order(5)
 @common.SKIPIF_WRONG_ERA
+# It takes long time to setup the cluster instance (when starting from Byron).
+# We mark the tests as "long" and set the highest priority, so the setup is done at the
+# beginning of the testrun, instead of needing to respin a cluster that is already running.
+@pytest.mark.order(5)
 @pytest.mark.long
 class TestBasic:
     """Basic tests for node configuration."""

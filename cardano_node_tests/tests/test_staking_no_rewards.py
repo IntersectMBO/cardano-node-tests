@@ -37,10 +37,10 @@ def cluster_lock_pool_use_rewards(
     return cluster_obj, pool_name
 
 
-@pytest.mark.order(6)
-@pytest.mark.long
 class TestNoRewards:
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     def test_no_reward_unmet_pledge1(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -204,6 +204,8 @@ class TestNoRewards:
         ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     def test_no_reward_unmet_pledge2(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -365,6 +367,8 @@ class TestNoRewards:
             ), "New reward was not received by pool reward address"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     def test_no_reward_deregistered_stake_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -560,6 +564,8 @@ class TestNoRewards:
         ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     def test_no_reward_deregistered_reward_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -745,6 +751,8 @@ class TestNoRewards:
         ), f"Pledge is not met for pool '{pool_name}'!"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     def test_deregister_reward_addr_retire_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,

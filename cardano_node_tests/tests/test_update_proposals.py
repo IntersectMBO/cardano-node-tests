@@ -21,7 +21,6 @@ LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data"
 
 
-@pytest.mark.order(8)
 @pytest.mark.skipif(
     VERSIONS.cluster_era != VERSIONS.transaction_era,
     reason="Must run with same cluster and Tx era",
@@ -30,7 +29,6 @@ DATA_DIR = pl.Path(__file__).parent / "data"
     VERSIONS.cluster_era >= VERSIONS.CONWAY,
     reason="Doesn't run on cluster era >= Conway",
 )
-@pytest.mark.long
 class TestUpdateProposals:
     """Tests for update proposals."""
 
@@ -72,6 +70,8 @@ class TestUpdateProposals:
         return addr
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(8)
+    @pytest.mark.long
     @pytest.mark.dbsync
     def test_update_proposal(
         self,

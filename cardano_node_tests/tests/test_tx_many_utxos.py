@@ -25,8 +25,6 @@ LOGGER = logging.getLogger(__name__)
     VERSIONS.cluster_era != VERSIONS.transaction_era,
     reason="expensive test, skip when cluster era is different from TX era",
 )
-@pytest.mark.order(5)
-@pytest.mark.long
 class TestManyUTXOs:
     """Test transaction with many UTxOs and small amounts of Lovelace."""
 
@@ -154,6 +152,8 @@ class TestManyUTXOs:
         return retval
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(5)
+    @pytest.mark.long
     @pytest.mark.dbsync
     def test_mini_transactions(
         self,
