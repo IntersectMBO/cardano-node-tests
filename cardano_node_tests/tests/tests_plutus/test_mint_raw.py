@@ -1342,12 +1342,12 @@ class TestMinting:
             ), f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
 
 
-@pytest.mark.testnets
 class TestCollateralOutput:
     """Tests for collateral output."""
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,

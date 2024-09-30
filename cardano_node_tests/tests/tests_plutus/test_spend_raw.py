@@ -129,13 +129,13 @@ def _check_pretty_utxo(
     return err
 
 
-@pytest.mark.testnets
 class TestLocking:
     """Tests for Tx output locking using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -192,6 +192,7 @@ class TestLocking:
         reason="cannot find `create-script-context` on the PATH",
     )
     @common.SKIPIF_MISMATCHED_ERAS
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_context_equivalence(
         self,
@@ -291,7 +292,6 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.parametrize("embed_datum", (True, False), ids=("embedded_datum", "datum"))
     @pytest.mark.parametrize(
         "variant",
@@ -304,6 +304,8 @@ class TestLocking:
         ),
     )
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
@@ -393,7 +395,6 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.parametrize(
         "plutus_version",
         (
@@ -403,6 +404,8 @@ class TestLocking:
             pytest.param("plutus_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
         ),
     )
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_two_scripts_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -630,6 +633,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
@@ -688,6 +692,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
@@ -751,8 +756,9 @@ class TestLocking:
             issues.consensus_947.finish_test()
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -812,8 +818,9 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -901,9 +908,10 @@ class TestLocking:
             assert u.datum_hash == script_utxos[0].datum_hash
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_collaterals(
         self,
         cluster: clusterlib.ClusterLib,

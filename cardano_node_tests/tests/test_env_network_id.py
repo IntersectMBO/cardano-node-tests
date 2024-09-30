@@ -124,11 +124,11 @@ def payment_addrs(
 
 
 @pytest.mark.smoke
-@pytest.mark.testnets
 class TestNetworkIdEnv:
     """Tests for `CARDANO_NODE_NETWORK_ID`."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_query_protocol_state(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -142,6 +142,7 @@ class TestNetworkIdEnv:
         assert "lastSlot" in state
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_query_stake_distribution(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -155,6 +156,7 @@ class TestNetworkIdEnv:
         assert next(iter(distrib)).startswith("pool")
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_query_protocol_params(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -168,6 +170,7 @@ class TestNetworkIdEnv:
         assert "protocolVersion" in protocol_params
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_query_pool_state(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -180,6 +183,7 @@ class TestNetworkIdEnv:
         cluster.g_query.get_pool_state(stake_pool_id=POOL_ID)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_query_stake_addr_info(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -193,6 +197,7 @@ class TestNetworkIdEnv:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.testnets
     def test_build_transfer_funds(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -243,7 +248,6 @@ class TestNetworkIdEnv:
 
 
 @pytest.mark.smoke
-@pytest.mark.testnets
 class TestNegativeNetworkIdEnv:
     """Negative tests for `CARDANO_NODE_NETWORK_ID`."""
 
@@ -260,6 +264,7 @@ class TestNegativeNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_ARG_SCENARIO
+    @pytest.mark.testnets
     def test_neg_query_protocol_state(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -289,6 +294,7 @@ class TestNegativeNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_ARG_SCENARIO
+    @pytest.mark.testnets
     def test_neg_query_stake_distribution(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -317,6 +323,7 @@ class TestNegativeNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_ARG_SCENARIO
+    @pytest.mark.testnets
     def test_neg_query_protocol_params(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -345,6 +352,7 @@ class TestNegativeNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_ARG_SCENARIO
+    @pytest.mark.testnets
     def test_neg_query_pool_state(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -373,6 +381,7 @@ class TestNegativeNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_ARG_SCENARIO
+    @pytest.mark.testnets
     def test_neg_query_stake_addr_info(
         self,
         skip_on_no_env: None,  # noqa: ARG002
@@ -402,6 +411,7 @@ class TestNegativeNetworkIdEnv:
     @common.SKIPIF_BUILD_UNUSABLE
     @PARAM_ENV_SCENARIO
     @PARAM_ARG_SCENARIO
+    @pytest.mark.testnets
     def test_neg_build_transfer_funds(
         self,
         skip_on_no_env: None,  # noqa: ARG002

@@ -47,7 +47,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestNegativeCollateralOutput:
     """Tests for collateral output that are expected to fail."""
 
@@ -58,6 +57,7 @@ class TestNegativeCollateralOutput:
         ids=("with_return_collateral", "without_return_collateral"),
     )
     @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.testnets
     def test_minting_with_unbalanced_total_collateral(
         self,
         cluster: clusterlib.ClusterLib,

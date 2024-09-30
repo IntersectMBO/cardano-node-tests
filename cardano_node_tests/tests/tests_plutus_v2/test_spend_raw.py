@@ -49,7 +49,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestLockingV2:
     """Tests for Tx output locking using Plutus V2 smart contracts."""
 
@@ -58,6 +57,7 @@ class TestLockingV2:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_txout_locking(
         self,
@@ -181,6 +181,7 @@ class TestLockingV2:
         assert helpers.is_in_interval(fee, expected_fee_redeem, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.needs_dbsync
     def test_datum_bytes_in_dbsync(
         self,

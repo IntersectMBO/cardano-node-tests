@@ -51,7 +51,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestNegativeInlineDatum:
     """Tests for Tx output with inline datum that are expected to fail."""
 
@@ -87,6 +86,7 @@ class TestNegativeInlineDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings()
+    @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -136,6 +136,7 @@ class TestNegativeInlineDatum:
         assert "JSON object expected. Unexpected value" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_v1_script(
         self,
@@ -224,6 +225,7 @@ class TestNegativeInlineDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_content=st.text(alphabet=string.ascii_letters, min_size=65))
     @common.hypothesis_settings(max_examples=200)
+    @pytest.mark.testnets
     def test_lock_tx_big_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -278,6 +280,7 @@ class TestNegativeInlineDatum:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_datum_as_witness(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]

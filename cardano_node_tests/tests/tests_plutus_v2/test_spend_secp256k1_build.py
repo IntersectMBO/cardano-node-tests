@@ -51,7 +51,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestSECP256k1:
     @pytest.fixture
     def build_fund_script_secp(
@@ -135,6 +134,7 @@ class TestSECP256k1:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("build_fund_script_secp", ("ecdsa", "schnorr"), indirect=True)
+    @pytest.mark.testnets
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
@@ -231,6 +231,7 @@ class TestSECP256k1:
         number_of_iterations=st.integers(min_value=1000300, max_value=common.MAX_UINT64)
     )
     @common.hypothesis_settings(max_examples=200)
+    @pytest.mark.testnets
     def test_overspending_execution_budget(
         self,
         cluster: clusterlib.ClusterLib,

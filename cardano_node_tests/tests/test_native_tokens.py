@@ -139,7 +139,6 @@ def multisig_script_policyid(
 
 
 @common.SKIPIF_TOKENS_UNUSABLE
-@pytest.mark.testnets
 class TestMinting:
     """Tests for minting and burning tokens."""
 
@@ -148,6 +147,7 @@ class TestMinting:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_and_burning_witnesses(
         self,
@@ -253,6 +253,7 @@ class TestMinting:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_and_burning_sign(
         self,
@@ -346,6 +347,7 @@ class TestMinting:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_multiple_scripts(
         self,
@@ -465,6 +467,7 @@ class TestMinting:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_burning_diff_tokens_single_tx(
         self,
@@ -578,6 +581,7 @@ class TestMinting:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_burning_same_token_single_tx(
         self,
@@ -699,6 +703,7 @@ class TestMinting:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("tokens_db", MINT_BURN_WITNESS_PARAMS)
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_bundle_minting_and_burning_witnesses(
         self,
@@ -842,6 +847,7 @@ class TestMinting:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("tokens_db", MINT_BURN_SIGN_PARAMS)
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_bundle_minting_and_burning_sign(
         self,
@@ -981,6 +987,7 @@ class TestMinting:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_and_partial_burning(
         self,
@@ -1079,6 +1086,7 @@ class TestMinting:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_unicode_asset_name(
         self,
@@ -1163,13 +1171,13 @@ class TestMinting:
 
 
 @common.SKIPIF_TOKENS_UNUSABLE
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_valid_policy_after(
         self,
@@ -1260,6 +1268,7 @@ class TestPolicies:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_valid_policy_before(
         self,
@@ -1351,6 +1360,7 @@ class TestPolicies:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_policy_before_past(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
     ):
@@ -1420,6 +1430,7 @@ class TestPolicies:
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_policy_before_future(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
     ):
@@ -1481,6 +1492,7 @@ class TestPolicies:
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_policy_after_future(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
     ):
@@ -1553,6 +1565,7 @@ class TestPolicies:
             assert not token_utxo, "The token was minted unexpectedly"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_policy_after_past(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
     ):
@@ -1615,7 +1628,6 @@ class TestPolicies:
 
 
 @common.SKIPIF_TOKENS_UNUSABLE
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestTransfer:
     """Tests for transferring tokens."""
@@ -1683,6 +1695,7 @@ class TestTransfer:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("amount", (1, 10, 200, 2_000, 100_000))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transfer_tokens(
         self,
@@ -1814,6 +1827,7 @@ class TestTransfer:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
@@ -1996,6 +2010,7 @@ class TestTransfer:
         cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
         reason="runs only on local cluster",
     )
+    @pytest.mark.testnets
     def test_transfer_no_ada(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2049,6 +2064,7 @@ class TestTransfer:
     @hypothesis.example(token_amount=MAX_TOKEN_AMOUNT)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     def test_transfer_invalid_token_amount(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2120,7 +2136,6 @@ class TestTransfer:
 
 
 @common.SKIPIF_TOKENS_UNUSABLE
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestNegative:
     """Negative tests for minting tokens."""
@@ -2187,6 +2202,7 @@ class TestNegative:
         )
     )
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.testnets
     def test_long_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2232,6 +2248,7 @@ class TestNegative:
     @hypothesis.given(token_amount=st.integers(min_value=MAX_TOKEN_AMOUNT + 1))
     @hypothesis.example(token_amount=MAX_TOKEN_AMOUNT + 1)
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.testnets
     def test_minting_amount_above_the_allowed(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2270,12 +2287,12 @@ class TestNegative:
 
 
 @common.SKIPIF_WRONG_ERA
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestCLITxOutSyntax:
     """Tests of syntax for specifying muti-asset values and txouts."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multiasset_txouts_syntax(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
@@ -2413,7 +2430,6 @@ class TestCLITxOutSyntax:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.BABBAGE,
@@ -2425,6 +2441,7 @@ class TestReferenceUTxO:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_script_reference_utxo(
         self,

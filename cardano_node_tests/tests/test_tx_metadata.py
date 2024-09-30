@@ -20,7 +20,6 @@ LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data"
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestMetadata:
     """Tests for transactions with metadata."""
@@ -59,6 +58,7 @@ class TestMetadata:
         return addr
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -85,6 +85,7 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.testnets
     def test_build_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -112,6 +113,7 @@ class TestMetadata:
         assert "The JSON metadata top level must be a map" in str_err, str_err
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -141,6 +143,7 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.testnets
     def test_build_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -172,6 +175,7 @@ class TestMetadata:
         ), str_err
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -197,6 +201,7 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.testnets
     def test_build_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -225,6 +230,7 @@ class TestMetadata:
         ), str_err
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -266,6 +272,7 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_build_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -316,6 +323,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -354,6 +362,7 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_build_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -403,6 +412,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -453,6 +463,7 @@ class TestMetadata:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_build_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
@@ -513,6 +524,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_tx_duplicate_metadata_keys(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
@@ -560,6 +572,7 @@ class TestMetadata:
             ), "Metadata in db-sync doesn't match the original metadata"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_tx_metadata_no_txout(
         self,

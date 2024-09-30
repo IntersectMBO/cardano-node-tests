@@ -38,7 +38,6 @@ else:
     TO_10_FROM_10_PARAMS = [(1, 309_557), (100, 309_997), (11_000, 310_437), (100_000, 311_317)]
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestFee:
     """General fees tests."""
@@ -73,6 +72,7 @@ class TestFee:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(fee=st.integers(max_value=-1))
     @common.hypothesis_settings()
+    @pytest.mark.testnets
     def test_negative_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -103,6 +103,7 @@ class TestFee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fee_change", (0, 1.1, 1.5, 2))
+    @pytest.mark.testnets
     def test_smaller_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -145,6 +146,7 @@ class TestFee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fee_add", (0, 1_000, 100_000, 1_000_000))
+    @pytest.mark.testnets
     def test_expected_or_higher_fee(
         self,
         cluster: clusterlib.ClusterLib,

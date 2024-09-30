@@ -54,11 +54,11 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestDatum:
     """Tests for datum."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_datum_on_key_credential_address(
         self,
@@ -107,6 +107,7 @@ class TestDatum:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_embed_datum_without_pparams(
         self,
         cluster: clusterlib.ClusterLib,
@@ -165,7 +166,6 @@ class TestDatum:
             issues.node_4058.finish_test()
 
 
-@pytest.mark.testnets
 class TestNegativeDatum:
     """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
 
@@ -193,6 +193,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
@@ -292,6 +293,7 @@ class TestNegativeDatum:
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -330,6 +332,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_unlock_tx_wrong_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -389,6 +392,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_unlock_non_script_utxo(
         self,
         cluster: clusterlib.ClusterLib,
@@ -480,6 +484,7 @@ class TestNegativeDatum:
     @hypothesis.given(datum_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=100)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,

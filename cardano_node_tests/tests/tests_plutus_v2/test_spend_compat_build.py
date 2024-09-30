@@ -48,7 +48,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestCompatibility:
     """Tests for checking compatibility with previous Tx eras."""
 
@@ -57,6 +56,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.BABBAGE,
         reason="runs only with Tx era < Babbage",
     )
+    @pytest.mark.testnets
     def test_inline_datum_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
@@ -101,6 +101,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.BABBAGE,
         reason="runs only with Tx era < Babbage",
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_reference_script_old_tx_era(
         self,
@@ -148,6 +149,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.BABBAGE,
         reason="runs only with Tx era < Babbage",
     )
+    @pytest.mark.testnets
     def test_ro_reference_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,

@@ -22,7 +22,6 @@ LOGGER = logging.getLogger(__name__)
 MAX_LOVELACE_AMOUNT = common.MAX_UINT64
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestUnbalanced:
     """Tests for unbalanced transactions."""
@@ -106,6 +105,7 @@ class TestUnbalanced:
         return cluster.g_query.get_utxo_with_highest_amount(payment_addrs[0].address)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_negative_change(
         self,
         cluster: clusterlib.ClusterLib,
@@ -168,6 +168,7 @@ class TestUnbalanced:
     @hypothesis.given(transfer_add=st.integers(min_value=1, max_value=MAX_LOVELACE_AMOUNT // 2))
     @hypothesis.example(transfer_add=1)
     @common.hypothesis_settings(100)
+    @pytest.mark.testnets
     def test_build_transfer_unavailable_funds(
         self,
         cluster: clusterlib.ClusterLib,
@@ -211,6 +212,7 @@ class TestUnbalanced:
     @hypothesis.example(change_amount=2_000_000)
     @hypothesis.example(change_amount=MAX_LOVELACE_AMOUNT)
     @common.hypothesis_settings(300)
+    @pytest.mark.testnets
     def test_wrong_balance(
         self,
         cluster: clusterlib.ClusterLib,
@@ -270,6 +272,7 @@ class TestUnbalanced:
     @hypothesis.example(change_amount=2_000_000)
     @hypothesis.example(change_amount=MAX_LOVELACE_AMOUNT + 1)
     @common.hypothesis_settings(300)
+    @pytest.mark.testnets
     def test_out_of_bounds_amount(
         self,
         cluster: clusterlib.ClusterLib,
@@ -313,6 +316,7 @@ class TestUnbalanced:
     @hypothesis.example(amount=0)
     @hypothesis.example(amount=tx_common.MIN_UTXO_VALUE[1] - 1_000)
     @common.hypothesis_settings(max_examples=200)
+    @pytest.mark.testnets
     def test_build_transfer_amount_bellow_minimum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -342,6 +346,7 @@ class TestUnbalanced:
     @hypothesis.example(amount=-MAX_LOVELACE_AMOUNT)
     @hypothesis.example(amount=-1)
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.testnets
     def test_build_transfer_negative_amount(
         self,
         cluster: clusterlib.ClusterLib,
@@ -373,6 +378,7 @@ class TestUnbalanced:
     @hypothesis.example(amount=0)
     @hypothesis.example(amount=tx_common.MIN_UTXO_VALUE[1] - 1_000)
     @common.hypothesis_settings(max_examples=400)
+    @pytest.mark.testnets
     def test_transfer_amount_bellow_minimum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -434,6 +440,7 @@ class TestUnbalanced:
     @hypothesis.example(amount=-1)
     @hypothesis.example(amount=-MAX_LOVELACE_AMOUNT)
     @common.hypothesis_settings(max_examples=500)
+    @pytest.mark.testnets
     def test_transfer_negative_amount(
         self,
         cluster: clusterlib.ClusterLib,

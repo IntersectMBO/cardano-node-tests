@@ -100,12 +100,12 @@ def _build_reference_txin(
     return reference_txin
 
 
-@pytest.mark.testnets
 class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.testnets
     def test_minting_ref_one_token(
         self,
         cluster: clusterlib.ClusterLib,
@@ -249,6 +249,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.testnets
     def test_minting_ref_missing_txout(
         self,
         cluster: clusterlib.ClusterLib,
@@ -359,6 +360,7 @@ class TestBuildMinting:
     @pytest.mark.parametrize(
         "valid_redeemer", (True, False), ids=("right_redeemer", "wrong_redeemer")
     )
+    @pytest.mark.testnets
     def test_reference_inputs_visibility(
         self,
         cluster: clusterlib.ClusterLib,
@@ -504,6 +506,7 @@ class TestBuildMinting:
     @pytest.mark.parametrize(
         "valid_redeemer", (True, False), ids=("right_redeemer", "wrong_redeemer")
     )
+    @pytest.mark.testnets
     def test_reference_scripts_visibility(
         self,
         cluster: clusterlib.ClusterLib,
@@ -633,6 +636,7 @@ class TestBuildMinting:
         "scenario",
         ("reference_script", "readonly_reference_input", "different_datum"),
     )
+    @pytest.mark.testnets
     def test_inline_datum_visibility(
         self,
         cluster: clusterlib.ClusterLib,

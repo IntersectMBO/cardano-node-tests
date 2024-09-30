@@ -90,7 +90,6 @@ def _build_reference_txin(
     return reference_txin
 
 
-@pytest.mark.testnets
 class TestMinting:
     """Tests for minting using Plutus smart contracts."""
 
@@ -99,6 +98,7 @@ class TestMinting:
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
     @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.testnets
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
@@ -234,6 +234,7 @@ class TestMinting:
     @pytest.mark.parametrize(
         "scenario", ("reference_script", "readonly_reference_input", "different_datum")
     )
+    @pytest.mark.testnets
     def test_datum_hash_visibility(
         self,
         cluster: clusterlib.ClusterLib,

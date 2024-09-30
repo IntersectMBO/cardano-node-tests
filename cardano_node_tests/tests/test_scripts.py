@@ -135,7 +135,6 @@ def multisig_tx(
     return tx_raw_output
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestBasic:
     """Basic tests for multisig transactions."""
@@ -168,6 +167,7 @@ class TestBasic:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_script_addr_length(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
     ):
@@ -197,6 +197,7 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_all(
         self,
@@ -254,6 +255,7 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_any(
         self,
@@ -348,6 +350,7 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_atleast(
         self,
@@ -417,6 +420,7 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_normal_tx_to_script_addr(
         self,
@@ -475,6 +479,7 @@ class TestBasic:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_normal_tx_from_script_addr(
         self,
@@ -552,6 +557,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_empty_all(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
@@ -604,6 +610,7 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_no_required_atleast(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
@@ -664,7 +671,6 @@ class TestBasic:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestNegative:
     """Transaction tests that are expected to fail."""
@@ -699,6 +705,7 @@ class TestNegative:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_all_missing_skey(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
@@ -751,6 +758,7 @@ class TestNegative:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_any_unlisted_skey(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
@@ -803,6 +811,7 @@ class TestNegative:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multisig_atleast_low_num_of_skeys(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
@@ -860,7 +869,6 @@ class TestNegative:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALLEGRA,
@@ -1043,6 +1051,7 @@ class TestTimeLocking:
     @pytest.mark.parametrize(
         "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_script_after(
         self,
@@ -1114,6 +1123,7 @@ class TestTimeLocking:
     @pytest.mark.parametrize(
         "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_script_before(
         self,
@@ -1181,6 +1191,7 @@ class TestTimeLocking:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("slot_type", ("before", "after"))
+    @pytest.mark.testnets
     def test_tx_missing_validity(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1248,6 +1259,7 @@ class TestTimeLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     def test_tx_negative_validity(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1327,6 +1339,7 @@ class TestTimeLocking:
     )
     @hypothesis.given(data=st.data())
     @common.hypothesis_settings(max_examples=50)
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_before_past(
         self,
@@ -1394,6 +1407,7 @@ class TestTimeLocking:
     )
     @hypothesis.given(slot_no=st.integers(min_value=1, max_value=10_000))
     @common.hypothesis_settings(max_examples=50)
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_before_future(
         self,
@@ -1442,6 +1456,7 @@ class TestTimeLocking:
     )
     @hypothesis.given(data=st.data())
     @common.hypothesis_settings(max_examples=50)
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_after_future(
         self,
@@ -1509,6 +1524,7 @@ class TestTimeLocking:
     )
     @hypothesis.given(data=st.data())
     @common.hypothesis_settings(max_examples=50)
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_after_past(
         self,
@@ -1552,7 +1568,6 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALLEGRA,
@@ -1593,6 +1608,7 @@ class TestAuxiliaryScripts:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_tx_script_metadata_json(
         self,
@@ -1648,6 +1664,7 @@ class TestAuxiliaryScripts:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_tx_script_metadata_cbor(
         self,
@@ -1704,6 +1721,7 @@ class TestAuxiliaryScripts:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_tx_script_no_metadata(
         self,
@@ -1750,6 +1768,7 @@ class TestAuxiliaryScripts:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     def test_tx_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1784,7 +1803,6 @@ class TestAuxiliaryScripts:
         assert 'Error in $: key "type" not found' in err_str, err_str
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestIncrementalSigning:
     """Tests for incremental signing."""
@@ -1826,6 +1844,7 @@ class TestIncrementalSigning:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_incremental_signing(
         self,
@@ -1980,7 +1999,6 @@ class TestIncrementalSigning:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALONZO,
@@ -2022,6 +2040,7 @@ class TestDatum:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_script_utxo_datum(
         self,
@@ -2092,7 +2111,6 @@ class TestDatum:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.BABBAGE,
@@ -2132,6 +2150,7 @@ class TestReferenceUTxO:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_script_reference_utxo(
         self,
@@ -2274,6 +2293,7 @@ class TestReferenceUTxO:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.parametrize("address_type", ("shelley", "byron"))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_spend_reference_script(
         self,
@@ -2361,7 +2381,6 @@ class TestReferenceUTxO:
         # TODO: check reference script in db-sync (the `tx_out_spend`)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.ALLEGRA,
@@ -2404,6 +2423,7 @@ class TestNested:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("type_top", ("all", "any"))
     @pytest.mark.parametrize("type_nested", ("all", "any"))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_nested_script(
         self,
@@ -2506,6 +2526,7 @@ class TestNested:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_nested_optional_all(
         self,
@@ -2589,6 +2610,7 @@ class TestNested:
     @pytest.mark.parametrize(
         "scenario", ("all1", "all2", "all3", "all4", "all5", "all6", "any1", "any2", "any3", "any4")
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_invalid(  # noqa: C901
         self,
@@ -2791,7 +2813,6 @@ class TestNested:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestCompatibility:
     """Tests for checking compatibility with previous Tx eras."""
@@ -2828,6 +2849,7 @@ class TestCompatibility:
         reason="runs only with Shelley TX",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.testnets
     def test_script_v2(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2891,6 +2913,7 @@ class TestCompatibility:
         reason="runs only with Shelley TX",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.testnets
     def test_auxiliary_scripts(
         self,
         cluster: clusterlib.ClusterLib,
