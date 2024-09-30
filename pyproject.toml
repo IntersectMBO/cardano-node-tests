@@ -136,4 +136,5 @@ markers = [
     "upgrade: test(s) for upgrade testing",
     "plutus: test(s) for plutus",
     "disabled: temporarily disabled test(s)",
+    "noop: placeholder marker",
 ]
