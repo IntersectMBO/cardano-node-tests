@@ -21,7 +21,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUSV2_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -63,6 +62,7 @@ class TestCollateralOutput:
         (True, False),
         ids=("using_total_collateral", "without_total_collateral"),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_with_total_return_collateral(
@@ -208,6 +208,7 @@ class TestCollateralOutput:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_with_tokens(

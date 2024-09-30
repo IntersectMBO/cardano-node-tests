@@ -34,7 +34,6 @@ LOGGER = logging.getLogger(__name__)
 ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
-@pytest.mark.smoke
 class TestNegative:
     """Transaction tests that are expected to fail."""
 
@@ -304,6 +303,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_past_ttl(
         self,
@@ -330,6 +330,7 @@ class TestNegative:
         reason="runs only with Allegra+ TX",
     )
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_negative_overflow(
         self,
@@ -381,6 +382,7 @@ class TestNegative:
         reason="runs only with Allegra+ TX",
     )
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_positive_overflow(
         self,
@@ -433,6 +435,7 @@ class TestNegative:
         reason="runs only with Allegra+ TX",
     )
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_too_high(
         self,
@@ -470,6 +473,7 @@ class TestNegative:
     @hypothesis.example(before_value=common.MAX_INT64)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_negative_overflow(
         self,
@@ -516,6 +520,7 @@ class TestNegative:
     @hypothesis.example(before_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_positive_overflow(
         self,
@@ -563,6 +568,7 @@ class TestNegative:
     @hypothesis.example(before_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_too_high(
         self,
@@ -589,6 +595,7 @@ class TestNegative:
         assert slot_no == before_value, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_duplicated_tx(
         self,
@@ -646,6 +653,7 @@ class TestNegative:
         assert "ValueNotConservedUTxO" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_wrong_network_magic(
         self,
@@ -715,6 +723,7 @@ class TestNegative:
         assert "HandshakeError" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_wrong_signing_key(
         self,
@@ -742,6 +751,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_wrong_tx_era(
         self,
@@ -774,6 +784,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_reward_address(
         self,
@@ -798,6 +809,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_utxo_address(
         self,
@@ -824,6 +836,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_invalid_address(
         self,
@@ -846,6 +859,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_to_invalid_address(
         self,
@@ -873,6 +887,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_invalid_length_address(
         self,
@@ -895,6 +910,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_to_invalid_length_address(
         self,
@@ -924,6 +940,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_invalid_chars_address(
         self,
@@ -948,6 +965,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_to_invalid_chars_address(
         self,
@@ -975,6 +993,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_address(
         self,
@@ -997,6 +1016,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_from_invalid_address(
         self,
@@ -1024,6 +1044,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_length_address(
         self,
@@ -1046,6 +1067,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_from_invalid_length_address(
         self,
@@ -1075,6 +1097,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_chars_address(
         self,
@@ -1099,6 +1122,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_from_invalid_chars_address(
         self,
@@ -1127,6 +1151,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_invalid_change_address(
         self,
@@ -1153,6 +1178,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_invalid_chars_change_address(
         self,
@@ -1177,6 +1203,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_send_funds_invalid_length_change_address(
         self,
@@ -1199,6 +1226,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_nonexistent_utxo_ix(
         self,
@@ -1232,6 +1260,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_nonexistent_utxo_hash(
         self,
@@ -1267,6 +1296,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_invalid_length_utxo_hash(
         self,
@@ -1295,6 +1325,7 @@ class TestNegative:
     @common.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_invalid_length_utxo_hash(
         self,
@@ -1326,6 +1357,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_missing_fee(
         self,
@@ -1384,6 +1416,7 @@ class TestNegative:
         VERSIONS.transaction_era != VERSIONS.SHELLEY or VERSIONS.node >= version.parse("8.7.0"),
         reason="runs only with Shelley TX on node < 8.7.0",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_missing_ttl(
         self,
@@ -1430,6 +1463,7 @@ class TestNegative:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_missing_tx_in(
         self,
@@ -1473,6 +1507,7 @@ class TestNegative:
         VERSIONS.transaction_era != VERSIONS.SHELLEY,
         reason="runs only with Shelley TX",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_lower_bound_not_supported(
         self,
@@ -1510,6 +1545,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_missing_tx_in(
         self,
@@ -1553,6 +1589,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_missing_change_address(
         self,
@@ -1595,6 +1632,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_multiple_change_addresses(
         self,

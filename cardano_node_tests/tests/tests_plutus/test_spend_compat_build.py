@@ -19,7 +19,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -55,6 +54,7 @@ class TestCompatibility:
         VERSIONS.transaction_era > VERSIONS.ALONZO,
         reason="doesn't run with Tx era > Alonzo",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_plutusv2_old_tx_era(

@@ -28,7 +28,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.smoke
 class TestBasicTransactions:
     """Test basic transactions - transferring funds, transaction IDs."""
 
@@ -161,6 +160,7 @@ class TestBasicTransactions:
     @pytest.mark.parametrize(
         "src_addr_type", ("shelley", "byron"), ids=("src_shelley", "src_byron")
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transfer_funds(
@@ -222,6 +222,7 @@ class TestBasicTransactions:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_byron_fee_too_small(
         self,
@@ -271,6 +272,7 @@ class TestBasicTransactions:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_build_no_change(
@@ -356,6 +358,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transfer_all_funds(
@@ -426,6 +429,7 @@ class TestBasicTransactions:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_funds_to_valid_address(
@@ -486,6 +490,7 @@ class TestBasicTransactions:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_get_txid(
@@ -541,6 +546,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_extra_signing_keys(
@@ -605,6 +611,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_duplicate_signing_keys(
@@ -669,6 +676,7 @@ class TestBasicTransactions:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("file_type", ("tx_body", "tx"))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_sign_wrong_file(
@@ -738,6 +746,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_no_txout(
@@ -788,6 +797,7 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_missing_tx_out(
         self,
@@ -827,6 +837,7 @@ class TestBasicTransactions:
         reason="doesn't run with Shelley TX on node < 8.7.0",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_missing_ttl(
@@ -888,6 +899,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multiple_same_txins(
@@ -952,6 +964,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_multiple_same_txins(
         self,
@@ -999,8 +1012,9 @@ class TestBasicTransactions:
         reason="doesn't run with TX era < Alonzo",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
-    @pytest.mark.dbsync
+    @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_utxo_with_datum_hash(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1066,8 +1080,9 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @pytest.mark.dbsync
+    @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_far_future_ttl(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1126,6 +1141,7 @@ class TestBasicTransactions:
         ids=("explicit_tx_era", "implicit_tx_era"),
         indirect=True,
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_default_tx_era(
         self,
@@ -1164,7 +1180,6 @@ class TestBasicTransactions:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
-@pytest.mark.smoke
 class TestMultiInOut:
     """Test transactions with multiple txins and/or txouts."""
 
@@ -1285,6 +1300,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_10_transactions(
@@ -1340,6 +1356,7 @@ class TestMultiInOut:
     @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_1_addr(
@@ -1371,6 +1388,7 @@ class TestMultiInOut:
     @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transaction_to_1_addr_from_10_addrs(
@@ -1402,6 +1420,7 @@ class TestMultiInOut:
     @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transaction_to_10_addrs_from_10_addrs(
@@ -1433,6 +1452,7 @@ class TestMultiInOut:
     @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transaction_to_100_addrs_from_50_addrs(
@@ -1461,7 +1481,6 @@ class TestMultiInOut:
         )
 
 
-@pytest.mark.smoke
 class TestIncrementalSigning:
     """Test incremental signing of transactions."""
 
@@ -1498,6 +1517,7 @@ class TestIncrementalSigning:
     @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_incremental_signing(

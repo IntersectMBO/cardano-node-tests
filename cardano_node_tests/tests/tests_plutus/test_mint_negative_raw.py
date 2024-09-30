@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -105,6 +104,7 @@ class TestMintingNegative:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_witness_redeemer_missing_signer(
         self,
@@ -200,8 +200,9 @@ class TestMintingNegative:
         ), str_err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_low_budget(
         self,
         cluster: clusterlib.ClusterLib,
@@ -297,8 +298,9 @@ class TestMintingNegative:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_low_fee(
         self,
         cluster: clusterlib.ClusterLib,
@@ -391,7 +393,6 @@ class TestMintingNegative:
         assert "FeeTooSmallUTxO" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @hypothesis.given(data=st.data())
     @common.hypothesis_settings(100)
     @pytest.mark.parametrize(
@@ -400,6 +401,8 @@ class TestMintingNegative:
         ids=("plutus_v1", "plutus_v2"),
         indirect=True,
     )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_execution_units_above_limit(
         self,
         cluster: clusterlib.ClusterLib,
@@ -516,6 +519,7 @@ class TestMintingNegative:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_time_range_missing_tx_validity(
         self,
@@ -620,8 +624,9 @@ class TestNegativeCollateral:
     """Tests for collaterals that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_minting_with_invalid_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
@@ -720,8 +725,9 @@ class TestNegativeCollateral:
         assert "NoCollateralInputs" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_minting_with_insufficient_collateral(
         self,
         cluster: clusterlib.ClusterLib,

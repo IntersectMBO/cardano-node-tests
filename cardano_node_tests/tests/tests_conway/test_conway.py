@@ -19,11 +19,11 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.mark.smoke
 class TestConway:
     """General tests for Conway era."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
         """Check that the `create-genesis-key-delegation-certificate` command is not available."""

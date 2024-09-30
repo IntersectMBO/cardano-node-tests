@@ -24,7 +24,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
     common.SKIPIF_PLUTUS_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -57,6 +56,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_wrong_script(
@@ -112,6 +112,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_no_script(
@@ -165,6 +166,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_w_tokens(
@@ -235,6 +237,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_same_collateral_txin(
@@ -308,6 +311,7 @@ class TestNegative:
         ),
     )
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_invalid_guessing_game(
@@ -378,6 +382,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_two_scripts_spending_one_fail(
         self,
@@ -649,6 +654,7 @@ class TestNegativeRedeemer:
     @hypothesis.example(redeemer_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_wrong_value_inside_range(
         self,
@@ -715,6 +721,7 @@ class TestNegativeRedeemer:
     @hypothesis.example(redeemer_value=common.MAX_UINT64 + 1)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_wrong_value_above_range(
         self,
@@ -756,6 +763,7 @@ class TestNegativeRedeemer:
     @hypothesis.example(redeemer_value=MIN_INT_VAL - 1)
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_wrong_value_bellow_range(
         self,
@@ -796,6 +804,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_wrong_type(
         self,
@@ -853,6 +862,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=100)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_too_big(
         self,
@@ -913,6 +923,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_json_schema_typed_int_bytes_declared(
         self,
@@ -973,6 +984,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_json_schema_untyped_int_bytes_declared(
         self,
@@ -1033,6 +1045,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_json_schema_typed_bytes_int_declared(
         self,
@@ -1094,6 +1107,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_json_schema_untyped_bytes_int_declared(
         self,
@@ -1155,6 +1169,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.text())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_invalid_json(
         self,
@@ -1212,6 +1227,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_json_schema_typed_invalid_type(
         self,
@@ -1274,6 +1290,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_type=st.text())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_json_schema_untyped_invalid_type(
         self,

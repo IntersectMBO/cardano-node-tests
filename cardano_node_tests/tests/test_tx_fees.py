@@ -38,7 +38,6 @@ else:
     TO_10_FROM_10_PARAMS = [(1, 309_557), (100, 309_997), (11_000, 310_437), (100_000, 311_317)]
 
 
-@pytest.mark.smoke
 class TestFee:
     """General fees tests."""
 
@@ -72,6 +71,7 @@ class TestFee:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(fee=st.integers(max_value=-1))
     @common.hypothesis_settings()
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_negative_fee(
         self,
@@ -103,6 +103,7 @@ class TestFee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fee_change", (0, 1.1, 1.5, 2))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_smaller_fee(
         self,
@@ -146,6 +147,7 @@ class TestFee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fee_add", (0, 1_000, 100_000, 1_000_000))
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_expected_or_higher_fee(
         self,
@@ -192,7 +194,6 @@ class TestFee:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
 
-@pytest.mark.smoke
 class TestExpectedFees:
     """Test expected fees."""
 
@@ -319,6 +320,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", [(1, 197_753), (3, 234_009), (5, 270_265), (10, 340_000)])
+    @pytest.mark.smoke
     def test_pool_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -371,6 +373,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", POOL_DEREG_PARAMS)
+    @pytest.mark.smoke
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -435,6 +438,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 290_000)])
+    @pytest.mark.smoke
     def test_addr_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -475,6 +479,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 290_000)])
+    @pytest.mark.smoke
     def test_addr_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -517,6 +522,7 @@ class TestExpectedFees:
     @pytest.mark.parametrize(
         "amount_expected", [(1, 176_677), (100, 176_721), (11_000, 176_765), (100_000, 176_853)]
     )
+    @pytest.mark.smoke
     def test_transaction_to_1_addr_from_1_addr_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -537,6 +543,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount_expected", TO_10_FROM_1_PARAMS)
+    @pytest.mark.smoke
     def test_transaction_to_10_addrs_from_1_addr_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -557,6 +564,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount_expected", TO_1_FROM_10_PARAMS)
+    @pytest.mark.smoke
     def test_transaction_to_1_addr_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -577,6 +585,7 @@ class TestExpectedFees:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("amount_expected", TO_10_FROM_10_PARAMS)
+    @pytest.mark.smoke
     def test_transaction_to_10_addrs_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
@@ -600,6 +609,7 @@ class TestExpectedFees:
         VERSIONS.node < version.parse("8.7.0"), reason="Doesn't run on node < 8.7.0"
     )
     @pytest.mark.parametrize("amount_expected", TO_FROM_100_PARAMS)
+    @pytest.mark.smoke
     def test_transaction_to_100_addrs_from_100_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,

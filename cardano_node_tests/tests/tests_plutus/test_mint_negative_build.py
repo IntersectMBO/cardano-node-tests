@@ -27,7 +27,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
     common.SKIPIF_BUILD_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -88,7 +87,6 @@ class TestBuildMintingNegative:
         return mint_utxos, collateral_utxos, payment_addrs
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @pytest.mark.parametrize(
         "plutus_version",
         (
@@ -98,6 +96,8 @@ class TestBuildMintingNegative:
         ids=("plutus_v1", "plutus_v3"),
     )
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_witness_redeemer_missing_signer(
         self,
         cluster: clusterlib.ClusterLib,
@@ -195,6 +195,7 @@ class TestBuildMintingNegative:
         ), str_err
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_redeemer_with_simple_minting_script(
         self,
@@ -294,6 +295,7 @@ class TestBuildMintingNegative:
         )
     )
     @common.hypothesis_settings(max_examples=300)
+    @pytest.mark.smoke
     def test_asset_name_too_long(
         self,
         cluster: clusterlib.ClusterLib,
@@ -373,6 +375,7 @@ class TestBuildMintingNegative:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_time_range_missing_tx_validity(
         self,

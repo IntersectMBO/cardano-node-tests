@@ -18,7 +18,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -54,6 +53,7 @@ class TestCompatibility:
         VERSIONS.transaction_era > VERSIONS.ALONZO,
         reason="doesn't run with Tx era > Alonzo",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_plutusv2_old_tx_era(
@@ -107,6 +107,7 @@ class TestCompatibility:
         VERSIONS.transaction_era >= VERSIONS.ALONZO,
         reason="runs only with Tx era < Alonzo",
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_plutusv1_old_tx_era(

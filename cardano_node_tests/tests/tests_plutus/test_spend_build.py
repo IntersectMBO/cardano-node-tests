@@ -25,7 +25,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     common.SKIPIF_BUILD_UNUSABLE,
     common.SKIPIF_PLUTUS_UNUSABLE,
-    pytest.mark.smoke,
     pytest.mark.plutus,
 ]
 
@@ -82,6 +81,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_txout_locking(
@@ -150,6 +150,7 @@ class TestBuildLocking:
         reason="cannot find `create-script-context` on the PATH",
     )
     @common.SKIPIF_MISMATCHED_ERAS
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_context_equivalence(
@@ -265,6 +266,7 @@ class TestBuildLocking:
         ("typed_json", "typed_cbor", "untyped_value", "untyped_json", "untyped_cbor"),
     )
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_guessing_game(
@@ -377,6 +379,7 @@ class TestBuildLocking:
             pytest.param("plutus_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
         ),
     )
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_two_scripts_spending(
@@ -638,6 +641,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_always_fails(
         self,
@@ -695,6 +699,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     def test_script_invalid(
         self,
@@ -772,6 +777,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_txout_token_locking(
@@ -850,6 +856,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_partial_spending(
@@ -974,6 +981,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_is_txin(
