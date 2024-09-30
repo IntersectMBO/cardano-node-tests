@@ -154,6 +154,9 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @SKIPIF_HF_SHORTCUT
+    # It takes long time to setup the cluster instance (when starting from Byron).
+    # We mark the tests as "long" and set the highest priority, so the setup is done at the
+    # beginning of the testrun, instead of needing to respin a cluster that is already running.
     @pytest.mark.order(5)
     @pytest.mark.long
     def test_expired_kes(

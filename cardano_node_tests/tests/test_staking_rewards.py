@@ -252,17 +252,17 @@ def _get_rew_type_for_cred_hash(key_hash: str, rec: tp.Dict[str, tp.List[dict]])
     return rew_types
 
 
-@pytest.mark.order(6)
-@pytest.mark.long
 class TestRewards:
     """Tests for checking expected rewards."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @pytest.mark.skipif(
         cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
         reason="supposed to run on testnet",
     )
+    @pytest.mark.order(6)
+    @pytest.mark.long
+    @pytest.mark.testnets
     def test_reward_simple(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -314,6 +314,8 @@ class TestRewards:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     @pytest.mark.dbsync
     def test_reward_amount(  # noqa: C901
         self,
@@ -621,6 +623,8 @@ class TestRewards:
             )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     @pytest.mark.needs_dbsync
     def test_reward_addr_delegation(  # noqa: C901
         self,
@@ -1017,6 +1021,8 @@ class TestRewards:
                 assert rtypes_set == {"leader"}
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     def test_decreasing_reward_transferred_funds(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1123,11 +1129,13 @@ class TestRewards:
         assert rewards_rec[-1] < rewards_rec[-2] // 3, "Rewards are not decreasing"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.needs_dbsync
     @pytest.mark.skipif(
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="needs Allegra+ TX to run",
     )
+    @pytest.mark.order(6)
+    @pytest.mark.long
+    @pytest.mark.needs_dbsync
     def test_2_pools_same_reward_addr(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -1378,6 +1386,8 @@ class TestRewards:
                 assert not rtypes
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(6)
+    @pytest.mark.long
     @pytest.mark.dbsync
     def test_redelegation(  # noqa: C901
         self,

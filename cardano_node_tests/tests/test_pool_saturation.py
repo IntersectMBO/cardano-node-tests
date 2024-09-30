@@ -208,10 +208,10 @@ def _check_pool_records(pool_records: tp.Dict[int, PoolRecord]) -> None:
         )
 
 
-@pytest.mark.order(5)
-@pytest.mark.long
 class TestPoolSaturation:
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(5)
+    @pytest.mark.long
     def test_oversaturated(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,

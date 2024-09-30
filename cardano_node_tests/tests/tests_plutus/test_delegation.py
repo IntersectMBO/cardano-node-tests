@@ -649,7 +649,6 @@ class TestRegisterAddr:
 
 # Don't run these tests on testnets as a stake address corresponding to the Plutus script
 # might be already in use.
-@pytest.mark.order(8)
 @common.SKIPIF_BUILD_UNUSABLE
 @common.PARAM_PLUTUS_VERSION
 @common.PARAM_USE_BUILD_CMD
@@ -660,6 +659,8 @@ class TestDelegateAddr:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @pytest.mark.order(8)
+    @pytest.mark.long
     @pytest.mark.dbsync
     def test_delegate_deregister(  # noqa: C901
         self,
@@ -869,6 +870,8 @@ class TestDelegateAddr:
                 raise
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(8)
+    @pytest.mark.long
     @pytest.mark.dbsync
     def test_register_delegate_deregister(
         self,
