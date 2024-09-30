@@ -25,7 +25,7 @@ class TestConway:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
-    def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
+    def test_genesis_cert_not_available(self, cluster: clusterlib.ClusterLib):
         """Check that the `create-genesis-key-delegation-certificate` command is not available."""
         common.get_test_id(cluster)
 
