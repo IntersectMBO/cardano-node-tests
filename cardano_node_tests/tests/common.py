@@ -9,6 +9,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -17,6 +18,11 @@ LOGGER = logging.getLogger(__name__)
 
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
+
+ORDER5_BYRON = (
+    pytest.mark.order(5) if "_fast" not in configuration.SCRIPTS_DIRNAME else pytest.mark.noop
+)
+LONG_BYRON = pytest.mark.long if "_fast" not in configuration.SCRIPTS_DIRNAME else pytest.mark.noop
 
 
 _BLD_SKIP_REASON = ""
