@@ -77,13 +77,13 @@ def pool_users(
     return created_users
 
 
-@pytest.mark.testnets
 class TestBuildLocking:
     """Tests for Tx output locking using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -150,6 +150,7 @@ class TestBuildLocking:
         reason="cannot find `create-script-context` on the PATH",
     )
     @common.SKIPIF_MISMATCHED_ERAS
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_context_equivalence(
         self,
@@ -258,13 +259,14 @@ class TestBuildLocking:
             assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.parametrize("embed_datum", (True, False), ids=("embedded_datum", "datum"))
     @pytest.mark.parametrize(
         "variant",
         ("typed_json", "typed_cbor", "untyped_value", "untyped_json", "untyped_cbor"),
     )
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
@@ -366,7 +368,6 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @pytest.mark.parametrize(
         "plutus_version",
         (
@@ -376,6 +377,8 @@ class TestBuildLocking:
             pytest.param("plutus_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
         ),
     )
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_two_scripts_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -635,6 +638,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
@@ -691,6 +695,7 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
@@ -766,8 +771,9 @@ class TestBuildLocking:
             assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
@@ -843,8 +849,9 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
@@ -966,8 +973,9 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_collateral_is_txin(
         self,
         cluster: clusterlib.ClusterLib,

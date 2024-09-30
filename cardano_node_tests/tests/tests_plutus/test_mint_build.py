@@ -100,10 +100,10 @@ class TestBuildMinting:
         return retval
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_minting_one_token(
         self,
         cluster: clusterlib.ClusterLib,
@@ -241,9 +241,9 @@ class TestBuildMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
     def test_minting_missing_txout(
         self,
         cluster: clusterlib.ClusterLib,
@@ -359,8 +359,8 @@ class TestBuildMinting:
         ids=("plutus_v1", "plutus_v3"),
     )
     @submit_utils.PARAM_SUBMIT_METHOD
-    @pytest.mark.dbsync
     @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
@@ -510,8 +510,6 @@ class TestBuildMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize(
         "plutus_version",
@@ -521,6 +519,8 @@ class TestBuildMinting:
             pytest.param("mix_v3_v1", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
     )
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_two_scripts_minting(
         self,
         cluster: clusterlib.ClusterLib,
@@ -783,9 +783,9 @@ class TestBuildMinting:
         reason="cannot find `create-script-context` on the PATH",
     )
     @common.SKIPIF_MISMATCHED_ERAS
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_minting_context_equivalence(
         self,
         cluster: clusterlib.ClusterLib,
@@ -968,8 +968,6 @@ class TestBuildMinting:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync
-    @pytest.mark.testnets
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize(
         "key",
@@ -986,6 +984,8 @@ class TestBuildMinting:
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1256,13 +1256,13 @@ class TestBuildMinting:
             ), f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
 
 
-@pytest.mark.testnets
 class TestCollateralOutput:
     """Tests for collateral output."""
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS3_VERSION
+    @pytest.mark.testnets
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,

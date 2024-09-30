@@ -51,11 +51,11 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestDatum:
     """Tests for datum."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_datum_on_key_credential_address(
         self,
@@ -94,7 +94,6 @@ class TestDatum:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
-@pytest.mark.testnets
 class TestNegativeDatum:
     """Tests for Tx output locking using Plutus smart contracts with wrong datum."""
 
@@ -134,6 +133,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
@@ -216,6 +216,7 @@ class TestNegativeDatum:
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
+    @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,

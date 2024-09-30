@@ -48,7 +48,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestReferenceScripts:
     """Tests for Tx output locking using Plutus smart contracts with reference scripts."""
 
@@ -56,6 +55,7 @@ class TestReferenceScripts:
     @pytest.mark.parametrize(
         "use_same_script", (True, False), ids=("same_script", "multiple_script")
     )
+    @pytest.mark.testnets
     def test_reference_multiple_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -215,6 +215,7 @@ class TestReferenceScripts:
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_reference_same_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -356,6 +357,7 @@ class TestReferenceScripts:
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_mix_reference_attached_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -504,6 +506,7 @@ class TestReferenceScripts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
     @pytest.mark.parametrize("address_type", ("shelley", "byron"))
+    @pytest.mark.testnets
     def test_spend_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -562,6 +565,7 @@ class TestReferenceScripts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @pytest.mark.testnets
     def test_spend_regular_utxo_and_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -636,6 +640,7 @@ class TestReferenceScripts:
         assert utxo_balance == amount, f"Incorrect balance for destination UTxO `{new_utxo}`"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_reference_script_byron_address(
         self,
         cluster: clusterlib.ClusterLib,
@@ -668,11 +673,11 @@ class TestReferenceScripts:
         assert reference_utxo.reference_script, "Reference script is missing"
 
 
-@pytest.mark.testnets
 class TestNegativeReferenceScripts:
     """Tests for Tx output with reference scripts that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_not_a_script(
         self,
         cluster: clusterlib.ClusterLib,
@@ -715,6 +720,7 @@ class TestNegativeReferenceScripts:
         assert "Syntax error in script" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_two_scripts_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
@@ -871,6 +877,7 @@ class TestNegativeReferenceScripts:
             issues.ledger_3731.finish_test()
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_v1_reference_script(
         self,
@@ -964,6 +971,7 @@ class TestNegativeReferenceScripts:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_v1_attached_v2_reference(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1113,6 +1121,7 @@ class TestNegativeReferenceScripts:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_byron_reference_script(
         self,

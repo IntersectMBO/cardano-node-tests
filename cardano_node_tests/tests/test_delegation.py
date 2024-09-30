@@ -396,7 +396,6 @@ class TestDelegateAddr:
     @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
-    @pytest.mark.testnets
     def test_deregister_delegated(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -563,7 +562,6 @@ class TestDelegateAddr:
     @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
-    @pytest.mark.testnets
     def test_undelegate(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -850,12 +848,12 @@ class TestDelegateAddr:
             assert pool_id == tx_db_deleg.stake_delegation[0].pool_id
 
 
-@pytest.mark.testnets
 @pytest.mark.smoke
 class TestNegative:
     """Tests that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_delegation_cert_with_wrong_key(
         self,
         cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
@@ -882,6 +880,7 @@ class TestNegative:
         ), err_msg
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_delegate_addr_with_wrong_key(
         self,
         cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
@@ -943,6 +942,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     def test_delegate_unknown_addr(
         self,
         cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
@@ -1001,6 +1001,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     def test_delegate_deregistered_addr(
         self,
         cluster_and_pool: tp.Tuple[clusterlib.ClusterLib, str],
@@ -1104,6 +1105,7 @@ class TestNegative:
         ), err_msg
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_delegatee_not_registered(
         self,
         cluster: clusterlib.ClusterLib,

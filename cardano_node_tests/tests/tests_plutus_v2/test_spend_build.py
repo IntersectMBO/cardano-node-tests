@@ -50,7 +50,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestBuildLocking:
     """Tests for Tx output locking using Plutus V2 functionalities and `transaction build`."""
 
@@ -59,6 +58,7 @@ class TestBuildLocking:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_txout_locking(
         self,
@@ -213,6 +213,7 @@ class TestBuildLocking:
         (True, False),
         ids=("with_reference_script", "without_reference_script"),
     )
+    @pytest.mark.testnets
     def test_min_required_utxo(
         self,
         cluster: clusterlib.ClusterLib,

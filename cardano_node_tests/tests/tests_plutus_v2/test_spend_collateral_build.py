@@ -50,7 +50,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestCollateralOutput:
     """Tests for Tx output locking using Plutus with collateral output."""
 
@@ -131,6 +130,7 @@ class TestCollateralOutput:
         (True, False),
         ids=("using_total_collateral", "without_total_collateral"),
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_with_total_return_collateral(
         self,
@@ -232,6 +232,7 @@ class TestCollateralOutput:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_with_tokens(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]

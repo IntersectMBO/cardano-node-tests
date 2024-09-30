@@ -50,12 +50,12 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestReadonlyReferenceInputs:
     """Tests for Tx with readonly reference inputs."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("reference_input_scenario", ("single", "duplicated"))
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_use_reference_input(
         self,
@@ -153,6 +153,7 @@ class TestReadonlyReferenceInputs:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_same_input_as_reference_input(
         self,
@@ -254,6 +255,7 @@ class TestReadonlyReferenceInputs:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_reference_input_non_plutus(
         self,
@@ -313,11 +315,11 @@ class TestReadonlyReferenceInputs:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
-@pytest.mark.testnets
 class TestNegativeReadonlyReferenceInputs:
     """Tests for Tx with readonly reference inputs that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_reference_spent_output(
         self,
@@ -423,6 +425,7 @@ class TestNegativeReadonlyReferenceInputs:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_v1_script_with_reference_input(
         self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
@@ -514,6 +517,7 @@ class TestNegativeReadonlyReferenceInputs:
                 raise
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_reference_input_without_spend_anything(
         self,
         cluster: clusterlib.ClusterLib,

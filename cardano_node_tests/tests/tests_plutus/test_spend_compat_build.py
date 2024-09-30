@@ -47,7 +47,6 @@ def payment_addrs(
     return addrs
 
 
-@pytest.mark.testnets
 class TestCompatibility:
     """Tests for checking compatibility with previous Tx eras."""
 
@@ -56,6 +55,7 @@ class TestCompatibility:
         VERSIONS.transaction_era > VERSIONS.ALONZO,
         reason="doesn't run with Tx era > Alonzo",
     )
+    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_plutusv2_old_tx_era(
         self,

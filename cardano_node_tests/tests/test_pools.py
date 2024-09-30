@@ -1916,7 +1916,6 @@ class TestPoolCost:
 
 
 @pytest.mark.smoke
-@pytest.mark.testnets
 class TestNegative:
     """Stake pool tests that are expected to fail."""
 
@@ -1985,6 +1984,7 @@ class TestNegative:
         return pool_name, pool_metadata_hash, node_vrf, node_cold
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_pool_registration_cert_wrong_vrf(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2010,6 +2010,7 @@ class TestNegative:
         assert "Expected: VrfVerificationKey_PraosVRF" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_pool_registration_cert_wrong_cold(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2035,6 +2036,7 @@ class TestNegative:
         assert "Expected: StakePoolVerificationKey" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_pool_registration_cert_wrong_stake(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2060,6 +2062,7 @@ class TestNegative:
         assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_pool_registration_missing_cold_skey(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2099,6 +2102,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_pool_registration_missing_payment_skey(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2137,6 +2141,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.testnets
     def test_pool_deregistration_not_registered(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2186,6 +2191,7 @@ class TestNegative:
         assert "StakePoolNotRegisteredOnKeyPOOL" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_stake_pool_metadata_no_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2210,6 +2216,7 @@ class TestNegative:
         assert 'key "name" not found' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_stake_pool_metadata_no_description(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2234,6 +2241,7 @@ class TestNegative:
         assert 'key "description" not found' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_stake_pool_metadata_no_ticker(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2258,6 +2266,7 @@ class TestNegative:
         assert 'key "ticker" not found' in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_stake_pool_metadata_no_homepage(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2284,6 +2293,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_name=st.text(min_size=51))
     @common.hypothesis_settings()
+    @pytest.mark.testnets
     def test_stake_pool_metadata_long_name(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2316,6 +2326,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_description=st.text(min_size=256, max_size=1000))
     @common.hypothesis_settings()
+    @pytest.mark.testnets
     def test_stake_pool_metadata_long_description(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2348,6 +2359,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_ticker=st.text())
     @common.hypothesis_settings()
+    @pytest.mark.testnets
     def test_stake_pool_metadata_long_ticker(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2382,6 +2394,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_homepage=st.text(min_size=425, max_size=1000))
     @common.hypothesis_settings()
+    @pytest.mark.testnets
     def test_stake_pool_metadata_long_homepage(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2412,6 +2425,7 @@ class TestNegative:
         metadata_url=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
     )
     @common.hypothesis_settings()
+    @pytest.mark.testnets
     def test_stake_pool_long_metadata_url(
         self,
         cluster: clusterlib.ClusterLib,

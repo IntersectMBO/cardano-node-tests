@@ -15,7 +15,6 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.testnets
 class TestMempool:
     """Tests for transactions in mempool."""
 
@@ -43,6 +42,7 @@ class TestMempool:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
     def test_query_mempool_txin(
         self,
         cluster_singleton: clusterlib.ClusterLib,
