@@ -1,5 +1,5 @@
 #! /usr/bin/env -S nix develop --accept-flake-config .#base -c bash
-# shellcheck shell=bash
+# shellcheck shell=bash disable=SC2317
 
 set -xeuo pipefail
 
@@ -139,8 +139,39 @@ _cleanup() {
   stop_postgres || true
 }
 
+_cleanup_testnet() {
+  [ -z "${BOOTSTRAP_DIR:-""}" ] && return
+
+  _PYTEST_CURRENT="$(find "$WORKDIR" -type l -name pytest-current)"
+  [ -z "$_PYTEST_CURRENT" ] && return
+  _PYTEST_CURRENT="$(readlink -m "$_PYTEST_CURRENT")"
+  export _PYTEST_CURRENT
+
+  echo "::endgroup::" # end group for the group that was interrupted
+  echo "::group::Testnet cleanup"
+
+  # shellcheck disable=SC2016
+  nix develop --accept-flake-config .#venv --command bash -c '
+    . .github/setup_venv.sh
+    export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
+    export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
+    cleanup_dir="${_PYTEST_CURRENT}/../cleanup-${_PYTEST_CURRENT##*/}-script"
+    mkdir "$cleanup_dir"
+    cd "$cleanup_dir"
+    testnet-cleanup -a "$_PYTEST_CURRENT"
+  '
+
+  echo "::endgroup::"
+}
+
 # cleanup on Ctrl+C
-trap 'set +e; _cleanup; exit 130' SIGINT
+_interrupted() {
+  # Do testnet cleanup only on interrupted testrun. When not interrupted,
+  # cleanup is done as part of a testrun.
+  _cleanup_testnet
+  _cleanup
+}
+trap 'set +e; _interrupted; exit 130' SIGINT
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
@@ -156,7 +187,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
-  . .github/setup_venv.sh
+  . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup"
 
   echo "::group::Pytest run"
