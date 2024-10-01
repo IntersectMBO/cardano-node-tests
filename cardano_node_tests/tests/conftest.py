@@ -30,6 +30,7 @@ from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+INTERRUPTED_NAME = ".session_interrupted"
 
 # make sure there's enough time to stop all cluster instances at the end of session
 workermanage.NodeManager.EXIT_TIMEOUT = 30
@@ -183,6 +184,13 @@ def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa:
         _skip_disabled(item)
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_keyboard_interrupt() -> None:
+    """Create a status file indicating that the test run was interrupted."""
+    session_basetemp = temptools.get_basetemp()
+    (session_basetemp / INTERRUPTED_NAME).touch()
+
+
 @pytest.fixture(scope="session")
 def init_pytest_temp_dirs(tmp_path_factory: TempPathFactory) -> None:
     """Init `PytestTempDirs`."""
@@ -262,6 +270,7 @@ def testenv_setup_teardown(
 ) -> tp.Generator[None, None, None]:
     """Setup and teardown test environment."""
     pytest_root_tmp = temptools.get_pytest_root_tmp()
+    session_basetemp = temptools.get_basetemp()
     running_session_glob = ".running_session"
 
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
@@ -269,19 +278,27 @@ def testenv_setup_teardown(
         if not list(pytest_root_tmp.glob(f"{running_session_glob}_*")):
             _save_env_for_allure(request.config)
 
+        # Remove dangling files from previous interrupted test run
+        (session_basetemp / INTERRUPTED_NAME).unlink(missing_ok=True)
+
+        # Create file indicating that testing session on this worker is running
         (pytest_root_tmp / f"{running_session_glob}_{worker_id}").touch()
 
     yield
 
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
+        # Remove file indicating that testing session on this worker is running
+        (pytest_root_tmp / f"{running_session_glob}_{worker_id}").unlink()
+
         # Save CLI coverage to dir specified by `--cli-coverage-dir`
         cluster_manager_obj = cluster_management.ClusterManager(
             worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
 
-        # Remove file indicating that testing session on this worker is running
-        (pytest_root_tmp / f"{running_session_glob}_{worker_id}").unlink()
+        # Don't do any cleanup on keyboard interrupt
+        if (session_basetemp / INTERRUPTED_NAME).exists():
+            return None
 
         # Perform cleanup if this is the last running pytest worker
         if not list(pytest_root_tmp.glob(f"{running_session_glob}_*")):
