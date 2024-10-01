@@ -60,6 +60,11 @@ if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":
     # We sometimes see this error on CI. It seems time is not synced properly on GitHub runners.
     ERRORS_IGNORED.append("TraceBlockFromFuture")
 
+if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+    # We can get these errors on testnets when some clients are old, or are using wrong
+    # network magic.
+    ERRORS_IGNORED.append("TrHandshakeClientError")
+
 # Errors that are ignored if there are expected messages in the log file before the error
 ERRORS_LOOK_BACK_LINES = 10
 ERRORS_LOOK_BACK_MAP = {
