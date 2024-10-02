@@ -54,7 +54,13 @@ class ClusterType:
 
     LOCAL: tp.Final[str] = "local"
     TESTNET: tp.Final[str] = "testnet"
-    test_addr_records: tp.ClassVar[tp.Tuple[str, ...]] = ("user1",)
+    test_addr_records: tp.ClassVar[tp.Tuple[str, ...]] = (
+        "user1",
+        "user2",
+        "user3",
+        "user4",
+        "user5",
+    )
 
     NODES: tp.ClassVar[tp.Set[str]] = set()
 
@@ -129,7 +135,7 @@ class LocalCluster(ClusterType):
         cluster_env = get_cluster_env()
         instance_num = cluster_env.instance_num
 
-        # create new addresses
+        # Create new addresses
         new_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {}
         for addr_name in self.test_addr_records:
             addr_name_instance = f"{addr_name}_ci{instance_num}"
@@ -141,7 +147,7 @@ class LocalCluster(ClusterType):
                 "payment": payment,
             }
 
-        # create records for existing addresses
+        # Create records for existing addresses
         faucet_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {"faucet": {"payment": None}}
         byron_dir = cluster_env.state_dir / "byron"
         shelley_dir = cluster_env.state_dir / "shelley"
@@ -162,14 +168,15 @@ class LocalCluster(ClusterType):
             msg = "Faucet address file doesn't exist."
             raise RuntimeError(msg)
 
-        # fund new addresses from faucet address
+        # Fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
         to_fund = [d["payment"] for d in new_addrs_data.values()]
+        amount_per_address = 100_000_000_000_000 // len(self.test_addr_records)
         faucet.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
             faucet_data=faucet_addrs_data["faucet"],
-            amount=100_000_000_000_000,
+            amount=amount_per_address,
             destination_dir=destination_dir,
             force=True,
         )
@@ -238,19 +245,43 @@ class TestnetCluster(ClusterType):
         destination_dir: clusterlib.FileType = ".",
     ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
+        # Store record of the original faucet address
         shelley_dir = get_cluster_env().state_dir / "shelley"
+        faucet_rec = clusterlib.AddressRecord(
+            address=clusterlib.read_address_from_file(shelley_dir / "faucet.addr"),
+            vkey_file=shelley_dir / "faucet.vkey",
+            skey_file=shelley_dir / "faucet.skey",
+        )
+        faucet_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {
+            self.test_addr_records[1]: {"payment": faucet_rec}
+        }
 
-        addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {}
-        for addr_name in self.test_addr_records:
-            faucet_addr = {
-                "payment": clusterlib.AddressRecord(
-                    address=clusterlib.read_address_from_file(shelley_dir / "faucet.addr"),
-                    vkey_file=shelley_dir / "faucet.vkey",
-                    skey_file=shelley_dir / "faucet.skey",
-                )
+        # Create new addresses
+        new_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {}
+        for addr_name in self.test_addr_records[1:]:
+            payment = cluster_obj.g_address.gen_payment_addr_and_keys(
+                name=addr_name,
+                destination_dir=destination_dir,
+            )
+            new_addrs_data[addr_name] = {
+                "payment": payment,
             }
-            addrs_data[addr_name] = faucet_addr
 
+        # Fund new addresses from faucet address
+        LOGGER.debug("Funding created addresses.")
+        to_fund = [d["payment"] for d in new_addrs_data.values()]
+        faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_rec.address)
+        amount_per_address = faucet_balance // len(self.test_addr_records)
+        faucet.fund_from_faucet(
+            *to_fund,
+            cluster_obj=cluster_obj,
+            faucet_data=faucet_addrs_data[self.test_addr_records[1]],
+            amount=amount_per_address,
+            destination_dir=destination_dir,
+            force=True,
+        )
+
+        addrs_data = {**new_addrs_data, **faucet_addrs_data}
         return addrs_data
 
 

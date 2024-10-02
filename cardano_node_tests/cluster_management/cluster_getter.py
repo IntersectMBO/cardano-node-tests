@@ -256,8 +256,12 @@ class ClusterGetter:
             fp_out.write(cluster_instance_id)
         self.log(f"c{self.cluster_instance_num}: started cluster instance '{cluster_instance_id}'")
 
-        # Create dir for faucet addresses data
-        addr_data_dir = state_dir / common.ADDRS_DATA_DIRNAME
+        # Create dir for faucet addresses data among tests artifacts, so it can be accessed
+        # during testnet cleanup.
+        addr_data_dir = (
+            temptools.get_pytest_worker_tmp()
+            / f"{common.ADDRS_DATA_DIRNAME}_ci{self.cluster_instance_num}"
+        )
         addr_data_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup faucet addresses
