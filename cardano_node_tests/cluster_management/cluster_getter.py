@@ -12,7 +12,6 @@ import typing as tp
 
 import pytest
 from _pytest.config import Config
-from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import common
 from cardano_node_tests.cluster_management import resources
@@ -130,7 +129,7 @@ class ClusterGetter:
 
     def _create_startup_files_dir(self, instance_num: int) -> pl.Path:
         _instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
-        rand_str = clusterlib.get_rand_str(8)
+        rand_str = helpers.get_rand_str(8)
         startup_files_dir = _instance_dir / "startup_files" / rand_str
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
@@ -256,8 +255,12 @@ class ClusterGetter:
             fp_out.write(cluster_instance_id)
         self.log(f"c{self.cluster_instance_num}: started cluster instance '{cluster_instance_id}'")
 
-        # Create dir for faucet addresses data
-        addr_data_dir = state_dir / common.ADDRS_DATA_DIRNAME
+        # Create dir for faucet addresses data among tests artifacts, so it can be accessed
+        # during testnet cleanup.
+        addr_data_dir = (
+            temptools.get_pytest_worker_tmp() / f"{common.ADDRS_DATA_DIRNAME}_"
+            f"ci{self.cluster_instance_num}_{cluster_instance_id}"
+        )
         addr_data_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup faucet addresses

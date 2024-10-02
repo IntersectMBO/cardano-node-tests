@@ -152,7 +152,7 @@ def delegate_stake_addr(
         clusterlib_utils.fund_from_faucet(
             pool_user.payment,
             cluster_obj=cluster_obj,
-            faucet_data=addrs_data["user1"],
+            all_faucets=addrs_data,
             amount=amount,
         )
 

@@ -113,7 +113,7 @@ def create_vote_stake(
     clusterlib_utils.fund_from_faucet(
         *pool_users,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        faucet_data=cluster_manager.cache.addrs_data["faucet"],
         amount=500_000_000_000,
         destination_dir=destination_dir,
     )

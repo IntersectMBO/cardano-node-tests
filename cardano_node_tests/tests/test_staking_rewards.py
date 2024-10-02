@@ -369,7 +369,7 @@ class TestRewards:
         clusterlib_utils.fund_from_faucet(
             *payment_addr_recs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
@@ -675,7 +675,7 @@ class TestRewards:
         clusterlib_utils.fund_from_faucet(
             pool_owner,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=900_000_000,
             force=True,
         )
@@ -1081,7 +1081,7 @@ class TestRewards:
         clusterlib_utils.fund_from_faucet(
             dst_addr_record,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         # transfer all funds from payment address back to faucet, so no funds are staked
@@ -1200,7 +1200,7 @@ class TestRewards:
         clusterlib_utils.fund_from_faucet(
             pool2_owner,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=900_000_000,
             force=True,
         )

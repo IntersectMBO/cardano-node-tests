@@ -80,7 +80,7 @@ def pool_users(
     clusterlib_utils.fund_from_faucet(
         created_users[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
 
     return created_users
@@ -127,7 +127,7 @@ def pool_users_cluster_and_pool(
     clusterlib_utils.fund_from_faucet(
         created_users[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
 
     return created_users
@@ -302,7 +302,7 @@ class TestDelegateAddr:
         clusterlib_utils.fund_from_faucet(
             *pool_users,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         # Step: Delegate the stake addresses to 2 different pools
@@ -431,7 +431,7 @@ class TestDelegateAddr:
         clusterlib_utils.fund_from_faucet(
             *payment_addr_recs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)

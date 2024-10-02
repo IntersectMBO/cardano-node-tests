@@ -143,7 +143,7 @@ def get_registered_pool_user(
     clusterlib_utils.fund_from_faucet(
         pool_user.payment,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=fund_amount,
     )
 

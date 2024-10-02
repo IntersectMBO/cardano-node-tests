@@ -210,7 +210,7 @@ class TestCollectData:
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -404,7 +404,7 @@ class TestDynamicBlockProd:
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
