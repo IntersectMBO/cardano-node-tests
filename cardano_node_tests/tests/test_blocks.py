@@ -390,17 +390,12 @@ class TestDynamicBlockProd:
         """Create new payment addresses."""
         cluster = cluster_singleton
 
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"addr_dyn_prod_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(20)],
+            cluster_obj=cluster,
+        )
 
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"addr_dyn_prod_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(20)],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
