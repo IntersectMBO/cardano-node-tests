@@ -53,7 +53,7 @@ class TestBasicTransactions:
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -81,7 +81,7 @@ class TestBasicTransactions:
         clusterlib_utils.fund_from_faucet(
             *new_byron_addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return new_byron_addrs
 
@@ -104,7 +104,7 @@ class TestBasicTransactions:
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -126,7 +126,7 @@ class TestBasicTransactions:
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -770,7 +770,7 @@ class TestBasicTransactions:
         clusterlib_utils.fund_from_faucet(
             src_record,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=2_000_000,
         )
 
@@ -1207,7 +1207,7 @@ class TestMultiInOut:
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=90_000_000_000,
         )
 
@@ -1508,7 +1508,7 @@ class TestIncrementalSigning:
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         return addrs

@@ -103,7 +103,7 @@ def pool_user(
     clusterlib_utils.fund_from_faucet(
         payment_addr_rec,
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=18_000_000_000,
     )
 

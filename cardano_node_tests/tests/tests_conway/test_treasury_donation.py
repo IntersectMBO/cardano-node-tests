@@ -50,7 +50,7 @@ def payment_addr_treasury(
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster_treasury,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
     return addr
 
@@ -73,7 +73,7 @@ def payment_addr_singleton(
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster_singleton,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
     return addr
 

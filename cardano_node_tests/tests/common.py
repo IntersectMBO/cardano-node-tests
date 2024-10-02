@@ -241,7 +241,7 @@ def detect_fork(
     tx_raw_output = clusterlib_utils.fund_from_faucet(
         payment_rec,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=2_000_000,
     )
     assert tx_raw_output

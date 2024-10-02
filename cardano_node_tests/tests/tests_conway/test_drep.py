@@ -76,7 +76,7 @@ def get_payment_addr(
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
 
     return addr
@@ -104,7 +104,7 @@ def get_pool_user(
     clusterlib_utils.fund_from_faucet(
         pool_user.payment,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
     return pool_user
 
@@ -1876,7 +1876,7 @@ class TestDRepActivity:
         clusterlib_utils.fund_from_faucet(
             *drep_users,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             # Add a lot of funds so no action can be ratified without the new DReps
             amount=10_000_000_000_000,
         )

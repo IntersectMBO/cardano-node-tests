@@ -51,7 +51,7 @@ class TestMetadata:
         clusterlib_utils.fund_from_faucet(
             addr,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         return addr
@@ -607,7 +607,7 @@ class TestMetadata:
         clusterlib_utils.fund_from_faucet(
             src_record,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=2_000_000,
         )
 

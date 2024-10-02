@@ -80,7 +80,7 @@ def pool_users(
     clusterlib_utils.fund_from_faucet(
         *created_users,
         cluster_obj=cluster_pots,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
 
     return created_users
