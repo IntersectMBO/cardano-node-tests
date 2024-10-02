@@ -447,16 +447,8 @@ class TestDynamicBlockProd:
             blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
             return blocks_before
 
-        # Blocks are produced by BFT node in Byron epoch and first Shelley epoch on local cluster
-        # that starts in Byron era.
-        if (
-            cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
-            and not cluster_nodes.get_cluster_type().uses_shortcut
-        ):
-            cluster.wait_for_epoch(epoch_no=2)
-
-        # The network needs to be at least in epoch 1
-        cluster.wait_for_epoch(epoch_no=1)
+        # The network needs to be at least in epoch 2
+        cluster.wait_for_epoch(epoch_no=2)
 
         # Wait for the epoch to be at least half way through and not too close to the end.
         # We want the original pool to have time to forge blocks in this epoch, before it becomes
