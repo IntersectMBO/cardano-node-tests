@@ -235,6 +235,10 @@ class TestHardfork:
         assert rat_gov_state["nextRatifyState"]["ratificationDelayed"], "Ratification not delayed"
         reqc.cip038_07.success()
 
+        assert (
+            rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9
+        ), "Incorrect major version"
+
         # Check enactment
         enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
