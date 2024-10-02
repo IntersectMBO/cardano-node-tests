@@ -1071,7 +1071,7 @@ class TestPParamUpdate:
         # Vote on the "final" action that will be enacted
         reqc.cip037.start(url=helpers.get_vcs_link())
         fin_prop_rec = _propose_pparams_update(
-            name_template=f"{temp_template}_fin_no", proposals=fin_update_proposals
+            name_template=f"{temp_template}_fin", proposals=fin_update_proposals
         )
         _check_proposed_pparams(
             update_proposals=fin_prop_rec.proposals,
