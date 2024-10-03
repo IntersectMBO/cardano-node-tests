@@ -16,9 +16,7 @@ from cardano_clusterlib import clusterlib
 from cardano_clusterlib import txtools as cl_txtools
 
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import submit_utils
-from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.faucet import fund_from_faucet  # noqa: F401 # for compatibility
 
 LOGGER = logging.getLogger(__name__)
@@ -286,43 +284,6 @@ def deregister_stake_address(
     )
 
     return tx_output
-
-
-def fund_from_genesis(
-    *dst_addrs: str,
-    cluster_obj: clusterlib.ClusterLib,
-    amount: int = 2_000_000,
-    tx_name: tp.Optional[str] = None,
-    destination_dir: cl_types.FileType = ".",
-) -> None:
-    """Send `amount` from genesis addr to all `dst_addrs`."""
-    fund_dst = [
-        clusterlib.TxOut(address=d, amount=amount)
-        for d in dst_addrs
-        if cluster_obj.g_query.get_address_balance(d) < amount
-    ]
-    if not fund_dst:
-        return
-
-    with locking.FileLockIfXdist(
-        f"{temptools.get_basetemp()}/{cluster_obj.g_genesis.genesis_utxo_addr}.lock"
-    ):
-        tx_name = tx_name or helpers.get_timestamped_rand_str()
-        tx_name = f"{tx_name}_genesis_funding"
-        fund_tx_files = clusterlib.TxFiles(
-            signing_key_files=[
-                *cluster_obj.g_genesis.genesis_keys.delegate_skeys,
-                cluster_obj.g_genesis.genesis_keys.genesis_utxo_skey,
-            ]
-        )
-
-        cluster_obj.g_transaction.send_funds(
-            src_address=cluster_obj.g_genesis.genesis_utxo_addr,
-            destinations=fund_dst,
-            tx_name=tx_name,
-            tx_files=fund_tx_files,
-            destination_dir=destination_dir,
-        )
 
 
 def create_payment_addr_records(
