@@ -52,7 +52,7 @@ class TestManyUTXOs:
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            faucet_data=cluster_manager.cache.addrs_data["faucet"],
             amount=800_000_000_000,
         )
 
