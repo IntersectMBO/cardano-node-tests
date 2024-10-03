@@ -1300,6 +1300,128 @@ class TestPParamUpdate:
         [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
+    def test_pparam_update2(
+        self,
+        cluster_lock_governance: governance_utils.GovClusterT,
+        pool_user_lg: clusterlib.PoolUser,
+    ):
+        """Test enactment of protocol parameter update."""
+        cluster, governance_data = cluster_lock_governance
+        temp_template = common.get_test_id(cluster)
+        cost_proposal_file = DATA_DIR / "cost_models_pv10.json"
+        is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
+
+        if is_in_bootstrap and not configuration.HAS_CC:
+            pytest.skip("The test doesn't work in bootstrap period without CC.")
+
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+
+        proposals = [
+            clusterlib_utils.UpdateProposal(
+                arg="--cost-model-file",
+                value=str(cost_proposal_file),
+                name="",  # costModels
+            ),
+        ]
+
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        def _propose_pparams_update(
+            name_template: str,
+            proposals: tp.List[clusterlib_utils.UpdateProposal],
+        ) -> conway_common.PParamPropRec:
+            anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
+            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+            return conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=name_template,
+                anchor_url=anchor_url,
+                anchor_data_hash=anchor_data_hash,
+                pool_user=pool_user_lg,
+                proposals=proposals,
+                prev_action_rec=prev_action_rec,
+            )
+
+        # Make sure we have enough time to submit the proposal in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+        proposal_epoch = cluster.g_query.get_epoch()
+
+        # Propose the action
+        fin_prop_rec = _propose_pparams_update(
+            name_template=f"{temp_template}_fin", proposals=proposals
+        )
+        clusterlib_utils.check_updated_params(
+            update_proposals=fin_prop_rec.proposals,
+            protocol_params=fin_prop_rec.future_pparams,
+        )
+
+        cluster.wait_for_epoch(epoch_no=proposal_epoch + 6, padding_seconds=5)
+
+        # Vote & approve the "final" action by CC
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_fin_cc",
+            payment_addr=pool_user_lg.payment,
+            action_txid=fin_prop_rec.action_txid,
+            action_ix=fin_prop_rec.action_ix,
+            approve_cc=True,
+        )
+        fin_approve_epoch = cluster.g_query.get_epoch()
+
+        def _check_state(state: dict):
+            pparams = state.get("curPParams") or state.get("currentPParams") or {}
+            clusterlib_utils.check_updated_params(
+                update_proposals=proposals, protocol_params=pparams
+            )
+
+        # Check ratification
+        rat_epoch = cluster.wait_for_epoch(epoch_no=fin_approve_epoch + 1, padding_seconds=5)
+
+        if rat_epoch == fin_approve_epoch + 1:
+            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            conway_common.save_gov_state(
+                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+            )
+
+            rat_action = governance_utils.lookup_ratified_actions(
+                gov_state=rat_gov_state, action_txid=fin_prop_rec.action_txid
+            )
+            assert rat_action, "Action not found in ratified actions"
+
+            next_rat_state = rat_gov_state["nextRatifyState"]
+            _check_state(next_rat_state["nextEnactState"])
+            assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
+
+        # Check enactment
+        enact_epoch = cluster.wait_for_epoch(
+            epoch_no=fin_approve_epoch + 2, padding_seconds=5, future_is_ok=False
+        )
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
+        )
+        _check_state(enact_gov_state)
+
+        # Check that deposit is returned for the enacted pparam proposal right after enactment.
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        total_deposit_return = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+        # Check total deposit return accounting for both expired and enacted actions
+        assert (
+            total_deposit_return == init_return_account_balance + deposit_amt
+        ), "Incorrect return account balance"
+
+    @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_pparam_negative_value(
         self,
