@@ -1876,7 +1876,7 @@ class TestDRepActivity:
         clusterlib_utils.fund_from_faucet(
             *drep_users,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            faucet_data=cluster_manager.cache.addrs_data["faucet"],
             # Add a lot of funds so no action can be ratified without the new DReps
             amount=10_000_000_000_000,
         )
