@@ -1,0 +1,102 @@
+8.1.1
+=====
+
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.1.1>
+* tag PR -
+* tag commits - <https://github.com/IntersectMBO/cardano-node/compare/8.0.0...8.1.1>
+
+
+Changelogs
+----------
+
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-node/ChangeLog.md>
+* submit-api: <https://github.com/IntersectMBO/cardano-node/blob/8.1.1/cardano-submit-api/CHANGELOG.md>
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.1.1-babbage_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with default (Babbage) TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.1.1-default_legacy_01/>`__
+     - |:heavy_check_mark:|
+   * - Mix P2P and Legacy - `Babbage with default (Babbage) TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.1.1-default_mixed_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.1.1-alonzo_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - Mix P2P and Legacy - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.1.1-mary_mixed_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.1.1-shelley_legacy_01/>`__
+     - |:heavy_check_mark:|
+   * - Plutus Functionality using `Antaeus <https://github.com/input-output-hk/antaeus/tree/cardano-node_8-1-1>`__ - `Multi-era (with V3 scripts) <https://cardano-tests-reports-3-74-115-22.nip.io/antaeus/8.1.1/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (8.0.0 to 8.1.1)
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
+     - |:heavy_check_mark:|
+   * - Sanity checks of the submit-api REST service
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+-------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `8.1.1` pushed to `shelley-qa`
+     - |:hourglass_flowing_sand:|
+   * - `8.1.1` pushed to `preview`
+     - |:heavy_check_mark:|
+   * - Grafana metrics OK
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `shelley-qa`
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `preview` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/testnet_preview/8.1.1/>`__
+     - |:heavy_check_mark:|
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
+     - |:heavy_check_mark:|
+   * - DB re-validation testing (ledger snapshots compatibility)
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
+   * - Benchmarking - `Report <https://input-output-rnd.slack.com/files/U03A639T0DN/F05C24JKAS2/2023-06-08-17.58.8.0.0_8.0.0_8.1.1-pre.value-only.pdf>`__
+     - |:heavy_check_mark:|
+   * - Sanity check release notes
+     - |:heavy_check_mark:|
+
+
+New functionalities in this tag
+-------------------------------
+
+The Ping command now takes a new parameter, query.  |:hourglass_flowing_sand:|
+
+
+Known issues
+------------
+
+`Up-to-date list of existing issues <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
+
+
+New issues
+----------
+
+
+Breaking changes
+----------------
