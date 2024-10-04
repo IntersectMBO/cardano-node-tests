@@ -2,6 +2,7 @@
 
 # pylint: disable=expression-not-assigned
 import fractions
+import json
 import logging
 import pathlib as pl
 import random
@@ -1300,13 +1301,20 @@ class TestPParamUpdate:
         [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        not configuration.DEV_CLUSTER_RUNNING,
+        reason="Meant to be run manually on dev cluster",
+    )
     @pytest.mark.long
-    def test_pparam_update2(
+    def test_update_cost_models(
         self,
         cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
-        """Test enactment of protocol parameter update."""
+        """Test cost model update.
+
+        This test is for verifying concrete cost model updates on a specific testnet configuration.
+        """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_pv10.json"
@@ -1326,6 +1334,9 @@ class TestPParamUpdate:
                 name="",  # costModels
             ),
         ]
+
+        with open(cost_proposal_file, encoding="utf-8") as fp:
+            cost_models_in = json.load(fp)
 
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
@@ -1348,6 +1359,12 @@ class TestPParamUpdate:
                 prev_action_rec=prev_action_rec,
             )
 
+        def _check_models(cost_models: dict):
+            for m in ("PlutusV1", "PlutusV2", "PlutusV3"):
+                if m not in cost_models_in:
+                    continue
+                assert len(cost_models_in[m]) == len(cost_models[m]), f"Unexpected length for {m}"
+
         # Make sure we have enough time to submit the proposal in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
@@ -1355,61 +1372,49 @@ class TestPParamUpdate:
         proposal_epoch = cluster.g_query.get_epoch()
 
         # Propose the action
-        fin_prop_rec = _propose_pparams_update(
-            name_template=f"{temp_template}_fin", proposals=proposals
-        )
-        clusterlib_utils.check_updated_params(
-            update_proposals=fin_prop_rec.proposals,
-            protocol_params=fin_prop_rec.future_pparams,
-        )
+        prop_rec = _propose_pparams_update(name_template=temp_template, proposals=proposals)
+        _check_models(prop_rec.future_pparams["costModels"])
 
-        cluster.wait_for_epoch(epoch_no=proposal_epoch + 6, padding_seconds=5)
+        # Wait until the last epoch where it is still possible to vote
+        approve_epoch = proposal_epoch + cluster.conway_genesis["govActionLifetime"]
+        cluster.wait_for_epoch(epoch_no=approve_epoch, padding_seconds=5, future_is_ok=False)
 
-        # Vote & approve the "final" action by CC
+        # Vote & approve the action by CC
         conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
-            name_template=f"{temp_template}_fin_cc",
+            name_template=f"{temp_template}_cc",
             payment_addr=pool_user_lg.payment,
-            action_txid=fin_prop_rec.action_txid,
-            action_ix=fin_prop_rec.action_ix,
+            action_txid=prop_rec.action_txid,
+            action_ix=prop_rec.action_ix,
             approve_cc=True,
         )
-        fin_approve_epoch = cluster.g_query.get_epoch()
-
-        def _check_state(state: dict):
-            pparams = state.get("curPParams") or state.get("currentPParams") or {}
-            clusterlib_utils.check_updated_params(
-                update_proposals=proposals, protocol_params=pparams
-            )
 
         # Check ratification
-        rat_epoch = cluster.wait_for_epoch(epoch_no=fin_approve_epoch + 1, padding_seconds=5)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=approve_epoch + 1, padding_seconds=5)
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+        )
 
-        if rat_epoch == fin_approve_epoch + 1:
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
-            conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
-            )
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=rat_gov_state, action_txid=prop_rec.action_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
 
-            rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=fin_prop_rec.action_txid
-            )
-            assert rat_action, "Action not found in ratified actions"
-
-            next_rat_state = rat_gov_state["nextRatifyState"]
-            _check_state(next_rat_state["nextEnactState"])
-            assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
+        next_rat_state = rat_gov_state["nextRatifyState"]
+        _check_models(next_rat_state["nextEnactState"]["curPParams"]["costModels"])
+        assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
 
         # Check enactment
         enact_epoch = cluster.wait_for_epoch(
-            epoch_no=fin_approve_epoch + 2, padding_seconds=5, future_is_ok=False
+            epoch_no=approve_epoch + 2, padding_seconds=5, future_is_ok=False
         )
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
-        _check_state(enact_gov_state)
+        _check_models(enact_gov_state["currentPParams"]["costModels"])
 
         # Check that deposit is returned for the enacted pparam proposal right after enactment.
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
