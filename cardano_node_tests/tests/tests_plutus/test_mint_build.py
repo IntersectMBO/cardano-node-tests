@@ -241,6 +241,84 @@ class TestBuildMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
     @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_PLUTUSV3_UNUSABLE
+    @pytest.mark.smoke
+    def test_simple_minting_one_token(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+    ):
+        """Test minting a token with a Plutus script."""
+        temp_template = common.get_test_id(cluster)
+
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        script_fund = 200_000_000
+
+        plutus_v_record = plutus_common.MINTING_PLUTUS["v3"]
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.g_query.get_protocol_params(),
+        )
+
+        # Step 1: fund the token issuer and create UTXO for collaterals
+
+        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=script_fund,
+        )
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_v_record.script_file,
+                collaterals=collateral_utxos,
+                redeemer_file=plutus_common.REDEEMER_42,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+        tx_output_step2 = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_step2",
+            src_address=payment_addr.address,
+            use_build_cmd=True,
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+        )
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
+        assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+    @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
