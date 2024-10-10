@@ -146,7 +146,7 @@ def download_config_file(env: str, file_name: str) -> None:
     if Path(file_name).exists():
         return
     print(f"Downloading {file_name} file...")
-    urllib.request.urlretrieve(f"https://book.world.dev.cardano.org/environments/{env}/{file_name}", file_name,)
+    urllib.request.urlretrieve(f"https://book.play.dev.cardano.org/environments/{env}/{file_name}", file_name,)
 
 
 def get_node_config_files(env, node_topology_type):
@@ -158,8 +158,8 @@ def get_node_config_files(env, node_topology_type):
     download_config_file(env, 'shelley-genesis.json')
     download_config_file(env, 'alonzo-genesis.json')
     # Temporary hardcoded sanchonet conway genesis file:
-    #download_config_file('sanchonet', 'conway-genesis.json')
-    urllib.request.urlretrieve("https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/027476c54b99e3ca0cc97b8cafa2eeb1c50a1c4b/cardano_node_tests/cluster_scripts/conway/genesis.conway.spec.json", 'conway-genesis.json')
+    download_config_file(env, 'conway-genesis.json')
+    #urllib.request.urlretrieve("https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/027476c54b99e3ca0cc97b8cafa2eeb1c50a1c4b/cardano_node_tests/cluster_scripts/conway/genesis.conway.spec.json", 'conway-genesis.json')
 
     if env == 'mainnet' and node_topology_type == 'p2p':
         print('Creating the topology.json file...')
@@ -172,15 +172,15 @@ def get_node_config_files(env, node_topology_type):
     conway_hash = "e8c82013a906175ee0e35fbd251b53d5a5fce8c17dfe4654bb1e8c045ed1cab7"
     #alonzo_hash = "27bd50c2318934f0886ea215dbba9a50368441629ef29a22b1f413ea4e05a954"
 
-    with open('config.json', 'r') as f:
-        lines = f.readlines()
-    with open('config.json', 'w') as f:
-        for line in lines:
-            if 'ConwayGenesisHash' in line.strip("\n"):
-                line = f'  "ConwayGenesisHash": "{conway_hash}",\n'
+    #with open('config.json', 'r') as f:
+    #    lines = f.readlines()
+    #with open('config.json', 'w') as f:
+    #    for line in lines:
+    #        if 'ConwayGenesisHash' in line.strip("\n"):
+    #            line = f'  "ConwayGenesisHash": "{conway_hash}",\n'
             #elif 'AlonzoGenesisHash' in line.strip("\n"):
             #    line = f'  "AlonzoGenesisHash": "{alonzo_hash}",\n'
-            f.write(line)
+    #        f.write(line)
 
 
     #if not utils.cli_has(f"{CLI} governance create-poll"):
