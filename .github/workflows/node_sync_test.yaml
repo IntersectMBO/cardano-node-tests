@@ -3,7 +3,7 @@ name: node_sync_tests
 on:
   workflow_dispatch:
     branches:
-      - artur/sync_tests_update
+      - artur/add_rss_ram
     inputs:
       environment:
         description: Environment on which Buildkite agent will run tests
@@ -100,7 +100,7 @@ jobs:
         cabal: ["3.8.1.0"]
         ghc: ["8.10.7"]
         branch:
-          - artur/sync_tests_update
+          - artur/add_rss_ram
       fail-fast: false
     runs-on: ${{ matrix.os }}
     timeout-minutes: 600
@@ -160,7 +160,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: cardano_node_tests
-          ref: artur/sync_tests_update
+          ref: artur/add_rss_ram
 
       - uses: cachix/install-nix-action@v22
         if: matrix.os != 'windows-latest'

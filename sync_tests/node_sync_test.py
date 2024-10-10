@@ -144,6 +144,10 @@ def rm_node_config_files() -> None:
 
 def download_config_file(env: str, file_name: str) -> None:
     if Path(file_name).exists():
+        print(f"{file_name}")
+        with open(file_name, 'r') as file:
+            content = file.read()
+        print(content)
         return
     print(f"Downloading {file_name} file...")
     urllib.request.urlretrieve(f"https://book.play.dev.cardano.org/environments/{env}/{file_name}", file_name,)
