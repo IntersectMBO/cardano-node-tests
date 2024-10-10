@@ -74,6 +74,12 @@ Sometimes it is useful to run individual tests and keep the local cluster runnin
     ./dev_workdir/conway_fast/stop-cluster
     ```
 
+To reuse the existing testing environment in another nix shell, source the `.source` file that was generated during setup:
+
+```sh
+source ./dev_workdir/.source
+```
+
 ## Variables for configuring testrun
 
 Tests execution can be configured using env variables.

@@ -52,10 +52,32 @@ if [ ! -d "$_scripts_dest" ]; then
 fi
 unset _scripts_dest
 
+cat > "$WORKDIR/.source" <<EoF
+if [ -z "\${IN_NIX_SHELL:-""}" ]; then
+  echo "WARNING: This script is supposed to be sourced from nix shell." >&2
+fi
+source "$VIRTUAL_ENV/bin/activate"
+PYTHONPATH="$(echo "\$VIRTUAL_ENV"/lib/python3*/site-packages):\$PYTHONPATH"
+export PYTHONPATH
+export CARDANO_NODE_SOCKET_PATH="$PWD/dev_workdir/state-cluster0/bft1.socket"
+export TMPDIR="$PWD/dev_workdir/tmp"
+export DEV_CLUSTER_RUNNING=1
+export CLUSTERS_COUNT=1
+export FORBID_RESTART=1
+export NO_ARTIFACTS=1
+export CLUSTER_ERA="$CLUSTER_ERA"
+export COMMAND_ERA="${COMMAND_ERA:-""}"
+EoF
+
 echo
 echo
-echo "----------------------------------------"
+echo "------------------------"
+echo "|    Test Env Ready    |"
+echo "------------------------"
 echo
 echo "To start local testnet, run:"
 echo "$WORKDIR/${CLUSTER_ERA}_fast/start-cluster"
+echo
+echo "To reuse the test env in another shell, source the env with:"
+echo "source $WORKDIR/.source"
 echo
