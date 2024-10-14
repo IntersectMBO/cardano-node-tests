@@ -81,7 +81,7 @@ def main():
     print_info(f"  ==== Write test values into the {env + '_logs'} DB table")
     log_values_dict = ast.literal_eval(str((sync_test_results_dict["log_values"])))
 
-    df1_column_names = ["identifier", "timestamp", "slot_no", "ram_bytes", "cpu_percent"]
+    df1_column_names = ["identifier", "timestamp", "slot_no", "ram_bytes", "cpu_percent", "rss_ram_bytes"]
     df1 = pd.DataFrame(columns=df1_column_names)
 
     print_info(f"    ==== Creating the dataframe with the test values")
@@ -89,8 +89,9 @@ def main():
         new_row_data = {"identifier": sync_test_results_dict["identifier"],
                     "timestamp": key,
                     "slot_no": val["tip"],
-                    "ram_bytes": val["ram"],
-                    "cpu_percent": val["cpu"]}
+                    "ram_bytes": val["heap_ram"],
+                    "cpu_percent": val["cpu"],
+                    "rss_ram_bytes": val["rss_ram"]}
             
         new_row = pd.DataFrame([new_row_data])
         df1 = pd.concat([df1, new_row], ignore_index=True)
