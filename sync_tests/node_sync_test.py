@@ -95,12 +95,6 @@ def delete_node_files():
 
 
 def update_config(file_name: str, updates: dict) -> None:
-    """
-    Updates the specified keys in a JSON config file.
-
-    :param file_name: The name of the JSON configuration file.
-    :param updates: A dictionary containing the keys and new values to update.
-    """
     # Load the current configuration from the JSON file
     with open(file_name, 'r') as file:
         config = json.load(file)
@@ -143,14 +137,7 @@ def rm_node_config_files() -> None:
 
 
 def download_config_file(env: str, file_name: str, save_as: str = None) -> None:
-    """
-    Downloads a file from the specified environment and saves it locally.
-
-    :param env: The environment to download from (e.g., 'mainnet', 'preprod').
-    :param file_name: The name of the file to download from the server.
-    :param save_as: (Optional) The name to save the file as locally. If not provided, it uses the original file name.
-    """
-    save_as = save_as or file_name  # Use `file_name` if `save_as` is not provided
+    save_as = save_as or file_name
     url = f"{CONFIGS_BASE_URL}/{env}/{file_name}"
     print(f"Downloading {file_name} from {url} and saving as {save_as}...")
     urllib.request.urlretrieve(url, save_as)
@@ -703,12 +690,12 @@ def copy_node_executables(src_location, dst_location, build_mode):
             shutil.copy2(node_binary_location, Path(dst_location) / 'cardano-node')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
-            exit(1)
+            #exit(1)
         try:
             shutil.copy2(cli_binary_location, Path(dst_location) / 'cardano-cli')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
-            exit(1)
+            #exit(1)
         time.sleep(5)
 
 
@@ -718,32 +705,58 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
     print_info(f"test_directory: {test_directory}")
     print(f" - listdir test_directory: {os.listdir(test_directory)}")
 
-    repo_name = 'cardano-node'
-    repo_dir = test_directory / 'cardano_node_dir'
+    node_repo_name = 'cardano-node'
+    node_repo_dir = test_directory / 'cardano_node_dir'
 
-    if is_dir(repo_dir):
+    cli_rev = 'e7e5a86'
+    cli_repo_name = 'cardano-cli'
+    cli_repo_dir = test_directory / 'cardano_cli_dir'
+
+    if is_dir(node_repo_dir):
         repo = git_checkout(repository, node_rev)
     else:
-        repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
+        repo = git_clone_iohk_repo(node_repo_name, node_repo_dir, node_rev)
+
+    if is_dir(cli_repo_dir):
+        git_checkout(repository, node_rev)
+    else:
+        git_clone_iohk_repo(cli_repo_name, cli_repo_dir, cli_rev)
 
     if build_tool == 'nix':
-        os.chdir(repo_dir)
+        os.chdir(node_repo_dir)
         Path('cardano-node-bin').unlink(missing_ok=True)
         Path('cardano-cli-bin').unlink(missing_ok=True)
         execute_command("nix build -v .#cardano-node -o cardano-node-bin")
         execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
-        copy_node_executables(repo_dir, test_directory, "nix")
+        copy_node_executables(node_repo_dir, test_directory, "nix")
+
     elif build_tool == 'cabal':
         cabal_local_file = Path(test_directory) / 'sync_tests' / 'cabal.project.local'
-        shutil.copy2(cabal_local_file, repo_dir)
-        os.chdir(repo_dir)
+
+        # Build cli
+        os.chdir(cli_repo_dir)
+        shutil.copy2(cabal_local_file, cli_repo_dir)
+        print(f" - listdir cli_repo_dir: {os.listdir(cli_repo_dir)}")
         shutil.rmtree('dist-newstyle', ignore_errors=True)
         for line in fileinput.input("cabal.project", inplace=True):
             print(line.replace("tests: True", "tests: False"), end="")
         execute_command("cabal update")
-        execute_command("cabal build cardano-node cardano-cli")
-        copy_node_executables(repo_dir, test_directory, "cabal")
+        execute_command("cabal build cardano-cli")
+        copy_node_executables(cli_repo_dir, test_directory, "cabal")
         git_checkout(repo, 'cabal.project')
+
+        # Build node
+        os.chdir(node_repo_dir)
+        shutil.copy2(cabal_local_file, node_repo_dir)
+        print(f" - listdir node_repo_dir: {os.listdir(node_repo_dir)}")
+        shutil.rmtree('dist-newstyle', ignore_errors=True)
+        for line in fileinput.input("cabal.project", inplace=True):
+            print(line.replace("tests: True", "tests: False"), end="")
+        execute_command("cabal update")
+        execute_command("cabal build cardano-node")
+        copy_node_executables(node_repo_dir, test_directory, "cabal")
+        git_checkout(repo, 'cabal.project')
+
 
     os.chdir(test_directory)
     subprocess.check_call(['chmod', '+x', NODE])

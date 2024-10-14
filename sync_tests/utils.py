@@ -160,11 +160,6 @@ def get_file_creation_date(path_to_file):
 
 
 def print_file_content(file_name: str) -> None:
-    """
-    Prints the content of a file.
-
-    :param file_name: The name of the file to print.
-    """
     try:
         with open(file_name, 'r') as file:
             content = file.read()
