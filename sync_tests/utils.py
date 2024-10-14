@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import platform
 import subprocess
 import zipfile
@@ -11,6 +12,9 @@ from pathlib import Path
 
 import psutil
 import time
+
+from colorama import Fore, Style
+
 
 
 class CLIOut(NamedTuple):
@@ -99,6 +103,25 @@ def cli_has(command: str) -> bool:
     return not cmd_err.startswith("Invalid")
 
 
+def print_ok(message):
+    print(Fore.GREEN + f"{message}", Style.RESET_ALL, flush=True)
+
+
+def print_info(message):
+    print(Fore.BLUE + f"{message}", Style.RESET_ALL, flush=True)
+
+
+def print_warn(message):
+    print(Fore.YELLOW + f"{message}", Style.RESET_ALL, flush=True)
+
+
+def print_info_warn(message):
+    print(Fore.LIGHTMAGENTA_EX + f"{message}", Style.RESET_ALL, flush=True)
+
+def print_error(message):
+    print(Fore.RED + f"{message}", Style.RESET_ALL, flush=True)
+
+
 def date_diff_in_seconds(dt2, dt1):
     # dt1 and dt2 should be datetime types
     timedelta = dt2 - dt1
@@ -177,4 +200,4 @@ def delete_file(file_path):
     try:
         file_path.unlink()
     except OSError as e:
-        print(f"Error: {file_path} : {e.strerror}")
+        print_error(f"Error: {file_path} : {e.strerror}")

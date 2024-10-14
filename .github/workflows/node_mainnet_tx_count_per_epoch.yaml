@@ -11,34 +11,34 @@ jobs:
   mainnet_tx_count_per_epoch:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout cardano-node-tests repo
+      - name: Checkout cardano-node-tests repo
         uses: actions/checkout@v3
         with:
           path: cardano_node_tests
           ref: sync_tests
-      - name: run actions/setup-python@v3
-        uses: actions/setup-python@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.8
-      - name: install dependencies
+          python-version: '3.10'
+      - name: Install Python libraries
         run: |
           pip install requests
           pip install psutil
           pip install pandas
           pip install pymysql
           pip install blockfrost-python
-      - name: checkout sync_tests repo
+          pip install colorama
+      - name: Checkout sync_tests branch
         run: |
           echo $PWD
           echo "current branch: $(git branch --show-current)"
           cd cardano_node_tests
           git config --global user.name "sync_tests"
           git config --global user.email "action@github.com"
-          echo "current branch1: $(git branch --show-current)"
-
+          echo "Checkout sync_tests branch"
           git checkout sync_tests
-          echo "current branch2: $(git branch --show-current)"
-      - name: get the automated tests results
+          echo "current branch: $(git branch --show-current)"
+      - name: Get the automated tests results
         env:
           BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}

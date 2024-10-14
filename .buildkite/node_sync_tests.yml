@@ -2,7 +2,6 @@ steps:
   - label: 'run the cardano node sync test on Mainnet using a Linux machine'
     commands:
       - './.buildkite/node_sync_tests.sh $env $build_mode $node_rev1 $node_rev2 $tag_no1 $tag_no2 $node_topology1 $node_topology2 $node_start_arguments1 $node_start_arguments2'
-    branches: "sync_tests"
     timeout_in_minutes: 5000
     agents:
       system: x86_64-linux
@@ -11,4 +10,3 @@ steps:
       - 'logfile.log'
       - 'logfile_copy.log'
       - 'sync_results.json'
-      - '*-config.json'
