@@ -26,8 +26,9 @@ from gitpython_utils import git_clone_iohk_repo, git_checkout
 import utils
 from utils import print_info, print_ok, print_warn, print_info_warn, print_error, seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir, \
-    list_absolute_file_paths
+    list_absolute_file_paths, print_file_content
 
+CONFIGS_BASE_URL = "https://book.play.dev.cardano.org/environments"
 NODE = './cardano-node'
 CLI = './cardano-cli'
 ROOT_TEST_PATH = ''
@@ -93,44 +94,43 @@ def delete_node_files():
         p.unlink(missing_ok=True)
 
 
-def create_mainnet_p2p_topology_file(filename):
-    data = '''{
-        "localRoots": [
-            { "accessPoints": [],
-              "advertise": false,
-              "valency": 1
-              }
-        ],
-        "publicRoots": [
-            { "accessPoints": [
-                {
-                    "address": "relays-new.cardano-mainnet.iohk.io",
-                    "port": 3001
-                }
-            ],
-                "advertise": false
-            }
-        ],
-        "useLedgerAfterSlot": 29691317
-    }'''
+def update_config(file_name: str, updates: dict) -> None:
+    """
+    Updates the specified keys in a JSON config file.
 
-    with open(filename, "w") as text_file:
-        text_file.write(data)
+    :param file_name: The name of the JSON configuration file.
+    :param updates: A dictionary containing the keys and new values to update.
+    """
+    # Load the current configuration from the JSON file
+    with open(file_name, 'r') as file:
+        config = json.load(file)
+
+    # Update the config with the new values
+    for key, value in updates.items():
+        if key in config:
+            print(f"Updating '{key}' from '{config[key]}' to '{value}'")
+            config[key] = value
+        else:
+            print(f"Key '{key}' not found in the config, adding new key-value pair")
+            config[key] = value
+
+    # Write the updated configuration back to the JSON file
+    with open(file_name, 'w') as file:
+        json.dump(config, file, indent=4)
+    print("Configuration updated successfully.")
 
 
-def enable_p2p_node_config_file(node_config_filepath):
+def disable_p2p_node_config():
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
-    with open(node_config_filepath, 'r') as json_file:
-        node_config_json = json.load(json_file)
-
-    node_config_json['EnableP2P'] = True
-
-    with open(node_config_filepath, 'w') as json_file:
-        json.dump(node_config_json, json_file, indent=2)
+    updates = {
+        "EnableP2P": False,
+        "PeerSharing": False
+    }
+    update_config('config.json', updates)
 
 
 def rm_node_config_files() -> None:
@@ -142,15 +142,18 @@ def rm_node_config_files() -> None:
         Path(f).unlink(missing_ok=True)
 
 
-def download_config_file(env: str, file_name: str) -> None:
-    if Path(file_name).exists():
-        print(f"{file_name}")
-        with open(file_name, 'r') as file:
-            content = file.read()
-        print(content)
-        return
-    print(f"Downloading {file_name} file...")
-    urllib.request.urlretrieve(f"https://book.play.dev.cardano.org/environments/{env}/{file_name}", file_name,)
+def download_config_file(env: str, file_name: str, save_as: str = None) -> None:
+    """
+    Downloads a file from the specified environment and saves it locally.
+
+    :param env: The environment to download from (e.g., 'mainnet', 'preprod').
+    :param file_name: The name of the file to download from the server.
+    :param save_as: (Optional) The name to save the file as locally. If not provided, it uses the original file name.
+    """
+    save_as = save_as or file_name  # Use `file_name` if `save_as` is not provided
+    url = f"{CONFIGS_BASE_URL}/{env}/{file_name}"
+    print(f"Downloading {file_name} from {url} and saving as {save_as}...")
+    urllib.request.urlretrieve(url, save_as)
 
 
 def get_node_config_files(env, node_topology_type):
@@ -163,13 +166,18 @@ def get_node_config_files(env, node_topology_type):
     download_config_file(env, 'alonzo-genesis.json')
     download_config_file(env, 'conway-genesis.json')
 
-    if env == 'mainnet' and node_topology_type == 'p2p':
-        print('Creating the topology.json file...')
-        create_mainnet_p2p_topology_file('topology.json')
-        enable_p2p_node_config_file('config.json')
+    if env == 'mainnet' and node_topology_type == 'non-bootstrap-peers':
+        download_config_file(env, 'topology-non-bootstrap-peers.json', save_as='topology.json')
+    elif env == 'mainnet' and node_topology_type == 'legacy':
+        download_config_file(env, 'topology-legacy.json', save_as='topology.json')
+        disable_p2p_node_config()
     else:
         download_config_file(env, 'topology.json')
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
+    print_info_warn(" Config File Content: ")
+    print_file_content('config.json')
+    print_info_warn(" Topology File Content: ")
+    print_file_content('topology.json')
 
 
 def enable_cardano_node_resources_monitoring(node_config_filepath):
@@ -976,10 +984,10 @@ if __name__ == "__main__":
         "-t2", "--tag_no2", help="tag_no2 label as it will be shown in the db/visuals",
     )
     parser.add_argument(
-        "-n1", "--node_topology1", help="type of node topology used for the initial sync - legacy, p2p"
+        "-n1", "--node_topology1", help="type of node topology used for the initial sync - legacy, non-bootstrap-peers, bootstrap-peers"
     )
     parser.add_argument(
-        "-n2", "--node_topology2", help="type of node topology used for final sync (after restart) - legacy, p2p"
+        "-n2", "--node_topology2", help="type of node topology used for final sync (after restart) - legacy, non-bootstrap-peers, bootstrap-peers"
     )
     parser.add_argument(
         "-a1", "--node_start_arguments1", nargs='+', type=str,

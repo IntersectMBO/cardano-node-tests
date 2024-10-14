@@ -33,8 +33,9 @@ on:
         type: choice
         options: 
         - legacy
-        - p2p
-        default: legacy
+        - non-bootstrap-peers
+        - bootstrap-peers
+        default: bootstrap-peers
       node_start_arguments1:
         description: Extra arguments to be used when starting the node using tag_no1 (--a1 --a2 21)
         required: false
@@ -52,8 +53,9 @@ on:
         type: choice
         options: 
         - legacy
-        - p2p
-        default: legacy
+        - non-bootstrap-peers
+        - bootstrap-peers
+        default: bootstrap-peers
       node_start_arguments2:
         description: Extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21)
         required: false
@@ -150,14 +152,14 @@ jobs:
           git-ref: ${{ env.SECP256K1_REF }}
           cache-version: ${{ env.SECP_CACHE_VERSION }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: "[PowerShell] Add build script path"        
         if: runner.os == 'Windows'
         shell: pwsh
         run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
 
       - name: Checkout cardano-node-tests repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: cardano_node_tests
           ref: artur/add_rss_ram
@@ -171,7 +173,7 @@ jobs:
             allow-import-from-derivation = true
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -207,7 +209,7 @@ jobs:
           python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
       
       - name: Generate artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}

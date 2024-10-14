@@ -159,6 +159,22 @@ def get_file_creation_date(path_to_file):
     return time.ctime(os.path.getmtime(path_to_file))
 
 
+def print_file_content(file_name: str) -> None:
+    """
+    Prints the content of a file.
+
+    :param file_name: The name of the file to print.
+    """
+    try:
+        with open(file_name, 'r') as file:
+            content = file.read()
+            print(content)
+    except FileNotFoundError:
+        print(f"File '{file_name}' not found.")
+    except Exception as e:
+        print(f"An error occurred while reading the file: {e}")
+
+
 def is_dir(dir):
     return os.path.isdir(dir)
 
