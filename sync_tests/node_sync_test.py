@@ -464,6 +464,7 @@ def wait_for_node_to_sync(env):
             time.sleep(5)
             count += 1
             actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip()
+
     else:
         while actual_slot <= last_slot_no:
             if count % 60 == 0:
@@ -631,13 +632,13 @@ def get_data_from_logs(log_file):
     return logs_details_dict
 
 
-def get_node_cabal_build_files():
+def get_cabal_build_files():
     node_build_files = list_absolute_file_paths('dist-newstyle/build')
     return node_build_files
 
 
 def get_node_executable_path_built_with_cabal():
-    for f in get_node_cabal_build_files():
+    for f in get_cabal_build_files():
         if "\\x\\cardano-node\\build\\" in f and 'cardano-node-tmp' not in f and 'autogen' not in f:
             print_info(f"Found node executable: {f}")
             global NODE   
@@ -646,7 +647,7 @@ def get_node_executable_path_built_with_cabal():
 
 
 def get_cli_executable_path_built_with_cabal():
-    for f in get_node_cabal_build_files():
+    for f in get_cabal_build_files():
         if "\\x\\cardano-cli\\build\\" in f and 'cardano-cli-tmp' not in f and 'autogen' not in f:
             print_info(f"Found node-cli executable: {f}")
             global CLI
@@ -690,12 +691,11 @@ def copy_node_executables(src_location, dst_location, build_mode):
             shutil.copy2(node_binary_location, Path(dst_location) / 'cardano-node')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
-            #exit(1)
+
         try:
             shutil.copy2(cli_binary_location, Path(dst_location) / 'cardano-cli')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
-            #exit(1)
         time.sleep(5)
 
 
@@ -718,7 +718,7 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
         repo = git_clone_iohk_repo(node_repo_name, node_repo_dir, node_rev)
 
     if is_dir(cli_repo_dir):
-        git_checkout(repository, node_rev)
+        git_checkout(repository, cli_rev)
     else:
         git_clone_iohk_repo(cli_repo_name, cli_repo_dir, cli_rev)
 
@@ -756,7 +756,6 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
         execute_command("cabal build cardano-node")
         copy_node_executables(node_repo_dir, test_directory, "cabal")
         git_checkout(repo, 'cabal.project')
-
 
     os.chdir(test_directory)
     subprocess.check_call(['chmod', '+x', NODE])

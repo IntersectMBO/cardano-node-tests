@@ -6,30 +6,29 @@ on:
       - artur/add_rss_ram
     inputs:
       environment:
-        description: Environment on which Buildkite agent will run tests
+        description: Environment on which Buildkite agent will run tests.
         type: choice
         options: 
         - mainnet
         - preprod
         - preview
-        - shelley-qa
         default: mainnet
       build_mode:
-        description: Currently only nix is supported, there are no prebuilt CI binaries available anymore. Windows agents can only build with cabal - nix is not supported. 
+        description: Currently only nix is supported. Windows agents can only build with cabal - nix is not supported. 
         type: choice
         options: 
         - nix
         default: nix
       tag_no1:
-        description: rev_label in db/visuals (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        description: rev_label in Microsoft BI visuals - it is label used to distinct graphs for various sync tests runs.
         required: true
         default: "9.2.1-bootstrap-peers"
       node_rev1:
-        description: Desired cardano-node revision (used for initial sync) - cardano-node (tags/1.33.0-rc2) tag or branch
+        description: Desired cardano-node revision (used for initial sync) - (tags/1.33.0-rc2) tag or branch.
         required: true
         default: "tags/9.2.1"
       node_topology1:
-        description: Desired cardano-node topology type (used for initial sync) - legacy, p2p
+        description: Desired cardano-node topology type (used for initial sync).
         type: choice
         options: 
         - legacy
@@ -37,19 +36,19 @@ on:
         - bootstrap-peers
         default: bootstrap-peers
       node_start_arguments1:
-        description: Extra arguments to be used when starting the node using tag_no1 (--a1 --a2 21)
+        description: Extra arguments to be used when starting the node using tag_no1 (--a1 --a2 21).
         required: false
         default: "None"
       tag_no2:
-        description: rev_label in db/visuals (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        description: rev_label in Microsoft BI visuals - (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version)).
         required: true
         default: "None"
       node_rev2:
-        description: Desired cardano-node revision (used for final sync) - cardano-node (tags/1.33.0-rc2) tag or branch
+        description: Desired cardano-node revision (used for final sync for upgrade test) - cardano-node (tags/1.33.0-rc2) tag or branch.
         required: true
         default: "None"
       node_topology2:
-        description: Desired cardano-node topology type (used for final sync) - legacy, p2p
+        description: Desired cardano-node topology type (used for final sync).
         type: choice
         options: 
         - legacy
@@ -57,7 +56,7 @@ on:
         - bootstrap-peers
         default: bootstrap-peers
       node_start_arguments2:
-        description: Extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21)
+        description: Extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21).
         required: false
         default: "None"
 
@@ -65,7 +64,7 @@ jobs:
   node_sync_test:
     strategy:
       matrix:
-        env: [preprod]
+        env: [preprod, preview]
         ghc: ["9.6"]
         cabal: ["3.12.1.0"]
         sys:
@@ -78,14 +77,7 @@ jobs:
     runs-on: ${{ matrix.sys.os }}
     timeout-minutes: 600
 
-
-#    defaults:
-#      run:
-#        shell: ${{ matrix.sys.shell }}
-
     env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-07-26"
 
       MSYS2_PATH_TYPE: inherit
       MSYSTEM: MINGW64
@@ -100,44 +92,23 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
-      #- name: Update Windows path with executables locations
-      #  if: runner.os == 'Windows'
-      #  shell: pwsh
-      #  run: |
-      #    $env:PATH+="D:\a\cardano-node-tests\cardano-node-tests\cardano_node_tests"
-      #    git config --system core.longpaths true
-      
 
       - name: Install system dependencies
+        if: matrix.sys.os == 'windows-latest'
         uses: input-output-hk/actions/base@latest
         with:
           use-sodium-vrf: true
 
-      - uses: actions/checkout@v4
 
-      #- name: Cabal update
-      #  run: cabal update
-
-      - name: Configure build
-        run: |
-          cp .github/workflows/cabal.project.local.ci cabal.project.local
-          echo "# cabal.project.local"
-          cat cabal.project.local
-
-
-      #- uses: actions/checkout@v4
-      #- name: "[PowerShell] Add build script path"        
-      #  if: runner.os == 'Windows'
-      #  shell: pwsh
-      #  run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
-
-      - name: Checkout cardano-node-tests repo
+      - name: Checkout cardano-node-tests repository
         uses: actions/checkout@v4
         with:
           path: cardano_node_tests
           ref: artur/add_rss_ram
 
-      - uses: cachix/install-nix-action@v27
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v27
         if: matrix.sys.os != 'windows-latest'
         with:
           extra_nix_config: |
@@ -161,7 +132,7 @@ jobs:
           pip install colorama
 
 
-      - name: "[windows] update environment variables"
+      - name: "[Windows] Update environment variables"
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -188,12 +159,20 @@ jobs:
           cd cardano_node_tests
           echo "current branch: $(git branch --show-current)"
           python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
+
       
+      - name: Prepare logs
+        if: always()
+        run: |
+          cd cardano_node_tests
+          cp logfile.log logfile_copy.log
+
+
       - name: Generate artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: node_logs_${{ matrix.env }}_${{ matrix.os }}
+          name: node_logs_${{ matrix.env }}_${{ matrix.sys.os }}
           path: |
             cardano_node_tests/logfile_copy.log
             cardano_node_tests/sync_results.json
