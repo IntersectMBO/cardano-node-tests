@@ -1531,3 +1531,33 @@ def check_off_chain_vote_fetch_error(voting_anchor_id: int) -> None:
 
     fetch_error_str = db_off_chain_vote_fetch_error[-1].fetch_error or ""
     assert "Hash mismatch when fetching metadata" in fetch_error_str
+
+
+def check_epoch_state(epoch_no: int, txid: str, change_type: str = "") -> None:
+    """Check governance stats per epoch in dbsync."""
+    if not configuration.HAS_DBSYNC:
+        return
+
+    epoch_state_data = list(dbsync_queries.query_epoch_state(epoch_no=epoch_no))
+
+    if not epoch_state_data:
+        msg = f"No information about epoch state in dbsync for epoch: {epoch_no}"
+        raise AssertionError(msg)
+
+    if change_type == "committee":
+        dbsync_committee_info = list(dbsync_queries.query_new_committee_info(txhash=txid))[-1]
+        es_committee_id = epoch_state_data[0].committee_id
+        tx_committee_id = dbsync_committee_info.id
+        assert es_committee_id == tx_committee_id, (
+            f"Committee id mismatch between epoch_state {es_committee_id} "
+            f"and committee table {tx_committee_id}."
+        )
+
+    if change_type == "constitution":
+        dbsync_constitution_info = list(dbsync_queries.query_new_constitution(txhash=txid))[-1]
+        es_constitution_id = epoch_state_data[0].constitution_id
+        tx_constitution_id = dbsync_constitution_info.id
+        assert es_constitution_id == tx_constitution_id, (
+            f"Committee id mismatch between epoch_state {es_constitution_id} "
+            f"and committee table {tx_constitution_id}."
+        )
