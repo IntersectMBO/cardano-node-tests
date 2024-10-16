@@ -12,7 +12,7 @@ on:
         - mainnet
         - preprod
         - preview
-        default: mainnet
+        default: preprod
       build_mode:
         description: Build tool - currently only nix is supported, Windows agents can only build node with cabal
         type: choice
@@ -59,10 +59,39 @@ on:
         required: false
         default: "None"
 
+
+  schedule:
+    - cron: '0 23 * * */1'  # Every day at 23:00
+
 jobs:
   node_sync_test_buildkite_mainnet:
     runs-on: ubuntu-latest
     steps:
+
+      - name: Get latest node tag
+        id: get_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Using manual input for tag_no1"
+            echo "node_rev1=${{ github.event.inputs.node_rev1 }}" >> $GITHUB_OUTPUT
+          else
+            echo "Fetching latest tag for scheduled run"
+            # Fetch the latest tag dynamically
+            node_release_url='https://api.github.com/repos/IntersectMBO/cardano-node/releases/latest'
+            latest_tag=$(curl -s $node_release_url | jq .tag_name -r)
+            echo "node_rev1=$latest_tag" >> $GITHUB_OUTPUT
+
+            # Fetch more details
+            latest_name=$(curl -s $node_release_url | jq .name -r)
+            latest_url=$(curl -s $node_release_url | jq .html_url -r)
+            latest_archive=$(curl -s $node_release_url | jq .assets[0].browser_download_url -r)
+          
+            echo "Latest Release Name: $latest_name"
+            echo "Release URL: $latest_url"
+            echo "Download Archive URL: $latest_archive"
+          fi
+
+
       - name: trigger the Buildkite pipeline - run sync tests on Mainnet
         uses: 'buildkite/trigger-pipeline-action@v1.5.0'
         env:
@@ -78,7 +107,7 @@ jobs:
           BUILD_ENV_VARS: '{
           "env":"${{ github.event.inputs.environment }}",
           "build_mode":"${{ github.event.inputs.build_mode }}",
-          "node_rev1":"${{ github.event.inputs.node_rev1 }}",
+          "node_rev1":"${{ steps.get_tag.outputs.node_rev1 }}",
           "node_rev2":"${{ github.event.inputs.node_rev2 }}",          
           "tag_no1":"${{ github.event.inputs.tag_no1 }}",
           "tag_no2":"${{ github.event.inputs.tag_no2 }}",
