@@ -33,7 +33,7 @@ NODE = './cardano-node'
 CLI = './cardano-cli'
 ROOT_TEST_PATH = ''
 NODE_LOG_FILE = 'logfile.log'
-NODE_LOG_FILE_ARTIFACT = 'logfile_copy.log'
+NODE_LOG_FILE_ARTIFACT = 'node.log'
 RESULTS_FILE_NAME = r'sync_results.json'
 ONE_MINUTE = 60
 

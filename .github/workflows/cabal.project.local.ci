@@ -1,2 +1,0 @@
-package HsOpenSSL
-  flags: +use-pkg-config

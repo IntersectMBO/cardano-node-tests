@@ -3,7 +3,7 @@ name: node_sync_tests
 on:
   workflow_dispatch:
     branches:
-      - artur/add_rss_ram
+      - artur/wip_node_sync_tests
     inputs:
       environment:
         description: Environment on which Buildkite agent will run tests.
@@ -61,6 +61,40 @@ on:
         default: "None"
 
 jobs:
+  node_sync_test_buildkite_mainnet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trigger the Buildkite pipeline - run sync tests on Mainnet
+        uses: 'buildkite/trigger-pipeline-action@v1.5.0'
+        env:
+          BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          PIPELINE: 'input-output-hk/qa-sync-tests'
+          BRANCH: 'artur/wip_node_sync_tests'
+          MESSAGE: ':github: Triggered by GitHub Action'
+          AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
+          AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
+          AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
+          AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
+          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}         
+          BUILD_ENV_VARS: '{
+          "env":"${{ github.event.inputs.environment }}",
+          "build_mode":"${{ github.event.inputs.build_mode }}",
+          "node_rev1":"${{ github.event.inputs.node_rev1 }}",
+          "node_rev2":"${{ github.event.inputs.node_rev2 }}",          
+          "tag_no1":"${{ github.event.inputs.tag_no1 }}",
+          "tag_no2":"${{ github.event.inputs.tag_no2 }}",
+          "node_topology1":"${{ github.event.inputs.node_topology1 }}",
+          "node_topology2":"${{ github.event.inputs.node_topology2 }}",
+          "node_start_arguments1":"${{ github.event.inputs.node_start_arguments1 }}",
+          "node_start_arguments2":"${{ github.event.inputs.node_start_arguments2 }}",
+          
+          "BLOCKFROST_API_KEY":"${{ secrets.BLOCKFROST_API_KEY }}",
+          "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
+          "AWS_DB_PASS":"${{ secrets.AWS_DB_PASS }}",
+          "AWS_DB_NAME":"${{ secrets.AWS_DB_NAME }}",
+          "AWS_DB_HOSTNAME":"${{ secrets.AWS_DB_HOSTNAME }}"
+          }'
+
   node_sync_test:
     strategy:
       matrix:
@@ -72,7 +106,7 @@ jobs:
           - { os: ubuntu-latest, shell: bash }
           - { os: macos-latest, shell: bash }
         branch:
-          - artur/add_rss_ram
+          - artur/wip_node_sync_tests
       fail-fast: false
     runs-on: ${{ matrix.sys.os }}
     timeout-minutes: 600
@@ -104,7 +138,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: cardano_node_tests
-          ref: artur/add_rss_ram
+          ref: artur/wip_node_sync_tests
 
 
       - name: Install nix
@@ -161,11 +195,11 @@ jobs:
           python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
 
       
-      - name: Prepare logs
+      - name: Prepare node logs
         if: always()
         run: |
           cd cardano_node_tests
-          cp logfile.log logfile_copy.log
+          cp logfile.log node.log
 
 
       - name: Generate artifacts
@@ -174,7 +208,7 @@ jobs:
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.sys.os }}
           path: |
-            cardano_node_tests/logfile_copy.log
+            cardano_node_tests/node.log
             cardano_node_tests/sync_results.json
             cardano_node_tests/config.json
             cardano_node_tests/topology.json
