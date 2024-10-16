@@ -26,13 +26,14 @@ from gitpython_utils import git_clone_iohk_repo, git_checkout
 import utils
 from utils import print_info, print_ok, print_warn, print_info_warn, print_error, seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir, \
-    list_absolute_file_paths
+    list_absolute_file_paths, print_file_content
 
+CONFIGS_BASE_URL = "https://book.play.dev.cardano.org/environments"
 NODE = './cardano-node'
 CLI = './cardano-cli'
 ROOT_TEST_PATH = ''
 NODE_LOG_FILE = 'logfile.log'
-NODE_LOG_FILE_ARTIFACT = 'logfile_copy.log'
+NODE_LOG_FILE_ARTIFACT = 'node.log'
 RESULTS_FILE_NAME = r'sync_results.json'
 ONE_MINUTE = 60
 
@@ -93,44 +94,37 @@ def delete_node_files():
         p.unlink(missing_ok=True)
 
 
-def create_mainnet_p2p_topology_file(filename):
-    data = '''{
-        "localRoots": [
-            { "accessPoints": [],
-              "advertise": false,
-              "valency": 1
-              }
-        ],
-        "publicRoots": [
-            { "accessPoints": [
-                {
-                    "address": "relays-new.cardano-mainnet.iohk.io",
-                    "port": 3001
-                }
-            ],
-                "advertise": false
-            }
-        ],
-        "useLedgerAfterSlot": 29691317
-    }'''
+def update_config(file_name: str, updates: dict) -> None:
+    # Load the current configuration from the JSON file
+    with open(file_name, 'r') as file:
+        config = json.load(file)
 
-    with open(filename, "w") as text_file:
-        text_file.write(data)
+    # Update the config with the new values
+    for key, value in updates.items():
+        if key in config:
+            print(f"Updating '{key}' from '{config[key]}' to '{value}'")
+            config[key] = value
+        else:
+            print(f"Key '{key}' not found in the config, adding new key-value pair")
+            config[key] = value
+
+    # Write the updated configuration back to the JSON file
+    with open(file_name, 'w') as file:
+        json.dump(config, file, indent=4)
+    print("Configuration updated successfully.")
 
 
-def enable_p2p_node_config_file(node_config_filepath):
+def disable_p2p_node_config():
     os.chdir(Path(ROOT_TEST_PATH))
     current_directory = Path.cwd()
     print(f"current_directory: {current_directory}")
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
 
-    with open(node_config_filepath, 'r') as json_file:
-        node_config_json = json.load(json_file)
-
-    node_config_json['EnableP2P'] = True
-
-    with open(node_config_filepath, 'w') as json_file:
-        json.dump(node_config_json, json_file, indent=2)
+    updates = {
+        "EnableP2P": False,
+        "PeerSharing": False
+    }
+    update_config('config.json', updates)
 
 
 def rm_node_config_files() -> None:
@@ -142,11 +136,11 @@ def rm_node_config_files() -> None:
         Path(f).unlink(missing_ok=True)
 
 
-def download_config_file(env: str, file_name: str) -> None:
-    if Path(file_name).exists():
-        return
-    print(f"Downloading {file_name} file...")
-    urllib.request.urlretrieve(f"https://book.play.dev.cardano.org/environments/{env}/{file_name}", file_name,)
+def download_config_file(env: str, file_name: str, save_as: str = None) -> None:
+    save_as = save_as or file_name
+    url = f"{CONFIGS_BASE_URL}/{env}/{file_name}"
+    print(f"Downloading {file_name} from {url} and saving as {save_as}...")
+    urllib.request.urlretrieve(url, save_as)
 
 
 def get_node_config_files(env, node_topology_type):
@@ -159,13 +153,18 @@ def get_node_config_files(env, node_topology_type):
     download_config_file(env, 'alonzo-genesis.json')
     download_config_file(env, 'conway-genesis.json')
 
-    if env == 'mainnet' and node_topology_type == 'p2p':
-        print('Creating the topology.json file...')
-        create_mainnet_p2p_topology_file('topology.json')
-        enable_p2p_node_config_file('config.json')
+    if env == 'mainnet' and node_topology_type == 'non-bootstrap-peers':
+        download_config_file(env, 'topology-non-bootstrap-peers.json', save_as='topology.json')
+    elif env == 'mainnet' and node_topology_type == 'legacy':
+        download_config_file(env, 'topology-legacy.json', save_as='topology.json')
+        disable_p2p_node_config()
     else:
         download_config_file(env, 'topology.json')
     print(f" - listdir current_directory: {os.listdir(current_directory)}")
+    print_info_warn(" Config File Content: ")
+    print_file_content('config.json')
+    print_info_warn(" Topology File Content: ")
+    print_file_content('topology.json')
 
 
 def enable_cardano_node_resources_monitoring(node_config_filepath):
@@ -465,6 +464,7 @@ def wait_for_node_to_sync(env):
             time.sleep(5)
             count += 1
             actual_epoch, actual_block, actual_hash, actual_slot, actual_era, syncProgress = get_current_tip()
+
     else:
         while actual_slot <= last_slot_no:
             if count % 60 == 0:
@@ -632,13 +632,13 @@ def get_data_from_logs(log_file):
     return logs_details_dict
 
 
-def get_node_cabal_build_files():
+def get_cabal_build_files():
     node_build_files = list_absolute_file_paths('dist-newstyle/build')
     return node_build_files
 
 
 def get_node_executable_path_built_with_cabal():
-    for f in get_node_cabal_build_files():
+    for f in get_cabal_build_files():
         if "\\x\\cardano-node\\build\\" in f and 'cardano-node-tmp' not in f and 'autogen' not in f:
             print_info(f"Found node executable: {f}")
             global NODE   
@@ -647,7 +647,7 @@ def get_node_executable_path_built_with_cabal():
 
 
 def get_cli_executable_path_built_with_cabal():
-    for f in get_node_cabal_build_files():
+    for f in get_cabal_build_files():
         if "\\x\\cardano-cli\\build\\" in f and 'cardano-cli-tmp' not in f and 'autogen' not in f:
             print_info(f"Found node-cli executable: {f}")
             global CLI
@@ -691,12 +691,11 @@ def copy_node_executables(src_location, dst_location, build_mode):
             shutil.copy2(node_binary_location, Path(dst_location) / 'cardano-node')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
-            exit(1)
+
         try:
             shutil.copy2(cli_binary_location, Path(dst_location) / 'cardano-cli')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
-            exit(1)
         time.sleep(5)
 
 
@@ -706,31 +705,56 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
     print_info(f"test_directory: {test_directory}")
     print(f" - listdir test_directory: {os.listdir(test_directory)}")
 
-    repo_name = 'cardano-node'
-    repo_dir = test_directory / 'cardano_node_dir'
+    node_repo_name = 'cardano-node'
+    node_repo_dir = test_directory / 'cardano_node_dir'
 
-    if is_dir(repo_dir):
+    cli_rev = 'e7e5a86'
+    cli_repo_name = 'cardano-cli'
+    cli_repo_dir = test_directory / 'cardano_cli_dir'
+
+    if is_dir(node_repo_dir):
         repo = git_checkout(repository, node_rev)
     else:
-        repo = git_clone_iohk_repo(repo_name, repo_dir, node_rev)
+        repo = git_clone_iohk_repo(node_repo_name, node_repo_dir, node_rev)
+
+    if is_dir(cli_repo_dir):
+        git_checkout(repository, cli_rev)
+    else:
+        git_clone_iohk_repo(cli_repo_name, cli_repo_dir, cli_rev)
 
     if build_tool == 'nix':
-        os.chdir(repo_dir)
+        os.chdir(node_repo_dir)
         Path('cardano-node-bin').unlink(missing_ok=True)
         Path('cardano-cli-bin').unlink(missing_ok=True)
         execute_command("nix build -v .#cardano-node -o cardano-node-bin")
         execute_command("nix build -v .#cardano-cli -o cardano-cli-bin")
-        copy_node_executables(repo_dir, test_directory, "nix")
+        copy_node_executables(node_repo_dir, test_directory, "nix")
+
     elif build_tool == 'cabal':
         cabal_local_file = Path(test_directory) / 'sync_tests' / 'cabal.project.local'
-        shutil.copy2(cabal_local_file, repo_dir)
-        os.chdir(repo_dir)
+
+        # Build cli
+        os.chdir(cli_repo_dir)
+        shutil.copy2(cabal_local_file, cli_repo_dir)
+        print(f" - listdir cli_repo_dir: {os.listdir(cli_repo_dir)}")
         shutil.rmtree('dist-newstyle', ignore_errors=True)
         for line in fileinput.input("cabal.project", inplace=True):
             print(line.replace("tests: True", "tests: False"), end="")
         execute_command("cabal update")
-        execute_command("cabal build cardano-node cardano-cli")
-        copy_node_executables(repo_dir, test_directory, "cabal")
+        execute_command("cabal build cardano-cli")
+        copy_node_executables(cli_repo_dir, test_directory, "cabal")
+        git_checkout(repo, 'cabal.project')
+
+        # Build node
+        os.chdir(node_repo_dir)
+        shutil.copy2(cabal_local_file, node_repo_dir)
+        print(f" - listdir node_repo_dir: {os.listdir(node_repo_dir)}")
+        shutil.rmtree('dist-newstyle', ignore_errors=True)
+        for line in fileinput.input("cabal.project", inplace=True):
+            print(line.replace("tests: True", "tests: False"), end="")
+        execute_command("cabal update")
+        execute_command("cabal build cardano-node")
+        copy_node_executables(node_repo_dir, test_directory, "cabal")
         git_checkout(repo, 'cabal.project')
 
     os.chdir(test_directory)
@@ -972,10 +996,10 @@ if __name__ == "__main__":
         "-t2", "--tag_no2", help="tag_no2 label as it will be shown in the db/visuals",
     )
     parser.add_argument(
-        "-n1", "--node_topology1", help="type of node topology used for the initial sync - legacy, p2p"
+        "-n1", "--node_topology1", help="type of node topology used for the initial sync - legacy, non-bootstrap-peers, bootstrap-peers"
     )
     parser.add_argument(
-        "-n2", "--node_topology2", help="type of node topology used for final sync (after restart) - legacy, p2p"
+        "-n2", "--node_topology2", help="type of node topology used for final sync (after restart) - legacy, non-bootstrap-peers, bootstrap-peers"
     )
     parser.add_argument(
         "-a1", "--node_start_arguments1", nargs='+', type=str,

@@ -1,2 +1,5 @@
+package HsOpenSSL
+  flags: +use-pkg-config
+
 package cardano-crypto-praos
   flags: -external-libsodium-vrf

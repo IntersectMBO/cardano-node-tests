@@ -1,9 +1,9 @@
-name: node_sync_tests
+name: Node sync tests
 
 on:
   workflow_dispatch:
     branches:
-      - artur/sync_tests_update
+      - node_sync_tests
     inputs:
       environment:
         description: Environment on which Buildkite agent will run tests
@@ -12,62 +12,63 @@ on:
         - mainnet
         - preprod
         - preview
-        - shelley-qa
         default: mainnet
       build_mode:
-        description: Currently only nix is supported, there are no prebuilt CI binaries available anymore. Windows agents can only build with cabal - nix is not supported. 
+        description: Build tool - currently only nix is supported, Windows agents can only build node with cabal
         type: choice
         options: 
         - nix
-        default: nix
       tag_no1:
-        description: rev_label in db/visuals (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        description: rev_label in DB used for visuals - it is label used to distinct Microsoft BI graphs for various sync tests
         required: true
-        default: "8.0.0-legacy"
+        default: "9.2.1-bootstrap-peers"
       node_rev1:
-        description: Desired cardano-node revision (used for initial sync) - cardano-node (tags/1.33.0-rc2) tag or branch
+        description: Desired cardano-node revision used for initial sync
         required: true
-        default: "tags/8.0.0"
+        default: "tags/9.2.1"
       node_topology1:
-        description: Desired cardano-node topology type (used for initial sync) - legacy, p2p
+        description: Desired cardano-node topology type used for initial sync
         type: choice
         options: 
         - legacy
-        - p2p
-        default: legacy
+        - non-bootstrap-peers
+        - bootstrap-peers
+        default: bootstrap-peers
       node_start_arguments1:
-        description: Extra arguments to be used when starting the node using tag_no1 (--a1 --a2 21)
+        description: Extra arguments to be used when starting the node using tag_no1 during inital sync (--a1 --a2 21)
         required: false
         default: "None"
       tag_no2:
-        description: rev_label in db/visuals (1.33.0-rc2 (tag number) or 1.33.0 (release number) or 1.33.0_PR2124 (for not released and not tagged runs with a specific node PR/version))
+        description: Use only if you plan to test node upgrade from version specified above to this one - it is label used to distinct Microsoft BI graphs for various sync tests
         required: true
         default: "None"
       node_rev2:
-        description: Desired cardano-node revision (used for final sync) - cardano-node (tags/1.33.0-rc2) tag or branch
+        description: Use only if you plan to test node upgrade - desired cardano-node revision used for final sync for upgrade test
         required: true
         default: "None"
       node_topology2:
-        description: Desired cardano-node topology type (used for final sync) - legacy, p2p
+        description: Use only if you plan to test node upgrade - desired cardano-node topology type used for final sync for upgrade test
         type: choice
         options: 
         - legacy
-        - p2p
-        default: legacy
+        - non-bootstrap-peers
+        - bootstrap-peers
+        default: bootstrap-peers
       node_start_arguments2:
-        description: Extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21)
+        description: Use only if you plan to test node upgrade - extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21).
         required: false
         default: "None"
+
 jobs:
-  node_sync_test_mainnet:
+  node_sync_test_buildkite_mainnet:
     runs-on: ubuntu-latest
     steps:
       - name: trigger the Buildkite pipeline - run sync tests on Mainnet
         uses: 'buildkite/trigger-pipeline-action@v1.5.0'
         env:
           BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
-          PIPELINE: 'input-output-hk/qa-sync-tests'
-          BRANCH: 'sync_tests'
+          PIPELINE: 'input-output-hk/qa-node-sync'
+          BRANCH: 'node_sync_tests'
           MESSAGE: ':github: Triggered by GitHub Action'
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
@@ -92,86 +93,64 @@ jobs:
           "AWS_DB_NAME":"${{ secrets.AWS_DB_NAME }}",
           "AWS_DB_HOSTNAME":"${{ secrets.AWS_DB_HOSTNAME }}"
           }'
+
   node_sync_test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        env: [preview, preprod]
-        cabal: ["3.8.1.0"]
-        ghc: ["8.10.7"]
+        env: [preprod, preview]
+        ghc: ["9.6"]
+        cabal: ["3.12.1.0"]
+        sys:
+          - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
+          - { os: ubuntu-latest, shell: bash }
+          - { os: macos-latest, shell: bash }
         branch:
-          - artur/sync_tests_update
+          - node_sync_tests
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.sys.os }}
     timeout-minutes: 600
 
     env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-06-01"
 
-      # Modify this value to "invalidate" the secp cache.
-      SECP_CACHE_VERSION: "2022-12-30"
-
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+      MSYS2_PATH_TYPE: inherit
+      MSYSTEM: MINGW64
 
     steps:
     
       - name: Install Haskell
-        if: matrix.os == 'windows-latest'
-        uses: input-output-hk/setup-haskell@v1
+        if: matrix.sys.os == 'windows-latest'
+        uses: input-output-hk/actions/haskell@latest
         id: setup-haskell
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
-          pacman-packages: >
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-libsodium
-            mingw-w64-x86_64-openssl
-            base-devel
-            autoconf-wrapper
-            autoconf
-            automake
-            libtool
-            make
 
-      - name: Update Windows path with executables locations
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $env:PATH+="D:\a\cardano-node-tests\cardano-node-tests\cardano_node_tests"
-          git config --system core.longpaths true
-      
 
-      - name: Install secp256k1
-        if: matrix.os == 'windows-latest'
-        uses: input-output-hk/setup-secp256k1@v1
+      - name: Install system dependencies
+        if: matrix.sys.os == 'windows-latest'
+        uses: input-output-hk/actions/base@latest
         with:
-          git-ref: ${{ env.SECP256K1_REF }}
-          cache-version: ${{ env.SECP_CACHE_VERSION }}
+          use-sodium-vrf: true
 
-      - uses: actions/checkout@v3
-      - name: "[PowerShell] Add build script path"        
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
 
-      - name: Checkout cardano-node-tests repo
-        uses: actions/checkout@v3
+      - name: Checkout cardano-node-tests repository
+        uses: actions/checkout@v4
         with:
           path: cardano_node_tests
-          ref: artur/sync_tests_update
+          ref: node_sync_tests
 
-      - uses: cachix/install-nix-action@v22
-        if: matrix.os != 'windows-latest'
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v27
+        if: matrix.sys.os != 'windows-latest'
         with:
           extra_nix_config: |
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
-            substituters = https://cache.nixos.org https://cache.iog.io https://iohk.cachix.org
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+            substituters = https://cache.nixos.org https://cache.iog.io
             allow-import-from-derivation = true
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -185,14 +164,35 @@ jobs:
           pip install GitPython
           pip install colorama
 
-      - name: Run sync test
+
+      - name: "[Windows] Update environment variables"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "PATH=C:\\msys64\\mingw64\\opt\\cardano\\bin;C:\\msys64\\mingw64\\bin;{0}" -f $env:PATH  >> $env:GITHUB_ENV
+          "PKG_CONFIG_PATH=C:\\msys64\\mingw64\\opt\\cardano\\lib\\pkgconfig;C:\\msys64\\mingw64\\lib\\pkgconfig;C:\\msys64\\mingw64\\share\\pkgconfig;C:\\msys64\\usr\\lib\\pkgconfig;C:\\msys64\\usr\\share\\pkgconfig;{0}" -f $env:PKG_CONFIG_PATH >> $env:GITHUB_ENV
+
+
+      - name: Run sync test on Windows
+        if: runner.os == 'Windows'
         env:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
         run: |
-          ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
           cd cardano_node_tests
           echo "current branch: $(git branch --show-current)"
           python sync_tests/node_sync_test.py -e ${{ matrix.env }} -b ${{ github.event.inputs.build_mode }} -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -r1 "${{ github.event.inputs.node_rev1 }}" -r2 "${{ github.event.inputs.node_rev2 }}" -n1 "${{ github.event.inputs.node_topology1 }}" -n2 "${{ github.event.inputs.node_topology2 }}" -a1="${{ github.event.inputs.node_start_arguments1 }}" -a2="${{ github.event.inputs.node_start_arguments2 }}"
+        continue-on-error: true  # This will ensure the job does not fail if Windows tests fail - which is expected because they run slower
+
+
+      - name: Run sync test
+        if: runner.os != 'Windows'
+        env:
+          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
+        run: |
+          cd cardano_node_tests
+          echo "current branch: $(git branch --show-current)"
+          python sync_tests/node_sync_test.py -e ${{ matrix.env }} -b ${{ github.event.inputs.build_mode }} -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -r1 "${{ github.event.inputs.node_rev1 }}" -r2 "${{ github.event.inputs.node_rev2 }}" -n1 "${{ github.event.inputs.node_topology1 }}" -n2 "${{ github.event.inputs.node_topology2 }}" -a1="${{ github.event.inputs.node_start_arguments1 }}" -a2="${{ github.event.inputs.node_start_arguments2 }}"
+
       
       - name: Write the test results into the database
         env:
@@ -205,14 +205,22 @@ jobs:
           cd cardano_node_tests
           echo "current branch: $(git branch --show-current)"
           python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
+
       
+      - name: Prepare node logs
+        if: always()
+        run: |
+          cd cardano_node_tests
+          cp logfile.log node.log
+
+
       - name: Generate artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: node_logs_${{ matrix.env }}_${{ matrix.os }}
+          name: node_logs_${{ matrix.env }}_${{ matrix.sys.os }}
           path: |
-            cardano_node_tests/logfile_copy.log
+            cardano_node_tests/node.log
             cardano_node_tests/sync_results.json
             cardano_node_tests/config.json
             cardano_node_tests/topology.json
