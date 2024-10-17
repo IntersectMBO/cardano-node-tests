@@ -159,13 +159,13 @@ class TestRegisterAddr:
             tx_signed = cluster.g_transaction.sign_tx(
                 tx_body_file=tx_raw_output_dereg.out_file,
                 signing_key_files=tx_files_dereg.signing_key_files,
-                tx_name=f"{temp_template}_dereg",  # TODO: should be reg_dereg
+                tx_name=f"{temp_template}_dereg",
             )
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_dereg.txins)
         else:
             tx_raw_output_dereg = cluster.g_transaction.send_tx(
                 src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg_dereg",
+                tx_name=f"{temp_template}_dereg",
                 tx_files=tx_files_dereg,
             )
 
