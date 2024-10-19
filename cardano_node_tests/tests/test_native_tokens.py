@@ -777,15 +777,21 @@ class TestMinting:
                 amount=300_000_000,
             )
 
+            max_tx_size = cluster.g_query.get_protocol_params().get("maxTxSize")
+
             try:
                 # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
+
                 with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
+                    # On older cardano-node releases
                     "OutputTooBigUTxO" in err_msg  # For `build-raw` command
                     or "balance of the transaction is negative" in err_msg  # For `build` command
+                    # On cardano-node 10.0.0+
+                    or re.search(rf"MaxTxSizeUTxO \d+ {max_tx_size}", err_msg)
                 ), "Unexpected error message"
             finally:
                 logging.disable(logging.NOTSET)
@@ -922,15 +928,21 @@ class TestMinting:
                 amount=300_000_000,
             )
 
+            max_tx_size = cluster.g_query.get_protocol_params().get("maxTxSize")
+
             try:
                 # Disable logging of "Not enough funds to make the transaction"
                 logging.disable(logging.ERROR)
+
                 with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
+                    # On older cardano-node releases
                     "OutputTooBigUTxO" in err_msg  # For `build-raw` command
                     or "balance of the transaction is negative" in err_msg  # For `build` command
+                    # On cardano-node 10.0.0+
+                    or re.search(rf"MaxTxSizeUTxO \d+ {max_tx_size}", err_msg)
                 ), "Unexpected error message"
             finally:
                 logging.disable(logging.NOTSET)
