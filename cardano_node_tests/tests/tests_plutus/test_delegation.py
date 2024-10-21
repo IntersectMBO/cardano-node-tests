@@ -13,6 +13,7 @@ import typing as tp
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
@@ -28,6 +29,8 @@ from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+
+CLI_WITH_ISSUE_942 = version.parse("10.0.0.0")
 
 pytestmark = [
     common.SKIPIF_PLUTUS_UNUSABLE,
@@ -630,7 +633,7 @@ class TestRegisterAddr:
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
-            use_build_cmd=use_build_cmd,
+            use_build_cmd=use_build_cmd and VERSIONS.cli != CLI_WITH_ISSUE_942,
         )
 
         if reward_error:
@@ -839,12 +842,12 @@ class TestDelegateAddr:
                 pool_user=pool_user,
                 redeemer_file=plutus_common.REDEEMER_42,
                 reference_script_utxos=reference_script_utxos,
-                use_build_cmd=use_build_cmd,
+                use_build_cmd=use_build_cmd and VERSIONS.cli != CLI_WITH_ISSUE_942,
             )
         except clusterlib.CLIError as exc:
-            if "(MissingRedeemers" not in str(exc):
-                raise
-            issues.cli_299.finish_test()
+            if "(MissingRedeemers" in str(exc):
+                issues.cli_299.finish_test()
+            raise
 
         if reward_error:
             raise AssertionError(reward_error)
@@ -1069,7 +1072,7 @@ class TestDelegateAddr:
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
-            use_build_cmd=use_build_cmd,
+            use_build_cmd=use_build_cmd and VERSIONS.cli != CLI_WITH_ISSUE_942,
         )
 
         if reward_error:

@@ -11,6 +11,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -819,7 +820,12 @@ class TestDelegateAddr:
                 signing_key_files=tx_files.signing_key_files,
                 tx_name=f"{temp_template}_deleg_dereg",
             )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_deleg.txins)
+            try:
+                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_deleg.txins)
+            except clusterlib.CLIError as exc:
+                if "ValueNotConservedUTxO" in str(exc):
+                    issues.cli_942.finish_test()
+                raise
         else:
             tx_raw_output_deleg = cluster.g_transaction.send_tx(
                 src_address=user_payment.address,
