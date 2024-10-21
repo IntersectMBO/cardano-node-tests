@@ -1169,4 +1169,7 @@ class TestNegative:
                 tx_files=tx_files,
             )
         err_msg = str(excinfo.value)
-        assert "DelegateeNotRegisteredDELEG" in err_msg, err_msg
+        assert (
+            "DelegateeNotRegisteredDELEG" in err_msg
+            or "DelegateeStakePoolNotRegisteredDELEG" in err_msg
+        ), err_msg
