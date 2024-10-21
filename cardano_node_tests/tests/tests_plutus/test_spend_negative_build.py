@@ -11,6 +11,7 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -18,6 +19,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -216,7 +218,8 @@ class TestNegative:
             tokens_collateral=tokens_rec,
         )
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        exc_str = ""
+        try:
             spend_build._build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
@@ -227,9 +230,13 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=2_000_000,
             )
+        except clusterlib.CLIError as exc:
+            exc_str = str(exc)
 
-        err_str = str(excinfo.value)
-        assert "CollateralContainsNonADA" in err_str, err_str
+        if VERSIONS.cli >= version.parse("10.0.0.0"):
+            assert not exc_str, exc_str
+        else:
+            assert "CollateralContainsNonADA" in exc_str, exc_str
 
         # check expected fees
         expected_fee_fund = 173597
