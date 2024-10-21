@@ -238,7 +238,7 @@ def script_dreps_lg(
             cluster_obj=cluster,
             name_template=f"{temp_template}_dereg",
             src_address=pool_users[0].payment.address,
-            use_build_cmd=True,
+            use_build_cmd=False,  # Workaround for CLI issue 942
             tx_files=tx_files,
             withdrawals=withdrawals,
             deposit=-sum(s.delegation_deposit for __, s in pool_users_info),

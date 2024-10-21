@@ -161,7 +161,12 @@ class TestRegisterAddr:
                 signing_key_files=tx_files_dereg.signing_key_files,
                 tx_name=f"{temp_template}_dereg",
             )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_dereg.txins)
+            try:
+                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_dereg.txins)
+            except clusterlib.CLIError as exc:
+                if "ValueNotConservedUTxO" in str(exc):
+                    issues.cli_942.finish_test()
+                raise
         else:
             tx_raw_output_dereg = cluster.g_transaction.send_tx(
                 src_address=user_payment.address,

@@ -86,6 +86,12 @@ cli_904 = blockers.GH(
     fixed_in="9.5.0.0",  # Fixed in some release after 9.4.1.0
     message="Negative pparam proposal values overflow to positive.",
 )
+cli_942 = blockers.GH(
+    issue=942,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="10.0.0.1",  # Fixed in some release after 10.0.0.0
+    message="build command doesn't balance key deposit.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,
