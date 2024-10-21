@@ -1170,6 +1170,6 @@ class TestNegative:
             )
         err_msg = str(excinfo.value)
         assert (
-            "DelegateeNotRegisteredDELEG" in err_msg
+            "DelegateeNotRegisteredDELEG" in err_msg  # Before cardano-node 10.0.0
             or "DelegateeStakePoolNotRegisteredDELEG" in err_msg
         ), err_msg
