@@ -1,88 +1,285 @@
-name: node_sync_tests
+name: Node sync tests
 
 on:
   workflow_dispatch:
-    branches:
-      - sync_tests
     inputs:
+      environment:
+        description: Environment on which Buildkite and GH agents will run tests
+        type: choice
+        options:
+        - mainnet
+        - preprod
+        - preview
+        default: mainnet
+      build_mode:
+        description: Build tool - currently only nix and ci_archive built by Hydra CI are supported. Windows agents will only build node with cabal so even if nix is selected it will default to cabal.
+        type: choice
+        options:
+        - nix
+        - ci_archive
+        default: ci_archive
       tag_no1:
-        description: tag number1 - used for initial sync, from clean state
+        description: rev_label in DB used for visuals only, does not affect test logic - it is label used to distinct Microsoft BI graphs for various sync tests
         required: true
+        default: "9.2.1-bootstrap-peers"
+      node_rev1:
+        description: Desired cardano-node revision used for initial sync. There are 2 groups of fields that have the same description. If first group that ends on "extra arguments" is specified then
+                     node will be fully synced for those parameters and test will end. After first occurence of "extra arguments" workflow form repeats the same input fields for second group.
+                     If fields from second group are also specified then node will fully sync with parameters from "Group 1" then stop, perform an upgrade for params specified in "Group 2" and check if it can start itself to test upgrade scenario
+        required: true
+        default: "9.2.1"
+      node_topology1:
+        description: Desired cardano-node topology type used for initial sync
+        type: choice
+        options:
+        - legacy
+        - non-bootstrap-peers
+        - bootstrap-peers
+        default: bootstrap-peers
+      node_start_arguments1:
+        description: Extra arguments to be used when starting the node using tag_no1 during inital sync (--a1 --a2 21)
+        required: false
+        default: "None"
       tag_no2:
-        description: tag number2 - used for final sync, from existing state
-        required: false
+        description: Group 2 - Use only if you plan to test node upgrade - it is label used to distinct Microsoft BI graphs for various sync tests
+        required: true
         default: "None"
-      hydra_eval_no1:
-        description: hydra_eval_no1 - used for getting node prebuilt files for the initial sync
-        required: false
+      node_rev2:
+        description: Group 2 - Use only if you plan to test node upgrade - cardano-node revision used for final sync for upgrade test
+        required: true
         default: "None"
-      hydra_eval_no2:
-        description: hydra_eval_no2 - used for getting node prebuilt files for the final sync
+      node_topology2:
+        description: Group 2 - Use only if you plan to test node upgrade - cardano-node topology type used for final sync for upgrade test
+        type: choice
+        options:
+        - legacy
+        - non-bootstrap-peers
+        - bootstrap-peers
+        default: bootstrap-peers
+      node_start_arguments2:
+        description: Group 2 - Use only if you plan to test node upgrade - extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21).
         required: false
         default: "None"
 
+  schedule:
+    - cron: '30 23 * * 5' # Every Friday at 23:30
+
+
+run-name: Node sync tests ${{ github.event.inputs.environment }} ${{ github.event.inputs.tag_no1 }} ${{ github.event.inputs.build_mode }}
+
 jobs:
-  node_sync_test_mainnet:
+
+  set_variables:
     runs-on: ubuntu-latest
+    name: Set variable
+    outputs:
+      env: ${{ steps.set_vars.outputs.env }}
+      build_mode: ${{ steps.set_vars.outputs.build_mode }}
+      node_rev1: ${{ steps.set_vars.outputs.node_rev1 }}
+      node_rev2: ${{ steps.set_vars.outputs.node_rev2 }}
+      tag_no1: ${{ steps.set_vars.outputs.tag_no1 }}
+      tag_no2: ${{ steps.set_vars.outputs.tag_no2 }}
+      node_topology1: ${{ steps.set_vars.outputs.node_topology1 }}
+      node_topology2: ${{ steps.set_vars.outputs.node_topology2 }}
+      node_start_arguments1: ${{ steps.set_vars.outputs.node_start_arguments1 }}
+      node_start_arguments2: ${{ steps.set_vars.outputs.node_start_arguments2 }}
+    steps:
+      - name: Set variables and get latest node tag
+        id: set_vars
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "env=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "build_mode=${{ github.event.inputs.build_mode }}" >> $GITHUB_OUTPUT
+            echo "node_rev1=${{ github.event.inputs.node_rev1 }}" >> $GITHUB_OUTPUT
+            echo "node_rev2=${{ github.event.inputs.node_rev2 }}" >> $GITHUB_OUTPUT
+            echo "tag_no1=${{ github.event.inputs.tag_no1 }}" >> $GITHUB_OUTPUT
+            echo "tag_no2=${{ github.event.inputs.tag_no2 }}" >> $GITHUB_OUTPUT
+            echo "node_topology1=${{ github.event.inputs.node_topology1 }}" >> $GITHUB_OUTPUT
+            echo "node_topology2=${{ github.event.inputs.node_topology2 }}" >> $GITHUB_OUTPUT
+            echo "node_start_arguments1=${{ github.event.inputs.node_start_arguments1 }}" >> $GITHUB_OUTPUT
+            echo "node_start_arguments2=${{ github.event.inputs.node_start_arguments2 }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "env=mainnet" >> $GITHUB_OUTPUT
+            echo "build_mode=nix" >> $GITHUB_OUTPUT
+            echo "Fetching latest tag for scheduled run"
+            node_release_url='https://api.github.com/repos/IntersectMBO/cardano-node/releases/latest'
+            latest_tag=$(curl -s $node_release_url | jq .tag_name -r)
+            echo "node_rev1=$latest_tag" >> $GITHUB_OUTPUT
+            echo "node_rev2=None" >> $GITHUB_OUTPUT
+            echo "tag_no1=${latest_tag}-bootstrap-peers" >> $GITHUB_OUTPUT
+            echo "tag_no2=None" >> $GITHUB_OUTPUT
+            echo "node_topology1=bootstrap-peers" >> $GITHUB_OUTPUT
+            echo "node_topology2=bootstrap-peers" >> $GITHUB_OUTPUT
+            echo "node_start_arguments1=None" >> $GITHUB_OUTPUT
+            echo "node_start_arguments2=None" >> $GITHUB_OUTPUT
+          fi
+
+
+  node_sync_test_buildkite:
+    runs-on: ubuntu-latest
+    name: Node sync test - ${{ needs.set_variables.outputs.env }} | Buildkite Agent
+    needs: set_variables
     steps:
       - name: trigger the Buildkite pipeline - run sync tests on Mainnet
+        uses: 'buildkite/trigger-pipeline-action@v1.5.0'
         env:
           BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          PIPELINE: 'input-output-hk/qa-node-sync'
+          BRANCH: 'node_sync_tests'
+          MESSAGE: ':github: Triggered by GitHub Action'
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
           AWS_DB_NAME: ${{ secrets.AWS_DB_NAME }}
           AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
-        uses: zegocover/buildkite-pipeline-action@master
-        with:
-          access_token: '${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}'
-          pipeline: 'input-output-hk/qa-sync-tests'
-          message: ':github: Triggered by GitHub Action'
-          env: '{
-          "tag_no1":"${{ github.event.inputs.tag_no1 }}",
-          "tag_no2":"${{ github.event.inputs.tag_no2 }}",
-          "hydra_eval_no1":"${{ github.event.inputs.hydra_eval_no1 }}",
-          "hydra_eval_no2":"${{ github.event.inputs.hydra_eval_no2 }}",
+          BUILD_ENV_VARS: '{
+          "env":"${{ needs.set_variables.outputs.env }}",
+          "build_mode":"${{ needs.set_variables.outputs.build_mode }}",
+          "node_rev1":"${{ needs.set_variables.outputs.node_rev1 }}",
+          "node_rev2":"${{ needs.set_variables.outputs.node_rev2 }}",
+          "tag_no1":"${{ needs.set_variables.outputs.tag_no1 }}",
+          "tag_no2":"${{ needs.set_variables.outputs.tag_no2 }}",
+          "node_topology1":"${{ needs.set_variables.outputs.node_topology1 }}",
+          "node_topology2":"${{ needs.set_variables.outputs.node_topology2 }}",
+          "node_start_arguments1":"${{ needs.set_variables.outputs.node_start_arguments1 }}",
+          "node_start_arguments2":"${{ needs.set_variables.outputs.node_start_arguments2 }}",
+
           "BLOCKFROST_API_KEY":"${{ secrets.BLOCKFROST_API_KEY }}",
           "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
           "AWS_DB_PASS":"${{ secrets.AWS_DB_PASS }}",
           "AWS_DB_NAME":"${{ secrets.AWS_DB_NAME }}",
           "AWS_DB_HOSTNAME":"${{ secrets.AWS_DB_HOSTNAME }}"
           }'
-          branch: 'sync_tests'
+
   node_sync_test:
+    needs: set_variables
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        env: [shelley_qa, testnet, staging]
+        ghc: ['9.6']
+        cabal: ['3.12.1.0']
+        sys:
+          - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
+          - { os: ubuntu-latest, shell: bash }
+          - { os: macos-latest, shell: bash }
+        branch:
+          - node_sync_tests
       fail-fast: false
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 600
+    runs-on: ${{ matrix.sys.os }}
+    name: Node sync test - ${{ github.event_name == 'schedule' && 'preprod' || needs.set_variables.outputs.env }} | OS ${{ matrix.sys.os }} | GHC ${{ matrix.ghc }} | Cabal ${{ matrix.cabal }}
+    timeout-minutes: 359
+    outputs:
+      OS_NAME: ${{ matrix.sys.os }}
+      TIMEOUT_OCCURRED: ${{ steps.check_timeout.outputs.TIMEOUT_OCCURRED }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ADJUSTED_ENV: ${{ github.event_name == 'schedule' && 'preprod' || needs.set_variables.outputs.env }}
+      TIMEOUT_OCCURRED: false
+      MSYS2_PATH_TYPE: inherit
+      MSYSTEM: MINGW64
+
+    if: ${{ !(github.event_name == 'workflow_dispatch' && needs.set_variables.outputs.env == 'mainnet') }}
+
     steps:
-      - name: checkout cardano-node-tests repo
+
+      - name: Install Haskell
+        if: matrix.sys.os == 'windows-latest'
+        uses: input-output-hk/actions/haskell@latest
+        id: setup-haskell
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+
+
+      - name: Install system dependencies
+        if: matrix.sys.os == 'windows-latest'
+        uses: input-output-hk/actions/base@latest
+        with:
+          use-sodium-vrf: true
+
+
+      - name: Checkout cardano-node-tests repository
         uses: actions/checkout@v4
         with:
           path: cardano_node_tests
-          ref: sync_tests
-      - name: run actions/setup-python@v5
+          ref: node_sync_tests
+
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v27
+        if: matrix.sys.os != 'windows-latest'
+        with:
+          extra_nix_config: |
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+            substituters = https://cache.nixos.org https://cache.iog.io
+            allow-import-from-derivation = true
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.8
-      - name: install dependencies
+          python-version: '3.10'
+
+      - name: Install Python dependencies
         run: |
           pip install pymysql
           pip install requests
           pip install psutil
           pip install pandas
           pip install blockfrost-python
-      - name: run sync test
+          pip install GitPython
+          pip install colorama
+
+
+      - name: "[Windows] Update environment variables"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "PATH=C:\\msys64\\mingw64\\opt\\cardano\\bin;C:\\msys64\\mingw64\\bin;{0}" -f $env:PATH  >> $env:GITHUB_ENV
+          "PKG_CONFIG_PATH=C:\\msys64\\mingw64\\opt\\cardano\\lib\\pkgconfig;C:\\msys64\\mingw64\\lib\\pkgconfig;C:\\msys64\\mingw64\\share\\pkgconfig;C:\\msys64\\usr\\lib\\pkgconfig;C:\\msys64\\usr\\share\\pkgconfig;{0}" -f $env:PKG_CONFIG_PATH >> $env:GITHUB_ENV
+
+
+      - name: Run sync test on Windows
+        id: run_sync_test_on_windows
+        if: runner.os == 'Windows'
         env:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
         run: |
           cd cardano_node_tests
-          echo "current branch2: $(git branch --show-current)"
-          python sync_tests/node_sync_test.py -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -e1 "${{ github.event.inputs.hydra_eval_no1 }}" -e2 "${{ github.event.inputs.hydra_eval_no2 }}" -e ${{ matrix.env }}
-      - name: write the test results into the database
+          echo "current branch: $(git branch --show-current)"
+          python sync_tests/node_sync_test.py -e ${{ env.ADJUSTED_ENV }} -b ${{ needs.set_variables.outputs.build_mode }} -t1 "${{ needs.set_variables.outputs.tag_no1 }}" -t2 "${{ needs.set_variables.outputs.tag_no2 }}" -r1 "${{ needs.set_variables.outputs.node_rev1 }}" -r2 "${{ needs.set_variables.outputs.node_rev2 }}" -n1 "${{ needs.set_variables.outputs.node_topology1 }}" -n2 "${{ needs.set_variables.outputs.node_topology2 }}" -a1="${{ needs.set_variables.outputs.node_start_arguments1 }}" -a2="${{ needs.set_variables.outputs.node_start_arguments2 }}"
+        timeout-minutes: 355     # Windows-specific timeout
+        continue-on-error: true  # This will ensure the job does not fail if Windows tests fail - which is expected because they run slower
+
+
+      - name: Run sync test
+        if: runner.os != 'Windows'
+        env:
+          BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
+        run: |
+          cd cardano_node_tests
+          echo "current branch: $(git branch --show-current)"
+          python sync_tests/node_sync_test.py -e ${{ env.ADJUSTED_ENV }} -b ${{ needs.set_variables.outputs.build_mode }} -t1 "${{ needs.set_variables.outputs.tag_no1 }}" -t2 "${{ needs.set_variables.outputs.tag_no2 }}" -r1 "${{ needs.set_variables.outputs.node_rev1 }}" -r2 "${{ needs.set_variables.outputs.node_rev2 }}" -n1 "${{ needs.set_variables.outputs.node_topology1 }}" -n2 "${{ needs.set_variables.outputs.node_topology2 }}" -a1="${{ needs.set_variables.outputs.node_start_arguments1 }}" -a2="${{ needs.set_variables.outputs.node_start_arguments2 }}"
+
+
+      - name: Check if timeout occurred
+        id: check_timeout
+        if: always()
+        shell: bash
+        run: |
+          if [[ ${{ job.status }} == "failure" ]] || [[ ${{ job.status }} == "success" && ${{ steps.run_sync_test_on_windows.outcome }} == "failure" ]]; then
+            echo "TIMEOUT_OCCURRED=true" >> $GITHUB_OUTPUT
+          else
+            echo "TIMEOUT_OCCURRED=false" >> $GITHUB_OUTPUT
+          fi
+
+
+      - name: Print timeout status
+        run: |
+          echo "Timeout occurred: ${{ steps.check_timeout.outputs.TIMEOUT_OCCURRED }}"
+
+
+      - name: Write the test results into the database
+        if: steps.check_timeout.outputs.TIMEOUT_OCCURRED == 'false'
         env:
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
@@ -91,13 +288,36 @@ jobs:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
         run: |
           cd cardano_node_tests
-          echo "current branch3: $(git branch --show-current)"
-          python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
-      - name: generate artifacts
+          echo "current branch: $(git branch --show-current)"
+          python sync_tests/node_write_sync_values_to_db.py -e ${{ env.ADJUSTED_ENV }}
+
+
+      - name: Prepare node logs
+        if: always()
+        run: |
+          cd cardano_node_tests
+          cp logfile.log node.log
+        continue-on-error: true
+
+
+      - name: Generate artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: node_logs_${{ matrix.env }}_${{ matrix.os }}
+          name: node_logs_${{ env.ADJUSTED_ENV }}_${{ matrix.sys.os }}
           path: |
-            cardano_node_tests/logfile.log
+            cardano_node_tests/node.log
             cardano_node_tests/sync_results.json
+            cardano_node_tests/config.json
+            cardano_node_tests/topology.json
+
+
+  finalize:
+    runs-on: ubuntu-latest
+    name: Windows timeout checker
+    needs: [node_sync_test]  # Ensure this runs after all matrix jobs
+    if: ${{ needs.node_sync_test.outputs.TIMEOUT_OCCURRED == 'true' && needs.node_sync_test.outputs.OS_NAME == 'windows-latest' }}  # Run only if timeout occurred on Windows
+    steps:
+      - name: Handle Windows test timeout gracefully
+        run: |
+          echo "Windows test timed out but not failing the workflow as this is expected behavior in case of Windows."

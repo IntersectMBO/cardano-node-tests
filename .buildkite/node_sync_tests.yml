@@ -1,12 +1,16 @@
 steps:
-  - label: 'run the cardano node sync test on Mainnet using a Linux machine'
+  - label: ':drum_with_drumsticks: Run the cardano node sync test on builkite agent'
     commands:
-      - './.buildkite/node_sync_tests.sh $tag_no1 $tag_no2 $hydra_eval_no1 $hydra_eval_no2'
-    branches: "sync_tests"
-    timeout_in_minutes: 5000
+      - 'git checkout origin/node_sync_tests'
+      - 'git pull origin node_sync_tests'
+      - 'git log -n 1'
+      - 'df -h'
+      - './.buildkite/node_sync_tests.sh $env $build_mode $node_rev1 $node_rev2 $tag_no1 $tag_no2 $node_topology1 $node_topology2 $node_start_arguments1 $node_start_arguments2'
+    timeout_in_minutes: 3000
     agents:
       system: x86_64-linux
       queue: core-tech-bench
     artifact_paths:
       - 'logfile.log'
+      - 'node.log'
       - 'sync_results.json'
