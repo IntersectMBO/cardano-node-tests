@@ -325,6 +325,7 @@ class TestBuildMinting:
             utxos=out_utxos, address=issuer_addr.address, coin=token
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+        from IPython import embed; embed()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
