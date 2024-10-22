@@ -2,30 +2,32 @@ name: Node sync tests
 
 on:
   workflow_dispatch:
-    branches:
-      - node_sync_tests
     inputs:
       environment:
-        description: Environment on which Buildkite agent will run tests
+        description: Environment on which Buildkite and GH agents will run tests
         type: choice
         options: 
         - mainnet
         - preprod
         - preview
-        default: preprod
+        default: mainnet
       build_mode:
-        description: Build tool - currently only nix is supported, Windows agents can only build node with cabal
+        description: Build tool - currently only nix and ci_archive built by Hydra CI are supported. Windows agents will only build node with cabal so even if nix is selected it will default to cabal.
         type: choice
         options: 
         - nix
+        - ci_archive
+        default: ci_archive
       tag_no1:
-        description: rev_label in DB used for visuals - it is label used to distinct Microsoft BI graphs for various sync tests
+        description: rev_label in DB used for visuals only, does not affect test logic - it is label used to distinct Microsoft BI graphs for various sync tests
         required: true
         default: "9.2.1-bootstrap-peers"
       node_rev1:
-        description: Desired cardano-node revision used for initial sync
+        description: Desired cardano-node revision used for initial sync. There are 2 groups of fields that have the same description. If first group that ends on "extra arguments" is specified then 
+                     node will be fully synced for those parameters and test will end. After first occurence of "extra arguments" workflow form repeats the same input fields for second group.
+                     If fields from second group are also specified then node will fully sync with parameters from "Group 1" then stop, perform an upgrade for params specified in "Group 2" and check if it can start itself to test upgrade scenario
         required: true
-        default: "tags/9.2.1"
+        default: "9.2.1"
       node_topology1:
         description: Desired cardano-node topology type used for initial sync
         type: choice
@@ -39,65 +41,91 @@ on:
         required: false
         default: "None"
       tag_no2:
-        description: Use only if you plan to test node upgrade from version specified above to this one - it is label used to distinct Microsoft BI graphs for various sync tests
+        description: Group 2 - Use only if you plan to test node upgrade - it is label used to distinct Microsoft BI graphs for various sync tests
         required: true
         default: "None"
       node_rev2:
-        description: Use only if you plan to test node upgrade - desired cardano-node revision used for final sync for upgrade test
+        description: Group 2 - Use only if you plan to test node upgrade - cardano-node revision used for final sync for upgrade test
         required: true
         default: "None"
       node_topology2:
-        description: Use only if you plan to test node upgrade - desired cardano-node topology type used for final sync for upgrade test
+        description: Group 2 - Use only if you plan to test node upgrade - cardano-node topology type used for final sync for upgrade test
         type: choice
-        options: 
+        options:
         - legacy
         - non-bootstrap-peers
         - bootstrap-peers
         default: bootstrap-peers
       node_start_arguments2:
-        description: Use only if you plan to test node upgrade - extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21).
+        description: Group 2 - Use only if you plan to test node upgrade - extra arguments to be used when starting the node using tag_no2 (--a1 --a2 21).
         required: false
         default: "None"
 
-
   schedule:
-    - cron: '0 23 * * */1'  # Every day at 23:00
+    - cron: '30 23 * * 5' # Every Friday at 23:30
+
+
+run-name: Node sync tests ${{ github.event.inputs.environment }} ${{ github.event.inputs.tag_no1 }} ${{ github.event.inputs.build_mode }}
 
 jobs:
-  node_sync_test_buildkite_mainnet:
-    runs-on: ubuntu-latest
-    steps:
 
-      - name: Get latest node tag
-        id: get_tag
+  set_variables:
+    runs-on: ubuntu-latest
+    name: Set variable
+    outputs:
+      env: ${{ steps.set_vars.outputs.env }}
+      build_mode: ${{ steps.set_vars.outputs.build_mode }}
+      node_rev1: ${{ steps.set_vars.outputs.node_rev1 }}
+      node_rev2: ${{ steps.set_vars.outputs.node_rev2 }}
+      tag_no1: ${{ steps.set_vars.outputs.tag_no1 }}
+      tag_no2: ${{ steps.set_vars.outputs.tag_no2 }}
+      node_topology1: ${{ steps.set_vars.outputs.node_topology1 }}
+      node_topology2: ${{ steps.set_vars.outputs.node_topology2 }}
+      node_start_arguments1: ${{ steps.set_vars.outputs.node_start_arguments1 }}
+      node_start_arguments2: ${{ steps.set_vars.outputs.node_start_arguments2 }}
+    steps:
+      - name: Set variables and get latest node tag
+        id: set_vars
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "Using manual input for tag_no1"
+            echo "env=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "build_mode=${{ github.event.inputs.build_mode }}" >> $GITHUB_OUTPUT
             echo "node_rev1=${{ github.event.inputs.node_rev1 }}" >> $GITHUB_OUTPUT
-          else
+            echo "node_rev2=${{ github.event.inputs.node_rev2 }}" >> $GITHUB_OUTPUT
+            echo "tag_no1=${{ github.event.inputs.tag_no1 }}" >> $GITHUB_OUTPUT
+            echo "tag_no2=${{ github.event.inputs.tag_no2 }}" >> $GITHUB_OUTPUT
+            echo "node_topology1=${{ github.event.inputs.node_topology1 }}" >> $GITHUB_OUTPUT
+            echo "node_topology2=${{ github.event.inputs.node_topology2 }}" >> $GITHUB_OUTPUT
+            echo "node_start_arguments1=${{ github.event.inputs.node_start_arguments1 }}" >> $GITHUB_OUTPUT
+            echo "node_start_arguments2=${{ github.event.inputs.node_start_arguments2 }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "env=mainnet" >> $GITHUB_OUTPUT
+            echo "build_mode=nix" >> $GITHUB_OUTPUT
             echo "Fetching latest tag for scheduled run"
-            # Fetch the latest tag dynamically
             node_release_url='https://api.github.com/repos/IntersectMBO/cardano-node/releases/latest'
             latest_tag=$(curl -s $node_release_url | jq .tag_name -r)
             echo "node_rev1=$latest_tag" >> $GITHUB_OUTPUT
-
-            # Fetch more details
-            latest_name=$(curl -s $node_release_url | jq .name -r)
-            latest_url=$(curl -s $node_release_url | jq .html_url -r)
-            latest_archive=$(curl -s $node_release_url | jq .assets[0].browser_download_url -r)
-          
-            echo "Latest Release Name: $latest_name"
-            echo "Release URL: $latest_url"
-            echo "Download Archive URL: $latest_archive"
+            echo "node_rev2=None" >> $GITHUB_OUTPUT
+            echo "tag_no1=${latest_tag}-bootstrap-peers" >> $GITHUB_OUTPUT
+            echo "tag_no2=None" >> $GITHUB_OUTPUT
+            echo "node_topology1=bootstrap-peers" >> $GITHUB_OUTPUT
+            echo "node_topology2=bootstrap-peers" >> $GITHUB_OUTPUT
+            echo "node_start_arguments1=None" >> $GITHUB_OUTPUT
+            echo "node_start_arguments2=None" >> $GITHUB_OUTPUT
           fi
 
 
+  node_sync_test_buildkite:
+    runs-on: ubuntu-latest
+    name: Node sync test - ${{ needs.set_variables.outputs.env }} | Buildkite Agent
+    needs: set_variables 
+    steps:
       - name: trigger the Buildkite pipeline - run sync tests on Mainnet
         uses: 'buildkite/trigger-pipeline-action@v1.5.0'
         env:
           BUILDKITE_API_ACCESS_TOKEN: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
           PIPELINE: 'input-output-hk/qa-node-sync'
-          BRANCH: 'node_sync_tests'
+          BRANCH: 'artur/latest-node-sync-tests'
           MESSAGE: ':github: Triggered by GitHub Action'
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
@@ -105,16 +133,16 @@ jobs:
           AWS_DB_HOSTNAME: ${{ secrets.AWS_DB_HOSTNAME }}
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}         
           BUILD_ENV_VARS: '{
-          "env":"${{ github.event.inputs.environment }}",
-          "build_mode":"${{ github.event.inputs.build_mode }}",
-          "node_rev1":"${{ steps.get_tag.outputs.node_rev1 }}",
-          "node_rev2":"${{ github.event.inputs.node_rev2 }}",          
-          "tag_no1":"${{ github.event.inputs.tag_no1 }}",
-          "tag_no2":"${{ github.event.inputs.tag_no2 }}",
-          "node_topology1":"${{ github.event.inputs.node_topology1 }}",
-          "node_topology2":"${{ github.event.inputs.node_topology2 }}",
-          "node_start_arguments1":"${{ github.event.inputs.node_start_arguments1 }}",
-          "node_start_arguments2":"${{ github.event.inputs.node_start_arguments2 }}",
+          "env":"${{ needs.set_variables.outputs.env }}",
+          "build_mode":"${{ needs.set_variables.outputs.build_mode }}",
+          "node_rev1":"${{ needs.set_variables.outputs.node_rev1 }}",
+          "node_rev2":"${{ needs.set_variables.outputs.node_rev2 }}",
+          "tag_no1":"${{ needs.set_variables.outputs.tag_no1 }}",
+          "tag_no2":"${{ needs.set_variables.outputs.tag_no2 }}",
+          "node_topology1":"${{ needs.set_variables.outputs.node_topology1 }}",
+          "node_topology2":"${{ needs.set_variables.outputs.node_topology2 }}",
+          "node_start_arguments1":"${{ needs.set_variables.outputs.node_start_arguments1 }}",
+          "node_start_arguments2":"${{ needs.set_variables.outputs.node_start_arguments2 }}",
           
           "BLOCKFROST_API_KEY":"${{ secrets.BLOCKFROST_API_KEY }}",
           "AWS_DB_USERNAME":"${{ secrets.AWS_DB_USERNAME }}",
@@ -124,11 +152,11 @@ jobs:
           }'
 
   node_sync_test:
+    needs: set_variables 
     strategy:
       matrix:
-        env: [preprod, preview]
-        ghc: ["9.6"]
-        cabal: ["3.12.1.0"]
+        ghc: ['9.6']
+        cabal: ['3.12.1.0']
         sys:
           - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
           - { os: ubuntu-latest, shell: bash }
@@ -137,12 +165,20 @@ jobs:
           - node_sync_tests
       fail-fast: false
     runs-on: ${{ matrix.sys.os }}
-    timeout-minutes: 600
+    name: Node sync test - ${{ github.event_name == 'schedule' && 'preprod' || needs.set_variables.outputs.env }} | OS ${{ matrix.sys.os }} | GHC ${{ matrix.ghc }} | Cabal ${{ matrix.cabal }}
+    timeout-minutes: 359
+    outputs:
+      OS_NAME: ${{ matrix.sys.os }}
+      TIMEOUT_OCCURRED: ${{ steps.check_timeout.outputs.TIMEOUT_OCCURRED }}
 
     env:
-
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ADJUSTED_ENV: ${{ github.event_name == 'schedule' && 'preprod' || needs.set_variables.outputs.env }}
+      TIMEOUT_OCCURRED: false
       MSYS2_PATH_TYPE: inherit
       MSYSTEM: MINGW64
+
+    if: ${{ !(github.event_name == 'workflow_dispatch' && needs.set_variables.outputs.env == 'mainnet') }}
 
     steps:
     
@@ -203,13 +239,15 @@ jobs:
 
 
       - name: Run sync test on Windows
+        id: run_sync_test_on_windows
         if: runner.os == 'Windows'
         env:
           BLOCKFROST_API_KEY: ${{ secrets.BLOCKFROST_API_KEY }}
         run: |
           cd cardano_node_tests
           echo "current branch: $(git branch --show-current)"
-          python sync_tests/node_sync_test.py -e ${{ matrix.env }} -b ${{ github.event.inputs.build_mode }} -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -r1 "${{ github.event.inputs.node_rev1 }}" -r2 "${{ github.event.inputs.node_rev2 }}" -n1 "${{ github.event.inputs.node_topology1 }}" -n2 "${{ github.event.inputs.node_topology2 }}" -a1="${{ github.event.inputs.node_start_arguments1 }}" -a2="${{ github.event.inputs.node_start_arguments2 }}"
+          python sync_tests/node_sync_test.py -e ${{ env.ADJUSTED_ENV }} -b ${{ needs.set_variables.outputs.build_mode }} -t1 "${{ needs.set_variables.outputs.tag_no1 }}" -t2 "${{ needs.set_variables.outputs.tag_no2 }}" -r1 "${{ needs.set_variables.outputs.node_rev1 }}" -r2 "${{ needs.set_variables.outputs.node_rev2 }}" -n1 "${{ needs.set_variables.outputs.node_topology1 }}" -n2 "${{ needs.set_variables.outputs.node_topology2 }}" -a1="${{ needs.set_variables.outputs.node_start_arguments1 }}" -a2="${{ needs.set_variables.outputs.node_start_arguments2 }}"
+        timeout-minutes: 355     # Windows-specific timeout
         continue-on-error: true  # This will ensure the job does not fail if Windows tests fail - which is expected because they run slower
 
 
@@ -220,10 +258,28 @@ jobs:
         run: |
           cd cardano_node_tests
           echo "current branch: $(git branch --show-current)"
-          python sync_tests/node_sync_test.py -e ${{ matrix.env }} -b ${{ github.event.inputs.build_mode }} -t1 "${{ github.event.inputs.tag_no1 }}" -t2 "${{ github.event.inputs.tag_no2 }}" -r1 "${{ github.event.inputs.node_rev1 }}" -r2 "${{ github.event.inputs.node_rev2 }}" -n1 "${{ github.event.inputs.node_topology1 }}" -n2 "${{ github.event.inputs.node_topology2 }}" -a1="${{ github.event.inputs.node_start_arguments1 }}" -a2="${{ github.event.inputs.node_start_arguments2 }}"
+          python sync_tests/node_sync_test.py -e ${{ env.ADJUSTED_ENV }} -b ${{ needs.set_variables.outputs.build_mode }} -t1 "${{ needs.set_variables.outputs.tag_no1 }}" -t2 "${{ needs.set_variables.outputs.tag_no2 }}" -r1 "${{ needs.set_variables.outputs.node_rev1 }}" -r2 "${{ needs.set_variables.outputs.node_rev2 }}" -n1 "${{ needs.set_variables.outputs.node_topology1 }}" -n2 "${{ needs.set_variables.outputs.node_topology2 }}" -a1="${{ needs.set_variables.outputs.node_start_arguments1 }}" -a2="${{ needs.set_variables.outputs.node_start_arguments2 }}"
+
+
+      - name: Check if timeout occurred
+        id: check_timeout
+        if: always()
+        shell: bash
+        run: |
+          if [[ ${{ job.status }} == "failure" ]] || [[ ${{ job.status }} == "success" && ${{ steps.run_sync_test_on_windows.outcome }} == "failure" ]]; then
+            echo "TIMEOUT_OCCURRED=true" >> $GITHUB_OUTPUT
+          else
+            echo "TIMEOUT_OCCURRED=false" >> $GITHUB_OUTPUT
+          fi
 
       
+      - name: Print timeout status
+        run: |
+          echo "Timeout occurred: ${{ steps.check_timeout.outputs.TIMEOUT_OCCURRED }}"
+
+
       - name: Write the test results into the database
+        if: steps.check_timeout.outputs.TIMEOUT_OCCURRED == 'false'
         env:
           AWS_DB_USERNAME: ${{ secrets.AWS_DB_USERNAME }}
           AWS_DB_PASS: ${{ secrets.AWS_DB_PASS }}
@@ -233,7 +289,7 @@ jobs:
         run: |
           cd cardano_node_tests
           echo "current branch: $(git branch --show-current)"
-          python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
+          python sync_tests/node_write_sync_values_to_db.py -e ${{ env.ADJUSTED_ENV }}
 
       
       - name: Prepare node logs
@@ -241,15 +297,27 @@ jobs:
         run: |
           cd cardano_node_tests
           cp logfile.log node.log
+        continue-on-error: true
 
 
       - name: Generate artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: node_logs_${{ matrix.env }}_${{ matrix.sys.os }}
+          name: node_logs_${{ env.ADJUSTED_ENV }}_${{ matrix.sys.os }}
           path: |
             cardano_node_tests/node.log
             cardano_node_tests/sync_results.json
             cardano_node_tests/config.json
             cardano_node_tests/topology.json
+
+
+  finalize:
+    runs-on: ubuntu-latest
+    name: Windows timeout checker
+    needs: [node_sync_test]  # Ensure this runs after all matrix jobs
+    if: ${{ needs.node_sync_test.outputs.TIMEOUT_OCCURRED == 'true' && needs.node_sync_test.outputs.OS_NAME == 'windows-latest' }}  # Run only if timeout occurred on Windows
+    steps:
+      - name: Handle Windows test timeout gracefully
+        run: |
+          echo "Windows test timed out but not failing the workflow as this is expected behavior in case of Windows."

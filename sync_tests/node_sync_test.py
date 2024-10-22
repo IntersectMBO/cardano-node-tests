@@ -26,7 +26,7 @@ from gitpython_utils import git_clone_iohk_repo, git_checkout
 import utils
 from utils import print_info, print_ok, print_warn, print_info_warn, print_error, seconds_to_time, date_diff_in_seconds, get_no_of_cpu_cores, \
     get_current_date_time, get_os_type, get_directory_size, get_total_ram_in_GB, delete_file, is_dir, \
-    list_absolute_file_paths, print_file_content
+    list_absolute_file_paths, print_file_content, unpack_archive
 
 CONFIGS_BASE_URL = "https://book.play.dev.cardano.org/environments"
 NODE = './cardano-node'
@@ -77,6 +77,28 @@ def git_get_last_closed_pr_cardano_node():
     jData = json.loads(response.content)
     print(f" -- last closed PR no is: {jData[0].get('url').split('/pulls/')[1].strip()}")
     return jData[0].get('url').split("/pulls/")[1].strip()
+
+
+def get_node_assets_url(node_version, platform):
+    node_release_url = f"https://api.github.com/repos/IntersectMBO/cardano-node/releases/tags/{node_version}"
+
+    # Fetch release info from GitHub API
+    github_token = os.getenv('GITHUB_TOKEN')
+    headers = {"Authorization": f"token {github_token}"}
+    response = requests.get(node_release_url, headers=headers)
+    response.raise_for_status()  # Ensure we got a valid response
+
+    assets = response.json().get('assets', [])
+
+    # Select the asset based on the platform
+    asset_name = f"cardano-node-{node_version}-{platform}"
+    for asset in assets:
+        if asset['name'].startswith(asset_name):
+            return asset['browser_download_url'], asset['name']
+
+    # If no matching asset is found
+    raise ValueError(f"Asset for platform '{platform}' not found for version {node_version}")
+
 
 
 def check_string_format(input_string):
@@ -683,23 +705,41 @@ def copy_node_executables(src_location, dst_location, build_mode):
             exit(1)
         time.sleep(5)
 
+    # Used only for Windows
     if build_mode == 'cabal':
         node_binary_location = get_node_executable_path_built_with_cabal()
         cli_binary_location = get_cli_executable_path_built_with_cabal()
 
         try:
-            shutil.copy2(node_binary_location, Path(dst_location) / 'cardano-node')
+            shutil.copy2(node_binary_location, Path(dst_location) / 'cardano-node.exe')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
 
         try:
-            shutil.copy2(cli_binary_location, Path(dst_location) / 'cardano-cli')
+            shutil.copy2(cli_binary_location, Path(dst_location) / 'cardano-cli.exe')
         except Exception as e:
             print_error(f" !!! ERROR - could not copy the cardano-cli file - {e}")
         time.sleep(5)
 
 
-def get_node_files(node_rev, repository=None, build_tool='nix'):
+def copy_bin_files_to_current_dir(bin_dir, current_dir):
+    """Copy all files from the bin directory to the specified current directory."""
+    if os.path.exists(bin_dir):
+        for item in os.listdir(bin_dir):
+            s = os.path.join(bin_dir, item)
+            d = os.path.join(current_dir, item)
+            if os.path.isfile(s):
+                shutil.copy2(s, d)  # Copy file and preserve metadata
+                print(f"Copied: {item}")
+            else:
+                print(f"Skipped (not a file): {item}")
+    else:
+        print(f"No 'bin' directory found at {bin_dir}")
+
+
+def get_node_files(node_rev, repository=None,):
+    print_info(f"BUILD TOOL: {build_tool}")
+    sys_platform = platform.system().lower()
     test_directory = Path.cwd()
     repo = None
     print_info(f"test_directory: {test_directory}")
@@ -757,7 +797,45 @@ def get_node_files(node_rev, repository=None, build_tool='nix'):
         copy_node_executables(node_repo_dir, test_directory, "cabal")
         git_checkout(repo, 'cabal.project')
 
+    elif build_tool == 'ci_archive':
+        os.chdir(test_directory)
+
+        if 'windows' in sys_platform:
+            sys_platform = 'win64'
+        elif 'darwin' in sys_platform:
+            sys_platform = 'macos'
+        
+        asset_url, asset_name = get_node_assets_url(node_rev, sys_platform)
+        print(f"Download URL for {platform}: {asset_url}")
+
+        # Download the archive to the current directory with the original filename
+        current_dir = os.getcwd()
+        bin_dir = current_dir + '/bin' # extracted binaries directory
+        archive_path = os.path.join(current_dir, asset_name)
+        urllib.request.urlretrieve(asset_url, archive_path)
+        print(f"Archive downloaded to: {archive_path}")
+
+        # Check if the downloaded file is valid
+        if os.path.exists(archive_path) and os.path.getsize(archive_path) > 0:
+            print("Downloaded file is valid.")
+        else:
+            print("Downloaded file is empty or not found.")
+
+        # List the contents of the current working directory
+        print(f"Current working directory contents: {os.listdir(current_dir)}")
+
+        unpack_archive(archive_path)
+        print("Unpacking completed.")
+        copy_bin_files_to_current_dir(bin_dir, current_dir)
+
     os.chdir(test_directory)
+
+    global NODE, CLI
+    node_executable = 'cardano-node.exe' if 'windows' in sys_platform else 'cardano-node'
+    cli_executable = 'cardano-cli.exe' if 'windows' in sys_platform else 'cardano-cli'
+    NODE = os.path.abspath(os.path.join(test_directory, node_executable))
+    CLI = os.path.abspath(os.path.join(test_directory, cli_executable))
+    
     subprocess.check_call(['chmod', '+x', NODE])
     subprocess.check_call(['chmod', '+x', CLI])
     print_info("files permissions inside test folder:")
@@ -804,9 +882,12 @@ def main():
     print_info(f"Get the cardano-node and cardano-cli files using - {node_build_mode}")
     start_build_time = get_current_date_time()
     if 'windows' not in platform_system.lower():
-        repository = get_node_files(node_rev1)
+        repository = get_node_files(node_rev1, build_tool=f"{node_build_mode}")
     elif 'windows' in platform_system.lower():
-        repository = get_node_files(node_rev1, build_tool='cabal')
+        if node_build_mode == 'nix':
+            repository = get_node_files(node_rev1, build_tool='cabal')
+        else:
+            repository = get_node_files(node_rev1, build_tool=f"{node_build_mode}")
     else:
         print_error(
             f"ERROR: method not implemented yet!!! Only building with NIX is supported at this moment - {node_build_mode}")

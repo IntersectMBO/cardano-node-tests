@@ -4,6 +4,7 @@ import shutil
 import platform
 import subprocess
 import zipfile
+import tarfile
 from datetime import datetime
 from typing import NamedTuple
 from typing import List
@@ -204,6 +205,29 @@ def unzip_file(file_name):
 
         print(f"Extracting all the files from {file_name}...")
         zip.extractall()
+
+
+def unpack_archive(archive_path):
+    """Unpack the archive based on its format."""
+    print(f"Attempting to unpack archive: {archive_path}")
+
+    if archive_path.endswith('.zip'):
+        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+            print(f"Contents of zip: {zip_ref.namelist()}")
+            zip_ref.extractall('.')
+            print(f"Extracted {archive_path} to current directory.")
+    elif archive_path.endswith('.tar.gz'):
+        with tarfile.open(archive_path, 'r:gz') as tar_ref:
+            print(f"Contents of tar.gz: {tar_ref.getnames()}")
+            tar_ref.extractall('.')
+            print(f"Extracted {archive_path} to current directory.")
+    elif archive_path.endswith('.tar'):
+        with tarfile.open(archive_path, 'r:') as tar_ref:
+            print(f"Contents of tar: {tar_ref.getnames()}")
+            tar_ref.extractall('.')
+            print(f"Extracted {archive_path} to current directory.")
+    else:
+        raise ValueError(f"Unsupported archive format: {archive_path}")
 
 
 def delete_file(file_path):
