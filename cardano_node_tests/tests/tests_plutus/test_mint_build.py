@@ -301,6 +301,14 @@ class TestBuildMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
             *mint_txouts,
         ]
+        plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
+            src_address=payment_addr.address,
+            tx_name=f"{temp_template}_step2",
+            tx_files=tx_files_step2,
+            txins=mint_utxos,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+        )
         tx_output_step2 = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_step2",
