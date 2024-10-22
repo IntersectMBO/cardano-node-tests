@@ -6,6 +6,7 @@ import typing as tp
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -232,11 +233,28 @@ class TestCollateralOutput:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_return_collateral",
+        (
+            True,
+            pytest.param(
+                False,
+                marks=pytest.mark.skipif(
+                    VERSIONS.cli < version.parse("10.0.0.0"),
+                    reason="not supported in cardano-cli < 10.0.0.0",
+                ),
+            ),
+        ),
+        ids=("using_return_collateral", "without_return_collateral"),
+    )
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_with_tokens(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        use_return_collateral: bool,
     ):
         """Test failing script using collaterals with tokens.
 
@@ -256,14 +274,20 @@ class TestCollateralOutput:
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        redeem_cost = plutus_common.compute_cost(
-            execution_cost=plutus_op.execution_cost,
-            protocol_params=cluster.g_query.get_protocol_params(),
-        )
-
         token_amount = 100
-        amount_for_collateral = redeem_cost.collateral * 4
-        return_collateral_amount = amount_for_collateral - redeem_cost.collateral
+
+        if use_return_collateral:
+            redeem_cost = plutus_common.compute_cost(
+                execution_cost=plutus_op.execution_cost,
+                protocol_params=cluster.g_query.get_protocol_params(),
+            )
+            total_collateral_amount = redeem_cost.collateral
+            amount_for_collateral = total_collateral_amount * 4
+            return_collateral_amount = amount_for_collateral - total_collateral_amount
+        else:
+            total_collateral_amount = None
+            amount_for_collateral = None
+            return_collateral_amount = 0
 
         # Create the token
         token_rand = clusterlib.get_rand_str(5)
@@ -291,15 +315,19 @@ class TestCollateralOutput:
 
         # Spend the "locked" UTxO
 
-        txouts_return_collateral = [
-            clusterlib.TxOut(
-                address=dst_addr.address,
-                amount=return_collateral_amount,
-            ),
-            clusterlib.TxOut(
-                address=dst_addr.address, amount=token_amount, coin=tokens_rec[0].coin
-            ),
-        ]
+        txouts_return_collateral = (
+            [
+                clusterlib.TxOut(
+                    address=dst_addr.address,
+                    amount=return_collateral_amount,
+                ),
+                clusterlib.TxOut(
+                    address=dst_addr.address, amount=token_amount, coin=tokens_rec[0].coin
+                ),
+            ]
+            if return_collateral_amount
+            else []
+        )
 
         try:
             tx_output_redeem = self._build_spend_locked_txin(
@@ -310,7 +338,7 @@ class TestCollateralOutput:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                total_collateral_amount=redeem_cost.collateral,
+                total_collateral_amount=total_collateral_amount,
                 return_collateral_txouts=txouts_return_collateral,
             )
         except clusterlib.CLIError as exc:
