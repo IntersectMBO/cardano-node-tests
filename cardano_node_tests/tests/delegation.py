@@ -170,6 +170,7 @@ def delegate_stake_addr(
     deleg_kwargs: tp.Dict[str, tp.Any] = {
         "addr_name": f"{temp_template}_addr0",
         "stake_vkey_file": pool_user.stake.vkey_file,
+        "always_abstain": True,
     }
     if pool_id:
         deleg_kwargs["stake_pool_id"] = pool_id
@@ -177,7 +178,7 @@ def delegate_stake_addr(
         deleg_kwargs["cold_vkey_file"] = cold_vkey
         pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(cold_vkey)
 
-    stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
+    stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_and_vote_delegation_cert(
         **deleg_kwargs
     )
 
@@ -222,6 +223,7 @@ def delegate_stake_addr(
     # check that the stake address was delegated
     stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
     assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
-    assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
+    assert stake_addr_info.delegation == pool_id, "Stake address delegated to wrong pool"
+    assert stake_addr_info.vote_delegation == "alwaysAbstain"
 
     return DelegationOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_raw_output)

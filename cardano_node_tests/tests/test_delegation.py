@@ -325,10 +325,11 @@ class TestDelegateAddr:
 
         # Create delegation certificates to different pool for each stake address
         stake_addr_deleg_cert_files = [
-            cluster.g_stake_address.gen_stake_addr_delegation_cert(
+            cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
                 addr_name=f"{temp_template}_{i}_addr",
                 stake_vkey_file=d[0].stake.vkey_file,
                 stake_pool_id=d[1],
+                always_abstain=True,
             )
             for i, d in enumerate(delegation_map)
         ]
@@ -783,11 +784,12 @@ class TestDelegateAddr:
         src_registered_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=stake_vkey_file,
             stake_address=stake_address,
             stake_pool_id=pool_id,
+            always_abstain=True,
         )
 
         clusterlib_utils.wait_for_epoch_interval(
@@ -874,10 +876,11 @@ class TestNegative:
 
         # create stake address delegation cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_stake_address.gen_stake_addr_delegation_cert(
+            cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
                 addr_name=f"{temp_template}_addr0",
                 stake_vkey_file=pool_users_cluster_and_pool[0].payment.vkey_file,
                 stake_pool_id=pool_id,
+                always_abstain=True,
             )
         err_msg = str(excinfo.value)
         assert (
@@ -926,10 +929,11 @@ class TestNegative:
         ).address, f"Stake address is not registered: {user_registered.stake.address}"
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             stake_pool_id=pool_id,
+            always_abstain=True,
         )
 
         # delegate stake address, use wrong payment skey
@@ -969,10 +973,11 @@ class TestNegative:
         user_payment = pool_users_cluster_and_pool[0].payment
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             stake_pool_id=pool_id,
+            always_abstain=True,
         )
 
         # delegate unknown stake address
@@ -1075,10 +1080,11 @@ class TestNegative:
         ).address, f"Stake address is registered: {user_registered.stake.address}"
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             stake_pool_id=pool_id,
+            always_abstain=True,
         )
 
         # delegate deregistered stake address
@@ -1156,10 +1162,11 @@ class TestNegative:
         node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_pool")
 
         # create stake address delegation cert
-        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+        stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=user_registered.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
+            always_abstain=True,
         )
 
         # delegate stake address
