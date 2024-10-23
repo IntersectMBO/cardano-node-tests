@@ -345,17 +345,20 @@ for i in $(seq 1 "$NUM_POOLS"); do
   cardano_cli_log conway stake-address key-gen \
     --signing-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
     --verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey"
+
   #   payment address
   cardano_cli_log conway address build \
     --payment-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-utxo.vkey" \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner.addr"
+
   #   stake address
   cardano_cli_log conway stake-address build \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.addr"
+
   #   stake address registration cert
   cardano_cli_log conway stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
@@ -363,15 +366,17 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
   # stake reward address registration cert
-  cardano_cli_log conway stake-address registration-certificate \
+  cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+    --always-abstain \
     --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
 
-  # stake address delegation certs
-  cardano_cli_log conway stake-address stake-delegation-certificate \
+  # owner stake address delegation certs
+  cardano_cli_log conway stake-address stake-and-vote-delegation-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+    --always-abstain \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
 
   POOL_NAME="TestPool$i"

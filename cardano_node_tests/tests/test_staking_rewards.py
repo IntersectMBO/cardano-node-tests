@@ -819,10 +819,11 @@ class TestRewards:
 
         # delegate pool rewards address to pool
         node_cold = pool_rec["cold_key_pair"]
-        reward_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+        reward_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
             addr_name=f"{temp_template}_addr0",
             stake_vkey_file=pool_reward.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
+            always_abstain=True,
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[
