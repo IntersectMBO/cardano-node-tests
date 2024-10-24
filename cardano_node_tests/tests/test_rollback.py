@@ -115,7 +115,7 @@ class TestRollback:
         state_dir = cluster_nodes.get_cluster_env().state_dir
         topology_files = list(state_dir.glob("topology*.json"))
 
-        prefix = "p2p-split" if configuration.ENABLE_P2P else "split"
+        prefix = "split" if configuration.ENABLE_LEGACY else "p2p-split"
 
         for f in topology_files:
             shutil.copy(split_topology_dir / f"{prefix}-{f.name}", f)

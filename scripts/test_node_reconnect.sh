@@ -11,7 +11,6 @@ TOP_DIR="$(readlink -m "${0%/*}/..")"
 export \
   CLUSTERS_COUNT=1 \
   TEST_THREADS=0 \
-  ENABLE_P2P=1 \
   SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-mainnet_fast}" \
   PYTEST_ARGS="-s -k TestNodeReconnect"
 

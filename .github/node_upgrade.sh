@@ -71,7 +71,7 @@ else
 fi
 
 export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
-unset ENABLE_P2P MIXED_P2P
+unset ENABLE_LEGACY MIXED_P2P
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
