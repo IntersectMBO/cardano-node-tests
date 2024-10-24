@@ -13,18 +13,16 @@ on:
         type: choice
         description: "Cluster era"
         options:
-        - babbage
-        default: babbage
+        - conway 9
+        - conway 10
+        default: conway 9
       tx_era:
         type: choice
         description: "Tx era"
         options:
         - default
+        - conway
         - babbage
-        - alonzo
-        - mary
-        - allegra
-        - shelley
         default: default
       markexpr:
         type: choice
@@ -36,6 +34,7 @@ on:
         - plutus
         - plutus and smoke
         - not long
+        - conway only
         - dbsync and smoke
         - dbsync and plutus
         - dbsync and not long

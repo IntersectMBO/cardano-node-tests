@@ -12,7 +12,6 @@ on:
         options:
         - conway 9
         - conway 10
-        - babbage
         default: conway 9
       tx_era:
         type: choice
@@ -21,10 +20,6 @@ on:
         - default
         - conway
         - babbage
-        - alonzo
-        - mary
-        - allegra
-        - shelley
         default: default
       markexpr:
         type: choice
