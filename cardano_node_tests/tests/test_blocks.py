@@ -235,11 +235,11 @@ class TestCollectData:
         rand = clusterlib.get_rand_str(5)
         num_epochs = int(os.environ.get("BLOCK_PRODUCTION_EPOCHS") or 50)
 
-        topology = "legacy"
+        topology = "p2p"
         if configuration.MIXED_P2P:
             topology = "mixed"
-        elif configuration.ENABLE_P2P:
-            topology = "p2p"
+        elif configuration.ENABLE_LEGACY:
+            topology = "legacy"
 
         pool_mapping = {}
         for idx, pn in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
@@ -342,7 +342,7 @@ class TestCollectData:
         conn.close()
 
 
-@pytest.mark.skipif(not configuration.ENABLE_P2P, reason="runs only on P2P enabled clusters")
+@pytest.mark.skipif(configuration.ENABLE_LEGACY, reason="runs only on P2P enabled clusters")
 class TestDynamicBlockProd:
     """Tests for P2P dynamic block production."""
 

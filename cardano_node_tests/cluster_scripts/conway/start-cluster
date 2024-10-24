@@ -2,7 +2,7 @@
 
 # controlling environment variables:
 # DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
-# ENABLE_P2P - if set, local cluster will use P2P
+# ENABLE_LEGACY - if set, local cluster will use legacy networking
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
 # NO_CC - if set, will not create committee
@@ -37,10 +37,6 @@ NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
 SLOT_LENGTH="$(jq '.slotLength' < "$SCRIPT_DIR/genesis.spec.json")"
 EPOCH_SEC="$(jq '.epochLength * .slotLength | ceil' < "$SCRIPT_DIR/genesis.spec.json")"
-
-if [ -n "${MIXED_P2P:-""}" ]; then
-  export ENABLE_P2P=1
-fi
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
@@ -173,7 +169,7 @@ cp "$SCRIPT_DIR/submit-api-config.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/*genesis*.spec.json "$STATE_CLUSTER/shelley/"
 
-if [ -n "${ENABLE_P2P:-""}" ]; then
+if [ -z "${ENABLE_LEGACY:-""}" ]; then
   # use P2P topology files
   for tconf in "$SCRIPT_DIR"/p2p-topology-*.json; do
     tfname="${tconf##*/p2p-}"
@@ -319,7 +315,7 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     "$conf" > "$STATE_CLUSTER/$fname"
 
   # enable P2P
-  if [ -n "${ENABLE_P2P:-""}" ]; then
+  if [ -z "${ENABLE_LEGACY:-""}" ]; then
 
     # setup mix of P2P and legacy
     if [ -n "${MIXED_P2P:-""}" ]; then

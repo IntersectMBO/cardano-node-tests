@@ -241,7 +241,7 @@ class TestNodeReconnect:
         not TEST_METRICS_RECONNECT, reason="This is not a 'metrics reconnect' testrun"
     )
     @pytest.mark.skipif(configuration.NUM_POOLS != 3, reason="`NUM_POOLS` must be 3")
-    @pytest.mark.skipif(not configuration.ENABLE_P2P, reason="Works only with P2P topology")
+    @pytest.mark.skipif(configuration.ENABLE_LEGACY, reason="Works only with P2P topology")
     def test_metrics_reconnect(
         self,
         cluster_manager: cluster_management.ClusterManager,

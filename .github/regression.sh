@@ -68,8 +68,8 @@ case "${CARDANO_CLI_REV:-""}" in
     ;;
 esac
 
-if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
-  export ENABLE_P2P=1
+if [ "${CI_TOPOLOGY:-""}" = "legacy" ]; then
+  export ENABLE_LEGACY=1
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
   export MIXED_P2P=1
   export NUM_POOLS="${NUM_POOLS:-4}"

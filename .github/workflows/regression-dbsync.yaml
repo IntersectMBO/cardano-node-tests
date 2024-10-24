@@ -43,10 +43,10 @@ on:
         type: choice
         description: "Network topology"
         options:
-        - legacy
         - p2p
+        - legacy
         - mixed
-        default: legacy
+        default: p2p
       byron_cluster:
         type: boolean
         default: false

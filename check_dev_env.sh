@@ -49,7 +49,7 @@ IN_ROOT_DIR="$([ -d "cardano_node_tests" ]; process_result)" || exit_code=1
 DEV_CLUSTER="$([ -n "${DEV_CLUSTER_RUNNING:-}" ]; process_result)" || exit_code=1
 SOCKET_PATH_SET="$([ -n "${CARDANO_NODE_SOCKET_PATH:-}" ]; process_result)" || exit_code=1
 USE_DBSYNC="$([ -n "${DBSYNC_REPO:-}" ]; process_result "optional")" || exit_code=1
-P2P_NET="$([ -n "${ENABLE_P2P:-}" ]; process_result "optional")" || exit_code=1
+P2P_NET="$([ -z "${ENABLE_LEGACY:-}" ]; process_result "optional")" || exit_code=1
 
 
 printf "'cardano-node' available: $HAS_NODE\n"

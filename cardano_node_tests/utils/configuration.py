@@ -33,7 +33,7 @@ DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
 # used also in startup scripts as `if [ -n "$VAR" ]...`
-ENABLE_P2P = (os.environ.get("ENABLE_P2P") or "") != ""
+ENABLE_LEGACY = (os.environ.get("ENABLE_LEGACY") or "") != ""
 # used also in startup scripts as `if [ -n "$VAR" ]...`
 MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
 

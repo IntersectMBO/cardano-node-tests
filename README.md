@@ -92,7 +92,7 @@ Tests execution can be configured using env variables.
 * `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script (default: conway)
 * `COMMAND_ERA` – era for cardano-cli commands – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
 * `NUM_POOLS` – number of stake pools created in each cluster instance (default: 3)
-* `ENABLE_P2P` – use P2P networking instead of the default legacy networking (default: unset)
+* `ENABLE_LEGACY` – use legacy networking instead of the default P2P networking (default: unset)
 * `MIXED_P2P` – use mix of P2P and legacy networking; half of stake pools using legacy and the other half P2P (default: unset)
 * `UTXO_BACKEND` – 'mem' or 'disk', default is 'mem' (or legacy) backend if unset (default: unset)
 * `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files (default: unset)
