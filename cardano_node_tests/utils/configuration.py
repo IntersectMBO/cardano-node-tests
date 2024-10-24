@@ -66,7 +66,7 @@ if BLOCK_PRODUCTION_DB:
     BLOCK_PRODUCTION_DB = pl.Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
-if CLUSTER_ERA not in ("", "babbage", "conway"):
+if CLUSTER_ERA not in ("", "conway"):
     msg = f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}"
     raise RuntimeError(msg)
 
