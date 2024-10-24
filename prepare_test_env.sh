@@ -11,14 +11,11 @@ if [ -z "${IN_NIX_SHELL:-""}" ]; then
 fi
 
 case "${1:-""}" in
-  "babbage")
-    export CLUSTER_ERA=babbage
-    ;;
   "conway")
     export CLUSTER_ERA=conway COMMAND_ERA=conway
     ;;
   *)
-    echo "Usage: $0 {babbage|conway}"
+    echo "Usage: $0 {conway}"
     return 1
     ;;
 esac
