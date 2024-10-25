@@ -25,10 +25,12 @@ fi
 NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
 NUM_CC=5
+NUM_DREPS=5
 TX_SUBMISSION_DELAY=60
 PROPOSAL_DELAY=5
 SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
+DREP_DELEGATED=500000000000
 
 FEE=5000000
 
@@ -260,8 +262,9 @@ jq -r '
 cat "$STATE_CLUSTER/shelley/genesis.json_jq" > "$STATE_CLUSTER/shelley/genesis.json"
 rm -f "$STATE_CLUSTER/shelley/genesis.json_jq"
 
-# Create committee keys
 mkdir -p "$STATE_CLUSTER/governance_data"
+
+# Create committee keys
 if [ -z "${NO_CC:-""}" ]; then
   for i in $(seq 1 "$NUM_CC"); do
     cardano_cli_log conway governance committee key-gen-cold \
@@ -532,6 +535,54 @@ done
 mv "$STATE_CLUSTER/shelley/utxo-keys/utxo1.vkey" "$STATE_CLUSTER/shelley/genesis-utxo.vkey"
 mv "$STATE_CLUSTER/shelley/utxo-keys/utxo1.skey" "$STATE_CLUSTER/shelley/genesis-utxo.skey"
 rmdir "$STATE_CLUSTER/shelley/utxo-keys"
+
+KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.json")"
+DREP_DEPOSIT="$(jq '.dRepDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.conway.json")"
+
+for i in $(seq 1 "$NUM_DREPS"); do
+  # DRep keys
+  cardano_cli_log conway governance drep key-gen \
+    --signing-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.skey" \
+    --verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey"
+
+  # DRep registration
+  cardano_cli_log conway governance drep registration-certificate \
+    --drep-verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey" \
+    --key-reg-deposit-amt "$DREP_DEPOSIT" \
+    --out-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep_reg.cert"
+
+  # delegatee payment keys
+  cardano_cli_log conway address key-gen \
+    --signing-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.skey" \
+    --verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.vkey"
+
+  # delegatee stake keys
+  cardano_cli_log conway stake-address key-gen \
+    --signing-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.skey" \
+    --verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey"
+
+  # delegatee payment address
+  cardano_cli_log conway address build \
+    --payment-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.vkey" \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.addr"
+
+  # delegatee stake address
+  cardano_cli_log conway stake-address build \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.addr"
+
+  # delegatee stake address registration and vote delegation cert
+  cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --drep-verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert"
+done
 
 # create scripts for cluster starting / stopping
 printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start all" > "$STATE_CLUSTER/supervisorctl_start"
@@ -1198,63 +1249,90 @@ PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")
 
 [ "$PROTOCOL_VERSION" = 9 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
 
-# Register committee members
-if [ -z "${NO_CC:-""}" ]; then
-  STOP_TXIN_AMOUNT=$FEE
+# Register CC members, DReps, all in one big transaction:
 
-  TXINS=()
-  TXIN_COUNT=0
-  TXIN_AMOUNT=0
-  while read -r txhash txix amount _; do
-    TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
-    TXIN_COUNT="$((TXIN_COUNT + 1))"
-    TXINS+=("--tx-in" "${txhash}#${txix}")
-    if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
-      break
-    fi
-  done <<< "$(cardano_cli_log latest query utxo --testnet-magic \
-              "$NETWORK_MAGIC" \
-              --address "$FAUCET_ADDR" |
-              grep -E "lovelace \+ TxOutDatumNone$")"
+DREP_DEPOSIT="$((KEY_DEPOSIT + DREP_DEPOSIT))"
+DREP_NEEDED_AMOUNT="$(( (DREP_DELEGATED + DREP_DEPOSIT) * NUM_DREPS ))"
+STOP_TXIN_AMOUNT="$(( FEE + DREP_NEEDED_AMOUNT))"
 
-  TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
-
-  V9_TX_NAME="reg_cc_members"
-
-  CC_ARGS=()
-  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
-    CC_ARGS+=( "--certificate-file" "$f" )
-  done
-
-  CC_SIGNING=()
-  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
-    CC_SIGNING+=( "--signing-key-file" "$f" )
-  done
-
-  cardano_cli_log conway transaction build-raw \
-    --fee    "$FEE" \
-    "${TXINS[@]}" \
-    "${CC_ARGS[@]}" \
-    --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
-    --out-file "${V9_TX_NAME}-tx.txbody"
-
-  cardano_cli_log conway transaction sign \
-    --signing-key-file "$FAUCET_SKEY" \
-    "${CC_SIGNING[@]}" \
-    --testnet-magic    "$NETWORK_MAGIC" \
-    --tx-body-file     "${V9_TX_NAME}-tx.txbody" \
-    --out-file         "${V9_TX_NAME}-tx.tx"
-
-  cardano_cli_log conway transaction submit \
-    --tx-file "${V9_TX_NAME}-tx.tx" \
-    --testnet-magic "$NETWORK_MAGIC"
-
-  sleep "$SUBMIT_DELAY"
-  if ! check_spend_success "${TXINS[@]}"; then
-    echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
-    exit 1
+TXINS=()
+TXIN_COUNT=0
+TXIN_AMOUNT=0
+while read -r txhash txix amount _; do
+  TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+  TXIN_COUNT="$((TXIN_COUNT + 1))"
+  TXINS+=("--tx-in" "${txhash}#${txix}")
+  if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+    break
   fi
+done <<< "$(cardano_cli_log latest query utxo --testnet-magic \
+            "$NETWORK_MAGIC" \
+            --address "$FAUCET_ADDR" |
+            grep -E "lovelace \+ TxOutDatumNone$")"
 
+TXOUT_AMOUNT="$((TXIN_AMOUNT - STOP_TXIN_AMOUNT))"
+
+V9_TX_NAME="setup_governance"
+
+# TODO: delegate pools stake to alwaysAbstain
+
+CC_ARGS=()
+for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
+  [ -e "$f" ] || continue
+  CC_ARGS+=( "--certificate-file" "$f" )
+done
+
+CC_SIGNING=()
+for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
+  [ -e "$f" ] || continue
+  CC_SIGNING+=( "--signing-key-file" "$f" )
+done
+
+DREPS_ARGS=()
+for i in $(seq 1 "$NUM_DREPS"); do
+  DREPS_ARGS+=( \
+    "--tx-out" "$(<"$STATE_CLUSTER/governance_data/vote_stake_addr${i}.addr")+$DREP_DELEGATED" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep_reg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert" \
+  )
+done
+
+DREPS_SIGNING=()
+for i in $(seq 1 "$NUM_DREPS"); do
+  DREPS_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.skey" \
+  )
+done
+
+cardano_cli_log conway transaction build-raw \
+  --fee    "$FEE" \
+  "${TXINS[@]}" \
+  "${CC_ARGS[@]}" \
+  "${DREPS_ARGS[@]}" \
+  --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+  --out-file "${V9_TX_NAME}-tx.txbody"
+
+cardano_cli_log conway transaction sign \
+  --signing-key-file "$FAUCET_SKEY" \
+  "${CC_SIGNING[@]}" \
+  "${DREPS_SIGNING[@]}" \
+  --testnet-magic    "$NETWORK_MAGIC" \
+  --tx-body-file     "${V9_TX_NAME}-tx.txbody" \
+  --out-file         "${V9_TX_NAME}-tx.tx"
+
+cardano_cli_log conway transaction submit \
+  --tx-file "${V9_TX_NAME}-tx.tx" \
+  --testnet-magic "$NETWORK_MAGIC"
+
+sleep "$SUBMIT_DELAY"
+if ! check_spend_success "${TXINS[@]}"; then
+  echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+  exit 1
+fi
+
+if [ -z "${NO_CC:-""}" ]; then
   cc_size="$(cardano-cli conway query committee-state --active --testnet-magic "$NETWORK_MAGIC" |
     grep -c '"status": "Active"')"
   [ "$cc_size" -ge "$NUM_CC" ] || \

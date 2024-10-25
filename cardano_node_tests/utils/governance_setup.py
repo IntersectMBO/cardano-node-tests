@@ -156,43 +156,74 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_uti
     return cc_members
 
 
+def load_dreps(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_utils.DRepRegistration]:
+    """Load DReps from the state directory."""
+    data_dir = cluster_obj.state_dir / GOV_DATA_DIR
+    deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+
+    dreps = []
+    for vkey_file in sorted(data_dir.glob("default_drep_*_drep.vkey")):
+        skey_file = vkey_file.with_suffix(".skey")
+        fpath = vkey_file.parent
+        reg_cert = fpath / vkey_file.name.replace(".vkey", "_reg.cert")
+        drep_id = cluster_obj.g_conway_governance.drep.get_id(
+            drep_vkey_file=vkey_file,
+            out_format="hex",
+        )
+        dreps.append(
+            governance_utils.DRepRegistration(
+                registration_cert=reg_cert,
+                key_pair=clusterlib.KeyPair(vkey_file=vkey_file, skey_file=skey_file),
+                drep_id=drep_id,
+                deposit=deposit_amt,
+            )
+        )
+
+    return dreps
+
+
+def load_drep_users(cluster_obj: clusterlib.ClusterLib) -> tp.List[clusterlib.PoolUser]:
+    """Load DReps users from the state directory."""
+    data_dir = cluster_obj.state_dir / GOV_DATA_DIR
+
+    users = []
+    for stake_vkey_file in sorted(data_dir.glob("vote_stake_addr*_stake.vkey")):
+        fpath = stake_vkey_file.parent
+
+        stake_skey_file = stake_vkey_file.with_suffix(".skey")
+        stake_address = clusterlib.read_address_from_file(stake_vkey_file.with_suffix(".addr"))
+
+        payment_vkey_file = fpath / stake_vkey_file.name.replace("_stake.vkey", ".vkey")
+        payment_skey_file = payment_vkey_file.with_suffix(".skey")
+        payment_address = clusterlib.read_address_from_file(payment_vkey_file.with_suffix(".addr"))
+
+        users.append(
+            clusterlib.PoolUser(
+                payment=clusterlib.AddressRecord(
+                    address=payment_address,
+                    vkey_file=payment_vkey_file,
+                    skey_file=payment_skey_file,
+                ),
+                stake=clusterlib.AddressRecord(
+                    address=stake_address, vkey_file=stake_vkey_file, skey_file=stake_skey_file
+                ),
+            )
+        )
+
+    return users
+
+
 def setup(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
-    destination_dir: clusterlib.FileType = ".",
 ) -> governance_utils.GovernanceRecords:
     cc_members = load_committee(cluster_obj=cluster_obj)
-    vote_stake = create_vote_stake(
-        name_template="vote_stake",
-        cluster_manager=cluster_manager,
-        cluster_obj=cluster_obj,
-        no_of_addr=DREPS_NUM,
-        destination_dir=destination_dir,
-    )
-    drep_reg_records, drep_users = governance_utils.create_dreps(
-        name_template="default_drep",
-        num=DREPS_NUM,
-        cluster_obj=cluster_obj,
-        payment_addr=vote_stake[0].payment,
-        pool_users=vote_stake,
-        destination_dir=destination_dir,
-    )
+    drep_reg_records = load_dreps(cluster_obj=cluster_obj)
+    drep_users = load_drep_users(cluster_obj=cluster_obj)
     node_cold_records = [
         cluster_manager.cache.addrs_data[pn]["cold_key_pair"]
         for pn in cluster_management.Resources.ALL_POOLS
     ]
-
-    cluster_obj.wait_for_new_epoch(padding_seconds=5)
-
-    # Check delegation to DReps
-    deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster_obj)
-    drep_id = drep_reg_records[0].drep_id
-    stake_addr_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
-        stake_vkey_file=drep_users[0].stake.vkey_file
-    )
-    governance_utils.check_drep_delegation(
-        deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
-    )
 
     gov_data = save_default_governance(
         dreps_reg=drep_reg_records,
@@ -200,6 +231,12 @@ def setup(
         cc_members=cc_members,
         pools_cold=node_cold_records,
     )
+
+    # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
+    # to be usable. DReps don't vote in PV9.
+    if cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10:
+        cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
+        # TODO: check `cardano-cli conway query drep-stake-distribution`
 
     return gov_data
 
@@ -221,7 +258,6 @@ def get_default_governance(
             return setup(
                 cluster_obj=cluster_obj,
                 cluster_manager=cluster_manager,
-                destination_dir=gov_data_dir,
             )
 
     if not gov_data_store.exists():
