@@ -225,18 +225,20 @@ def setup(
         for pn in cluster_management.Resources.ALL_POOLS
     ]
 
+    # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
+    # to be usable. DReps don't vote in PV9.
+    if cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10:
+        cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
+        # TODO: check `cardano-cli conway query drep-stake-distribution`
+
+    # The data needs to be saved only after DReps are ready. Other functions check
+    # presence of the pickle file.
     gov_data = save_default_governance(
         dreps_reg=drep_reg_records,
         drep_delegators=drep_users,
         cc_members=cc_members,
         pools_cold=node_cold_records,
     )
-
-    # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
-    # to be usable. DReps don't vote in PV9.
-    if cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10:
-        cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
-        # TODO: check `cardano-cli conway query drep-stake-distribution`
 
     return gov_data
 
