@@ -601,6 +601,7 @@ done <<< "$(cardano_cli_log conway query utxo --testnet-magic \
             grep -E "lovelace$|[0-9]$|lovelace \+ TxOutDatumNone$")"
 
 POOL_ARGS=()
+POOL_SIGNING=()
 for i in $(seq 1 "$NUM_POOLS"); do
   POOL_ARGS+=( \
     "--tx-out" "$(<"$STATE_CLUSTER/nodes/node-pool$i/owner.addr")+$POOL_PLEDGE" \
@@ -609,10 +610,6 @@ for i in $(seq 1 "$NUM_POOLS"); do
     "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/register.cert" \
     "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert" \
   )
-done
-
-POOL_SIGNING=()
-for i in $(seq 1 "$NUM_POOLS"); do
   POOL_SIGNING+=( \
     "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.skey" \
     "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool$i/reward.skey" \
@@ -633,16 +630,13 @@ for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
 done
 
 DREPS_ARGS=()
+DREPS_SIGNING=()
 for i in $(seq 1 "$NUM_DREPS"); do
   DREPS_ARGS+=( \
     "--tx-out" "$(<"$STATE_CLUSTER/governance_data/vote_stake_addr${i}.addr")+$DREP_DELEGATED" \
     "--certificate-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep_reg.cert" \
     "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert" \
   )
-done
-
-DREPS_SIGNING=()
-for i in $(seq 1 "$NUM_DREPS"); do
   DREPS_SIGNING+=( \
     "--signing-key-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.skey" \
     "--signing-key-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.skey" \
