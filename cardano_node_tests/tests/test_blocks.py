@@ -379,7 +379,7 @@ class TestDynamicBlockProd:
         with open(supervisor_conf, "w", encoding="utf-8") as fp_out:
             fp_out.write(supervisor_conf_content)
 
-        cluster_nodes.reload_supervisor_config()
+        cluster_nodes.reload_supervisor_config(delay=0)
 
     @pytest.fixture
     def payment_addrs(
@@ -447,8 +447,8 @@ class TestDynamicBlockProd:
             blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
             return blocks_before
 
-        # The network needs to be at least in epoch 2
-        cluster.wait_for_epoch(epoch_no=2)
+        # The network needs to be at least in epoch 1
+        cluster.wait_for_epoch(epoch_no=1)
 
         # Wait for the epoch to be at least half way through and not too close to the end.
         # We want the original pool to have time to forge blocks in this epoch, before it becomes
@@ -457,8 +457,9 @@ class TestDynamicBlockProd:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster,
             start=(cluster.epoch_length_sec // 2),
-            stop=-50,
+            stop=-(configuration.TX_SUBMISSION_DELAY + 20),
         )
+        reconf_epoch = cluster.g_query.get_epoch()
 
         # The cluster needs respin after this point
         cluster_manager.set_needs_respin()
@@ -468,9 +469,13 @@ class TestDynamicBlockProd:
         cluster_nodes.restart_all_nodes()
 
         tip = cluster.g_query.get_tip()
-        epoch_end = cluster.time_to_epoch_end(tip)
         curr_epoch = int(tip["epoch"])
-        reconf_epoch = curr_epoch
+
+        assert (
+            reconf_epoch == curr_epoch
+        ), "Failed to finish reconfiguration in single epoch, it would affect other checks"
+
+        epoch_end = cluster.time_to_epoch_end(tip)
         curr_time = time.time()
         epoch_end_timestamp = curr_time + epoch_end
         test_end_timestamp = epoch_end_timestamp + (num_epochs * cluster.epoch_length_sec)
