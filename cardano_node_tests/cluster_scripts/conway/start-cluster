@@ -30,6 +30,7 @@ TX_SUBMISSION_DELAY=60
 PROPOSAL_DELAY=5
 SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
+POOL_COST=600
 DREP_DELEGATED=500000000000
 
 FEE=5000000
@@ -521,7 +522,7 @@ EoF
     --vrf-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/vrf.vkey" \
     --pool-pledge "$POOL_PLEDGE" \
     --pool-margin 0.35 \
-    --pool-cost 600 \
+    --pool-cost "$POOL_COST" \
     --pool-reward-account-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
     --pool-owner-stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
     --metadata-url "$METADATA_URL" \
