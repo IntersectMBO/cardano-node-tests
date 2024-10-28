@@ -1251,6 +1251,14 @@ PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")
 
 # Register CC members, DReps, all in one big transaction:
 
+# delegate pool reward to alwaysAbstain DRep
+for i in $(seq 1 "$NUM_POOLS"); do
+  cardano_cli_log conway stake-address vote-delegation-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool${i}/reward.vkey" \
+    --always-abstain \
+    --out-file "$STATE_CLUSTER/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
+done
+
 DREP_DEPOSIT="$((KEY_DEPOSIT + DREP_DEPOSIT))"
 DREP_NEEDED_AMOUNT="$(( (DREP_DELEGATED + DREP_DEPOSIT) * NUM_DREPS ))"
 STOP_TXIN_AMOUNT="$(( FEE + DREP_NEEDED_AMOUNT))"
@@ -1273,8 +1281,6 @@ done <<< "$(cardano_cli_log latest query utxo --testnet-magic \
 TXOUT_AMOUNT="$((TXIN_AMOUNT - STOP_TXIN_AMOUNT))"
 
 V9_TX_NAME="setup_governance"
-
-# TODO: delegate pools stake to alwaysAbstain
 
 CC_ARGS=()
 for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
@@ -1306,11 +1312,26 @@ for i in $(seq 1 "$NUM_DREPS"); do
   )
 done
 
+POOL_ARGS=()
+for i in $(seq 1 "$NUM_POOLS"); do
+  POOL_ARGS+=( \
+    "--certificate-file" "$STATE_CLUSTER/nodes/node-pool${i}/stake-reward_vote_deleg.cert" \
+  )
+done
+
+POOL_SIGNING=()
+for i in $(seq 1 "$NUM_POOLS"); do
+  POOL_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/nodes/node-pool${i}/reward.skey" \
+  )
+done
+
 cardano_cli_log conway transaction build-raw \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   "${CC_ARGS[@]}" \
   "${DREPS_ARGS[@]}" \
+  "${POOL_ARGS[@]}" \
   --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
   --out-file "${V9_TX_NAME}-tx.txbody"
 
@@ -1318,6 +1339,7 @@ cardano_cli_log conway transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
   "${CC_SIGNING[@]}" \
   "${DREPS_SIGNING[@]}" \
+  "${POOL_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "${V9_TX_NAME}-tx.txbody" \
   --out-file         "${V9_TX_NAME}-tx.tx"
