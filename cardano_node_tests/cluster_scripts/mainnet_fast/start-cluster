@@ -26,9 +26,11 @@ fi
 NUM_BFT_NODES=1
 NUM_POOLS=%%NUM_POOLS%%
 NUM_CC=5
+NUM_DREPS=5
 TX_SUBMISSION_DELAY=60
 SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
+DREP_DELEGATED=500000000000
 BYRON_INIT_SUPPLY=10020000000
 PROTOCOL_VERSION=9
 if [ -n "${PV10:-""}" ]; then
@@ -194,8 +196,9 @@ cardano_cli_log legacy genesis create-staked \
   --supply-delegated "$DELEG_SUPPLY" \
   --start-time "$START_TIME_SHELLEY"
 
-# Create committee keys
 mkdir -p "$STATE_CLUSTER/governance_data"
+
+# Create committee keys
 if [ -z "${NO_CC:-""}" ]; then
   for i in $(seq 1 "$NUM_CC"); do
     cardano_cli_log conway governance committee key-gen-cold \
@@ -428,6 +431,52 @@ done
 
 rm -rf "$STATE_CLUSTER/shelley/create_staked"
 
+DREP_DEPOSIT="$(jq '.dRepDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.conway.json")"
+
+for i in $(seq 1 "$NUM_DREPS"); do
+  # DRep keys
+  cardano_cli_log conway governance drep key-gen \
+    --signing-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.skey" \
+    --verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey"
+
+  # DRep registration
+  cardano_cli_log conway governance drep registration-certificate \
+    --drep-verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey" \
+    --key-reg-deposit-amt "$DREP_DEPOSIT" \
+    --out-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep_reg.cert"
+
+  # delegatee payment keys
+  cardano_cli_log conway address key-gen \
+    --signing-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.skey" \
+    --verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.vkey"
+
+  # delegatee stake keys
+  cardano_cli_log conway stake-address key-gen \
+    --signing-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.skey" \
+    --verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey"
+
+  # delegatee payment address
+  cardano_cli_log conway address build \
+    --payment-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.vkey" \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.addr"
+
+  # delegatee stake address
+  cardano_cli_log conway stake-address build \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.addr"
+
+  # delegatee stake address registration and vote delegation cert
+  cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --drep-verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert"
+done
+
 # create scripts for cluster starting / stopping
 printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start all" > "$STATE_CLUSTER/supervisorctl_start"
 printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:" > "$STATE_CLUSTER/supervisorctl_restart_nodes"
@@ -508,7 +557,7 @@ fi
 echo "Sleeping for initial Tx submission delay of $TX_SUBMISSION_DELAY seconds"
 sleep "$TX_SUBMISSION_DELAY"
 
-echo "Re-registering pools"
+echo "Re-registering pools, creating CC members and DReps"
 
 GENESIS_SIGNING=()
 for skey in "$STATE_CLUSTER"/shelley/genesis-keys/genesis?.skey; do
@@ -520,15 +569,19 @@ for skey in "$STATE_CLUSTER"/shelley/delegate-keys/delegate?.skey; do
   DELEGATE_SIGNING+=("--signing-key-file" "$skey")
 done
 
-# Transfer funds, register stake addresses and pools, all in one big transaction:
+# Transfer funds, register stake addresses and pools, CC members, DReps, all in one big transaction:
 
 cardano_cli_log conway query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
+POOL_DEPOSIT="$((KEY_DEPOSIT * 2))"
+POOL_NEEDED_AMOUNT="$(( (POOL_PLEDGE + POOL_DEPOSIT) * NUM_POOLS ))"
+DREP_DEPOSIT="$((KEY_DEPOSIT + DREP_DEPOSIT))"
+DREP_NEEDED_AMOUNT="$(( (DREP_DELEGATED + DREP_DEPOSIT) * NUM_DREPS ))"
+NEEDED_AMOUNT="$(( POOL_NEEDED_AMOUNT + DREP_NEEDED_AMOUNT))"
+
 TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/genesis-utxo.addr)"
-DEPOSITS="$((KEY_DEPOSIT * 2))"
-NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
 FEE_BUFFER=100000000
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
 
@@ -579,13 +632,32 @@ for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
   CC_SIGNING+=( "--signing-key-file" "$f" )
 done
 
-WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + ${#CC_SIGNING[@]} + 1))"
+DREPS_ARGS=()
+for i in $(seq 1 "$NUM_DREPS"); do
+  DREPS_ARGS+=( \
+    "--tx-out" "$(<"$STATE_CLUSTER/governance_data/vote_stake_addr${i}.addr")+$DREP_DELEGATED" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep_reg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert" \
+  )
+done
+
+DREPS_SIGNING=()
+for i in $(seq 1 "$NUM_DREPS"); do
+  DREPS_SIGNING+=( \
+    "--signing-key-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}.skey" \
+    "--signing-key-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.skey" \
+  )
+done
+
+WITNESS_COUNT="$((${#POOL_SIGNING[@]} + ${#GENESIS_SIGNING[@]} + ${#DELEGATE_SIGNING[@]} + ${#CC_SIGNING[@]} + ${#DREPS_SIGNING[@]} + 1))"
 
 cardano_cli_log conway transaction build \
   "${TXINS[@]}" \
   --change-address   "$TXIN_ADDR" \
   "${POOL_ARGS[@]}" \
   "${CC_ARGS[@]}" \
+  "${DREPS_ARGS[@]}" \
   --witness-override "$WITNESS_COUNT" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --out-file         "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody"
@@ -595,6 +667,7 @@ cardano_cli_log conway transaction sign \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
   "${CC_SIGNING[@]}" \
+  "${DREPS_SIGNING[@]}" \
   --signing-key-file "$STATE_CLUSTER/shelley/genesis-utxo.skey" \
   --testnet-magic    "$NETWORK_MAGIC" \
   --tx-body-file     "$STATE_CLUSTER/shelley/transfer-register-delegate-tx.txbody" \
