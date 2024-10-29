@@ -17,8 +17,6 @@ LOGGER = logging.getLogger(__name__)
 GOV_DATA_DIR = "governance_data"
 GOV_DATA_STORE = "governance_data.pickle"
 
-DREPS_NUM = 5
-
 
 def _get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
     return data.get("committee") or data.get("commitee") or {}
