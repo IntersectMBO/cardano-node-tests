@@ -225,20 +225,18 @@ def setup(
         for pn in cluster_management.Resources.ALL_POOLS
     ]
 
-    # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
-    # to be usable. DReps don't vote in PV9.
-    if cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10:
-        cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
-        # TODO: check `cardano-cli conway query drep-stake-distribution`
-
-    # The data needs to be saved only after DReps are ready. Other functions check
-    # presence of the pickle file.
     gov_data = save_default_governance(
         dreps_reg=drep_reg_records,
         drep_delegators=drep_users,
         cc_members=cc_members,
         pools_cold=node_cold_records,
     )
+
+    # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
+    # to be usable. DReps don't vote in PV9.
+    if cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10:
+        cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
+        # TODO: check `cardano-cli conway query drep-stake-distribution`
 
     return gov_data
 
@@ -253,16 +251,21 @@ def get_default_governance(
     governance_data = None
 
     def _setup_gov() -> tp.Optional[governance_utils.GovernanceRecords]:
-        with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
-            if gov_data_store.exists():
-                return None
+        if gov_data_store.exists():
+            return None
 
-            return setup(
-                cluster_obj=cluster_obj,
-                cluster_manager=cluster_manager,
-            )
+        gov_records = setup(
+            cluster_obj=cluster_obj,
+            cluster_manager=cluster_manager,
+        )
 
-    if not gov_data_store.exists():
+        if not gov_data_store.exists():
+            msg = f"File `{gov_data_store}` not found"
+            raise FileNotFoundError(msg)
+
+        return gov_records
+
+    with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
         governance_data = _setup_gov()
 
     gov_data_checksum = helpers.checksum(gov_data_store)
@@ -271,7 +274,7 @@ def get_default_governance(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-        if not governance_data and gov_data_store.exists():
+        if governance_data is None:
             with open(gov_data_store, "rb") as in_data:
                 governance_data = pickle.load(in_data)
 
