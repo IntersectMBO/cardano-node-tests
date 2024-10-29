@@ -592,10 +592,6 @@ done
 
 # Transfer funds, register stake addresses and pools, CC members, DReps, all in one big transaction:
 
-cardano_cli_log conway query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --out-file "$STATE_CLUSTER/pparams.json"
-
 DEPOSIT_FOR_POOLS="$((KEY_DEPOSIT * 2))"
 NEEDED_AMOUNT_POOLS="$(( (POOL_PLEDGE + DEPOSIT_FOR_POOLS) * NUM_POOLS ))"
 DEPOSIT_FOR_DREPS="$((KEY_DEPOSIT + DREP_DEPOSIT))"
