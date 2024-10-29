@@ -271,6 +271,11 @@ cardano_cli_log conway address build --payment-verification-key-file \
 
 mv "$STATE_CLUSTER/create_staked/stake-delegator-keys" "$STATE_CLUSTER/shelley/stake-delegator-keys"
 
+KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.json")"
+DREP_DEPOSIT="$(jq '.dRepDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.conway.json")"
+
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "$STATE_CLUSTER/byron/genesis.json")"
 SHELLEY_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
@@ -336,9 +341,6 @@ for i in $(seq 1 $NUM_BFT_NODES); do
   BFT_PORT=$(("%%NODE_PORT_BASE%%" + (i - 1) * "%%PORTS_PER_NODE%%" ))
   echo "$BFT_PORT" > "$STATE_CLUSTER/nodes/node-bft$i/port"
 done
-
-KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
-  < "$STATE_CLUSTER/shelley/genesis.json")"
 
 for i in $(seq 1 "$NUM_POOLS"); do
   mkdir -p "$STATE_CLUSTER/nodes/node-pool$i"
@@ -452,9 +454,6 @@ EoF
 done
 
 rm -rf "$STATE_CLUSTER/shelley/create_staked"
-
-DREP_DEPOSIT="$(jq '.dRepDeposit' \
-  < "$STATE_CLUSTER/shelley/genesis.conway.json")"
 
 for i in $(seq 1 "$NUM_DREPS"); do
   # DRep keys
@@ -597,11 +596,11 @@ cardano_cli_log conway query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-POOL_DEPOSIT="$((KEY_DEPOSIT * 2))"
-POOL_NEEDED_AMOUNT="$(( (POOL_PLEDGE + POOL_DEPOSIT) * NUM_POOLS ))"
-DREP_DEPOSIT="$((KEY_DEPOSIT + DREP_DEPOSIT))"
-DREP_NEEDED_AMOUNT="$(( (DREP_DELEGATED + DREP_DEPOSIT) * NUM_DREPS ))"
-NEEDED_AMOUNT="$(( POOL_NEEDED_AMOUNT + DREP_NEEDED_AMOUNT))"
+DEPOSIT_FOR_POOLS="$((KEY_DEPOSIT * 2))"
+NEEDED_AMOUNT_POOLS="$(( (POOL_PLEDGE + DEPOSIT_FOR_POOLS) * NUM_POOLS ))"
+DEPOSIT_FOR_DREPS="$((KEY_DEPOSIT + DREP_DEPOSIT))"
+NEEDED_AMOUNT_DREPS="$(( (DREP_DELEGATED + DEPOSIT_FOR_DREPS) * NUM_DREPS ))"
+NEEDED_AMOUNT="$((NEEDED_AMOUNT_POOLS + NEEDED_AMOUNT_DREPS))"
 
 FEE_BUFFER=100000000
 TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/genesis-utxo.addr)"
