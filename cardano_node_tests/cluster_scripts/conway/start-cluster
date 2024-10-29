@@ -321,6 +321,8 @@ fi
 
 KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
   < "$STATE_CLUSTER/shelley/genesis.json")"
+POOL_DEPOSIT="$(jq '.protocolParams.poolDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.json")"
 DREP_DEPOSIT="$(jq '.dRepDeposit' \
   < "$STATE_CLUSTER/shelley/genesis.conway.json")"
 GOV_ACTION_DEPOSIT="$(jq '.govActionDeposit' \
@@ -742,8 +744,7 @@ cardano_cli_log shelley query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
 
-DEPOSITS="$(jq '.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit)' \
-  < "$STATE_CLUSTER/shelley/genesis.json")"
+DEPOSITS="$((POOL_DEPOSIT + (2 * KEY_DEPOSIT) ))"
 NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE))"
 
@@ -1180,9 +1181,9 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --out-file "$STATE_CLUSTER/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
 done
 
-DREP_DEPOSIT="$((KEY_DEPOSIT + DREP_DEPOSIT))"
-DREP_NEEDED_AMOUNT="$(( (DREP_DELEGATED + DREP_DEPOSIT) * NUM_DREPS ))"
-STOP_TXIN_AMOUNT="$((FEE + DREP_NEEDED_AMOUNT))"
+DEPOSITS="$((KEY_DEPOSIT + DREP_DEPOSIT))"
+NEEDED_AMOUNT="$(( (DREP_DELEGATED + DEPOSITS) * NUM_DREPS ))"
+STOP_TXIN_AMOUNT="$((FEE + NEEDED_AMOUNT))"
 
 get_txins "$FAUCET_ADDR" "$STOP_TXIN_AMOUNT"
 
