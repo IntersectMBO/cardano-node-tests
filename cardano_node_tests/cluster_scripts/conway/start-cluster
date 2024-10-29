@@ -515,6 +515,12 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/op.cert"
 
+  # delegate pool reward to alwaysAbstain DRep
+  cardano_cli_log conway stake-address vote-delegation-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool${i}/reward.vkey" \
+    --always-abstain \
+    --out-file "$STATE_CLUSTER/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
+
   POOL_NAME="TestPool$i"
   POOL_DESC="Test Pool $i"
   POOL_TICKER="TP$i"
@@ -740,10 +746,6 @@ cardano_cli_log legacy governance create-update-proposal \
 
 # Transfer funds, register pools and delegations, submit update proposal, all in one big transaction:
 
-cardano_cli_log shelley query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --out-file "$STATE_CLUSTER/pparams.json"
-
 DEPOSITS="$((POOL_DEPOSIT + (2 * KEY_DEPOSIT) ))"
 NEEDED_AMOUNT="$(( (POOL_PLEDGE + DEPOSITS) * NUM_POOLS ))"
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE))"
@@ -823,10 +825,6 @@ cardano_cli_log legacy governance create-update-proposal \
   --protocol-major-version 4 \
   --protocol-minor-version 0
 
-cardano_cli_log allegra query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --out-file "$STATE_CLUSTER/pparams.json"
-
 get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
@@ -878,10 +876,6 @@ cardano_cli_log legacy governance create-update-proposal \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 5 \
   --protocol-minor-version 0
-
-cardano_cli_log mary query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --out-file "$STATE_CLUSTER/pparams.json"
 
 get_txins "$FAUCET_ADDR" "$FEE"
 
@@ -935,10 +929,6 @@ cardano_cli_log legacy governance create-update-proposal \
   "${GENESIS_VERIFICATION[@]}" \
   --protocol-major-version 6 \
   --protocol-minor-version 0
-
-cardano_cli_log alonzo query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --out-file "$STATE_CLUSTER/pparams.json"
 
 get_txins "$FAUCET_ADDR" "$FEE"
 
@@ -1059,10 +1049,6 @@ cardano_cli_log legacy governance create-update-proposal \
   --protocol-major-version 8 \
   --protocol-minor-version 0
 
-cardano_cli_log babbage query protocol-parameters \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --out-file "$STATE_CLUSTER/pparams.json"
-
 get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
@@ -1172,14 +1158,6 @@ PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")
 [ "$PROTOCOL_VERSION" = 9 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
 
 # Register CC members, DReps, all in one big transaction:
-
-# delegate pool reward to alwaysAbstain DRep
-for i in $(seq 1 "$NUM_POOLS"); do
-  cardano_cli_log conway stake-address vote-delegation-certificate \
-    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool${i}/reward.vkey" \
-    --always-abstain \
-    --out-file "$STATE_CLUSTER/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
-done
 
 DEPOSITS="$((KEY_DEPOSIT + DREP_DEPOSIT))"
 NEEDED_AMOUNT="$(( (DREP_DELEGATED + DEPOSITS) * NUM_DREPS ))"
