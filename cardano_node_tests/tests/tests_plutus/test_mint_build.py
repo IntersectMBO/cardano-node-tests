@@ -240,6 +240,128 @@ class TestBuildMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
+    ################################################################################
+
+    # Helper function to run an e2e test for a Plutus builtin
+    def run_plutus_test_script(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+        plutus_v_record: plutus_common.PlutusScriptData,
+        success_expected: bool,
+
+    ):
+        """Test minting a token with a Plutus script."""
+        print ("*** Testing ", plutus_v_record.script_file)
+        temp_template = common.get_test_id(cluster)
+
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        script_fund = 20_000_000
+
+        minting_cost = plutus_common.compute_cost(
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.g_query.get_protocol_params(),
+        )
+
+        # Step 1: fund the token issuer and create UTXO for collaterals
+
+        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=script_fund,
+        )
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_v_record.script_file,
+                collaterals=collateral_utxos,
+                redeemer_file=plutus_common.REDEEMER_42,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(
+            signing_key_files=[issuer_addr.skey_file],
+        )
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        # # Doesn't work if the script fails.
+        #
+        # plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
+        #     src_address=payment_addr.address,
+        #     tx_name=f"{temp_template}_step2",
+        #     tx_files=tx_files_step2,
+        #     txins=mint_utxos,
+        #     txouts=txouts_step2,
+        #     mint=plutus_mint_data,
+        # )
+        # print(str(plutus_costs))
+
+        try:
+            tx_output_step2 = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_step2",
+                src_address=payment_addr.address,
+                use_build_cmd=True,
+                tx_files=tx_files_step2,
+                txins=mint_utxos,
+                txouts=txouts_step2,
+                mint=plutus_mint_data,
+            )
+        except (clusterlib.CLIError, submit_api.SubmitApiError) as excp:
+            if (not success_expected) and ("The machine terminated because of an error" in str(excp)):
+                return  # We're expecting evaluation to fail
+            else:
+                raise   # Some unexpected error
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
+        token_utxo = clusterlib.filter_utxos(
+            utxos=out_utxos, address=issuer_addr.address, coin=token
+        )
+        assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+
+# Accidentally (?) deleted
+#   cardano_node_tests/tests/data/plutus/v3/blsMint.plutus
+#   cardano_node_tests/tests/data/plutus/v3/blsSpend.plutus
+#   cardano_node_tests/tests/data/plutus/v3/constitutionScriptV3.plutus
+#
+    # Run all of the Plutus bitwise tests and the ripemd_160 test.
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_PLUTUSV3_UNUSABLE
+    @pytest.mark.smoke
+    def test_plutus_batch5_minting_v3_all(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: tp.List[clusterlib.AddressRecord],
+    ):
+        for test in plutus_common.succeeding_minting_ripemd_160_scripts_v3:
+           self.run_plutus_test_script(cluster, payment_addrs, test, True)
+        for test in plutus_common.succeeding_minting_bitwise_scripts_v3:
+           self.run_plutus_test_script(cluster, payment_addrs, test, True)
+        for test in plutus_common.failing_minting_bitwise_scripts_v3:
+           self.run_plutus_test_script(cluster, payment_addrs, test, False)
+
+    ################################################################################
+
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_PLUTUSV3_UNUSABLE
     @pytest.mark.smoke

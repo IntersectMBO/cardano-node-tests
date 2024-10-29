@@ -283,6 +283,170 @@ MINTING_SECP256K1_SCHNORR = {
 }
 
 
+# ----- Succeeding bitwise tests ----- #
+
+UNKNOWN_FIXED_COST = 777_777
+
+MINTING_ANDBYTESTRING_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingAndByteStringPolicyScriptV3.plutus"
+MINTING_ANDBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_ANDBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=19269680, per_space=102266, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_ORBYTESTRING_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingOrByteStringPolicyScriptV3.plutus"
+MINTING_ORBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_ORBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=19269680, per_space=102266, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_XORBYTESTRING_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingXorByteStringPolicyScriptV3.plutus"
+MINTING_XORBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_XORBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=19269680, per_space=102266, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_COMPLEMENTBYTESTRING_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingComplementByteStringPolicyScriptV3.plutus"
+MINTING_COMPLEMENTBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_COMPLEMENTBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=5863431, per_space=30027, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_COUNTSETBITS_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingCountSetBitsPolicyScriptV3.plutus"
+MINTING_COUNTSETBITS_V3 = PlutusScriptData(
+    script_file=MINTING_COUNTSETBITS_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=9211420, per_space=45324, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_FINDFIRSTSET_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingFindFirstSetBitPolicyScriptV3.plutus"
+MINTING_FINDFIRSTSET_V3 = PlutusScriptData(
+    script_file=MINTING_FINDFIRSTSET_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=8071583, per_space=40221, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_READBIT_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingReadBitPolicyScriptV3.plutus"
+MINTING_READBIT_V3 = PlutusScriptData(
+    script_file=MINTING_READBIT_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=15272720, per_space=82724, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_REPLICATEBYTE_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingReplicateBytePolicyScriptV3.plutus"
+MINTING_REPLICATEBYTE_V3 = PlutusScriptData(
+    script_file=MINTING_REPLICATEBYTE_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=4549650, per_space=22946, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_ROTATEBYTESTRING_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingRotateByteStringPolicyScriptV3.plutus"
+MINTING_ROTATEBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_ROTATEBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=22778618, per_space=109004, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_SHIFTBYTESTRING_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingShiftByteStringPolicyScriptV3.plutus"
+MINTING_SHIFTBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_SHIFTBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=17922844, per_space=85787, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+MINTING_WRITEBITS_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingWriteBitsPolicyScriptV3.plutus"
+MINTING_WRITEBITS_V3 = PlutusScriptData(
+    script_file=MINTING_WRITEBITS_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=90646820, per_space=462457, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+# ----- All succeeding bitwise tests ----- #
+
+succeeding_minting_bitwise_scripts_v3 = [
+    MINTING_ANDBYTESTRING_V3,
+    MINTING_ORBYTESTRING_V3,
+    MINTING_XORBYTESTRING_V3,
+    MINTING_COMPLEMENTBYTESTRING_V3,
+    MINTING_COUNTSETBITS_V3,
+    MINTING_FINDFIRSTSET_V3,
+    MINTING_READBIT_V3,
+    MINTING_REPLICATEBYTE_V3,
+    MINTING_ROTATEBYTESTRING_V3,
+    MINTING_SHIFTBYTESTRING_V3,
+    MINTING_WRITEBITS_V3
+]
+
+
+# ----- All failing bitwise tests ----- #
+
+FAILING_BITWISE_SCRIPTS_V3 = [
+    "failingReadBitPolicyScriptV3_1.plutus",
+    "failingReadBitPolicyScriptV3_2.plutus",
+    "failingReadBitPolicyScriptV3_3.plutus",
+    "failingReadBitPolicyScriptV3_4.plutus",
+    "failingReadBitPolicyScriptV3_5.plutus",
+    "failingReadBitPolicyScriptV3_6.plutus",
+    "failingReadBitPolicyScriptV3_7.plutus",
+    "failingReadBitPolicyScriptV3_8.plutus",
+    "failingReadBitPolicyScriptV3_9.plutus",
+    "failingReadBitPolicyScriptV3_10.plutus",
+    "failingReadBitPolicyScriptV3_11.plutus",
+    "failingReadBitPolicyScriptV3_12.plutus",
+    "failingReadBitPolicyScriptV3_13.plutus",
+    "failingReadBitPolicyScriptV3_14.plutus",
+    "failingReplicateBytePolicyScriptV3_1.plutus",
+    "failingReplicateBytePolicyScriptV3_2.plutus",
+    "failingReplicateBytePolicyScriptV3_3.plutus",
+    "failingReplicateBytePolicyScriptV3_4.plutus",
+    "failingReplicateBytePolicyScriptV3_5.plutus",
+    "failingReplicateBytePolicyScriptV3_6.plutus",
+    "failingWriteBitsPolicyScriptV3_1.plutus",
+    "failingWriteBitsPolicyScriptV3_2.plutus",
+    "failingWriteBitsPolicyScriptV3_3.plutus",
+    "failingWriteBitsPolicyScriptV3_4.plutus",
+    "failingWriteBitsPolicyScriptV3_5.plutus",
+    "failingWriteBitsPolicyScriptV3_6.plutus",
+    "failingWriteBitsPolicyScriptV3_7.plutus",
+    "failingWriteBitsPolicyScriptV3_8.plutus",
+    "failingWriteBitsPolicyScriptV3_9.plutus",
+    "failingWriteBitsPolicyScriptV3_10.plutus",
+    "failingWriteBitsPolicyScriptV3_11.plutus",
+    "failingWriteBitsPolicyScriptV3_12.plutus",
+    "failingWriteBitsPolicyScriptV3_13.plutus",
+    "failingWriteBitsPolicyScriptV3_14.plutus",
+    "failingWriteBitsPolicyScriptV3_15.plutus",
+    "failingWriteBitsPolicyScriptV3_16.plutus",
+    "failingWriteBitsPolicyScriptV3_17.plutus",
+    "failingWriteBitsPolicyScriptV3_18.plutus",
+    "failingWriteBitsPolicyScriptV3_19.plutus"
+]
+
+# We're not currently checking the costs (and it seems to be difficult when the
+# script fails anyway), so the values here don't really matter.
+UNDETERMINED_COST = ExecutionCost(per_time=1_000_000, per_space=100_000, fixed_cost=1234)
+
+def make_failing_scriptdata (name: str):
+    return PlutusScriptData(
+        script_file=SCRIPTS_V3_DIR / name,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+
+failing_minting_bitwise_scripts_v3 = map (make_failing_scriptdata, FAILING_BITWISE_SCRIPTS_V3)
+
+MINTING_RIPEMD_160_PLUTUS_V3=SCRIPTS_V3_DIR / "succeedingRipemd_160Policy.plutus"
+MINTING_RIPEMD_160_V3 = PlutusScriptData(
+    script_file=MINTING_RIPEMD_160_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=6598460, per_space=14710, fixed_cost=UNKNOWN_FIXED_COST)
+)
+
+succeeding_minting_ripemd_160_scripts_v3 = [ MINTING_RIPEMD_160_V3 ]
+
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusOp:
     script_file: clusterlib.FileType
