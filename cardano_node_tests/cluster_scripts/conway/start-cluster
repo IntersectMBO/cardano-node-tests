@@ -6,6 +6,7 @@
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
 # NO_CC - if set, will not create committee
+# PV10 - if set, will use protocol version 10
 # DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
@@ -296,6 +297,13 @@ if [ -z "${NO_CC:-""}" ]; then
   rm -f "$STATE_CLUSTER/shelley/genesis.conway.json_jq"
 fi
 
+KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.json")"
+DREP_DEPOSIT="$(jq '.dRepDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.conway.json")"
+GOV_ACTION_DEPOSIT="$(jq '.govActionDeposit' \
+  < "$STATE_CLUSTER/shelley/genesis.conway.json")"
+
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "$STATE_CLUSTER/byron/genesis.json")"
 SHELLEY_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
@@ -536,11 +544,6 @@ done
 mv "$STATE_CLUSTER/shelley/utxo-keys/utxo1.vkey" "$STATE_CLUSTER/shelley/genesis-utxo.vkey"
 mv "$STATE_CLUSTER/shelley/utxo-keys/utxo1.skey" "$STATE_CLUSTER/shelley/genesis-utxo.skey"
 rmdir "$STATE_CLUSTER/shelley/utxo-keys"
-
-KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
-  < "$STATE_CLUSTER/shelley/genesis.json")"
-DREP_DEPOSIT="$(jq '.dRepDeposit' \
-  < "$STATE_CLUSTER/shelley/genesis.conway.json")"
 
 for i in $(seq 1 "$NUM_DREPS"); do
   # DRep keys
@@ -1239,6 +1242,8 @@ wait_for_epoch "$((BABBAGE_PV8_EPOCH + 1))"
 
 wait_for_era "Conway"
 
+CONWAY_PV9_EPOCH="$(get_epoch)"
+
 cardano_cli_log conway query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "$STATE_CLUSTER/pparams.json"
@@ -1259,7 +1264,7 @@ done
 
 DREP_DEPOSIT="$((KEY_DEPOSIT + DREP_DEPOSIT))"
 DREP_NEEDED_AMOUNT="$(( (DREP_DELEGATED + DREP_DEPOSIT) * NUM_DREPS ))"
-STOP_TXIN_AMOUNT="$(( FEE + DREP_NEEDED_AMOUNT))"
+STOP_TXIN_AMOUNT="$((FEE + DREP_NEEDED_AMOUNT))"
 
 TXINS=()
 TXIN_COUNT=0
@@ -1278,7 +1283,7 @@ done <<< "$(cardano_cli_log latest query utxo --testnet-magic \
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - STOP_TXIN_AMOUNT))"
 
-V9_TX_NAME="setup_governance"
+V9_TX="$STATE_CLUSTER/governance_data/setup_governance"
 
 CC_ARGS=()
 for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
@@ -1325,7 +1330,7 @@ cardano_cli_log conway transaction build-raw \
   "${DREPS_ARGS[@]}" \
   "${POOL_ARGS[@]}" \
   --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
-  --out-file "${V9_TX_NAME}-tx.txbody"
+  --out-file "${V9_TX}-tx.txbody"
 
 cardano_cli_log conway transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
@@ -1333,11 +1338,11 @@ cardano_cli_log conway transaction sign \
   "${DREPS_SIGNING[@]}" \
   "${POOL_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${V9_TX_NAME}-tx.txbody" \
-  --out-file         "${V9_TX_NAME}-tx.tx"
+  --tx-body-file     "${V9_TX}-tx.txbody" \
+  --out-file         "${V9_TX}-tx.tx"
 
 cardano_cli_log conway transaction submit \
-  --tx-file "${V9_TX_NAME}-tx.tx" \
+  --tx-file "${V9_TX}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
 sleep "$SUBMIT_DELAY"
@@ -1351,6 +1356,174 @@ if [ -z "${NO_CC:-""}" ]; then
     grep -c '"status": "Active"')"
   [ "$cc_size" -ge "$NUM_CC" ] || \
     { echo "The CC members were not registered, line $LINENO" >&2; exit 1; }  # assert
+fi
+
+# Hard fork to Conway protocol version 10
+
+if [ -n "${PV10:-""}" ]; then
+  PV10_ACTION="$STATE_CLUSTER/governance_data/hardfork_pv10_action"
+
+  echo "Submitting hard fork proposal to update to Conway PV10"
+
+  cardano_cli_log conway governance action create-hardfork \
+    --testnet \
+    --governance-action-deposit "$GOV_ACTION_DEPOSIT" \
+    --deposit-return-stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool1/reward.vkey" \
+    --anchor-url "http://www.hardfork-pv10.com" \
+    --anchor-data-hash 5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d \
+    --protocol-major-version 10 \
+    --protocol-minor-version 0 \
+    --out-file "$PV10_ACTION.action"
+
+  STOP_TXIN_AMOUNT="$((FEE + GOV_ACTION_DEPOSIT))"
+
+  TXINS=()
+  TXIN_COUNT=0
+  TXIN_AMOUNT=0
+  while read -r txhash txix amount _; do
+    TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+    TXIN_COUNT="$((TXIN_COUNT + 1))"
+    TXINS+=("--tx-in" "${txhash}#${txix}")
+    if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+      break
+    fi
+  done <<< "$(cardano_cli_log latest query utxo --testnet-magic \
+              "$NETWORK_MAGIC" \
+              --address "$FAUCET_ADDR" |
+              grep -E "lovelace \+ TxOutDatumNone$")"
+
+  TXOUT_AMOUNT="$((TXIN_AMOUNT - STOP_TXIN_AMOUNT))"
+
+  cardano_cli_log conway transaction build-raw \
+    --fee    "$FEE" \
+    "${TXINS[@]}" \
+    --proposal-file "$PV10_ACTION.action" \
+    --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+    --out-file "${PV10_ACTION}-tx.txbody"
+
+  cardano_cli_log conway transaction sign \
+    --signing-key-file "$FAUCET_SKEY" \
+    --testnet-magic    "$NETWORK_MAGIC" \
+    --tx-body-file     "${PV10_ACTION}-tx.txbody" \
+    --out-file         "${PV10_ACTION}-tx.tx"
+
+  cardano_cli_log conway transaction submit \
+    --tx-file "${PV10_ACTION}-tx.tx" \
+    --testnet-magic "$NETWORK_MAGIC"
+
+  sleep "$SUBMIT_DELAY"
+  if ! check_spend_success "${TXINS[@]}"; then
+    echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+    exit 1
+  fi
+
+  ACTION_TXID="$(cardano_cli_log conway transaction txid --tx-body-file "${PV10_ACTION}-tx.txbody")"
+
+  echo "Voting on hard fork proposal"
+
+  INDEX=0
+  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot.vkey; do
+    [ -e "$f" ] || continue
+    INDEX="$((INDEX + 1))"
+    cardano_cli_log conway governance vote create \
+      --yes \
+      --governance-action-tx-id "$ACTION_TXID" \
+      --governance-action-index 0 \
+      --cc-hot-verification-key-file "$f" \
+      --anchor-url "http://www.cc-vote${INDEX}-hf-pv10.com" \
+      --anchor-data-hash 5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d \
+      --out-file "${PV10_ACTION}_cc${INDEX}.vote"
+  done
+
+  INDEX=0
+  for f in "$STATE_CLUSTER"/nodes/node-pool*/cold.vkey; do
+    INDEX="$((INDEX + 1))"
+    cardano_cli_log conway governance vote create \
+      --yes \
+      --governance-action-tx-id "$ACTION_TXID" \
+      --governance-action-index 0 \
+      --cold-verification-key-file "$f" \
+      --anchor-url "http://www.spo-vote${INDEX}-hf-pv10.com" \
+      --anchor-data-hash 5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d \
+      --out-file "${PV10_ACTION}_spo${INDEX}.vote"
+  done
+
+  # Submit the votes
+
+  PV10_VOTES="$STATE_CLUSTER/governance_data/hardfork_pv10_votes"
+
+  VOTE_FILES=()
+  for f in "$PV10_ACTION"_*.vote; do
+    VOTE_FILES+=( "--vote-file" "$f" )
+  done
+
+  CC_SIGNING=()
+  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot.skey; do
+    [ -e "$f" ] || continue
+    CC_SIGNING+=( "--signing-key-file" "$f" )
+  done
+
+  POOL_SIGNING=()
+  for f in "$STATE_CLUSTER"/nodes/node-pool*/cold.skey; do
+    POOL_SIGNING+=( \
+      "--signing-key-file" "$f" \
+    )
+  done
+
+  STOP_TXIN_AMOUNT=$FEE
+
+  TXINS=()
+  TXIN_COUNT=0
+  TXIN_AMOUNT=0
+  while read -r txhash txix amount _; do
+    TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+    TXIN_COUNT="$((TXIN_COUNT + 1))"
+    TXINS+=("--tx-in" "${txhash}#${txix}")
+    if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
+      break
+    fi
+  done <<< "$(cardano_cli_log latest query utxo --testnet-magic \
+              "$NETWORK_MAGIC" \
+              --address "$FAUCET_ADDR" |
+              grep -E "lovelace \+ TxOutDatumNone$")"
+
+  TXOUT_AMOUNT="$((TXIN_AMOUNT - STOP_TXIN_AMOUNT))"
+
+  cardano_cli_log conway transaction build-raw \
+    --fee    "$FEE" \
+    "${TXINS[@]}" \
+    "${VOTE_FILES[@]}" \
+    --tx-out "$FAUCET_ADDR+$TXOUT_AMOUNT" \
+    --out-file "${PV10_VOTES}-tx.txbody"
+
+  cardano_cli_log conway transaction sign \
+    --signing-key-file "$FAUCET_SKEY" \
+    "${CC_SIGNING[@]}" \
+    "${POOL_SIGNING[@]}" \
+    --testnet-magic    "$NETWORK_MAGIC" \
+    --tx-body-file     "${PV10_VOTES}-tx.txbody" \
+    --out-file         "${PV10_VOTES}-tx.tx"
+
+  cardano_cli_log conway transaction submit \
+    --tx-file "${PV10_VOTES}-tx.tx" \
+    --testnet-magic "$NETWORK_MAGIC"
+
+  sleep "$SUBMIT_DELAY"
+  if ! check_spend_success "${TXINS[@]}"; then
+    echo "Failed to spend Tx inputs, line $LINENO" >&2  # assert
+    exit 1
+  fi
+
+  echo "Waiting for Conway PV10 to start"
+  wait_for_epoch "$((CONWAY_PV9_EPOCH + 2))"
+
+  cardano_cli_log conway query protocol-parameters \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "$STATE_CLUSTER/pparams.json"
+
+  PROTOCOL_VERSION="$(jq ".protocolVersion.major" < "$STATE_CLUSTER/pparams.json")"
+
+  [ "$PROTOCOL_VERSION" = 10 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
 fi
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
