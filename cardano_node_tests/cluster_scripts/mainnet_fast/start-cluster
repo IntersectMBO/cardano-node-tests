@@ -92,6 +92,28 @@ check_spend_success() {
   return 1
 }
 
+get_txins() {
+  local txin_addr stop_txin_amount txhash txix amount _
+
+  txin_addr="${1:?"Missing TxIn address"}"
+  stop_txin_amount="${2:?"Missing stop TxIn amount"}"
+
+  stop_txin_amount="$((stop_txin_amount + 2000000))"
+
+  TXINS=()
+  TXIN_AMOUNT=0
+  while read -r txhash txix amount _; do
+    TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+    TXINS+=("--tx-in" "${txhash}#${txix}")
+    if [ "$TXIN_AMOUNT" -ge "$stop_txin_amount" ]; then
+      break
+    fi
+  done <<< "$(cardano_cli_log conway query utxo --testnet-magic \
+              "$NETWORK_MAGIC" \
+              --address "$txin_addr" |
+              grep -E "lovelace$|[0-9]$|lovelace \+ TxOutDatumNone$")"
+}
+
 ENABLE_SUBMIT_API="$(command -v cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
 
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
@@ -581,24 +603,11 @@ DREP_DEPOSIT="$((KEY_DEPOSIT + DREP_DEPOSIT))"
 DREP_NEEDED_AMOUNT="$(( (DREP_DELEGATED + DREP_DEPOSIT) * NUM_DREPS ))"
 NEEDED_AMOUNT="$(( POOL_NEEDED_AMOUNT + DREP_NEEDED_AMOUNT))"
 
-TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/genesis-utxo.addr)"
 FEE_BUFFER=100000000
+TXIN_ADDR="$(<"$STATE_CLUSTER"/shelley/genesis-utxo.addr)"
 STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE_BUFFER))"
 
-TXINS=()
-TXIN_COUNT=0
-TXIN_AMOUNT=0
-while read -r txhash txix amount _; do
-  TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
-  TXIN_COUNT="$((TXIN_COUNT + 1))"
-  TXINS+=("--tx-in" "${txhash}#${txix}")
-  if [ "$TXIN_AMOUNT" -ge "$STOP_TXIN_AMOUNT" ]; then
-    break
-  fi
-done <<< "$(cardano_cli_log conway query utxo --testnet-magic \
-            "$NETWORK_MAGIC" \
-            --address "$TXIN_ADDR" |
-            grep -E "lovelace$|[0-9]$|lovelace \+ TxOutDatumNone$")"
+get_txins "$TXIN_ADDR" "$STOP_TXIN_AMOUNT"
 
 POOL_ARGS=()
 POOL_SIGNING=()
