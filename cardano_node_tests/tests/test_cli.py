@@ -64,6 +64,32 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
+    def test_toplevel_query_tip(self, cluster: clusterlib.ClusterLib):
+        """Check that `query tip` is available in top level."""
+        common.get_test_id(cluster)
+
+        try:
+            cli_out = cluster.cli(
+                [
+                    "cardano-cli",
+                    "query",
+                    "tip",
+                    *cluster.magic_args,
+                ],
+                add_default_args=False,
+            )
+        except clusterlib.CLIError as exc:
+            if "Invalid argument `query'" in str(exc):
+                issues.cli_953.finish_test()
+            raise
+
+        tip = json.loads(cli_out.stdout.decode("utf-8").strip())
+        keys = set(tip)
+        assert {"block", "epoch", "era", "hash", "slot"}.issubset(keys)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    @pytest.mark.testnets
     def test_calculate_min_fee(self, cluster: clusterlib.ClusterLib):
         """Check the `calculate-min-fee` command."""
         common.get_test_id(cluster)

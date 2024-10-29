@@ -92,6 +92,12 @@ cli_942 = blockers.GH(
     fixed_in="10.0.0.1",  # Fixed in some release after 10.0.0.0
     message="build command doesn't balance key deposit.",
 )
+cli_953 = blockers.GH(
+    issue=953,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="10.1.2.0",  # Fixed in some release after 10.1.1.0
+    message="query tip is not a top level command.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,
