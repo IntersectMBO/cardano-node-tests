@@ -487,7 +487,25 @@ for i in $(seq 1 "$NUM_POOLS"); do
   # stake reward address registration cert
   cardano_cli_log shelley stake-address registration-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
-    --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+    --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.shelley_reg.cert"
+  # stake reward delegation to alwaysAbstain DRep cert
+  cardano_cli_log conway stake-address vote-delegation-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool${i}/reward.vkey" \
+    --always-abstain \
+    --out-file "$STATE_CLUSTER/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
+  if [ -n "${PV10:-""}" ]; then
+    # stake reward address registration and vote delegation cert, to be used later in tests
+    # when re-registering the reward address in Conway
+    cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
+      --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+      --always-abstain \
+      --key-reg-deposit-amt "$KEY_DEPOSIT" \
+      --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+  else
+    ln \
+      "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.shelley_reg.cert" \
+      "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+  fi
 
   # pool keys
   cardano_cli_log latest node key-gen \
@@ -514,12 +532,6 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --kes-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/kes.vkey" \
     --operational-certificate-issue-counter-file "$STATE_CLUSTER/nodes/node-pool$i/cold.counter" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/op.cert"
-
-  # delegate pool reward to alwaysAbstain DRep
-  cardano_cli_log conway stake-address vote-delegation-certificate \
-    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool${i}/reward.vkey" \
-    --always-abstain \
-    --out-file "$STATE_CLUSTER/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
 
   POOL_NAME="TestPool$i"
   POOL_DESC="Test Pool $i"
@@ -610,12 +622,17 @@ for i in $(seq 1 "$NUM_DREPS"); do
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.addr"
 
-  # delegatee stake address registration and vote delegation cert
-  cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
+  # delegatee stake address registration cert
+  cardano_cli_log conway stake-address registration-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg.cert"
+
+  # delegatee vote delegation cert
+  cardano_cli_log conway stake-address vote-delegation-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
     --drep-verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey" \
-    --key-reg-deposit-amt "$KEY_DEPOSIT" \
-    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert"
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vote_deleg.cert"
 done
 
 # create scripts for cluster starting / stopping
@@ -761,7 +778,7 @@ for i in $(seq 1 "$NUM_POOLS"); do
   POOL_ARGS+=( \
     "--tx-out" "$(<"$STATE_CLUSTER/nodes/node-pool$i/owner.addr")+$POOL_PLEDGE" \
     "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert" \
-    "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.shelley_reg.cert" \
     "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/register.cert" \
     "--certificate-file" "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert" \
   )
@@ -1187,7 +1204,8 @@ for i in $(seq 1 "$NUM_DREPS"); do
   DREPS_ARGS+=( \
     "--tx-out" "$(<"$STATE_CLUSTER/governance_data/vote_stake_addr${i}.addr")+$DREP_DELEGATED" \
     "--certificate-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep_reg.cert" \
-    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vote_deleg.cert" \
   )
   DREPS_SIGNING+=( \
     "--signing-key-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.skey" \
