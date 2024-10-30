@@ -504,12 +504,17 @@ for i in $(seq 1 "$NUM_DREPS"); do
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.addr"
 
-  # delegatee stake address registration and vote delegation cert
-  cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
+  # delegatee stake address registration cert
+  cardano_cli_log conway stake-address registration-certificate \
+    --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg.cert"
+
+  # delegatee vote delegation cert
+  cardano_cli_log conway stake-address vote-delegation-certificate \
     --stake-verification-key-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vkey" \
     --drep-verification-key-file "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.vkey" \
-    --key-reg-deposit-amt "$KEY_DEPOSIT" \
-    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert"
+    --out-file "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vote_deleg.cert"
 done
 
 # create scripts for cluster starting / stopping
@@ -653,7 +658,8 @@ for i in $(seq 1 "$NUM_DREPS"); do
   DREPS_ARGS+=( \
     "--tx-out" "$(<"$STATE_CLUSTER/governance_data/vote_stake_addr${i}.addr")+$DREP_DELEGATED" \
     "--certificate-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep_reg.cert" \
-    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg_vote_deleg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.reg.cert" \
+    "--certificate-file" "$STATE_CLUSTER/governance_data/vote_stake_addr${i}_stake.vote_deleg.cert" \
   )
   DREPS_SIGNING+=( \
     "--signing-key-file" "$STATE_CLUSTER/governance_data/default_drep_${i}_drep.skey" \
