@@ -242,6 +242,10 @@ class TestNodeReconnect:
     )
     @pytest.mark.skipif(configuration.NUM_POOLS != 3, reason="`NUM_POOLS` must be 3")
     @pytest.mark.skipif(configuration.ENABLE_LEGACY, reason="Works only with P2P topology")
+    @pytest.mark.skipif(
+        "mainnet_fast" not in configuration.SCRIPTS_DIRNAME,
+        reason="Cannot run on testnet with short epochs",
+    )
     def test_metrics_reconnect(
         self,
         cluster_manager: cluster_management.ClusterManager,
