@@ -389,19 +389,33 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake.reg.cert"
 
-  # stake reward address registration cert
-  cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
-    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
-    --always-abstain \
-    --key-reg-deposit-amt "$KEY_DEPOSIT" \
-    --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+  if [ -n "${PV10:-""}" ]; then
+    # stake reward address registration and vote delegation cert
+    cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
+      --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+      --always-abstain \
+      --key-reg-deposit-amt "$KEY_DEPOSIT" \
+      --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
 
-  # owner stake address delegation certs
-  cardano_cli_log conway stake-address stake-and-vote-delegation-certificate \
-    --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
-    --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
-    --always-abstain \
-    --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
+    # owner stake address stake and vote delegation cert
+    cardano_cli_log conway stake-address stake-and-vote-delegation-certificate \
+      --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+      --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+      --always-abstain \
+      --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
+  else
+    # stake reward address registration cert
+    cardano_cli_log conway stake-address registration-certificate \
+      --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/reward.vkey" \
+      --key-reg-deposit-amt "$KEY_DEPOSIT" \
+      --out-file "$STATE_CLUSTER/nodes/node-pool$i/stake-reward.reg.cert"
+
+    # owner stake address stake delegation cert
+    cardano_cli_log conway stake-address stake-delegation-certificate \
+      --stake-verification-key-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.vkey" \
+      --cold-verification-key-file  "$STATE_CLUSTER/nodes/node-pool$i/cold.vkey" \
+      --out-file "$STATE_CLUSTER/nodes/node-pool$i/owner-stake.deleg.cert"
+  fi
 
   POOL_NAME="TestPool$i"
   POOL_DESC="Test Pool $i"
