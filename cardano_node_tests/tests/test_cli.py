@@ -62,30 +62,42 @@ class TestCLI:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "command",
+        (
+            "protocol-parameters",
+            "tip",
+            "stake-pools",
+            "stake-distribution",
+            "stake-address-info",
+            "utxo",
+            "ledger-state",
+            "protocol-state",
+            "stake-snapshot",
+            "leadership-schedule",
+            "kes-period-info",
+            "pool-state",
+            "tx-mempool",
+            "slot-number",
+        ),
+    )
     @pytest.mark.smoke
     @pytest.mark.testnets
-    def test_toplevel_query_tip(self, cluster: clusterlib.ClusterLib):
-        """Check that `query tip` is available in top level."""
+    def test_toplevel_queries(self, cluster: clusterlib.ClusterLib, command: str):
+        """Check that various queries are available in top level."""
         common.get_test_id(cluster)
 
         try:
-            cli_out = cluster.cli(
-                [
-                    "cardano-cli",
-                    "query",
-                    "tip",
-                    *cluster.magic_args,
-                ],
+            cluster.cli(
+                ["cardano-cli", "query", command],
                 add_default_args=False,
             )
         except clusterlib.CLIError as exc:
-            if "Invalid argument `query'" in str(exc):
+            str_exc = str(exc)
+            if "Invalid argument `query'" in str_exc:
                 issues.cli_953.finish_test()
-            raise
-
-        tip = json.loads(cli_out.stdout.decode("utf-8").strip())
-        keys = set(tip)
-        assert {"block", "epoch", "era", "hash", "slot"}.issubset(keys)
+            elif f"Usage: cardano-cli query {command}" not in str_exc:
+                raise
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
