@@ -218,7 +218,7 @@ elif [ "$1" = "step2" ]; then
   # waiting to make sure the chain is synced
   NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   for _ in {1..10}; do
-    sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
+    sync_progress="$(cardano-cli latest query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
     if [ "$sync_progress" = "100.00" ]; then
       break
     fi
