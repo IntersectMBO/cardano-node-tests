@@ -198,6 +198,14 @@ class TestRollback:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
 
     @allure.link(helpers.get_vcs_link())
+    # There's a submission delay of 60 sec. Therefore on testnet with low `securityParam`,
+    # it is not possible to restart the nodes, submit transaction, and still be under
+    # `securityParam` blocks.
+    @pytest.mark.skipif(
+        "mainnet_fast" not in configuration.SCRIPTS_DIRNAME,
+        reason="cannot run on testnet with low `securityParam`",
+    )
+    @pytest.mark.long
     def test_consensus_reached(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -306,11 +314,12 @@ class TestRollback:
             ), "The Tx number 3 doesn't exist on cluster 2"
 
             # Wait for new block to let chains progress.
-            # We can't wait for too long, because if both clusters has produced more than
-            # `securityParam` number of blocks while the topology was fragmented, it would not be
-            # possible to bring the the clusters back into global consensus. On local cluster,
-            # the value of `securityParam` is 10.
-            cluster.wait_for_new_block()
+            # If both clusters has produced more than `securityParam` number of blocks while
+            # the topology was fragmented, it would not be possible to bring the the clusters
+            # back into global consensus.
+            # On fast epoch local cluster, the value of `securityParam` is 10.
+            # On mainnet, the value of `securityParam` is 2160.
+            cluster.wait_for_new_block(new_blocks=15)
 
             if ROLLBACK_PAUSE:
                 print("PHASE2: cluster with separated into cluster1 and cluster2")
@@ -361,6 +370,10 @@ class TestRollback:
         ), "Neither Tx number 2 nor Tx number 3 was rolled back"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        "mainnet" in configuration.SCRIPTS_DIRNAME,
+        reason="cannot run on testnet with high `securityParam`",
+    )
     @pytest.mark.long
     def test_permanent_fork(
         self,

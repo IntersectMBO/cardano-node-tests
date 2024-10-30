@@ -15,14 +15,14 @@ set -euo pipefail
 
 TOP_DIR="$(readlink -m "${0%/*}/..")"
 
-export NUM_POOLS="${NUM_POOLS:-"10"}"
+export NUM_POOLS="${NUM_POOLS:-"10"}" CLUSTERS_COUNT=1 TEST_THREADS=0
 
 if [ -n "${INTERACTIVE:-""}" ]; then
-  export ROLLBACK_PAUSE=1 SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-mainnet_fast}" PYTEST_ARGS="-s -k test_consensus_reached"
+  export ROLLBACK_PAUSE=1 SCRIPTS_DIRNAME="mainnet_fast" PYTEST_ARGS="-s -k test_consensus_reached"
+  "$TOP_DIR/.github/regression.sh"
 else
-  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-conway_fast}" PYTEST_ARGS="-k TestRollback"
+  export SCRIPTS_DIRNAME="conway_fast" PYTEST_ARGS="-k test_permanent_fork"
+  "$TOP_DIR/.github/regression.sh" || exit "$?"
+  export SCRIPTS_DIRNAME="mainnet_fast" PYTEST_ARGS="-k test_consensus_reached"
+  "$TOP_DIR/.github/regression.sh"
 fi
-
-export CLUSTERS_COUNT=1 TEST_THREADS=0
-
-"$TOP_DIR/.github/regression.sh"
