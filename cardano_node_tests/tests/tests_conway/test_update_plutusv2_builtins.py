@@ -97,6 +97,10 @@ class TestUpdateBuiltIns:
         if not conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Can run only during bootstrap period.")
 
+        init_cost_model = cluster.g_query.get_protocol_params()["costModels"]["PlutusV2"]
+        if len(init_cost_model) >= 185:
+            pytest.skip("PlutusV2 cost model was already updated.")
+
         cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
 
         def _update_cost_model() -> None:
