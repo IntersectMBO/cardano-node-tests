@@ -2,7 +2,7 @@
 
 testnet_magic="$(<./state-cluster%%INSTANCE_NUM%%/db-bft1/protocolMagicId)"
 
-echo "Starting cardano-submit-api: cardano-submit-api"
+echo "Starting cardano-submit-api with PID $$: cardano-submit-api"
   echo "--config ./state-cluster%%INSTANCE_NUM%%/submit-api-config.json"
   echo "--socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket"
   echo "--listen-address 127.0.0.1"

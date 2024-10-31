@@ -16,7 +16,7 @@ case "${UTXO_BACKEND:-""}" in
     ;;
 esac
 
-echo "Starting cardano-node run: cardano-node run"
+echo "Starting cardano-node run with PID $$: cardano-node run"
    echo "--config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json"
    echo "--database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1"
    echo "--topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json"
