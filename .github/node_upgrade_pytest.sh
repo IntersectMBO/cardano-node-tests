@@ -186,6 +186,8 @@ elif [ "$1" = "step2" ]; then
 
   # Restart local cluster nodes with binaries from new cluster-node version.
   # It is necessary to restart supervisord with new environment.
+  "$STATE_CLUSTER/supervisorctl" stop all
+  sleep 5
   "$STATE_CLUSTER/supervisord_stop"
   sleep 3
   "$STATE_CLUSTER/supervisord_start" || exit 6
