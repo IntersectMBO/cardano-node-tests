@@ -136,6 +136,12 @@ cp "${SCRIPT_DIR}/submit-api-config.json" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/*genesis*.spec.json "${STATE_CLUSTER}/create_staked/"
 
+if [ -n "${PV10:-""}" ]; then
+  mv \
+    "${SCRIPT_DIR}/genesis.conway.spec.pv10.json" \
+    "${STATE_CLUSTER}/create_staked/genesis.conway.spec.json"
+fi
+
 if [ -z "${ENABLE_LEGACY:-""}" ]; then
   # use P2P topology files
   for tconf in "$SCRIPT_DIR"/p2p-topology-*.json; do
