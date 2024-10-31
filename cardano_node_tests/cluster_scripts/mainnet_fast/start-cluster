@@ -39,8 +39,11 @@ fi
 
 SECURITY_PARAM="$(jq '.securityParam' < "$SCRIPT_DIR/genesis.spec.json")"
 NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
-POOL_COST="$(jq '.protocolParams.minPoolCost' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
+POOL_COST="$(jq '.protocolParams.minPoolCost' < "$SCRIPT_DIR/genesis.spec.json")"
+if [ "$POOL_COST" -eq 0 ]; then
+  POOL_COST=600
+fi
 
 # There is some weird calculation going on, and the deleg supply needs to have a minimum value,
 # that is somehow based on non-delegated supply.

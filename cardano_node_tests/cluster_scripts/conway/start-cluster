@@ -31,7 +31,6 @@ TX_SUBMISSION_DELAY=60
 PROPOSAL_DELAY=5
 SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
-POOL_COST=600
 DREP_DELEGATED=500000000000
 
 FEE=5000000
@@ -41,6 +40,10 @@ NETWORK_MAGIC="$(jq '.networkMagic' < "$SCRIPT_DIR/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "$SCRIPT_DIR/genesis.spec.json")"
 SLOT_LENGTH="$(jq '.slotLength' < "$SCRIPT_DIR/genesis.spec.json")"
 EPOCH_SEC="$(jq '.epochLength * .slotLength | ceil' < "$SCRIPT_DIR/genesis.spec.json")"
+POOL_COST="$(jq '.protocolParams.minPoolCost' < "$SCRIPT_DIR/genesis.spec.json")"
+if [ "$POOL_COST" -eq 0 ]; then
+  POOL_COST=600
+fi
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
