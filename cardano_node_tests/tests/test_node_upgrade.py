@@ -94,11 +94,11 @@ class TestSetup:
         cluster = cluster_singleton
         common.get_test_id(cluster)
 
-        if UPGRADE_REVISION >= version.parse("9.0.0") > BASE_REVISION:
+        if UPGRADE_REVISION >= version.parse("10.1.0") > BASE_REVISION:
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
                 regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure "
-                ".*expected list len or indef",
+                ".* expected change in the serialization format",
                 ignore_file_id=worker_id,
             )
 
