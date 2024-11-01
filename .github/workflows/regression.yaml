@@ -29,6 +29,7 @@ on:
         - smoke
         - plutus
         - plutus and smoke
+        - team_plutus
         - not long
         - conway only
         default: all
