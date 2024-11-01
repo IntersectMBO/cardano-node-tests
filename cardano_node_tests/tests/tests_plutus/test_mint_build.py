@@ -1536,7 +1536,7 @@ class TestPlutusBatch5V3Builtins:
     @pytest.mark.parametrize(
         "script",
         success_scripts,
-        ids=(s.script_file.name for s in success_scripts),
+        ids=(s.script_file.stem for s in success_scripts),
     )
     @pytest.mark.smoke
     def test_plutus_success(
@@ -1558,7 +1558,7 @@ class TestPlutusBatch5V3Builtins:
     @pytest.mark.parametrize(
         "script",
         fail_scripts,
-        ids=(s.script_file.name for s in fail_scripts),
+        ids=(s.script_file.stem for s in fail_scripts),
     )
     @pytest.mark.smoke
     def test_plutus_fail(
