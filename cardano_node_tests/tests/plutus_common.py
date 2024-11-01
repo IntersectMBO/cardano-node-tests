@@ -446,7 +446,7 @@ FAILING_BITWISE_SCRIPT_FILES_V3 = (
 UNDETERMINED_COST = ExecutionCost(per_time=1_000_000, per_space=100_000, fixed_cost=1234)
 
 
-FAILING_MINTING_BITWISE_SCRIPTS_V3 = (
+FAILING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
     PlutusScriptData(
         script_file=SCRIPTS_V3_DIR / n,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
