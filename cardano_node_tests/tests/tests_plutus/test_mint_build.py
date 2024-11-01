@@ -1538,6 +1538,7 @@ class TestPlutusBatch5V3Builtins:
         success_scripts,
         ids=(s.script_file.stem for s in success_scripts),
     )
+    @pytest.mark.team_plutus
     @pytest.mark.smoke
     def test_plutus_success(
         self,
@@ -1560,6 +1561,7 @@ class TestPlutusBatch5V3Builtins:
         fail_scripts,
         ids=(s.script_file.stem for s in fail_scripts),
     )
+    @pytest.mark.team_plutus
     @pytest.mark.smoke
     def test_plutus_fail(
         self,

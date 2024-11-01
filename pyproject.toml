@@ -135,6 +135,7 @@ markers = [
     "smoke: fast test(s) under 1 minute",
     "upgrade: test(s) for upgrade testing",
     "plutus: test(s) for plutus",
+    "team_plutus: test(s) from Plutus dev team",
     "disabled: temporarily disabled test(s)",
     "noop: placeholder marker",
 ]
