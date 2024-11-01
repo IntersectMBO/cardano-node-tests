@@ -351,7 +351,9 @@ def check_tx_collaterals(
             *tx_raw_output.script_withdrawals,
         )
     ]
-    tx_collaterals = set(itertools.chain.from_iterable(tx_collaterals_nested))
+    tx_collaterals_flat = set(itertools.chain.from_iterable(tx_collaterals_nested))
+    # TODO: support multi-assets in collateral inputs
+    tx_collaterals = {r for r in tx_collaterals_flat if r.coin == clusterlib.DEFAULT_COIN}
     db_collaterals = {utxorecord2utxodata(utxorecord=r) for r in response.collaterals}
 
     assert (
