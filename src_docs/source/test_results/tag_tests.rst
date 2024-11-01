@@ -4,6 +4,7 @@ Tag Testing
 .. toctree::
    :maxdepth: 4
 
+   node/tag_10_1_2.rst
    node/tag_10_1_1.rst
    node/tag_9_0_0.rst
    node/tag_8_11_0.rst
