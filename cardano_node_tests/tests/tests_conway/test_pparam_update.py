@@ -264,7 +264,7 @@ class TestPParamUpdate:
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, then
         # missing votes would approve the action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparams = cluster.g_query.get_protocol_params()
         drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["ppGovGroup"]
         spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["ppSecurityGroup"]
         is_drep_total_below_threshold = (
@@ -590,7 +590,7 @@ class TestPParamUpdate:
         ]
 
         # Hand-picked parameters and values that can stay changed even for other tests
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparams = cluster.g_query.get_protocol_params()
         fin_update_proposals = [
             # From network group
             clusterlib_utils.UpdateProposal(
@@ -1353,7 +1353,7 @@ class TestPParamData:
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
 
-        cur_pparam = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparam = cluster.g_query.get_protocol_params()
         cur_pparam_keys = set(cur_pparam.keys())
         known_pparam_keys = set().union(
             NETWORK_GROUP_PPARAMS,

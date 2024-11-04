@@ -29,9 +29,7 @@ def is_in_bootstrap(
     cluster_obj: clusterlib.ClusterLib,
 ) -> bool:
     """Check if the cluster is in bootstrap period."""
-    pv = cluster_obj.g_conway_governance.query.gov_state()["currentPParams"]["protocolVersion"][
-        "major"
-    ]
+    pv = cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"]
     return bool(pv == 9)
 
 

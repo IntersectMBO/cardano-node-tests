@@ -340,7 +340,7 @@ class TestCommittee:
         # undelegated stake is treated as Abstain. If undelegated stake was treated as No, it
         # would not be possible to approve any action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparams = cluster.g_query.get_protocol_params()
         drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["committeeNormal"]
         spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["committeeNormal"]
         is_drep_total_below_threshold = (
