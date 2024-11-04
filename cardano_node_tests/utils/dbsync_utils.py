@@ -864,43 +864,43 @@ def _get_float_pparam(pparam: tp.Any) -> tp.Optional[float]:
     return float(pparam)
 
 
-def map_params_to_db_convention(pp: dict) -> tp.Dict[str, tp.Any]:
+def map_params_to_db_convention(pparams: dict) -> tp.Dict[str, tp.Any]:
     # Get the prices of memory and steps
-    prices = pp.get("executionUnitPrices", {})
+    prices = pparams.get("executionUnitPrices", {})
     price_mem = _get_float_pparam(prices.get("priceMemory"))
     price_steps = _get_float_pparam(prices.get("priceSteps"))
 
-    dvt = pp.get("dRepVotingThresholds", {})
-    pvt = pp.get("poolVotingThresholds", {})
+    dvt = pparams.get("dRepVotingThresholds", {})
+    pvt = pparams.get("poolVotingThresholds", {})
 
     params_mapping = {
         # Network proposals group
-        "max_block_size": pp.get("maxBlockBodySize"),
-        "max_tx_size": pp.get("maxTxSize"),
-        "max_bh_size": pp.get("maxBlockHeaderSize"),
-        "max_val_size": pp.get("maxValueSize"),
-        "max_tx_ex_mem": pp.get("maxTxExecutionUnits", {}).get("memory"),
-        "max_tx_ex_steps": pp.get("maxTxExecutionUnits", {}).get("steps"),
-        "max_block_ex_mem": pp.get("maxBlockExecutionUnits", {}).get("memory"),
-        "max_block_ex_steps": pp.get("maxBlockExecutionUnits", {}).get("steps"),
-        "max_collateral_inputs": pp.get("maxCollateralInputs"),
+        "max_block_size": pparams.get("maxBlockBodySize"),
+        "max_tx_size": pparams.get("maxTxSize"),
+        "max_bh_size": pparams.get("maxBlockHeaderSize"),
+        "max_val_size": pparams.get("maxValueSize"),
+        "max_tx_ex_mem": pparams.get("maxTxExecutionUnits", {}).get("memory"),
+        "max_tx_ex_steps": pparams.get("maxTxExecutionUnits", {}).get("steps"),
+        "max_block_ex_mem": pparams.get("maxBlockExecutionUnits", {}).get("memory"),
+        "max_block_ex_steps": pparams.get("maxBlockExecutionUnits", {}).get("steps"),
+        "max_collateral_inputs": pparams.get("maxCollateralInputs"),
         # Economic proposals group
-        "min_fee_a": pp.get("txFeePerByte"),
-        "min_fee_b": pp.get("txFeeFixed"),
-        "key_deposit": pp.get("stakeAddressDeposit"),
-        "pool_deposit": pp.get("stakePoolDeposit"),
-        "monetary_expand_rate": _get_float_pparam(pp.get("monetaryExpansion")),
-        "treasury_growth_rate": _get_float_pparam(pp.get("treasuryCut")),
-        "min_pool_cost": pp.get("minPoolCost"),
-        "coins_per_utxo_size": pp.get("utxoCostPerByte"),
-        "min_fee_ref_script_cost_per_byte": pp.get("minFeeRefScriptCostPerByte"),
+        "min_fee_a": pparams.get("txFeePerByte"),
+        "min_fee_b": pparams.get("txFeeFixed"),
+        "key_deposit": pparams.get("stakeAddressDeposit"),
+        "pool_deposit": pparams.get("stakePoolDeposit"),
+        "monetary_expand_rate": _get_float_pparam(pparams.get("monetaryExpansion")),
+        "treasury_growth_rate": _get_float_pparam(pparams.get("treasuryCut")),
+        "min_pool_cost": pparams.get("minPoolCost"),
+        "coins_per_utxo_size": pparams.get("utxoCostPerByte"),
+        "min_fee_ref_script_cost_per_byte": pparams.get("minFeeRefScriptCostPerByte"),
         "price_mem": price_mem,
         "price_step": price_steps,
         # Technical proposals group
-        "influence": _get_float_pparam(pp.get("poolPledgeInfluence")),
-        "max_epoch": pp.get("poolRetireMaxEpoch"),
-        "optimal_pool_count": pp.get("stakePoolTargetNum"),
-        "collateral_percent": pp.get("collateralPercentage"),
+        "influence": _get_float_pparam(pparams.get("poolPledgeInfluence")),
+        "max_epoch": pparams.get("poolRetireMaxEpoch"),
+        "optimal_pool_count": pparams.get("stakePoolTargetNum"),
+        "collateral_percent": pparams.get("collateralPercentage"),
         # Governance proposal group
         # - DReps
         "dvt_committee_no_confidence": _get_float_pparam(dvt.get("committeeNoConfidence")),
@@ -920,12 +920,12 @@ def map_params_to_db_convention(pp: dict) -> tp.Dict[str, tp.Any]:
         "pvt_motion_no_confidence": _get_float_pparam(pvt.get("motionNoConfidence")),
         "pvtpp_security_group": _get_float_pparam(pvt.get("ppSecurityGroup")),
         # General
-        "gov_action_lifetime": pp.get("govActionLifetime"),
-        "gov_action_deposit": pp.get("govActionDeposit"),
-        "drep_deposit": pp.get("dRepDeposit"),
-        "drep_activity": pp.get("dRepActivity"),
-        "committee_min_size": pp.get("committeeMinSize"),
-        "committee_max_term_length": pp.get("committeeMaxTermLength"),
+        "gov_action_lifetime": pparams.get("govActionLifetime"),
+        "gov_action_deposit": pparams.get("govActionDeposit"),
+        "drep_deposit": pparams.get("dRepDeposit"),
+        "drep_activity": pparams.get("dRepActivity"),
+        "committee_min_size": pparams.get("committeeMinSize"),
+        "committee_max_term_length": pparams.get("committeeMaxTermLength"),
     }
 
     return params_mapping
@@ -956,7 +956,7 @@ def check_conway_param_update_proposal(
         return None
 
     param_proposal_db = dbsync_queries.query_param_proposal()
-    params_map = map_params_to_db_convention(param_proposal_ledger)
+    params_map = map_params_to_db_convention(pparams=param_proposal_ledger)
     failures = []
 
     # Get cost models
@@ -975,16 +975,15 @@ def check_conway_param_update_proposal(
 
 
 def check_conway_param_update_enactment(
-    gov_state: dict, epoch_no: int
+    pparams: dict, epoch_no: int
 ) -> tp.Optional[dbsync_queries.EpochParamDBRow]:
     """Check params enactment between ledger and epoch param in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
-    curr_params_db = dbsync_queries.query_epoch_param(epoch_no)
-    curr_params_ledger = gov_state["currentPParams"]
-    params_map = map_params_to_db_convention(curr_params_ledger)
-    failures = _check_param_proposal(curr_params_db, params_map)
+    curr_params_db = dbsync_queries.query_epoch_param(epoch_no=epoch_no)
+    params_map = map_params_to_db_convention(pparams=pparams)
+    failures = _check_param_proposal(param_proposal_db=curr_params_db, params_map=params_map)
 
     if failures:
         failures_str = "\n".join(failures)
