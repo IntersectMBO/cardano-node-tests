@@ -1245,7 +1245,9 @@ class TestPParamUpdate:
         # db-sync check
         try:
             reqc.db024.start(url=helpers.get_vcs_link())
-            dbsync_utils.check_conway_param_update_enactment(enact_gov_state, enact_epoch)
+            dbsync_utils.check_conway_param_update_enactment(
+                pparams=enact_gov_state["currentPParams"], epoch_no=enact_epoch
+            )
             reqc.db024.success()
         except AssertionError as exc:
             db_errors_final.append(f"db-sync params enactment error: {exc}")
