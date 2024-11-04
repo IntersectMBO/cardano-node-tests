@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = common.SKIPIF_WRONG_ERA
 
-# Slot number where KES certificate expires when using `cluster_kes`
+# Slot number where KES expires when using `cluster_kes`
 KES_EXPIRE_SLOT = 2100
 
 
