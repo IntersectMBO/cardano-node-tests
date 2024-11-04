@@ -199,7 +199,7 @@ cp "${SCRIPT_DIR}/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/*genesis*.spec.json "${STATE_CLUSTER}/shelley/"
 
 if [ -n "${PV10:-""}" ]; then
-  mv \
+  cp \
     "${SCRIPT_DIR}/genesis.conway.spec.pv10.json" \
     "${STATE_CLUSTER}/shelley/genesis.conway.spec.json"
 fi
