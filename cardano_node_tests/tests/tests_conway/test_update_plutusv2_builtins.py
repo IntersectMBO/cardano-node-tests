@@ -163,9 +163,7 @@ class TestUpdateBuiltIns:
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
             )
-            pparams = (
-                enact_gov_state.get("curPParams") or enact_gov_state.get("currentPParams") or {}
-            )
+            pparams = enact_gov_state.get("currentPParams") or {}
             assert len(pparams["costModels"]["PlutusV2"]) == 185
 
         # Check that Plutus script fails as expected in PV9
