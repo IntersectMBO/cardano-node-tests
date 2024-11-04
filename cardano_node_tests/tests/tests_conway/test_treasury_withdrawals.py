@@ -12,6 +12,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
@@ -685,41 +686,126 @@ class TestTreasuryWithdrawals:
 
         [r.success() for r in (reqc.cip032ex, reqc.cip069ex)]
 
+
+class TestMIRCerts:
+    """Tests for MIR certificates."""
+
+    @pytest.fixture
+    def payment_addr(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> clusterlib.AddressRecord:
+        """Create new payment address."""
+        test_id = common.get_test_id(cluster)
+        with cluster_manager.cache_fixture() as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addr = clusterlib_utils.create_payment_addr_records(
+                f"{test_id}_payment_addr_0",
+                cluster_obj=cluster,
+            )[0]
+            fixture_cache.value = addr
+
+        # Fund source addresses
+        clusterlib_utils.fund_from_faucet(
+            addr,
+            cluster_obj=cluster,
+            all_faucets=cluster_manager.cache.addrs_data,
+            amount=4_000_000,
+        )
+
+        return addr
+
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("mir_cert", ("treasury", "rewards", "stake_addr"))
-    @pytest.mark.disabled  # TODO: test that the certs cannot be submitted
+    @pytest.mark.parametrize(
+        "mir_cert", ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr")
+    )
     @pytest.mark.smoke
     def test_mir_certificates(
         self,
         cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
         mir_cert: str,
     ):
-        """Try to withdraw funds from the treasury using MIR certificates.
+        """Try to use MIR certificates in Conway+ eras.
 
         Expect failure.
+
+        * try and fail to build the Tx using `transaction build`
+        * successfully build the Tx as Babbage Tx using `transaction build-raw`
+        * try and fail to submit the Babbage Tx
         """
         temp_template = common.get_test_id(cluster)
-        amount = 1_000_000_000_000
+        amount = 1_500_000
+        cluster_babbage = cluster_nodes.get_cluster_type().get_cluster_obj(command_era="babbage")
 
         reqc.cip070.start(url=helpers.get_vcs_link())
+
+        if mir_cert == "to_treasury":
+            cert_file = cluster.g_governance.gen_mir_cert_to_treasury(
+                transfer=amount,
+                tx_name=temp_template,
+            )
+        elif mir_cert == "to_rewards":
+            cert_file = cluster.g_governance.gen_mir_cert_to_rewards(
+                transfer=amount,
+                tx_name=temp_template,
+            )
+        elif mir_cert == "treasury_to_addr":
+            cert_file = cluster.g_governance.gen_mir_cert_stake_addr(
+                tx_name=temp_template,
+                stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
+                reward=amount,
+                use_treasury=True,
+            )
+        elif mir_cert == "reserves_to_addr":
+            cert_file = cluster.g_governance.gen_mir_cert_stake_addr(
+                tx_name=temp_template,
+                stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
+                reward=amount,
+                use_treasury=False,
+            )
+        else:
+            _verr = f"Unknown MIR cert scenario: {mir_cert}"
+            raise ValueError(_verr)
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[cert_file],
+            signing_key_files=[
+                payment_addr.skey_file,
+                *cluster.g_genesis.genesis_keys.delegate_skeys,
+            ],
+        )
+
+        # The Tx cannot be build in Conway using `build`
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if mir_cert == "treasury":
-                cluster.g_governance.gen_mir_cert_to_treasury(
-                    transfer=amount,
-                    tx_name=temp_template,
-                )
-            elif mir_cert == "rewards":
-                cluster.g_governance.gen_mir_cert_to_rewards(
-                    transfer=amount,
-                    tx_name=temp_template,
-                )
-            else:
-                cluster.g_governance.gen_mir_cert_stake_addr(
-                    tx_name=temp_template,
-                    stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
-                    reward=amount,
-                    use_treasury=True,
-                )
-        err_str = str(excinfo.value)
-        assert "Invalid argument `create-mir-certificate'" in err_str, err_str
+            cluster.g_transaction.build_tx(
+                tx_name=temp_template,
+                src_address=payment_addr.address,
+                tx_files=tx_files,
+            )
+        err_build = str(excinfo.value)
+        assert "TextEnvelope type error:" in err_build, err_build
+
+        # The Tx can be build as Babbage Tx using `build-raw`, but cannot be submitted
+        tx_output = cluster_babbage.g_transaction.build_raw_tx(
+            tx_name=temp_template,
+            src_address=payment_addr.address,
+            fee=400_000,
+            tx_files=tx_files,
+        )
+
+        out_file_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_output.txins)
+        err_submit = str(excinfo.value)
+        assert "Error: The era of the node and the tx do not match." in err_submit, err_submit
+
         reqc.cip070.success()
