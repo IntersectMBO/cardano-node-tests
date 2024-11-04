@@ -31,14 +31,6 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = common.SKIPIF_WRONG_ERA
 
-# TODO: It would be better to use `cluster_nodes.get_cluster_type().uses_shortcut`, but we would
-# need to get a cluster instance first. That would be too expensive in this module, as we are using
-# custom startup scripts.
-SKIPIF_NOT_HF_SHORTCUT = pytest.mark.skipif(
-    "_fast" not in configuration.SCRIPTS_DIRNAME,
-    reason="Runs only on local cluster with HF shortcut.",
-)
-
 # Slot number where KES certificate expires when using `cluster_kes`
 KES_EXPIRE_SLOT = 2100
 
@@ -134,10 +126,14 @@ def _check_block_production(
 class TestKES:
     """Basic tests for KES period."""
 
-    MAX_INT_VAL = 2**64
-
     @allure.link(helpers.get_vcs_link())
-    @SKIPIF_NOT_HF_SHORTCUT
+    # It would be better to use `cluster_nodes.get_cluster_type().uses_shortcut`, but we
+    # would need to get a cluster instance first. That would be too expensive in this test,
+    # as we are using custom startup scripts.
+    @pytest.mark.skipif(
+        "_fast" not in configuration.SCRIPTS_DIRNAME,
+        reason="Runs only on local cluster with HF shortcut.",
+    )
     @pytest.mark.order(5)
     @pytest.mark.long
     def test_expired_kes(
@@ -148,7 +144,6 @@ class TestKES:
     ):
         """Test expired KES.
 
-        * start local cluster instance configured with short KES period and low number of key
           evolutions, so KES expires soon on all pools
         * refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
           the pools keep minting blocks
