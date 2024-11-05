@@ -232,9 +232,16 @@ def setup(
 
     # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
     # to be usable. DReps don't vote in PV9.
-    if cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10:
+    if (
+        drep_reg_records
+        and cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10
+    ):
         cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
-        # TODO: check `cardano-cli conway query drep-stake-distribution`
+
+        drep1_rec = cluster_obj.g_conway_governance.query.drep_stake_distribution(
+            drep_vkey_file=drep_reg_records[0].key_pair.vkey_file
+        )
+        assert drep1_rec, "DRep stake distribution not found"
 
     return gov_data
 
