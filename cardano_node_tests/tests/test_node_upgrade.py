@@ -8,7 +8,6 @@ import typing as tp
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -20,9 +19,6 @@ from cardano_node_tests.utils import temptools
 LOGGER = logging.getLogger(__name__)
 
 UPGRADE_TESTS_STEP = int(os.environ.get("UPGRADE_TESTS_STEP") or 0)
-BASE_REVISION = version.parse(os.environ.get("BASE_REVISION") or "0.0.0")
-UPGRADE_REVISION = version.parse(os.environ.get("UPGRADE_REVISION") or "0.0.0")
-GOV_DATA_DIR = "governance_data"
 
 pytestmark = [
     pytest.mark.skipif(not UPGRADE_TESTS_STEP, reason="not upgrade testing"),
@@ -91,16 +87,14 @@ class TestSetup:
         worker_id: str,
     ):
         """Ignore selected errors in log right after node upgrade."""
-        cluster = cluster_singleton
-        common.get_test_id(cluster)
+        common.get_test_id(cluster_singleton)
 
-        if UPGRADE_REVISION >= version.parse("10.1.0") > BASE_REVISION:
-            logfiles.add_ignore_rule(
-                files_glob="*.stdout",
-                regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure "
-                ".* expected change in the serialization format",
-                ignore_file_id=worker_id,
-            )
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure "
+            ".* expected change in the serialization format",
+            ignore_file_id=worker_id,
+        )
 
 
 @pytest.mark.upgrade
