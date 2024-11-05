@@ -230,6 +230,9 @@ elif [ "$1" = "step2" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
   err_retval="$?"
 
+  # Update PlutusV3 cost models.
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 2
+
   # run smoke tests
   pytest \
     cardano_node_tests \

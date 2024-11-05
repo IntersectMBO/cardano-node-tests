@@ -1,7 +1,9 @@
 """Tests for node upgrade."""
 
+import json
 import logging
 import os
+import pathlib as pl
 import shutil
 import typing as tp
 
@@ -11,13 +13,17 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_setup
+from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
+DATA_DIR = pl.Path(__file__).parent / "data"
 UPGRADE_TESTS_STEP = int(os.environ.get("UPGRADE_TESTS_STEP") or 0)
 
 pytestmark = [
@@ -79,6 +85,20 @@ class TestSetup:
     Special tests that run outside of normal test run.
     """
 
+    @pytest.fixture
+    def pool_user_singleton(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+    ) -> clusterlib.PoolUser:
+        """Create a pool user for singleton."""
+        name_template = common.get_test_id(cluster_singleton)
+        return conway_common.get_registered_pool_user(
+            cluster_manager=cluster_manager,
+            name_template=name_template,
+            cluster_obj=cluster_singleton,
+        )
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(UPGRADE_TESTS_STEP < 2, reason="runs only on step >= 2 of upgrade testing")
     def test_ignore_log_errors(
@@ -95,6 +115,113 @@ class TestSetup:
             ".* expected change in the serialization format",
             ignore_file_id=worker_id,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(UPGRADE_TESTS_STEP != 2, reason="runs only on step 2 of upgrade testing")
+    def test_update_cost_models(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+        pool_user_singleton: clusterlib.PoolUser,
+    ):
+        """Test cost model update."""
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+        cost_proposal_file = DATA_DIR / "cost_models_pv10.json"
+
+        governance_data = governance_setup.get_default_governance(
+            cluster_manager=cluster_manager, cluster_obj=cluster
+        )
+        governance_utils.wait_delayed_ratification(cluster_obj=cluster)
+
+        proposals = [
+            clusterlib_utils.UpdateProposal(
+                arg="--cost-model-file",
+                value=str(cost_proposal_file),
+                name="",  # costModels
+            ),
+        ]
+
+        with open(cost_proposal_file, encoding="utf-8") as fp:
+            cost_models_in = json.load(fp)
+
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        def _propose_pparams_update(
+            name_template: str,
+            proposals: tp.List[clusterlib_utils.UpdateProposal],
+        ) -> conway_common.PParamPropRec:
+            anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
+            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+            return conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=name_template,
+                anchor_url=anchor_url,
+                anchor_data_hash=anchor_data_hash,
+                pool_user=pool_user_singleton,
+                proposals=proposals,
+                prev_action_rec=prev_action_rec,
+            )
+
+        def _check_models(cost_models: dict):
+            for m in ("PlutusV1", "PlutusV2", "PlutusV3"):
+                if m not in cost_models_in:
+                    continue
+                assert len(cost_models_in[m]) == len(cost_models[m]), f"Unexpected length for {m}"
+
+        # Make sure we have enough time to submit the proposal and vote in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+        init_epoch = cluster.g_query.get_epoch()
+
+        # Propose the action
+        prop_rec = _propose_pparams_update(name_template=temp_template, proposals=proposals)
+        _check_models(prop_rec.future_pparams["costModels"])
+
+        # Vote & approve the action by CC
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_cc",
+            payment_addr=pool_user_singleton.payment,
+            action_txid=prop_rec.action_txid,
+            action_ix=prop_rec.action_ix,
+            approve_cc=True,
+        )
+
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Epoch changed and it would affect other checks"
+
+        # Check ratification
+        rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+        )
+
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=rat_gov_state, action_txid=prop_rec.action_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
+
+        next_rat_state = rat_gov_state["nextRatifyState"]
+        _check_models(next_rat_state["nextEnactState"]["curPParams"]["costModels"])
+        assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
+
+        # Check enactment
+        enact_epoch = cluster.wait_for_epoch(
+            epoch_no=init_epoch + 2, padding_seconds=5, future_is_ok=False
+        )
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
+        )
+        _check_models(enact_gov_state["currentPParams"]["costModels"])
 
 
 @pytest.mark.upgrade
