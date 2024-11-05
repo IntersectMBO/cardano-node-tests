@@ -223,6 +223,123 @@ class TestSetup:
         )
         _check_models(enact_gov_state["currentPParams"]["costModels"])
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
+    def test_hardfork(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+        pool_user_singleton: clusterlib.PoolUser,
+    ):
+        """Test hard fork."""
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+
+        governance_data = governance_setup.get_default_governance(
+            cluster_manager=cluster_manager, cluster_obj=cluster
+        )
+        governance_utils.wait_delayed_ratification(cluster_obj=cluster)
+
+        # Create an action
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        anchor_url = "http://www.hardfork-upgrade-pv10.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.HARDFORK,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        hardfork_action = cluster.g_conway_governance.action.create_hardfork(
+            action_name=temp_template,
+            deposit_amt=deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            protocol_major_version=10,
+            protocol_minor_version=0,
+            prev_action_txid=prev_action_rec.txid,
+            prev_action_ix=prev_action_rec.ix,
+            deposit_return_stake_vkey_file=pool_user_singleton.stake.vkey_file,
+        )
+
+        tx_files_action = clusterlib.TxFiles(
+            proposal_files=[hardfork_action.action_file],
+            signing_key_files=[
+                pool_user_singleton.payment.skey_file,
+            ],
+        )
+
+        # Make sure we have enough time to submit the proposal and the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 20
+        )
+        init_epoch = cluster.g_query.get_epoch()
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_action",
+            src_address=pool_user_singleton.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_action,
+        )
+
+        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        action_epoch = cluster.g_query.get_epoch()
+        conway_common.save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
+        assert prop_action, "Hardfork action not found"
+        assert (
+            prop_action["proposalProcedure"]["govAction"]["tag"]
+            == governance_utils.ActionTags.HARDFORK_INIT.value
+        ), "Incorrect action tag"
+
+        action_ix = prop_action["actionId"]["govActionIx"]
+
+        # Vote & approve the action
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_yes",
+            payment_addr=pool_user_singleton.payment,
+            action_txid=action_txid,
+            action_ix=action_ix,
+            approve_cc=True,
+            approve_spo=True,
+        )
+
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Epoch changed and it would affect other checks"
+
+        # Check ratification
+        rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+        )
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=rat_gov_state, action_txid=action_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
+
+        assert (
+            rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9
+        ), "Incorrect major version"
+
+        # Check enactment
+        enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
+        )
+        assert (
+            enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10
+        ), "Incorrect major version"
+
 
 @pytest.mark.upgrade
 class TestUpgrade:

@@ -344,6 +344,9 @@ elif [ "$1" = "step3" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
   err_retval="$?"
 
+  # Hard fork to PV10.
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 2
+
   # Run smoke tests
   pytest \
     cardano_node_tests \
