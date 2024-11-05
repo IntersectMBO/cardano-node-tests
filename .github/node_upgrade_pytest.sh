@@ -230,6 +230,9 @@ elif [ "$1" = "step2" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
   err_retval="$?"
 
+  # Update PlutusV3 cost models.
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 2
+
   # run smoke tests
   pytest \
     cardano_node_tests \
@@ -340,6 +343,9 @@ elif [ "$1" = "step3" ]; then
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
   err_retval="$?"
+
+  # Hard fork to PV10.
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 2
 
   # Run smoke tests
   pytest \
