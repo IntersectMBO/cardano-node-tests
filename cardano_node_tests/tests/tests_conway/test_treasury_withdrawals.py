@@ -93,6 +93,7 @@ class TestTreasuryWithdrawals:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.long
+    @pytest.mark.upgrade_step3
     def test_enact_treasury_withdrawals(
         self,
         cluster_use_governance_lock_treasury: governance_utils.GovClusterT,

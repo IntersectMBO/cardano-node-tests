@@ -55,6 +55,7 @@ class TestInfo:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
     @pytest.mark.dbsync
+    @pytest.mark.upgrade_step1
     def test_info(
         self,
         cluster_use_governance: governance_utils.GovClusterT,

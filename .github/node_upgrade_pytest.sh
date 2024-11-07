@@ -75,10 +75,11 @@ if [ "$1" = "step1" ]; then
   cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway.step1.json"
 
   # run smoke tests
+  printf "STEP1 tests: %(%H:%M:%S)T\n" -1
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade" \
+    -m "smoke or upgrade_step1" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
@@ -231,13 +232,14 @@ elif [ "$1" = "step2" ]; then
   err_retval="$?"
 
   # Update PlutusV3 cost models.
-  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 2
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 6
 
   # run smoke tests
+  printf "STEP2 tests: %(%H:%M:%S)T\n" -1
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade" \
+    -m "smoke or upgrade_step2" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
@@ -345,13 +347,14 @@ elif [ "$1" = "step3" ]; then
   err_retval="$?"
 
   # Hard fork to PV10.
-  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 2
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 6
 
   # Run smoke tests
+  printf "STEP3 tests: %(%H:%M:%S)T\n" -1
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade" \
+    -m "smoke or upgrade_step3" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
