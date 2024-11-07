@@ -172,12 +172,6 @@ class TestSetup:
                     continue
                 assert len(cost_models_in[m]) == len(cost_models[m]), f"Unexpected length for {m}"
 
-        # Make sure we have enough time to submit the proposal and vote in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
-        )
-        init_epoch = cluster.g_query.get_epoch()
-
         # Propose the action
         prop_rec = _propose_pparams_update(name_template=temp_template, proposals=proposals)
         _check_models(prop_rec.future_pparams["costModels"])
@@ -192,13 +186,10 @@ class TestSetup:
             action_ix=prop_rec.action_ix,
             approve_cc=True,
         )
-
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Epoch changed and it would affect other checks"
+        vote_epoch = cluster.g_query.get_epoch()
 
         # Check ratification
-        rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+        rat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
         rat_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
@@ -215,7 +206,7 @@ class TestSetup:
 
         # Check enactment
         enact_epoch = cluster.wait_for_epoch(
-            epoch_no=init_epoch + 2, padding_seconds=5, future_is_ok=False
+            epoch_no=vote_epoch + 2, padding_seconds=5, future_is_ok=False
         )
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
