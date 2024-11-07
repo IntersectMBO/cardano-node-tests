@@ -75,7 +75,7 @@ class TestUpdateBuiltIns:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    @pytest.mark.upgrade
+    @pytest.mark.upgrade_step1
     def test_update_in_pv9(
         self,
         cluster_lock_governance: governance_utils.GovClusterT,

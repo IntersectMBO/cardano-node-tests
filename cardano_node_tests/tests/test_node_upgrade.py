@@ -341,13 +341,15 @@ class TestSetup:
         ), "Incorrect major version"
 
 
-@pytest.mark.upgrade
 class TestUpgrade:
     """Tests for node upgrade testing."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(UPGRADE_TESTS_STEP > 2, reason="doesn't run on step > 2 of upgrade testing")
     @pytest.mark.order(-1)
+    @pytest.mark.upgrade_step1
+    @pytest.mark.upgrade_step2
+    @pytest.mark.upgrade_step3
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "for_step",
@@ -447,6 +449,9 @@ class TestUpgrade:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(UPGRADE_TESTS_STEP < 2, reason="runs only on step >= 2 of upgrade testing")
     @pytest.mark.order(5)
+    @pytest.mark.upgrade_step1
+    @pytest.mark.upgrade_step2
+    @pytest.mark.upgrade_step3
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "for_step",
