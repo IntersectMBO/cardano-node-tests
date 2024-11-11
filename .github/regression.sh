@@ -95,9 +95,11 @@ case "${DBSYNC_REV:-""}" in
     unset DBSYNC_REV
     ;;
   * )
+    echo "::group::db-sync setup"
     # shellcheck disable=SC1090,SC1091
     . .github/source_dbsync.sh
     df -h .
+    echo "::endgroup::"
     ;;
 esac
 
@@ -111,8 +113,10 @@ case "${PLUTUS_APPS_REV:="none"}" in
     unset PLUTUS_APPS_REV
     ;;
   * )
+    echo "::group::plutus-apps setup"
     # shellcheck disable=SC1090,SC1091
     . .github/source_plutus_apps.sh
+    echo "::endgroup::"
     ;;
 esac
 
@@ -124,8 +128,10 @@ case "${CARDANO_CLI_REV:-""}" in
     unset CARDANO_CLI_REV
     ;;
   * )
+    echo "::group::cardano-cli setup"
     # shellcheck disable=SC1090,SC1091
     . .github/source_cardano_cli.sh
+    echo "::endgroup::"
     ;;
 esac
 
