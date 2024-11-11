@@ -144,6 +144,7 @@ class TestKES:
     ):
         """Test expired KES.
 
+        * start local cluster instance configured with short KES period and low number of key
           evolutions, so KES expires soon on all pools
         * refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
           the pools keep minting blocks
