@@ -377,8 +377,14 @@ class TestCommittee:
 
         [r.success() for r in (reqc.cli003, reqc.cli004, reqc.cli005, reqc.cli006)]
 
+        # Make sure we have enough time to submit the proposals in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 10
+        )
+        actions_epoch = cluster.g_query.get_epoch()
+
         # New CC members to be added
-        cc_member1_expire = cluster.g_query.get_epoch() + 3
+        cc_member1_expire = actions_epoch + 3
         cc_members = [
             clusterlib.CCMember(
                 epoch=cc_member1_expire,
@@ -706,12 +712,6 @@ class TestCommittee:
             dbsync_utils.check_committee_member_deregistration(
                 cc_member_cold_key=res_member.cold_vkey_hash
             )
-
-        # Make sure we have enough time to submit the proposals in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 10
-        )
-        actions_epoch = cluster.g_query.get_epoch()
 
         # Create an action to add new CC members
         add_cc_action, action_add_txid, action_add_ix = _add_members()
