@@ -141,6 +141,8 @@ def cluster_with_constitution(
             constitution_url = "http://www.const-with-plutus.com"
             constitution_hash = "0000000000000000000000000000000000000000000000000000000000000000"
 
+            governance_utils.wait_delayed_ratification(cluster_obj=cluster)
+
             _, action_txid, action_ix = conway_common.propose_change_constitution(
                 cluster_obj=cluster,
                 name_template=temp_template,
