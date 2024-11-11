@@ -144,6 +144,7 @@ class TestKES:
     ):
         """Test expired KES.
 
+        * start local cluster instance configured with short KES period and low number of key
           evolutions, so KES expires soon on all pools
         * refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
           the pools keep minting blocks
@@ -155,7 +156,6 @@ class TestKES:
         """
         # pylint: disable=too-many-statements,too-many-locals
         cluster = cluster_kes
-        kes_period_info_errors_list = []
         temp_template = common.get_test_id(cluster)
 
         expire_slot = KES_EXPIRE_SLOT + 100
@@ -216,6 +216,49 @@ class TestKES:
 
             cluster_nodes.restart_all_nodes(delay=5)
             return refreshed_nodes_kes_period
+
+        def _check_kes_period_info(
+            refreshed_nodes_kes_period: tp.Dict[str, int],
+        ) -> tp.List[str]:
+            errors = []
+            # Check kes-period-info with an operational certificate with KES expired
+            kes_info_expired = cluster.g_query.get_kes_period_info(
+                opcert_file=expire_pool_rec["pool_operational_cert"]
+            )
+            with open(f"{temp_template}_kes_period_info_1.json", "w", encoding="utf-8") as out_fp:
+                json.dump(kes_info_expired, out_fp, indent=2)
+            errors.extend(
+                kes.check_kes_period_info_result(
+                    cluster_obj=cluster,
+                    kes_output=kes_info_expired,
+                    expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
+                    check_id="1",
+                    pool_num=expire_pool_num,
+                )
+            )
+
+            # Check kes-period-info with valid operational certificates
+            for idx, n in enumerate(refreshed_nodes):
+                refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
+                kes_info_valid = cluster.g_query.get_kes_period_info(
+                    opcert_file=refreshed_pool_rec["pool_operational_cert"]
+                )
+                check_id = str(2 + idx)
+                with open(
+                    f"{temp_template}_kes_period_info_{check_id}.json", "w", encoding="utf-8"
+                ) as out_fp:
+                    json.dump(kes_info_valid, out_fp, indent=2)
+                errors.extend(
+                    kes.check_kes_period_info_result(
+                        cluster_obj=cluster,
+                        kes_output=kes_info_valid,
+                        expected_scenario=kes.KesScenarios.ALL_VALID,
+                        check_id=check_id,
+                        expected_start_kes=refreshed_nodes_kes_period[n],
+                    )
+                )
+
+            return errors
 
         this_epoch = cluster.g_query.get_epoch()
         clusterlib_utils.save_ledger_state(
@@ -284,54 +327,22 @@ class TestKES:
                 not is_minting
             ), f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
 
-            # Refresh opcerts on pools that are not supposed to expire one more time
+            # Refresh opcerts one more time on pools that are not supposed to expire
             refreshed_nodes_kes_period = _refresh_opcerts()
 
-            LOGGER.info(
-                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
-                "Waiting 120 secs to make sure the expected errors make it to log files."
-            )
-            time.sleep(120)
-
+            this_epoch = cluster.g_query.get_epoch()
             _save_all_metrics(temp_template=f"{temp_template}_{this_epoch}_after_refresh")
             _save_all_period_info(temp_template=f"{temp_template}_{this_epoch}_after_refresh")
 
-        # Check kes-period-info with an operational certificate with KES expired
-        kes_info_expired = cluster.g_query.get_kes_period_info(
-            opcert_file=expire_pool_rec["pool_operational_cert"]
-        )
-        with open(f"{temp_template}_kes_period_info_1.json", "w", encoding="utf-8") as out_fp:
-            json.dump(kes_info_expired, out_fp, indent=2)
-        kes_period_info_errors_list.extend(
-            kes.check_kes_period_info_result(
-                cluster_obj=cluster,
-                kes_output=kes_info_expired,
-                expected_scenario=kes.KesScenarios.INVALID_KES_PERIOD,
-                check_id="1",
-                pool_num=expire_pool_num,
+            kes_period_info_errors_list = _check_kes_period_info(
+                refreshed_nodes_kes_period=refreshed_nodes_kes_period
             )
-        )
 
-        # Check kes-period-info with valid operational certificates
-        for idx, n in enumerate(refreshed_nodes):
-            refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
-            kes_info_valid = cluster.g_query.get_kes_period_info(
-                opcert_file=refreshed_pool_rec["pool_operational_cert"]
+            LOGGER.info(
+                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+                "Waiting 90 secs to make sure the expected errors make it to log files."
             )
-            check_id = str(2 + idx)
-            with open(
-                f"{temp_template}_kes_period_info_{check_id}.json", "w", encoding="utf-8"
-            ) as out_fp:
-                json.dump(kes_info_valid, out_fp, indent=2)
-            kes_period_info_errors_list.extend(
-                kes.check_kes_period_info_result(
-                    cluster_obj=cluster,
-                    kes_output=kes_info_valid,
-                    expected_scenario=kes.KesScenarios.ALL_VALID,
-                    check_id=check_id,
-                    expected_start_kes=refreshed_nodes_kes_period[n],
-                )
-            )
+            time.sleep(90)
 
         kes.finish_on_errors(errors=kes_period_info_errors_list)
 
