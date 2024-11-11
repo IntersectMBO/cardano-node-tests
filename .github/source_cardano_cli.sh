@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "::group::cardano-cli setup"
-
 pushd "$WORKDIR" || exit 1
 
 case "${CARDANO_CLI_REV:-""}" in
@@ -39,5 +37,3 @@ nix build --accept-flake-config .#cardano-cli -o cardano-cli-build || exit 1
 [ -e cardano-cli-build/bin/cardano-cli ] || exit 1
 
 pushd "$REPODIR" || exit 1
-
-echo "::endgroup::"
