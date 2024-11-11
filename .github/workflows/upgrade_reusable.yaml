@@ -43,9 +43,12 @@ jobs:
           cat .github_ci_env
           cat .github_ci_env >> $GITHUB_ENV
           echo "GITHUB_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
-      - name: Run CLI regression tests
+      - name: Run upgrade tests
         id: testing-step
-        run: ./.github/node_upgrade.sh
+        run: |
+          # Upgrade Tests
+          echo "::group::Script setup"
+          ./.github/node_upgrade.sh
       - name: Upload testing artifacts on failure
         uses: actions/upload-artifact@v4
         if: failure()

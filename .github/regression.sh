@@ -26,48 +26,6 @@ mkdir -p "$WORKDIR"
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
-# setup dbsync (disabled by default)
-case "${DBSYNC_REV:-""}" in
-  "" )
-    ;;
-  "none" )
-    unset DBSYNC_REV
-    ;;
-  * )
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_dbsync.sh
-    df -h .
-    ;;
-esac
-
-# Setup plutus-apps (disabled by default).
-# The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
-# Plutus tests that are testing script context.
-# TODO: The `create-script-context` tool is broken for a very long time, hence disabled.
-# See https://github.com/IntersectMBO/plutus-apps/issues/1107
-case "${PLUTUS_APPS_REV:="none"}" in
-  "none" )
-    unset PLUTUS_APPS_REV
-    ;;
-  * )
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_plutus_apps.sh
-    ;;
-esac
-
-# setup cardano-cli (use the built-in version by default)
-case "${CARDANO_CLI_REV:-""}" in
-  "" )
-    ;;
-  "none" )
-    unset CARDANO_CLI_REV
-    ;;
-  * )
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_cardano_cli.sh
-    ;;
-esac
-
 if [ "${CI_TOPOLOGY:-""}" = "legacy" ]; then
   export ENABLE_LEGACY=1
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
@@ -127,9 +85,49 @@ if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   export MAKE_TARGET="${MAKE_TARGET:-"testnets"}"
 fi
 
-# function to update cardano-node to specified branch and/or revision, or to the latest available
-# shellcheck disable=SC1090,SC1091
-. .github/nix_override_cardano_node.sh
+echo "::endgroup::"  # end group for "Script setup"
+
+# setup dbsync (disabled by default)
+case "${DBSYNC_REV:-""}" in
+  "" )
+    ;;
+  "none" )
+    unset DBSYNC_REV
+    ;;
+  * )
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_dbsync.sh
+    df -h .
+    ;;
+esac
+
+# Setup plutus-apps (disabled by default).
+# The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
+# Plutus tests that are testing script context.
+# TODO: The `create-script-context` tool is broken for a very long time, hence disabled.
+# See https://github.com/IntersectMBO/plutus-apps/issues/1107
+case "${PLUTUS_APPS_REV:="none"}" in
+  "none" )
+    unset PLUTUS_APPS_REV
+    ;;
+  * )
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_plutus_apps.sh
+    ;;
+esac
+
+# setup cardano-cli (use the built-in version by default)
+case "${CARDANO_CLI_REV:-""}" in
+  "" )
+    ;;
+  "none" )
+    unset CARDANO_CLI_REV
+    ;;
+  * )
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_cardano_cli.sh
+    ;;
+esac
 
 _cleanup() {
   # stop all running cluster instances
@@ -176,6 +174,10 @@ trap 'set +e; _interrupted; exit 130' SIGINT
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
 
+# function to update cardano-node to specified branch and/or revision, or to the latest available
+# shellcheck disable=SC1090,SC1091
+. .github/nix_override_cardano_node.sh
+
 # run tests and generate report
 set +e
 # shellcheck disable=SC2046,SC2119
@@ -190,7 +192,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup"
 
-  echo "::group::Pytest run"
+  echo "::group::-> PYTEST RUN <-"
   export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   make "${MAKE_TARGET:-"tests"}"

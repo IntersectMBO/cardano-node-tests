@@ -108,7 +108,10 @@ jobs:
           fi
       - name: Run CLI regression tests
         id: testing-step
-        run: .github/regression.sh
+        run: |
+          # Regression Tests
+          echo "::group::Script setup"
+          .github/regression.sh
       - name: Report test results
         if: (success() || failure()) && inputs.testrun_name
         run: |

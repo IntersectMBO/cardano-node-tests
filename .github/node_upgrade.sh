@@ -55,6 +55,14 @@ mkdir -p "$COVERAGE_DIR"
 export SCHEDULING_LOG=scheduling.log
 true > "$SCHEDULING_LOG"
 
+export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
+unset ENABLE_LEGACY MIXED_P2P
+
+echo "::endgroup::"  # end group for "Script setup"
+
+echo "::group::Nix env setup"
+printf "start: %(%H:%M:%S)T\n" -1
+
 # shellcheck disable=SC1090,SC1091
 . .github/nix_override_cardano_node.sh
 
@@ -70,12 +78,6 @@ else
   NODE_OVERRIDE=$(node_override)
 fi
 
-export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
-unset ENABLE_LEGACY MIXED_P2P
-
-echo "::group::Nix env setup"
-printf "start: %(%H:%M:%S)T\n" -1
-
 set +e
 # shellcheck disable=SC2086
 nix flake update --accept-flake-config $NODE_OVERRIDE
@@ -89,7 +91,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup"
 
-  echo "::group::Pytest step1"
+  echo "::group::-> PYTEST STEP1 <-"
   df -h .
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
   ./.github/node_upgrade_pytest.sh step1
@@ -104,8 +106,8 @@ fi
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
 [ "$retval" -le 1 ] || exit "$retval"
 
-echo "::endgroup::"  # end group for "Pytest step1"
-echo "::group::Pytest step2"
+echo "::endgroup::"  # end group for "-> PYTEST STEP1 <-"
+echo "::group::-> PYTEST STEP2 <-"
 
 # update cardano-node to specified branch and/or revision, or to the latest available revision
 if [ -n "${UPGRADE_REVISION:-""}" ]; then
@@ -130,14 +132,14 @@ nix develop --accept-flake-config .#venv --command bash -c '
   retval="$?"
   # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we dont want to continue
   [ "$retval" -le 1 ] || exit "$retval"
-  echo "::endgroup::"  # end group for "Pytest step2"
+  echo "::endgroup::"  # end group for "-> PYTEST STEP2 <-"
 
-  echo "::group::Pytest step3"
+  echo "::group::-> PYTEST STEP3 <-"
   df -h .
   # update to Conway, run smoke tests
   ./.github/node_upgrade_pytest.sh step3
   retval="$?"
-  echo "::endgroup::"  # end group for "Pytest step3"
+  echo "::endgroup::"  # end group for "-> PYTEST STEP3 <-"
 
   echo "::group::Cluster teardown & artifacts"
   # teardown cluster
