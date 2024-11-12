@@ -45,7 +45,7 @@ Sometimes it is useful to run individual tests and keep the local cluster runnin
 
     ```sh
     nix flake update --accept-flake-config --override-input cardano-node "github:IntersectMBO/cardano-node/master"  # change `master` to rev you want
-    nix develop --accept-flake-config .#venv
+    nix develop --accept-flake-config
     ```
 
 1. prepare testing environment
