@@ -46,7 +46,7 @@ jobs:
       - name: Run upgrade tests
         id: testing-step
         run: |
-          # Upgrade Tests
+          # env
           echo "::group::Script setup"
           ./.github/node_upgrade.sh
       - name: Upload testing artifacts on failure

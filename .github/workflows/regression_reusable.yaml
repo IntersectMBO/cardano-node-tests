@@ -106,10 +106,10 @@ jobs:
             curl -s -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/pypassed" > deselected_tests.txt
             echo "DESELECT_FROM_FILE=deselected_tests.txt" >> $GITHUB_ENV
           fi
-      - name: Run CLI regression tests
+      - name: Run regression tests
         id: testing-step
         run: |
-          # Regression Tests
+          # env
           echo "::group::Script setup"
           .github/regression.sh
       - name: Report test results

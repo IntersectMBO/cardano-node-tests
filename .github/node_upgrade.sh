@@ -53,7 +53,7 @@ rm -rf "${COVERAGE_DIR:?}"
 mkdir -p "$COVERAGE_DIR"
 
 export SCHEDULING_LOG=scheduling.log
-true > "$SCHEDULING_LOG"
+: > "$SCHEDULING_LOG"
 
 export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
 unset ENABLE_LEGACY MIXED_P2P
@@ -107,6 +107,7 @@ fi
 [ "$retval" -le 1 ] || exit "$retval"
 
 echo "::endgroup::"  # end group for "-> PYTEST STEP1 <-"
+
 echo "::group::Nix env setup steps 2 & 3"
 printf "start: %(%H:%M:%S)T\n" -1
 
