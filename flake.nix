@@ -21,11 +21,13 @@
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          py3pkgs = pkgs.python311Packages;
+          py3Full = pkgs.python311Full;
         in
         {
           devShells = rec {
             base = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnumake gnutar jq python3Packages.supervisor xz ];
+              nativeBuildInputs = with pkgs; [ py3Full bash coreutils curl git gnugrep gnumake gnutar jq py3pkgs.supervisor xz ];
             };
             # TODO: can be removed once sync tests are fully moved to separate repo
             python = pkgs.mkShell {
@@ -39,8 +41,8 @@
             ).overrideAttrs (oldAttrs: rec {
               nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ oldAttrs.nativeBuildInputs ++ [
                 cardano-node.packages.${system}.cardano-submit-api
-                pkgs.python3Packages.pip
-                pkgs.python3Packages.virtualenv
+                py3pkgs.pip
+                py3pkgs.virtualenv
               ];
             });
             # Use 'venv' directly as 'default' and 'dev'
