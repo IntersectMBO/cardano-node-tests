@@ -98,6 +98,7 @@
             base = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnumake gnutar jq python3Packages.supervisor xz ];
             };
+            # TODO: can be removed once sync tests are fully moved to separate repo
             python = pkgs.mkShell {
               nativeBuildInputs = with pkgs; with python39Packages; [ python39Full virtualenv pip matplotlib pandas requests xmltodict psutil GitPython pymysql ];
             };
@@ -114,25 +115,12 @@
               ];
             });
             default = (
-              cardano-node.devShells.${system}.devops or (
-                # Compat with 1.34.1:
-                (import (cardano-node + "/shell.nix") {
-                  pkgs = cardano-node.legacyPackages.${system}.extend (self: prev: {
-                    workbench-supervisord =
-                      { useCabalRun, profileName, haskellPackages }:
-                      self.callPackage (cardano-node + "/nix/supervisord-cluster")
-                        {
-                          inherit profileName useCabalRun haskellPackages;
-                          workbench = self.callPackage (cardano-node + "/nix/workbench") { inherit useCabalRun; };
-                        };
-                  });
-                }).devops
-              )
+              cardano-node.devShells.${system}.devops
             ).overrideAttrs (oldAttrs: rec {
               nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ oldAttrs.nativeBuildInputs ++ [
                 cardano-node.packages.${system}.cardano-submit-api
                 cardano-nodes-tests-apps
-                #TODO: can be removed once tests scripts do not rely on cardano-nodes-tests-apps dependencies:
+                # TODO: can be removed once tests scripts do not rely on cardano-nodes-tests-apps dependencies:
                 cardano-nodes-tests-apps.dependencyEnv
               ];
             });
