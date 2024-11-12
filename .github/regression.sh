@@ -37,7 +37,7 @@ export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 rm -rf "${ARTIFACTS_DIR:?}"
 
 export SCHEDULING_LOG=scheduling.log
-true > "$SCHEDULING_LOG"
+: > "$SCHEDULING_LOG"
 
 MARKEXPR="${MARKEXPR:-""}"
 if [ "$MARKEXPR" = "all" ]; then
@@ -87,6 +87,8 @@ fi
 
 echo "::endgroup::"  # end group for "Script setup"
 
+echo "::group::Dependencies setup"
+
 # setup dbsync (disabled by default)
 case "${DBSYNC_REV:-""}" in
   "" )
@@ -95,11 +97,9 @@ case "${DBSYNC_REV:-""}" in
     unset DBSYNC_REV
     ;;
   * )
-    echo "::group::db-sync setup"
     # shellcheck disable=SC1090,SC1091
     . .github/source_dbsync.sh
     df -h .
-    echo "::endgroup::"
     ;;
 esac
 
@@ -113,10 +113,8 @@ case "${PLUTUS_APPS_REV:="none"}" in
     unset PLUTUS_APPS_REV
     ;;
   * )
-    echo "::group::plutus-apps setup"
     # shellcheck disable=SC1090,SC1091
     . .github/source_plutus_apps.sh
-    echo "::endgroup::"
     ;;
 esac
 
@@ -128,22 +126,24 @@ case "${CARDANO_CLI_REV:-""}" in
     unset CARDANO_CLI_REV
     ;;
   * )
-    echo "::group::cardano-cli setup"
     # shellcheck disable=SC1090,SC1091
     . .github/source_cardano_cli.sh
-    echo "::endgroup::"
     ;;
 esac
+
+echo "::endgroup::"  # end group for "Dependencies setup"
+
+echo "::group::Cleanup setup"
 
 _cleanup() {
   # stop all running cluster instances
   stop_instances "$WORKDIR"
 
   # stop postgres if running
-  stop_postgres || true
+  stop_postgres || :
 }
 
-_cleanup_testnet() {
+_cleanup_testnet_on_interrupt() {
   [ -z "${BOOTSTRAP_DIR:-""}" ] && return
 
   _PYTEST_CURRENT="$(find "$WORKDIR" -type l -name pytest-current)"
@@ -172,10 +172,12 @@ _cleanup_testnet() {
 _interrupted() {
   # Do testnet cleanup only on interrupted testrun. When not interrupted,
   # cleanup is done as part of a testrun.
-  _cleanup_testnet
+  _cleanup_testnet_on_interrupt
   _cleanup
 }
 trap 'set +e; _interrupted; exit 130' SIGINT
+
+echo "::endgroup::"  # end group for "Cleanup setup"
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
