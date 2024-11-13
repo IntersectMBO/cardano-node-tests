@@ -135,7 +135,7 @@ Install and configure poetry, follow [Poetry documentation](https://python-poetr
 
 ### Preparing Python virtual environment
 
-Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
+Create a Python virtual environment and install this package together with development requirements:
 
 ```sh
 ./setup_dev_venv.sh
