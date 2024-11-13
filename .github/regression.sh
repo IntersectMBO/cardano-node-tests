@@ -85,9 +85,7 @@ if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   export MAKE_TARGET="${MAKE_TARGET:-"testnets"}"
 fi
 
-echo "::endgroup::"  # end group for "Script setup"
-
-echo "::group::Dependencies setup"
+echo "### Dependencies setup ###"
 
 # setup dbsync (disabled by default)
 case "${DBSYNC_REV:-""}" in
@@ -131,9 +129,9 @@ case "${CARDANO_CLI_REV:-""}" in
     ;;
 esac
 
-echo "::endgroup::"  # end group for "Dependencies setup"
+df -h .
 
-echo "::group::Cleanup setup"
+echo "### Cleanup setup ###"
 
 _cleanup() {
   # stop all running cluster instances
@@ -177,7 +175,7 @@ _interrupted() {
 }
 trap 'set +e; _interrupted; exit 130' SIGINT
 
-echo "::endgroup::"  # end group for "Cleanup setup"
+echo "::endgroup::"  # end group for "Script setup"
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
