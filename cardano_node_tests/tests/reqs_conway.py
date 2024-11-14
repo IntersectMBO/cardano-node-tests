@@ -49,6 +49,7 @@ cip026_01 = __r("intCIP026-01")  # Committee disallowed
 cip026_02 = __r("intCIP026-02")  # Constitution disallowed
 cip026_03 = __r("intCIP026-03")  # Withdrawal disallowed
 cip026_04 = __r("intCIP026-04")  # DRep voting disallowed
+cip027 = __r("CIP027")
 cip028 = __r("CIP028")
 cip029 = __r("CIP029")
 cip030en = __r("intCIP030en")  # enacted

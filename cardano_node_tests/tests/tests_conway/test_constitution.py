@@ -331,6 +331,7 @@ class TestConstitution:
         * vote to approve the action
         * check that the action is ratified
         * try to disapprove the ratified action, this shouldn't have any effect
+        * try and fail to withdraw the deposit from stake address that is not delegated to a DRep
         * check that the action is enacted
         * check that it's not possible to vote on enacted action
         """
@@ -339,6 +340,10 @@ class TestConstitution:
         rand_str = clusterlib.get_rand_str(4)
         governance_data = governance_w_scripts_lg
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+
+        init_return_account_balance = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
 
         # Create an action
 
@@ -520,6 +525,29 @@ class TestConstitution:
         reqc.cli036.start(url=helpers.get_vcs_link())
         _check_cli_query()
         reqc.cli036.success()
+
+        # Check that deposit was returned immediately after enactment
+        enact_deposit_returned = cluster.g_query.get_stake_addr_info(
+            pool_user_lg.stake.address
+        ).reward_account_balance
+
+        assert (
+            enact_deposit_returned
+            == init_return_account_balance + cluster.conway_genesis["govActionDeposit"]
+        ), "Incorrect return account balance"
+
+        reqc.cip027.start(url=helpers.get_vcs_link())
+        # Try to withdraw the deposit from stake address that is not delegated to a DRep
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            clusterlib_utils.withdraw_reward_w_build(
+                cluster_obj=cluster,
+                stake_addr_record=pool_user_lg.stake,
+                dst_addr_record=pool_user_lg.payment,
+                tx_name=temp_template,
+            )
+        err_str = str(excinfo.value)
+        assert "(ConwayWdrlNotDelegatedToDRep" in err_str, err_str
+        reqc.cip027.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
