@@ -252,6 +252,4 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   ls -1a
 fi
 
-echo -e "\x3A:endgroup::" # end group for "Collect artifacts"
-
 exit "$retval"

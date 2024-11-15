@@ -180,6 +180,4 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   ls -1a
 fi
 
-echo -e "\x3A:endgroup::" # end group for "Cluster teardown & artifacts"
-
 exit "$retval"

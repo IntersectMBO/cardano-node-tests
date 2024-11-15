@@ -49,6 +49,7 @@ jobs:
           # env
           echo "::group::Script setup"
           ./.github/node_upgrade.sh
+          echo "::endgroup::"
       - name: Upload testing artifacts on failure
         uses: actions/upload-artifact@v4
         if: failure()
