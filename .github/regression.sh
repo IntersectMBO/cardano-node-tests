@@ -211,7 +211,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   retval="$?"
   echo "::endgroup::"
 
-  echo "::group::Collect artifacts"
+  echo "::group::Collect artifacts & teardown cluster"
   ./.github/cli_coverage.sh
   ./.github/reqs_coverage.sh
   exit "$retval"

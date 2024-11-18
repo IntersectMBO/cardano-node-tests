@@ -150,7 +150,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   retval="$?"
   echo "::endgroup::"  # end group for "-> PYTEST STEP3 <-"
 
-  echo "::group::Cluster teardown & artifacts"
+  echo "::group::Teardown cluster & collect artifacts"
   # teardown cluster
   ./.github/node_upgrade_pytest.sh finish
   exit $retval
