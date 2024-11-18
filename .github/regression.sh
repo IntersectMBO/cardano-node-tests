@@ -149,8 +149,10 @@ _cleanup_testnet_on_interrupt() {
   _PYTEST_CURRENT="$(readlink -m "$_PYTEST_CURRENT")"
   export _PYTEST_CURRENT
 
-  echo -e "\x3A:endgroup::" # end group for the group that was interrupted
-  echo -e "\x3A:group::Testnet cleanup"
+  sets="$-"; set +x
+  echo "::endgroup::" # end group for the group that was interrupted
+  echo "::group::Testnet cleanup"
+  set -"$sets"
 
   # shellcheck disable=SC2016
   nix develop --accept-flake-config .#venv --command bash -c '
@@ -163,7 +165,9 @@ _cleanup_testnet_on_interrupt() {
     testnet-cleanup -a "$_PYTEST_CURRENT"
   '
 
-  echo -e "\x3A:endgroup::"
+  sets="$-"; set +x
+  echo "::endgroup::"
+  set -"$sets"
 }
 
 # cleanup on Ctrl+C
@@ -175,9 +179,11 @@ _interrupted() {
 }
 trap 'set +e; _interrupted; exit 130' SIGINT
 
-echo -e "\x3A:endgroup::"  # end group for "Script setup"
+sets="$-"; set +x
+echo "::endgroup::"  # end group for "Script setup"
+echo "::group::Nix env setup"
+set -"$sets"
 
-echo -e "\x3A:group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
 
 # function to update cardano-node to specified branch and/or revision, or to the latest available
@@ -192,20 +198,20 @@ nix flake update --accept-flake-config $(node_override)
 nix develop --accept-flake-config .#venv --command bash -c '
   printf "finish: %(%H:%M:%S)T\n" -1
   df -h .
-  echo -e "\x3A:endgroup::"  # end group for "Nix env setup"
+  echo "::endgroup::"  # end group for "Nix env setup"
 
-  echo -e "\x3A:group::Python venv setup"
+  echo "::group::Python venv setup"
   . .github/setup_venv.sh clean
-  echo -e "\x3A:endgroup::"  # end group for "Python venv setup"
+  echo "::endgroup::"  # end group for "Python venv setup"
 
-  echo -e "\x3A:group::-> PYTEST RUN <-"
+  echo "::group::-> PYTEST RUN <-"
   export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   make "${MAKE_TARGET:-"tests"}"
   retval="$?"
-  echo -e "\x3A:endgroup::"
+  echo "::endgroup::"
 
-  echo -e "\x3A:group::Collect artifacts"
+  echo "::group::Collect artifacts"
   ./.github/cli_coverage.sh
   ./.github/reqs_coverage.sh
   exit "$retval"

@@ -58,9 +58,11 @@ export SCHEDULING_LOG=scheduling.log
 export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
 unset ENABLE_LEGACY MIXED_P2P
 
-echo -e "\x3A:endgroup::"  # end group for "Script setup"
+sets="$-"; set +x
+echo "::endgroup::"  # end group for "Script setup"
+echo "::group::Nix env setup step1"
+set -"$sets"
 
-echo -e "\x3A:group::Nix env setup step1"
 printf "start: %(%H:%M:%S)T\n" -1
 
 # shellcheck disable=SC1090,SC1091
@@ -85,13 +87,13 @@ nix flake update --accept-flake-config $NODE_OVERRIDE
 nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step1"
   printf "finish: %(%H:%M:%S)T\n" -1
-  echo -e "\x3A:endgroup::"  # end group for "Nix env setup step1"
+  echo "::endgroup::"  # end group for "Nix env setup step1"
 
-  echo -e "\x3A:group::Python venv setup step1"
+  echo "::group::Python venv setup step1"
   . .github/setup_venv.sh clean
-  echo -e "\x3A:endgroup::"  # end group for "Python venv setup step1"
+  echo "::endgroup::"  # end group for "Python venv setup step1"
 
-  echo -e "\x3A:group::-> PYTEST STEP1 <-"
+  echo "::group::-> PYTEST STEP1 <-"
   df -h .
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
   ./.github/node_upgrade_pytest.sh step1
@@ -106,9 +108,11 @@ fi
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
 [ "$retval" -le 1 ] || exit "$retval"
 
-echo -e "\x3A:endgroup::"  # end group for "-> PYTEST STEP1 <-"
+sets="$-"; set +x
+echo "::endgroup::"  # end group for "-> PYTEST STEP1 <-"
+echo "::group::Nix env setup steps 2 & 3"
+set -"$sets"
 
-echo -e "\x3A:group::Nix env setup steps 2 & 3"
 printf "start: %(%H:%M:%S)T\n" -1
 
 # update cardano-node to specified branch and/or revision, or to the latest available revision
@@ -124,29 +128,29 @@ nix flake update --accept-flake-config $NODE_OVERRIDE
 nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step2"
   printf "finish: %(%H:%M:%S)T\n" -1
-  echo -e "\x3A:endgroup::"  # end group for "Nix env setup steps 2 & 3"
+  echo "::endgroup::"  # end group for "Nix env setup steps 2 & 3"
 
-  echo -e "\x3A:group::Python venv setup steps 2 & 3"
+  echo "::group::Python venv setup steps 2 & 3"
   . .github/setup_venv.sh clean
-  echo -e "\x3A:endgroup::"  # end group for "Python venv setup steps 2 & 3"
+  echo "::endgroup::"  # end group for "Python venv setup steps 2 & 3"
 
-  echo -e "\x3A:group::-> PYTEST STEP2 <-"
+  echo "::group::-> PYTEST STEP2 <-"
   df -h .
   # update cluster nodes, run smoke tests
   ./.github/node_upgrade_pytest.sh step2
   retval="$?"
   # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we dont want to continue
   [ "$retval" -le 1 ] || exit "$retval"
-  echo -e "\x3A:endgroup::"  # end group for "-> PYTEST STEP2 <-"
+  echo "::endgroup::"  # end group for "-> PYTEST STEP2 <-"
 
-  echo -e "\x3A:group::-> PYTEST STEP3 <-"
+  echo "::group::-> PYTEST STEP3 <-"
   df -h .
   # update to Conway, run smoke tests
   ./.github/node_upgrade_pytest.sh step3
   retval="$?"
-  echo -e "\x3A:endgroup::"  # end group for "-> PYTEST STEP3 <-"
+  echo "::endgroup::"  # end group for "-> PYTEST STEP3 <-"
 
-  echo -e "\x3A:group::Cluster teardown & artifacts"
+  echo "::group::Cluster teardown & artifacts"
   # teardown cluster
   ./.github/node_upgrade_pytest.sh finish
   exit $retval
