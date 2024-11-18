@@ -6,7 +6,6 @@
 """
 
 import concurrent.futures
-import contextlib
 import functools
 import logging
 import pathlib as pl
@@ -34,14 +33,17 @@ def withdraw_reward(
         signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
     )
 
-    LOGGER.info(f"Withdrawing rewards for '{stake_addr_record.address}'")
-    with contextlib.suppress(clusterlib.CLIError):
+    try:
         cluster_obj.g_transaction.send_tx(
             src_address=dst_address,
             tx_name=f"rf_{name_template}_reward_withdrawal",
             tx_files=tx_files_withdrawal,
             withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
         )
+    except clusterlib.CLIError:
+        LOGGER.error(f"Failed to withdraw rewards for '{stake_addr_record.address}'")  # noqa: TRY400
+    else:
+        LOGGER.info(f"Withdrawn rewards for '{stake_addr_record.address}'")
 
 
 def deregister_stake_addr(
@@ -62,14 +64,17 @@ def deregister_stake_addr(
         signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
     )
 
-    LOGGER.info(f"Deregistering stake address '{pool_user.stake.address}'")
-    with contextlib.suppress(clusterlib.CLIError):
+    try:
         cluster_obj.g_transaction.send_tx(
             src_address=pool_user.payment.address,
             tx_name=f"{name_template}_dereg_stake_addr",
             tx_files=tx_files_deregister,
             deposit=-deposit_amt,
         )
+    except clusterlib.CLIError:
+        LOGGER.error(f"Failed to deregister stake address '{pool_user.stake.address}'")  # noqa: TRY400
+    else:
+        LOGGER.info(f"Deregistered stake address '{pool_user.stake.address}'")
 
 
 def return_funds_to_faucet(
@@ -100,9 +105,8 @@ def return_funds_to_faucet(
         futxo = random.choice(faucet_utxos)
         txins.append(futxo)
 
-    LOGGER.info(f"Returning funds from '{src_addr.address}'")
     # try to return funds; don't mind if there's not enough funds for fees etc.
-    with contextlib.suppress(clusterlib.CLIError):
+    try:
         cluster_obj.g_transaction.send_tx(
             src_address=src_addr.address,
             tx_name=tx_name,
@@ -111,6 +115,10 @@ def return_funds_to_faucet(
             tx_files=fund_tx_files,
             verify_tx=False,
         )
+    except clusterlib.CLIError:
+        LOGGER.error(f"Failed to return funds from '{src_addr.address}'")  # noqa: TRY400
+    else:
+        LOGGER.info(f"Returned funds from '{src_addr.address}'")
 
 
 def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
