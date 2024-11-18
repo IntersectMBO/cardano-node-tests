@@ -45,12 +45,17 @@ def withdraw_reward(
 
 
 def deregister_stake_addr(
-    cluster_obj: clusterlib.ClusterLib, pool_user: clusterlib.PoolUser, name_template: str
+    cluster_obj: clusterlib.ClusterLib,
+    pool_user: clusterlib.PoolUser,
+    name_template: str,
+    deposit_amt: int,
 ) -> None:
     """Deregister stake address."""
     # files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
-        addr_name=f"rf_{name_template}_addr0_dereg", stake_vkey_file=pool_user.stake.vkey_file
+        addr_name=f"rf_{name_template}_addr0_dereg",
+        deposit_amt=deposit_amt,
+        stake_vkey_file=pool_user.stake.vkey_file,
     )
     tx_files_deregister = clusterlib.TxFiles(
         certificate_files=[stake_addr_dereg_cert],
@@ -63,6 +68,7 @@ def deregister_stake_addr(
             src_address=pool_user.payment.address,
             tx_name=f"{name_template}_dereg_stake_addr",
             tx_files=tx_files_deregister,
+            deposit=-deposit_amt,
         )
 
 
@@ -166,6 +172,7 @@ def cleanup(
     faucet_addr_file = cluster_env.state_dir / "shelley" / "faucet.addr"
     faucet_payment = create_addr_record(faucet_addr_file)
     files_found = group_files(find_files(location))
+    stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
     def _run(files: tp.List[pl.Path]) -> None:
         for fpath in files:
@@ -200,7 +207,10 @@ def cleanup(
                     )
 
                 deregister_stake_addr(
-                    cluster_obj=cluster_obj, pool_user=pool_user, name_template=f_name
+                    cluster_obj=cluster_obj,
+                    pool_user=pool_user,
+                    name_template=f_name,
+                    deposit_amt=stake_deposit_amt,
                 )
             else:
                 try:
