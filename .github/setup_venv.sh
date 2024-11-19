@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VENV_DIR="${_VENV_DIR:-"$WORKDIR/.env"}"
+_VENV_DIR="${_VENV_DIR:-"$WORKDIR/.venv"}"
 
 if [ "${1:-""}" = "clean" ]; then
   rm -rf "$_VENV_DIR"
