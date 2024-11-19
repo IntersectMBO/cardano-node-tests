@@ -4,15 +4,10 @@
   inputs = {
     cardano-node = {
       url = "github:IntersectMBO/cardano-node";
-      inputs = {
-        node-measured.follows = "cardano-node";
-        membench.follows = "/";
-      };
     };
     nixpkgs.follows = "cardano-node/nixpkgs";
     flake-utils = {
       url = "github:numtide/flake-utils";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
