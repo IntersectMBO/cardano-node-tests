@@ -25,10 +25,6 @@
             base = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnumake gnutar jq xz ];
             };
-            # TODO: can be removed once sync tests are fully moved to separate repo
-            python = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; with python39Packages; [ python39Full virtualenv pip matplotlib pandas requests xmltodict psutil GitPython pymysql ];
-            };
             postgres = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ glibcLocales postgresql lsof procps ];
             };
