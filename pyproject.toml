@@ -42,6 +42,7 @@ pytest-xdist = "^3.6.1"
 PyYAML = "^6.0.2"
 requests = "^2.32.3"
 pytest-subtests = "^0.13.1"
+supervisor = "^4.2.5"
 
 [tool.poetry.group.dev]
 optional = true

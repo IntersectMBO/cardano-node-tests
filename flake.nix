@@ -27,7 +27,7 @@
         {
           devShells = rec {
             base = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; [ py3Full bash coreutils curl git gnugrep gnumake gnutar jq py3pkgs.supervisor xz ];
+              nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnumake gnutar jq xz ];
             };
             # TODO: can be removed once sync tests are fully moved to separate repo
             python = pkgs.mkShell {
@@ -36,15 +36,17 @@
             postgres = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ glibcLocales postgresql lsof procps ];
             };
-            venv = (
-              cardano-node.devShells.${system}.devops
-            ).overrideAttrs (oldAttrs: rec {
-              nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ oldAttrs.nativeBuildInputs ++ [
+            venv = pkgs.mkShell {
+              nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ [
+                cardano-node.packages.${system}.cardano-cli
+                cardano-node.packages.${system}.cardano-node
                 cardano-node.packages.${system}.cardano-submit-api
+                cardano-node.packages.${system}.bech32
+                py3Full
                 py3pkgs.pip
                 py3pkgs.virtualenv
               ];
-            });
+            };
             # Use 'venv' directly as 'default' and 'dev'
             default = venv;
             dev = venv;
