@@ -6,7 +6,7 @@
 # BASE_REVISION - revision of cardano-node to upgrade from (alternative to BASE_TAR_URL)
 # UPGRADE_REVISION - revision of cardano-node to upgrade to
 
-set -xeuo pipefail
+set -euo pipefail
 
 if [[ -z "${BASE_TAR_URL:-""}" && -z "${BASE_REVISION:-""}" ]]; then
   echo "BASE_TAR_URL or BASE_REVISION must be set"
@@ -58,10 +58,8 @@ export SCHEDULING_LOG=scheduling.log
 export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
 unset ENABLE_LEGACY MIXED_P2P
 
-sets="$-"; set +x
 echo "::endgroup::"  # end group for "Script setup"
 echo "::group::Nix env setup step1"
-set -"$sets"
 
 printf "start: %(%H:%M:%S)T\n" -1
 
@@ -108,10 +106,8 @@ fi
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
 [ "$retval" -le 1 ] || exit "$retval"
 
-sets="$-"; set +x
 echo "::endgroup::"  # end group for "-> PYTEST STEP1 <-"
 echo "::group::Nix env setup steps 2 & 3"
-set -"$sets"
 
 printf "start: %(%H:%M:%S)T\n" -1
 
