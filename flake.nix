@@ -2,10 +2,10 @@
   description = "Functional tests for cardano-node";
 
   inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
     cardano-node = {
       url = "github:IntersectMBO/cardano-node";
     };
-    nixpkgs.follows = "cardano-node/nixpkgs";
     flake-utils = {
       url = "github:numtide/flake-utils";
     };
@@ -37,8 +37,8 @@
                 cardano-node.packages.${system}.cardano-node
                 cardano-node.packages.${system}.cardano-submit-api
                 cardano-node.packages.${system}.bech32
+                pkgs.poetry
                 py3Full
-                py3pkgs.pip
                 py3pkgs.virtualenv
               ];
             };

@@ -19,7 +19,7 @@ PYTHONPATH="$(echo "$VIRTUAL_ENV"/lib/python3*/site-packages):$PYTHONPATH"
 export PYTHONPATH
 
 if [ -z "$_REQS_INSTALLED" ]; then
-  pip install -r requirements_freeze.txt
+  poetry install -n
 fi
 
 unset _VENV_DIR _REQS_INSTALLED

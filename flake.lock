@@ -1366,6 +1366,22 @@
         "type": "github"
       }
     },
+    "nixpkgs_7": {
+      "locked": {
+        "lastModified": 1731797254,
+        "narHash": "sha256-df3dJApLPhd11AlueuoN0Q4fHo/hagP75LlM5K1sz9g=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e8c38b73aeb218e27163376a2d617e61a2ad9b59",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-24.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nosys": {
       "locked": {
         "lastModified": 1668010795,
@@ -1465,10 +1481,7 @@
       "inputs": {
         "cardano-node": "cardano-node",
         "flake-utils": "flake-utils_5",
-        "nixpkgs": [
-          "cardano-node",
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs_7"
       }
     },
     "secp256k1": {
