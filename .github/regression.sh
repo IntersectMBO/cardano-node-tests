@@ -1,7 +1,7 @@
 #! /usr/bin/env -S nix develop --accept-flake-config .#base -c bash
 # shellcheck shell=bash disable=SC2317
 
-set -xeuo pipefail
+set -euo pipefail
 
 nix --version
 df -h .
@@ -149,10 +149,8 @@ _cleanup_testnet_on_interrupt() {
   _PYTEST_CURRENT="$(readlink -m "$_PYTEST_CURRENT")"
   export _PYTEST_CURRENT
 
-  sets="$-"; set +x
   echo "::endgroup::" # end group for the group that was interrupted
   echo "::group::Testnet cleanup"
-  set -"$sets"
 
   # shellcheck disable=SC2016
   nix develop --accept-flake-config .#venv --command bash -c '
@@ -165,9 +163,7 @@ _cleanup_testnet_on_interrupt() {
     testnet-cleanup -a "$_PYTEST_CURRENT"
   '
 
-  sets="$-"; set +x
   echo "::endgroup::"
-  set -"$sets"
 }
 
 # cleanup on Ctrl+C
@@ -179,10 +175,8 @@ _interrupted() {
 }
 trap 'set +e; _interrupted; exit 130' SIGINT
 
-sets="$-"; set +x
 echo "::endgroup::"  # end group for "Script setup"
 echo "::group::Nix env setup"
-set -"$sets"
 
 printf "start: %(%H:%M:%S)T\n" -1
 
@@ -230,13 +224,10 @@ mv .reports/testrun-report.* ./
 # Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
 # After any key is pressed, resume this script and stop all running cluster instances.
 if [ "${KEEP_CLUSTERS_RUNNING:-""}" = 1 ]; then
-  sets="$-"
-  set +x
   echo
   echo "KEEP_CLUSTERS_RUNNING is set, leaving clusters running until any key is pressed."
   echo "Press any key to continue..."
   read -r
-  set -"$sets"
 fi
 
 _cleanup
