@@ -16,7 +16,8 @@
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          py3pkgs = pkgs.python311Packages;
+          nodePkgs = cardano-node.packages.${system};
+          py3Pkgs = pkgs.python311Packages;
           py3Full = pkgs.python311Full;
         in
         {
@@ -33,13 +34,13 @@
             };
             venv = pkgs.mkShell {
               nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ [
-                cardano-node.packages.${system}.cardano-cli
-                cardano-node.packages.${system}.cardano-node
-                cardano-node.packages.${system}.cardano-submit-api
-                cardano-node.packages.${system}.bech32
+                nodePkgs.cardano-cli
+                nodePkgs.cardano-node
+                nodePkgs.cardano-submit-api
+                nodePkgs.bech32
                 pkgs.poetry
                 py3Full
-                py3pkgs.virtualenv
+                py3Pkgs.virtualenv
               ];
             };
             # Use 'venv' directly as 'default' and 'dev'
