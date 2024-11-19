@@ -25,10 +25,6 @@
             base = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnumake gnutar jq xz ];
             };
-            # TODO: can be removed once sync tests are fully moved to separate repo
-            python = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; with python39Packages; [ python39Full virtualenv pip matplotlib pandas requests xmltodict psutil GitPython pymysql ];
-            };
             postgres = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ glibcLocales postgresql lsof procps ];
             };
@@ -51,9 +47,7 @@
 
   # --- Flake Local Nix Configuration ----------------------------
   nixConfig = {
-    # This sets the flake to use the IOG nix cache.
-    # Nix should ask for permission before using it,
-    # but remove it here if you do not want it to.
+    # Sets the flake to use the IOG nix cache.
     extra-substituters = [ "https://cache.iog.io" ];
     extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
     allow-import-from-derivation = "true";
