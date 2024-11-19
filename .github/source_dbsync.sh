@@ -7,6 +7,8 @@ export TEST_THREADS CLUSTERS_COUNT
 pushd "$WORKDIR" || exit 1
 
 stop_postgres() {
+  echo "Stopping postgres"
+
   local psql_pid_file="$WORKDIR/postgres/postgres.pid"
   if [ ! -f "$psql_pid_file" ]; then
     return 0

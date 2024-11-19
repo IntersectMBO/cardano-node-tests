@@ -97,7 +97,6 @@ case "${DBSYNC_REV:-""}" in
   * )
     # shellcheck disable=SC1090,SC1091
     . .github/source_dbsync.sh
-    df -h .
     ;;
 esac
 
@@ -129,8 +128,6 @@ case "${CARDANO_CLI_REV:-""}" in
     ;;
 esac
 
-df -h .
-
 echo "### Cleanup setup ###"
 
 _cleanup() {
@@ -138,7 +135,9 @@ _cleanup() {
   stop_instances "$WORKDIR"
 
   # stop postgres if running
-  stop_postgres || :
+  if command -v stop_postgres >/dev/null 2>&1; then
+    stop_postgres || :
+  fi
 }
 
 _cleanup_testnet_on_interrupt() {
@@ -150,7 +149,9 @@ _cleanup_testnet_on_interrupt() {
   export _PYTEST_CURRENT
 
   echo "::endgroup::" # end group for the group that was interrupted
+
   echo "::group::Testnet cleanup"
+  printf "start: %(%H:%M:%S)T\n" -1
 
   # shellcheck disable=SC2016
   nix develop --accept-flake-config .#venv --command bash -c '
@@ -176,8 +177,8 @@ _interrupted() {
 trap 'set +e; _interrupted; exit 130' SIGINT
 
 echo "::endgroup::"  # end group for "Script setup"
-echo "::group::Nix env setup"
 
+echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
 
 # function to update cardano-node to specified branch and/or revision, or to the latest available
@@ -190,29 +191,30 @@ set +e
 nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
-  printf "finish: %(%H:%M:%S)T\n" -1
-  df -h .
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
+  printf "start: %(%H:%M:%S)T\n" -1
   . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup"
 
   echo "::group::-> PYTEST RUN <-"
+  printf "start: %(%H:%M:%S)T\n" -1
+  df -h .
   export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   make "${MAKE_TARGET:-"tests"}"
   retval="$?"
+  df -h .
   echo "::endgroup::"
 
   echo "::group::Collect artifacts & teardown cluster"
+  printf "start: %(%H:%M:%S)T\n" -1
   ./.github/cli_coverage.sh
   ./.github/reqs_coverage.sh
   exit "$retval"
 '
 retval="$?"
-
-df -h .
 
 # move reports to root dir
 mv .reports/testrun-report.* ./
