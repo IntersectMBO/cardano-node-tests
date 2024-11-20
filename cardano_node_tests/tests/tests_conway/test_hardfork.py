@@ -43,19 +43,10 @@ def pool_user_lg(
 class TestHardfork:
     """Tests for hard-fork."""
 
-    @pytest.fixture(scope="class")
-    def skip_hf_command(self):
-        if not clusterlib_utils.cli_has("conway governance action create-hardfork"):
-            pytest.skip(
-                "The `cardano-cli conway governance action create-hardfork` command "
-                "is not available."
-            )
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
     def test_hardfork(
         self,
-        skip_hf_command: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
