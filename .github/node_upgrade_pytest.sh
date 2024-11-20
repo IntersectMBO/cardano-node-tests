@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xuo pipefail
+set -uo pipefail
 
 retval=1
 
