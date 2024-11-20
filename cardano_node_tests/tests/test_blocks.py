@@ -34,17 +34,11 @@ LOGGER = logging.getLogger(__name__)
 class TestLeadershipSchedule:
     """Tests for cardano-cli leadership-schedule."""
 
-    @pytest.fixture(scope="class")
-    def skip_leadership_schedule(self):
-        if not clusterlib_utils.cli_has("query leadership-schedule"):
-            pytest.skip("The `cardano-cli query leadership-schedule` command is not available.")
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.needs_dbsync
     @pytest.mark.parametrize("for_epoch", ("current", "next"))
     def test_pool_blocks(
         self,
-        skip_leadership_schedule: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
         for_epoch: str,
@@ -143,7 +137,6 @@ class TestLeadershipSchedule:
     @allure.link(helpers.get_vcs_link())
     def test_unstable_stake_distribution(
         self,
-        skip_leadership_schedule: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ):
