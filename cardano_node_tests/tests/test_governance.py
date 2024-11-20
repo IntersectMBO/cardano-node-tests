@@ -1,4 +1,4 @@
-"""Tests for governance functionality.
+"""Tests for old pre-Conway governance functionality.
 
 Tests for update proposals are in separate file `test_update_proposals.py`.
 
@@ -25,24 +25,20 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import poll_utils
 from cardano_node_tests.utils import tx_view
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data"
 
-pytestmark = pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.BABBAGE,
-    reason="legacy SPO polls work only with Babbage Tx era",
-)
-
 
 class TestPoll:
-    """Tests for SPO poll."""
+    """Tests for old pre-Conway SPO poll."""
 
     @pytest.fixture(scope="class")
     def governance_poll_available(self) -> None:
         if not clusterlib_utils.cli_has("babbage governance create-poll"):
-            pytest.skip("The `cardano-cli governance` poll commands are not available.")
+            pytest.fail(
+                "The `cardano-cli babbage governance` poll commands are no longer available."
+            )
 
     @pytest.fixture
     def payment_addr(
@@ -58,7 +54,7 @@ class TestPoll:
             cluster_obj=cluster,
         )[0]
 
-        # fund source address
+        # Fund source address
         clusterlib_utils.fund_from_faucet(
             addr,
             cluster_obj=cluster,
@@ -128,30 +124,16 @@ class TestPoll:
             metadata_json_detailed_schema=True,
         )
 
-        if use_build_cmd:
-            tx_output_poll = cluster.g_transaction.build_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_poll",
-                tx_files=tx_files_poll,
-                witness_override=len(tx_files_poll.signing_key_files),
-                required_signers=required_signers_arg,
-                required_signer_hashes=required_signers_vkey_hash_arg,
-            )
-
-            tx_signed_poll = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_output_poll.out_file,
-                signing_key_files=tx_files_poll.signing_key_files,
-                tx_name=f"{temp_template}_poll",
-            )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed_poll, txins=tx_output_poll.txins)
-        else:
-            tx_output_poll = cluster.g_transaction.send_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_poll",
-                tx_files=tx_files_poll,
-                required_signers=required_signers_arg,
-                required_signer_hashes=required_signers_vkey_hash_arg,
-            )
+        tx_output_poll = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_poll",
+            src_address=payment_addr.address,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files_poll,
+            required_signers=required_signers_arg,
+            required_signer_hashes=required_signers_vkey_hash_arg,
+            witness_override=len(tx_files_poll.signing_key_files),
+        )
 
         expected_metadata = {"94": [[0, [poll_question]], [1, [["Yes"], ["No"]]]]}
 
@@ -189,27 +171,15 @@ class TestPoll:
             metadata_json_detailed_schema=True,
         )
 
-        if use_build_cmd:
-            tx_output_answer = cluster.g_transaction.build_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_answer",
-                tx_files=tx_files_answer,
-                required_signers=[node_cold.skey_file],
-                witness_override=len(tx_files_answer.signing_key_files),
-            )
-            tx_signed_answer = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_output_answer.out_file,
-                signing_key_files=tx_files_answer.signing_key_files,
-                tx_name=f"{temp_template}_answer",
-            )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed_answer, txins=tx_output_answer.txins)
-        else:
-            tx_output_answer = cluster.g_transaction.send_tx(
-                src_address=payment_addr.address,
-                tx_name=f"{temp_template}_answer",
-                tx_files=tx_files_answer,
-                required_signers=[node_cold.skey_file],
-            )
+        tx_output_answer = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_answer",
+            src_address=payment_addr.address,
+            use_build_cmd=use_build_cmd,
+            tx_files=tx_files_answer,
+            required_signers=[node_cold.skey_file],
+            witness_override=len(tx_files_answer.signing_key_files),
+        )
 
         out_utxos_answer = cluster.g_query.get_utxo(tx_raw_output=tx_output_answer)
         assert (
@@ -327,7 +297,11 @@ class TestPoll:
             )
 
         err_str = str(excinfo.value)
-        assert "Poll answer out of bounds" in err_str or "negative index" in err_str, err_str
+        assert (
+            "Poll answer out of bounds" in err_str
+            or "negative index" in err_str
+            or 'unexpected "-"' in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -353,7 +327,11 @@ class TestPoll:
             )
 
         err_str = str(excinfo.value)
-        assert "Poll answer out of bounds" in err_str or "negative index" in err_str, err_str
+        assert (
+            "Poll answer out of bounds" in err_str
+            or "negative index" in err_str
+            or 'unexpected "-"' in err_str
+        ), err_str
 
         if "Prelude.!!" in err_str:
             issues.dbsync_1363.finish_test()
