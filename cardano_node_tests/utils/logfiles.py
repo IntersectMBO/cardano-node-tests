@@ -270,13 +270,54 @@ def add_ignore_rule(
         infile.write(f"{files_glob};;{skip_after};;{regex}\n")
 
 
+def _check_msgs_presence_in_logs(
+    regex_pairs: tp.List[tp.Tuple[str, str]],
+    seek_offsets: tp.Dict[str, int],
+    state_dir: pl.Path,
+    timestamp: float,
+) -> None:
+    """Make sure the expected messages are present in logs."""
+    errors = []
+    for files_glob, regex in regex_pairs:
+        regex_comp = re.compile(regex)
+        # Get list of records (file names and offsets) for given glob
+        matching_files = fnmatch.filter(seek_offsets, f"{state_dir}/{files_glob}")
+        for logfile in matching_files:
+            # Skip if the log file is rotated log, it will be handled by `_get_rotated_logs`
+            if ROTATED_RE.match(logfile):
+                continue
+
+            # Search for the expected string
+            seek = seek_offsets.get(logfile) or 0
+            line_found = False
+            for logfile_rec in _get_rotated_logs(
+                logfile=pl.Path(logfile), seek=seek, timestamp=timestamp
+            ):
+                with open(logfile_rec.logfile, encoding="utf-8") as infile:
+                    infile.seek(logfile_rec.seek)
+                    for line in infile:
+                        if regex_comp.search(line):
+                            line_found = True
+                            break
+                if line_found:
+                    break
+            else:
+                errors.append(f"No line matching `{regex}` found in '{logfile}'.")
+
+    if errors:
+        errors_joined = "\n".join(errors)
+        raise AssertionError(errors_joined) from None
+
+
 @contextlib.contextmanager
 def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> tp.Iterator[None]:
     """Make sure the expected errors are present in logs.
 
+    Context manager.
+
     Args:
-        regex_pairs: [(glob, regex)] - A list of regexes that need to be present in files
-            described by the glob.
+        regex_pairs: [(glob, regex)] - A list of regexes matching strings that need to be present
+            in files described by the glob.
         worker_id: The id of the pytest-xdist worker (the `worker_id` fixture) that the test
             is running on.
     """
@@ -297,36 +338,38 @@ def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> t
 
     yield
 
-    errors = []
-    for files_glob, regex in regex_pairs:
-        regex_comp = re.compile(regex)
-        # Get list of records (file names and offsets) for given glob
-        matching_files = fnmatch.filter(seek_offsets, f"{state_dir}/{files_glob}")
-        for logfile in matching_files:
-            # Skip if the log file is rotated log, it will be handled by `_get_rotated_logs`
-            if ROTATED_RE.match(logfile):
-                continue
+    _check_msgs_presence_in_logs(
+        regex_pairs=regex_pairs, seek_offsets=seek_offsets, state_dir=state_dir, timestamp=timestamp
+    )
 
-            # Search for the expected error
-            seek = seek_offsets.get(logfile) or 0
-            line_found = False
-            for logfile_rec in _get_rotated_logs(
-                logfile=pl.Path(logfile), seek=seek, timestamp=timestamp
-            ):
-                with open(logfile_rec.logfile, encoding="utf-8") as infile:
-                    infile.seek(logfile_rec.seek)
-                    for line in infile:
-                        if regex_comp.search(line):
-                            line_found = True
-                            break
-                if line_found:
-                    break
-            else:
-                errors.append(f"No line matching `{regex}` found in '{logfile}'.")
 
-    if errors:
-        errors_joined = "\n".join(errors)
-        raise AssertionError(errors_joined) from None
+@contextlib.contextmanager
+def expect_messages(regex_pairs: tp.List[tp.Tuple[str, str]]) -> tp.Iterator[None]:
+    """Make sure the expected messages are present in logs.
+
+    Context manager.
+
+    Args:
+        regex_pairs: [(glob, regex)] - A list of regexes matching strings that need to be present
+            in files described by the glob.
+    """
+    state_dir = cluster_nodes.get_cluster_env().state_dir
+
+    glob_list = [r[0] for r in regex_pairs]
+    # Resolve the globs
+    _expanded_paths = [list(state_dir.glob(glob_item)) for glob_item in glob_list]
+    # Flatten the list
+    expanded_paths = list(itertools.chain.from_iterable(_expanded_paths))
+    # Record each end-of-file as a starting offset for searching the log file
+    seek_offsets = {str(p): helpers.get_eof_offset(p) for p in expanded_paths}
+
+    timestamp = time.time()
+
+    yield
+
+    _check_msgs_presence_in_logs(
+        regex_pairs=regex_pairs, seek_offsets=seek_offsets, state_dir=state_dir, timestamp=timestamp
+    )
 
 
 def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
