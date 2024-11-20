@@ -105,8 +105,8 @@ class TestCommittee:
     @pytest.mark.smoke
     def test_register_hot_key_no_cc_member(
         self,
-        cluster_use_committee: governance_utils.GovClusterT,
-        payment_addr_comm: clusterlib.AddressRecord,
+        cluster: clusterlib.ClusterLib,
+        pool_user: clusterlib.PoolUser,
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -114,7 +114,6 @@ class TestCommittee:
 
         Expect failure.
         """
-        cluster, __ = cluster_use_committee
         temp_template = common.get_test_id(cluster)
 
         cc_auth_record = governance_utils.get_cc_member_auth_record(
@@ -124,7 +123,7 @@ class TestCommittee:
 
         tx_files_auth = clusterlib.TxFiles(
             certificate_files=[cc_auth_record.auth_cert],
-            signing_key_files=[payment_addr_comm.skey_file, cc_auth_record.cold_key_pair.skey_file],
+            signing_key_files=[pool_user.payment.skey_file, cc_auth_record.cold_key_pair.skey_file],
         )
 
         # Try to submit a Hot Credential Authorization certificate without being a CC member
@@ -132,7 +131,7 @@ class TestCommittee:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_auth",
-                src_address=payment_addr_comm.address,
+                src_address=pool_user.payment.address,
                 submit_method=submit_method,
                 use_build_cmd=use_build_cmd,
                 tx_files=tx_files_auth,
