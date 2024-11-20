@@ -250,6 +250,11 @@ def get_default_governance(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
 ) -> governance_utils.GovernanceRecords:
+    """Get default governance data for CC members, DReps and SPOs."""
+    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+        err = "Default governance is not available on testnets"
+        raise ValueError(err)
+
     cluster_env = cluster_nodes.get_cluster_env()
     gov_data_dir = cluster_env.state_dir / GOV_DATA_DIR
     gov_data_store = gov_data_dir / GOV_DATA_STORE

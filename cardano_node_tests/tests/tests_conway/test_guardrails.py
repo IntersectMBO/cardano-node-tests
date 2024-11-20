@@ -1567,7 +1567,6 @@ def get_subtests() -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
 class TestGovernanceGuardrails:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.testnets
     def test_guardrails(
         self,
         cluster_with_constitution: ClusterWithConstitutionRecord,
