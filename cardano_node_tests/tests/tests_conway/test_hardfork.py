@@ -13,6 +13,7 @@ from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -231,7 +232,10 @@ class TestHardfork:
         ), "Incorrect major version"
 
         # Check enactment
-        enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
+        expected_msgs = [("pool1.stdout", r"ProtVer \{pvMajor = Version 10")]
+        with logfiles.expect_messages(expected_msgs):
+            enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=15)
+
         enact_gov_state = cluster.g_conway_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
