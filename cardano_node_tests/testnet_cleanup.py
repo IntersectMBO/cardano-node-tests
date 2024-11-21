@@ -3,6 +3,7 @@
 
 * withdraw rewards
 * deregister stake addresses
+* retire DReps
 * return funds to faucet
 """
 
