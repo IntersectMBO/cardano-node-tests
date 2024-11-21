@@ -27,6 +27,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "-s",
         "--skey-file",
+        required=True,
         type=helpers.check_file_arg,
         help="Path to skey file",
     )
@@ -46,10 +47,7 @@ def main() -> int:
         return 1
 
     state_dir = pl.Path(socket_env).parent
-    cluster_obj = clusterlib.ClusterLib(
-        state_dir=state_dir,
-        command_era=clusterlib.CommandEras.LATEST,
-    )
+    cluster_obj = clusterlib.ClusterLib(state_dir=state_dir)
     defragment_utxos.defragment(
         cluster_obj=cluster_obj, address=args.address, skey_file=args.skey_file
     )
