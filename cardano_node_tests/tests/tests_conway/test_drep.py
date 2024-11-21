@@ -973,23 +973,17 @@ class TestNegativeDReps:
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
-        deposit_amt = cluster.conway_genesis["dRepDeposit"]
-        drep_keys = cluster.g_conway_governance.drep.gen_key_pair(
-            key_name=temp_template, destination_dir="."
-        )
+
         reqc.cip090.start(url=helpers.get_vcs_link())
-        # Obtain drep registration certificate
-        reg_cert = cluster.g_conway_governance.drep.gen_registration_cert(
-            cert_name=temp_template,
-            deposit_amt=deposit_amt,
-            drep_vkey_file=drep_keys.vkey_file,
+        reg_drep = governance_utils.get_drep_reg_record(
+            cluster_obj=cluster,
+            name_template=temp_template,
             drep_metadata_url=drep_metadata_url,
             drep_metadata_hash=drep_metadata_hash,
-            destination_dir=".",
         )
         tx_files_reg = clusterlib.TxFiles(
-            certificate_files=[reg_cert],
-            signing_key_files=[payment_addr.skey_file, drep_keys.skey_file],
+            certificate_files=[reg_drep.registration_cert],
+            signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
         )
 
         # Submit drep registration certificate
@@ -1000,7 +994,7 @@ class TestNegativeDReps:
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files_reg,
-            deposit=deposit_amt,
+            deposit=reg_drep.deposit,
         )
 
         # Wait for some blocks and again submit drep registration certificate
@@ -1015,7 +1009,7 @@ class TestNegativeDReps:
                 submit_method=submit_method,
                 use_build_cmd=use_build_cmd,
                 tx_files=tx_files_reg,
-                deposit=deposit_amt,
+                deposit=reg_drep.deposit,
             )
 
         err_msg = str(excinfo.value)
