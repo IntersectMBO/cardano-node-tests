@@ -34,13 +34,11 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "-f",
         "--address",
-        required=True,
         help="Faucet address",
     )
     parser.add_argument(
         "-s",
         "--skey-file",
-        required=True,
         type=helpers.check_file_arg,
         help="Path to faucet skey file",
     )
@@ -58,8 +56,15 @@ def main() -> int:
     if not socket_env:
         LOGGER.error("The `CARDANO_NODE_SOCKET_PATH` environment variable is not set.")
         return 1
-    if not os.environ.get("BOOTSTRAP_DIR"):
-        LOGGER.error("The `BOOTSTRAP_DIR` environment variable is not set.")
+    if bool(args.address) ^ bool(args.skey_file):
+        LOGGER.error(
+            "Both address and skey file must be provided, or neither of them should be provided."
+        )
+        return 1
+    if not (args.address or os.environ.get("BOOTSTRAP_DIR")):
+        LOGGER.error(
+            "The address must be provided, or `BOOTSTRAP_DIR` environment variable must be set."
+        )
         return 1
 
     state_dir = pl.Path(socket_env).parent
