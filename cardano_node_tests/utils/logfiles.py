@@ -41,6 +41,10 @@ ERRORS_IGNORED = [
     "db-sync-node.*could not serialize access",
     # Can happen on p2p when node is shutting down
     "AsyncCancelled",
+    # DB-Sync table name
+    "OffChainPoolFetchError",
+    # DB-Sync table name
+    "OffChainVoteFetchError",
     # TODO: p2p failures on testnet
     "PeerStatusChangeFailure",
     # TODO: p2p failures on testnet - PeerMonitoringError
