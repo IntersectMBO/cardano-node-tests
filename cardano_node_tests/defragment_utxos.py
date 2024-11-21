@@ -27,6 +27,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "-s",
         "--skey-file",
+        required=True,
         type=helpers.check_file_arg,
         help="Path to skey file",
     )
