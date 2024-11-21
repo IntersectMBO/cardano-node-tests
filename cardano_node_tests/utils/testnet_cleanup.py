@@ -172,14 +172,37 @@ def group_files(file_paths: tp.Generator[pl.Path, None, None]) -> tp.List[tp.Lis
     return path_groups
 
 
+def _get_faucet_payment_rec(
+    address: str = "",
+    skey_file: clusterlib.FileType = "",
+) -> clusterlib.AddressRecord:
+    if address or skey_file:
+        if not (address and skey_file):
+            err = "Both 'address' and 'skey_file' need to be set."
+            raise ValueError(err)
+
+        faucet_payment = clusterlib.AddressRecord(
+            address=address,
+            vkey_file=pl.Path("/nonexistent"),  # We don't need this for faucet
+            skey_file=pl.Path(skey_file),
+        )
+    else:
+        # Try to infer the faucet address and keys from cluster env
+        cluster_env = cluster_nodes.get_cluster_env()
+        faucet_addr_file = cluster_env.state_dir / "shelley" / "faucet.addr"
+        faucet_payment = create_addr_record(faucet_addr_file)
+
+    return faucet_payment
+
+
 def cleanup(
     cluster_obj: clusterlib.ClusterLib,
     location: clusterlib.FileType,
+    faucet_address: str = "",
+    faucet_skey_file: clusterlib.FileType = "",
 ) -> None:
     """Cleanup a testnet with the help of testing artifacts."""
-    cluster_env = cluster_nodes.get_cluster_env()
-    faucet_addr_file = cluster_env.state_dir / "shelley" / "faucet.addr"
-    faucet_payment = create_addr_record(faucet_addr_file)
+    faucet_payment = _get_faucet_payment_rec(address=faucet_address, skey_file=faucet_skey_file)
     files_found = group_files(find_files(location))
     stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
