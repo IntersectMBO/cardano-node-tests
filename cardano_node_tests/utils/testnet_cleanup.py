@@ -16,6 +16,7 @@ import typing as tp
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import defragment_utxos
 
 LOGGER = logging.getLogger(__name__)
 
@@ -237,3 +238,8 @@ def cleanup(
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(_run, f) for f in files_found]
         concurrent.futures.wait(futures)
+
+    # Defragment faucet address UTxOs
+    defragment_utxos.defragment(
+        cluster_obj=cluster_obj, address=faucet_payment.address, skey_file=faucet_payment.skey_file
+    )

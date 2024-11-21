@@ -65,6 +65,7 @@ sphinxemoji = "^0.3.1"
 
 [tool.poetry.scripts]
 testnet-cleanup = "cardano_node_tests.testnet_cleanup:main"
+defragment-utxos = "cardano_node_tests.defragment_utxos:main"
 prepare-cluster-scripts = "cardano_node_tests.prepare_cluster_scripts:main"
 split-topology = "cardano_node_tests.split_topology:main"
 cardano-cli-coverage = "cardano_node_tests.cardano_cli_coverage:main"
