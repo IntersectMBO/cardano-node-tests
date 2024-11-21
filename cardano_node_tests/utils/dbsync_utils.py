@@ -1270,12 +1270,11 @@ def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], t
         rem_amts.remove(r_amount)
         assert row.ratified_epoch, "Action not marked as ratified in db-sync"
         assert row.enacted_epoch, "Action not marked as enacted in db-sync"
+        assert not row.dropped_epoch, "Action marked as dropped in db-sync"
+        assert not row.expired_epoch, "Action marked as expired in db-sync"
         assert (
             row.enacted_epoch == row.ratified_epoch + 1
         ), "Wrong relation between enacted and ratified epochs in db-sync"
-        assert (
-            row.enacted_epoch == row.dropped_epoch
-        ), "Wrong relation between enacted and dropped epochs in db-sync"
 
 
 def check_reward_rest(stake_address: str, transfer_amts: tp.List[int], type: str = "") -> None:
