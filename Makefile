@@ -103,6 +103,6 @@ testpr: .dirs .run_tests
 .PHONY: testnets
 testnets: export CLUSTERS_COUNT=1
 testnets: export FORBID_RESTART=1
-testnets: TEST_THREADS := $(or $(TEST_THREADS),20)
+testnets: TEST_THREADS := $(or $(TEST_THREADS),15)
 testnets: MARKEXPR := $(or $(MARKEXPR),-m "testnets")
 testnets: .dirs .run_tests
