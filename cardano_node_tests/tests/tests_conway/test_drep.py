@@ -60,6 +60,7 @@ def get_payment_addr(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str,
+    amount: tp.Optional[int] = None,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
@@ -77,6 +78,7 @@ def get_payment_addr(
         addr,
         cluster_obj=cluster_obj,
         all_faucets=cluster_manager.cache.addrs_data,
+        amount=amount,
     )
 
     return addr
@@ -187,7 +189,11 @@ def payment_addr(
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
     return get_payment_addr(
-        name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
+        name_template=test_id,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        caching_key=key,
+        amount=2000_000_000,
     )
 
 
