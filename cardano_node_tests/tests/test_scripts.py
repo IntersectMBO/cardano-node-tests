@@ -2272,6 +2272,7 @@ class TestReferenceUTxO:
             tx_files=tx_files,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
+            witness_count_add=2,
         )
 
         # Check final balances
@@ -2389,7 +2390,7 @@ class TestReferenceUTxO:
             txouts=destinations,
             tx_files=tx_files,
             witness_override=2 if address_type == "byron" else None,
-            witness_count_add=2 if address_type == "byron" else 0,
+            witness_count_add=0 if use_build_cmd else 2,
         )
 
         # check that the reference UTxO was spent

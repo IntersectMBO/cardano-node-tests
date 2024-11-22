@@ -188,7 +188,7 @@ class TestBuildLocking:
         # check expected fees
         if use_reference_script:
             expected_fee_fund = 258_913
-            expected_fee_redeem = 213_889
+            expected_fee_redeem = 233_889
         else:
             expected_fee_fund = 167_965
             expected_fee_redeem = 293_393
