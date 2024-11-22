@@ -7,6 +7,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import issues
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -492,11 +493,15 @@ class ScriptCost:
 
 def check_plutus_costs(
     plutus_costs: tp.List[dict], expected_costs: tp.List[ExecutionCost], frac: float = 0.15
-):
+) -> None:
     """Check plutus transaction cost.
 
     units: the time is in picoseconds and the space is in bytes.
     """
+    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+        # We have the costs calibrated only for local testnet
+        return
+
     # sort records by total cost
     sorted_plutus = sorted(
         plutus_costs,
