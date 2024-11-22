@@ -198,7 +198,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup"
 
-  echo "::group::-> PYTEST RUN <-"
+  echo "::group::🧪 Testrun"
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
@@ -206,7 +206,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   make "${MAKE_TARGET:-"tests"}"
   retval="$?"
   df -h .
-  echo "::endgroup::"
+  echo "::endgroup::"  # end group for "Testrun"
 
   echo "::group::Collect artifacts & teardown cluster"
   printf "start: %(%H:%M:%S)T\n" -1
