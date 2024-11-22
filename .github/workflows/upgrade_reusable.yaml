@@ -50,13 +50,13 @@ jobs:
           echo "::group::Script setup"
           ./.github/node_upgrade.sh
           echo "::endgroup::"
-      - name: 🠉 Upload testing artifacts on failure
+      - name: ↑ Upload testing artifacts on failure
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: testing-artifacts
           path: testing_artifacts.tar.xz
-      - name: 🠉 Upload Allure results for step1
+      - name: ↑ Upload Allure results for step1
         uses: actions/upload-artifact@v4
         # When using `always()`, you lose ability to manually cancel the workflow.
         # Use `success() || failure()` instead.
@@ -64,19 +64,19 @@ jobs:
         with:
           name: allure-results-step1
           path: allure-results-step1.tar.xz
-      - name: 🠉 Upload Allure results for step2
+      - name: ↑ Upload Allure results for step2
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: allure-results-step2
           path: allure-results-step2.tar.xz
-      - name: 🠉 Upload Allure results for step3
+      - name: ↑ Upload Allure results for step3
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: allure-results-step3
           path: allure-results-step3.tar.xz
-      - name: 🠉 Upload HTML reports
+      - name: ↑ Upload HTML reports
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
@@ -85,7 +85,7 @@ jobs:
             testrun-report-step1.html
             testrun-report-step2.html
             testrun-report-step3.html
-      - name: 🠉 Upload testrun files
+      - name: ↑ Upload testrun files
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
@@ -93,7 +93,7 @@ jobs:
           path: |
             scheduling.log.xz
             errors_all.log
-      - name: 🠉 Upload CLI coverage
+      - name: ↑ Upload CLI coverage
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
