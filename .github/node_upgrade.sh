@@ -91,7 +91,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup step1"
 
-  echo "::group::-> PYTEST STEP1 <-"
+  echo "::group::🧪 Testrun Step1"
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
@@ -107,7 +107,7 @@ fi
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
 [ "$retval" -le 1 ] || exit "$retval"
 
-echo "::endgroup::"  # end group for "-> PYTEST STEP1 <-"
+echo "::endgroup::"  # end group for "Testrun Step1"
 
 echo "::group::Nix env setup steps 2 & 3"
 printf "start: %(%H:%M:%S)T\n" -1
@@ -131,7 +131,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup steps 2 & 3"
 
-  echo "::group::-> PYTEST STEP2 <-"
+  echo "::group::🧪 Testrun Step2"
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # update cluster nodes, run smoke tests
@@ -139,16 +139,16 @@ nix develop --accept-flake-config .#venv --command bash -c '
   retval="$?"
   # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we dont want to continue
   [ "$retval" -le 1 ] || exit "$retval"
-  echo "::endgroup::"  # end group for "-> PYTEST STEP2 <-"
+  echo "::endgroup::"  # end group for "Testrun Step2"
 
-  echo "::group::-> PYTEST STEP3 <-"
+  echo "::group::🧪 Testrun Step3"
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # update to Conway, run smoke tests
   ./.github/node_upgrade_pytest.sh step3
   retval="$?"
   df -h .
-  echo "::endgroup::"  # end group for "-> PYTEST STEP3 <-"
+  echo "::endgroup::"  # end group for "Testrun Step3"
 
   echo "::group::Teardown cluster & collect artifacts"
   printf "start: %(%H:%M:%S)T\n" -1
