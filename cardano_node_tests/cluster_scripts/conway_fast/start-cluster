@@ -453,7 +453,7 @@ EoF
     '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' \
     > "${STATE_CLUSTER}/webserver/pool${i}.json"
 
-  METADATA_URL="http://localhost:%%WEBSERVER_PORT%%/pool${i}.json"
+  METADATA_URL="https://localhost:%%WEBSERVER_PORT%%/pool${i}.json"
   METADATA_HASH="$(cardano_cli_log conway stake-pool metadata-hash --pool-metadata-file \
     "${STATE_CLUSTER}/webserver/pool${i}.json")"
   POOL_PORT="$(("%%NODE_PORT_BASE%%" + (NUM_BFT_NODES + i - 1) * "%%PORTS_PER_NODE%%"))"
@@ -468,8 +468,6 @@ EoF
     --pool-cost "$POOL_COST" \
     --pool-reward-account-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
     --pool-owner-stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
-    --metadata-url "$METADATA_URL" \
-    --metadata-hash "$METADATA_HASH" \
     --pool-relay-port "$POOL_PORT" \
     --pool-relay-ipv4 "127.0.0.1" \
     --testnet-magic "$NETWORK_MAGIC" \
