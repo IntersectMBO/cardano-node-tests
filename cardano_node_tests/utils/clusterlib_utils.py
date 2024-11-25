@@ -96,7 +96,7 @@ def build_and_submit_tx(
         skip_asset_balancing = True if cli_asset_balancing is None else cli_asset_balancing
         witness_override = (
             len(tx_files.signing_key_files) + witness_count_add
-            if witness_override is None
+            if witness_override is None and witness_count_add > 0
             else witness_override
         )
         tx_output = cluster_obj.g_transaction.build_tx(
