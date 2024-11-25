@@ -106,10 +106,10 @@ BYTE_STRING_ROUNDTRIP_V2_COST = ExecutionCost(
     per_time=168_868_800, per_space=540_612, fixed_cost=43_369
 )
 SECP256K1_ECDSA_LOOP_COST = ExecutionCost(
-    per_time=397_863_996, per_space=128_584, fixed_cost=36_106
+    per_time=470_000_000, per_space=128_584, fixed_cost=36_106
 )
 SECP256K1_SCHNORR_LOOP_COST = ExecutionCost(
-    per_time=430_445_916, per_space=128_584, fixed_cost=38_455
+    per_time=470_000_000, per_space=128_584, fixed_cost=38_455
 )
 
 ALWAYS_FAILS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
