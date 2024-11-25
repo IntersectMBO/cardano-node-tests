@@ -274,12 +274,12 @@ def add_ignore_rule(
         infile.write(f"{files_glob};;{skip_after};;{regex}\n")
 
 
-def _check_msgs_presence_in_logs(
+def check_msgs_presence_in_logs(
     regex_pairs: tp.List[tp.Tuple[str, str]],
     seek_offsets: tp.Dict[str, int],
     state_dir: pl.Path,
     timestamp: float,
-) -> None:
+) -> tp.List[str]:
     """Make sure the expected messages are present in logs."""
     errors = []
     for files_glob, regex in regex_pairs:
@@ -308,9 +308,7 @@ def _check_msgs_presence_in_logs(
             else:
                 errors.append(f"No line matching `{regex}` found in '{logfile}'.")
 
-    if errors:
-        errors_joined = "\n".join(errors)
-        raise AssertionError(errors_joined) from None
+    return errors
 
 
 @contextlib.contextmanager
@@ -342,9 +340,12 @@ def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> t
 
     yield
 
-    _check_msgs_presence_in_logs(
+    errors = check_msgs_presence_in_logs(
         regex_pairs=regex_pairs, seek_offsets=seek_offsets, state_dir=state_dir, timestamp=timestamp
     )
+    if errors:
+        errors_joined = "\n".join(errors)
+        raise AssertionError(errors_joined) from None
 
 
 @contextlib.contextmanager
@@ -371,9 +372,12 @@ def expect_messages(regex_pairs: tp.List[tp.Tuple[str, str]]) -> tp.Iterator[Non
 
     yield
 
-    _check_msgs_presence_in_logs(
+    errors = check_msgs_presence_in_logs(
         regex_pairs=regex_pairs, seek_offsets=seek_offsets, state_dir=state_dir, timestamp=timestamp
     )
+    if errors:
+        errors_joined = "\n".join(errors)
+        raise AssertionError(errors_joined) from None
 
 
 def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
