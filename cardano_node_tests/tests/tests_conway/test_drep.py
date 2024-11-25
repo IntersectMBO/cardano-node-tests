@@ -36,6 +36,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
+MAINNET_DREP_DEPOSIT = 500_000_000
+
 pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY,
     reason="runs only with Tx era >= Conway",
@@ -59,19 +61,27 @@ def get_payment_addr(
     name_template: str,
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
-    caching_key: str,
+    caching_key: str = "",
     amount: tp.Optional[int] = None,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
-    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
 
+    def _create_addr() -> clusterlib.AddressRecord:
         addr = clusterlib_utils.create_payment_addr_records(
-            f"drep_addr_{name_template}",
+            f"{name_template}_fund_addr",
             cluster_obj=cluster_obj,
         )[0]
-        fixture_cache.value = addr
+        return addr
+
+    if caching_key:
+        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addr = _create_addr()
+            fixture_cache.value = addr
+    else:
+        addr = _create_addr()
 
     # Fund source address
     clusterlib_utils.fund_from_faucet(
@@ -186,14 +196,23 @@ def payment_addr(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
 ) -> clusterlib.AddressRecord:
+    if cluster.conway_genesis["dRepDeposit"] < MAINNET_DREP_DEPOSIT:
+        amount = 1_000_000_000
+        key = helpers.get_current_line_str()
+    else:
+        amount = MAINNET_DREP_DEPOSIT + 10_000_000
+        # Don't cache the fixture when DRep deposit is high. We don't know on how many
+        # different workers the tests will run, and we might end up creating many addresses
+        # with lot of funds if the fixture is cached.
+        key = ""
+
     test_id = common.get_test_id(cluster)
-    key = helpers.get_current_line_str()
     return get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         caching_key=key,
-        amount=2000_000_000,
+        amount=amount,
     )
 
 
