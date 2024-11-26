@@ -1446,8 +1446,9 @@ class TestDelegDReps:
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
-        key1 = helpers.get_current_line_str()
+
         # Get first DRep
+        key1 = helpers.get_current_line_str()
         drep1 = get_custom_drep(
             name_template=f"custom_drep_1_{temp_template}",
             cluster_manager=cluster_manager,
@@ -1456,8 +1457,8 @@ class TestDelegDReps:
             caching_key=key1,
         )
 
-        key2 = helpers.get_current_line_str()
         # Get second DRep
+        key2 = helpers.get_current_line_str()
         drep2 = get_custom_drep(
             name_template=f"custom_drep_2_{temp_template}",
             cluster_manager=cluster_manager,
@@ -1513,8 +1514,9 @@ class TestDelegDReps:
             drep_id=drep1.drep_id
         ), "Votes are NOT delegated to the correct DRep 1"
 
+        # Change delegation to second DRep
+
         reqc.cip086.start(url=helpers.get_vcs_link())
-        # Change delegation to drep2
         deleg_cert = cluster.g_stake_address.gen_vote_delegation_cert(
             addr_name=f"{temp_template}_addr2",
             stake_vkey_file=pool_user_rewards.stake.vkey_file,
@@ -1541,6 +1543,39 @@ class TestDelegDReps:
             drep_id=drep2.drep_id
         ), "Votes are NOT changed to the correct DRep 2"
         reqc.cip086.success()
+
+        # Retire the first DRep
+
+        ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+            cert_name=temp_template,
+            deposit_amt=drep1.deposit,
+            drep_vkey_file=drep1.key_pair.vkey_file,
+        )
+
+        tx_files_ret = clusterlib.TxFiles(
+            certificate_files=[ret_cert],
+            signing_key_files=[payment_addr_rewards.skey_file, drep1.key_pair.skey_file],
+        )
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_ret",
+            src_address=payment_addr_rewards.address,
+            tx_files=tx_files_ret,
+            deposit=-drep1.deposit,
+        )
+
+        ret_drep_state = cluster.g_conway_governance.query.drep_state(
+            drep_vkey_file=drep1.key_pair.vkey_file
+        )
+        assert not ret_drep_state, "DRep was not retired"
+
+        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
+        if not stake_addr_info.vote_delegation:
+            issues.ledger_4772.finish_test()
+        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+            drep_id=drep2.drep_id
+        ), "Votes are no longer delegated to DRep 2!"
 
 
 class TestDRepActivity:
