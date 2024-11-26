@@ -346,11 +346,11 @@ class TestDReps:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test proper drep id is being generated.
+        """Test that proper DRep id is being generated.
 
-        * Register a drep
-        * Hash drep vkey using blake2b_224
-        * Check drep ID generated from cli is same as blake2b_224 hash of drep vkey
+        * Register a DRep
+        * Hash DRep vkey using blake2b_224
+        * Check DRep ID generated from cli is same as blake2b_224 hash of DRep vkey
         """
         reqc.cip085.start(url=helpers.get_vcs_link())
         temp_template = common.get_test_id(cluster)
@@ -361,7 +361,7 @@ class TestDReps:
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
-        # Get a drep registration record
+        # Get a DRep registration record
         reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
             name_template=temp_template,
@@ -369,7 +369,7 @@ class TestDReps:
             drep_metadata_hash=drep_metadata_hash,
         )
         vkey_file_path = reg_drep.key_pair.vkey_file
-        # Get drep vkey from vkey file
+        # Get DRep vkey from vkey file
         with open(vkey_file_path) as vkey_file:
             vkey_file_json = json.loads(vkey_file.read())
             cbor_hex = vkey_file_json["cborHex"]
@@ -377,9 +377,9 @@ class TestDReps:
             decoded_data = cbor2.loads(cbor_binary)
             blake2b_224 = hashlib.blake2b(digest_size=28)
             blake2b_224.update(decoded_data)
-            # Obtain blake2b_224 hash of drep vkey
+            # Obtain blake2b_224 hash of DRep vkey
             hash_digest = blake2b_224.hexdigest()
-            assert reg_drep.drep_id == hash_digest, "Drep ID hash is not blake2b_224."
+            assert reg_drep.drep_id == hash_digest, "DRep ID hash is not blake2b_224."
             reqc.cip085.success()
 
     @allure.link(helpers.get_vcs_link())
@@ -397,11 +397,11 @@ class TestDReps:
     ):
         """Test DRep registration and retirement.
 
-        * register DRep
-        * check that DRep was registered
-        * retire DRep
-        * check that DRep was retired
-        * check that deposit was returned to source address
+        * Register DRep
+        * Check that DRep was registered
+        * Retire DRep
+        * Check that DRep was retired
+        * Check that deposit was returned to source address
         """
         # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
@@ -544,9 +544,9 @@ class TestDReps:
     ):
         """Register a DRep with wrong metadata url.
 
-        * register DRep with mismatch url metadata vs metadata file
-        * check that DRep was registered
-        * verify that dbsync is returning an error
+        * Register DRep with mismatch url metadata vs metadata file
+        * Check that DRep was registered
+        * Verify that dbsync is returning an error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -650,12 +650,12 @@ class TestNegativeDReps:
         There was a ledger issue that allowed a DRep to be registered without needing
         the corresponding skey witness.
 
-        * try to register DRep without skey, expect failure
-        * register DRep
-        * check that DRep was registered
-        * try to retire DRep without skey, expect failure
-        * retire DRep
-        * check that DRep was retired
+        * Try to register DRep without skey, expect failure
+        * Register DRep
+        * Check that DRep was registered
+        * Try to retire DRep without skey, expect failure
+        * Retire DRep
+        * Check that DRep was retired
         """
         temp_template = common.get_test_id(cluster)
         errors_final = []
@@ -780,12 +780,12 @@ class TestNegativeDReps:
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
     ):
-        """Test No multiple delegation to different dreps.
+        """Test that it is not possible to delegate to multiple DReps at the same time.
 
-        * Create 2 Dreps
-        * Create vote delegation certifcate to both dreps
+        * Create 2 DReps
+        * Create vote delegation certifcate to both DReps
         * Submit both certificates
-        * check that the Drep certificate placed at last of the certificates is delegated to
+        * Check that the DRep certificate placed at last of the certificates is delegated to
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
@@ -816,7 +816,7 @@ class TestNegativeDReps:
         )
 
         reqc.cip087.start(url=helpers.get_vcs_link())
-        # Create vote delegation cert for drep 1
+        # Create vote delegation cert for DRep 1
         deleg_cert_1 = cluster.g_stake_address.gen_vote_delegation_cert(
             addr_name=f"{temp_template}_addr1",
             stake_vkey_file=pool_user_rewards.stake.vkey_file,
@@ -825,7 +825,7 @@ class TestNegativeDReps:
             always_no_confidence=False,
         )
 
-        # Create vote delegation cert for drep 2
+        # Create vote delegation cert for DRep 2
         deleg_cert_2 = cluster.g_stake_address.gen_vote_delegation_cert(
             addr_name=f"{temp_template}_addr2",
             stake_vkey_file=pool_user_rewards.stake.vkey_file,
@@ -880,7 +880,7 @@ class TestNegativeDReps:
         custom_drep: governance_utils.DRepRegistration,
         drep: str,
     ):
-        """Test No voting delegation without registering stake address first.
+        """Test that it is not possible to delegate without registering stake address first.
 
         * Use a wallet without registered stake address
         * Create vote delegation certifcate using unregistered wallet stake key
@@ -932,11 +932,11 @@ class TestNegativeDReps:
         use_build_cmd: bool,
         submit_method: str,
     ):
-        """Test No Drep retirement before register.
+        """Test that it is not possible to retire DRep before registering it.
 
         * Create a retirement certificate without registering
         * Submit certificate
-        * check it is not possible to retire before register
+        * Check that it is not possible to retire before registering the DRep
         """
         temp_template = common.get_test_id(cluster)
         drep_keys = cluster.g_conway_governance.drep.gen_key_pair(
@@ -955,7 +955,7 @@ class TestNegativeDReps:
             signing_key_files=[payment_addr.skey_file, drep_keys.skey_file],
         )
 
-        # Expecting error for both cases as drep is not registered
+        # Expecting error for both cases as DRep is not registered
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
@@ -983,10 +983,10 @@ class TestNegativeDReps:
         use_build_cmd: bool,
         submit_method: str,
     ):
-        """Test Drep cannot be registered multiple time.
+        """Test that DRep cannot be registered multiple times.
 
-        * Generate drep keys
-        * Create a drep registration certificate
+        * Generate DRep keys
+        * Create a DRep registration certificate
         * Submit the registration certificate twice
         * Expect ConwayDRepAlreadyRegistered on the second time
         """
@@ -1018,7 +1018,7 @@ class TestNegativeDReps:
             signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
         )
 
-        # Submit drep registration certificate
+        # Submit DRep registration certificate
         clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_reg",
@@ -1029,10 +1029,10 @@ class TestNegativeDReps:
             deposit=reg_drep.deposit,
         )
 
-        # Wait for some blocks and again submit drep registration certificate
+        # Wait for some blocks and again submit DRep registration certificate
         cluster.wait_for_new_block(new_blocks=2)
 
-        # Expecting error as drep is already registered
+        # Expecting error as DRep is already registered
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
@@ -1073,14 +1073,14 @@ class TestDelegDReps:
     ):
         """Test delegating to DReps.
 
-        * register stake address
-        * delegate stake to following DReps:
+        * Register stake address
+        * Delegate stake to following DReps:
 
             - always-abstain
             - always-no-confidence
             - custom DRep
 
-        * check that the stake address is registered
+        * Check that the stake address is registered
         """
         # pylint: disable=too-many-statements,too-many-locals
         cluster = cluster_rewards
@@ -1255,7 +1255,7 @@ class TestDelegDReps:
 
             assert (
                 db_drep_distr
-            ), f"No Drep distribution found for Drep {drep_id_bech32} and epoch {deleg_epoch}"
+            ), f"No DRep distribution found for DRep {drep_id_bech32} and epoch {deleg_epoch}"
             assert (
                 db_drep_distr[0].amount >= deleg_amount
             ), f"Unexpected delegated amount in dbsync: {db_drep_distr[0].amount} < {deleg_amount}"
@@ -1282,14 +1282,14 @@ class TestDelegDReps:
     ):
         """Test delegating to DRep and SPO using single certificate.
 
-        * register stake address
-        * delegate stake to a stake pool and to following DReps:
+        * Register stake address
+        * Delegate stake to a stake pool and to following DReps:
 
             - always-abstain
             - always-no-confidence
             - custom DRep
 
-        * check that the stake address is registered and delegated
+        * Check that the stake address is registered and delegated
         """
         cluster, pool_id = cluster_and_pool_and_rewards
         temp_template = common.get_test_id(cluster)
@@ -1434,20 +1434,20 @@ class TestDelegDReps:
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
     ):
-        """Test Change delegation to different dreps.
+        """Test changing delegation to a different DRep.
 
-        * Create 2 Dreps
-        * Create vote delegation certifcate for first drep
+        * Create 2 DReps
+        * Create vote delegation certifcate for the first DRep
         * Submit certificate
-        * check that the delegation is of correct drep id
+        * Check that the delegation is of correct DRep id
         * Change delegation to drep2 and submit certificate
-        * Check vote delegation is updated to second drep
+        * Check that vote delegation is updated to second DRep
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
         key1 = helpers.get_current_line_str()
-        # Get first drep
+        # Get first DRep
         drep1 = get_custom_drep(
             name_template=f"custom_drep_1_{temp_template}",
             cluster_manager=cluster_manager,
@@ -1457,7 +1457,7 @@ class TestDelegDReps:
         )
 
         key2 = helpers.get_current_line_str()
-        # Get second drep
+        # Get second DRep
         drep2 = get_custom_drep(
             name_template=f"custom_drep_2_{temp_template}",
             cluster_manager=cluster_manager,
