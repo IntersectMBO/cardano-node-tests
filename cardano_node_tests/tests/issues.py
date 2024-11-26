@@ -168,6 +168,12 @@ ledger_4349 = blockers.GH(
     fixed_in="8.12.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="Inconsistent listing of DRep expiry.",
 )
+ledger_4772 = blockers.GH(
+    issue=4772,
+    repo="IntersectMBO/cardano-ledger",
+    fixed_in="10.1.3.0",  # Unknown yet, will be fixed/changed sometime in the future
+    message="Delegation to DRep2 removed after retirement of DRep1.",
+)
 
 node_3788 = blockers.GH(
     issue=3788,
