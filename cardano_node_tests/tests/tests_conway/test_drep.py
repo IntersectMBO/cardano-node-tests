@@ -978,8 +978,8 @@ class TestNegativeDReps:
     @pytest.mark.smoke
     def test_drep_no_multiple_registration(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addr: clusterlib.AddressRecord,
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -997,6 +997,13 @@ class TestNegativeDReps:
         helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
+        )
+
+        payment_addr = get_payment_addr(
+            name_template=temp_template,
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            amount=cluster.conway_genesis["dRepDeposit"] * 2 + 10_000_000,
         )
 
         reqc.cip090.start(url=helpers.get_vcs_link())
