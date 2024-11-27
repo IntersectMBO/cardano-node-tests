@@ -1570,11 +1570,17 @@ class TestDelegDReps:
         assert not ret_drep_state, "DRep 1 was not retired"
 
         stake_addr_info_ret = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
-        if not stake_addr_info_ret.vote_delegation:
-            issues.ledger_4772.finish_test()
-        assert stake_addr_info_ret.vote_delegation == governance_utils.get_drep_cred_name(
-            drep_id=drep2.drep_id
-        ), "Votes are no longer delegated to DRep 2!"
+
+        if conway_common.is_in_bootstrap(cluster):
+            assert (
+                not stake_addr_info_ret.vote_delegation
+            ), "Due to ledger issue 4772, vote delegation should be empty with PV9"
+        else:
+            if not stake_addr_info_ret.vote_delegation:
+                issues.ledger_4772.finish_test()
+            assert stake_addr_info_ret.vote_delegation == governance_utils.get_drep_cred_name(
+                drep_id=drep2.drep_id
+            ), "Votes are no longer delegated to DRep 2!"
 
 
 class TestDRepActivity:
