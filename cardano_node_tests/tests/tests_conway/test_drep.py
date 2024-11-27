@@ -1428,7 +1428,6 @@ class TestDelegDReps:
     def test_change_delegation(
         self,
         cluster_rewards: clusterlib.ClusterLib,
-        cluster_manager: cluster_management.ClusterManager,
         payment_addr_rewards: clusterlib.AddressRecord,
         pool_user_rewards: clusterlib.PoolUser,
         testfile_temp_dir: pl.Path,
@@ -1442,29 +1441,25 @@ class TestDelegDReps:
         * Check that the delegation is of correct DRep id
         * Change delegation to drep2 and submit certificate
         * Check that vote delegation is updated to second DRep
+        * Retire the first DRep
+        * Check that votes are still delegated to the second DRep
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
 
         # Get first DRep
-        key1 = helpers.get_current_line_str()
-        drep1 = get_custom_drep(
+        drep1 = create_drep(
             name_template=f"custom_drep_1_{temp_template}",
-            cluster_manager=cluster_manager,
             cluster_obj=cluster,
             payment_addr=payment_addr_rewards,
-            caching_key=key1,
         )
 
         # Get second DRep
-        key2 = helpers.get_current_line_str()
-        drep2 = get_custom_drep(
+        drep2 = create_drep(
             name_template=f"custom_drep_2_{temp_template}",
-            cluster_manager=cluster_manager,
             cluster_obj=cluster,
             payment_addr=payment_addr_rewards,
-            caching_key=key2,
         )
 
         # Create stake address registration cert
@@ -1509,8 +1504,10 @@ class TestDelegDReps:
 
         request.addfinalizer(_deregister)
 
-        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
-        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+        stake_addr_info_deleg1 = cluster.g_query.get_stake_addr_info(
+            pool_user_rewards.stake.address
+        )
+        assert stake_addr_info_deleg1.vote_delegation == governance_utils.get_drep_cred_name(
             drep_id=drep1.drep_id
         ), "Votes are NOT delegated to the correct DRep 1"
 
@@ -1538,8 +1535,10 @@ class TestDelegDReps:
             tx_files=tx_files,
             deposit=deposit_amt,
         )
-        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
-        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+        stake_addr_info_deleg2 = cluster.g_query.get_stake_addr_info(
+            pool_user_rewards.stake.address
+        )
+        assert stake_addr_info_deleg2.vote_delegation == governance_utils.get_drep_cred_name(
             drep_id=drep2.drep_id
         ), "Votes are NOT changed to the correct DRep 2"
         reqc.cip086.success()
@@ -1568,12 +1567,12 @@ class TestDelegDReps:
         ret_drep_state = cluster.g_conway_governance.query.drep_state(
             drep_vkey_file=drep1.key_pair.vkey_file
         )
-        assert not ret_drep_state, "DRep was not retired"
+        assert not ret_drep_state, "DRep 1 was not retired"
 
-        stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
-        if not stake_addr_info.vote_delegation:
+        stake_addr_info_ret = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
+        if not stake_addr_info_ret.vote_delegation:
             issues.ledger_4772.finish_test()
-        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
+        assert stake_addr_info_ret.vote_delegation == governance_utils.get_drep_cred_name(
             drep_id=drep2.drep_id
         ), "Votes are no longer delegated to DRep 2!"
 
