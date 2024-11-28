@@ -6,6 +6,7 @@ Other block production checks may be present in `test_staking.py`.
 import logging
 import os
 import random
+import re
 import shutil
 import signal
 import sqlite3
@@ -38,7 +39,7 @@ class TestLeadershipSchedule:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.parametrize("for_epoch", ("current", "next"))
-    def test_pool_blocks(
+    def test_pool_blocks(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
@@ -48,12 +49,10 @@ class TestLeadershipSchedule:
 
         * query leadership schedule for selected pool for current epoch or next epoch
         * wait for epoch that comes after the queried epoch
-        * check in log files that the blocks were minted in expected slots
-        * if db-sync is available:
-
-           - get info about minted blocks in queried epoch for the selected pool
-           - compare leadership schedule with blocks that were actually minted
-           - compare db-sync records with ledger state dump
+        * get info about minted blocks in queried epoch for the selected pool
+        * compare leadership schedule with blocks that were actually minted
+        * compare log records with ledger state dump
+        * (optional) check minted blocks in db-sync
         """
         # pylint: disable=unused-argument
         cluster, pool_name = cluster_use_pool
@@ -62,10 +61,10 @@ class TestLeadershipSchedule:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.g_stake_pool.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
-        state_dir = cluster_nodes.get_cluster_env().state_dir
-        pool_log_fname = f"{pool_name.replace('node-', '')}.stdout"
-        pool_log = state_dir / pool_log_fname
-        seek_offsets = {str(pool_log): helpers.get_eof_offset(pool_log)}
+        pool_log = (
+            cluster_nodes.get_cluster_env().state_dir / f"{pool_name.replace('node-', '')}.stdout"
+        )
+        seek_offset = helpers.get_eof_offset(pool_log)
         timestamp = time.time()
 
         if for_epoch == "current":
@@ -90,27 +89,66 @@ class TestLeadershipSchedule:
         )
         slots_when_scheduled = {r.slot_no for r in leadership_schedule}
 
-        expected_msgs = [
-            (pool_log_fname, rf'TraceForgedBlock"\),\("slot",Number {s}')
-            for s in slots_when_scheduled
-        ]
-
         # Wait for epoch that comes after the queried epoch
-        cluster.wait_for_epoch(epoch_no=queried_epoch + 1)
+        cluster.wait_for_epoch(epoch_no=queried_epoch + 1, padding_seconds=10)
+
+        # Get number of minted blocks from ledger
+        ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        clusterlib_utils.save_ledger_state(
+            cluster_obj=cluster,
+            state_name=temp_template,
+            ledger_state=ledger_state,
+        )
+        blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+        pool_id_dec = helpers.decode_bech32(pool_id)
+        minted_blocks_ledger = blocks_before.get(pool_id_dec) or 0
 
         errors: tp.List[str] = []
 
-        log_msgs_errors = logfiles.check_msgs_presence_in_logs(
-            regex_pairs=expected_msgs,
-            seek_offsets=seek_offsets,
-            state_dir=state_dir,
-            timestamp=timestamp,
-        )
-        if len(log_msgs_errors) > len(leadership_schedule) // 2:
-            log_msgs_errors_joined = "\n  ".join(log_msgs_errors)
-            errors.append(f"Lot of slots missed: \n  {log_msgs_errors_joined}")
+        def _check_logs() -> None:
+            # Get info about minted blocks in queried epoch for the selected pool
+            minted_lines = logfiles.find_msgs_in_logs(
+                regex='"TraceForgedBlock"',
+                logfile=pool_log,
+                seek_offset=seek_offset,
+                timestamp=timestamp,
+            )
+            tip = cluster.g_query.get_tip()
+            last_slot_queried_epoch = int(tip["slot"]) - int(tip["slotInEpoch"] - 1)
+            first_slot_queried_epoch = (
+                last_slot_queried_epoch - int(cluster.genesis["epochLength"]) + 1
+            )
+            slots_pattern = re.compile(r'"slot",Number (\d+)\.0')
+            slots_when_minted = {
+                s
+                for m in minted_lines
+                if (o := slots_pattern.search(m)) is not None
+                and first_slot_queried_epoch <= (s := int(o.group(1))) <= last_slot_queried_epoch
+            }
 
-        if configuration.HAS_DBSYNC:
+            # Compare leadership schedule with blocks that were actually minted
+            difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
+            if difference_scheduled:
+                errors.append(
+                    f"Some blocks were minted in other slots than scheduled: {difference_scheduled}"
+                )
+
+            difference_minted = slots_when_scheduled.difference(slots_when_minted)
+            if len(difference_minted) > len(leadership_schedule) // 5:
+                errors.append(f"Lot of slots missed: {difference_minted}")
+
+            # Compare log records with ledger state dump
+            minted_blocks_logs = len(slots_when_minted)
+            # Some minted block may not be adopted, and so the total number of adopted blocks
+            # may be lower than the number of minted blocks.
+            if minted_blocks_ledger > minted_blocks_logs:
+                errors.append(
+                    "Number of minted blocks reported by ledger state "
+                    "is higher than number extracted from log file: "
+                    f"{minted_blocks_ledger} vs {minted_blocks_logs}"
+                )
+
+        def _check_dbsync() -> None:
             # Get info about minted blocks in queried epoch for the selected pool
             minted_blocks = list(
                 dbsync_queries.query_blocks(
@@ -123,29 +161,27 @@ class TestLeadershipSchedule:
             difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
             if difference_scheduled:
                 errors.append(
-                    f"Some blocks were minted in other slots than scheduled: {difference_scheduled}"
+                    "DB-Sync: Some blocks were minted in other slots than scheduled: "
+                    f"{difference_scheduled}"
                 )
 
             difference_minted = slots_when_scheduled.difference(slots_when_minted)
-            if len(difference_minted) > len(leadership_schedule) // 2:
-                errors.append(f"Lot of slots missed: {difference_minted}")
+            if len(difference_minted) > len(leadership_schedule) // 3:
+                errors.append(f"DB-Sync: Lot of slots missed: {difference_minted}")
 
             # Compare db-sync records with ledger state dump
-            ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
-            clusterlib_utils.save_ledger_state(
-                cluster_obj=cluster,
-                state_name=temp_template,
-                ledger_state=ledger_state,
-            )
-            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
-            pool_id_dec = helpers.decode_bech32(pool_id)
-            minted_blocks_ledger = blocks_before.get(pool_id_dec) or 0
             minted_blocks_db = len(slots_when_minted)
             if minted_blocks_ledger != minted_blocks_db:
                 errors.append(
-                    "Numbers of minted blocks reported by ledger state and db-sync don't match: "
+                    "DB-Sync: Numbers of minted blocks reported by ledger state "
+                    "and db-sync don't match: "
                     f"{minted_blocks_ledger} vs {minted_blocks_db}"
                 )
+
+        _check_logs()
+
+        if configuration.HAS_DBSYNC:
+            _check_dbsync()
 
         if errors:
             # Xfail if cardano-api GH-269 is still open
