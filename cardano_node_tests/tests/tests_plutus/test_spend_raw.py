@@ -331,12 +331,12 @@ class TestLocking:
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
-        datum_file: tp.Optional[pl.Path] = None
-        datum_cbor_file: tp.Optional[pl.Path] = None
-        datum_value: tp.Optional[str] = None
-        redeemer_file: tp.Optional[pl.Path] = None
-        redeemer_cbor_file: tp.Optional[pl.Path] = None
-        redeemer_value: tp.Optional[str] = None
+        datum_file: pl.Path | None = None
+        datum_cbor_file: pl.Path | None = None
+        datum_value: str | None = None
+        redeemer_file: pl.Path | None = None
+        redeemer_cbor_file: pl.Path | None = None
+        redeemer_value: str | None = None
 
         if variant == "typed_json":
             script_file = plutus_common.GUESSING_GAME[plutus_version].script_file

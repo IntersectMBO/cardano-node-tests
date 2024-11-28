@@ -12,7 +12,6 @@ import dataclasses
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import hypothesis
@@ -126,8 +125,8 @@ def _register_stake_pool_w_build(
     vrf_vkey_file: clusterlib.FileType,
     cold_key_pair: clusterlib.ColdKeyPair,
     tx_name: str,
-    reward_account_vkey_file: tp.Optional[clusterlib.FileType] = None,
-    deposit: tp.Optional[int] = None,
+    reward_account_vkey_file: clusterlib.FileType | None = None,
+    deposit: int | None = None,
     destination_dir: clusterlib.FileType = ".",
 ) -> tuple[pl.Path, clusterlib.TxRawOutput]:
     """Register a stake pool using a `transaction build` command.
@@ -335,7 +334,7 @@ def _create_register_pool(
     temp_dir: pl.Path,
     pool_owners: list[clusterlib.PoolUser],
     pool_data: clusterlib.PoolData,
-    request: tp.Optional[FixtureRequest] = None,
+    request: FixtureRequest | None = None,
     use_build_cmd: bool = False,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool.
@@ -402,7 +401,7 @@ def _create_register_pool_delegate_stake_tx(
     temp_template: str,
     temp_dir: pl.Path,
     pool_data: clusterlib.PoolData,
-    request: tp.Optional[FixtureRequest] = None,
+    request: FixtureRequest | None = None,
     use_build_cmd: bool = False,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool, delegate stake address - all in single TX.
@@ -532,7 +531,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     temp_template: str,
     temp_dir: pl.Path,
     pool_data: clusterlib.PoolData,
-    request: tp.Optional[FixtureRequest] = None,
+    request: FixtureRequest | None = None,
     use_build_cmd: bool = False,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool - first TX; delegate stake address - second TX.

@@ -1,6 +1,5 @@
 import logging
 import pathlib as pl
-import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -22,12 +21,12 @@ def _fund_issuer(
     amount: int,
     fee_txsize: int = FEE_MINT_TXSIZE,
     collateral_utxo_num: int = 1,
-    reference_script: tp.Optional[pl.Path] = None,
-    datum_file: tp.Optional[pl.Path] = None,
+    reference_script: pl.Path | None = None,
+    datum_file: pl.Path | None = None,
 ) -> tuple[
     list[clusterlib.UTXOData],
     list[clusterlib.UTXOData],
-    tp.Optional[clusterlib.UTXOData],
+    clusterlib.UTXOData | None,
     clusterlib.TxRawOutput,
 ]:
     """Fund the token issuer."""

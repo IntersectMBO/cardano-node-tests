@@ -121,7 +121,7 @@ def register_delegate_stake_addr(
     pool_user: delegation.PoolUserScript,
     pool_id: str,
     redeemer_file: pl.Path,
-    reference_script_utxos: tp.Optional[list[clusterlib.UTXOData]],
+    reference_script_utxos: list[clusterlib.UTXOData] | None,
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Submit registration certificate and delegate to pool."""
@@ -220,7 +220,7 @@ def register_stake_addr(
     collaterals: list[clusterlib.UTXOData],
     pool_user: delegation.PoolUserScript,
     redeemer_file: pl.Path,
-    reference_script_utxos: tp.Optional[list[clusterlib.UTXOData]],
+    reference_script_utxos: list[clusterlib.UTXOData] | None,
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Register a stake address."""
@@ -303,7 +303,7 @@ def delegate_stake_addr(
     pool_user: delegation.PoolUserScript,
     pool_id: str,
     redeemer_file: pl.Path,
-    reference_script_utxos: tp.Optional[list[clusterlib.UTXOData]],
+    reference_script_utxos: list[clusterlib.UTXOData] | None,
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Delegate a stake address to a pool."""
@@ -387,7 +387,7 @@ def deregister_stake_addr(
     collaterals: list[clusterlib.UTXOData],
     pool_user: delegation.PoolUserScript,
     redeemer_file: pl.Path,
-    reference_script_utxos: tp.Optional[list[clusterlib.UTXOData]],
+    reference_script_utxos: list[clusterlib.UTXOData] | None,
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Deregister stake address."""

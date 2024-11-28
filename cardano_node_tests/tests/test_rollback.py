@@ -9,7 +9,6 @@ import os
 import pathlib as pl
 import shutil
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -137,7 +136,7 @@ class TestRollback:
         cluster_obj: clusterlib.ClusterLib,
         node: str,
         address: str = "",
-        tx_raw_output: tp.Optional[clusterlib.TxRawOutput] = None,
+        tx_raw_output: clusterlib.TxRawOutput | None = None,
     ) -> list[clusterlib.UTXOData]:
         """Query UTxO on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")

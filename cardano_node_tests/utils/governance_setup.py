@@ -260,7 +260,7 @@ def get_default_governance(
     gov_data_store = gov_data_dir / GOV_DATA_STORE
     governance_data = None
 
-    def _setup_gov() -> tp.Optional[governance_utils.GovernanceRecords]:
+    def _setup_gov() -> governance_utils.GovernanceRecords | None:
         if gov_data_store.exists():
             return None
 

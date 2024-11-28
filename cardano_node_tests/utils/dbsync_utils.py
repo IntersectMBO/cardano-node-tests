@@ -119,7 +119,7 @@ def get_utxo(address: str) -> dbsync_types.PaymentAddrRecord:
     )
 
 
-def get_pool_data(pool_id_bech32: str) -> tp.Optional[dbsync_types.PoolDataRecord]:
+def get_pool_data(pool_id_bech32: str) -> dbsync_types.PoolDataRecord | None:
     """Get pool data from db-sync."""
     pools = list(dbsync_queries.query_pool_data(pool_id_bech32))
     if not pools:
@@ -533,7 +533,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> dbsync_types.TxRecor
 
 def get_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
-) -> tp.Optional[dbsync_types.TxRecord]:
+) -> dbsync_types.TxRecord | None:
     """Get a transaction data from db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -546,7 +546,7 @@ def get_tx(
 
 def check_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
-) -> tp.Optional[dbsync_types.TxRecord]:
+) -> dbsync_types.TxRecord | None:
     """Check a transaction in db-sync."""
     response = get_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output, retry_num=retry_num)
 
@@ -562,7 +562,7 @@ def check_tx_phase_2_failure(
     tx_raw_output: clusterlib.TxRawOutput,
     collateral_charged: int,
     retry_num: int = 3,
-) -> tp.Optional[dbsync_types.TxRecord]:
+) -> dbsync_types.TxRecord | None:
     """Check a transaction in db-sync when a phase 2 failure happens."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -601,7 +601,7 @@ def check_tx_phase_2_failure(
 
 def check_pool_deregistration(
     pool_id: str, retiring_epoch: int
-) -> tp.Optional[dbsync_types.PoolDataRecord]:
+) -> dbsync_types.PoolDataRecord | None:
     """Check pool retirement in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -622,7 +622,7 @@ def check_pool_deregistration(
 
 def check_pool_data(  # noqa: C901
     ledger_pool_data: dict, pool_id: str
-) -> tp.Optional[dbsync_types.PoolDataRecord]:
+) -> dbsync_types.PoolDataRecord | None:
     """Check comparison for pool data between ledger and db-sync."""
     # pylint: disable=too-many-branches
     if not configuration.HAS_DBSYNC:
@@ -809,7 +809,7 @@ def check_plutus_costs(
         raise AssertionError("\n".join(errors))
 
 
-def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
+def check_param_proposal(protocol_params: dict) -> dbsync_queries.ParamProposalDBRow | None:
     """Check expected values in the `param_proposal` table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -854,7 +854,7 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
     return param_proposal_db
 
 
-def _get_float_pparam(pparam: tp.Any) -> tp.Optional[float]:
+def _get_float_pparam(pparam: tp.Any) -> float | None:
     if pparam is None:
         return None
     if isinstance(pparam, dict):
@@ -950,7 +950,7 @@ def _check_param_proposal(
 
 def check_conway_param_update_proposal(
     param_proposal_ledger: dict,
-) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
+) -> dbsync_queries.ParamProposalDBRow | None:
     """Check comparison for param proposal between ledger and db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -976,7 +976,7 @@ def check_conway_param_update_proposal(
 
 def check_conway_param_update_enactment(
     pparams: dict, epoch_no: int
-) -> tp.Optional[dbsync_queries.EpochParamDBRow]:
+) -> dbsync_queries.EpochParamDBRow | None:
     """Check params enactment between ledger and epoch param in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1016,7 +1016,7 @@ def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
 
 def check_conway_gov_action_proposal_description(
     update_proposal: dict, txhash: str = "", action_ix: int = 0
-) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
+) -> dbsync_queries.GovActionProposalDBRow | None:
     """Check expected values in the gov_action_proposal table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1041,7 +1041,7 @@ def get_gov_action_proposals(
     return gov_action_proposals
 
 
-def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
+def get_committee_member(cold_key: str) -> dbsync_types.CommitteeRegistrationRecord | None:
     """Get committee member data from db-sync."""
     cc_members = list(dbsync_queries.query_committee_registration(cold_key=cold_key))
     if not cc_members:
@@ -1062,7 +1062,7 @@ def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeReg
 
 def check_committee_member_registration(
     cc_member_cold_key: str,
-) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
+) -> dbsync_types.CommitteeRegistrationRecord | None:
     """Check committee member registration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1079,7 +1079,7 @@ def check_committee_member_registration(
 
 def get_deregistered_committee_member(
     cold_key: str,
-) -> tp.Optional[dbsync_types.CommitteeDeregistrationRecord]:
+) -> dbsync_types.CommitteeDeregistrationRecord | None:
     """Get deregistered committee member data from db-sync."""
     deregistered_cc_members = list(dbsync_queries.query_committee_deregistration(cold_key=cold_key))
     if not deregistered_cc_members:
@@ -1100,7 +1100,7 @@ def get_deregistered_committee_member(
 
 def check_committee_member_deregistration(
     cc_member_cold_key: str,
-) -> tp.Optional[dbsync_types.CommitteeDeregistrationRecord]:
+) -> dbsync_types.CommitteeDeregistrationRecord | None:
     """Check committee member deregistration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1116,7 +1116,7 @@ def check_committee_member_deregistration(
     return cc_member_data
 
 
-def get_drep(drep_hash: str, drep_deposit: int) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+def get_drep(drep_hash: str, drep_deposit: int) -> dbsync_types.DrepRegistrationRecord | None:
     """Get drep data from db-sync."""
     dreps = list(dbsync_queries.query_drep_registration(drep_hash, drep_deposit))
     if not dreps:
@@ -1140,7 +1140,7 @@ def get_drep(drep_hash: str, drep_deposit: int) -> tp.Optional[dbsync_types.Drep
 
 def check_drep_registration(
     drep: governance_utils.DRepRegistration, drep_state: list[list[dict[str, tp.Any]]]
-) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+) -> dbsync_types.DrepRegistrationRecord | None:
     """Check drep registration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1160,7 +1160,7 @@ def check_drep_registration(
 
 def check_drep_deregistration(
     drep: governance_utils.DRepRegistration,
-) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+) -> dbsync_types.DrepRegistrationRecord | None:
     """Check drep deregistration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1354,7 +1354,7 @@ def check_off_chain_drep_registration(
         raise AssertionError("\n".join(errors))
 
 
-def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteDataRecord]:  # noqa: C901
+def get_action_data(data_hash: str) -> dbsync_types.OffChainVoteDataRecord | None:  # noqa: C901
     """Get off chain action data from db-sync."""
     votes = list(dbsync_queries.query_off_chain_vote_data(data_hash))
     if not votes:
@@ -1388,7 +1388,7 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
                 "rationale": vote.gov_act_rationale,
             }
         if vote.ref_id:
-            reference: dict[str, str | tp.Optional[dict[str, str]]]
+            reference: dict[str, str | dict[str, str] | None]
             reference = {"label": vote.ref_label, "uri": vote.ref_uri}
             if vote.ref_hash_digest and vote.ref_hash_alg:
                 reference["referenceHash"] = {

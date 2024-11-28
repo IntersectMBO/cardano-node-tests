@@ -4,7 +4,6 @@ import functools
 import logging
 import random
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -105,7 +104,7 @@ class TestManyUTXOs:
                 amount = less_than_1_ada + 1_000_000
 
                 # Repeat transaction when "BadInputsUTxO" error happens
-                excp: tp.Optional[clusterlib.CLIError] = None
+                excp: clusterlib.CLIError | None = None
                 for r in range(2):
                     if r > 0:
                         cluster.wait_for_new_block(2)

@@ -3,7 +3,6 @@
 import logging
 import pathlib as pl
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -50,7 +49,7 @@ def _gen_signed_tx(
     out_addr: clusterlib.AddressRecord,
     tx_name: str,
     fee: int,
-    invalid_hereafter: tp.Optional[int] = None,
+    invalid_hereafter: int | None = None,
 ) -> tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, pl.Path]:
     """Generate Tx and return Tx output in a format that can be used as input for next Tx."""
     send_amount = txin.amount - fee

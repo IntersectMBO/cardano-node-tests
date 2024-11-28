@@ -1,7 +1,6 @@
 """Tests for collateral while spending with Plutus V2 using `transaction build`."""
 
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -62,7 +61,7 @@ class TestCollateralOutput:
         script_utxos: list[clusterlib.UTXOData],
         collateral_utxos: list[clusterlib.UTXOData],
         plutus_op: plutus_common.PlutusOp,
-        total_collateral_amount: tp.Optional[int] = None,
+        total_collateral_amount: int | None = None,
         return_collateral_txouts: clusterlib.OptionalTxOuts = (),
     ) -> clusterlib.TxRawOutput:
         # for mypy

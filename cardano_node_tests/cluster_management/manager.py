@@ -290,7 +290,7 @@ class ClusterManager:
     def _get_resources_by_glob(
         self,
         glob: str,
-        from_set: tp.Optional[tp.Iterable[str]] = None,
+        from_set: tp.Iterable[str] | None = None,
     ) -> list[str]:
         if from_set is not None and isinstance(from_set, str):
             msg = "`from_set` cannot be a string"
@@ -305,8 +305,8 @@ class ClusterManager:
 
     def get_locked_resources(
         self,
-        from_set: tp.Optional[tp.Iterable[str]] = None,
-        worker_id: tp.Optional[str] = None,
+        from_set: tp.Iterable[str] | None = None,
+        worker_id: str | None = None,
     ) -> list[str]:
         """Get resources locked by worker.
 
@@ -317,8 +317,8 @@ class ClusterManager:
 
     def get_used_resources(
         self,
-        from_set: tp.Optional[tp.Iterable[str]] = None,
-        worker_id: tp.Optional[str] = None,
+        from_set: tp.Iterable[str] | None = None,
+        worker_id: str | None = None,
     ) -> list[str]:
         """Get resources used by worker.
 

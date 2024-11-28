@@ -112,7 +112,7 @@ class ScriptsTypes:
 class LocalScripts(ScriptsTypes):
     """Scripts for starting local cluster."""
 
-    _has_dns_rebinding_protection: tp.ClassVar[tp.Optional[bool]] = None
+    _has_dns_rebinding_protection: tp.ClassVar[bool | None] = None
 
     def __init__(self, num_pools: int = -1) -> None:
         super().__init__()

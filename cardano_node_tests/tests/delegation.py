@@ -107,7 +107,7 @@ def cluster_and_pool(
 
 def db_check_delegation(
     pool_user: clusterlib.PoolUser | PoolUserScript,
-    db_record: tp.Optional[dbsync_types.TxRecord],
+    db_record: dbsync_types.TxRecord | None,
     deleg_epoch: int,
     pool_id: str,
     check_registration: bool = True,
@@ -128,9 +128,9 @@ def delegate_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     addrs_data: dict,
     temp_template: str,
-    pool_user: tp.Optional[clusterlib.PoolUser] = None,
+    pool_user: clusterlib.PoolUser | None = None,
     pool_id: str = "",
-    cold_vkey: tp.Optional[pl.Path] = None,
+    cold_vkey: pl.Path | None = None,
     amount: int = 100_000_000,
     use_build_cmd: bool = False,
 ) -> DelegationOut:

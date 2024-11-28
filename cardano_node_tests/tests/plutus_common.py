@@ -1,7 +1,6 @@
 import dataclasses
 import itertools
 import pathlib as pl
-import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -469,13 +468,13 @@ SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusOp:
     script_file: clusterlib.FileType
-    datum_file: tp.Optional[pl.Path] = None
-    datum_cbor_file: tp.Optional[pl.Path] = None
-    datum_value: tp.Optional[str] = None
-    redeemer_file: tp.Optional[pl.Path] = None
-    redeemer_cbor_file: tp.Optional[pl.Path] = None
-    redeemer_value: tp.Optional[str] = None
-    execution_cost: tp.Optional[ExecutionCost] = None
+    datum_file: pl.Path | None = None
+    datum_cbor_file: pl.Path | None = None
+    datum_value: str | None = None
+    redeemer_file: pl.Path | None = None
+    redeemer_cbor_file: pl.Path | None = None
+    redeemer_value: str | None = None
+    execution_cost: ExecutionCost | None = None
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -734,7 +733,7 @@ def create_script_context_w_blockers(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
     redeemer_file: pl.Path,
-    tx_file: tp.Optional[pl.Path] = None,
+    tx_file: pl.Path | None = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps).
 
