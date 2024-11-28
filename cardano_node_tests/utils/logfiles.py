@@ -274,13 +274,38 @@ def add_ignore_rule(
         infile.write(f"{files_glob};;{skip_after};;{regex}\n")
 
 
+def find_msgs_in_logs(
+    regex: str,
+    logfile: pl.Path,
+    seek_offset: int,
+    timestamp: float,
+    only_first: bool = False,
+) -> tp.List[str]:
+    """Find messages in log."""
+    regex_comp = re.compile(regex)
+    lines_found = []
+    for logfile_rec in _get_rotated_logs(
+        logfile=pl.Path(logfile), seek=seek_offset, timestamp=timestamp
+    ):
+        with open(logfile_rec.logfile, encoding="utf-8") as infile:
+            infile.seek(logfile_rec.seek)
+            for line in infile:
+                if regex_comp.search(line):
+                    lines_found.append(line)
+                    if only_first:
+                        break
+        if lines_found and only_first:
+            break
+    return lines_found
+
+
 def check_msgs_presence_in_logs(
     regex_pairs: tp.List[tp.Tuple[str, str]],
     seek_offsets: tp.Dict[str, int],
     state_dir: pl.Path,
     timestamp: float,
 ) -> tp.List[str]:
-    """Make sure the expected messages are present in logs."""
+    """Check if the expected messages are present in logs."""
     errors = []
     for files_glob, regex in regex_pairs:
         regex_comp = re.compile(regex)
