@@ -440,14 +440,14 @@ class ClusterGetter:
 
     def _resolve_resources_availability(self, cget_status: _ClusterGetStatus) -> bool:
         """Resolve availability of required "use" and "lock" resources."""
-        resources_locked = common._get_resources_from_paths(
+        resources_locked = common.get_resources_from_path(
             paths=cget_status.instance_dir.glob(f"{common.RESOURCE_LOCKED_GLOB}_*")
         )
 
         # This test wants to lock some resources, check if these are not in use
         res_lockable = []
         if cget_status.lock_resources:
-            resources_used = common._get_resources_from_paths(
+            resources_used = common.get_resources_from_path(
                 paths=cget_status.instance_dir.glob(f"{common.RESOURCE_IN_USE_GLOB}_*")
             )
             unlockable_resources = {*resources_locked, *resources_used}
