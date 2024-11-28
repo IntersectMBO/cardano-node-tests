@@ -296,7 +296,7 @@ class ClusterManager:
             msg = "`from_set` cannot be a string"
             raise AssertionError(msg)
 
-        resources_locked = set(common._get_resources_from_paths(paths=self.instance_dir.glob(glob)))
+        resources_locked = set(common.get_resources_from_path(paths=self.instance_dir.glob(glob)))
 
         if from_set is not None:
             return list(resources_locked.intersection(from_set))
