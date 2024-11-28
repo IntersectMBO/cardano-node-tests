@@ -114,7 +114,7 @@ def retire_drep(
 
 def return_funds_to_faucet(
     cluster_obj: clusterlib.ClusterLib,
-    src_addrs: tp.List[clusterlib.AddressRecord],
+    src_addrs: list[clusterlib.AddressRecord],
     faucet_address: str,
     tx_name: str,
 ) -> None:
@@ -186,14 +186,14 @@ def find_cert_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
     return location.glob("**/*_drep_reg.cert")
 
 
-def group_addr_files(file_paths: tp.Generator[pl.Path, None, None]) -> tp.List[tp.List[pl.Path]]:
+def group_addr_files(file_paths: tp.Generator[pl.Path, None, None]) -> list[list[pl.Path]]:
     """Group payment address files with corresponding stake address files.
 
     These need to be processed together - funds are transferred from payment address after
     the stake address was deregistered.
     """
-    curr_group: tp.List[pl.Path] = []
-    path_groups: tp.List[tp.List[pl.Path]] = [curr_group]
+    curr_group: list[pl.Path] = []
+    path_groups: list[list[pl.Path]] = [curr_group]
     prev_basename = ""
 
     # reverse-sort the list so stake address files are processes before payment address files
@@ -218,7 +218,7 @@ def cleanup_addresses(
     files_found = group_addr_files(find_addr_files(location))
     stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
-    def _run(files: tp.List[pl.Path]) -> None:
+    def _run(files: list[pl.Path]) -> None:
         for fpath in files:
             # Add random sleep for < 1s to prevent
             # "Network.Socket.connect: <socket: 11>: resource exhausted"

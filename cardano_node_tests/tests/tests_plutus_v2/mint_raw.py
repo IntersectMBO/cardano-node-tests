@@ -24,9 +24,9 @@ def _fund_issuer(
     collateral_utxo_num: int = 1,
     reference_script: tp.Optional[pl.Path] = None,
     datum_file: tp.Optional[pl.Path] = None,
-) -> tp.Tuple[
-    tp.List[clusterlib.UTXOData],
-    tp.List[clusterlib.UTXOData],
+) -> tuple[
+    list[clusterlib.UTXOData],
+    list[clusterlib.UTXOData],
     tp.Optional[clusterlib.UTXOData],
     clusterlib.TxRawOutput,
 ]:

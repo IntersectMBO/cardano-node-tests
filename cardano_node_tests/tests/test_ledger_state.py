@@ -3,7 +3,6 @@
 import functools
 import itertools
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -65,13 +64,13 @@ class TestLedgerState:
         )
         es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
 
-        def _get_hashes(snapshot: str) -> tp.Dict[str, int]:
+        def _get_hashes(snapshot: str) -> dict[str, int]:
             hashes: dict = clusterlib_utils.get_snapshot_rec(
                 ledger_snapshot=es_snapshot[snapshot]["stake"]
             )
             return hashes
 
-        def _get_delegations(snapshot: str) -> tp.Dict[str, tp.List[str]]:
+        def _get_delegations(snapshot: str) -> dict[str, list[str]]:
             delegations: dict = clusterlib_utils.get_snapshot_delegations(
                 ledger_snapshot=es_snapshot[snapshot]["delegations"]
             )
@@ -125,9 +124,9 @@ class TestLedgerState:
             )
 
         sum_mark = sum_set = sum_go = 0
-        seen_hashes_mark: tp.Set[str] = set()
-        seen_hashes_set: tp.Set[str] = set()
-        seen_hashes_go: tp.Set[str] = set()
+        seen_hashes_mark: set[str] = set()
+        seen_hashes_set: set[str] = set()
+        seen_hashes_go: set[str] = set()
         delegation_pool_ids = {*delegations_mark, *delegations_set, *delegations_go}
         for pool_id_dec in delegation_pool_ids:
             pool_id = helpers.encode_bech32(prefix="pool", data=pool_id_dec)

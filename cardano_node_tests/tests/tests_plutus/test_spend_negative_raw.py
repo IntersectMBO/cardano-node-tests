@@ -29,8 +29,8 @@ pytestmark = [
 ]
 
 
-FundTupleT = tp.Tuple[
-    tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], tp.List[clusterlib.AddressRecord]
+FundTupleT = tuple[
+    list[clusterlib.UTXOData], list[clusterlib.UTXOData], list[clusterlib.AddressRecord]
 ]
 
 
@@ -38,7 +38,7 @@ FundTupleT = tp.Tuple[
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -68,11 +68,9 @@ class TestNegative:
     def fund_execution_units_above_limit(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> tp.Tuple[
-        tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], plutus_common.PlutusOp
-    ]:
+    ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], plutus_common.PlutusOp]:
         plutus_version = request.param
         temp_template = common.get_test_id(cluster)
 
@@ -110,7 +108,7 @@ class TestNegative:
     def test_invalid_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         variant: str,
         plutus_version: str,
     ):
@@ -178,7 +176,7 @@ class TestNegative:
     def test_wrong_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while using wrong Plutus script.
@@ -236,7 +234,7 @@ class TestNegative:
     def test_no_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while passing no Plutus script.
@@ -289,7 +287,7 @@ class TestNegative:
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while collateral contains native tokens.
@@ -356,7 +354,7 @@ class TestNegative:
     def test_same_collateral_txin(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while using the same UTxO as collateral.
@@ -410,7 +408,7 @@ class TestNegative:
     def test_collateral_percent(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Try to spend locked UTxO while collateral is less than required.
@@ -468,7 +466,7 @@ class TestNegative:
     def test_two_scripts_spending_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx, one fails.
@@ -640,9 +638,9 @@ class TestNegative:
     def test_execution_units_above_limit(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_execution_units_above_limit: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], plutus_common.PlutusOp
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_execution_units_above_limit: tuple[
+            list[clusterlib.UTXOData], list[clusterlib.UTXOData], plutus_common.PlutusOp
         ],
         pparams: dict,
         data: st.DataObject,
@@ -798,8 +796,8 @@ class TestNegativeRedeemer:
         self,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        script_utxos: tp.List[clusterlib.UTXOData],
-        collateral_utxos: tp.List[clusterlib.UTXOData],
+        script_utxos: list[clusterlib.UTXOData],
+        collateral_utxos: list[clusterlib.UTXOData],
         redeemer_content: str,
         dst_addr: clusterlib.AddressRecord,
         cost_per_unit: plutus_common.ExecutionCost,
@@ -849,8 +847,8 @@ class TestNegativeRedeemer:
         self,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        script_utxos: tp.List[clusterlib.UTXOData],
-        collateral_utxos: tp.List[clusterlib.UTXOData],
+        script_utxos: list[clusterlib.UTXOData],
+        collateral_utxos: list[clusterlib.UTXOData],
         redeemer_value: int,
         dst_addr: clusterlib.AddressRecord,
         cost_per_unit: plutus_common.ExecutionCost,

@@ -13,7 +13,6 @@ import logging
 import pathlib as pl
 import re
 import time
-import typing as tp
 
 import allure
 import hypothesis
@@ -78,7 +77,7 @@ else:
 def issuers_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new issuers addresses."""
     temp_template = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -100,8 +99,8 @@ def issuers_addrs(
 @pytest.fixture
 def simple_script_policyid(
     cluster: clusterlib.ClusterLib,
-    issuers_addrs: tp.List[clusterlib.AddressRecord],
-) -> tp.Tuple[pl.Path, str]:
+    issuers_addrs: list[clusterlib.AddressRecord],
+) -> tuple[pl.Path, str]:
     """Return script and its PolicyId."""
     temp_template = common.get_test_id(cluster)
     issuer_addr = issuers_addrs[1]
@@ -121,8 +120,8 @@ def simple_script_policyid(
 @pytest.fixture
 def multisig_script_policyid(
     cluster: clusterlib.ClusterLib,
-    issuers_addrs: tp.List[clusterlib.AddressRecord],
-) -> tp.Tuple[pl.Path, str]:
+    issuers_addrs: list[clusterlib.AddressRecord],
+) -> tuple[pl.Path, str]:
     """Return multisig script and it's PolicyId."""
     temp_template = common.get_test_id(cluster)
     payment_vkey_files = [p.vkey_file for p in issuers_addrs]
@@ -152,7 +151,7 @@ class TestMinting:
     def test_minting_and_burning_witnesses(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         aname_type: str,
         use_build_cmd: bool,
         submit_method: str,
@@ -258,7 +257,7 @@ class TestMinting:
     def test_minting_and_burning_sign(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         aname_type: str,
         use_build_cmd: bool,
         submit_method: str,
@@ -352,7 +351,7 @@ class TestMinting:
     def test_minting_multiple_scripts(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -472,7 +471,7 @@ class TestMinting:
     def test_minting_burning_diff_tokens_single_tx(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -586,7 +585,7 @@ class TestMinting:
     def test_minting_burning_same_token_single_tx(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -710,9 +709,9 @@ class TestMinting:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         worker_id: str,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
-        multisig_script_policyid: tp.Tuple[pl.Path, str],
-        tokens_db: tp.Tuple[int, int, int],
+        issuers_addrs: list[clusterlib.AddressRecord],
+        multisig_script_policyid: tuple[pl.Path, str],
+        tokens_db: tuple[int, int, int],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -860,9 +859,9 @@ class TestMinting:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         worker_id: str,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
-        simple_script_policyid: tp.Tuple[pl.Path, str],
-        tokens_db: tp.Tuple[int, int, int],
+        issuers_addrs: list[clusterlib.AddressRecord],
+        simple_script_policyid: tuple[pl.Path, str],
+        tokens_db: tuple[int, int, int],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -1004,7 +1003,7 @@ class TestMinting:
     def test_minting_and_partial_burning(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -1103,7 +1102,7 @@ class TestMinting:
     def test_minting_unicode_asset_name(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -1194,7 +1193,7 @@ class TestPolicies:
     def test_valid_policy_after(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
@@ -1286,7 +1285,7 @@ class TestPolicies:
     def test_valid_policy_before(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
     ):
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
@@ -1376,7 +1375,7 @@ class TestPolicies:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_policy_before_past(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
         """Test that it's NOT possible to mint tokens when the "before" slot is in the past."""
         temp_template = common.get_test_id(cluster)
@@ -1447,7 +1446,7 @@ class TestPolicies:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_policy_before_future(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
         """Test that it's NOT possible to mint tokens when the policy is not met.
 
@@ -1510,7 +1509,7 @@ class TestPolicies:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_policy_after_future(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
         """Test that it's NOT possible to mint tokens when the policy is not met.
 
@@ -1584,7 +1583,7 @@ class TestPolicies:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_policy_after_past(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
         """Test that it's NOT possible to mint tokens when the policy is not met.
 
@@ -1655,7 +1654,7 @@ class TestTransfer:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -1684,7 +1683,7 @@ class TestTransfer:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ) -> clusterlib_utils.TokenRecord:
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -1717,7 +1716,7 @@ class TestTransfer:
     def test_transfer_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
         amount: int,
         use_build_cmd: bool,
@@ -1850,7 +1849,7 @@ class TestTransfer:
     def test_transfer_multiple_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
         use_build_cmd: bool,
     ):
@@ -2033,7 +2032,7 @@ class TestTransfer:
     def test_transfer_no_ada(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
         use_build_cmd: bool,
     ):
@@ -2088,7 +2087,7 @@ class TestTransfer:
     def test_transfer_invalid_token_amount(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.TokenRecord,
         use_build_cmd: bool,
         token_amount: int,
@@ -2162,7 +2161,7 @@ class TestNegative:
     def _mint_tx(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        new_tokens: tp.List[clusterlib_utils.TokenRecord],
+        new_tokens: list[clusterlib_utils.TokenRecord],
         temp_template: str,
     ) -> pl.Path:
         """Return signed TX for minting new token. Sign using skeys."""
@@ -2226,8 +2225,8 @@ class TestNegative:
     def test_long_name(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
-        simple_script_policyid: tp.Tuple[pl.Path, str],
+        issuers_addrs: list[clusterlib.AddressRecord],
+        simple_script_policyid: tuple[pl.Path, str],
         asset_name: str,
     ):
         """Try to create token with asset name that is longer than allowed.
@@ -2273,8 +2272,8 @@ class TestNegative:
     def test_minting_amount_above_the_allowed(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
-        simple_script_policyid: tp.Tuple[pl.Path, str],
+        issuers_addrs: list[clusterlib.AddressRecord],
+        simple_script_policyid: tuple[pl.Path, str],
         token_amount: int,
     ):
         """Test minting a token amount above the maximum allowed."""
@@ -2316,7 +2315,7 @@ class TestCLITxOutSyntax:
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_multiasset_txouts_syntax(
-        self, cluster: clusterlib.ClusterLib, issuers_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
         """Test syntax for specifying multi-asset values and txouts via CLI.
 
@@ -2467,7 +2466,7 @@ class TestReferenceUTxO:
     def test_script_reference_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        issuers_addrs: tp.List[clusterlib.AddressRecord],
+        issuers_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         script_version: str,
     ):

@@ -27,7 +27,7 @@ STOP_SCRIPT = "supervisord_stop"
 class InstanceFiles:
     start_script: pl.Path
     stop_script: pl.Path
-    start_script_args: tp.List[str]
+    start_script_args: list[str]
     dir: pl.Path
 
 
@@ -68,7 +68,7 @@ class InstancePorts:
     pool3: int
     ekg_pool3: int
     prometheus_pool3: int
-    node_ports: tp.Tuple[NodePorts, ...]
+    node_ports: tuple[NodePorts, ...]
 
 
 class ScriptsTypes:
@@ -283,7 +283,7 @@ class LocalScripts(ScriptsTypes):
         topology = {"Producers": producers}
         return topology
 
-    def _gen_p2p_topology(self, addr: str, ports: tp.List[int], fixed_ports: tp.List[int]) -> dict:
+    def _gen_p2p_topology(self, addr: str, ports: list[int], fixed_ports: list[int]) -> dict:
         """Generate p2p topology for given ports."""
         # Select fixed ports and several randomly selected ports
         sample_ports = random.sample(ports, 3) if len(ports) > 3 else ports
@@ -510,7 +510,7 @@ class LocalScripts(ScriptsTypes):
 class TestnetScripts(ScriptsTypes):
     """Scripts for starting a node on testnet."""
 
-    TESTNET_GLOBS: tp.ClassVar[tp.Tuple[str, ...]] = (
+    TESTNET_GLOBS: tp.ClassVar[tuple[str, ...]] = (
         "config*.json",
         "genesis-*.json",
         "topology-*.json",
@@ -589,7 +589,7 @@ class TestnetScripts(ScriptsTypes):
         )
 
     def _reconfigure_testnet(
-        self, indir: pl.Path, destdir: pl.Path, instance_num: int, globs: tp.List[str]
+        self, indir: pl.Path, destdir: pl.Path, instance_num: int, globs: list[str]
     ) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
@@ -639,7 +639,7 @@ class TestnetScripts(ScriptsTypes):
         with open(outfile, "w", encoding="utf-8") as out_fp:
             out_fp.write("".join(new_content))
 
-    def _reconfigure_bootstrap(self, indir: pl.Path, destdir: pl.Path, globs: tp.List[str]) -> None:
+    def _reconfigure_bootstrap(self, indir: pl.Path, destdir: pl.Path, globs: list[str]) -> None:
         """Copy and reconfigure config files from bootstrap dir."""
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))

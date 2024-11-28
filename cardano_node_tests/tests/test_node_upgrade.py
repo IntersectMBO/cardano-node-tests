@@ -5,7 +5,6 @@ import logging
 import os
 import pathlib as pl
 import shutil
-import typing as tp
 
 import allure
 import pytest
@@ -59,7 +58,7 @@ def payment_addr_locked(
 def payment_addrs_disposable(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new disposable payment addresses."""
     temp_template = common.get_test_id(cluster)
 
@@ -152,7 +151,7 @@ class TestSetup:
 
         def _propose_pparams_update(
             name_template: str,
-            proposals: tp.List[clusterlib_utils.UpdateProposal],
+            proposals: list[clusterlib_utils.UpdateProposal],
         ) -> conway_common.PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
@@ -364,7 +363,7 @@ class TestUpgrade:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs_disposable: tp.List[clusterlib.AddressRecord],
+        payment_addrs_disposable: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         for_step: int,
         file_type: str,

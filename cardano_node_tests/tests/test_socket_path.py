@@ -91,7 +91,7 @@ def payment_addrs(
     set_socket_path: None,  # noqa: ARG001
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     # pylint: disable=unused-argument
     with cluster_manager.cache_fixture() as fixture_cache:
@@ -220,7 +220,7 @@ class TestSocketPath:
         self,
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         env_scenario: str,
     ):
         """Send funds to payment address.
@@ -422,7 +422,7 @@ class TestNegativeSocketPath:
         self,
         set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         env_scenario: str,
         socket_scenario: str,
     ):

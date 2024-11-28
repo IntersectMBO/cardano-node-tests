@@ -104,10 +104,10 @@ class ClusterWithConstitutionRecord:
     cluster: clusterlib.ClusterLib
     constitution_script_file: pl.Path
     constitution_script_hash: str
-    default_constitution: tp.Dict[str, tp.Any]
+    default_constitution: dict[str, tp.Any]
     pool_user: clusterlib.PoolUser
     payment_addr: clusterlib.AddressRecord
-    collaterals: tp.List[clusterlib.UTXOData]
+    collaterals: list[clusterlib.UTXOData]
 
 
 @pytest.fixture
@@ -217,7 +217,7 @@ def cluster_with_constitution(
 
 def propose_param_changes(
     cluster_with_constitution: ClusterWithConstitutionRecord,
-    proposals: tp.List[clusterlib_utils.UpdateProposal],
+    proposals: list[clusterlib_utils.UpdateProposal],
 ) -> str:
     """Build and submit update pparams action with specified proposals."""
     cluster = cluster_with_constitution.cluster
@@ -289,7 +289,7 @@ def propose_param_changes(
 
 def check_invalid_proposals(  # noqa: C901
     cluster_with_constitution: ClusterWithConstitutionRecord,
-    proposals: tp.List[clusterlib_utils.UpdateProposal],
+    proposals: list[clusterlib_utils.UpdateProposal],
 ):
     """Check that the guardrails are enforced."""
     action_txid = ""
@@ -340,7 +340,7 @@ def check_invalid_proposals(  # noqa: C901
 
 def check_valid_proposals(
     cluster_with_constitution: ClusterWithConstitutionRecord,
-    proposals: tp.List[clusterlib_utils.UpdateProposal],
+    proposals: list[clusterlib_utils.UpdateProposal],
 ):
     action_txid = propose_param_changes(
         cluster_with_constitution=cluster_with_constitution, proposals=proposals
@@ -358,7 +358,7 @@ def _get_rational_str(value: float) -> str:
 
 def _get_param_min_value(
     cluster_with_constitution: ClusterWithConstitutionRecord, key: str
-) -> tp.Union[float, int]:
+) -> float | int:
     """Get the min value from the default constitution for a param."""
     param_predicates = cluster_with_constitution.default_constitution[key]
     min_val_dicts = list(filter(lambda x: "minValue" in x, param_predicates["predicates"]))
@@ -383,7 +383,7 @@ def _get_param_min_value(
 
 def _get_param_max_value(
     cluster_with_constitution: ClusterWithConstitutionRecord, key: str
-) -> tp.Union[float, int]:
+) -> float | int:
     """Get the max value from the default constitution for a param."""
     param_predicates = cluster_with_constitution.default_constitution[key]
     max_value_dicts = list(filter(lambda x: "maxValue" in x, param_predicates["predicates"]))
@@ -413,15 +413,15 @@ class GuardrailTestParam:
     param_key: str  # key in the default constitution json file
     param_cli_arg: str  # CLI argument for the parameter
     param_name: str  # name of the protocol parameter
-    param_lower_limit: tp.Union[int, None] = None  # optional lower limit of the parameter
-    param_upper_limit: tp.Union[int, None] = None  # optional upper limit of the parameter
+    param_lower_limit: int | None = None  # optional lower limit of the parameter
+    param_upper_limit: int | None = None  # optional upper limit of the parameter
 
 
 def check_min_value_proposals(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    min_value: tp.Union[int, float],
-    dependent_proposals: tp.Union[tp.List[clusterlib_utils.UpdateProposal], tp.Tuple],
+    min_value: int | float,
+    dependent_proposals: list[clusterlib_utils.UpdateProposal] | tuple,
 ):
     """Check invalid proposals for min value predicate (must not be lower than)."""
     if min_value == 0:
@@ -465,8 +465,8 @@ def check_min_value_proposals(
 def check_max_value_proposals(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    max_value: tp.Union[int, float],
-    dependent_proposals: tp.Union[tp.List[clusterlib_utils.UpdateProposal], tp.Tuple],
+    max_value: int | float,
+    dependent_proposals: list[clusterlib_utils.UpdateProposal] | tuple,
     type_upper_limit: int,
 ):
     """Check invalid proposals for max value predicate (must not exceed)."""
@@ -492,7 +492,7 @@ def check_max_value_proposals(
 def perform_predicates_check_with_dependent_params(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    dependent_params: tp.List[GuardrailTestParam],
+    dependent_params: list[GuardrailTestParam],
 ):
     """
     Check for predicates defined in the constitution with dependent parameters.
@@ -555,7 +555,7 @@ def get_upper_limit_according_to_type(type: str) -> int:
 def perform_predicates_check(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    dependent_proposals: tp.Union[tp.List[clusterlib_utils.UpdateProposal], tp.Tuple] = (),
+    dependent_proposals: list[clusterlib_utils.UpdateProposal] | tuple = (),
 ):
     """Check for predicates defined in the constitution.
 

@@ -51,7 +51,7 @@ def _gen_signed_tx(
     tx_name: str,
     fee: int,
     invalid_hereafter: tp.Optional[int] = None,
-) -> tp.Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, pl.Path]:
+) -> tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, pl.Path]:
     """Generate Tx and return Tx output in a format that can be used as input for next Tx."""
     send_amount = txin.amount - fee
     out_file = f"{tx_name}_tx.body"
@@ -139,7 +139,7 @@ class TestTxChaining:
         iterations = 1_000
         min_utxo_value = 1_000_000
 
-        tx_raw_outputs: tp.List[clusterlib.TxRawOutput] = []
+        tx_raw_outputs: list[clusterlib.TxRawOutput] = []
         submit_err = ""
 
         # It can happen that a Tx is removed from mempool without making it to the blockchain.

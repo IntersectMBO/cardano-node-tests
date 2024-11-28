@@ -175,11 +175,11 @@ def get_pool_data(pool_id_bech32: str) -> tp.Optional[dbsync_types.PoolDataRecor
 
 def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     """Get first batch of transaction data from db-sync."""
-    utxo_out: tp.List[dbsync_types.UTxORecord] = []
+    utxo_out: list[dbsync_types.UTxORecord] = []
     seen_tx_out_ids = set()
-    ma_utxo_out: tp.List[dbsync_types.UTxORecord] = []
+    ma_utxo_out: list[dbsync_types.UTxORecord] = []
     seen_ma_tx_out_ids = set()
-    mint_utxo_out: tp.List[dbsync_types.UTxORecord] = []
+    mint_utxo_out: list[dbsync_types.UTxORecord] = []
     seen_ma_tx_mint_ids = set()
     tx_id = -1
 
@@ -258,9 +258,9 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     return txdata
 
 
-def get_txins(txhash: str) -> tp.List[dbsync_types.UTxORecord]:
+def get_txins(txhash: str) -> list[dbsync_types.UTxORecord]:
     """Get txins of a transaction from db-sync."""
-    txins: tp.List[dbsync_types.UTxORecord] = []
+    txins: list[dbsync_types.UTxORecord] = []
     seen_txins_out_ids = set()
     seen_txins_ma_ids = set()
 
@@ -754,7 +754,7 @@ def check_pool_off_chain_fetch_error(
 
 
 def check_plutus_cost(
-    redeemer_record: dbsync_types.RedeemerRecord, cost_record: tp.Dict[str, tp.Any]
+    redeemer_record: dbsync_types.RedeemerRecord, cost_record: dict[str, tp.Any]
 ) -> None:
     """Compare cost of Plutus script with data from db-sync."""
     errors = []
@@ -776,8 +776,8 @@ def check_plutus_cost(
 
 
 def check_plutus_costs(
-    redeemer_records: tp.List[dbsync_types.RedeemerRecord],
-    cost_records: tp.List[tp.Dict[str, tp.Any]],
+    redeemer_records: list[dbsync_types.RedeemerRecord],
+    cost_records: list[dict[str, tp.Any]],
 ) -> None:
     """Compare cost of multiple Plutus scripts with data from db-sync."""
     # Sort records first by total cost, second by hash
@@ -864,7 +864,7 @@ def _get_float_pparam(pparam: tp.Any) -> tp.Optional[float]:
     return float(pparam)
 
 
-def map_params_to_db_convention(pparams: dict) -> tp.Dict[str, tp.Any]:
+def map_params_to_db_convention(pparams: dict) -> dict[str, tp.Any]:
     # Get the prices of memory and steps
     prices = pparams.get("executionUnitPrices", {})
     price_mem = _get_float_pparam(prices.get("priceMemory"))
@@ -932,7 +932,7 @@ def map_params_to_db_convention(pparams: dict) -> tp.Dict[str, tp.Any]:
 
 
 def _check_param_proposal(
-    param_proposal_db: tp.Union[dbsync_queries.ParamProposalDBRow, dbsync_queries.EpochParamDBRow],
+    param_proposal_db: dbsync_queries.ParamProposalDBRow | dbsync_queries.EpochParamDBRow,
     params_map: dict,
 ) -> list:
     """Check parameter proposal against db-sync."""
@@ -1035,7 +1035,7 @@ def check_conway_gov_action_proposal_description(
 
 def get_gov_action_proposals(
     txhash: str = "", type: str = ""
-) -> tp.List[dbsync_queries.GovActionProposalDBRow]:
+) -> list[dbsync_queries.GovActionProposalDBRow]:
     """Get government action proposal from db-sync."""
     gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash=txhash, type=type))
     return gov_action_proposals
@@ -1139,7 +1139,7 @@ def get_drep(drep_hash: str, drep_deposit: int) -> tp.Optional[dbsync_types.Drep
 
 
 def check_drep_registration(
-    drep: governance_utils.DRepRegistration, drep_state: tp.List[tp.List[tp.Dict[str, tp.Any]]]
+    drep: governance_utils.DRepRegistration, drep_state: list[list[dict[str, tp.Any]]]
 ) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
     """Check drep registration in db-sync."""
     if not configuration.HAS_DBSYNC:
@@ -1246,7 +1246,7 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
     )
 
 
-def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], txhash: str) -> None:
+def check_treasury_withdrawal(stake_address: str, transfer_amts: list[int], txhash: str) -> None:
     """Check treasury_withdrawal in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
@@ -1277,7 +1277,7 @@ def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], t
         ), "Wrong relation between enacted and ratified epochs in db-sync"
 
 
-def check_reward_rest(stake_address: str, transfer_amts: tp.List[int], type: str = "") -> None:
+def check_reward_rest(stake_address: str, transfer_amts: list[int], type: str = "") -> None:
     """Check reward_rest in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
@@ -1388,7 +1388,7 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
                 "rationale": vote.gov_act_rationale,
             }
         if vote.ref_id:
-            reference: tp.Dict[str, tp.Union[str, tp.Optional[tp.Dict[str, str]]]]
+            reference: dict[str, str | tp.Optional[dict[str, str]]]
             reference = {"label": vote.ref_label, "uri": vote.ref_uri}
             if vote.ref_hash_digest and vote.ref_hash_alg:
                 reference["referenceHash"] = {
@@ -1430,7 +1430,7 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
 
 
 def check_action_data(  # noqa: C901
-    json_anchor_file: tp.Dict[str, tp.Any],
+    json_anchor_file: dict[str, tp.Any],
     anchor_data_hash: str,
 ) -> None:
     """Compare anchor json file with off chain action's data from db-sync."""

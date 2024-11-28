@@ -58,7 +58,7 @@ def get_pool_id(
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
     use_resources: resources_management.ResourcesType = (),
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     """Return instance of `clusterlib.ClusterLib`, and pool id to delegate to.
 
     We need to mark the pool as "in use" when requesting local cluster
@@ -106,7 +106,7 @@ def cluster_and_pool(
 
 
 def db_check_delegation(
-    pool_user: tp.Union[clusterlib.PoolUser, PoolUserScript],
+    pool_user: clusterlib.PoolUser | PoolUserScript,
     db_record: tp.Optional[dbsync_types.TxRecord],
     deleg_epoch: int,
     pool_id: str,
@@ -167,7 +167,7 @@ def delegate_stake_addr(
         )
 
     # create stake address delegation cert
-    deleg_kwargs: tp.Dict[str, tp.Any] = {
+    deleg_kwargs: dict[str, tp.Any] = {
         "addr_name": f"{temp_template}_addr0",
         "stake_vkey_file": pool_user.stake.vkey_file,
         "always_abstain": True,

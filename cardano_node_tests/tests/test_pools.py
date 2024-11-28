@@ -90,7 +90,7 @@ def _check_pool(
 
 
 def _check_staking(
-    pool_owners: tp.List[clusterlib.PoolUser],
+    pool_owners: list[clusterlib.PoolUser],
     cluster_obj: clusterlib.ClusterLib,
     stake_pool_id: str,
 ):
@@ -122,14 +122,14 @@ def _check_staking(
 def _register_stake_pool_w_build(
     cluster_obj: clusterlib.ClusterLib,
     pool_data: clusterlib.PoolData,
-    pool_owners: tp.List[clusterlib.PoolUser],
+    pool_owners: list[clusterlib.PoolUser],
     vrf_vkey_file: clusterlib.FileType,
     cold_key_pair: clusterlib.ColdKeyPair,
     tx_name: str,
     reward_account_vkey_file: tp.Optional[clusterlib.FileType] = None,
     deposit: tp.Optional[int] = None,
     destination_dir: clusterlib.FileType = ".",
-) -> tp.Tuple[pl.Path, clusterlib.TxRawOutput]:
+) -> tuple[pl.Path, clusterlib.TxRawOutput]:
     """Register a stake pool using a `transaction build` command.
 
     Args:
@@ -199,7 +199,7 @@ def _register_stake_pool_w_build(
 def _create_stake_pool_w_build(
     cluster_obj: clusterlib.ClusterLib,
     pool_data: clusterlib.PoolData,
-    pool_owners: tp.List[clusterlib.PoolUser],
+    pool_owners: list[clusterlib.PoolUser],
     tx_name: str,
     destination_dir: clusterlib.FileType = ".",
 ) -> clusterlib.PoolCreationOutput:
@@ -265,13 +265,13 @@ def _create_stake_pool_w_build(
 
 def _deregister_stake_pool_w_build(
     cluster_obj: clusterlib.ClusterLib,
-    pool_owners: tp.List[clusterlib.PoolUser],
+    pool_owners: list[clusterlib.PoolUser],
     cold_key_pair: clusterlib.ColdKeyPair,
     epoch: int,
     pool_name: str,
     tx_name: str,
     destination_dir: clusterlib.FileType = ".",
-) -> tp.Tuple[pl.Path, clusterlib.TxRawOutput]:
+) -> tuple[pl.Path, clusterlib.TxRawOutput]:
     """Deregister a stake pool.
 
     Args:
@@ -333,7 +333,7 @@ def _create_register_pool(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
     temp_dir: pl.Path,
-    pool_owners: tp.List[clusterlib.PoolUser],
+    pool_owners: list[clusterlib.PoolUser],
     pool_data: clusterlib.PoolData,
     request: tp.Optional[FixtureRequest] = None,
     use_build_cmd: bool = False,
@@ -398,7 +398,7 @@ def _create_register_pool(
 
 def _create_register_pool_delegate_stake_tx(
     cluster_obj: clusterlib.ClusterLib,
-    pool_owners: tp.List[clusterlib.PoolUser],
+    pool_owners: list[clusterlib.PoolUser],
     temp_template: str,
     temp_dir: pl.Path,
     pool_data: clusterlib.PoolData,
@@ -528,7 +528,7 @@ def _create_register_pool_delegate_stake_tx(
 
 def _create_register_pool_tx_delegate_stake_tx(
     cluster_obj: clusterlib.ClusterLib,
-    pool_owners: tp.List[clusterlib.PoolUser],
+    pool_owners: list[clusterlib.PoolUser],
     temp_template: str,
     temp_dir: pl.Path,
     pool_data: clusterlib.PoolData,
@@ -1825,7 +1825,7 @@ class TestPoolCost:
     def test_stake_pool_low_cost(
         self,
         cluster_mincost: clusterlib.ClusterLib,
-        pool_owners_pbt: tp.List[clusterlib.PoolUser],
+        pool_owners_pbt: list[clusterlib.PoolUser],
         pool_cost: int,
     ):
         """Try to create and register a stake pool with pool cost lower than *minPoolCost*.
@@ -1923,7 +1923,7 @@ class TestNegative:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.PoolUser]:
+    ) -> list[clusterlib.PoolUser]:
         """Create pool users."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -1960,7 +1960,7 @@ class TestNegative:
     def gen_pool_registration_cert_data(
         self,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.Tuple[str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair]:
+    ) -> tuple[str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair]:
         rand_str = clusterlib.get_rand_str(3)
         pool_name = f"pool_{rand_str}"
 
@@ -1988,7 +1988,7 @@ class TestNegative:
     def test_pool_registration_cert_wrong_vrf(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Try to generate pool registration certificate using wrong VRF key.
@@ -2015,7 +2015,7 @@ class TestNegative:
     def test_pool_registration_cert_wrong_cold(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Try to generate pool registration certificate using wrong Cold vkey.
@@ -2042,7 +2042,7 @@ class TestNegative:
     def test_pool_registration_cert_wrong_stake(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Try to generate pool registration certificate using wrong stake vkey.
@@ -2069,7 +2069,7 @@ class TestNegative:
     def test_pool_registration_missing_cold_skey(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Try to register pool using transaction with missing Cold skey.
@@ -2110,7 +2110,7 @@ class TestNegative:
     def test_pool_registration_missing_payment_skey(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
     ):
         """Try to register pool using transaction with missing payment skey.
@@ -2150,7 +2150,7 @@ class TestNegative:
     def test_pool_deregistration_not_registered(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
         use_build_cmd: bool,
     ):
@@ -2443,8 +2443,8 @@ class TestNegative:
     def test_stake_pool_long_metadata_url(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        gen_pool_registration_cert_data: tp.Tuple[
+        pool_users: list[clusterlib.PoolUser],
+        gen_pool_registration_cert_data: tuple[
             str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair
         ],
         metadata_url: str,

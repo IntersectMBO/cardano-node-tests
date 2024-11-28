@@ -50,7 +50,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
         num_addrs = 4 if ROLLBACK_PAUSE else 3
@@ -138,7 +138,7 @@ class TestRollback:
         node: str,
         address: str = "",
         tx_raw_output: tp.Optional[clusterlib.TxRawOutput] = None,
-    ) -> tp.List[clusterlib.UTXOData]:
+    ) -> list[clusterlib.UTXOData]:
         """Query UTxO on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
@@ -210,7 +210,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         backup_topology: pl.Path,
         split_topology_dir: pl.Path,
     ):
@@ -379,7 +379,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         backup_topology: pl.Path,
         split_topology_dir: pl.Path,
     ):

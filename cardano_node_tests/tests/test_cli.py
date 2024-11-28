@@ -7,7 +7,6 @@ import os
 import pathlib as pl
 import string
 import time
-import typing as tp
 
 import allure
 import hypothesis
@@ -1130,7 +1129,7 @@ class TestAdvancedQueries:
             node_4895.finish_test()
 
     @pytest.fixture
-    def pool_ids(self, cluster: clusterlib.ClusterLib) -> tp.List[str]:
+    def pool_ids(self, cluster: clusterlib.ClusterLib) -> list[str]:
         stake_pool_ids = cluster.g_query.get_stake_pools()
         if not stake_pool_ids:
             pytest.skip("No stake pools are available.")
@@ -1191,7 +1190,7 @@ class TestAdvancedQueries:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
-    def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: tp.List[str]):
+    def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: list[str]):
         """Test `query pool-params`."""
         common.get_test_id(cluster)
 
@@ -1245,7 +1244,7 @@ class TestAdvancedQueries:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
-    def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: tp.List[str]):
+    def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: list[str]):
         """Test `query pool-state`."""
         common.get_test_id(cluster)
 

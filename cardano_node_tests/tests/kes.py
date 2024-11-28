@@ -25,12 +25,12 @@ class KesScenarios:
 
 def check_kes_period_info_result(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
-    kes_output: tp.Dict[str, tp.Any],
+    kes_output: dict[str, tp.Any],
     expected_scenario: str,
     check_id: str,
     expected_start_kes: tp.Optional[int] = None,
     pool_num: tp.Optional[int] = None,
-) -> tp.List[str]:
+) -> list[str]:
     """Check output `kes-period-info` command.
 
     When `pool_num` is specified, prometheus metrics are checked.
@@ -40,7 +40,7 @@ def check_kes_period_info_result(  # noqa: C901
     errors = []
 
     # Get command metrics
-    command_metrics: tp.Dict[str, tp.Any] = kes_output["metrics"] or {}
+    command_metrics: dict[str, tp.Any] = kes_output["metrics"] or {}
 
     # Check kes metrics with values in genesis
     if command_metrics["qKesMaxKESEvolutions"] != cluster_obj.max_kes_evolutions:
@@ -77,7 +77,7 @@ def check_kes_period_info_result(  # noqa: C901
             )
 
     # Get prometheus metrics
-    prometheus_metrics: tp.Dict[str, tp.Any] = {}
+    prometheus_metrics: dict[str, tp.Any] = {}
     if pool_num and expected_scenario in (
         KesScenarios.ALL_VALID,
         KesScenarios.INVALID_COUNTERS,
@@ -104,7 +104,7 @@ def check_kes_period_info_result(  # noqa: C901
         }
 
     # Check kes metrics with expected values
-    expected_metrics: tp.Dict[str, tp.Any] = {
+    expected_metrics: dict[str, tp.Any] = {
         "qKesCurrentKesPeriod": cluster_obj.g_query.get_kes_period(),
     }
     if expected_start_kes is not None:
@@ -189,7 +189,7 @@ def check_kes_period_info_result(  # noqa: C901
     return errors
 
 
-def get_xfails(errors: tp.List[str]) -> tp.List[blockers.GH]:
+def get_xfails(errors: list[str]) -> list[blockers.GH]:
     """Get xfail issues.
 
     Either all errors can Xfail, or none of them can. There can be only one outcome of a test,
@@ -212,7 +212,7 @@ def get_xfails(errors: tp.List[str]) -> tp.List[blockers.GH]:
     return xfails
 
 
-def finish_on_errors(errors: tp.List[str]) -> None:
+def finish_on_errors(errors: list[str]) -> None:
     """Fail or Xfail the test if there are errors."""
     if not errors:
         return

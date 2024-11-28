@@ -111,7 +111,7 @@ def cli(cli_args: tp.Iterable[str]) -> str:
     return stderr.decode()
 
 
-def parse_cmd_output(output: str) -> tp.List[str]:
+def parse_cmd_output(output: str) -> list[str]:
     """Parse `cardano-cli` command output, return sub-commands and options names."""
     section_start = False
     cli_args = []
@@ -165,7 +165,7 @@ def get_log_coverage(log_file: pl.Path) -> dict:
     return coverage_dict
 
 
-def get_coverage(coverage_files: tp.List[pl.Path], available_commands: dict) -> dict:
+def get_coverage(coverage_files: list[pl.Path], available_commands: dict) -> dict:
     """Get coverage info by merging available data."""
     coverage_dict = copy.deepcopy(available_commands)
     for in_coverage in coverage_files:
@@ -186,7 +186,7 @@ def get_coverage(coverage_files: tp.List[pl.Path], available_commands: dict) -> 
 
 def get_report(
     arg_name: str, coverage: dict, uncovered_only: bool = False
-) -> tp.Tuple[dict, int, int]:
+) -> tuple[dict, int, int]:
     """Generate coverage report."""
     uncovered_db: dict = {}
     covered_count = 0

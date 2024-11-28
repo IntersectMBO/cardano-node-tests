@@ -18,7 +18,7 @@ GOV_DATA_DIR = "governance_data"
 GOV_DATA_STORE = "governance_data.pickle"
 
 
-def _get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
+def _get_committee_val(data: dict[str, tp.Any]) -> dict[str, tp.Any]:
     return data.get("committee") or data.get("commitee") or {}
 
 
@@ -99,7 +99,7 @@ def create_vote_stake(
     cluster_obj: clusterlib.ClusterLib,
     no_of_addr: int,
     destination_dir: clusterlib.FileType = ".",
-) -> tp.List[clusterlib.PoolUser]:
+) -> list[clusterlib.PoolUser]:
     pool_users = clusterlib_utils.create_pool_users(
         cluster_obj=cluster_obj,
         name_template=name_template,
@@ -119,7 +119,7 @@ def create_vote_stake(
     return pool_users
 
 
-def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_utils.CCKeyMember]:
+def load_committee(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.CCKeyMember]:
     genesis_cc_members = cluster_obj.conway_genesis.get("committee", {}).get("members") or {}
     if not genesis_cc_members:
         return []
@@ -154,7 +154,7 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_uti
     return cc_members
 
 
-def load_dreps(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_utils.DRepRegistration]:
+def load_dreps(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.DRepRegistration]:
     """Load DReps from the state directory."""
     data_dir = cluster_obj.state_dir / GOV_DATA_DIR
     deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
@@ -180,7 +180,7 @@ def load_dreps(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_utils.D
     return dreps
 
 
-def load_drep_users(cluster_obj: clusterlib.ClusterLib) -> tp.List[clusterlib.PoolUser]:
+def load_drep_users(cluster_obj: clusterlib.ClusterLib) -> list[clusterlib.PoolUser]:
     """Load DReps users from the state directory."""
     data_dir = cluster_obj.state_dir / GOV_DATA_DIR
 
@@ -293,10 +293,10 @@ def get_default_governance(
 
 
 def save_default_governance(
-    dreps_reg: tp.List[governance_utils.DRepRegistration],
-    drep_delegators: tp.List[clusterlib.PoolUser],
-    cc_members: tp.List[governance_utils.CCKeyMember],
-    pools_cold: tp.List[clusterlib.ColdKeyPair],
+    dreps_reg: list[governance_utils.DRepRegistration],
+    drep_delegators: list[clusterlib.PoolUser],
+    cc_members: list[governance_utils.CCKeyMember],
+    pools_cold: list[clusterlib.ColdKeyPair],
 ) -> governance_utils.GovernanceRecords:
     """Save governance data to a pickle, so it can be reused.
 
@@ -323,7 +323,7 @@ def save_default_governance(
 
 def refresh_cc_keys(
     cluster_obj: clusterlib.ClusterLib,
-    cc_members: tp.List[governance_utils.CCKeyMember],
+    cc_members: list[governance_utils.CCKeyMember],
     governance_data: governance_utils.GovernanceRecords,
 ) -> governance_utils.GovernanceRecords:
     """Refresh hot certs for original CC members."""
@@ -382,7 +382,7 @@ def refresh_cc_keys(
 
 def auth_cc_members(
     cluster_obj: clusterlib.ClusterLib,
-    cc_members: tp.List[governance_utils.CCKeyMember],
+    cc_members: list[governance_utils.CCKeyMember],
     name_template: str,
     payment_addr: clusterlib.AddressRecord,
 ) -> None:

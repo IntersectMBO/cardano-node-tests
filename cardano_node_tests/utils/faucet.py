@@ -14,11 +14,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 def fund_from_faucet(
-    *dst_addrs: tp.Union[clusterlib.AddressRecord, clusterlib.PoolUser],
+    *dst_addrs: clusterlib.AddressRecord | clusterlib.PoolUser,
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: tp.Optional[dict] = None,
-    all_faucets: tp.Optional[tp.Dict[str, dict]] = None,
-    amount: tp.Union[None, int, tp.List[int]] = None,
+    all_faucets: tp.Optional[dict[str, dict]] = None,
+    amount: None | int | list[int] = None,
     tx_name: tp.Optional[str] = None,
     destination_dir: clusterlib.FileType = ".",
     force: bool = False,
@@ -32,7 +32,7 @@ def fund_from_faucet(
         raise AssertionError(msg)
 
     # Get payment AddressRecord out of PoolUser
-    dst_addr_records: tp.List[clusterlib.AddressRecord] = [
+    dst_addr_records: list[clusterlib.AddressRecord] = [
         (r.payment if hasattr(r, "payment") else r)
         for r in dst_addrs  # type: ignore
     ]
@@ -75,7 +75,7 @@ def return_funds_to_faucet(
     *src_addrs: clusterlib.AddressRecord,
     cluster_obj: clusterlib.ClusterLib,
     faucet_addr: str,
-    amount: tp.Union[int, tp.List[int]] = -1,
+    amount: int | list[int] = -1,
     tx_name: tp.Optional[str] = None,
     destination_dir: cl_types.FileType = ".",
 ) -> None:

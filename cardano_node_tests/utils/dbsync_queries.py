@@ -1144,7 +1144,7 @@ def query_blocks(
             yield BlockDBRow(*result)
 
 
-def query_table_names() -> tp.List[str]:
+def query_table_names() -> list[str]:
     """Query table names in db-sync."""
     query = (
         "SELECT tablename "
@@ -1154,7 +1154,7 @@ def query_table_names() -> tp.List[str]:
     )
 
     with execute(query=query) as cur:
-        results: tp.List[tp.Tuple[str]] = cur.fetchall()
+        results: list[tuple[str]] = cur.fetchall()
         table_names = [r[0] for r in results]
         return table_names
 
@@ -1168,14 +1168,14 @@ def query_datum(datum_hash: str) -> tp.Generator[DatumDBRow, None, None]:
             yield DatumDBRow(*result)
 
 
-def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> dict[str, dict[str, tp.Any]]:
     """Query cost model record in db-sync.
 
     If `model_id` is specified, query the cost model that corresponds to the given id.
     If `epoch_no` is specified, query the cost model used in the given epoch.
     Otherwise query the latest cost model.
     """
-    query_var: tp.Union[int, str]
+    query_var: int | str
 
     if model_id != -1:
         subquery = "WHERE cm.id = %s "
@@ -1194,7 +1194,7 @@ def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> tp.Dict[str, tp.
 
     with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()
-        cost_model: tp.Dict[str, tp.Dict[str, tp.Any]] = results[1] if results else {}
+        cost_model: dict[str, dict[str, tp.Any]] = results[1] if results else {}
         return cost_model
 
 

@@ -31,7 +31,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -59,8 +59,8 @@ class TestCollateralOutput:
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         dst_addr: clusterlib.AddressRecord,
-        script_utxos: tp.List[clusterlib.UTXOData],
-        collateral_utxos: tp.List[clusterlib.UTXOData],
+        script_utxos: list[clusterlib.UTXOData],
+        collateral_utxos: list[clusterlib.UTXOData],
         plutus_op: plutus_common.PlutusOp,
         total_collateral_amount: tp.Optional[int] = None,
         return_collateral_txouts: clusterlib.OptionalTxOuts = (),
@@ -136,7 +136,7 @@ class TestCollateralOutput:
     def test_with_total_return_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_return_collateral: bool,
         use_total_collateral: bool,
     ):
@@ -253,7 +253,7 @@ class TestCollateralOutput:
     def test_collateral_with_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_return_collateral: bool,
     ):
         """Test failing script using collaterals with tokens.

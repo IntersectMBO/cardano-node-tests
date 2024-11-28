@@ -4,7 +4,6 @@
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import pytest
@@ -186,7 +185,7 @@ class TestInfo:
         ]
         [r.success() for r in (reqc.cli021, reqc.cip059)]
 
-        votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
+        votes: list[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
         vote_keys = [
             *[r.hot_keys.hot_skey_file for r in governance_data.cc_key_members],
             *[r.key_pair.skey_file for r in governance_data.dreps_reg],

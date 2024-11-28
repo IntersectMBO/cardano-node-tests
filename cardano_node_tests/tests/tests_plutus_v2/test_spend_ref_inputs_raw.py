@@ -30,7 +30,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -60,7 +60,7 @@ class TestReadonlyReferenceInputs:
     def test_use_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         reference_input_scenario: str,
     ):
         """Test use a reference input when unlock some funds.
@@ -159,7 +159,7 @@ class TestReadonlyReferenceInputs:
     def test_same_input_as_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test use a reference input that is also a regular input of the same transaction.
 
@@ -262,7 +262,7 @@ class TestReadonlyReferenceInputs:
     def test_reference_input_non_plutus(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test using a read-only reference input in non-Plutus transaction.
 
@@ -327,7 +327,7 @@ class TestNegativeReadonlyReferenceInputs:
     def test_reference_spent_output(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test use a reference input that was already spent.
 
@@ -432,7 +432,7 @@ class TestNegativeReadonlyReferenceInputs:
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_v1_script_with_reference_input(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]
     ):
         """Test use a reference input with a v1 Plutus script.
 
@@ -526,7 +526,7 @@ class TestNegativeReadonlyReferenceInputs:
     def test_reference_input_without_spend_anything(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test using a read-only reference input without spending any UTxO.
 

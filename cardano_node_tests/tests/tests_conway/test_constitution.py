@@ -81,7 +81,7 @@ def script_dreps_lg(
     cluster_lock_gov_script: governance_utils.GovClusterT,
     testfile_temp_dir: pl.Path,
 ) -> tp.Generator[
-    tp.Tuple[tp.List[governance_utils.DRepScriptRegistration], tp.List[clusterlib.PoolUser]],
+    tuple[list[governance_utils.DRepScriptRegistration], list[clusterlib.PoolUser]],
     None,
     None,
 ]:
@@ -299,8 +299,8 @@ def script_dreps_lg(
 @pytest.fixture
 def governance_w_scripts_lg(
     cluster_lock_gov_script: governance_utils.GovClusterT,
-    script_dreps_lg: tp.Tuple[
-        tp.List[governance_utils.DRepScriptRegistration], tp.List[clusterlib.PoolUser]
+    script_dreps_lg: tuple[
+        list[governance_utils.DRepScriptRegistration], list[clusterlib.PoolUser]
     ],
 ) -> governance_utils.GovernanceRecords:
     """Create a governance records with script DReps."""

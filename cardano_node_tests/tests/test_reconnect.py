@@ -41,7 +41,7 @@ class TestNodeReconnect:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
         num_addrs = 2
@@ -73,7 +73,7 @@ class TestNodeReconnect:
         node: str,
         address: str = "",
         tx_raw_output: tp.Optional[clusterlib.TxRawOutput] = None,
-    ) -> tp.List[clusterlib.UTXOData]:
+    ) -> list[clusterlib.UTXOData]:
         """Query UTxO on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
@@ -90,7 +90,7 @@ class TestNodeReconnect:
         self,
         cluster_obj: clusterlib.ClusterLib,
         node: str,
-    ) -> tp.Dict[str, tp.Any]:
+    ) -> dict[str, tp.Any]:
         """Query UTxO on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
@@ -160,7 +160,7 @@ class TestNodeReconnect:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test that node reconnects after it was stopped.
 
@@ -177,7 +177,7 @@ class TestNodeReconnect:
         node1 = "pool1"
         node2 = "pool2"
 
-        def _assert(tx_outputs: tp.List[clusterlib.TxRawOutput]) -> None:
+        def _assert(tx_outputs: list[clusterlib.TxRawOutput]) -> None:
             tx1_node2 = self.node_query_utxo(
                 cluster_obj=cluster, node=node2, tx_raw_output=tx_outputs[-2]
             )

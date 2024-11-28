@@ -1,7 +1,6 @@
 """Negative tests for minting with Plutus V2 using `transaction build`."""
 
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -27,7 +26,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -61,7 +60,7 @@ class TestNegativeCollateralOutput:
     def test_minting_with_unbalanced_total_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         with_return_collateral: bool,
         plutus_version: str,
     ):

@@ -8,7 +8,6 @@ import pathlib as pl
 import random
 import shutil
 import time
-import typing as tp
 
 import requests
 from cardano_clusterlib import clusterlib
@@ -105,7 +104,7 @@ def submit_tx_bare(tx_file: clusterlib.FileType) -> SubmitApiOut:
 def submit_tx(
     cluster_obj: clusterlib.ClusterLib,
     tx_file: clusterlib.FileType,
-    txins: tp.List[clusterlib.UTXOData],
+    txins: list[clusterlib.UTXOData],
     wait_blocks: int = 2,
 ) -> None:
     """Submit a transaction, resubmit if the transaction didn't make it to the chain.

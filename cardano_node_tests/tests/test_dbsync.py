@@ -30,7 +30,7 @@ pytestmark = pytest.mark.needs_dbsync
 class TestDBSync:
     """General db-sync tests."""
 
-    DBSYNC_TABLES: tp.Final[tp.Set[str]] = {
+    DBSYNC_TABLES: tp.Final[set[str]] = {
         "ada_pots",
         "block",
         "collateral_tx_in",
@@ -134,7 +134,7 @@ class TestDBSync:
 
         rec = None
         prev_rec = None
-        errors: tp.List[str] = []
+        errors: list[str] = []
         for rec in dbsync_queries.query_blocks(epoch_from=epoch_from):
             if not prev_rec:
                 prev_rec = rec

@@ -5,7 +5,6 @@ import datetime
 import logging
 import pathlib as pl
 import shutil
-import typing as tp
 
 import allure
 import pytest
@@ -34,7 +33,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -110,7 +109,7 @@ class TestMinting:
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting two tokens with a single Plutus script.
@@ -257,7 +256,7 @@ class TestMinting:
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         key: str,
         plutus_version: str,
     ):
@@ -390,7 +389,7 @@ class TestMinting:
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a time constraints Plutus script.
@@ -518,7 +517,7 @@ class TestMinting:
     def test_two_scripts_minting(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting two tokens with two different Plutus scripts.
@@ -741,7 +740,7 @@ class TestMinting:
     def test_minting_policy_executed_once1(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test that minting policy is executed only once even when the same policy is used twice.
 
@@ -899,7 +898,7 @@ class TestMinting:
     def test_minting_policy_executed_once2(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test that minting policy is executed only once even when the same policy is used twice.
 
@@ -1058,7 +1057,7 @@ class TestMinting:
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_context_equivalence(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]
     ):
         """Test context equivalence while minting a token.
 
@@ -1214,7 +1213,7 @@ class TestMinting:
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         ttl_offset: int,
         plutus_version: str,
     ):
@@ -1359,7 +1358,7 @@ class TestCollateralOutput:
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script while using the same collateral input twice.

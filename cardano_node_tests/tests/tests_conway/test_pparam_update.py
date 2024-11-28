@@ -5,7 +5,6 @@ import fractions
 import logging
 import pathlib as pl
 import random
-import typing as tp
 
 import allure
 import pytest
@@ -114,9 +113,9 @@ def _get_rational_str(value: float) -> str:
 
 
 def _check_w_denominator(
-    update_proposal: clusterlib_utils.UpdateProposal, pparam: tp.Union[float, dict]
+    update_proposal: clusterlib_utils.UpdateProposal, pparam: float | dict
 ) -> bool:
-    exp_val: tp.Union[float, dict, str] = pparam
+    exp_val: float | dict | str = pparam
     if isinstance(pparam, dict):
         exp_val = f"{pparam['numerator']}/{pparam['denominator']}"
     return bool(update_proposal.value == exp_val)
@@ -649,7 +648,7 @@ class TestPParamUpdate:
 
         def _propose_pparams_update(
             name_template: str,
-            proposals: tp.List[clusterlib_utils.UpdateProposal],
+            proposals: list[clusterlib_utils.UpdateProposal],
         ) -> conway_common.PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
@@ -669,7 +668,7 @@ class TestPParamUpdate:
         proposed_pparams_errors = []
 
         def _check_proposed_pparams(
-            update_proposals: tp.List[clusterlib_utils.UpdateProposal], protocol_params: dict
+            update_proposals: list[clusterlib_utils.UpdateProposal], protocol_params: dict
         ) -> None:
             try:
                 clusterlib_utils.check_updated_params(

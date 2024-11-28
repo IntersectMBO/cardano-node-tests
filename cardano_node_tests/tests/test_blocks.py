@@ -11,7 +11,6 @@ import shutil
 import signal
 import sqlite3
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -42,7 +41,7 @@ class TestLeadershipSchedule:
     def test_pool_blocks(  # noqa: C901
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool: tuple[clusterlib.ClusterLib, str],
         for_epoch: str,
     ):
         """Check that blocks were minted according to leadership schedule.
@@ -99,11 +98,11 @@ class TestLeadershipSchedule:
             state_name=temp_template,
             ledger_state=ledger_state,
         )
-        blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+        blocks_before: dict[str, int] = ledger_state["blocksBefore"]
         pool_id_dec = helpers.decode_bech32(pool_id)
         minted_blocks_ledger = blocks_before.get(pool_id_dec) or 0
 
-        errors: tp.List[str] = []
+        errors: list[str] = []
 
         def _check_logs() -> None:
             # Get info about minted blocks in queried epoch for the selected pool
@@ -245,7 +244,7 @@ class TestCollectData:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -273,7 +272,7 @@ class TestCollectData:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Record number of blocks produced by each pool over multiple epochs.
 
@@ -337,7 +336,7 @@ class TestCollectData:
                 state_name=f"{temp_template}_epoch{curr_epoch}",
                 ledger_state=ledger_state,
             )
-            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+            blocks_before: dict[str, int] = ledger_state["blocksBefore"]
 
             # save blocks data to sqlite db
             cur = conn.cursor()
@@ -440,7 +439,7 @@ class TestDynamicBlockProd:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
 
@@ -463,7 +462,7 @@ class TestDynamicBlockProd:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Check dynamic block production.
 
@@ -491,14 +490,14 @@ class TestDynamicBlockProd:
             )
         )
 
-        def _save_state(curr_epoch: int) -> tp.Dict[str, int]:
+        def _save_state(curr_epoch: int) -> dict[str, int]:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
             clusterlib_utils.save_ledger_state(
                 cluster_obj=cluster,
                 state_name=f"{temp_template}_epoch{curr_epoch}",
                 ledger_state=ledger_state,
             )
-            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+            blocks_before: dict[str, int] = ledger_state["blocksBefore"]
             return blocks_before
 
         # The network needs to be at least in epoch 1

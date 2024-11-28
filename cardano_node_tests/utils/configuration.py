@@ -2,7 +2,6 @@
 
 import os
 import pathlib as pl
-import typing as tp
 
 
 def _check_cardano_node_socket_path() -> None:
@@ -56,12 +55,12 @@ STARTUP_CARDANO_NODE_SOCKET_PATH = (
 os.environ["CARDANO_NODE_SOCKET_PATH"] = str(STARTUP_CARDANO_NODE_SOCKET_PATH)
 
 # resolve SCHEDULING_LOG
-SCHEDULING_LOG: tp.Union[str, pl.Path] = os.environ.get("SCHEDULING_LOG") or ""
+SCHEDULING_LOG: str | pl.Path = os.environ.get("SCHEDULING_LOG") or ""
 if SCHEDULING_LOG:
     SCHEDULING_LOG = pl.Path(SCHEDULING_LOG).expanduser().resolve()
 
 # resolve BLOCK_PRODUCTION_DB
-BLOCK_PRODUCTION_DB: tp.Union[str, pl.Path] = os.environ.get("BLOCK_PRODUCTION_DB") or ""
+BLOCK_PRODUCTION_DB: str | pl.Path = os.environ.get("BLOCK_PRODUCTION_DB") or ""
 if BLOCK_PRODUCTION_DB:
     BLOCK_PRODUCTION_DB = pl.Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
 

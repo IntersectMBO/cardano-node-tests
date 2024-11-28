@@ -2,7 +2,6 @@
 
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import pytest
@@ -49,7 +48,7 @@ def pool_user_lg(
 def payment_addrs_lg(
     cluster_manager: cluster_management.ClusterManager,
     cluster_lock_governance: governance_utils.GovClusterT,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     cluster, __ = cluster_lock_governance
     test_id = common.get_test_id(cluster)
@@ -79,7 +78,7 @@ class TestUpdateBuiltIns:
     def test_update_in_pv9(
         self,
         cluster_lock_governance: governance_utils.GovClusterT,
-        payment_addrs_lg: tp.List[clusterlib.AddressRecord],
+        payment_addrs_lg: list[clusterlib.AddressRecord],
         pool_user_lg: clusterlib.PoolUser,
     ):
         """Test updating PlutusV2 cost model in PV9.

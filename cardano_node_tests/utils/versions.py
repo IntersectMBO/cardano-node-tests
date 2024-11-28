@@ -23,7 +23,7 @@ class Versions:
     DEFAULT_TX_ERA: tp.Final[int] = 9
     LAST_KNOWN_ERA: tp.Final[int] = 9
 
-    MAP: tp.ClassVar[tp.Dict[int, str]] = {
+    MAP: tp.ClassVar[dict[int, str]] = {
         1: "byron",
         2: "shelley",
         3: "allegra",

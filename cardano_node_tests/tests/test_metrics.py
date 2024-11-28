@@ -44,7 +44,7 @@ def get_ekg_metrics(port: int) -> requests.Response:
 class TestPrometheus:
     """Prometheus metrics tests."""
 
-    EXPECTED_METRICS: tp.Final[tp.Set[str]] = {
+    EXPECTED_METRICS: tp.Final[set[str]] = {
         "cardano_node_metrics_Forge_adopted_int",
         "cardano_node_metrics_Forge_forge_about_to_lead_int",
         "cardano_node_metrics_Forge_forged_int",

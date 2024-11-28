@@ -94,7 +94,7 @@ def get_framework_log_path() -> pl.Path:
     return temptools.get_pytest_worker_tmp() / "framework.log"
 
 
-def _look_back_found(buffer: tp.List[str]) -> bool:
+def _look_back_found(buffer: list[str]) -> bool:
     """Look back to the buffer to see if there is an expected message.
 
     If the expected message is found, the error can be ignored.
@@ -114,9 +114,7 @@ def _look_back_found(buffer: tp.List[str]) -> bool:
     return any(re.search(look_back_re, line) for line in buffer[:-1])
 
 
-def _get_rotated_logs(
-    logfile: pl.Path, seek: int = 0, timestamp: float = 0.0
-) -> tp.List[RotableLog]:
+def _get_rotated_logs(logfile: pl.Path, seek: int = 0, timestamp: float = 0.0) -> list[RotableLog]:
     """Return list of versions of the log file (list of `RotableLog`).
 
     When the seek offset was recorded for a log file and the log file was rotated,
@@ -149,9 +147,9 @@ def _get_ignore_rules_lock_file(instance_num: int) -> pl.Path:
 
 def _get_ignore_rules(
     cluster_env: cluster_nodes.ClusterEnv, timestamp: float
-) -> tp.List[tp.Tuple[str, str]]:
+) -> list[tuple[str, str]]:
     """Get rules (file glob and regex) for ignored errors."""
-    rules: tp.List[tp.Tuple[str, str]] = []
+    rules: list[tuple[str, str]] = []
     lock_file = _get_ignore_rules_lock_file(instance_num=cluster_env.instance_num)
 
     with locking.FileLockIfXdist(lock_file):
@@ -183,7 +181,7 @@ def _read_seek(offset_file: pl.Path) -> int:
 
 
 def _get_ignore_regex(
-    ignore_rules: tp.List[tp.Tuple[str, str]], regexes: tp.List[str], logfile: pl.Path
+    ignore_rules: list[tuple[str, str]], regexes: list[str], logfile: pl.Path
 ) -> str:
     """Combine together regex for the given log file using file specific and global ignore rules."""
     regex_set = set(regexes)
@@ -196,11 +194,11 @@ def _get_ignore_regex(
 
 def _search_log_lines(
     logfile: pl.Path,
-    rotated_logs: tp.List[RotableLog],
+    rotated_logs: list[RotableLog],
     errors_re: re.Pattern,
     errors_ignored_re: tp.Optional[re.Pattern] = None,
     errors_look_back_re: tp.Optional[re.Pattern] = None,
-) -> tp.List[tp.Tuple[pl.Path, str]]:
+) -> list[tuple[pl.Path, str]]:
     """Search for errors in the log file and, if needed, in the corresponding rotated logs."""
     errors = []
     last_line_pos = -1
@@ -280,7 +278,7 @@ def find_msgs_in_logs(
     seek_offset: int,
     timestamp: float,
     only_first: bool = False,
-) -> tp.List[str]:
+) -> list[str]:
     """Find messages in log."""
     regex_comp = re.compile(regex)
     lines_found = []
@@ -300,11 +298,11 @@ def find_msgs_in_logs(
 
 
 def check_msgs_presence_in_logs(
-    regex_pairs: tp.List[tp.Tuple[str, str]],
-    seek_offsets: tp.Dict[str, int],
+    regex_pairs: list[tuple[str, str]],
+    seek_offsets: dict[str, int],
     state_dir: pl.Path,
     timestamp: float,
-) -> tp.List[str]:
+) -> list[str]:
     """Check if the expected messages are present in logs."""
     errors = []
     for files_glob, regex in regex_pairs:
@@ -337,7 +335,7 @@ def check_msgs_presence_in_logs(
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> tp.Iterator[None]:
+def expect_errors(regex_pairs: list[tuple[str, str]], worker_id: str) -> tp.Iterator[None]:
     """Make sure the expected errors are present in logs.
 
     Context manager.
@@ -374,7 +372,7 @@ def expect_errors(regex_pairs: tp.List[tp.Tuple[str, str]], worker_id: str) -> t
 
 
 @contextlib.contextmanager
-def expect_messages(regex_pairs: tp.List[tp.Tuple[str, str]]) -> tp.Iterator[None]:
+def expect_messages(regex_pairs: list[tuple[str, str]]) -> tp.Iterator[None]:
     """Make sure the expected messages are present in logs.
 
     Context manager.
@@ -405,7 +403,7 @@ def expect_messages(regex_pairs: tp.List[tp.Tuple[str, str]]) -> tp.Iterator[Non
         raise AssertionError(errors_joined) from None
 
 
-def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
+def search_cluster_logs() -> list[tuple[pl.Path, str]]:
     """Search cluster logs for errors."""
     cluster_env = cluster_nodes.get_cluster_env()
     lock_file = temptools.get_basetemp() / f"search_cluster_{cluster_env.instance_num}.lock"
@@ -448,7 +446,7 @@ def search_cluster_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
     return errors
 
 
-def search_framework_log() -> tp.List[tp.Tuple[pl.Path, str]]:
+def search_framework_log() -> list[tuple[pl.Path, str]]:
     """Search framework log for errors."""
     # It is not necessary to lock the `framework.log` file because there is one log file per worker.
     # Each worker is checking only its own log file.
@@ -476,7 +474,7 @@ def search_framework_log() -> tp.List[tp.Tuple[pl.Path, str]]:
     return errors
 
 
-def search_supervisord_logs() -> tp.List[tp.Tuple[pl.Path, str]]:
+def search_supervisord_logs() -> list[tuple[pl.Path, str]]:
     """Search cluster logs for errors."""
     cluster_env = cluster_nodes.get_cluster_env()
     lock_file = temptools.get_basetemp() / f"search_supervisord_{cluster_env.instance_num}.lock"

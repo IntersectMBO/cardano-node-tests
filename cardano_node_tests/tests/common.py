@@ -177,10 +177,10 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
 
 def get_nodes_missing_utxos(
     cluster_obj: clusterlib.ClusterLib,
-    utxos: tp.List[clusterlib.UTXOData],
-) -> tp.Set[str]:
+    utxos: list[clusterlib.UTXOData],
+) -> set[str]:
     """Return set of nodes that don't have the given UTxOs."""
-    missing_nodes: tp.Set[str] = set()
+    missing_nodes: set[str] = set()
 
     known_nodes = cluster_nodes.get_cluster_type().NODES
     # Skip the check if there is only one node
@@ -208,7 +208,7 @@ def get_nodes_missing_utxos(
 
 def check_missing_utxos(
     cluster_obj: clusterlib.ClusterLib,
-    utxos: tp.List[clusterlib.UTXOData],
+    utxos: list[clusterlib.UTXOData],
 ) -> None:
     """Fail if any node is missing the given UTxOs."""
     missing_nodes = get_nodes_missing_utxos(cluster_obj=cluster_obj, utxos=utxos)
@@ -222,10 +222,10 @@ def detect_fork(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
-) -> tp.Tuple[tp.Set[str], tp.Set[str]]:
+) -> tuple[set[str], set[str]]:
     """Detect if one or more nodes have forked blockchain or is out of sync."""
-    forked_nodes: tp.Set[str] = set()
-    unsynced_nodes: tp.Set[str] = set()
+    forked_nodes: set[str] = set()
+    unsynced_nodes: set[str] = set()
 
     known_nodes = cluster_nodes.get_cluster_type().NODES
     if len(known_nodes) <= 1:

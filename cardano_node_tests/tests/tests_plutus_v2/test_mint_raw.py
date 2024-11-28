@@ -30,7 +30,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -56,7 +56,7 @@ def _build_reference_txin(
     payment_addr: clusterlib.AddressRecord,
     dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
     datum_file: tp.Optional[pl.Path] = None,
-) -> tp.List[clusterlib.UTXOData]:
+) -> list[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 
     Uses `cardano-cli transaction build-raw` command for building the transaction.
@@ -102,7 +102,7 @@ class TestMinting:
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_reference_script: bool,
         plutus_version: str,
     ):
@@ -239,7 +239,7 @@ class TestMinting:
     def test_datum_hash_visibility(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         scenario: str,
     ):
         """Test visibility of datum hash on reference inputs by the plutus script.
@@ -392,7 +392,7 @@ class TestMinting:
     def test_missing_builtin(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test builtins added to PlutusV2 from PlutusV3.
 

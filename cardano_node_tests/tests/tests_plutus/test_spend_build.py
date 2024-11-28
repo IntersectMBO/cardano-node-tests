@@ -33,7 +33,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -56,7 +56,7 @@ def payment_addrs(
 def pool_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.PoolUser]:
+) -> list[clusterlib.PoolUser]:
     """Create new pool users."""
     test_id = common.get_test_id(cluster)
     created_users = clusterlib_utils.create_pool_users(
@@ -87,7 +87,7 @@ class TestBuildLocking:
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
@@ -156,7 +156,7 @@ class TestBuildLocking:
     def test_context_equivalence(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
     ):
         """Test context equivalence while spending a locked UTxO.
 
@@ -272,7 +272,7 @@ class TestBuildLocking:
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         variant: str,
         plutus_version: str,
         embed_datum: bool,
@@ -385,7 +385,7 @@ class TestBuildLocking:
     def test_two_scripts_spending(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx.
@@ -646,7 +646,7 @@ class TestBuildLocking:
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
@@ -704,7 +704,7 @@ class TestBuildLocking:
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test failing script together with the `--script-invalid` argument - collateral is taken.
@@ -783,7 +783,7 @@ class TestBuildLocking:
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
@@ -862,7 +862,7 @@ class TestBuildLocking:
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
@@ -987,7 +987,7 @@ class TestBuildLocking:
     def test_collateral_is_txin(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while using single UTxO for both collateral and Tx input.
