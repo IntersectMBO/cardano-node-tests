@@ -156,7 +156,7 @@ class TestLedgerState:
                 pstake_go_cmd = stake_snapshot["pools"][pool_id_dec]["stakeGo"]
             else:
                 pstake_mark_cmd = stake_snapshot["poolStakeMark"]
-                pstake_set_cmd = stake_snapshot["poolStaketp.Set"]
+                pstake_set_cmd = stake_snapshot["poolStakeSet"]
                 pstake_go_cmd = stake_snapshot["poolStakeGo"]
 
             if pstake_sum_mark != pstake_mark_cmd:
@@ -203,8 +203,8 @@ class TestLedgerState:
         else:
             if sum_mark < stake_snapshot["activeStakeMark"]:
                 errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
-            if sum_set < stake_snapshot["activeStaketp.Set"]:
-                errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStaketp.Set']}")
+            if sum_set < stake_snapshot["activeStakeSet"]:
+                errors.append(f"active_set: {sum_set} < {stake_snapshot['activeStakeSet']}")
             if sum_go < stake_snapshot["activeStakeGo"]:
                 errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
 

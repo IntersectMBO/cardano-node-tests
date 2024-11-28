@@ -1112,10 +1112,10 @@ class TestAdvancedQueries:
         elif not {
             "activeStakeGo",
             "activeStakeMark",
-            "activeStaketp.Set",
+            "activeStakeSet",
             "poolStakeGo",
             "poolStakeMark",
-            "poolStaketp.Set",
+            "poolStakeSet",
         }.issubset(stake_snapshot):
             errors.append(f"Missing some expected keys: {stake_snapshot.keys()}")
 
