@@ -16,23 +16,19 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
-ActionsAllT = tp.Union[  # pylint: disable=invalid-name
-    clusterlib.ActionConstitution,
-    clusterlib.ActionHardfork,
-    clusterlib.ActionInfo,
-    clusterlib.ActionNoConfidence,
-    clusterlib.ActionPParamsUpdate,
-    clusterlib.ActionTreasuryWithdrawal,
-    clusterlib.ActionUpdateCommittee,
-]
+ActionsAllT = (
+    clusterlib.ActionConstitution
+    | clusterlib.ActionHardfork
+    | clusterlib.ActionInfo
+    | clusterlib.ActionNoConfidence
+    | clusterlib.ActionPParamsUpdate
+    | clusterlib.ActionTreasuryWithdrawal
+    | clusterlib.ActionUpdateCommittee
+)
 
-VotesAllT = tp.Union[  # pylint: disable=invalid-name
-    clusterlib.VoteCC,
-    clusterlib.VoteDrep,
-    clusterlib.VoteSPO,
-]
+VotesAllT = clusterlib.VoteCC | clusterlib.VoteDrep | clusterlib.VoteSPO
 
-DRepStateT = tp.List[tp.List[tp.Dict[str, tp.Any]]]
+DRepStateT = list[list[dict[str, tp.Any]]]
 
 
 class ScriptTypes(enum.Enum):
@@ -58,14 +54,14 @@ class DRepScriptRegRecord:
 @dataclasses.dataclass(frozen=True, order=True)
 class DRepScriptRegInputs:
     registration_cert: clusterlib.ComplexCert
-    key_pairs: tp.List[clusterlib.KeyPair]
+    key_pairs: list[clusterlib.KeyPair]
     script_type: ScriptTypes
 
 
 @dataclasses.dataclass(frozen=True, order=True)
 class DRepScriptRegistration:
     registration_cert: clusterlib.ComplexCert
-    key_pairs: tp.List[clusterlib.KeyPair]
+    key_pairs: list[clusterlib.KeyPair]
     script_hash: str
     script_type: ScriptTypes
     deposit: int
@@ -89,15 +85,15 @@ class CCKeyMember:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class GovernanceRecords:
-    dreps_reg: tp.List[DRepRegistration]
-    drep_delegators: tp.List[clusterlib.PoolUser]
-    cc_key_members: tp.List[CCKeyMember]
-    pools_cold: tp.List[clusterlib.ColdKeyPair]
-    drep_scripts_reg: tp.List[DRepScriptRegistration] = dataclasses.field(default_factory=list)
-    drep_scripts_delegators: tp.List[clusterlib.PoolUser] = dataclasses.field(default_factory=list)
+    dreps_reg: list[DRepRegistration]
+    drep_delegators: list[clusterlib.PoolUser]
+    cc_key_members: list[CCKeyMember]
+    pools_cold: list[clusterlib.ColdKeyPair]
+    drep_scripts_reg: list[DRepScriptRegistration] = dataclasses.field(default_factory=list)
+    drep_scripts_delegators: list[clusterlib.PoolUser] = dataclasses.field(default_factory=list)
 
 
-GovClusterT = tp.Tuple[clusterlib.ClusterLib, GovernanceRecords]
+GovClusterT = tuple[clusterlib.ClusterLib, GovernanceRecords]
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -127,9 +123,9 @@ class StakeDelegation:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class VotedVotes:
-    cc: tp.List[clusterlib.VoteCC]  # pylint: disable=invalid-name
-    drep: tp.List[clusterlib.VoteDrep]
-    spo: tp.List[clusterlib.VoteSPO]
+    cc: list[clusterlib.VoteCC]  # pylint: disable=invalid-name
+    drep: list[clusterlib.VoteDrep]
+    spo: list[clusterlib.VoteSPO]
 
 
 class PrevGovActionIds(enum.Enum):
@@ -182,9 +178,7 @@ def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str)
     assert stake_addr_val.get("drep") == expected_drep
 
 
-def check_drep_stake_distribution(
-    distrib_state: tp.List[list], drep_id: str, min_amount: int
-) -> None:
+def check_drep_stake_distribution(distrib_state: list[list], drep_id: str, min_amount: int) -> None:
     cred_name = get_drep_cred_name(drep_id=drep_id)
     expected_drep = f"drep-{cred_name}"
 
@@ -202,7 +196,7 @@ def check_drep_stake_distribution(
 
 def get_prev_action(
     action_type: PrevGovActionIds,
-    gov_state: tp.Dict[str, tp.Any],
+    gov_state: dict[str, tp.Any],
 ) -> PrevActionRec:
     prev_action_rec = (
         gov_state["nextRatifyState"]["nextEnactState"]["prevGovActionIds"][action_type.value] or {}
@@ -214,9 +208,9 @@ def get_prev_action(
 
 
 def _lookup_action(
-    actions: tp.List[tp.Dict[str, tp.Any]], action_txid: str, action_ix: int = 0
-) -> tp.Dict[str, tp.Any]:
-    prop: tp.Dict[str, tp.Any] = {}
+    actions: list[dict[str, tp.Any]], action_txid: str, action_ix: int = 0
+) -> dict[str, tp.Any]:
+    prop: dict[str, tp.Any] = {}
     for _a in actions:
         _p_action_id = _a["actionId"]
         if _p_action_id["txId"] == action_txid and _p_action_id["govActionIx"] == action_ix:
@@ -226,30 +220,26 @@ def _lookup_action(
 
 
 def lookup_proposal(
-    gov_state: tp.Dict[str, tp.Any], action_txid: str, action_ix: int = 0
-) -> tp.Dict[str, tp.Any]:
-    proposals: tp.List[tp.Dict[str, tp.Any]] = gov_state["proposals"]
+    gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
+) -> dict[str, tp.Any]:
+    proposals: list[dict[str, tp.Any]] = gov_state["proposals"]
     return _lookup_action(actions=proposals, action_txid=action_txid, action_ix=action_ix)
 
 
 def lookup_ratified_actions(
-    gov_state: tp.Dict[str, tp.Any], action_txid: str, action_ix: int = 0
-) -> tp.Dict[str, tp.Any]:
-    ratified_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
-        "enactedGovActions"
-    ]
+    gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
+) -> dict[str, tp.Any]:
+    ratified_actions: list[dict[str, tp.Any]] = gov_state["nextRatifyState"]["enactedGovActions"]
     return _lookup_action(actions=ratified_actions, action_txid=action_txid, action_ix=action_ix)
 
 
 def lookup_expired_actions(
-    gov_state: tp.Dict[str, tp.Any],
+    gov_state: dict[str, tp.Any],
     action_txid: str,
     action_ix: int = 0,
-) -> tp.Dict[str, tp.Any]:
-    removed_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
-        "expiredGovActions"
-    ]
-    raction: tp.Dict[str, tp.Any] = {}
+) -> dict[str, tp.Any]:
+    removed_actions: list[dict[str, tp.Any]] = gov_state["nextRatifyState"]["expiredGovActions"]
+    raction: dict[str, tp.Any] = {}
     for _r in removed_actions:
         if _r["txId"] == action_txid and _r["govActionIx"] == action_ix:
             raction = _r
@@ -376,7 +366,7 @@ def check_action_view(  # noqa: C901
     prev_action_txid = getattr(action_data, "prev_action_txid", None)
     prev_action_ix = getattr(action_data, "prev_action_ix", None)
 
-    gov_action: tp.Dict[str, tp.Any]
+    gov_action: dict[str, tp.Any]
 
     if isinstance(action_data, clusterlib.ActionTreasuryWithdrawal):
         if not recv_addr_vkey_hash:
@@ -637,7 +627,7 @@ def is_drep_active(
     return bool(drep_state[0][1].get("expiry", 0) > epoch)
 
 
-def is_cc_active(cc_member_state: tp.Dict[str, tp.Any]) -> bool:
+def is_cc_active(cc_member_state: dict[str, tp.Any]) -> bool:
     """Check if CC member is active."""
     if not cc_member_state:
         return False
@@ -654,9 +644,9 @@ def create_dreps(
     num: int,
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
-    pool_users: tp.List[clusterlib.PoolUser],
+    pool_users: list[clusterlib.PoolUser],
     destination_dir: clusterlib.FileType = ".",
-) -> tp.Tuple[tp.List[DRepRegistration], tp.List[clusterlib.PoolUser]]:
+) -> tuple[list[DRepRegistration], list[clusterlib.PoolUser]]:
     """Create DReps with keys."""
     no_of_addrs = len(pool_users)
 
@@ -732,12 +722,12 @@ def create_dreps(
 
 def create_script_dreps(
     name_template: str,
-    script_inputs: tp.List[DRepScriptRegInputs],
+    script_inputs: list[DRepScriptRegInputs],
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
-    pool_users: tp.List[clusterlib.PoolUser],
+    pool_users: list[clusterlib.PoolUser],
     destination_dir: clusterlib.FileType = ".",
-) -> tp.Tuple[tp.List[DRepScriptRegistration], tp.List[clusterlib.PoolUser]]:
+) -> tuple[list[DRepScriptRegistration], list[clusterlib.PoolUser]]:
     """Create DReps with scripts."""
     no_of_addrs = len(pool_users)
     no_of_scripts = len(script_inputs)

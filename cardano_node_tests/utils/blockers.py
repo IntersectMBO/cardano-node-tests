@@ -166,7 +166,7 @@ class GH:
 def finish_test(issues: tp.Iterable[GH]) -> None:
     """Fail or Xfail test with references to multiple GitHub issues."""
 
-    def _get_outcome(issue: GH) -> tp.Tuple[bool, str, str]:
+    def _get_outcome(issue: GH) -> tuple[bool, str, str]:
         blocked = issue.is_blocked()
         py_outcome = "XFAIL" if blocked else "FAIL"
         reason = f"{py_outcome}: {issue.gh_issue}: {issue.message}"

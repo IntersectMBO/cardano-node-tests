@@ -13,7 +13,7 @@ class GHIssue:
 
     TOKEN: tp.ClassVar[tp.Optional[str]] = None
 
-    issue_cache: tp.ClassVar[tp.Dict[str, str]] = {}
+    issue_cache: tp.ClassVar[dict[str, str]] = {}
 
     _github_instance: tp.ClassVar[tp.Optional[github.Github]] = None
     _github_instance_error: tp.ClassVar[bool] = False

@@ -99,7 +99,7 @@ def _check_block_production(
     temp_template: str,
     pool_id_dec: str,
     in_epoch: int,
-) -> tp.Tuple[int, bool]:
+) -> tuple[int, bool]:
     cluster_obj.wait_for_epoch(epoch_no=in_epoch)
     clusterlib_utils.wait_for_epoch_interval(
         cluster_obj=cluster_obj,
@@ -196,7 +196,7 @@ class TestKES:
                     ]
                 )
 
-        def _refresh_opcerts() -> tp.Dict[str, int]:
+        def _refresh_opcerts() -> dict[str, int]:
             """Refresh opcert on pools that are not supposed to expire."""
             refreshed_nodes_kes_period = {}
 
@@ -218,8 +218,8 @@ class TestKES:
             return refreshed_nodes_kes_period
 
         def _check_kes_period_info(
-            refreshed_nodes_kes_period: tp.Dict[str, int],
-        ) -> tp.List[str]:
+            refreshed_nodes_kes_period: dict[str, int],
+        ) -> list[str]:
             errors = []
             # Check kes-period-info with an operational certificate with KES expired
             kes_info_expired = cluster.g_query.get_kes_period_info(

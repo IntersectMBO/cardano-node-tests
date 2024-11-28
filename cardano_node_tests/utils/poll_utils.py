@@ -4,7 +4,6 @@ import dataclasses
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -20,7 +19,7 @@ class PollFiles:
 
 
 def create_poll(
-    cluster_obj: clusterlib.ClusterLib, question: str, answers: tp.List[str], name_template: str
+    cluster_obj: clusterlib.ClusterLib, question: str, answers: list[str], name_template: str
 ) -> PollFiles:
     """Create a poll and return the poll and metadata files."""
     poll_file = f"{name_template}_poll.json"
@@ -85,7 +84,7 @@ def answer_poll(
 
 def verify_poll(
     cluster_obj: clusterlib.ClusterLib, poll_file: pl.Path, tx_signed: pl.Path
-) -> tp.Tuple[str, ...]:
+) -> tuple[str, ...]:
     """Verify an answer to the poll."""
     cli_out = cluster_obj.cli(
         [

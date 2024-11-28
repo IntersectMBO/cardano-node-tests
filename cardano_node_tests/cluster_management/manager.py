@@ -291,7 +291,7 @@ class ClusterManager:
         self,
         glob: str,
         from_set: tp.Optional[tp.Iterable[str]] = None,
-    ) -> tp.List[str]:
+    ) -> list[str]:
         if from_set is not None and isinstance(from_set, str):
             msg = "`from_set` cannot be a string"
             raise AssertionError(msg)
@@ -307,7 +307,7 @@ class ClusterManager:
         self,
         from_set: tp.Optional[tp.Iterable[str]] = None,
         worker_id: tp.Optional[str] = None,
-    ) -> tp.List[str]:
+    ) -> list[str]:
         """Get resources locked by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
@@ -319,7 +319,7 @@ class ClusterManager:
         self,
         from_set: tp.Optional[tp.Iterable[str]] = None,
         worker_id: tp.Optional[str] = None,
-    ) -> tp.List[str]:
+    ) -> list[str]:
         """Get resources used by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).

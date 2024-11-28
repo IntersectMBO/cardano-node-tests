@@ -39,7 +39,7 @@ def submit_tx(
     submit_method: str,
     cluster_obj: clusterlib.ClusterLib,
     tx_file: clusterlib.FileType,
-    txins: tp.List[clusterlib.UTXOData],
+    txins: list[clusterlib.UTXOData],
     wait_blocks: int = 2,
 ) -> None:
     """Submit a transaction using the selected method.

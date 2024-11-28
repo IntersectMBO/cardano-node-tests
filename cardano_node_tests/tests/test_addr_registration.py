@@ -1,7 +1,6 @@
 """Tests for stake address registration."""
 
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -24,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 def pool_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.PoolUser]:
+) -> list[clusterlib.PoolUser]:
     """Create pool users."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
@@ -50,7 +49,7 @@ def pool_users(
 @pytest.fixture
 def pool_users_disposable(
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.PoolUser]:
+) -> list[clusterlib.PoolUser]:
     """Create function scoped pool users."""
     test_id = common.get_test_id(cluster)
     pool_users = clusterlib_utils.create_pool_users(
@@ -72,8 +71,8 @@ class TestRegisterAddr:
     def test_deregister_registered(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        pool_users_disposable: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Deregister a registered stake address.
@@ -205,8 +204,8 @@ class TestRegisterAddr:
     def test_addr_registration_deregistration(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        pool_users_disposable: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Submit registration and deregistration certificates in single TX.
@@ -299,8 +298,8 @@ class TestRegisterAddr:
     def test_addr_registration_certificate_order(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        pool_users_disposable: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -394,7 +393,7 @@ class TestNegative:
     def test_registration_cert_with_wrong_key(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
     ):
         """Try to generate stake address registration certificate using wrong stake vkey.
 
@@ -418,8 +417,8 @@ class TestNegative:
     def test_register_addr_with_wrong_key(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        pool_users_disposable: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
     ):
         """Try to register stake address using wrong payment skey.
 
@@ -457,8 +456,8 @@ class TestNegative:
     def test_deregister_not_registered_addr(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        pool_users_disposable: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
         use_build_cmd: bool,
     ):
         """Deregister not registered stake address."""

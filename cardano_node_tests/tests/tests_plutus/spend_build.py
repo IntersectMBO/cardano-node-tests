@@ -22,13 +22,13 @@ def _build_fund_script(
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
     tokens: tp.Optional[
-        tp.List[plutus_common.Token]
+        list[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
     tokens_collateral: tp.Optional[
-        tp.List[plutus_common.Token]
+        list[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
     embed_datum: bool = False,
-) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
@@ -133,8 +133,8 @@ def _build_spend_locked_txin(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
-    script_utxos: tp.List[clusterlib.UTXOData],
-    collateral_utxos: tp.List[clusterlib.UTXOData],
+    script_utxos: list[clusterlib.UTXOData],
+    collateral_utxos: list[clusterlib.UTXOData],
     plutus_op: plutus_common.PlutusOp,
     amount: int,
     deposit_amount: int = 0,
@@ -142,11 +142,11 @@ def _build_spend_locked_txin(  # noqa: C901
     tx_files: tp.Optional[clusterlib.TxFiles] = None,
     invalid_hereafter: tp.Optional[int] = None,
     invalid_before: tp.Optional[int] = None,
-    tokens: tp.Optional[tp.List[plutus_common.Token]] = None,
+    tokens: tp.Optional[list[plutus_common.Token]] = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
-) -> tp.Tuple[str, tp.Optional[clusterlib.TxRawOutput], list]:
+) -> tuple[str, tp.Optional[clusterlib.TxRawOutput], list]:
     """Spend the locked UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.

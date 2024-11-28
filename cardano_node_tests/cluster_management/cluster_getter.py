@@ -380,8 +380,8 @@ class ClusterGetter:
             f.unlink()
 
     def _get_marked_tests_status(
-        self, marked_tests_cache: tp.Dict[int, tp.Dict[str, int]], instance_num: int
-    ) -> tp.Dict[str, int]:
+        self, marked_tests_cache: dict[int, dict[str, int]], instance_num: int
+    ) -> dict[str, int]:
         """Return marked tests status for cluster instance."""
         if instance_num not in marked_tests_cache:
             marked_tests_cache[instance_num] = {}
@@ -390,7 +390,7 @@ class ClusterGetter:
 
     def _update_marked_tests(
         self,
-        marked_tests_cache: tp.Dict[int, tp.Dict[str, int]],
+        marked_tests_cache: dict[int, dict[str, int]],
         cget_status: _ClusterGetStatus,
     ) -> None:
         """Update status about running of marked test.
@@ -809,7 +809,7 @@ class ClusterGetter:
             start_cmd=start_cmd,
             current_test=os.environ.get("PYTEST_CURRENT_TEST") or "",
         )
-        marked_tests_cache: tp.Dict[int, tp.Dict[str, int]] = {}
+        marked_tests_cache: dict[int, dict[str, int]] = {}
 
         self.log(f"want to run test '{cget_status.current_test}'")
 

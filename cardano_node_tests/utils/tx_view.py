@@ -71,7 +71,7 @@ def load_raw(tx_view: str) -> dict:
     return tx_loaded
 
 
-def _load_assets(assets: tp.Dict[str, tp.Dict[str, int]]) -> tp.List[tp.Tuple[int, str]]:
+def _load_assets(assets: dict[str, dict[str, int]]) -> list[tuple[int, str]]:
     loaded_data = []
 
     for policy_key_rec, policy_rec in assets.items():
@@ -92,7 +92,7 @@ def _load_assets(assets: tp.Dict[str, tp.Dict[str, int]]) -> tp.List[tp.Tuple[in
     return loaded_data
 
 
-def _load_coins_data(coins_data: tp.Union[dict, str]) -> tp.List[tp.Tuple[int, str]]:
+def _load_coins_data(coins_data: dict | str) -> list[tuple[int, str]]:
     # `coins_data` for Mary+ Tx era has Lovelace amount and policies info,
     # for older Tx eras it's just Lovelace amount
     try:
@@ -116,7 +116,7 @@ def _check_collateral_inputs(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     """Check collateral inputs of tx_view."""
     view_collateral = set(tx_loaded.get("collateral inputs") or [])
 
-    all_collateral_locations: tp.List[tp.Any] = [
+    all_collateral_locations: list[tp.Any] = [
         *(tx_raw_output.script_txins or ()),
         *(tx_raw_output.script_withdrawals or ()),
         *(tx_raw_output.complex_certs or ()),
@@ -150,7 +150,7 @@ def _check_reference_inputs(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: di
         s.reference_txin for s in reference_txin_locations if getattr(s, "reference_txin", None)
     ]
 
-    reference_txins_combined: tp.List[tp.Any] = [
+    reference_txins_combined: list[tp.Any] = [
         *(tx_raw_output.readonly_reference_txins or []),
         *reference_txins,
     ]
@@ -223,15 +223,15 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     ), "Return collateral address mismatch"
 
 
-def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path) -> tp.Dict[str, tp.Any]:
+def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path) -> dict[str, tp.Any]:
     tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_body_file)
-    tx_loaded: tp.Dict[str, tp.Any] = load_raw(tx_view=tx_view_raw)
+    tx_loaded: dict[str, tp.Any] = load_raw(tx_view=tx_view_raw)
     return tx_loaded
 
 
 def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
-) -> tp.Dict[str, tp.Any]:
+) -> dict[str, tp.Any]:
     """Check output of the `transaction view` command."""
     # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
@@ -252,7 +252,7 @@ def check_tx_view(  # noqa: C901
 
     # check outputs
     tx_loaded_outputs = tx_loaded.get("outputs") or []
-    loaded_txouts: tp.Set[tp.Tuple[str, int, str]] = set()
+    loaded_txouts: set[tuple[str, int, str]] = set()
     for txout in tx_loaded_outputs:
         address = txout["address"]
         for amount in _load_coins_data(txout["amount"]):

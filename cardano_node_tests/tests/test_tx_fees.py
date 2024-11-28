@@ -2,7 +2,6 @@
 
 import itertools
 import logging
-import typing as tp
 
 import allure
 import hypothesis
@@ -46,7 +45,7 @@ class TestFee:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -76,7 +75,7 @@ class TestFee:
     def test_negative_fee(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         fee: int,
     ):
         """Try to send a transaction with negative fee (property-based test).
@@ -108,7 +107,7 @@ class TestFee:
     def test_smaller_fee(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         fee_change: float,
     ):
         """Try to send a transaction with smaller-than-expected fee.
@@ -152,7 +151,7 @@ class TestFee:
     def test_expected_or_higher_fee(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         fee_add: int,
     ):
         """Send a transaction with fee that is same or higher than expected."""
@@ -202,7 +201,7 @@ class TestExpectedFees:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.PoolUser]:
+    ) -> list[clusterlib.PoolUser]:
         """Create pool users."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -227,10 +226,10 @@ class TestExpectedFees:
     def _create_pool_certificates(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        pool_owners: tp.List[clusterlib.PoolUser],
+        pool_owners: list[clusterlib.PoolUser],
         temp_template: str,
         pool_data: clusterlib.PoolData,
-    ) -> tp.Tuple[str, clusterlib.TxFiles]:
+    ) -> tuple[str, clusterlib.TxFiles]:
         """Create certificates for registering a stake pool, delegating stake address."""
         # create node VRF key pair
         node_vrf = cluster_obj.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
@@ -287,10 +286,10 @@ class TestExpectedFees:
         self,
         cluster_obj: clusterlib.ClusterLib,
         tx_name: str,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         from_num: int,
         to_num: int,
-        amount_expected: tp.Tuple[int, int],
+        amount_expected: tuple[int, int],
     ):
         """Check fees for 1 tx from `from_num` payment addresses to `to_num` payment addresses."""
         amount, expected_fee = amount_expected
@@ -324,8 +323,8 @@ class TestExpectedFees:
     def test_pool_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        addr_fee: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        addr_fee: tuple[int, int],
     ):
         """Test pool registration fees."""
         no_of_addr, expected_fee = addr_fee
@@ -377,8 +376,8 @@ class TestExpectedFees:
     def test_pool_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        addr_fee: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        addr_fee: tuple[int, int],
     ):
         """Test pool deregistration fees."""
         no_of_addr, expected_fee = addr_fee
@@ -442,8 +441,8 @@ class TestExpectedFees:
     def test_addr_registration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        addr_fee: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        addr_fee: tuple[int, int],
     ):
         """Test stake address registration fees."""
         no_of_addr, expected_fee = addr_fee
@@ -483,8 +482,8 @@ class TestExpectedFees:
     def test_addr_deregistration_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        addr_fee: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        addr_fee: tuple[int, int],
     ):
         """Test stake address deregistration fees."""
         no_of_addr, expected_fee = addr_fee
@@ -526,8 +525,8 @@ class TestExpectedFees:
     def test_transaction_to_1_addr_from_1_addr_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        amount_expected: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        amount_expected: tuple[int, int],
     ):
         """Test fees for 1 tx from 1 payment address to 1 payment address."""
         temp_template = common.get_test_id(cluster)
@@ -547,8 +546,8 @@ class TestExpectedFees:
     def test_transaction_to_10_addrs_from_1_addr_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        amount_expected: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        amount_expected: tuple[int, int],
     ):
         """Test fees for 1 tx from 1 payment address to 10 payment addresses."""
         temp_template = common.get_test_id(cluster)
@@ -568,8 +567,8 @@ class TestExpectedFees:
     def test_transaction_to_1_addr_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        amount_expected: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        amount_expected: tuple[int, int],
     ):
         """Test fees for 1 tx from 10 payment addresses to 1 payment address."""
         temp_template = common.get_test_id(cluster)
@@ -589,8 +588,8 @@ class TestExpectedFees:
     def test_transaction_to_10_addrs_from_10_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        amount_expected: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        amount_expected: tuple[int, int],
     ):
         """Test fees for 1 tx from 10 payment addresses to 10 payment addresses."""
         temp_template = common.get_test_id(cluster)
@@ -613,8 +612,8 @@ class TestExpectedFees:
     def test_transaction_to_100_addrs_from_100_addrs_fees(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
-        amount_expected: tp.Tuple[int, int],
+        pool_users: list[clusterlib.PoolUser],
+        amount_expected: tuple[int, int],
     ):
         """Test fees for 1 tx from 100 payment addresses to 100 payment addresses."""
         temp_template = common.get_test_id(cluster)

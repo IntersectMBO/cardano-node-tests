@@ -456,7 +456,7 @@ class TestCommittee:
                 ), "CC Member should not be recognized"
             [r.success() for r in (reqc.cli032, reqc.cip002, reqc.cip004)]
 
-        def _add_members() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+        def _add_members() -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Add new CC members."""
             anchor_url_add = "http://www.cc-add.com"
             anchor_data_hash_add = (
@@ -572,7 +572,7 @@ class TestCommittee:
 
         def _remove_member(
             rem_member: clusterlib.CCMember, prev_action_txid: str, prev_action_ix: int
-        ) -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+        ) -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove a CC member."""
             anchor_url_rem = "http://www.cc-rem.com"
             anchor_data_hash_rem = (
@@ -677,9 +677,7 @@ class TestCommittee:
                     tx_files=tx_files_res,
                 )
 
-        def _check_cc_member1_expired(
-            committee_state: tp.Dict[str, tp.Any], curr_epoch: int
-        ) -> None:
+        def _check_cc_member1_expired(committee_state: dict[str, tp.Any], curr_epoch: int) -> None:
             member_rec = committee_state["committee"][cc_member1_key]
             if curr_epoch <= cc_member1_expire:
                 assert member_rec["status"] != "Expired", "CC Member is already expired"
@@ -690,13 +688,13 @@ class TestCommittee:
             elif curr_epoch > cc_member1_expire:
                 assert member_rec["status"] == "Expired", "CC Member should be expired"
 
-        def _check_cc_member2_removed(gov_state: tp.Dict[str, tp.Any]):
+        def _check_cc_member2_removed(gov_state: dict[str, tp.Any]):
             cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
                 cc_member2_key
             )
             assert not cc_member_val, "Removed committee member still present"
 
-        def _check_add_state(gov_state: tp.Dict[str, tp.Any]):
+        def _check_add_state(gov_state: dict[str, tp.Any]):
             for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key, cc_member3_key)):
                 cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
                     _cc_member_key
@@ -1094,7 +1092,7 @@ class TestCommittee:
                 proposals=update_proposals,
             )
 
-        def _rem_committee() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+        def _rem_committee() -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove all CC members."""
             anchor_url_rem = "http://www.cc-rem-all.com"
             anchor_data_hash_rem = (
@@ -1169,7 +1167,7 @@ class TestCommittee:
 
         def _check_rat_gov_state(
             name_template: str, action_txid: str, action_ix: int, epoch_no: int
-        ) -> tp.Dict[str, tp.Any]:
+        ) -> dict[str, tp.Any]:
             gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=gov_state, name_template=f"{name_template}_{epoch_no}"

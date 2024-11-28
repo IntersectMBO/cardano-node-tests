@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture
 def cluster_lock_pool_use_rewards(
     cluster_manager: cluster_management.ClusterManager,
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     """Lock any pool, use pots, and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         lock_resources=[
@@ -44,7 +44,7 @@ class TestNoRewards:
     def test_no_reward_unmet_pledge1(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool: tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -209,7 +209,7 @@ class TestNoRewards:
     def test_no_reward_unmet_pledge2(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool: tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
@@ -372,7 +372,7 @@ class TestNoRewards:
     def test_no_reward_deregistered_stake_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool_use_rewards: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool_use_rewards: tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the pool is not receiving rewards when owner's stake address is deregistered.
 
@@ -569,7 +569,7 @@ class TestNoRewards:
     def test_no_reward_deregistered_reward_addr(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool_use_rewards: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool_use_rewards: tuple[clusterlib.ClusterLib, str],
     ):
         """Check that the reward address is not receiving rewards when deregistered.
 
@@ -756,7 +756,7 @@ class TestNoRewards:
     def test_deregister_reward_addr_retire_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_pool_use_rewards: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_lock_pool_use_rewards: tuple[clusterlib.ClusterLib, str],
     ):
         """Test deregistering reward address and retiring stake pool.
 
@@ -779,7 +779,7 @@ class TestNoRewards:
         cluster, pool_name = cluster_lock_pool_use_rewards
         pool_num = int(pool_name.replace("node-pool", ""))
 
-        kes_period_info_errors_list: tp.List[str] = []
+        kes_period_info_errors_list: list[str] = []
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])

@@ -30,7 +30,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -56,7 +56,7 @@ def _build_reference_txin(
     payment_addr: clusterlib.AddressRecord,
     dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
     inline_datum: tp.Optional[pl.Path] = None,
-) -> tp.List[clusterlib.UTXOData]:
+) -> list[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 
     Uses `cardano-cli transaction build` command for building the transaction.
@@ -109,7 +109,7 @@ class TestBuildMinting:
     def test_minting_ref_one_token(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with reference Plutus script.
@@ -254,7 +254,7 @@ class TestBuildMinting:
     def test_minting_ref_missing_txout(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with reference Plutus script without providing TxOut for the token.
@@ -366,7 +366,7 @@ class TestBuildMinting:
     def test_reference_inputs_visibility(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         valid_redeemer: bool,
     ):
         """
@@ -513,7 +513,7 @@ class TestBuildMinting:
     def test_reference_scripts_visibility(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         valid_redeemer: bool,
     ):
         """Test visibility of reference inputs by a plutus script.
@@ -644,7 +644,7 @@ class TestBuildMinting:
     def test_inline_datum_visibility(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         scenario: str,
     ):
         """

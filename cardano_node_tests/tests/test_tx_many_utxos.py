@@ -41,7 +41,7 @@ class TestManyUTXOs:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         addrs = clusterlib_utils.create_payment_addr_records(
             *[f"tiny_tx_addr_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(3)],
@@ -62,7 +62,7 @@ class TestManyUTXOs:
         self,
         cluster_obj: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
-        out_addrs: tp.List[clusterlib.AddressRecord],
+        out_addrs: list[clusterlib.AddressRecord],
         tx_name: str,
         amount: int,
     ):
@@ -87,8 +87,8 @@ class TestManyUTXOs:
     def many_utxos(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-    ) -> tp.Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
+        payment_addrs: list[clusterlib.AddressRecord],
+    ) -> tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
         """Generate many UTxOs (100000+) with 1-2 ADA."""
         temp_template = common.get_test_id(cluster)
 
@@ -158,7 +158,7 @@ class TestManyUTXOs:
     def test_mini_transactions(
         self,
         cluster: clusterlib.ClusterLib,
-        many_utxos: tp.Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord],
+        many_utxos: tuple[clusterlib.AddressRecord, clusterlib.AddressRecord],
         subtests: pytest_subtests.SubTests,
     ):
         """Test transaction with many UTxOs (300+) with small amounts of ADA (1-10).

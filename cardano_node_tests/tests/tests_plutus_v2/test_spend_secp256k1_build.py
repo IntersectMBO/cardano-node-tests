@@ -3,7 +3,6 @@
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import hypothesis
@@ -31,7 +30,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -55,9 +54,9 @@ class TestSECP256k1:
     def build_fund_script_secp(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         request: SubRequest,
-    ) -> tp.Tuple[str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]]:
+    ) -> tuple[str, list[clusterlib.UTXOData], list[clusterlib.UTXOData]]:
         """Fund a Plutus script and create the necessary Tx outputs."""
         algorithm = request.param
         temp_template = common.get_test_id(cluster)
@@ -138,10 +137,8 @@ class TestSECP256k1:
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        build_fund_script_secp: tp.Tuple[
-            str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        build_fund_script_secp: tuple[str, list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
     ):
         """Test that it is possible to spend a locked UTxO by a script that uses a SECP function.
 
@@ -236,11 +233,9 @@ class TestSECP256k1:
     def test_overspending_execution_budget(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         number_of_iterations: int,
-        build_fund_script_secp: tp.Tuple[
-            str, tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        build_fund_script_secp: tuple[str, list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
     ):
         """Try to build a transaction with a plutus script that overspend the execution budget.
 

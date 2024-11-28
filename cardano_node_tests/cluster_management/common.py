@@ -35,7 +35,7 @@ def _get_res(path: pl.Path) -> str:
     return out.group(1)
 
 
-def get_resources_from_path(paths: tp.Iterator[pl.Path]) -> tp.List[str]:
+def get_resources_from_path(paths: tp.Iterator[pl.Path]) -> list[str]:
     """Get resources names from status files path."""
     resources = [_get_res(p) for p in paths]
     return resources

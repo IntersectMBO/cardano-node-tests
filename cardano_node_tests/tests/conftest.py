@@ -255,7 +255,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
         return
 
     alluredir = configuration.LAUNCH_PATH / alluredir
-    metadata: tp.Dict[str, tp.Any] = pytest_config.stash[metadata_key]  # type: ignore
+    metadata: dict[str, tp.Any] = pytest_config.stash[metadata_key]  # type: ignore
     with open(alluredir / "environment.properties", "w+", encoding="utf-8") as infile:
         for k, v in metadata.items():
             if isinstance(v, dict):
@@ -435,7 +435,7 @@ def cluster_singleton(
 @pytest.fixture
 def cluster_lock_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     """Lock any pool and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         lock_resources=[
@@ -451,7 +451,7 @@ def cluster_lock_pool(
 @pytest.fixture
 def cluster_use_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     """Mark any pool as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[

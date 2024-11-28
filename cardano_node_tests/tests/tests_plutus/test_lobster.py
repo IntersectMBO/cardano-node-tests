@@ -39,7 +39,7 @@ LOBSTER_DATUM_HASH = "45b0cfc220ceec5b7c1c62c4d4193d38e4eba48e8815729ce75f9c0ab0
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -65,7 +65,7 @@ def _fund_issuer(
     issuer_addr: clusterlib.AddressRecord,
     amount: int,
     collateral_amount: int,
-) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund the token issuer."""
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -111,11 +111,11 @@ def _mint_lobster_nft(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
     issuer_addr: clusterlib.AddressRecord,
-    mint_utxos: tp.List[clusterlib.UTXOData],
-    collateral_utxos: tp.List[clusterlib.UTXOData],
+    mint_utxos: list[clusterlib.UTXOData],
+    collateral_utxos: list[clusterlib.UTXOData],
     nft_amount: int,
     lovelace_amount: int,
-) -> tp.Tuple[str, tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[str, list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Mint the LobsterNFT token."""
     lobster_policyid = cluster_obj.g_transaction.get_policyid(NFT_MINT_PLUTUS)
     asset_name = b"LobsterNFT".hex()
@@ -190,11 +190,11 @@ def _deploy_lobster_nft(
     temp_template: str,
     payment_addr: clusterlib.AddressRecord,
     issuer_addr: clusterlib.AddressRecord,
-    token_utxos: tp.List[clusterlib.UTXOData],
+    token_utxos: list[clusterlib.UTXOData],
     lobster_nft_token: str,
     nft_amount: int,
     lovelace_amount: int,
-) -> tp.Tuple[str, tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[str, list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Deploy the LobsterNFT token to script address."""
     script_address = cluster_obj.g_address.gen_payment_addr(
         addr_name=f"{temp_template}_deploy_nft", payment_script_file=LOBSTER_PLUTUS
@@ -255,7 +255,7 @@ class TestLobsterChallenge:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     def test_lobster_name(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]
     ):
         """Test the Lobster Challenge.
 

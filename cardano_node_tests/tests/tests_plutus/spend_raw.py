@@ -28,14 +28,14 @@ def _fund_script(
     fee_txsize: int = FEE_REDEEM_TXSIZE,
     deposit_amount: int = 0,
     tokens: tp.Optional[
-        tp.List[plutus_common.Token]
+        list[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
     tokens_collateral: tp.Optional[
-        tp.List[plutus_common.Token]
+        list[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
     embed_datum: bool = False,
-) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
     # pylint: disable=too-many-locals,too-many-arguments
     assert plutus_op.execution_cost  # for mypy
@@ -130,8 +130,8 @@ def _spend_locked_txin(  # noqa: C901
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
     dst_addr: clusterlib.AddressRecord,
-    script_utxos: tp.List[clusterlib.UTXOData],
-    collateral_utxos: tp.List[clusterlib.UTXOData],
+    script_utxos: list[clusterlib.UTXOData],
+    collateral_utxos: list[clusterlib.UTXOData],
     plutus_op: plutus_common.PlutusOp,
     amount: int,
     fee_txsize: int = FEE_REDEEM_TXSIZE,
@@ -139,11 +139,11 @@ def _spend_locked_txin(  # noqa: C901
     tx_files: tp.Optional[clusterlib.TxFiles] = None,
     invalid_hereafter: tp.Optional[int] = None,
     invalid_before: tp.Optional[int] = None,
-    tokens: tp.Optional[tp.List[plutus_common.Token]] = None,
+    tokens: tp.Optional[list[plutus_common.Token]] = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
-) -> tp.Tuple[str, clusterlib.TxRawOutput]:
+) -> tuple[str, clusterlib.TxRawOutput]:
     """Spend the locked UTxO."""
     # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
     assert plutus_op.execution_cost

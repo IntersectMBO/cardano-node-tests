@@ -2,7 +2,6 @@
 
 import json
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -113,7 +112,7 @@ class TestProtocol:
         protocol_params = cluster.g_query.get_protocol_params()
 
         # The sets were updated for Conway, so there's nothing to add or remove at the moment.
-        union_with: tp.FrozenSet[str] = frozenset()
-        rem: tp.FrozenSet[str] = frozenset()
+        union_with: frozenset[str] = frozenset()
+        rem: frozenset[str] = frozenset()
 
         assert set(protocol_params) == PROTOCOL_PARAM_KEYS.union(union_with).difference(rem)

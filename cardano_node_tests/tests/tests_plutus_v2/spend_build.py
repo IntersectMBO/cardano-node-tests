@@ -52,11 +52,11 @@ def _build_fund_script(
     use_inline_datum: bool = True,
     collateral_amount: tp.Optional[int] = None,
     tokens_collateral: tp.Optional[
-        tp.List[plutus_common.Token]
+        list[plutus_common.Token]
     ] = None,  # tokens must already be in `payment_addr`
-) -> tp.Tuple[
-    tp.List[clusterlib.UTXOData],
-    tp.List[clusterlib.UTXOData],
+) -> tuple[
+    list[clusterlib.UTXOData],
+    list[clusterlib.UTXOData],
     tp.Optional[clusterlib.UTXOData],
     clusterlib.TxRawOutput,
 ]:
@@ -184,7 +184,7 @@ def _build_reference_txin(
     amount: int,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
-) -> tp.List[clusterlib.UTXOData]:
+) -> list[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 
     Uses `cardano-cli transaction build` command for building the transaction.

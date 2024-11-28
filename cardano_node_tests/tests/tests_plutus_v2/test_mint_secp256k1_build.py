@@ -28,7 +28,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -52,7 +52,7 @@ class TestSECP256k1:
         self,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         script_file: pl.Path,
         redeemer_file: pl.Path,
     ):
@@ -139,7 +139,7 @@ class TestSECP256k1:
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         algorithm: str,
         plutus_version: str,
     ):
@@ -216,7 +216,7 @@ class TestSECP256k1:
     def test_negative_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         test_vector: str,
         algorithm: str,
         plutus_version: str,

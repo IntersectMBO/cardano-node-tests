@@ -178,7 +178,7 @@ def get_custom_drep(
 @pytest.fixture
 def cluster_and_pool_and_rewards(
     cluster_manager: cluster_management.ClusterManager,
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     return delegation.cluster_and_pool(
         cluster_manager=cluster_manager, use_resources=[cluster_management.Resources.REWARDS]
     )
@@ -248,7 +248,7 @@ def custom_drep(
 @pytest.fixture
 def payment_addr_wpr(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_and_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
+    cluster_and_pool_and_rewards: tuple[clusterlib.ClusterLib, str],
 ) -> clusterlib.AddressRecord:
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
@@ -261,7 +261,7 @@ def payment_addr_wpr(
 @pytest.fixture
 def pool_user_wpr(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_and_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
+    cluster_and_pool_and_rewards: tuple[clusterlib.ClusterLib, str],
 ) -> clusterlib.PoolUser:
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
@@ -274,7 +274,7 @@ def pool_user_wpr(
 @pytest.fixture
 def custom_drep_wpr(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_and_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
+    cluster_and_pool_and_rewards: tuple[clusterlib.ClusterLib, str],
     payment_addr_wpr: clusterlib.AddressRecord,
 ) -> governance_utils.DRepRegistration:
     cluster, __ = cluster_and_pool_and_rewards
@@ -1270,7 +1270,7 @@ class TestDelegDReps:
     @pytest.mark.smoke
     def test_dreps_and_spo_delegation(
         self,
-        cluster_and_pool_and_rewards: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_and_pool_and_rewards: tuple[clusterlib.ClusterLib, str],
         payment_addr_wpr: clusterlib.AddressRecord,
         pool_user_wpr: clusterlib.PoolUser,
         custom_drep_wpr: governance_utils.DRepRegistration,
@@ -1403,7 +1403,7 @@ class TestDelegDReps:
 
         def _get_drep_rec(
             drep_state: governance_utils.DRepStateT,
-        ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+        ) -> dict[str, dict[str, tp.Any]]:
             return {drep[0]["keyHash"]: drep[1] for drep in drep_state}
 
         drep_states_all = _get_drep_rec(drep_state=cluster.g_conway_governance.query.drep_state())
@@ -1643,9 +1643,9 @@ class TestDRepActivity:
         deposit_amt = cluster.g_query.get_address_deposit()
 
         # Saved DRep records
-        drep1_state: tp.Dict[str, DRepStateRecord] = {}
-        drep2_state: tp.Dict[str, DRepStateRecord] = {}
-        rat_records: tp.Dict[str, DRepRatRecord] = {}
+        drep1_state: dict[str, DRepStateRecord] = {}
+        drep2_state: dict[str, DRepStateRecord] = {}
+        rat_records: dict[str, DRepRatRecord] = {}
 
         # Register and delegate stake address
         def _delegate_addr(
@@ -1769,7 +1769,7 @@ class TestDRepActivity:
                 for i, d in enumerate(governance_data.dreps_reg, start=1)
             ]
 
-            votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep]
+            votes: list[governance_utils.VotesAllT] = [*votes_cc, *votes_drep]
             vote_keys = [
                 *[r.hot_keys.hot_skey_file for r in governance_data.cc_key_members],
                 *[r.key_pair.skey_file for r in governance_data.dreps_reg],
@@ -1861,7 +1861,7 @@ class TestDRepActivity:
                 _state = {"drep1": drep1_state, "drep2": drep2_state, "rat_records": rat_records}
                 pickle.dump(_state, out_data)
 
-        def _check_records() -> tp.List[blockers.GH]:
+        def _check_records() -> list[blockers.GH]:
             found_issues = []
 
             assert drep1_state, "No DRep1 states"

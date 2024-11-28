@@ -5,7 +5,6 @@ import datetime
 import logging
 import pathlib as pl
 import shutil
-import typing as tp
 
 import allure
 import pytest
@@ -38,7 +37,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -65,10 +64,8 @@ class TestBuildMinting:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-    ) -> tp.Tuple[
-        tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput
-    ]:
+        payment_addrs: list[clusterlib.AddressRecord],
+    ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
         """Create UTxOs for `test_ttl_horizon`."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -107,7 +104,7 @@ class TestBuildMinting:
     def test_minting_one_token(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
         submit_method: str,
     ):
@@ -248,7 +245,7 @@ class TestBuildMinting:
     def test_minting_missing_txout(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
         submit_method: str,
     ):
@@ -366,7 +363,7 @@ class TestBuildMinting:
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
         submit_method: str,
     ):
@@ -527,7 +524,7 @@ class TestBuildMinting:
     def test_two_scripts_minting(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
         submit_method: str,
     ):
@@ -793,7 +790,7 @@ class TestBuildMinting:
     def test_minting_context_equivalence(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Test context equivalence while minting a token.
@@ -994,7 +991,7 @@ class TestBuildMinting:
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         key: str,
         plutus_version: str,
         submit_method: str,
@@ -1153,9 +1150,9 @@ class TestBuildMinting:
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        past_horizon_funds: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput
+        payment_addrs: list[clusterlib.AddressRecord],
+        past_horizon_funds: tuple[
+            list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput
         ],
         plutus_version: str,
         ttl_offset: int,
@@ -1273,7 +1270,7 @@ class TestCollateralOutput:
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
         submit_method: str,
     ):
@@ -1431,7 +1428,7 @@ class TestPlutusBatch5V3Builtins:
         skip_bootstrap: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment address."""
         test_id = common.get_test_id(cluster)
         addrs = clusterlib_utils.create_payment_addr_records(
@@ -1452,7 +1449,7 @@ class TestPlutusBatch5V3Builtins:
     def run_scenario(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_v_record: plutus_common.PlutusScriptData,
         success_expected: bool,
     ):
@@ -1544,7 +1541,7 @@ class TestPlutusBatch5V3Builtins:
         self,
         skip_bootstrap: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         script: plutus_common.PlutusScriptData,
     ):
         """Test scenarios that are supposed to succeed."""
@@ -1567,7 +1564,7 @@ class TestPlutusBatch5V3Builtins:
         self,
         skip_bootstrap: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         script: plutus_common.PlutusScriptData,
     ):
         """Test scenarios that are supposed to fail."""

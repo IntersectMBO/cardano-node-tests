@@ -27,7 +27,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -59,7 +59,7 @@ class TestCompatibility:
     def test_inline_datum_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an inline datum using old Tx era.
 
@@ -118,7 +118,7 @@ class TestCompatibility:
     def test_reference_script_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a reference script using old Tx era."""
         __: tp.Any  # mypy workaround
@@ -176,7 +176,7 @@ class TestCompatibility:
     def test_ro_reference_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test building Tx with read-only reference input using old Tx era.
 

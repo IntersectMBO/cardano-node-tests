@@ -2,7 +2,6 @@
 
 import logging
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -29,9 +28,7 @@ RESERVES = "reserves"
 TREASURY = "treasury"
 
 
-def _wait_for_ada_pots(
-    epoch_from: int, expected_len: int = 2
-) -> tp.List[dbsync_queries.ADAPotsDBRow]:
+def _wait_for_ada_pots(epoch_from: int, expected_len: int = 2) -> list[dbsync_queries.ADAPotsDBRow]:
     pots_records = []
     for r in range(4):
         if r > 0:
@@ -63,7 +60,7 @@ def cluster_pots(
 def pool_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster_pots: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.PoolUser]:
+) -> list[clusterlib.PoolUser]:
     """Create pool user."""
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value:
@@ -90,8 +87,8 @@ def pool_users(
 def registered_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster_pots: clusterlib.ClusterLib,
-    pool_users: tp.List[clusterlib.PoolUser],
-) -> tp.List[clusterlib.PoolUser]:
+    pool_users: list[clusterlib.PoolUser],
+) -> list[clusterlib.PoolUser]:
     """Register pool user's stake address."""
     registered = pool_users[1:3]
 
@@ -131,7 +128,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
     ):
         """Send funds from the reserves pot to the treasury pot.
 
@@ -206,7 +203,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
     ):
         """Send funds from the reserves pot to the treasury pot.
 
@@ -286,7 +283,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
     ):
         """Send funds from the treasury pot to the reserves pot.
 
@@ -361,7 +358,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
     ):
         """Send funds from the treasury pot to the reserves pot.
 
@@ -442,7 +439,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_users: tp.List[clusterlib.PoolUser],
+        registered_users: list[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Send funds from the reserves or treasury pot to stake address.
@@ -533,7 +530,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_users: tp.List[clusterlib.PoolUser],
+        registered_users: list[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Send funds from the reserves or treasury pot to stake address.
@@ -630,7 +627,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_users: tp.List[clusterlib.PoolUser],
+        registered_users: list[clusterlib.PoolUser],
     ):
         """Send funds from the reserves and treasury pots to stake address.
 
@@ -763,7 +760,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        registered_users: tp.List[clusterlib.PoolUser],
+        registered_users: list[clusterlib.PoolUser],
     ):
         """Send funds from the reserves and treasury pots to multiple stake addresses in single TX.
 
@@ -908,7 +905,7 @@ class TestMIRCerts:
         skip_on_hf_shortcut: None,  # pylint: disable=unused-argument # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
         fund_src: str,
         addr_history: str,
     ):
@@ -1039,7 +1036,7 @@ class TestNegativeMIRCerts:
     def test_exceed_pay_stake_addr_from(
         self,
         cluster_pots: clusterlib.ClusterLib,
-        registered_users: tp.List[clusterlib.PoolUser],
+        registered_users: list[clusterlib.PoolUser],
         fund_src: str,
     ):
         """Try to send more funds than available from the reserves or treasury pot to stake address.

@@ -492,7 +492,7 @@ class ScriptCost:
 
 
 def check_plutus_costs(
-    plutus_costs: tp.List[dict], expected_costs: tp.List[ExecutionCost], frac: float = 0.15
+    plutus_costs: list[dict], expected_costs: list[ExecutionCost], frac: float = 0.15
 ) -> None:
     """Check plutus transaction cost.
 

@@ -1,6 +1,5 @@
 import logging
 import pathlib as pl
-import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -64,8 +63,8 @@ def get_raw_tx_values(
 
 
 def get_txins_txouts(
-    txins: tp.List[clusterlib.UTXOData], txouts: tp.List[clusterlib.TxOut]
-) -> tp.Tuple[tp.List[str], tp.List[str]]:
+    txins: list[clusterlib.UTXOData], txouts: list[clusterlib.TxOut]
+) -> tuple[list[str], list[str]]:
     txins_combined = [f"{x.utxo_hash}#{x.utxo_ix}" for x in txins]
     txouts_combined = [f"{x.address}+{x.amount}" for x in txouts]
     return txins_combined, txouts_combined

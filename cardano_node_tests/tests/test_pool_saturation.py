@@ -3,7 +3,6 @@
 import dataclasses
 import logging
 import pickle
-import typing as tp
 
 import allure
 import pytest
@@ -35,10 +34,10 @@ class PoolRecord:
     id_dec: str
     reward_addr: clusterlib.PoolUser
     delegation_out: delegation.DelegationOut
-    user_rewards: tp.List[RewardRecord]
-    owner_rewards: tp.List[RewardRecord]
-    blocks_minted: tp.Dict[int, int]
-    saturation_amounts: tp.Dict[int, int]
+    user_rewards: list[RewardRecord]
+    owner_rewards: list[RewardRecord]
+    blocks_minted: dict[int, int]
+    saturation_amounts: dict[int, int]
 
 
 @pytest.fixture
@@ -74,11 +73,9 @@ def _get_saturation_threshold(
     return saturation_threshold
 
 
-def _get_reward_per_block(
-    pool_record: PoolRecord, owner_rewards: bool = False
-) -> tp.Dict[int, float]:
+def _get_reward_per_block(pool_record: PoolRecord, owner_rewards: bool = False) -> dict[int, float]:
     """For each epoch calculate reward per block per staked Lovelace."""
-    results: tp.Dict[int, float] = {}
+    results: dict[int, float] = {}
 
     rew_db = pool_record.user_rewards
     if owner_rewards:
@@ -131,7 +128,7 @@ def _withdraw_rewards(
     return tx_raw_withdrawal_output
 
 
-def _check_pool_records(pool_records: tp.Dict[int, PoolRecord]) -> None:
+def _check_pool_records(pool_records: dict[int, PoolRecord]) -> None:
     """Check that pool records has expected values."""
     pool1_user_rewards_per_block = _get_reward_per_block(pool_records[1])
     pool2_user_rewards_per_block = _get_reward_per_block(pool_records[2])
@@ -244,7 +241,7 @@ class TestPoolSaturation:
         initial_balance = 1_000_000_000
 
         faucet_rec = cluster_manager.cache.addrs_data["faucet"]
-        pool_records: tp.Dict[int, PoolRecord] = {}
+        pool_records: dict[int, PoolRecord] = {}
 
         def _save_pool_records() -> None:
             """Save debugging data in case of test failure."""

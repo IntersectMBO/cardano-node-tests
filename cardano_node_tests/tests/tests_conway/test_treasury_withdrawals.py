@@ -2,7 +2,6 @@
 
 # pylint: disable=expression-not-assigned
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -272,7 +271,7 @@ class TestTreasuryWithdrawals:
                         ]
                     )
 
-            votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
+            votes: list[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
             spo_keys = [r.skey_file for r in governance_data.pools_cold] if votes_spo else []
             vote_keys = [
                 *[r.hot_keys.hot_skey_file for r in governance_data.cc_key_members],
@@ -525,7 +524,7 @@ class TestTreasuryWithdrawals:
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
 
-        votes: tp.List[governance_utils.VotesAllT] = []
+        votes: list[governance_utils.VotesAllT] = []
         for action_ix in range(actions_num):
             prop_action = governance_utils.lookup_proposal(
                 gov_state=action_gov_state, action_txid=action_txid, action_ix=action_ix
