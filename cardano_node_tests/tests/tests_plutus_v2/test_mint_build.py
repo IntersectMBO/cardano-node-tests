@@ -3,7 +3,6 @@
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import pytest
@@ -54,8 +53,8 @@ def _build_reference_txin(
     cluster: clusterlib.ClusterLib,
     amount: int,
     payment_addr: clusterlib.AddressRecord,
-    dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
-    inline_datum: tp.Optional[pl.Path] = None,
+    dst_addr: clusterlib.AddressRecord | None = None,
+    inline_datum: pl.Path | None = None,
 ) -> list[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 

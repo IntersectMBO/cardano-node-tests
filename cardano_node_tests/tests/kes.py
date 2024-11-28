@@ -28,8 +28,8 @@ def check_kes_period_info_result(  # noqa: C901
     kes_output: dict[str, tp.Any],
     expected_scenario: str,
     check_id: str,
-    expected_start_kes: tp.Optional[int] = None,
-    pool_num: tp.Optional[int] = None,
+    expected_start_kes: int | None = None,
+    pool_num: int | None = None,
 ) -> list[str]:
     """Check output `kes-period-info` command.
 

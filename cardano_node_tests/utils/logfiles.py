@@ -196,8 +196,8 @@ def _search_log_lines(
     logfile: pl.Path,
     rotated_logs: list[RotableLog],
     errors_re: re.Pattern,
-    errors_ignored_re: tp.Optional[re.Pattern] = None,
-    errors_look_back_re: tp.Optional[re.Pattern] = None,
+    errors_ignored_re: re.Pattern | None = None,
+    errors_look_back_re: re.Pattern | None = None,
 ) -> list[tuple[pl.Path, str]]:
     """Search for errors in the log file and, if needed, in the corresponding rotated logs."""
     errors = []

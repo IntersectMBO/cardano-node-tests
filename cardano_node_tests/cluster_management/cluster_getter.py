@@ -184,7 +184,7 @@ class ClusterGetter:
             f"stop_cmd='{startup_files.stop_script}'"
         )
 
-        excp: tp.Optional[Exception] = None
+        excp: Exception | None = None
         for i in range(2):
             if i > 0:
                 self.log(

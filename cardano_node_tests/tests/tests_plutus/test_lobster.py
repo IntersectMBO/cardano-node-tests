@@ -6,7 +6,6 @@ See https://github.com/input-output-hk/lobster-challenge
 import logging
 import pathlib as pl
 import random
-import typing as tp
 
 import allure
 import pytest
@@ -347,7 +346,7 @@ class TestLobsterChallenge:
 
         vote_utxos = token_utxos_step3
         vote_counter = 0
-        utxo_counter_token: tp.Optional[clusterlib.UTXOData] = None
+        utxo_counter_token: clusterlib.UTXOData | None = None
         for vote_num, vote_val in enumerate(votes, start=1):
             # normal votes
             if vote_num <= votes_num:

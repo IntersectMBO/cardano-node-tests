@@ -27,7 +27,7 @@ class UpdateProposal:
     arg: str
     value: tp.Any
     name: str = ""
-    check_func: tp.Optional[tp.Callable] = None
+    check_func: tp.Callable | None = None
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -56,31 +56,31 @@ def build_and_submit_tx(
     readonly_reference_txins: clusterlib.OptionalUTXOData = (),
     script_txins: clusterlib.OptionalScriptTxIn = (),
     return_collateral_txouts: clusterlib.OptionalTxOuts = (),
-    total_collateral_amount: tp.Optional[int] = None,
+    total_collateral_amount: int | None = None,
     mint: clusterlib.OptionalMint = (),
-    tx_files: tp.Optional[clusterlib.TxFiles] = None,
+    tx_files: clusterlib.TxFiles | None = None,
     complex_certs: clusterlib.OptionalScriptCerts = (),
     complex_proposals: clusterlib.OptionalScriptProposals = (),
     change_address: str = "",
-    fee_buffer: tp.Optional[int] = None,
-    raw_fee: tp.Optional[int] = None,
+    fee_buffer: int | None = None,
+    raw_fee: int | None = None,
     required_signers: cl_types.OptionalFiles = (),
-    required_signer_hashes: tp.Optional[list[str]] = None,
+    required_signer_hashes: list[str] | None = None,
     withdrawals: clusterlib.OptionalTxOuts = (),
     script_withdrawals: clusterlib.OptionalScriptWithdrawals = (),
     script_votes: clusterlib.OptionalScriptVotes = (),
-    deposit: tp.Optional[int] = None,
-    current_treasury_value: tp.Optional[int] = None,
-    treasury_donation: tp.Optional[int] = None,
-    invalid_hereafter: tp.Optional[int] = None,
-    invalid_before: tp.Optional[int] = None,
-    witness_override: tp.Optional[int] = None,
+    deposit: int | None = None,
+    current_treasury_value: int | None = None,
+    treasury_donation: int | None = None,
+    invalid_hereafter: int | None = None,
+    invalid_before: int | None = None,
+    witness_override: int | None = None,
     witness_count_add: int = 0,
     script_valid: bool = True,
-    calc_script_cost_file: tp.Optional[cl_types.FileType] = None,
+    calc_script_cost_file: cl_types.FileType | None = None,
     join_txouts: bool = True,
     destination_dir: cl_types.FileType = ".",
-    cli_asset_balancing: tp.Optional[bool] = None,
+    cli_asset_balancing: bool | None = None,
 ) -> clusterlib.TxRawOutput:
     """
     Build and submit a transaction.
@@ -246,7 +246,7 @@ def deregister_stake_address(
     pool_user: clusterlib.PoolUser,
     name_template: str,
     deposit_amt: int = -1,
-) -> tp.Optional[clusterlib.TxRawOutput]:
+) -> clusterlib.TxRawOutput | None:
     """Deregister stake address."""
     stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
     if not stake_addr_info:
@@ -289,7 +289,7 @@ def deregister_stake_address(
 def create_payment_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
-    stake_vkey_file: tp.Optional[cl_types.FileType] = None,
+    stake_vkey_file: cl_types.FileType | None = None,
     destination_dir: cl_types.FileType = ".",
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address(es)."""
@@ -560,8 +560,8 @@ def mint_or_burn_witness(
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: list[TokenRecord],
     temp_template: str,
-    invalid_hereafter: tp.Optional[int] = None,
-    invalid_before: tp.Optional[int] = None,
+    invalid_hereafter: int | None = None,
+    invalid_before: int | None = None,
     submit_method: str = submit_utils.SubmitMethods.CLI,
     use_build_cmd: bool = False,
     sign_incrementally: bool = False,
@@ -992,7 +992,7 @@ def get_ledger_state(
 def save_ledger_state(
     cluster_obj: clusterlib.ClusterLib,
     state_name: str,
-    ledger_state: tp.Optional[dict] = None,
+    ledger_state: dict | None = None,
     destination_dir: cl_types.FileType = ".",
 ) -> pl.Path:
     """Save ledger state to file.
@@ -1163,7 +1163,7 @@ def create_script_context(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
     redeemer_file: pl.Path,
-    tx_file: tp.Optional[pl.Path] = None,
+    tx_file: pl.Path | None = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps)."""
     if plutus_version == 1:

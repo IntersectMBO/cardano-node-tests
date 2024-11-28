@@ -217,9 +217,9 @@ def cast_vote(
     payment_addr: clusterlib.AddressRecord,
     action_txid: str,
     action_ix: int,
-    approve_cc: tp.Optional[bool] = None,
-    approve_drep: tp.Optional[bool] = None,
-    approve_spo: tp.Optional[bool] = None,
+    approve_cc: bool | None = None,
+    approve_drep: bool | None = None,
+    approve_spo: bool | None = None,
     cc_skip_votes: bool = False,
     drep_skip_votes: bool = False,
     spo_skip_votes: bool = False,
@@ -489,7 +489,7 @@ def propose_pparams_update(
     anchor_data_hash: str,
     pool_user: clusterlib.PoolUser,
     proposals: list[clusterlib_utils.UpdateProposal],
-    prev_action_rec: tp.Optional[governance_utils.PrevActionRec] = None,
+    prev_action_rec: governance_utils.PrevActionRec | None = None,
 ) -> PParamPropRec:
     """Propose a pparams update."""
     deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]

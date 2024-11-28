@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -21,12 +20,9 @@ def _build_fund_script(
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
-    tokens: tp.Optional[
-        list[plutus_common.Token]
-    ] = None,  # tokens must already be in `payment_addr`
-    tokens_collateral: tp.Optional[
-        list[plutus_common.Token]
-    ] = None,  # tokens must already be in `payment_addr`
+    tokens: list[plutus_common.Token] | None = None,  # tokens must already be in `payment_addr`
+    tokens_collateral: list[plutus_common.Token]
+    | None = None,  # tokens must already be in `payment_addr`
     embed_datum: bool = False,
 ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO.
@@ -139,14 +135,14 @@ def _build_spend_locked_txin(  # noqa: C901
     amount: int,
     deposit_amount: int = 0,
     txins: clusterlib.OptionalUTXOData = (),
-    tx_files: tp.Optional[clusterlib.TxFiles] = None,
-    invalid_hereafter: tp.Optional[int] = None,
-    invalid_before: tp.Optional[int] = None,
-    tokens: tp.Optional[list[plutus_common.Token]] = None,
+    tx_files: clusterlib.TxFiles | None = None,
+    invalid_hereafter: int | None = None,
+    invalid_before: int | None = None,
+    tokens: list[plutus_common.Token] | None = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
-) -> tuple[str, tp.Optional[clusterlib.TxRawOutput], list]:
+) -> tuple[str, clusterlib.TxRawOutput | None, list]:
     """Spend the locked UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.

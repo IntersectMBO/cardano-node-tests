@@ -1,7 +1,6 @@
 import contextlib
 import logging
 import random
-import typing as tp
 
 import cardano_clusterlib.types as cl_types
 from cardano_clusterlib import clusterlib
@@ -16,13 +15,13 @@ LOGGER = logging.getLogger(__name__)
 def fund_from_faucet(
     *dst_addrs: clusterlib.AddressRecord | clusterlib.PoolUser,
     cluster_obj: clusterlib.ClusterLib,
-    faucet_data: tp.Optional[dict] = None,
-    all_faucets: tp.Optional[dict[str, dict]] = None,
+    faucet_data: dict | None = None,
+    all_faucets: dict[str, dict] | None = None,
     amount: None | int | list[int] = None,
-    tx_name: tp.Optional[str] = None,
+    tx_name: str | None = None,
     destination_dir: clusterlib.FileType = ".",
     force: bool = False,
-) -> tp.Optional[clusterlib.TxRawOutput]:
+) -> clusterlib.TxRawOutput | None:
     """Send `amount` from faucet addr to all `dst_addrs`."""
     if amount is None:
         amount = 1000_000_000
@@ -76,7 +75,7 @@ def return_funds_to_faucet(
     cluster_obj: clusterlib.ClusterLib,
     faucet_addr: str,
     amount: int | list[int] = -1,
-    tx_name: tp.Optional[str] = None,
+    tx_name: str | None = None,
     destination_dir: cl_types.FileType = ".",
 ) -> None:
     """Send `amount` from all `src_addrs` to `faucet_addr`.

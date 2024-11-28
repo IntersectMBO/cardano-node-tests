@@ -12,7 +12,7 @@ class ClusterManagerCache:
     """
 
     # single `ClusterLib` instance can be used in multiple tests executed on the same worker
-    cluster_obj: tp.Optional[clusterlib.ClusterLib] = None
+    cluster_obj: clusterlib.ClusterLib | None = None
     # data for initialized cluster instance
     test_data: dict = dataclasses.field(default_factory=dict)
     addrs_data: dict = dataclasses.field(default_factory=dict)

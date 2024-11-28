@@ -11,7 +11,6 @@ import logging
 import pathlib as pl
 import random
 import re
-import typing as tp
 
 import allure
 import hypothesis
@@ -48,9 +47,9 @@ def multisig_tx(
     dst_address: str,
     amount: int,
     payment_skey_files: list[pl.Path],
-    multisig_script: tp.Optional[pl.Path] = None,
-    invalid_hereafter: tp.Optional[int] = None,
-    invalid_before: tp.Optional[int] = None,
+    multisig_script: pl.Path | None = None,
+    invalid_hereafter: int | None = None,
+    invalid_before: int | None = None,
     use_build_cmd: bool = False,
     submit_method: str = submit_utils.SubmitMethods.CLI,
 ) -> clusterlib.TxRawOutput:

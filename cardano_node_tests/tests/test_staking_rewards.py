@@ -890,11 +890,11 @@ class TestRewards:
                     )
                 )
 
-                mir_tx_raw_reserves: tp.Optional[clusterlib.TxRawOutput] = None
+                mir_tx_raw_reserves: clusterlib.TxRawOutput | None = None
                 if mir_reward and this_epoch == init_epoch + 2:
                     mir_tx_raw_reserves = _mir_tx("reserves")
 
-                mir_tx_raw_treasury: tp.Optional[clusterlib.TxRawOutput] = None
+                mir_tx_raw_treasury: clusterlib.TxRawOutput | None = None
                 if mir_reward and this_epoch == init_epoch + 3:
                     assert reward_per_epoch > mir_reward
                     mir_tx_raw_treasury = _mir_tx("treasury")

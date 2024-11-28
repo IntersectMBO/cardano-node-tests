@@ -65,7 +65,7 @@ class UTxORecord:
     datum_hash: str = ""
     inline_datum_hash: str = ""
     inline_datum: str | dict | None = None
-    reference_script: tp.Optional[dict] = None
+    reference_script: dict | None = None
     reference_script_hash: str = ""
 
 
@@ -81,7 +81,7 @@ class GetUTxORecord:
 @dataclasses.dataclass(frozen=True, order=True)
 class PaymentAddrRecord:
     payment_address: str
-    stake_address: tp.Optional[str]
+    stake_address: str | None
     amount_sum: int
     utxos: list[GetUTxORecord]
 
@@ -100,7 +100,7 @@ class PoolDataRecord:
     pledge: int
     reward_addr: str
     active_epoch_no: int
-    meta_id: tp.Optional[int]
+    meta_id: int | None
     margin: float
     fixed_cost: int
     registered_tx_id: int
@@ -108,9 +108,9 @@ class PoolDataRecord:
     metadata_hash: str
     owners: list[str]
     relays: list[dict[str, dict[str, tp.Any]]]
-    retire_cert_index: tp.Optional[int]
-    retire_announced_tx_id: tp.Optional[int]
-    retiring_epoch: tp.Optional[int]
+    retire_cert_index: int | None
+    retire_announced_tx_id: int | None
+    retiring_epoch: int | None
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -141,8 +141,8 @@ class TxRecord:
     fee: int
     deposit: int
     size: int
-    invalid_before: tp.Optional[int]
-    invalid_hereafter: tp.Optional[int]
+    invalid_before: int | None
+    invalid_hereafter: int | None
     treasury_donation: int
     txins: list[UTxORecord]
     txouts: list[UTxORecord]
@@ -204,7 +204,7 @@ class DrepRegistrationRecord:
     cert_index: int
     deposit: int
     drep_hash_id: int
-    voting_anchor_id: tp.Optional[int]
+    voting_anchor_id: int | None
     hash_hex: str
     hash_bech32: str
     has_script: bool
@@ -217,10 +217,10 @@ class OffChainVoteDataRecord:
     hash: str
     json: dict
     bytes: str
-    warning: tp.Optional[str]
+    warning: str | None
     language: str
-    comment: tp.Optional[str]
-    is_valid: tp.Optional[bool]
+    comment: str | None
+    is_valid: bool | None
     authors: list[dict[str, tp.Any]]
     references: list[dict[str, tp.Any]]
     gov_action_data: dict[str, tp.Any]

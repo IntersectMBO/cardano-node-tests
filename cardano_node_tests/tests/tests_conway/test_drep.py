@@ -62,7 +62,7 @@ def get_payment_addr(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str = "",
-    amount: tp.Optional[int] = None,
+    amount: int | None = None,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
 
@@ -1822,8 +1822,8 @@ class TestDRepActivity:
 
         def _save_drep_states(
             id: str,
-            drep1: tp.Optional[governance_utils.DRepRegistration],
-            drep2: tp.Optional[governance_utils.DRepRegistration],
+            drep1: governance_utils.DRepRegistration | None,
+            drep2: governance_utils.DRepRegistration | None,
         ) -> None:
             curr_epoch = cluster.g_query.get_epoch()
             if drep1 is not None:

@@ -37,8 +37,8 @@ class ClusterEnv:
 class ServiceStatus:
     name: str
     status: str
-    pid: tp.Optional[int]
-    uptime: tp.Optional[str]
+    pid: int | None
+    uptime: str | None
     message: str = ""
 
 
@@ -347,7 +347,7 @@ def get_cluster_env() -> ClusterEnv:
 
 
 def reload_supervisor_config(
-    instance_num: tp.Optional[int] = None, delay: int = configuration.TX_SUBMISSION_DELAY
+    instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
     """Reload supervisor configuration."""
     LOGGER.info("Reloading supervisor configuration.")
@@ -380,7 +380,7 @@ def start_cluster(cmd: str, args: list[str]) -> clusterlib.ClusterLib:
 
 
 def restart_all_nodes(
-    instance_num: tp.Optional[int] = None, delay: int = configuration.TX_SUBMISSION_DELAY
+    instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
@@ -402,9 +402,7 @@ def restart_all_nodes(
         time.sleep(delay)
 
 
-def services_action(
-    service_names: list[str], action: str, instance_num: tp.Optional[int] = None
-) -> None:
+def services_action(service_names: list[str], action: str, instance_num: int | None = None) -> None:
     """Perform action on services on the running cluster."""
     LOGGER.info(f"Performing '{action}' action on services {service_names}.")
 
@@ -424,13 +422,13 @@ def services_action(
             ) from exc
 
 
-def start_nodes(node_names: list[str], instance_num: tp.Optional[int] = None) -> None:
+def start_nodes(node_names: list[str], instance_num: int | None = None) -> None:
     """Start list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="start", instance_num=instance_num)
 
 
-def stop_nodes(node_names: list[str], instance_num: tp.Optional[int] = None) -> None:
+def stop_nodes(node_names: list[str], instance_num: int | None = None) -> None:
     """Stop list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="stop", instance_num=instance_num)
@@ -438,7 +436,7 @@ def stop_nodes(node_names: list[str], instance_num: tp.Optional[int] = None) -> 
 
 def restart_nodes(
     node_names: list[str],
-    instance_num: tp.Optional[int] = None,
+    instance_num: int | None = None,
     delay: int = configuration.TX_SUBMISSION_DELAY,
 ) -> None:
     """Restart list of Cardano nodes of the running cluster."""
@@ -451,7 +449,7 @@ def restart_nodes(
 
 
 def services_status(
-    service_names: tp.Optional[list[str]] = None, instance_num: tp.Optional[int] = None
+    service_names: list[str] | None = None, instance_num: int | None = None
 ) -> list[ServiceStatus]:
     """Return status info for list of services running on the running cluster (all by default)."""
     if instance_num is None:

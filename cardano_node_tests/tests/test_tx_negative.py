@@ -221,10 +221,10 @@ class TestNegative:
         cluster_obj: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         temp_template: str,
-        invalid_before: tp.Optional[int] = None,
-        invalid_hereafter: tp.Optional[int] = None,
+        invalid_before: int | None = None,
+        invalid_hereafter: int | None = None,
         use_build_cmd=False,
-    ) -> tuple[tp.Optional[int], str, tp.Optional[clusterlib.TxRawOutput]]:
+    ) -> tuple[int | None, str, clusterlib.TxRawOutput | None]:
         """Try to build and submit a transaction with wrong validity interval."""
         src_address = pool_users[0].payment.address
         dst_address = pool_users[1].payment.address
@@ -288,7 +288,7 @@ class TestNegative:
 
     def _get_validity_range(
         self, cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path
-    ) -> tuple[tp.Optional[int], tp.Optional[int]]:
+    ) -> tuple[int | None, int | None]:
         """Get validity range from a transaction body."""
         tx_loaded = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_body_file)
 
