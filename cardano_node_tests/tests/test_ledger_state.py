@@ -39,7 +39,7 @@ class TestLedgerState:
         # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         temp_template = common.get_test_id(cluster)
 
-        # make sure the queries can be finished in single epoch
+        # Make sure the queries can be finished in single epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
@@ -86,22 +86,22 @@ class TestLedgerState:
                 f"{LEDGER_STATE_KEYS.difference(ledger_state_keys)}"
             )
 
-        # stake addresses (hashes) and corresponding amounts
+        # Stake addresses (hashes) and corresponding amounts
         stake_mark = _get_hashes("pstakeMark")
         stake_set = _get_hashes("pstakeSet")
         stake_go = _get_hashes("pstakeGo")
 
-        # pools (hashes) and stake addresses (hashes) delegated to corresponding pool
+        # Pools (hashes) and stake addresses (hashes) delegated to corresponding pool
         delegations_mark = _get_delegations("pstakeMark")
         delegations_set = _get_delegations("pstakeSet")
         delegations_go = _get_delegations("pstakeGo")
 
-        # all delegated stake addresses (hashes)
+        # All delegated stake addresses (hashes)
         delegated_hashes_mark = set(itertools.chain.from_iterable(delegations_mark.values()))
         delegated_hashes_set = set(itertools.chain.from_iterable(delegations_set.values()))
         delegated_hashes_go = set(itertools.chain.from_iterable(delegations_go.values()))
 
-        # check if all delegated addresses are listed among stake addresses
+        # Check if all delegated addresses are listed among stake addresses
         stake_hashes_mark = set(stake_mark)
         if not delegated_hashes_mark.issubset(stake_hashes_mark):
             errors.append(
@@ -131,7 +131,7 @@ class TestLedgerState:
         for pool_id_dec in delegation_pool_ids:
             pool_id = helpers.encode_bech32(prefix="pool", data=pool_id_dec)
 
-            # get stake info from ledger state
+            # Get stake info from ledger state
             pstake_hashes_mark = delegations_mark.get(pool_id_dec) or ()
             seen_hashes_mark.update(pstake_hashes_mark)
             pstake_amounts_mark = [stake_mark[h] for h in pstake_hashes_mark]
@@ -147,7 +147,7 @@ class TestLedgerState:
             pstake_amounts_go = [stake_go[h] for h in pstake_hashes_go]
             pstake_sum_go = functools.reduce(lambda x, y: x + y, pstake_amounts_go, 0)
 
-            # get stake info from `stake-snapshot` command
+            # Get stake info from `stake-snapshot` command
             stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_ids=[pool_id])
             if "pools" in stake_snapshot:
                 pstake_mark_cmd = stake_snapshot["pools"][pool_id_dec]["stakeMark"]
@@ -197,7 +197,7 @@ class TestLedgerState:
                 errors.append(f"total_set: {sum_set} != {stake_snapshot['total']['stakeSet']}")
             if sum_go != stake_snapshot["total"]["stakeGo"]:
                 errors.append(f"total_go: {sum_go} != {stake_snapshot['total']['stakeGo']}")
-        # active stake can be lower than sum of stakes, as some pools may not be running
+        # Active stake can be lower than sum of stakes, as some pools may not be running
         # and minting blocks
         else:
             if sum_mark < stake_snapshot["activeStakeMark"]:

@@ -40,7 +40,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -73,7 +73,7 @@ class TestInlineDatum:
             addr_name=temp_template, payment_script_file=plutus_op.script_file
         )
 
-        # small datum
+        # Small datum
 
         txouts_with_small_inline_datum = [
             clusterlib.TxOut(
@@ -113,7 +113,7 @@ class TestInlineDatum:
             min_utxo_small_datum_hash, expected_min_small_datum_hash, frac=0.15
         )
 
-        # big datum
+        # Big datum
 
         txouts_with_big_inline_datum = [
             clusterlib.TxOut(
@@ -153,7 +153,7 @@ class TestInlineDatum:
             min_utxo_big_datum_hash, expected_min_big_datum_hash, frac=0.15
         )
 
-        # check that the min UTxO value with an inline datum depends on the size of the datum
+        # Check that the min UTxO value with an inline datum depends on the size of the datum
 
         assert (
             min_utxo_small_inline_datum < min_utxo_small_datum_hash
@@ -210,7 +210,7 @@ class TestNegativeInlineDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_V2_COST,
         )
 
-        # create a Tx output with an invalid inline datum at the script address
+        # Create a Tx output with an invalid inline datum at the script address
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             spend_build._build_fund_script(
@@ -246,11 +246,11 @@ class TestNegativeInlineDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
             cluster=cluster,
@@ -259,7 +259,7 @@ class TestNegativeInlineDatum:
             plutus_op=plutus_op,
         )
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -364,12 +364,12 @@ class TestNegativeInlineDatum:
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
             cluster=cluster,

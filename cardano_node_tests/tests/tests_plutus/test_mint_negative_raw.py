@@ -38,7 +38,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -74,7 +74,7 @@ class TestMintingNegative:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
 
         minting_cost = plutus_common.compute_cost(
@@ -257,7 +257,7 @@ class TestMintingNegative:
                 txouts=mint_txouts,
                 script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
-                # set execution units too low - to half of the expected values
+                # Set execution units too low - to half of the expected values
                 execution_units=(
                     plutus_v_record.execution_cost.per_time // 2,
                     plutus_v_record.execution_cost.per_space // 2,
@@ -367,7 +367,7 @@ class TestMintingNegative:
 
         fee_subtract = 300_000
         txouts_step2 = [
-            # add subtracted fee to the transferred Lovelace amount so the Tx remains balanced
+            # Add subtracted fee to the transferred Lovelace amount so the Tx remains balanced
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount + fee_subtract),
             *mint_txouts,
         ]
@@ -458,7 +458,7 @@ class TestMintingNegative:
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
 
         policyid = cluster.g_transaction.get_policyid(plutus_op.script_file)
@@ -716,7 +716,7 @@ class TestNegativeCollateral:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with an invalid collateral
+        # It should NOT be possible to mint with an invalid collateral
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         assert "NoCollateralInputs" in str(excinfo.value)
@@ -752,7 +752,7 @@ class TestNegativeCollateral:
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
-        # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
+        # Increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
         execution_cost = dataclasses.replace(plutus_v_record.execution_cost, fixed_cost=2_000_000)
 
         minting_cost = plutus_common.compute_cost(
@@ -820,7 +820,7 @@ class TestNegativeCollateral:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with a collateral with insufficient funds
+        # It should NOT be possible to mint with a collateral with insufficient funds
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         assert "InsufficientCollateral" in str(excinfo.value)

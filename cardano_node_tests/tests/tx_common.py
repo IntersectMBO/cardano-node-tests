@@ -41,7 +41,7 @@ def get_raw_tx_values(
 
     src_addr_highest_utxo = cluster_obj.g_query.get_utxo_with_highest_amount(src_address)
 
-    # use only the UTxO with the highest amount
+    # Use only the UTxO with the highest amount
     txins = [src_addr_highest_utxo]
     txouts = [
         clusterlib.TxOut(

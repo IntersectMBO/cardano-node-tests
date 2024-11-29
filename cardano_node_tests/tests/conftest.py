@@ -32,10 +32,10 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 INTERRUPTED_NAME = ".session_interrupted"
 
-# make sure there's enough time to stop all cluster instances at the end of session
+# Make sure there's enough time to stop all cluster instances at the end of session
 workermanage.NodeManager.EXIT_TIMEOUT = 30
 
-# use custom xdist scheduler
+# Use custom xdist scheduler
 pytest_plugins = ("cardano_node_tests.pytest_plugins.xdist_scheduler",)
 
 
@@ -67,7 +67,7 @@ def pytest_addoption(parser: tp.Any) -> None:
 
 
 def pytest_configure(config: tp.Any) -> None:
-    # don't bother collecting metadata if all tests are skipped
+    # Don't bother collecting metadata if all tests are skipped
     if config.getvalue("skipall"):
         return
 
@@ -144,7 +144,7 @@ def _skip_all_tests(config: tp.Any, items: list) -> bool:
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa: C901
-    # prevent on slave nodes (xdist)
+    # Prevent on slave nodes (xdist)
     if hasattr(config, "slaveinput"):
         return
 
@@ -158,12 +158,12 @@ def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa:
         if "needs_dbsync" not in item.keywords:
             return
 
-        # all tests marked with 'needs_dbsync' are db-sync tests, and should be marked
+        # All tests marked with 'needs_dbsync' are db-sync tests, and should be marked
         # with the 'dbsync' marker as well
         if "dbsync" not in item.keywords:
             item.add_marker(pytest.mark.dbsync)
 
-        # skip all tests that require db-sync when db-sync is not available
+        # Skip all tests that require db-sync when db-sync is not available
         if not configuration.HAS_DBSYNC:
             item.add_marker(skip_dbsync_marker)
 
@@ -218,7 +218,7 @@ def _save_all_cluster_instances_artifacts(
     """Save artifacts of all cluster instances after all tests are finished."""
     cluster_manager_obj.log("running `_save_all_cluster_instances_artifacts`")
 
-    # stop all cluster instances
+    # Stop all cluster instances
     with helpers.ignore_interrupt():
         cluster_manager_obj.save_all_clusters_artifacts()
 
@@ -227,7 +227,7 @@ def _stop_all_cluster_instances(cluster_manager_obj: cluster_management.ClusterM
     """Stop all cluster instances after all tests are finished."""
     cluster_manager_obj.log("running `_stop_all_cluster_instances`")
 
-    # stop all cluster instances
+    # Stop all cluster instances
     with helpers.ignore_interrupt():
         cluster_manager_obj.stop_all_clusters()
 
@@ -237,7 +237,7 @@ def _testnet_cleanup(pytest_root_tmp: pl.Path) -> None:
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET:
         return
 
-    # there's only one cluster instance for testnets, so we don't need to use cluster manager
+    # There's only one cluster instance for testnets, so we don't need to use cluster manager
     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
     destdir = pytest_root_tmp.parent / f"cleanup-{pytest_root_tmp.stem}-{helpers.get_rand_str(8)}"
@@ -339,7 +339,7 @@ def testfile_temp_dir() -> pl.Path:
 
     The dir is specific to a single test file.
     """
-    # get a dir path based on the test file running
+    # Get a dir path based on the test file running
     dir_path = (
         (os.environ.get("PYTEST_CURRENT_TEST") or "unknown")
         .split("::")[0]
@@ -368,7 +368,7 @@ def cluster_manager(
     request: FixtureRequest,
 ) -> tp.Generator[cluster_management.ClusterManager, None, None]:
     """Return instance of `cluster_management.ClusterManager`."""
-    # hide from traceback to make logs errors more readable
+    # Hide from traceback to make logs errors more readable
     __tracebackhide__ = True  # pylint: disable=unused-variable
 
     cluster_manager_obj = cluster_management.ClusterManager(

@@ -105,7 +105,7 @@ def payment_addrs(
         )
         fixture_cache.value = addrs
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,

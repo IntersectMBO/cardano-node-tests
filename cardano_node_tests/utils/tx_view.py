@@ -194,11 +194,11 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
             "total collateral"
         ), "Return collateral total collateral mismatch"
 
-    # automatic return collateral works only with `transaction build`
+    # Automatic return collateral works only with `transaction build`
     if not (tx_raw_output.return_collateral_txouts or tx_raw_output.change_address):
         return
 
-    # when total collateral amount is specified, it is necessary to specify also return
+    # When total collateral amount is specified, it is necessary to specify also return
     # collateral `TxOut` to get the change, otherwise all collaterals will be collected
     if tx_raw_output.total_collateral_amount and not tx_raw_output.return_collateral_txouts:
         return
@@ -237,7 +237,7 @@ def check_tx_view(  # noqa: C901
 
     tx_loaded = load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_raw_output.out_file)
 
-    # check inputs
+    # Check inputs
     loaded_txins = set(tx_loaded.get("inputs") or [])
     _tx_raw_script_txins = list(
         itertools.chain.from_iterable(r.txins for r in tx_raw_output.script_txins)
@@ -250,7 +250,7 @@ def check_tx_view(  # noqa: C901
         msg = f"txins: {tx_raw_txins} != {loaded_txins}"
         raise AssertionError(msg)
 
-    # check outputs
+    # Check outputs
     tx_loaded_outputs = tx_loaded.get("outputs") or []
     loaded_txouts: set[tuple[str, int, str]] = set()
     for txout in tx_loaded_outputs:
@@ -264,9 +264,9 @@ def check_tx_view(  # noqa: C901
         msg = f"txouts: {tx_raw_txouts} not in {loaded_txouts}"
         raise AssertionError(msg)
 
-    # check fee
+    # Check fee
     fee = int(tx_loaded.get("fee", "").split()[0] or 0)
-    # for `transaction build` the `tx_raw_output.fee` can be -1
+    # For `transaction build` the `tx_raw_output.fee` can be -1
     if tx_raw_output.fee not in (
         -1,
         fee,
@@ -274,7 +274,7 @@ def check_tx_view(  # noqa: C901
         msg = f"fee: {tx_raw_output.fee} != {fee}"
         raise AssertionError(msg)
 
-    # check validity intervals
+    # Check validity intervals
     validity_range = tx_loaded.get("validity range") or {}
 
     loaded_invalid_before = validity_range.get("lower bound")
@@ -289,7 +289,7 @@ def check_tx_view(  # noqa: C901
         msg = f"invalid hereafter: {tx_raw_output.invalid_hereafter} != {loaded_invalid_hereafter}"
         raise AssertionError(msg)
 
-    # check minting and burning
+    # Check minting and burning
     loaded_mint = set(_load_assets(assets=tx_loaded.get("mint") or {}))
     mint_txouts = list(itertools.chain.from_iterable(m.txouts for m in tx_raw_output.mint))
     tx_raw_mint = {(r.amount, r.coin) for r in mint_txouts}
@@ -298,7 +298,7 @@ def check_tx_view(  # noqa: C901
         msg = f"mint: {tx_raw_mint} != {loaded_mint}"
         raise AssertionError(msg)
 
-    # check withdrawals
+    # Check withdrawals
     tx_loaded_withdrawals = tx_loaded.get("withdrawals")
     loaded_withdrawals = set()
     if tx_loaded_withdrawals:
@@ -321,7 +321,7 @@ def check_tx_view(  # noqa: C901
         msg = f"withdrawals: {tx_raw_withdrawals} != {loaded_withdrawals}"
         raise AssertionError(msg)
 
-    # check certificates
+    # Check certificates
     tx_raw_len_certs = len(tx_raw_output.tx_files.certificate_files) + len(
         tx_raw_output.complex_certs
     )
@@ -344,7 +344,7 @@ def check_tx_view(  # noqa: C901
             )
             raise AssertionError(msg)
 
-    # load and check transaction era
+    # Load and check transaction era
     loaded_tx_era: str = tx_loaded["era"]
     loaded_tx_version = getattr(VERSIONS, loaded_tx_era.upper())
 
@@ -358,19 +358,19 @@ def check_tx_view(  # noqa: C901
         msg = f"Unexpected transaction era: {loaded_tx_version} != {output_tx_version}"
         raise AssertionError(msg)
 
-    # check collateral inputs, this is only available on Alonzo+ TX
+    # Check collateral inputs, this is only available on Alonzo+ TX
     if loaded_tx_version >= VERSIONS.ALONZO:
         _check_collateral_inputs(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 
-    # check reference inputs, this is only available on Babbage+ TX on node version 1.35.3+
+    # Check reference inputs, this is only available on Babbage+ TX on node version 1.35.3+
     if loaded_tx_version >= VERSIONS.BABBAGE and "reference inputs" in tx_loaded:
         _check_reference_inputs(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 
-    # check inline datum, this is only available on Babbage+ TX
+    # Check inline datum, this is only available on Babbage+ TX
     if loaded_tx_version >= VERSIONS.BABBAGE:
         _check_inline_datums(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 
-    # check return collateral, this is only available on Babbage+ TX on node version 1.35.3+
+    # Check return collateral, this is only available on Babbage+ TX on node version 1.35.3+
     if loaded_tx_version >= VERSIONS.BABBAGE and "return collateral" in tx_loaded:
         _check_return_collateral(tx_raw_output=tx_raw_output, tx_loaded=tx_loaded)
 

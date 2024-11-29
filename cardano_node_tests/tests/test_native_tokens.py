@@ -85,7 +85,7 @@ def issuers_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -176,13 +176,13 @@ class TestMinting:
 
         token_mint_addr = issuers_addrs[0]
 
-        # create issuers
+        # Create issuers
         if aname_type == "asset_name":
             _issuers_vkey_files = [p.vkey_file for p in issuers_addrs]
             payment_vkey_files = _issuers_vkey_files[1:]
             token_issuers = issuers_addrs
         else:
-            # create unique script/policyid for an empty asset name
+            # Create unique script/policyid for an empty asset name
             _empty_issuers = clusterlib_utils.create_payment_addr_records(
                 *[f"token_minting_{temp_template}_{i}" for i in range(4)],
                 cluster_obj=cluster,
@@ -190,7 +190,7 @@ class TestMinting:
             payment_vkey_files = [p.vkey_file for p in _empty_issuers]
             token_issuers = [issuers_addrs[0], *_empty_issuers]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -208,7 +208,7 @@ class TestMinting:
             script=multisig_script,
         )
 
-        # token minting
+        # Token minting
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_mint],
@@ -220,7 +220,7 @@ class TestMinting:
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # token burning
+        # Token burning
         token_burn = dataclasses.replace(token_mint, amount=-amount)
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
@@ -233,14 +233,14 @@ class TestMinting:
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ) and helpers.is_in_interval(
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
@@ -283,13 +283,13 @@ class TestMinting:
         if aname_type == "asset_name":
             issuer_addr = issuers_addrs[1]
         else:
-            # create unique script/policyid for an empty asset name
+            # Create unique script/policyid for an empty asset name
             issuer_addr = clusterlib_utils.create_payment_addr_records(
                 f"token_minting_{temp_template}",
                 cluster_obj=cluster,
             )[0]
 
-        # create simple script
+        # Create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = pl.Path(f"{temp_template}.script")
@@ -307,7 +307,7 @@ class TestMinting:
             script=script,
         )
 
-        # token minting
+        # Token minting
         tx_out_mint = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_mint],
@@ -319,7 +319,7 @@ class TestMinting:
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # token burning
+        # Token burning
         token_burn = dataclasses.replace(token_mint, amount=-amount)
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
@@ -332,7 +332,7 @@ class TestMinting:
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ) and helpers.is_in_interval(
@@ -382,7 +382,7 @@ class TestMinting:
 
         tokens_mint = []
         for i in range(num_of_scripts):
-            # create simple script
+            # Create simple script
             keyhash = cluster.g_address.get_payment_vkey_hash(
                 payment_vkey_file=i_addrs[i].vkey_file
             )
@@ -396,7 +396,7 @@ class TestMinting:
             policyid = cluster.g_transaction.get_policyid(script)
             aname_token = f"{policyid}.{asset_name}"
 
-            # for each script mint both token identified by policyid + asset name and token
+            # For each script mint both token identified by policyid + asset name and token
             # identified by just policyid
             tokens_mint.extend(
                 [
@@ -417,7 +417,7 @@ class TestMinting:
                 ]
             )
 
-        # token minting
+        # Token minting
         tx_out_mint = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=tokens_mint,
@@ -433,7 +433,7 @@ class TestMinting:
                 utxo_mint and utxo_mint[0].amount == amount
             ), f"The {t.token} token was not minted"
 
-        # token burning
+        # Token burning
         tokens_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
@@ -448,14 +448,14 @@ class TestMinting:
             utxo_burn = clusterlib.filter_utxos(utxos=burn_utxos, coin=t.token)
             assert not utxo_burn, f"The {t.token} token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ) and helpers.is_in_interval(
             tx_out_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
@@ -494,7 +494,7 @@ class TestMinting:
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
 
-        # create simple script
+        # Create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = pl.Path(f"{temp_template}.script")
@@ -519,7 +519,7 @@ class TestMinting:
             for t in tokens
         ]
 
-        # first token minting
+        # First token minting
         tx_out_mint1 = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[tokens_mint[0]],
@@ -532,7 +532,7 @@ class TestMinting:
         token1_mint_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint1, coins=[tokens[0]])
         assert token1_mint_utxo and token1_mint_utxo[0].amount == amount, "The token was not minted"
 
-        # second token minting and first token burning in single TX
+        # Second token minting and first token burning in single TX
         token_burn1 = dataclasses.replace(tokens_mint[0], amount=-amount)
         tx_out_mint_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
@@ -553,7 +553,7 @@ class TestMinting:
         )
         assert token2_mint_utxo and token2_mint_utxo[0].amount == amount, "The token was not minted"
 
-        # second token burning
+        # Second token burning
         token_burn2 = dataclasses.replace(tokens_mint[1], amount=-amount)
         tx_out_burn2 = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
@@ -567,7 +567,7 @@ class TestMinting:
         token2_burn_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn2, coins=[tokens[1]])
         assert not token2_burn_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint_burn.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -610,7 +610,7 @@ class TestMinting:
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
 
-        # create simple script
+        # Create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = pl.Path(f"{temp_template}.script")
@@ -620,7 +620,7 @@ class TestMinting:
         policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
-        # build and sign a transaction
+        # Build and sign a transaction
         tx_files = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file],
         )
@@ -649,7 +649,7 @@ class TestMinting:
                 tx_files=tx_files,
                 txouts=txouts,
                 fee_buffer=2_000_000,
-                # token minting and burning in the same TX
+                # Token minting and burning in the same TX
                 mint=mint,
                 witness_override=len(tx_files.signing_key_files),
             )
@@ -667,7 +667,7 @@ class TestMinting:
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
                 txouts=txouts,
-                # token minting and burning in the same TX
+                # Token minting and burning in the same TX
                 mint=mint,
                 tx_files=tx_files,
                 fee=fee,
@@ -679,7 +679,7 @@ class TestMinting:
             tx_name=f"{temp_template}_mint_burn",
         )
 
-        # submit signed transaction
+        # Submit signed transaction
         submit_utils.submit_tx(
             submit_method=submit_method,
             cluster_obj=cluster,
@@ -690,7 +690,7 @@ class TestMinting:
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_output, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_output.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -1024,7 +1024,7 @@ class TestMinting:
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
         token_mint_addr = issuers_addrs[0]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1042,7 +1042,7 @@ class TestMinting:
             script=multisig_script,
         )
 
-        # token minting
+        # Token minting
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=[token_mint],
@@ -1055,7 +1055,7 @@ class TestMinting:
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
         assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # token burning
+        # Token burning
         # the `transaction build` command doesn't balance MAs, so use the `build-raw` with
         # clusterlib magic for this partial burning
         burn_amount = amount - 10
@@ -1073,7 +1073,7 @@ class TestMinting:
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not burned"
 
-        # burn the rest of tokens
+        # Burn the rest of tokens
         final_burn = dataclasses.replace(token_mint, amount=-10)
         tx_out_burn2 = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
@@ -1084,7 +1084,7 @@ class TestMinting:
             sign_incrementally=True,
         )
 
-        # check expected fee
+        # Check expected fee
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -1125,7 +1125,7 @@ class TestMinting:
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
 
-        # create simple script
+        # Create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = pl.Path(f"{temp_template}.script")
@@ -1143,7 +1143,7 @@ class TestMinting:
             script=script,
         )
 
-        # token minting
+        # Token minting
         tx_out_mint = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
             new_tokens=[token_mint],
@@ -1157,7 +1157,7 @@ class TestMinting:
             token_utxo and token_utxo[0].amount == amount
         ), "The token was not minted or expected chars are not present in the asset name"
 
-        # token burning
+        # Token burning
         token_burn = dataclasses.replace(token_mint, amount=-amount)
         tx_out_burn = clusterlib_utils.mint_or_burn_sign(
             cluster_obj=cluster,
@@ -1170,7 +1170,7 @@ class TestMinting:
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
         assert not token_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ) and helpers.is_in_interval(
@@ -1206,7 +1206,7 @@ class TestPolicies:
         token_mint_addr = issuers_addrs[0]
         payment_vkey_files = [p.vkey_file for p in issuers_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1232,7 +1232,7 @@ class TestPolicies:
                 )
             )
 
-        # token minting
+        # Token minting
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_mint,
@@ -1249,7 +1249,7 @@ class TestPolicies:
             )
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # token burning
+        # Token burning
         tokens_to_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
@@ -1267,7 +1267,7 @@ class TestPolicies:
             )
             assert not token_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ) and helpers.is_in_interval(
@@ -1300,7 +1300,7 @@ class TestPolicies:
 
         before_slot = cluster.g_query.get_slot_no() + 10_000
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1326,7 +1326,7 @@ class TestPolicies:
                 )
             )
 
-        # token minting
+        # Token minting
         tx_out_mint = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
             new_tokens=tokens_to_mint,
@@ -1343,7 +1343,7 @@ class TestPolicies:
             )
             assert token_utxo and token_utxo[0].amount == amount, "The token was not minted"
 
-        # token burning
+        # Token burning
         tokens_to_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_to_mint]
         tx_out_burn = clusterlib_utils.mint_or_burn_witness(
             cluster_obj=cluster,
@@ -1361,7 +1361,7 @@ class TestPolicies:
             )
             assert not token_utxo, "The token was not burnt"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
         ) and helpers.is_in_interval(
@@ -1387,7 +1387,7 @@ class TestPolicies:
 
         before_slot = cluster.g_query.get_slot_no() - 1
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1413,7 +1413,7 @@ class TestPolicies:
                 )
             )
 
-        # token minting - valid range, slot is already in the past
+        # Token minting - valid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
@@ -1424,7 +1424,7 @@ class TestPolicies:
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
 
-        # token minting - invalid range, slot is already in the past
+        # Token minting - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
@@ -1461,7 +1461,7 @@ class TestPolicies:
 
         before_slot = cluster.g_query.get_slot_no() + 10_000
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1487,7 +1487,7 @@ class TestPolicies:
                 )
             )
 
-        # token minting - invalid range, slot is in the future
+        # Token minting - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
             clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
@@ -1524,7 +1524,7 @@ class TestPolicies:
 
         after_slot = cluster.g_query.get_slot_no() + 10_000
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1550,7 +1550,7 @@ class TestPolicies:
                 )
             )
 
-        # token minting - valid range, slot is in the future
+        # Token minting - valid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
             clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
@@ -1561,7 +1561,7 @@ class TestPolicies:
             )
         assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
 
-        # token minting - invalid range, slot is in the future
+        # Token minting - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
             clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
@@ -1598,7 +1598,7 @@ class TestPolicies:
 
         after_slot = cluster.g_query.get_slot_no() - 1
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1624,7 +1624,7 @@ class TestPolicies:
                 )
             )
 
-        # token minting - valid slot, invalid range - `invalid_hereafter` is in the past
+        # Token minting - valid slot, invalid range - `invalid_hereafter` is in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             clusterlib_utils.mint_or_burn_witness(
                 cluster_obj=cluster,
@@ -1669,7 +1669,7 @@ class TestTransfer:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -1738,7 +1738,7 @@ class TestTransfer:
             clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
         ]
 
-        # destinations with both native token and Lovelace (it doesn't matter on the amounts) for
+        # Destinations with both native token and Lovelace (it doesn't matter on the amounts) for
         # calculating minimum required Lovelace value for tx output
         calc_destinations = [
             *ma_destinations,
@@ -1890,7 +1890,7 @@ class TestTransfer:
                 clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token)
             )
 
-        # destinations with both native token and Lovelace (it doesn't matter on the amounts) for
+        # Destinations with both native token and Lovelace (it doesn't matter on the amounts) for
         # calculating minimum required Lovelace value for tx output
         calc_destinations_address1 = [
             *ma_destinations_address1,
@@ -2113,7 +2113,7 @@ class TestTransfer:
 
         if use_build_cmd:
             with pytest.raises(clusterlib.CLIError) as excinfo:
-                # add ADA txout for change address - see node issue #3057
+                # Add ADA txout for change address - see node issue #3057
                 destinations.append(
                     clusterlib.TxOut(address=src_address, amount=min_amount_lovelace)
                 )
@@ -2172,7 +2172,7 @@ class TestNegative:
         token_mint_addr_skey_files = {n.token_mint_addr.skey_file for n in new_tokens}
         src_address = new_tokens[0].token_mint_addr.address
 
-        # build and sign a transaction
+        # Build and sign a transaction
         tx_files = clusterlib.TxFiles(
             signing_key_files=[*issuers_skey_files, *token_mint_addr_skey_files],
         )
@@ -2294,7 +2294,7 @@ class TestNegative:
             script=script,
         )
 
-        # token minting
+        # Token minting
         with pytest.raises(clusterlib.CLIError) as excinfo:
             self._mint_tx(
                 cluster_obj=cluster,
@@ -2341,7 +2341,7 @@ class TestCLITxOutSyntax:
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
 
-        # create simple script
+        # Create simple script
         keyhash = cluster.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
         script_content = {"keyHash": keyhash, "type": "sig"}
         script = pl.Path(f"{temp_template}.script")
@@ -2376,19 +2376,19 @@ class TestCLITxOutSyntax:
         tx_raw_blueprint = cluster.g_transaction.build_raw_tx(
             src_address=token_mint_addr.address,
             tx_name=f"{temp_template}_mint_burn",
-            # token minting and burning in the same TX
+            # Token minting and burning in the same TX
             mint=mint,
             tx_files=tx_files,
             fee=fee,
         )
 
-        # assemble CLI arguments for `transaction build` using data from `tx_raw_blueprint`
+        # Assemble CLI arguments for `transaction build` using data from `tx_raw_blueprint`
 
         assert tx_raw_blueprint.txins
         assert tx_raw_blueprint.txouts
         assert tx_raw_blueprint.mint
 
-        # test syntax for multi-asset values and txouts, see
+        # Test syntax for multi-asset values and txouts, see
         # https://github.com/IntersectMBO/cardano-node/pull/2072
         coin_txouts = [f"{t.amount} {t.coin}" for t in tx_raw_blueprint.txouts]
         txout_parts = [
@@ -2424,10 +2424,10 @@ class TestCLITxOutSyntax:
             str(out_file),
         ]
 
-        # build transaction body
+        # Build transaction body
         cluster.cli(build_raw_args)
 
-        # create signed transaction
+        # Create signed transaction
         out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=out_file,
             signing_key_files=tx_files.signing_key_files,
@@ -2436,13 +2436,13 @@ class TestCLITxOutSyntax:
 
         tx_raw_output = dataclasses.replace(tx_raw_blueprint, out_file=out_file)
 
-        # submit signed transaction
+        # Submit signed transaction
         cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
         assert token_utxo and token_utxo[0].amount == 1_000, "The token was not minted"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_raw_output.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
@@ -2495,7 +2495,7 @@ class TestReferenceUTxO:
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
 
-        # create simple script
+        # Create simple script
         if script_version == "simple_v1":
             invalid_before = None
             invalid_hereafter = None
@@ -2527,7 +2527,7 @@ class TestReferenceUTxO:
         policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
-        # create reference UTxO
+        # Create reference UTxO
         reference_utxo, tx_out_reference = clusterlib_utils.create_reference_utxo(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -2538,7 +2538,7 @@ class TestReferenceUTxO:
         )
         assert reference_utxo.reference_script
 
-        # build and sign a transaction
+        # Build and sign a transaction
         tx_files = clusterlib.TxFiles(
             signing_key_files=[issuer_addr.skey_file, token_mint_addr.skey_file],
         )
@@ -2590,7 +2590,7 @@ class TestReferenceUTxO:
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
                 txouts=txouts,
-                # token minting and burning in the same TX
+                # Token minting and burning in the same TX
                 mint=mint,
                 tx_files=tx_files,
                 fee=fee,
@@ -2604,7 +2604,7 @@ class TestReferenceUTxO:
             tx_name=f"{temp_template}_mint_burn",
         )
 
-        # submit signed transaction
+        # Submit signed transaction
         cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
@@ -2612,10 +2612,10 @@ class TestReferenceUTxO:
             token_utxo and token_utxo[0].amount == amount - burn_amount
         ), "The token was not minted / burned"
 
-        # check that reference UTxO was NOT spent
+        # Check that reference UTxO was NOT spent
         assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"
 
-        # check expected fees
+        # Check expected fees
         assert helpers.is_in_interval(
             tx_raw_output.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"

@@ -47,7 +47,7 @@ class TestMetadata:
             )[0]
             fixture_cache.value = addr
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addr,
             cluster_obj=cluster,
@@ -130,7 +130,7 @@ class TestMetadata:
             metadata_json_files=[self.JSON_METADATA_INVALID_FILE],
         )
 
-        # it should NOT be possible to build a transaction using an invalid metadata JSON
+        # It should NOT be possible to build a transaction using an invalid metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_raw_tx(
                 src_address=payment_addr.address,
@@ -163,7 +163,7 @@ class TestMetadata:
             metadata_json_files=[self.JSON_METADATA_INVALID_FILE],
         )
 
-        # it should NOT be possible to build a transaction using an invalid metadata JSON
+        # It should NOT be possible to build a transaction using an invalid metadata JSON
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addr.address,
@@ -258,7 +258,7 @@ class TestMetadata:
         assert tx_raw_output.fee, "Transaction had no fee"
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
-        # dump it as JSON, so keys are converted to strings
+        # Dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
@@ -268,7 +268,7 @@ class TestMetadata:
             json_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match the original metadata"
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
@@ -311,7 +311,7 @@ class TestMetadata:
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_output.out_file)
-        # dump it as JSON, so keys are converted to strings
+        # Dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
@@ -321,7 +321,7 @@ class TestMetadata:
             json_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match the original metadata"
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
@@ -360,7 +360,7 @@ class TestMetadata:
             cbor_body_metadata.metadata == cbor_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
@@ -412,7 +412,7 @@ class TestMetadata:
             cbor_body_metadata.metadata == cbor_file_metadata
         ), "Metadata in TX body doesn't match original metadata"
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
@@ -444,7 +444,7 @@ class TestMetadata:
         assert tx_raw_output.fee, "Transaction had no fee"
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
-        # dump it as JSON, so keys are converted to strings
+        # Dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp_json:
@@ -459,11 +459,11 @@ class TestMetadata:
             **cbor_file_metadata,
         }, "Metadata in TX body doesn't match original metadata"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         assert json_body_metadata == tx_view_out["metadata"]
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
@@ -507,7 +507,7 @@ class TestMetadata:
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_output.out_file)
-        # dump it as JSON, so keys are converted to strings
+        # Dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp_json:
@@ -522,11 +522,11 @@ class TestMetadata:
             **cbor_file_metadata,
         }, "Metadata in TX body doesn't match original metadata"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
         assert json_body_metadata == tx_view_out["metadata"]
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
@@ -560,10 +560,10 @@ class TestMetadata:
         assert tx_raw_output.fee, "Transaction had no fee"
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
-        # dump it as JSON, so keys are converted to strings
+        # Dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
-        # merge the input JSON files and alter the result so it matches the expected metadata
+        # Merge the input JSON files and alter the result so it matches the expected metadata
         with open(metadata_json_files[0], encoding="utf-8") as metadata_fp:
             json_file_metadata1 = json.load(metadata_fp)
         with open(metadata_json_files[1], encoding="utf-8") as metadata_fp:
@@ -575,7 +575,7 @@ class TestMetadata:
             json_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match the original metadata"
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
@@ -622,7 +622,7 @@ class TestMetadata:
         assert not tx_raw_output.txouts, "Transaction has unexpected txouts"
 
         cbor_body_metadata = clusterlib_utils.load_tx_metadata(tx_body_file=tx_raw_output.out_file)
-        # dump it as JSON, so keys are converted to strings
+        # Dump it as JSON, so keys are converted to strings
         json_body_metadata = json.loads(json.dumps(cbor_body_metadata.metadata))
 
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
@@ -632,7 +632,7 @@ class TestMetadata:
             json_body_metadata == json_file_metadata
         ), "Metadata in TX body doesn't match the original metadata"
 
-        # check TX and metadata in db-sync if available
+        # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()

@@ -93,7 +93,7 @@ def return_funds_to_faucet(
             for addr, amount_rec in zip(src_addrs, amount):
                 fund_dst = [clusterlib.TxOut(address=faucet_addr, amount=amount_rec)]
                 fund_tx_files = clusterlib.TxFiles(signing_key_files=[addr.skey_file])
-                # try to return funds; don't mind if there's not enough funds for fees etc.
+                # Try to return funds; don't mind if there's not enough funds for fees etc.
                 with contextlib.suppress(Exception):
                     cluster_obj.g_transaction.send_funds(
                         src_address=addr.address,

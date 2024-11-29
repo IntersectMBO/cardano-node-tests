@@ -41,7 +41,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -237,7 +237,7 @@ class TestNegative:
         else:
             assert "CollateralContainsNonADA" in exc_str, exc_str
 
-        # check expected fees
+        # Check expected fees
         expected_fee_fund = 173597
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
@@ -299,11 +299,11 @@ class TestNegative:
             "expected to be key witnessed but are actually script witnessed: "
             f'["{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"]'
             in err_str
-            # in 1.35.3 and older
+            # In 1.35.3 and older
             or "Expected key witnessed collateral" in err_str
         ), err_str
 
-        # check expected fees
+        # Check expected fees
         expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
@@ -449,7 +449,7 @@ class TestNegative:
             script_data_file=plutus_op2.datum_file
         )
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files_fund = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -465,7 +465,7 @@ class TestNegative:
                 amount=script_fund,
                 datum_hash=datum_hash2,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]

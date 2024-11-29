@@ -55,9 +55,9 @@ def multisig_tx(
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
     # pylint: disable=too-many-arguments
-    # create TX body
+    # Create TX body
     script_txins = (
-        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        # Empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
         [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)] if multisig_script else []
     )
     destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
@@ -94,7 +94,7 @@ def multisig_tx(
             invalid_before=invalid_before,
         )
 
-    # create witness file for each key
+    # Create witness file for each key
     witness_files = [
         cluster_obj.g_transaction.witness_tx(
             tx_body_file=tx_raw_output.out_file,
@@ -104,14 +104,14 @@ def multisig_tx(
         for idx, skey in enumerate(payment_skey_files)
     ]
 
-    # sign TX using witness files
+    # Sign TX using witness files
     tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
         tx_body_file=tx_raw_output.out_file,
         witness_files=witness_files,
         tx_name=temp_template,
     )
 
-    # submit signed TX
+    # Submit signed TX
     submit_utils.submit_tx(
         submit_method=submit_method,
         cluster_obj=cluster_obj,
@@ -119,7 +119,7 @@ def multisig_tx(
         txins=tx_raw_output.txins,
     )
 
-    # check final balances
+    # Check final balances
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)
     assert (
         clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
@@ -154,7 +154,7 @@ class TestBasic:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -178,19 +178,19 @@ class TestBasic:
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # check script address length
+        # Check script address length
         assert len(script_address) == len(payment_addrs[0].address)
 
     @allure.link(helpers.get_vcs_link())
@@ -212,19 +212,19 @@ class TestBasic:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -236,7 +236,7 @@ class TestBasic:
             submit_method=submit_method,
         )
 
-        # send funds from script address
+        # Send funds from script address
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
@@ -278,21 +278,21 @@ class TestBasic:
 
         skeys_len = len(payment_skey_files)
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
             payment_vkey_files=payment_vkey_files,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
         tx_raw_outputs = []
 
-        # send funds to script address
+        # Send funds to script address
         tx_raw_outputs.append(
             multisig_tx(
                 cluster_obj=cluster,
@@ -306,7 +306,7 @@ class TestBasic:
             )
         )
 
-        # send funds from script address using single witness
+        # Send funds from script address using single witness
         expected_fee = 204_969
         for i in range(5):
             tx_raw_outputs.append(
@@ -323,12 +323,12 @@ class TestBasic:
                 )
             )
 
-            # check expected fees
+            # Check expected fees
             assert helpers.is_in_interval(
                 tx_raw_outputs[-1].fee, expected_fee, frac=0.15
             ), "TX fee doesn't fit the expected interval"
 
-        # send funds from script address using multiple witnesses
+        # Send funds from script address using multiple witnesses
         for i in range(5):
             num_of_skeys = random.randrange(2, skeys_len)
             tx_raw_outputs.append(
@@ -370,7 +370,7 @@ class TestBasic:
         skeys_len = len(payment_skey_files)
         required = skeys_len - 4
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
@@ -378,14 +378,14 @@ class TestBasic:
             required=required,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
         tx_raw_outputs = []
 
-        # send funds to script address
+        # Send funds to script address
         tx_raw_outputs.append(
             multisig_tx(
                 cluster_obj=cluster,
@@ -399,7 +399,7 @@ class TestBasic:
             )
         )
 
-        # send funds from script address
+        # Send funds from script address
         for i in range(5):
             num_of_skeys = random.randrange(required, skeys_len)
             tx_raw_outputs.append(
@@ -437,23 +437,23 @@ class TestBasic:
         src_address = payment_addrs[0].address
         amount = 2_000_000
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=[p.vkey_file for p in payment_addrs],
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # record initial balances
+        # Record initial balances
         src_init_balance = cluster.g_query.get_address_balance(src_address)
         dst_init_balance = cluster.g_query.get_address_balance(script_address)
 
-        # send funds to script address
+        # Send funds to script address
         destinations = [clusterlib.TxOut(address=script_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
@@ -467,7 +467,7 @@ class TestBasic:
             tx_files=tx_files,
         )
 
-        # check final balances
+        # Check final balances
         assert (
             cluster.g_query.get_address_balance(src_address)
             == src_init_balance - amount - tx_raw_output.fee
@@ -500,19 +500,19 @@ class TestBasic:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
             payment_vkey_files=payment_vkey_files,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -524,16 +524,16 @@ class TestBasic:
             submit_method=submit_method,
         )
 
-        # record initial balances
+        # Record initial balances
         src_init_balance = cluster.g_query.get_address_balance(script_address)
         dst_init_balance = cluster.g_query.get_address_balance(dst_addr.address)
 
-        # send funds from script address
+        # Send funds from script address
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(
             signing_key_files=[dst_addr.skey_file],
         )
-        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        # Empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
         script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
 
         tx_out_from = clusterlib_utils.build_and_submit_tx(
@@ -547,7 +547,7 @@ class TestBasic:
             tx_files=tx_files,
         )
 
-        # check final balances
+        # Check final balances
         assert (
             cluster.g_query.get_address_balance(script_address)
             == src_init_balance - amount - tx_out_from.fee
@@ -572,19 +572,19 @@ class TestBasic:
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=(),
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -594,7 +594,7 @@ class TestBasic:
             payment_skey_files=[payment_skey_files[0]],
         )
 
-        # send funds from script address
+        # Send funds from script address
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
@@ -605,7 +605,7 @@ class TestBasic:
             multisig_script=multisig_script,
         )
 
-        # check expected fees
+        # Check expected fees
         expected_fee = 176_809
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
@@ -627,7 +627,7 @@ class TestBasic:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
@@ -635,12 +635,12 @@ class TestBasic:
             required=0,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -650,7 +650,7 @@ class TestBasic:
             payment_skey_files=[payment_skey_files[0]],
         )
 
-        # send funds from script address
+        # Send funds from script address
         try:
             tx_out_from = multisig_tx(
                 cluster_obj=cluster,
@@ -667,7 +667,7 @@ class TestBasic:
                 return
             raise
 
-        # check expected fees
+        # Check expected fees
         expected_fee = 176_765
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
@@ -700,7 +700,7 @@ class TestNegative:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -725,19 +725,19 @@ class TestNegative:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
             payment_vkey_files=payment_vkey_files,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -747,7 +747,7 @@ class TestNegative:
             payment_skey_files=[payment_skey_files[0]],
         )
 
-        # send funds from script address, omit one skey
+        # Send funds from script address, omit one skey
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -779,19 +779,19 @@ class TestNegative:
         payment_vkey_files = [p.vkey_file for p in payment_addrs[:-1]]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
             payment_vkey_files=payment_vkey_files,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -801,7 +801,7 @@ class TestNegative:
             payment_skey_files=[payment_skey_files[0]],
         )
 
-        # send funds from script address, use skey that is not listed in the script
+        # Send funds from script address, use skey that is not listed in the script
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -836,7 +836,7 @@ class TestNegative:
         skeys_len = len(payment_skey_files)
         required = skeys_len - 4
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
@@ -844,12 +844,12 @@ class TestNegative:
             required=required,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -859,7 +859,7 @@ class TestNegative:
             payment_skey_files=[payment_skey_files[0]],
         )
 
-        # send funds from script address, use lower number of skeys then required
+        # Send funds from script address, use lower number of skeys then required
         for num_of_skeys in range(1, required):
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 multisig_tx(
@@ -897,7 +897,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster_obj.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -906,12 +906,12 @@ class TestTimeLocking:
             slot_type_arg=slot_type_arg,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster_obj.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_output = multisig_tx(
             cluster_obj=cluster_obj,
             temp_template=f"{temp_template}_to",
@@ -944,7 +944,7 @@ class TestTimeLocking:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -1074,7 +1074,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1083,12 +1083,12 @@ class TestTimeLocking:
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -1099,7 +1099,7 @@ class TestTimeLocking:
             use_build_cmd=use_build_cmd,
         )
 
-        # send funds from script address
+        # Send funds from script address
         invalid_hereafter = cluster.g_query.get_slot_no() + 1_000 if use_tx_validity else None
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
@@ -1114,13 +1114,13 @@ class TestTimeLocking:
             use_build_cmd=use_build_cmd,
         )
 
-        # check expected fees
+        # Check expected fees
         expected_fee = 280_693 if use_build_cmd else 323_857
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
         ), "TX fee doesn't fit the expected interval"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
@@ -1149,7 +1149,7 @@ class TestTimeLocking:
 
         before_slot = cluster.g_query.get_slot_no() + 10_000
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1158,12 +1158,12 @@ class TestTimeLocking:
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -1174,7 +1174,7 @@ class TestTimeLocking:
             use_build_cmd=use_build_cmd,
         )
 
-        # send funds from script address
+        # Send funds from script address
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
@@ -1188,7 +1188,7 @@ class TestTimeLocking:
             use_build_cmd=use_build_cmd,
         )
 
-        # check expected fees
+        # Check expected fees
         expected_fee = 279_241 if use_build_cmd else 323_989
         assert helpers.is_in_interval(
             tx_out_from.fee, expected_fee, frac=0.15
@@ -1225,7 +1225,7 @@ class TestTimeLocking:
             slot_num = 100
             slot_type_arg = clusterlib.MultiSlotTypeArgs.AFTER
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1234,12 +1234,12 @@ class TestTimeLocking:
             slot_type_arg=slot_type_arg,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -1250,7 +1250,7 @@ class TestTimeLocking:
             use_build_cmd=use_build_cmd,
         )
 
-        # send funds from script address - missing required validity interval
+        # Send funds from script address - missing required validity interval
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -1283,7 +1283,7 @@ class TestTimeLocking:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1292,12 +1292,12 @@ class TestTimeLocking:
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -1308,7 +1308,7 @@ class TestTimeLocking:
             use_build_cmd=use_build_cmd,
         )
 
-        # send funds from script address - negative validity interval
+        # Send funds from script address - negative validity interval
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -1374,7 +1374,7 @@ class TestTimeLocking:
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # send funds from script address - valid range, slot is already in the past
+        # Send funds from script address - valid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -1391,7 +1391,7 @@ class TestTimeLocking:
         err_str = str(excinfo.value)
         assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
-        # send funds from script address - invalid range, slot is already in the past
+        # Send funds from script address - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -1441,7 +1441,7 @@ class TestTimeLocking:
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # send funds from script address - invalid range, slot is in the future
+        # Send funds from script address - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -1493,7 +1493,7 @@ class TestTimeLocking:
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # send funds from script address - valid range, slot is in the future
+        # Send funds from script address - valid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -1510,7 +1510,7 @@ class TestTimeLocking:
         err_str = str(excinfo.value)
         assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
-        # send funds from script address - invalid range, slot is in the future
+        # Send funds from script address - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -1562,7 +1562,7 @@ class TestTimeLocking:
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # send funds from script address - valid slot,
+        # Send funds from script address - valid slot,
         # invalid range - `invalid_hereafter` is in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
             multisig_tx(
@@ -1610,7 +1610,7 @@ class TestAuxiliaryScripts:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -1640,7 +1640,7 @@ class TestAuxiliaryScripts:
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1697,7 +1697,7 @@ class TestAuxiliaryScripts:
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.AT_LEAST,
@@ -1755,7 +1755,7 @@ class TestAuxiliaryScripts:
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ANY,
@@ -1801,7 +1801,7 @@ class TestAuxiliaryScripts:
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
-            # not valid script file
+            # Not valid script file
             auxiliary_script_files=[JSON_METADATA_FILE],
         )
 
@@ -1844,7 +1844,7 @@ class TestIncrementalSigning:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -1886,7 +1886,7 @@ class TestIncrementalSigning:
 
         before_slot = cluster.g_query.get_slot_no() + 10_000
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -1895,12 +1895,12 @@ class TestIncrementalSigning:
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -1912,18 +1912,18 @@ class TestIncrementalSigning:
             submit_method=submit_method,
         )
 
-        # record initial balances
+        # Record initial balances
         src_init_balance = cluster.g_query.get_address_balance(script_address)
         dst_init_balance = cluster.g_query.get_address_balance(dst_addr.address)
 
-        # send funds from script address
+        # Send funds from script address
         destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(
             metadata_json_files=[JSON_METADATA_FILE],
             metadata_cbor_files=[CBOR_METADATA_FILE],
             signing_key_files=payment_skey_files,
         )
-        # empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
+        # Empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
         script_txins = [clusterlib.ScriptTxIn(txins=[], script_file=multisig_script)]
 
         invalid_hereafter = cluster.g_query.get_slot_no() + 1_000
@@ -1962,7 +1962,7 @@ class TestIncrementalSigning:
                 invalid_before=100,
             )
 
-        # sign or witness Tx body with first 2 skey and thus create Tx file that will be used for
+        # Sign or witness Tx body with first 2 skey and thus create Tx file that will be used for
         # incremental signing
         if tx_is == "signed":
             tx_signed = cluster.g_transaction.sign_tx(
@@ -1971,7 +1971,7 @@ class TestIncrementalSigning:
                 tx_name=f"{temp_template}_from0",
             )
         else:
-            # sign Tx body using witness files
+            # Sign Tx body using witness files
             witness_files = [
                 cluster.g_transaction.witness_tx(
                     tx_body_file=tx_out_from.out_file,
@@ -1986,9 +1986,9 @@ class TestIncrementalSigning:
                 tx_name=f"{temp_template}_from0",
             )
 
-        # incrementally sign the already signed Tx with rest of required skeys
+        # Incrementally sign the already signed Tx with rest of required skeys
         for idx, skey in enumerate(payment_skey_files[2:], start=1):
-            # sign multiple times with the same skey to see that it doesn't affect Tx fee
+            # Sign multiple times with the same skey to see that it doesn't affect Tx fee
             for r in range(5):
                 tx_signed = cluster.g_transaction.sign_tx(
                     tx_file=tx_signed,
@@ -2003,7 +2003,7 @@ class TestIncrementalSigning:
             txins=tx_out_from.txins,
         )
 
-        # check final balances
+        # Check final balances
         assert (
             cluster.g_query.get_address_balance(script_address)
             == src_init_balance - amount - tx_out_from.fee
@@ -2044,7 +2044,7 @@ class TestDatum:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -2075,7 +2075,7 @@ class TestDatum:
         src_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
 
-        # create multisig script
+        # Create multisig script
         if script_version == "simple_v1":
             multisig_script = pl.Path(f"{temp_template}_multisig.script")
             script_content = {
@@ -2095,7 +2095,7 @@ class TestDatum:
                 slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
             )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
@@ -2153,7 +2153,7 @@ class TestReferenceUTxO:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -2286,14 +2286,14 @@ class TestReferenceUTxO:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check that reference UTxO was NOT spent
+        # Check that reference UTxO was NOT spent
         assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
-        # check expected script type
+        # Check expected script type
         if (
             script_type_str == "SimpleScriptV1"
             and reference_utxo.reference_script["script"]["type"] == "SimpleScriptV2"
@@ -2336,12 +2336,12 @@ class TestReferenceUTxO:
 
         reference_addr = payment_addrs[1]
         if address_type == "byron":
-            # create reference UTxO on Byron address
+            # Create reference UTxO on Byron address
             reference_addr = clusterlib_utils.gen_byron_addr(
                 cluster_obj=cluster, name_template=temp_template
             )
 
-        # create multisig script
+        # Create multisig script
         if script_version == "simple_v1":
             multisig_script = pl.Path(f"{temp_template}_multisig.script")
             script_content = {
@@ -2361,7 +2361,7 @@ class TestReferenceUTxO:
                 slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
             )
 
-        # create reference UTxO
+        # Create reference UTxO
         reference_utxo, tx_out_reference = clusterlib_utils.create_reference_utxo(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -2372,7 +2372,7 @@ class TestReferenceUTxO:
         )
         assert reference_utxo.reference_script
 
-        # spend the reference UTxO
+        # Spend the reference UTxO
         destinations = [clusterlib.TxOut(address=payment_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(
             signing_key_files=[reference_addr.skey_file],
@@ -2392,7 +2392,7 @@ class TestReferenceUTxO:
             witness_count_add=0 if use_build_cmd else 2,
         )
 
-        # check that the reference UTxO was spent
+        # Check that the reference UTxO was spent
         assert not cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), f"Reference script UTxO was NOT spent: '{reference_utxo}`"
@@ -2428,7 +2428,7 @@ class TestNested:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -2461,7 +2461,7 @@ class TestNested:
         dst_addr2 = payment_addrs[2]
         dst_addr3 = payment_addrs[3]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = pl.Path(f"{temp_template}_multisig.script")
         script_content = {
             "type": type_top,
@@ -2495,12 +2495,12 @@ class TestNested:
         with open(multisig_script, "w", encoding="utf-8") as fp_out:
             json.dump(script_content, fp_out, indent=4)
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -2512,7 +2512,7 @@ class TestNested:
             submit_method=submit_method,
         )
 
-        # we don't need to include any signatures for the nested "any" case, meeting the slot range
+        # We don't need to include any signatures for the nested "any" case, meeting the slot range
         # is enough
         payment_skey_files = []
         if type_nested == "all":
@@ -2524,7 +2524,7 @@ class TestNested:
         if not payment_skey_files:
             payment_skey_files.append(dst_addr2.skey_file)
 
-        # fund script address
+        # Fund script address
         invalid_hereafter = cluster.g_query.get_slot_no() + 1_000
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
@@ -2561,7 +2561,7 @@ class TestNested:
 
         dst_addr1 = payment_addrs[1]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = pl.Path(f"{temp_template}_multisig.script")
         script_content = {
             "type": "any",
@@ -2592,12 +2592,12 @@ class TestNested:
         with open(multisig_script, "w", encoding="utf-8") as fp_out:
             json.dump(script_content, fp_out, indent=4)
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         tx_out_to = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -2609,7 +2609,7 @@ class TestNested:
             submit_method=submit_method,
         )
 
-        # fund script address
+        # Fund script address
         tx_out_from = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_from",
@@ -2666,7 +2666,7 @@ class TestNested:
             type_top = "all"
             type_nested = "any"
             payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
-            # valid interval is in the future
+            # Valid interval is in the future
             invalid_hereafter = last_slot_no + 1_000
             invalid_before = invalid_hereafter - 100
             script_top = []
@@ -2676,7 +2676,7 @@ class TestNested:
             type_top = "all"
             type_nested = "any"
             payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
-            # valid interval is in the past
+            # Valid interval is in the past
             invalid_hereafter = last_slot_no - 10
             invalid_before = 10
             script_top = []
@@ -2698,7 +2698,7 @@ class TestNested:
             payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
             invalid_before = 10
             invalid_hereafter = last_slot_no + 1_000
-            # conflicting intervals
+            # Conflicting intervals
             script_top = [{"type": "before", "slot": invalid_before + 10}]
             script_nested = [{"type": "after", "slot": invalid_before + 11}]
             expected_err = "ScriptWitnessNotValidatingUTXOW"
@@ -2708,7 +2708,7 @@ class TestNested:
             invalid_before = 10
             invalid_hereafter = last_slot_no + 1_000
             payment_skey_files = [dst_addr1.skey_file, dst_addr2.skey_file]
-            # valid interval is in the past
+            # Valid interval is in the past
             script_top = [{"type": "before", "slot": last_slot_no - 100}]
             script_nested = []
             expected_err = "ScriptWitnessNotValidatingUTXOW"
@@ -2717,7 +2717,7 @@ class TestNested:
             type_nested = "all"
             invalid_before = 10
             invalid_hereafter = last_slot_no + 1_000
-            # none of the "ANY" conditions are met:
+            # None of the "ANY" conditions are met:
             #  `dst_addr1.skey_file` is missing
             #  nested "ALL" condition is not met - `dst_addr3.skey_file` is missing
             payment_skey_files = [dst_addr2.skey_file]
@@ -2728,7 +2728,7 @@ class TestNested:
             type_top = "any"
             type_nested = "all"
             payment_skey_files = [dst_addr2.skey_file]
-            # valid interval is in the future
+            # Valid interval is in the future
             invalid_hereafter = last_slot_no + 1_000
             invalid_before = last_slot_no + 200
             script_top = [{"type": "after", "slot": invalid_before}]
@@ -2740,7 +2740,7 @@ class TestNested:
             invalid_before = 10
             invalid_hereafter = last_slot_no + 1_000
             payment_skey_files = [dst_addr2.skey_file, dst_addr3.skey_file]
-            # none of the "ANY" conditions are met:
+            # None of the "ANY" conditions are met:
             #  `dst_addr1.skey_file` is missing
             #  nested "ALL" condition is not met - the valid interval is in the past
             script_top = []
@@ -2751,7 +2751,7 @@ class TestNested:
             type_nested = "all"
             invalid_before = 10
             invalid_hereafter = last_slot_no + 1_000
-            # none of the "ANY" conditions are met:
+            # None of the "ANY" conditions are met:
             #  `dst_addr1.skey_file` is missing
             #  valid interval is in the past
             #  nested "ALL" condition is not met - `dst_addr3.skey_file` is missing
@@ -2763,7 +2763,7 @@ class TestNested:
             msg = f"Unknown scenario: {scenario}"
             raise AssertionError(msg)
 
-        # create multisig script
+        # Create multisig script
         multisig_script = pl.Path(f"{temp_template}_multisig.script")
         script_content = {
             "type": type_top,
@@ -2798,12 +2798,12 @@ class TestNested:
         with open(multisig_script, "w", encoding="utf-8") as fp_out:
             json.dump(script_content, fp_out, indent=4)
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # fund script address
+        # Fund script address
         tx_raw_output = multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -2855,7 +2855,7 @@ class TestCompatibility:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -2884,7 +2884,7 @@ class TestCompatibility:
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -2893,12 +2893,12 @@ class TestCompatibility:
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
         )
 
-        # create script address
+        # Create script address
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
 
-        # send funds to script address
+        # Send funds to script address
         multisig_tx(
             cluster_obj=cluster,
             temp_template=f"{temp_template}_to",
@@ -2909,7 +2909,7 @@ class TestCompatibility:
             submit_method=submit_method,
         )
 
-        # try to send funds from script address
+        # Try to send funds from script address
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -2948,7 +2948,7 @@ class TestCompatibility:
 
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,

@@ -142,7 +142,7 @@ def _check_pool_records(pool_records: dict[int, PoolRecord]) -> None:
     saturated_epoch = oversaturated_epoch - 2
     nonsaturated_epoch = oversaturated_epoch - 4
 
-    # check that rewards per block per stake for "pool2" in the epoch where the pool is
+    # Check that rewards per block per stake for "pool2" in the epoch where the pool is
     # oversaturated is lower than in epochs where pools are not oversaturated
     assert (
         pool1_user_rewards_per_block[nonsaturated_epoch]
@@ -170,7 +170,7 @@ def _check_pool_records(pool_records: dict[int, PoolRecord]) -> None:
         > pool2_user_rewards_per_block[oversaturated_epoch]
     )
 
-    # check that oversaturated pool doesn't lead to increased rewards for pool owner
+    # Check that oversaturated pool doesn't lead to increased rewards for pool owner
     # when compared to saturated pool, i.e. total pool margin amount is not increased
     pool1_rew_fraction_sat = pool1_owner_rewards_per_block[saturated_epoch]
     pool2_rew_fraction_sat = pool2_owner_rewards_per_block[saturated_epoch]
@@ -248,16 +248,16 @@ class TestPoolSaturation:
             with open(f"{temp_template}_pool_records.pickle", "wb") as out_data:
                 pickle.dump(pool_records, out_data)
 
-        # make sure there are rewards already available
+        # Make sure there are rewards already available
         clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
 
-        # make sure we have enough time to finish the delegation in one epoch
+        # Make sure we have enough time to finish the delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         init_epoch = cluster.g_query.get_epoch()
 
-        # submit registration certificates and delegate to pools
+        # Submit registration certificates and delegate to pools
         for idx, res in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
             pool_addrs_data = cluster_manager.cache.addrs_data[res]
             reward_addr = clusterlib.PoolUser(
@@ -290,7 +290,7 @@ class TestPoolSaturation:
                 saturation_amounts={},
             )
 
-        # record initial reward balance for each pool
+        # Record initial reward balance for each pool
         for pool_rec in pool_records.values():
             user_payment_balance = cluster.g_query.get_address_balance(
                 pool_rec.delegation_out.pool_user.payment.address
@@ -327,7 +327,7 @@ class TestPoolSaturation:
                 prev_epoch = pool_records[2].owner_rewards[-1].epoch_no
                 this_epoch = cluster.wait_for_epoch(epoch_no=prev_epoch + 1, future_is_ok=False)
 
-                # make sure we have enough time to finish everything in single epoch
+                # Make sure we have enough time to finish everything in single epoch
                 clusterlib_utils.wait_for_epoch_interval(
                     cluster_obj=cluster, start=10, stop=50, force_epoch=True
                 )
@@ -344,7 +344,7 @@ class TestPoolSaturation:
                 )
 
                 for pool_rec in pool_records.values():
-                    # reward balance in previous epoch
+                    # Reward balance in previous epoch
                     prev_user_reward = pool_rec.user_rewards[-1].reward_total
                     prev_owner_reward = pool_rec.owner_rewards[-1].reward_total
 
@@ -352,7 +352,7 @@ class TestPoolSaturation:
                         ledger_state["blocksBefore"].get(pool_rec.id_dec) or 0
                     )
 
-                    # current reward balance
+                    # Current reward balance
                     user_reward = cluster.g_query.get_stake_addr_info(
                         pool_rec.delegation_out.pool_user.stake.address
                     ).reward_account_balance
@@ -360,7 +360,7 @@ class TestPoolSaturation:
                         pool_rec.reward_addr.stake.address
                     ).reward_account_balance
 
-                    # total reward amounts received this epoch
+                    # Total reward amounts received this epoch
                     owner_reward_epoch = owner_reward - prev_owner_reward
                     # We cannot compare with previous rewards in epochs where
                     # `this_epoch >= init_epoch + epoch_withdrawal`.
@@ -370,7 +370,7 @@ class TestPoolSaturation:
                     else:
                         user_reward_epoch = user_reward - prev_user_reward
 
-                    # store collected rewards info
+                    # Store collected rewards info
                     user_payment_balance = cluster.g_query.get_address_balance(
                         pool_rec.delegation_out.pool_user.payment.address
                     )
@@ -398,13 +398,13 @@ class TestPoolSaturation:
                         cluster_obj=cluster, ledger_state=ledger_state, pool_id=pool_rec.id
                     )
 
-                    # check that pool owner received rewards
+                    # Check that pool owner received rewards
                     if this_epoch >= 5:
                         assert (
                             owner_reward_epoch
                         ), f"New reward was not received by pool owner of pool '{pool_rec.id}'"
 
-                # fund the delegated addresses - saturate all pools
+                # Fund the delegated addresses - saturate all pools
                 if this_epoch == init_epoch + epoch_saturate:
                     clusterlib_utils.fund_from_faucet(
                         *[p.delegation_out.pool_user.payment for p in pool_records.values()],
@@ -449,10 +449,10 @@ class TestPoolSaturation:
                         force=True,
                     )
 
-                # transfer funds back to faucet so the pools are no longer (over)saturated
+                # Transfer funds back to faucet so the pools are no longer (over)saturated
                 # and staked amount is +- same as the `initial_balance`
                 if this_epoch >= init_epoch + epoch_withdrawal:
-                    # withdraw rewards of pool users of all pools
+                    # Withdraw rewards of pool users of all pools
                     try:
                         _withdraw_rewards(
                             *[p.delegation_out.pool_user for p in pool_records.values()],
@@ -504,7 +504,7 @@ class TestPoolSaturation:
                     msg = "Failed to finish actions in single epoch, it would affect other checks"
                     raise AssertionError(msg)
         except Exception:
-            # at this point the cluster needs respin in case of any failure
+            # At this point the cluster needs respin in case of any failure
             if cluster.g_query.get_epoch() >= init_epoch + epoch_saturate:
                 cluster_manager.set_needs_respin()
             _save_pool_records()

@@ -15,7 +15,7 @@ from cardano_node_tests.utils import cluster_nodes
 LOGGER = logging.getLogger(__name__)
 
 
-# valid scenarios when we are testing the kes-period-info cli command
+# Valid scenarios when we are testing the kes-period-info cli command
 class KesScenarios:
     ALL_VALID = "all_valid"
     ALL_INVALID = "all_invalid"

@@ -37,7 +37,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -193,7 +193,7 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
-            # ttl is optional in this test
+            # Ttl is optional in this test
             invalid_hereafter=cluster.g_query.get_slot_no() + 200,
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(
@@ -226,7 +226,7 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check tx view
+        # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
@@ -277,7 +277,7 @@ class TestMinting:
             datum_file=plutus_common.DATUM_42,
         )
 
-        # to check datum hash on readonly reference input
+        # To check datum hash on readonly reference input
         with_reference_input = scenario != "reference_script"
         different_datum = scenario == "different_datum"
         datum_file = plutus_common.DATUM_43_TYPED if different_datum else plutus_common.DATUM_42
@@ -308,7 +308,7 @@ class TestMinting:
             script_data_file=plutus_common.DATUM_42
         )
 
-        # the redeemer file will be composed by the datum hash
+        # The redeemer file will be composed by the datum hash
         redeemer_file = f"{temp_template}.redeemer"
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
             json.dump({"bytes": datum_hash}, outfile)
@@ -336,7 +336,7 @@ class TestMinting:
             *mint_txouts,
         ]
 
-        # the plutus script checks if all reference inputs have the same datum hash
+        # The plutus script checks if all reference inputs have the same datum hash
         # it will fail if the datums hash are not the same in all reference inputs and
         # succeed if all datums hash match
         if different_datum:
@@ -372,7 +372,7 @@ class TestMinting:
             readonly_reference_txins=reference_input,
         )
 
-        # check that the token was minted
+        # Check that the token was minted
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         token_utxo = clusterlib.filter_utxos(
             utxos=out_utxos, address=issuer_addr.address, coin=token
@@ -381,7 +381,7 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check that reference UTxO was NOT spent
+        # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), "Reference UTxO was spent"

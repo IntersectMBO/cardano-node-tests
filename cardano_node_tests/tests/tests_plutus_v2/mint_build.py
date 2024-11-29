@@ -33,14 +33,14 @@ def _fund_issuer(
             address=issuer_addr.address,
             amount=amount,
         ),
-        # for collateral
+        # For collateral
         clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost.collateral),
     ]
 
     reference_amount = 0
     if reference_script:
         reference_amount = 20_000_000
-        # for reference UTxO
+        # For reference UTxO
         txouts.append(
             clusterlib.TxOut(
                 address=issuer_addr.address,
@@ -56,7 +56,7 @@ def _fund_issuer(
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
-        # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+        # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,
     )
     tx_signed = cluster_obj.g_transaction.sign_tx(

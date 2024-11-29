@@ -13,7 +13,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-# approx. fee for Tx size
+# Approx. fee for Tx size
 FEE_REDEEM_TXSIZE = 400_000
 
 
@@ -49,7 +49,7 @@ def _fund_script(
         collateral_fraction_offset=collateral_fraction_offset,
     )
 
-    # create a Tx output with a datum hash at the script address
+    # Create a Tx output with a datum hash at the script address
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -64,7 +64,7 @@ def _fund_script(
 
     txouts = [
         script_txout,
-        # for collateral
+        # For collateral
         clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
@@ -147,7 +147,7 @@ def _spend_locked_txin(  # noqa: C901
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 
-    # change will be returned to address of the first script
+    # Change will be returned to address of the first script
     change_rec = script_utxos[0]
 
     redeem_cost = plutus_common.compute_cost(
@@ -160,7 +160,7 @@ def _spend_locked_txin(  # noqa: C901
         utxos=[*script_utxos_lovelace, *txins]
     )
 
-    # spend the "locked" UTxO
+    # Spend the "locked" UTxO
 
     plutus_txins = [
         clusterlib.ScriptTxIn(
@@ -184,7 +184,7 @@ def _spend_locked_txin(  # noqa: C901
     txouts = [
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
     ]
-    # append change
+    # Append change
     if script_lovelace_balance > amount + redeem_cost.fee + fee_txsize:
         txouts.append(
             clusterlib.TxOut(
@@ -198,7 +198,7 @@ def _spend_locked_txin(  # noqa: C901
         txouts.append(
             clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
         )
-        # append change
+        # Append change
         script_token_balance = clusterlib.calculate_utxos_balance(
             utxos=script_utxos, coin=token.coin
         )
@@ -299,7 +299,7 @@ def _spend_locked_txin(  # noqa: C901
                 utxo=u, coins=[token.coin]
             ), f"Token inputs were NOT spent for `{u.address}`"
 
-    # check tx view
+    # Check tx view
     tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)

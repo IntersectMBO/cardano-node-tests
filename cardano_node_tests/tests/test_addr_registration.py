@@ -36,7 +36,7 @@ def pool_users(
         )
         fixture_cache.value = created_users
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         created_users[0],
         cluster_obj=cluster,
@@ -223,7 +223,7 @@ class TestRegisterAddr:
         user_payment = pool_users[0].payment
         src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
-        # create stake address registration cert
+        # Create stake address registration cert
         address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
@@ -232,14 +232,14 @@ class TestRegisterAddr:
             stake_vkey_file=user_registered.stake.vkey_file,
         )
 
-        # create stake address deregistration cert
+        # Create stake address deregistration cert
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=address_deposit,
             stake_vkey_file=user_registered.stake.vkey_file,
         )
 
-        # register and deregister stake address in single TX
+        # Register and deregister stake address in single TX
         tx_files = clusterlib.TxFiles(
             certificate_files=[
                 stake_addr_reg_cert_file,
@@ -272,12 +272,12 @@ class TestRegisterAddr:
                 deposit=0,
             )
 
-        # check that the stake address is not registered
+        # Check that the stake address is not registered
         assert not cluster.g_query.get_stake_addr_info(
             user_registered.stake.address
         ).address, f"Stake address is registered: {user_registered.stake.address}"
 
-        # check that the balance for source address was correctly updated and that key deposit
+        # Check that the balance for source address was correctly updated and that key deposit
         # was not needed
         assert (
             cluster.g_query.get_address_balance(user_payment.address)
@@ -401,7 +401,7 @@ class TestNegative:
         """
         temp_template = common.get_test_id(cluster)
 
-        # create stake address registration cert, use wrong stake vkey
+        # Create stake address registration cert, use wrong stake vkey
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr0",
@@ -429,14 +429,14 @@ class TestNegative:
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
 
-        # create stake address registration cert
+        # Create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=user_registered.stake.vkey_file,
         )
 
-        # register stake address, use wrong payment skey
+        # Register stake address, use wrong payment skey
         tx_files = clusterlib.TxFiles(
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[pool_users[1].payment.skey_file],
@@ -466,7 +466,7 @@ class TestNegative:
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
 
-        # files for deregistering stake address
+        # Files for deregistering stake address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),

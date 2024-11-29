@@ -16,7 +16,7 @@ from cardano_node_tests.utils import model_ekg
 LOGGER = logging.getLogger(__name__)
 
 
-# skip all tests for now
+# Skip all tests for now
 pytestmark = pytest.mark.skip(reason="metrics data are not stable yet")
 
 

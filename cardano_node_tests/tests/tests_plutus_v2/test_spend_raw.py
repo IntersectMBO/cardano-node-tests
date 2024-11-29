@@ -36,7 +36,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -77,7 +77,7 @@ class TestLockingV2:
 
         plutus_op = spend_raw.PLUTUS_OP_GUESSING_GAME_UNTYPED
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
@@ -152,28 +152,28 @@ class TestLockingV2:
             == dst_init_balance + amount
         ), f"Incorrect balance for destination address `{payment_addrs[1].address}`"
 
-        # check that script address UTxO was spent
+        # Check that script address UTxO was spent
         assert not cluster.g_query.get_utxo(
             utxo=script_utxos[0]
         ), f"Script address UTxO was NOT spent `{script_utxos[0]}`"
 
-        # check that reference UTxO was NOT spent
+        # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), "Reference input was spent"
 
-        # check expected fees
+        # Check expected fees
         expected_fee_redeem = 176_024 if use_reference_script else 179_764
 
         fee = (
-            # for tx size
+            # For tx size
             cluster.g_transaction.estimate_fee(
                 txbody_file=tx_output_redeem.out_file,
                 txin_count=len(tx_output_redeem.txins),
                 txout_count=len(tx_output_redeem.txouts),
                 witness_count=len(tx_files_redeem.signing_key_files),
             )
-            # for script execution
+            # For script execution
             + redeem_cost.fee
         )
 
@@ -211,7 +211,7 @@ class TestLockingV2:
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
         script_utxos, *__ = spend_raw._fund_script(
             temp_template=temp_template,
             cluster=cluster,
@@ -224,7 +224,7 @@ class TestLockingV2:
         )
         script_utxo = script_utxos[0]
 
-        # double-check that the UTxO datum hash corresponds to the datum CBOR file
+        # Double-check that the UTxO datum hash corresponds to the datum CBOR file
         datum_hash = cluster.g_transaction.get_hash_script_data(
             script_data_cbor_file=plutus_common.DATUM_FINITE_TYPED_CBOR
         )
@@ -234,7 +234,7 @@ class TestLockingV2:
             dbsync_queries.query_datum(datum_hash=script_utxo.inline_datum_hash)
         )
 
-        # check that datum from db-sync produces the original datum hash
+        # Check that datum from db-sync produces the original datum hash
         db_cbor_hex = datum_db_response[0].bytes.hex()
         db_cbor_bin = binascii.unhexlify(db_cbor_hex)
         db_cbor_file = f"{temp_template}_db_datum.cbor"
@@ -247,12 +247,12 @@ class TestLockingV2:
             db_datum_hash == datum_hash
         ), "Datum hash of bytes in db-sync doesn't correspond to the original datum hash"
 
-        # check that datum bytes in db-sync corresponds to the original datum
+        # Check that datum bytes in db-sync corresponds to the original datum
         with open(plutus_common.DATUM_FINITE_TYPED_CBOR, "rb") as in_fp:
             orig_cbor_bin = in_fp.read()
             orig_cbor_hex = orig_cbor_bin.hex()
 
-        # see https://github.com/IntersectMBO/cardano-db-sync/issues/1214
+        # See https://github.com/IntersectMBO/cardano-db-sync/issues/1214
         # and https://github.com/IntersectMBO/cardano-node/issues/4433
         if db_cbor_hex != orig_cbor_hex:
             issues.node_4433.finish_test()

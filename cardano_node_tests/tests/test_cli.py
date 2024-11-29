@@ -317,12 +317,12 @@ class TestAddressInfo:
         """Check script address info."""
         temp_template = common.get_test_id(cluster)
 
-        # create payment address
+        # Create payment address
         payment_rec = cluster.g_address.gen_payment_addr_and_keys(
             name=temp_template,
         )
 
-        # create multisig script
+        # Create multisig script
         multisig_script = cluster.g_transaction.build_multisig_script(
             script_name=temp_template,
             script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
@@ -331,7 +331,7 @@ class TestAddressInfo:
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
         )
 
-        # create script address
+        # Create script address
         address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=multisig_script
         )
@@ -349,21 +349,21 @@ class TestAddressInfo:
         """Compare payment address info with and without outfile provided."""
         common.get_test_id(cluster)
 
-        # just a static address to preform the test
+        # Just a static address to preform the test
         address = "addr_test1vzp4kj0rmnl5q5046e2yy697fndej56tm35jekemj6ew2gczp74wk"
 
-        # get address information
+        # Get address information
         cli_out = cluster.cli(["address", "info", "--address", str(address)])
         address_info_no_outfile = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
-        # get address information using an output file
+        # Get address information using an output file
         out_file = "/dev/stdout"
         cli_out = cluster.cli(
             ["address", "info", "--address", str(address), "--out-file", out_file]
         )
         address_info_with_outfile = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
-        # check if the information obtained by the two methods is the same
+        # Check if the information obtained by the two methods is the same
         assert (
             address_info_no_outfile == address_info_with_outfile
         ), "Address information doesn't match"
@@ -649,22 +649,22 @@ class TestKey:
         """Check that the non-extended verification key is according the verification key."""
         temp_template = common.get_test_id(cluster)
 
-        # get an extended verification key
+        # Get an extended verification key
         payment_keys = cluster.g_address.gen_payment_key_pair(
             key_name=f"{temp_template}_extended", extended=True
         )
 
         with open(payment_keys.vkey_file, encoding="utf-8") as in_file:
-            # ignore the first 4 chars, just an informative keyword
+            # Ignore the first 4 chars, just an informative keyword
             extended_vkey = json.loads(in_file.read().strip()).get("cborHex", "")[4:]
 
-        # get a non-extended verification key using the extended key
+        # Get a non-extended verification key using the extended key
         non_extended_key_file = cluster.g_key.gen_non_extended_verification_key(
             key_name=temp_template, extended_verification_key_file=payment_keys.vkey_file
         )
 
         with open(non_extended_key_file, encoding="utf-8") as in_file:
-            # ignore the first 4 chars, just an informative keyword
+            # Ignore the first 4 chars, just an informative keyword
             non_extended_vkey = json.loads(in_file.read().strip()).get("cborHex", "")[4:]
 
         assert extended_vkey.startswith(non_extended_vkey)
@@ -696,12 +696,12 @@ class TestKey:
         """
         temp_template = common.get_test_id(cluster)
 
-        # get an extended key
+        # Get an extended key
         payment_keys = cluster.g_address.gen_payment_key_pair(
             key_name=f"{temp_template}_extended", extended=True
         )
 
-        # try to get a non-extended verification key using the extended signing key
+        # Try to get a non-extended verification key using the extended signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_key.gen_non_extended_verification_key(
                 key_name=temp_template, extended_verification_key_file=payment_keys.skey_file
@@ -747,14 +747,14 @@ class TestQueryUTxO:
         amount1 = 2_000_000
         amount2 = 2_500_000
 
-        # create source and destination payment addresses
+        # Create source and destination payment addresses
         payment_addrs = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_src",
             f"{temp_template}_dst",
             cluster_obj=cluster,
         )
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             payment_addrs[0],
             cluster_obj=cluster,
@@ -962,7 +962,7 @@ class TestAdvancedQueries:
 
         try:
             if option == "single_pool":
-                # make sure the queries can be finished in single epoch
+                # Make sure the queries can be finished in single epoch
                 clusterlib_utils.wait_for_epoch_interval(
                     cluster_obj=cluster_obj,
                     start=1,
@@ -979,13 +979,13 @@ class TestAdvancedQueries:
                     stake_pool_ids=expected_pool_ids
                 )
             elif option == "all_pools":
-                # sleep till the end of epoch for stable stake distribution
+                # Sleep till the end of epoch for stable stake distribution
                 clusterlib_utils.wait_for_epoch_interval(
                     cluster_obj=cluster_obj,
                     start=common.EPOCH_START_SEC_LEDGER_STATE,
                     stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
                 )
-                # get up-to-date list of available pools
+                # Get up-to-date list of available pools
                 expected_pool_ids = [
                     cluster_obj.g_stake_pool.get_stake_pool_id(
                         cluster_manager.cache.addrs_data[p]["cold_key_pair"].vkey_file
@@ -1052,7 +1052,7 @@ class TestAdvancedQueries:
                 expected_pool_ids_dec = set(expected_pool_ids_mapping.values())
 
                 out_pool_ids_dec = set(stake_snapshot["pools"].keys())
-                # retired pools and newly created ones may not yet be on the snapshot
+                # Retired pools and newly created ones may not yet be on the snapshot
                 if not expected_pool_ids_dec.issubset(out_pool_ids_dec):
                     errors.append(
                         f"Expected pools: {expected_pool_ids_dec}\nVS\n"
@@ -1060,7 +1060,7 @@ class TestAdvancedQueries:
                         "Difference: "
                         f"{expected_pool_ids_dec.symmetric_difference(out_pool_ids_dec)}"
                     )
-                # active stake can be lower than sum of stakes, as some pools may not be running
+                # Active stake can be lower than sum of stakes, as some pools may not be running
                 # and minting blocks
                 if sum_mark < stake_snapshot["total"]["stakeMark"]:
                     total_stake_errors.append(

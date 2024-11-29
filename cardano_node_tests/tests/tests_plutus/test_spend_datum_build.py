@@ -41,7 +41,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -286,7 +286,7 @@ class TestNegativeDatum:
                 or "points to a script hash that is not known" in err_str
             ), err_str
 
-        # check expected fees
+        # Check expected fees
         expected_fee_fund = 199_087
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
@@ -363,7 +363,7 @@ class TestNegativeDatum:
             plutus_op=plutus_op_1,
         )
 
-        # use a wrong datum to try to unlock the funds
+        # Use a wrong datum to try to unlock the funds
         plutus_op_2 = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
@@ -427,7 +427,7 @@ class TestNegativeDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
-        # create datum and collateral UTxOs
+        # Create datum and collateral UTxOs
 
         txouts = [
             clusterlib.TxOut(
@@ -466,7 +466,7 @@ class TestNegativeDatum:
             datum_utxo.datum_hash == datum_hash
         ), f"UTxO should have datum hash '{datum_hash}': {datum_utxo}"
 
-        # try to spend the "locked" UTxO
+        # Try to spend the "locked" UTxO
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             spend_build._build_spend_locked_txin(
@@ -518,7 +518,7 @@ class TestNegativeDatum:
 
         script_address = pbt_script_addresses[plutus_version]
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],

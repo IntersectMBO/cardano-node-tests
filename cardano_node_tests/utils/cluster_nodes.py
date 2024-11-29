@@ -203,7 +203,7 @@ class TestnetCluster(ClusterType):
             cluster_scripts.TestnetScripts()
         )
 
-        # cached values
+        # Cached values
         self._testnet_type = ""
 
     @property

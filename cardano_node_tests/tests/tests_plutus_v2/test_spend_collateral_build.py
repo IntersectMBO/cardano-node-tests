@@ -38,7 +38,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -64,7 +64,7 @@ class TestCollateralOutput:
         total_collateral_amount: int | None = None,
         return_collateral_txouts: clusterlib.OptionalTxOuts = (),
     ) -> clusterlib.TxRawOutput:
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.redeemer_cbor_file
 
@@ -88,7 +88,7 @@ class TestCollateralOutput:
         txouts_redeem = [
             clusterlib.TxOut(address=dst_addr.address, amount=2_000_000),
         ]
-        # include any payment txin
+        # Include any payment txin
         txins = [
             r
             for r in cluster.g_query.get_utxo(

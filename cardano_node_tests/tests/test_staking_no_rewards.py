@@ -76,7 +76,7 @@ class TestNoRewards:
         )
         init_epoch = cluster.g_query.get_epoch()
 
-        # submit registration certificate and delegate to pool
+        # Submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
@@ -94,13 +94,13 @@ class TestNoRewards:
             delegation_out.pool_user.stake.address
         ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
 
-        # make sure we have enough time to finish the pool update in one epoch
+        # Make sure we have enough time to finish the pool update in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         update_epoch = cluster.g_query.get_epoch()
 
-        # load and update original pool data
+        # Load and update original pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
         )
@@ -108,7 +108,7 @@ class TestNoRewards:
             loaded_data, pool_pledge=loaded_data.pool_pledge * 9
         )
 
-        # increase the needed pledge amount - update the pool parameters by resubmitting the pool
+        # Increase the needed pledge amount - update the pool parameters by resubmitting the pool
         # registration certificate
         cluster.g_stake_pool.register_stake_pool(
             pool_data=pool_data_updated,
@@ -136,7 +136,7 @@ class TestNoRewards:
         return_orig_epoch = cluster.wait_for_epoch(epoch_no=no_rewards_epoch + 3, padding_seconds=5)
 
         with cluster_manager.respin_on_failure():
-            # check that NO new rewards were received by those delegating to the pool
+            # Check that NO new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
                 == cluster.g_query.get_stake_addr_info(
@@ -144,7 +144,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "Received unexpected rewards"
 
-            # check that pool owner is also NOT receiving rewards
+            # Check that pool owner is also NOT receiving rewards
             assert (
                 orig_owner_reward
                 == cluster.g_query.get_stake_addr_info(
@@ -154,7 +154,7 @@ class TestNoRewards:
 
             # Return the pool to the original state - restore pledge settings.
 
-            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
                 pool_owner,
@@ -164,7 +164,7 @@ class TestNoRewards:
                 force=True,
             )
 
-            # update the pool to original parameters by resubmitting
+            # Update the pool to original parameters by resubmitting
             # the pool registration certificate
             cluster.g_stake_pool.register_stake_pool(
                 pool_data=loaded_data,
@@ -178,7 +178,7 @@ class TestNoRewards:
 
             cluster.wait_for_epoch(epoch_no=return_orig_epoch + 5, padding_seconds=30)
 
-            # check that new rewards were received by those delegating to the pool
+            # Check that new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -186,7 +186,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "New reward was not received by stake address"
 
-            # check that pool owner is also receiving rewards
+            # Check that pool owner is also receiving rewards
             assert (
                 orig_owner_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -194,7 +194,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "New reward was not received by pool reward address"
 
-        # check that pledge is still met after the owner address was used to pay for Txs
+        # Check that pledge is still met after the owner address was used to pay for Txs
         pool_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
@@ -240,7 +240,7 @@ class TestNoRewards:
         )
         init_epoch = cluster.g_query.get_epoch()
 
-        # submit registration certificate and delegate to pool
+        # Submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
@@ -258,14 +258,14 @@ class TestNoRewards:
             delegation_out.pool_user.stake.address
         ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
 
-        # load pool data
+        # Load pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=f"changed_{pool_name}", pool_id=pool_id
         )
 
         pledge_amount = loaded_data.pool_pledge // 2
 
-        # withdraw part of the pledge
+        # Withdraw part of the pledge
         destinations = [
             clusterlib.TxOut(address=delegation_out.pool_user.payment.address, amount=pledge_amount)
         ]
@@ -297,7 +297,7 @@ class TestNoRewards:
         return_orig_epoch = cluster.wait_for_epoch(epoch_no=no_rewards_epoch + 3, padding_seconds=5)
 
         with cluster_manager.respin_on_failure():
-            # check that NO new rewards were received by those delegating to the pool
+            # Check that NO new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
                 == cluster.g_query.get_stake_addr_info(
@@ -305,7 +305,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "Received unexpected rewards"
 
-            # check that pool owner is also NOT receiving rewards
+            # Check that pool owner is also NOT receiving rewards
             assert (
                 orig_owner_reward
                 == cluster.g_query.get_stake_addr_info(
@@ -315,7 +315,7 @@ class TestNoRewards:
 
             # Return the pool to the original state - restore pledge funds.
 
-            # fund user address so it has enough funds for fees etc.
+            # Fund user address so it has enough funds for fees etc.
             clusterlib_utils.fund_from_faucet(
                 delegation_out.pool_user,
                 cluster_obj=cluster,
@@ -324,7 +324,7 @@ class TestNoRewards:
                 force=True,
             )
 
-            # return pledge
+            # Return pledge
             destinations = [
                 clusterlib.TxOut(
                     address=pool_owner.payment.address, amount=pledge_amount + 100_000_000
@@ -350,7 +350,7 @@ class TestNoRewards:
 
             cluster.wait_for_epoch(epoch_no=return_orig_epoch + 5, padding_seconds=30)
 
-            # check that new rewards were received by those delegating to the pool
+            # Check that new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -358,7 +358,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "New reward was not received by stake address"
 
-            # check that pool owner is also receiving rewards
+            # Check that pool owner is also receiving rewards
             assert (
                 orig_owner_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -405,7 +405,7 @@ class TestNoRewards:
         )
         init_epoch = cluster.g_query.get_epoch()
 
-        # submit registration certificate and delegate to pool
+        # Submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
@@ -423,7 +423,7 @@ class TestNoRewards:
             delegation_out.pool_user.stake.address
         ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
 
-        # withdraw rewards from owner's stake address if there are any
+        # Withdraw rewards from owner's stake address if there are any
         if cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance:
             cluster.g_stake_address.withdraw_reward(
                 stake_addr_record=pool_owner.stake,
@@ -431,7 +431,7 @@ class TestNoRewards:
                 tx_name=temp_template,
             )
 
-        # deregister stake address - owner's stake is lower than pledge
+        # Deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
@@ -451,7 +451,7 @@ class TestNoRewards:
         )
 
         with cluster_manager.respin_on_failure():
-            # check that the key deposit was returned
+            # Check that the key deposit was returned
             assert (
                 cluster.g_query.get_address_balance(pool_owner.payment.address)
                 == src_init_balance
@@ -459,7 +459,7 @@ class TestNoRewards:
                 + cluster.g_query.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
-            # check that the stake address is no longer delegated
+            # Check that the stake address is no longer delegated
             assert not cluster.g_query.get_stake_addr_info(
                 pool_owner.stake.address
             ), "Stake address still delegated"
@@ -477,7 +477,7 @@ class TestNoRewards:
                 epoch_no=no_rewards_epoch + 3, padding_seconds=5
             )
 
-            # check that NO new rewards were received by those delegating to the pool
+            # Check that NO new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
                 == cluster.g_query.get_stake_addr_info(
@@ -485,7 +485,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "Received unexpected rewards"
 
-            # check that pool owner is also NOT receiving rewards
+            # Check that pool owner is also NOT receiving rewards
             assert (
                 orig_owner_reward
                 == cluster.g_query.get_stake_addr_info(
@@ -496,7 +496,7 @@ class TestNoRewards:
             # Return the pool to the original state - reregister stake address and
             # delegate it to the pool.
 
-            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
                 pool_owner,
@@ -508,7 +508,7 @@ class TestNoRewards:
 
             src_updated_balance = cluster.g_query.get_address_balance(pool_owner.payment.address)
 
-            # reregister stake address and delegate it to pool
+            # Reregister stake address and delegate it to pool
             tx_files = clusterlib.TxFiles(
                 certificate_files=[
                     pool_rec["stake_addr_registration_cert"],
@@ -522,7 +522,7 @@ class TestNoRewards:
                 tx_files=tx_files,
             )
 
-            # check that the balance for source address was correctly updated
+            # Check that the balance for source address was correctly updated
             assert (
                 cluster.g_query.get_address_balance(pool_owner.payment.address)
                 == src_updated_balance - tx_raw_output.fee - cluster.g_query.get_address_deposit()
@@ -530,7 +530,7 @@ class TestNoRewards:
 
             cluster.wait_for_epoch(epoch_no=return_orig_epoch + 4, padding_seconds=30)
 
-            # check that the stake address was delegated
+            # Check that the stake address was delegated
             stake_addr_info = cluster.g_query.get_stake_addr_info(pool_owner.stake.address)
             assert (
                 stake_addr_info.delegation
@@ -538,7 +538,7 @@ class TestNoRewards:
 
             assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-            # check that new rewards were received by those delegating to the pool
+            # Check that new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -546,7 +546,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "New reward was not received by stake address"
 
-            # check that pool owner is also receiving rewards
+            # Check that pool owner is also receiving rewards
             assert (
                 orig_user_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -554,7 +554,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "New reward was not received by pool reward address"
 
-        # check that pledge is still met after the owner address was used to pay for Txs
+        # Check that pledge is still met after the owner address was used to pay for Txs
         pool_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
@@ -601,7 +601,7 @@ class TestNoRewards:
         )
         init_epoch = cluster.g_query.get_epoch()
 
-        # submit registration certificate and delegate to pool
+        # Submit registration certificate and delegate to pool
         delegation_out = delegation.delegate_stake_addr(
             cluster_obj=cluster,
             addrs_data=cluster_manager.cache.addrs_data,
@@ -619,7 +619,7 @@ class TestNoRewards:
             delegation_out.pool_user.stake.address
         ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
 
-        # withdraw pool rewards to payment address
+        # Withdraw pool rewards to payment address
         # use `transaction build` if possible
         if common.BUILD_UNUSABLE:
             cluster.g_stake_address.withdraw_reward(
@@ -635,7 +635,7 @@ class TestNoRewards:
                 tx_name=temp_template,
             )
 
-        # deregister the pool reward address
+        # Deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
@@ -655,7 +655,7 @@ class TestNoRewards:
         )
 
         with cluster_manager.respin_on_failure():
-            # check that the key deposit was returned
+            # Check that the key deposit was returned
             assert (
                 cluster.g_query.get_address_balance(pool_reward.payment.address)
                 == src_init_balance
@@ -663,7 +663,7 @@ class TestNoRewards:
                 + cluster.g_query.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
-            # check that the reward address is no longer delegated
+            # Check that the reward address is no longer delegated
             assert not cluster.g_query.get_stake_addr_info(
                 pool_reward.stake.address
             ), "Stake address still delegated"
@@ -674,7 +674,7 @@ class TestNoRewards:
 
             return_orig_epoch = cluster.wait_for_epoch(epoch_no=dereg_epoch + 3, padding_seconds=10)
 
-            # check that pool owner is NOT receiving rewards
+            # Check that pool owner is NOT receiving rewards
             assert (
                 cluster.g_query.get_stake_addr_info(
                     pool_reward.stake.address
@@ -682,7 +682,7 @@ class TestNoRewards:
                 == 0
             ), "Pool owner received unexpected rewards"
 
-            # check that new rewards are received by those delegating to the pool
+            # Check that new rewards are received by those delegating to the pool
             assert (
                 orig_user_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -692,7 +692,7 @@ class TestNoRewards:
 
             # Return the pool to the original state - reregister reward address.
 
-            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
                 pool_reward,
@@ -704,7 +704,7 @@ class TestNoRewards:
 
             src_updated_balance = cluster.g_query.get_address_balance(pool_reward.payment.address)
 
-            # reregister reward address
+            # Reregister reward address
             tx_files = clusterlib.TxFiles(
                 certificate_files=[
                     pool_rec["reward_addr_registration_cert"],
@@ -717,7 +717,7 @@ class TestNoRewards:
                 tx_files=tx_files,
             )
 
-            # check that the balance for source address was correctly updated
+            # Check that the balance for source address was correctly updated
             assert (
                 cluster.g_query.get_address_balance(pool_reward.payment.address)
                 == src_updated_balance - tx_raw_output.fee - cluster.g_query.get_address_deposit()
@@ -725,7 +725,7 @@ class TestNoRewards:
 
             cluster.wait_for_epoch(epoch_no=return_orig_epoch + 4, padding_seconds=30)
 
-            # check that new rewards were received by those delegating to the pool
+            # Check that new rewards were received by those delegating to the pool
             assert (
                 orig_user_reward
                 < cluster.g_query.get_stake_addr_info(
@@ -733,7 +733,7 @@ class TestNoRewards:
                 ).reward_account_balance
             ), "New reward was not received by stake address"
 
-            # check that pool owner is also receiving rewards
+            # Check that pool owner is also receiving rewards
             assert (
                 cluster.g_query.get_stake_addr_info(
                     pool_reward.stake.address
@@ -741,7 +741,7 @@ class TestNoRewards:
                 > 0
             ), "New reward was not received by pool reward address"
 
-        # check that pledge is still met after the owner address was used to pay for Txs
+        # Check that pledge is still met after the owner address was used to pay for Txs
         pool_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
@@ -801,20 +801,20 @@ class TestNoRewards:
         else:
             pytest.xfail(f"Pool '{pool_name}' hasn't received any rewards, cannot continue.")
 
-        # make sure we have enough time to finish reward address deregistration in one epoch
+        # Make sure we have enough time to finish reward address deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         dereg_reward_epoch = cluster.g_query.get_epoch()
 
-        # withdraw pool rewards to payment address
+        # Withdraw pool rewards to payment address
         cluster.g_stake_address.withdraw_reward(
             stake_addr_record=pool_reward.stake,
             dst_addr_record=pool_reward.payment,
             tx_name=temp_template,
         )
 
-        # deregister the pool reward address
+        # Deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
@@ -834,7 +834,7 @@ class TestNoRewards:
         )
 
         with cluster_manager.respin_on_failure():
-            # check that the key deposit was returned
+            # Check that the key deposit was returned
             assert (
                 cluster.g_query.get_address_balance(pool_reward.payment.address)
                 == src_init_balance
@@ -842,7 +842,7 @@ class TestNoRewards:
                 + cluster.g_query.get_address_deposit()
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
-            # check that the reward address is no longer delegated
+            # Check that the reward address is no longer delegated
             assert not cluster.g_query.get_stake_addr_info(
                 pool_reward.stake.address
             ), "Stake address still delegated"
@@ -851,7 +851,7 @@ class TestNoRewards:
                 epoch_no=dereg_reward_epoch + 3, padding_seconds=5
             )
 
-            # check that pool owner is NOT receiving rewards
+            # Check that pool owner is NOT receiving rewards
             assert (
                 cluster.g_query.get_stake_addr_info(
                     pool_reward.stake.address
@@ -859,7 +859,7 @@ class TestNoRewards:
                 == 0
             ), "Pool owner received unexpected rewards"
 
-            # fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
+            # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
                 pool_owner,
@@ -880,7 +880,7 @@ class TestNoRewards:
             node_cold = pool_rec["cold_key_pair"]
             pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
 
-            # deregister stake pool
+            # Deregister stake pool
             depoch = cluster.g_query.get_epoch() + 1
             __, tx_raw_output = cluster.g_stake_pool.deregister_stake_pool(
                 pool_owners=[pool_owner],
@@ -893,12 +893,12 @@ class TestNoRewards:
 
             cluster.wait_for_epoch(epoch_no=dereg_pool_epoch + 1, padding_seconds=5)
 
-            # check that the pool was deregistered
+            # Check that the pool was deregistered
             assert not cluster.g_query.get_pool_state(
                 stake_pool_id=pool_id
             ).pool_params, f"The pool {pool_id} was not deregistered"
 
-            # check command kes-period-info case: de-register pool
+            # Check command kes-period-info case: de-register pool
             kes_period_info = cluster.g_query.get_kes_period_info(pool_opcert_file)
             kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
@@ -910,12 +910,12 @@ class TestNoRewards:
                 )
             )
 
-            # check that the balance for source address was correctly updated
+            # Check that the balance for source address was correctly updated
             assert src_dereg_balance - tx_raw_output.fee == cluster.g_query.get_address_balance(
                 pool_owner.payment.address
             )
 
-            # check that the pool deposit was NOT returned to reward or stake address
+            # Check that the pool deposit was NOT returned to reward or stake address
             assert (
                 cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance
                 == stake_acount_balance
@@ -932,7 +932,7 @@ class TestNoRewards:
 
             src_updated_balance = cluster.g_query.get_address_balance(pool_reward.payment.address)
 
-            # reregister the pool by resubmitting the pool registration certificate,
+            # Reregister the pool by resubmitting the pool registration certificate,
             # delegate stake address to pool again, reregister reward address
             tx_files = clusterlib.TxFiles(
                 certificate_files=[
@@ -953,7 +953,7 @@ class TestNoRewards:
                 tx_files=tx_files,
             )
 
-            # check command kes-period-info case: re-register pool, check without
+            # Check command kes-period-info case: re-register pool, check without
             # waiting to take effect
             kes_period_info = cluster.g_query.get_kes_period_info(pool_opcert_file)
             kes_period_info_errors_list.extend(
@@ -966,7 +966,7 @@ class TestNoRewards:
                 )
             )
 
-            # check that the balance for source address was correctly updated and that the
+            # Check that the balance for source address was correctly updated and that the
             # pool deposit was needed
             assert (
                 cluster.g_query.get_address_balance(pool_reward.payment.address)
@@ -985,7 +985,7 @@ class TestNoRewards:
                 msg = f"Stake pool `{pool_id}` not registered even after 5 epochs."
                 raise AssertionError(msg)
 
-            # check command kes-period-info case: re-register pool
+            # Check command kes-period-info case: re-register pool
             kes_period_info = cluster.g_query.get_kes_period_info(pool_opcert_file)
             kes_period_info_errors_list.extend(
                 kes.check_kes_period_info_result(
@@ -997,10 +997,10 @@ class TestNoRewards:
                 )
             )
 
-            # wait before checking delegation and rewards
+            # Wait before checking delegation and rewards
             cluster.wait_for_epoch(epoch_no=rereg_epoch + 3, padding_seconds=30)
 
-            # check that the stake address was delegated
+            # Check that the stake address was delegated
             stake_addr_info = cluster.g_query.get_stake_addr_info(pool_owner.stake.address)
             assert (
                 stake_addr_info.delegation
@@ -1008,12 +1008,12 @@ class TestNoRewards:
 
             assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
-            # check that pool owner is receiving rewards
+            # Check that pool owner is receiving rewards
             assert cluster.g_query.get_stake_addr_info(
                 pool_reward.stake.address
             ).reward_account_balance, "New reward was not received by pool reward address"
 
-        # check that pledge is still met after the owner address was used to pay for Txs
+        # Check that pledge is still met after the owner address was used to pay for Txs
         pool_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )

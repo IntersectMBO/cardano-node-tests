@@ -44,7 +44,7 @@ def payment_addr_locked(
         cluster_obj=cluster,
     )[0]
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster,
@@ -68,7 +68,7 @@ def payment_addrs_disposable(
         cluster_obj=cluster,
     )
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,

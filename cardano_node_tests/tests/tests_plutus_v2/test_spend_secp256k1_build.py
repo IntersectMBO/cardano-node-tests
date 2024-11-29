@@ -38,7 +38,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -97,7 +97,7 @@ class TestSECP256k1:
                 amount=script_fund,
                 inline_datum_file=plutus_common.DATUM_42_TYPED,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
         ]
 
@@ -146,7 +146,7 @@ class TestSECP256k1:
         * spend the locked UTxO
         * check that script address UTxO was spent
         """
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         algorithm, script_utxos, collateral_utxos = build_fund_script_secp
         temp_template = common.get_test_id(cluster)
@@ -170,12 +170,12 @@ class TestSECP256k1:
             redeemer_file=redeemer_file,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.script_file
         assert plutus_op.datum_file
         assert plutus_op.redeemer_file
 
-        # spend the "locked" UTxO
+        # Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -217,7 +217,7 @@ class TestSECP256k1:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UTxO was spent
+        # Check that script address UTxO was spent
         assert not cluster.g_query.get_utxo(
             utxo=script_utxos[0]
         ), f"Script address UTxO was NOT spent `{script_utxos}`"
@@ -241,12 +241,12 @@ class TestSECP256k1:
 
         * Expect failure.
         """
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         algorithm, script_utxos, collateral_utxos = build_fund_script_secp
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
-        # the redeemer file will define the number of loops on the script
+        # The redeemer file will define the number of loops on the script
         redeemer_dir = (
             plutus_common.SEPC256K1_ECDSA_DIR
             if algorithm == "ecdsa"
@@ -255,7 +255,7 @@ class TestSECP256k1:
 
         redeemer_file = redeemer_dir / "loop_script.redeemer"
 
-        # generate a dummy redeemer with a number of loops big enough
+        # Generate a dummy redeemer with a number of loops big enough
         # to make the script to overspending the budget
         redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
 
@@ -278,12 +278,12 @@ class TestSECP256k1:
             redeemer_file=pl.Path(redeemer_file_dummy),
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.script_file
         assert plutus_op.datum_file
         assert plutus_op.redeemer_file
 
-        # spend the "locked" UTxO
+        # Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
