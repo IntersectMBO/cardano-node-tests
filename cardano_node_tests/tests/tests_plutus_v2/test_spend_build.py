@@ -37,7 +37,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -100,12 +100,12 @@ class TestBuildLocking:
             ),
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         (
             script_utxos,
@@ -123,7 +123,7 @@ class TestBuildLocking:
         )
         assert reference_utxo or not use_reference_script, "No reference script UTxO"
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -174,17 +174,17 @@ class TestBuildLocking:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UTxO was spent
+        # Check that script address UTxO was spent
         assert not cluster.g_query.get_utxo(
             utxo=script_utxos[0]
         ), f"Script address UTxO was NOT spent `{script_utxos}`"
 
-        # check that reference UTxO was NOT spent
+        # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), "Reference input was spent"
 
-        # check expected fees
+        # Check expected fees
         if use_reference_script:
             expected_fee_fund = 258_913
             expected_fee_redeem = 233_889
@@ -244,14 +244,14 @@ class TestBuildLocking:
 
         plutus_op = spend_build.PLUTUS_OP_GUESSING_GAME
 
-        # for mypy
+        # For mypy
         assert plutus_op.datum_file
 
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template, payment_script_file=plutus_op.script_file
         )
 
-        # create a Tx outputs
+        # Create a Tx outputs
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -268,7 +268,7 @@ class TestBuildLocking:
         ]
 
         if use_token:
-            # create the token
+            # Create the token
             token_rand = clusterlib.get_rand_str(5)
             token = clusterlib_utils.new_tokens(
                 *[f"qacoin{token_rand}".encode().hex()],

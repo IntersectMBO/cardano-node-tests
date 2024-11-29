@@ -69,11 +69,11 @@ class TestManyUTXOs:
         src_address = payment_addr.address
         dst_addresses = [rec.address for rec in out_addrs]
 
-        # create TX data
+        # Create TX data
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-        # send TX
+        # Send TX
         cluster_obj.g_transaction.send_tx(
             src_address=src_address,  # change is returned to `src_address`
             tx_name=tx_name,
@@ -214,7 +214,7 @@ class TestManyUTXOs:
                     txins_optimized.append(popped_txin)
                     break
 
-            # build, sign and submit the transaction
+            # Build, sign and submit the transaction
             data_for_build = clusterlib.collect_data_for_build(
                 clusterlib_obj=cluster,
                 src_address=src_address,

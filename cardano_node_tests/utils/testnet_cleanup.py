@@ -57,7 +57,7 @@ def deregister_stake_addr(
     deposit_amt: int,
 ) -> None:
     """Deregister stake address."""
-    # files for deregistering stake address
+    # Files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"rf_{name_template}_addr0_dereg",
         deposit_amt=deposit_amt,
@@ -120,7 +120,7 @@ def return_funds_to_faucet(
 ) -> None:
     """Send funds from `src_addr`s to `faucet_address`."""
     tx_name = f"rf_{tx_name}"
-    # the amount of "-1" means all available funds.
+    # The amount of "-1" means all available funds.
     fund_dst = [clusterlib.TxOut(address=faucet_address, amount=-1)]
     fund_tx_files = clusterlib.TxFiles(signing_key_files=[f.skey_file for f in src_addrs])
 
@@ -128,11 +128,11 @@ def return_funds_to_faucet(
     txins = list(itertools.chain.from_iterable(txins_nested))
     utxos_balance = functools.reduce(lambda x, y: x + y.amount, txins, 0)
 
-    # skip if there no (or too little) Lovelace
+    # Skip if there no (or too little) Lovelace
     if utxos_balance < 1000_000:
         return
 
-    # if the balance is too low, add a faucet UTxO so there's enough funds for fee
+    # If the balance is too low, add a faucet UTxO so there's enough funds for fee
     # and the total amount is higher than min ADA value
     if utxos_balance < 3000_000:
         faucet_utxos = cluster_obj.g_query.get_utxo(
@@ -141,7 +141,7 @@ def return_funds_to_faucet(
         futxo = random.choice(faucet_utxos)
         txins.append(futxo)
 
-    # try to return funds; don't mind if there's not enough funds for fees etc.
+    # Try to return funds; don't mind if there's not enough funds for fees etc.
     try:
         cluster_obj.g_transaction.send_tx(
             src_address=src_addrs[0].address,
@@ -196,9 +196,9 @@ def group_addr_files(file_paths: tp.Generator[pl.Path, None, None]) -> list[list
     path_groups: list[list[pl.Path]] = [curr_group]
     prev_basename = ""
 
-    # reverse-sort the list so stake address files are processes before payment address files
+    # Reverse-sort the list so stake address files are processes before payment address files
     for f in sorted(file_paths, reverse=True):
-        # skip the '*_pycurrent' symlinks to pytest temp dirs
+        # Skip the '*_pycurrent' symlinks to pytest temp dirs
         if "_pycurrent" in str(f):
             continue
         basename = f.name.replace("_stake.addr", "").replace(".addr", "")

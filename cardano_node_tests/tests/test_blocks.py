@@ -210,7 +210,7 @@ class TestLeadershipSchedule:
         pool_name = cluster_management.Resources.POOL3
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
-        # wait for epoch interval where stake distribution for next epoch is unstable,
+        # Wait for epoch interval where stake distribution for next epoch is unstable,
         # that is anytime before last 300 slots of current epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster,
@@ -218,7 +218,7 @@ class TestLeadershipSchedule:
             stop=-int(300 * cluster.slot_length + 5),
         )
 
-        # it should NOT be possible to query leadership schedule
+        # It should NOT be possible to query leadership schedule
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_leadership_schedule(
                 vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
@@ -259,7 +259,7 @@ class TestCollectData:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
@@ -302,7 +302,7 @@ class TestCollectData:
             pool_id_dec = helpers.decode_bech32(pool_id)
             pool_mapping[pool_id_dec] = {"pool_id": pool_id, "pool_idx": idx}
 
-            # delegate to each pool
+            # Delegate to each pool
             delegation.delegate_stake_addr(
                 cluster_obj=cluster,
                 addrs_data=cluster_manager.cache.addrs_data,
@@ -310,7 +310,7 @@ class TestCollectData:
                 pool_id=pool_id,
             )
 
-        # create sqlite db
+        # Create sqlite db
         conn = sqlite3.connect(configuration.BLOCK_PRODUCTION_DB)
         cur = conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS runs(run_id, topology)")
@@ -338,7 +338,7 @@ class TestCollectData:
             )
             blocks_before: dict[str, int] = ledger_state["blocksBefore"]
 
-            # save blocks data to sqlite db
+            # Save blocks data to sqlite db
             cur = conn.cursor()
             for pool_id_dec, num_blocks in blocks_before.items():
                 pool_rec = pool_mapping[pool_id_dec]
@@ -374,7 +374,7 @@ class TestCollectData:
                 curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
                 epoch_end_timestamp = cluster.time_to_epoch_end() + time.time()
 
-            # send tx
+            # Send tx
             src_addr, dst_addr = random.sample(payment_addrs, 2)
             destinations = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
             tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
@@ -389,7 +389,7 @@ class TestCollectData:
             time.sleep(2)
             curr_time = time.time()
 
-        # save also data for the last epoch
+        # Save also data for the last epoch
         _save_state(cluster.g_query.get_epoch())
 
         conn.close()

@@ -36,7 +36,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -177,11 +177,11 @@ class TestSECP256k1:
         except clusterlib.CLIError as err:
             before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
 
-            # the SECP256k1 functions should work from protocol version 8
+            # The SECP256k1 functions should work from protocol version 8
             if not before_pv8:
                 raise
 
-            # before protocol version 8 the SECP256k1 is blocked or limited by high cost model
+            # Before protocol version 8 the SECP256k1 is blocked or limited by high cost model
             err_msg = str(err)
 
             is_forbidden = (

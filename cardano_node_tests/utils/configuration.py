@@ -31,35 +31,35 @@ TX_SUBMISSION_DELAY = 60
 DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
-# used also in startup scripts as `if [ -n "$VAR" ]...`
+# Used also in startup scripts as `if [ -n "$VAR" ]...`
 ENABLE_LEGACY = (os.environ.get("ENABLE_LEGACY") or "") != ""
-# used also in startup scripts as `if [ -n "$VAR" ]...`
+# Used also in startup scripts as `if [ -n "$VAR" ]...`
 MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
 
-# used also in startup scripts as `if [ -n "$VAR" ]...`
+# Used also in startup scripts as `if [ -n "$VAR" ]...`
 HAS_CC = (os.environ.get("NO_CC") or "") == ""
 
-# used also in startup scripts as `if [ -n "$VAR" ]...`
+# Used also in startup scripts as `if [ -n "$VAR" ]...`
 PV10 = (os.environ.get("PV10") or "") == ""
 
-# used also in startup scripts
+# Used also in startup scripts
 UTXO_BACKEND = os.environ.get("UTXO_BACKEND") or ""
 if UTXO_BACKEND not in ("", "mem", "disk"):
     msg = f"Invalid UTXO_BACKEND: {UTXO_BACKEND}"
     raise RuntimeError(msg)
 
-# resolve CARDANO_NODE_SOCKET_PATH
+# Resolve CARDANO_NODE_SOCKET_PATH
 STARTUP_CARDANO_NODE_SOCKET_PATH = (
     pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
 )
 os.environ["CARDANO_NODE_SOCKET_PATH"] = str(STARTUP_CARDANO_NODE_SOCKET_PATH)
 
-# resolve SCHEDULING_LOG
+# Resolve SCHEDULING_LOG
 SCHEDULING_LOG: str | pl.Path = os.environ.get("SCHEDULING_LOG") or ""
 if SCHEDULING_LOG:
     SCHEDULING_LOG = pl.Path(SCHEDULING_LOG).expanduser().resolve()
 
-# resolve BLOCK_PRODUCTION_DB
+# Resolve BLOCK_PRODUCTION_DB
 BLOCK_PRODUCTION_DB: str | pl.Path = os.environ.get("BLOCK_PRODUCTION_DB") or ""
 if BLOCK_PRODUCTION_DB:
     BLOCK_PRODUCTION_DB = pl.Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
@@ -98,10 +98,10 @@ else:
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
-# cluster instances are kept running after tests finish
+# Cluster instances are kept running after tests finish
 KEEP_CLUSTERS_RUNNING = bool(os.environ.get("KEEP_CLUSTERS_RUNNING"))
 
-# determine what scripts to use to start the cluster
+# Determine what scripts to use to start the cluster
 SCRIPTS_DIRNAME = os.environ.get("SCRIPTS_DIRNAME") or ""
 if SCRIPTS_DIRNAME:
     pass

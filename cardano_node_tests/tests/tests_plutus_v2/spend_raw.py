@@ -10,7 +10,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-# approx. fee for Tx size
+# Approx. fee for Tx size
 FEE_REDEEM_TXSIZE = 400_000
 
 PLUTUS_OP_ALWAYS_SUCCEEDS = plutus_common.PlutusOp(
@@ -61,7 +61,7 @@ def _fund_script(
         addr_name=temp_template, payment_script_file=plutus_op.script_file
     )
 
-    # create a Tx output with a datum hash at the script address
+    # Create a Tx output with a datum hash at the script address
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -92,13 +92,13 @@ def _fund_script(
                 else ""
             ),
         ),
-        # for collateral
+        # For collateral
         clusterlib.TxOut(
             address=dst_addr.address, amount=collateral_amount or redeem_cost.collateral
         ),
     ]
 
-    # for reference script
+    # For reference script
     if use_reference_script:
         txouts.append(
             clusterlib.TxOut(
@@ -143,7 +143,7 @@ def _fund_script(
     if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
-        # check if inline datum is returned by 'query utxo'
+        # Check if inline datum is returned by 'query utxo'
         if use_inline_datum:
             expected_datum = None
             if plutus_op.datum_file:
@@ -156,7 +156,7 @@ def _fund_script(
                 expected_datum is None or script_utxos[0].inline_datum == expected_datum
             ), "The inline datum returned by 'query utxo' is different than the expected"
 
-    # check "transaction view"
+    # Check "transaction view"
     tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     return script_utxos, collateral_utxos, reference_utxo, tx_raw_output

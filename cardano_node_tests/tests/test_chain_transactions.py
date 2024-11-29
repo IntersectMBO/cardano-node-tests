@@ -55,11 +55,11 @@ def _gen_signed_tx(
     send_amount = txin.amount - fee
     out_file = f"{tx_name}_tx.body"
 
-    # create Tx data
+    # Create Tx data
     txout = clusterlib.TxOut(address=out_addr.address, amount=send_amount)
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-    # build Tx
+    # Build Tx
     tx_raw_output = cluster_obj.g_transaction.build_raw_tx_bare(
         out_file=out_file,
         txouts=[txout],
@@ -69,14 +69,14 @@ def _gen_signed_tx(
         invalid_hereafter=invalid_hereafter,
     )
 
-    # sign Tx
+    # Sign Tx
     tx_file = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         tx_name=tx_name,
         signing_key_files=tx_files.signing_key_files,
     )
 
-    # transform output of this Tx (`TxOut`) to input for next Tx (`UTXOData`)
+    # Transform output of this Tx (`TxOut`) to input for next Tx (`UTXOData`)
     txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
     out_utxo = clusterlib.UTXOData(
         utxo_hash=txid,
@@ -194,7 +194,7 @@ class TestTxChaining:
                 raise AssertionError(submit_err)
 
         if configuration.HAS_DBSYNC:
-            # wait a bit for all Txs to appear in db-sync
+            # Wait a bit for all Txs to appear in db-sync
             time.sleep(5)
 
             check_tx_outs = [

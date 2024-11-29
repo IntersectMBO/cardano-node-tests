@@ -43,7 +43,7 @@ def _fund_issuer(
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
-        # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+        # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,
     )
     tx_signed = cluster_obj.g_transaction.sign_tx(

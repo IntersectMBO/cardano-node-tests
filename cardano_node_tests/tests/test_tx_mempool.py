@@ -32,7 +32,7 @@ class TestMempool:
             cluster_obj=cluster_singleton,
         )
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster_singleton,

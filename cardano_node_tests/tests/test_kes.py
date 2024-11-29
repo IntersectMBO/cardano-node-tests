@@ -116,7 +116,7 @@ def _check_block_production(
         ledger_state=ledger_state,
     )
 
-    # check if the pool is minting any blocks
+    # Check if the pool is minting any blocks
     blocks_made = ledger_state["blocksCurrent"] or {}
     is_minting = pool_id_dec in blocks_made
 
@@ -406,7 +406,7 @@ class TestKES:
             ignore_file_id=cluster_manager.worker_id,
         )
 
-        # generate new operational certificate with `--kes-period` in the future
+        # Generate new operational certificate with `--kes-period` in the future
         invalid_kes_period = cluster.g_query.get_kes_period() + 100
         invalid_opcert_file = cluster.g_node.gen_node_operational_cert(
             node_name=f"{node_name}_invalid_opcert_file",
@@ -418,7 +418,7 @@ class TestKES:
 
         with cluster_manager.respin_on_failure():
             with logfiles.expect_errors(expected_errors, worker_id=cluster_manager.worker_id):
-                # restart the node with the new operational certificate (restart all nodes so
+                # Restart the node with the new operational certificate (restart all nodes so
                 # the connection is established again)
                 shutil.copy(invalid_opcert_file, opcert_file)
                 cluster_nodes.restart_all_nodes(delay=5)
@@ -434,13 +434,13 @@ class TestKES:
                     )
                     _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
-                    # check that the pool is not minting any blocks
+                    # Check that the pool is not minting any blocks
                     assert (
                         not is_minting
                     ), f"The pool '{pool_name}' has minted blocks in epoch {this_epoch}"
 
                     if invalid_opcert_epoch == 1:
-                        # check kes-period-info with operational certificate with
+                        # Check kes-period-info with operational certificate with
                         # invalid `--kes-period`
                         kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
                         with open(
@@ -458,7 +458,7 @@ class TestKES:
                             )
                         )
 
-                    # test the `CounterOverIncrementedOCERT` error - the counter will now be +2 from
+                    # Test the `CounterOverIncrementedOCERT` error - the counter will now be +2 from
                     # last used opcert counter value
                     if invalid_opcert_epoch == 2:
                         overincrement_kes_period = cluster.g_query.get_kes_period()
@@ -469,7 +469,7 @@ class TestKES:
                             cold_counter_file=cold_counter_file,
                             kes_period=overincrement_kes_period,
                         )
-                        # copy the new certificate and restart the node (restart all nodes so
+                        # Copy the new certificate and restart the node (restart all nodes so
                         # the connection is established again)
                         shutil.copy(overincrement_opcert_file, opcert_file)
                         cluster_nodes.restart_all_nodes(delay=5)
@@ -493,7 +493,7 @@ class TestKES:
                         )
 
                     if invalid_opcert_epoch == 3:
-                        # check kes-period-info with operational certificate with
+                        # Check kes-period-info with operational certificate with
                         # invalid kes-period
                         kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
                         with open(
@@ -511,11 +511,11 @@ class TestKES:
                             )
                         )
 
-            # in Babbage we'll use the original counter for issuing new valid opcert so the counter
+            # In Babbage we'll use the original counter for issuing new valid opcert so the counter
             # value of new valid opcert equals to counter value of the original opcert +1
             shutil.copy(cold_counter_file_orig, cold_counter_file)
 
-            # generate new operational certificate with valid `--kes-period`
+            # Generate new operational certificate with valid `--kes-period`
             valid_kes_period = cluster.g_query.get_kes_period()
             valid_opcert_file = cluster.g_node.gen_node_operational_cert(
                 node_name=f"{node_name}_valid_opcert_file",
@@ -524,7 +524,7 @@ class TestKES:
                 cold_counter_file=cold_counter_file,
                 kes_period=valid_kes_period,
             )
-            # copy the new certificate and restart the node (restart all nodes so
+            # Copy the new certificate and restart the node (restart all nodes so
             # the connection is established again)
             shutil.copy(valid_opcert_file, opcert_file)
             cluster_nodes.restart_all_nodes(delay=5)
@@ -541,7 +541,7 @@ class TestKES:
                 )
                 _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
-                # check that the pool is minting blocks
+                # Check that the pool is minting blocks
                 if is_minting:
                     break
             else:
@@ -565,7 +565,7 @@ class TestKES:
                 )
                 raise AssertionError(msg)
 
-        # check kes-period-info with valid operational certificate
+        # Check kes-period-info with valid operational certificate
         kes_period_info = cluster.g_query.get_kes_period_info(valid_opcert_file)
         with open(f"{temp_template}_kes_period_info_4.json", "w", encoding="utf-8") as out_fp:
             json.dump(kes_period_info, out_fp, indent=2)
@@ -580,7 +580,7 @@ class TestKES:
             )
         )
 
-        # check kes-period-info with operational certificate with invalid kes-period
+        # Check kes-period-info with operational certificate with invalid kes-period
         kes_period_info = cluster.g_query.get_kes_period_info(invalid_opcert_file)
         with open(f"{temp_template}_kes_period_info_5.json", "w", encoding="utf-8") as out_fp:
             json.dump(kes_period_info, out_fp, indent=2)
@@ -636,7 +636,7 @@ class TestKES:
         opcert_file_old = shutil.copy(opcert_file, f"{opcert_file}_old")
 
         with cluster_manager.respin_on_failure():
-            # generate new operational certificate with valid `--kes-period`
+            # Generate new operational certificate with valid `--kes-period`
             new_kes_period = cluster.g_query.get_kes_period()
             new_opcert_file = cluster.g_node.gen_node_operational_cert(
                 node_name=f"{node_name}_new_opcert_file",
@@ -646,7 +646,7 @@ class TestKES:
                 kes_period=new_kes_period,
             )
 
-            # copy new operational certificate to the node
+            # Copy new operational certificate to the node
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
                 regex="MuxBearerClosed",
@@ -654,12 +654,12 @@ class TestKES:
             )
             shutil.copy(new_opcert_file, opcert_file)
 
-            # stop the node so the corresponding pool is not minting new blocks
+            # Stop the node so the corresponding pool is not minting new blocks
             cluster_nodes.stop_nodes([node_name])
 
             time.sleep(10)
 
-            # check kes-period-info while the pool is not minting blocks
+            # Check kes-period-info while the pool is not minting blocks
             kes_period_info_new = cluster.g_query.get_kes_period_info(opcert_file)
             with open(f"{temp_template}_kes_period_info_1.json", "w", encoding="utf-8") as out_fp:
                 json.dump(kes_period_info_new, out_fp, indent=2)
@@ -694,7 +694,7 @@ class TestKES:
                     f"New and old opcert counters don't match: {new_opcert_num} vs {old_opcert_num}"
                 )
 
-            # start the node with the new operational certificate (restart all nodes so
+            # Start the node with the new operational certificate (restart all nodes so
             # the connection is established again)
             cluster_nodes.restart_all_nodes(delay=5)
 
@@ -710,7 +710,7 @@ class TestKES:
                 )
                 _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
-                # check that the pool is minting blocks
+                # Check that the pool is minting blocks
                 if is_minting:
                     break
             else:
@@ -734,7 +734,7 @@ class TestKES:
                 )
                 raise AssertionError(msg)
 
-        # check that metrics reported by kes-period-info got updated once the pool started
+        # Check that metrics reported by kes-period-info got updated once the pool started
         # minting blocks again
         kes_period_info_updated = cluster.g_query.get_kes_period_info(opcert_file)
         with open(f"{temp_template}_kes_period_info_3.json", "w", encoding="utf-8") as out_fp:
@@ -759,7 +759,7 @@ class TestKES:
                 f"Both updated and old opcert counters have same value '{old_opcert_num}'"
             )
 
-        # check kes-period-info with operational certificate with a wrong counter
+        # Check kes-period-info with operational certificate with a wrong counter
         kes_period_info_invalid = cluster.g_query.get_kes_period_info(opcert_file_old)
         with open(f"{temp_template}_kes_period_info_4.json", "w", encoding="utf-8") as out_fp:
             json.dump(kes_period_info_invalid, out_fp, indent=2)
@@ -791,7 +791,7 @@ class TestKES:
         temp_template = common.get_test_id(cluster)
         out_file = pl.Path(f"{temp_template}_shouldnt_exist.opcert")
 
-        # try to generate new operational certificate without specifying the `--kes-period`
+        # Try to generate new operational certificate without specifying the `--kes-period`
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
                 [
@@ -828,7 +828,7 @@ class TestKES:
 
         node_name = pool_name.replace("node-", "")
 
-        # generate new operational certificate with negative value for `--kes-period`
+        # Generate new operational certificate with negative value for `--kes-period`
         invalid_kes_period = -100
 
         try:

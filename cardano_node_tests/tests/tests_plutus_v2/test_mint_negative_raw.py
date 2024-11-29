@@ -33,7 +33,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -130,7 +130,7 @@ class TestNegativeCollateralOutput:
             *mint_txouts,
         ]
 
-        # limit the amount of collateral that can be used and balance the return collateral txout
+        # Limit the amount of collateral that can be used and balance the return collateral txout
         total_collateral_amount = minting_cost.min_collateral // 2
         return_collateral_txouts = [
             clusterlib.TxOut(
@@ -154,7 +154,7 @@ class TestNegativeCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with a collateral with insufficient funds
+        # It should NOT be possible to mint with a collateral with insufficient funds
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)
@@ -263,7 +263,7 @@ class TestNegativeCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with an unbalanced total collateral
+        # It should NOT be possible to mint with an unbalanced total collateral
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)

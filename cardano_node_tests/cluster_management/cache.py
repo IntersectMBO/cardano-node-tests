@@ -11,9 +11,9 @@ class ClusterManagerCache:
     Here goes only data that makes sense to reuse in multiple tests.
     """
 
-    # single `ClusterLib` instance can be used in multiple tests executed on the same worker
+    # Single `ClusterLib` instance can be used in multiple tests executed on the same worker
     cluster_obj: clusterlib.ClusterLib | None = None
-    # data for initialized cluster instance
+    # Data for initialized cluster instance
     test_data: dict = dataclasses.field(default_factory=dict)
     addrs_data: dict = dataclasses.field(default_factory=dict)
     last_checksum: str = ""
@@ -22,7 +22,7 @@ class ClusterManagerCache:
 class CacheManager:
     """Set of cache management methods."""
 
-    # every pytest worker has its own cache, i.e. this cache is local to single worker
+    # Every pytest worker has its own cache, i.e. this cache is local to single worker
     cache: tp.ClassVar[dict[int, ClusterManagerCache]] = {}
 
     @classmethod

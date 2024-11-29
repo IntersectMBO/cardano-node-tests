@@ -60,7 +60,7 @@ class TestUpdateProposals:
             )[0]
             fixture_cache.value = addr
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addr,
             cluster_obj=cluster,
@@ -109,7 +109,7 @@ class TestUpdateProposals:
         with open(f"{temp_template}_pparams_ep{this_epoch}.json", "w", encoding="utf-8") as fp_out:
             json.dump(protocol_params, fp_out, indent=4)
 
-        # update Alonzo+ specific parameters in separate update proposal
+        # Update Alonzo+ specific parameters in separate update proposal
 
         # TODO: On node >= 1.36.0 the cost models are lists. On older versions they are dicts.
         cost_proposal_file = (
@@ -195,11 +195,11 @@ class TestUpdateProposals:
             assert cost_model_v1 == cost_model_prop_content["PlutusV1"]
             assert cost_model_v2 == cost_model_prop_content["PlutusV2"]
         else:
-            # check only selected expected value as some key names don't necessarily match
+            # Check only selected expected value as some key names don't necessarily match
             assert cost_model_v1["verifyEd25519Signature-memory-arguments"] == 11
             assert cost_model_v2["verifyEd25519Signature-memory-arguments"] == 11
 
-        # check param proposal on dbsync
+        # Check param proposal on dbsync
         dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
         # Check that only one update proposal can be applied each epoch and that the last
@@ -275,7 +275,7 @@ class TestUpdateProposals:
         )
         time.sleep(2)
 
-        # the final update proposal
+        # The final update proposal
         decentralization = clusterlib_utils.UpdateProposal(
             arg="--decentralization-parameter",
             value=0.1,
@@ -356,7 +356,7 @@ class TestUpdateProposals:
             update_proposals=update_proposals, protocol_params=protocol_params
         )
 
-        # check param proposal on dbsync
+        # Check param proposal on dbsync
         dbsync_utils.check_param_proposal(protocol_params=protocol_params)
 
         assert protocol_params.get("decentralization") is None
@@ -386,7 +386,7 @@ class TestNegativeCostModels:
             )[0]
             fixture_cache.value = addr
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addr,
             cluster_obj=cluster,

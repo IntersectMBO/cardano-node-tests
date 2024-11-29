@@ -8,7 +8,7 @@ from cardano_node_tests.tests import plutus_common
 
 LOGGER = logging.getLogger(__name__)
 
-# approx. fee for Tx size
+# Approx. fee for Tx size
 FEE_MINT_TXSIZE = 400_000
 
 
@@ -41,7 +41,7 @@ def _fund_issuer(
         signing_key_files=[payment_addr.skey_file],
     )
 
-    # for reference script
+    # For reference script
     reference_amount = 0
     txouts_reference = []
     if reference_script:
@@ -75,7 +75,7 @@ def _fund_issuer(
         tx_files=tx_files,
         # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
         witness_count_add=2,
-        # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+        # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,
     )
 

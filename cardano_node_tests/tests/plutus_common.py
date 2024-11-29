@@ -87,7 +87,7 @@ class ExecutionCost:
     fixed_cost: int
 
 
-# scripts execution cost for Txs with single UTxO input and single Plutus script
+# Scripts execution cost for Txs with single UTxO input and single Plutus script
 ALWAYS_FAILS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
 ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=368_100, per_space=1_700, fixed_cost=125)
 GUESSING_GAME_COST = ExecutionCost(per_time=236_715_138, per_space=870_842, fixed_cost=67_315)
@@ -501,7 +501,7 @@ def check_plutus_costs(
         # We have the costs calibrated only for local testnet
         return
 
-    # sort records by total cost
+    # Sort records by total cost
     sorted_plutus = sorted(
         plutus_costs,
         key=lambda x: x["executionUnits"]["memory"]  # type: ignore
@@ -610,7 +610,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
     return_collateral_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     protocol_params = cluster_obj.g_query.get_protocol_params()
 
-    # when total collateral amount is specified, it is necessary to specify also return
+    # When total collateral amount is specified, it is necessary to specify also return
     # collateral `TxOut` to get the change, otherwise all collaterals will be collected
     if tx_output.total_collateral_amount and not tx_output.return_collateral_txouts:
         assert not return_collateral_utxos, "Return collateral UTxO was unexpectedly created"
@@ -619,10 +619,10 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
     if not (tx_output.return_collateral_txouts or tx_output.total_collateral_amount):
         return
 
-    # check that correct return collateral UTxO was created
+    # Check that correct return collateral UTxO was created
     assert return_collateral_utxos, "Return collateral UTxO was NOT created"
 
-    # check that return collateral is the only output and that the index matches
+    # Check that return collateral is the only output and that the index matches
     out_utxos_ix = {r.utxo_ix for r in return_collateral_utxos}
     assert len(out_utxos_ix) == 1, "There are other outputs other than return collateral"
     # TODO: the index of change can be either 0 (in old node versions) or `txouts_count`,
@@ -672,9 +672,9 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
                 utxos=tx_output.return_collateral_txouts, coin=coin
             ), f"Incorrect return collateral token balance for token '{coin}'"
 
-    # automatic return collateral with `transaction build` command
+    # Automatic return collateral with `transaction build` command
     elif tx_output.change_address:
-        # check that the collateral amount charged corresponds to 'collateralPercentage'
+        # Check that the collateral amount charged corresponds to 'collateralPercentage'
         assert collateral_charged == round(
             tx_output.fee * protocol_params["collateralPercentage"] / 100
         ), "The collateral amount charged is not the expected amount"
@@ -683,7 +683,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
             tx_output.change_address == return_collateral_utxos[0].address
         ), "Return collateral address doesn't match change address"
 
-        # the returned amount is the total of all collaterals minus fee
+        # The returned amount is the total of all collaterals minus fee
         expected_return_amount = int(tx_collaterals_amount - collateral_charged)
 
         assert returned_amount == expected_return_amount, (

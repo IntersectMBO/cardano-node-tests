@@ -58,7 +58,7 @@ class TestFee:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -214,7 +214,7 @@ class TestExpectedFees:
             )
             fixture_cache.value = created_users
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *created_users[:10],
             cluster_obj=cluster,
@@ -231,12 +231,12 @@ class TestExpectedFees:
         pool_data: clusterlib.PoolData,
     ) -> tuple[str, clusterlib.TxFiles]:
         """Create certificates for registering a stake pool, delegating stake address."""
-        # create node VRF key pair
+        # Create node VRF key pair
         node_vrf = cluster_obj.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
-        # create node cold key pair and counter
+        # Create node cold key pair and counter
         node_cold = cluster_obj.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
-        # create stake address registration certs
+        # Create stake address registration certs
         stake_addr_reg_cert_files = [
             cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr{i}",
@@ -246,7 +246,7 @@ class TestExpectedFees:
             for i, p in enumerate(pool_owners)
         ]
 
-        # create stake address delegation cert
+        # Create stake address delegation cert
         stake_addr_deleg_cert_files = [
             cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
                 addr_name=f"{temp_template}_addr{i}",
@@ -256,7 +256,7 @@ class TestExpectedFees:
             for i, p in enumerate(pool_owners)
         ]
 
-        # create stake pool registration cert
+        # Create stake pool registration cert
         pool_reg_cert_file = cluster_obj.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
@@ -266,7 +266,7 @@ class TestExpectedFees:
 
         src_address = pool_owners[0].payment.address
 
-        # register and delegate stake address, create and register pool
+        # Register and delegate stake address, create and register pool
         tx_files = clusterlib.TxFiles(
             certificate_files=[
                 pool_reg_cert_file,
@@ -295,21 +295,21 @@ class TestExpectedFees:
         amount, expected_fee = amount_expected
 
         src_address = pool_users[0].payment.address
-        # addr1..addr<from_num+1>
+        # Addr1..addr<from_num+1>
         from_addr_recs = [p.payment for p in pool_users[1 : from_num + 1]]
-        # addr<from_num+1>..addr<from_num+to_num+1>
+        # Addr<from_num+1>..addr<from_num+to_num+1>
         dst_addresses = [
             pool_users[i].payment.address for i in range(from_num + 1, from_num + to_num + 1)
         ]
 
-        # create TX data
+        # Create TX data
         _txins = [cluster_obj.g_query.get_utxo(address=r.address) for r in from_addr_recs]
-        # flatten the list of lists that is _txins
+        # Flatten the list of lists that is _txins
         txins = list(itertools.chain.from_iterable(_txins))
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
         tx_files = clusterlib.TxFiles(signing_key_files=[r.skey_file for r in from_addr_recs])
 
-        # calculate TX fee
+        # Calculate TX fee
         tx_fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=tx_name, txins=txins, txouts=txouts, tx_files=tx_files
         )
@@ -351,10 +351,10 @@ class TestExpectedFees:
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
-        # create pool owners
+        # Create pool owners
         selected_owners = pool_users[:no_of_addr]
 
-        # create certificates
+        # Create certificates
         src_address, tx_files = self._create_pool_certificates(
             cluster_obj=cluster,
             pool_owners=selected_owners,
@@ -362,7 +362,7 @@ class TestExpectedFees:
             pool_data=pool_data,
         )
 
-        # calculate TX fee
+        # Calculate TX fee
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
@@ -405,13 +405,13 @@ class TestExpectedFees:
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
-        # create pool owners
+        # Create pool owners
         selected_owners = pool_users[:no_of_addr]
 
-        # create node cold key pair and counter
+        # Create node cold key pair and counter
         node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
-        # create deregistration certificate
+        # Create deregistration certificate
         pool_dereg_cert_file = cluster.g_stake_pool.gen_pool_deregistration_cert(
             pool_name=pool_data.pool_name,
             cold_vkey_file=node_cold.vkey_file,
@@ -427,7 +427,7 @@ class TestExpectedFees:
             ],
         )
 
-        # calculate TX fee
+        # Calculate TX fee
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
@@ -459,7 +459,7 @@ class TestExpectedFees:
             for i, p in enumerate(selected_users)
         ]
 
-        # create TX data
+        # Create TX data
         tx_files = clusterlib.TxFiles(
             certificate_files=[*stake_addr_reg_certs],
             signing_key_files=[
@@ -468,7 +468,7 @@ class TestExpectedFees:
             ],
         )
 
-        # calculate TX fee
+        # Calculate TX fee
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
@@ -500,7 +500,7 @@ class TestExpectedFees:
             for i, p in enumerate(selected_users)
         ]
 
-        # create TX data
+        # Create TX data
         tx_files = clusterlib.TxFiles(
             certificate_files=[*stake_addr_dereg_certs],
             signing_key_files=[
@@ -509,7 +509,7 @@ class TestExpectedFees:
             ],
         )
 
-        # calculate TX fee
+        # Calculate TX fee
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )

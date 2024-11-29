@@ -73,7 +73,7 @@ def pool_users(
         )
         fixture_cache.value = created_users
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         *created_users,
         cluster_obj=cluster_pots,
@@ -150,7 +150,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -171,7 +171,7 @@ class TestMIRCerts:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -190,9 +190,9 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
             pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
-            # normally `treasury[-1]` > `treasury[-2]`
+            # Normally `treasury[-1]` > `treasury[-2]`
             assert (pots_records[-1].treasury - pots_records[-2].treasury) > amount
-            # normally `reserves[-1]` < `reserves[-2]`
+            # Normally `reserves[-1]` < `reserves[-2]`
             assert (pots_records[-2].reserves - pots_records[-1].reserves) > amount
 
     @allure.link(helpers.get_vcs_link())
@@ -225,7 +225,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -271,9 +271,9 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
             pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
-            # normally `treasury[-1]` > `treasury[-2]`
+            # Normally `treasury[-1]` > `treasury[-2]`
             assert (pots_records[-1].treasury - pots_records[-2].treasury) > amount
-            # normally `reserves[-1]` < `reserves[-2]`
+            # Normally `reserves[-1]` < `reserves[-2]`
             assert (pots_records[-2].reserves - pots_records[-1].reserves) > amount
 
     @allure.link(helpers.get_vcs_link())
@@ -305,7 +305,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -326,7 +326,7 @@ class TestMIRCerts:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -345,9 +345,9 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
             pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
-            # normally `treasury[-1]` > `treasury[-2]`
+            # Normally `treasury[-1]` > `treasury[-2]`
             assert pots_records[-1].treasury < pots_records[-2].treasury
-            # normally `reserves[-1]` < `reserves[-2]`
+            # Normally `reserves[-1]` < `reserves[-2]`
             assert pots_records[-1].reserves > pots_records[-2].reserves
 
     @allure.link(helpers.get_vcs_link())
@@ -380,7 +380,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -426,9 +426,9 @@ class TestMIRCerts:
             cluster.wait_for_new_epoch()
 
             pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
-            # normally `treasury[-1]` > `treasury[-2]`
+            # Normally `treasury[-1]` > `treasury[-2]`
             assert pots_records[-1].treasury < pots_records[-2].treasury
-            # normally `reserves[-1]` < `reserves[-2]`
+            # Normally `reserves[-1]` < `reserves[-2]`
             assert pots_records[-1].reserves > pots_records[-2].reserves
 
     @allure.link(helpers.get_vcs_link())
@@ -472,7 +472,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -504,7 +504,7 @@ class TestMIRCerts:
             == init_reward + amount
         ), f"Incorrect reward balance for stake address `{registered_user.stake.address}`"
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -565,7 +565,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -675,7 +675,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -818,7 +818,7 @@ class TestMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -951,19 +951,19 @@ class TestMIRCerts:
             ],
         )
 
-        # register the stake address, if it is supposed to be known on blockchain
+        # Register the stake address, if it is supposed to be known on blockchain
         if addr_history == "addr_known":
             tx_raw_out_reg = clusterlib_utils.register_stake_address(
                 cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
             )
 
-            # deregister the stake address before submitting the Tx with MIR cert
+            # Deregister the stake address before submitting the Tx with MIR cert
             if fund_src == TREASURY:
                 tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
                 )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 
@@ -980,7 +980,7 @@ class TestMIRCerts:
 
         tx_epoch = cluster.g_query.get_epoch()
 
-        # deregister the stake address after submitting the Tx with MIR cert
+        # Deregister the stake address after submitting the Tx with MIR cert
         if addr_history == "addr_known" and fund_src != TREASURY:
             tx_raw_out_dereg = clusterlib_utils.deregister_stake_address(
                 cluster_obj=cluster_pots, pool_user=pool_user, name_template=temp_template
@@ -1009,7 +1009,7 @@ class TestMIRCerts:
                     f"({tx_db_record.reserve[0].amount} != {amount})"
                 )
 
-        # wait for next epoch and check the reward
+        # Wait for next epoch and check the reward
         cluster.wait_for_new_epoch()
 
         assert (
@@ -1017,14 +1017,14 @@ class TestMIRCerts:
         ), f"Reward was added for unregistered stake address `{pool_user.stake.address}`"
 
         if tx_db_record:
-            # check that the amount was not transferred out of the pot
+            # Check that the amount was not transferred out of the pot
             pots_records = _wait_for_ada_pots(epoch_from=tx_epoch)
 
             if fund_src == TREASURY:
-                # normally `treasury[-1]` > `treasury[-2]`
+                # Normally `treasury[-1]` > `treasury[-2]`
                 assert abs(pots_records[-1].treasury - pots_records[-2].treasury) < amount
             else:
-                # normally `reserves[-1]` < `reserves[-2]`
+                # Normally `reserves[-1]` < `reserves[-2]`
                 assert abs(pots_records[-2].reserves - pots_records[-1].reserves) < amount
 
 
@@ -1066,7 +1066,7 @@ class TestNegativeMIRCerts:
             ],
         )
 
-        # send the transaction at the beginning of an epoch
+        # Send the transaction at the beginning of an epoch
         if cluster.time_from_epoch_start() > (cluster.epoch_length_sec // 6):
             cluster.wait_for_new_epoch()
 

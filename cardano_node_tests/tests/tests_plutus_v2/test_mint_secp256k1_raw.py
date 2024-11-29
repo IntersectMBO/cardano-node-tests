@@ -36,7 +36,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -261,4 +261,4 @@ class TestSECP256k1:
             assert is_forbidden or is_overspending, err_msg
         else:
             assert re.search(expected_error_messages[test_vector], err_msg), err_msg
-            # assert expected_error_messages[test_vector] in err_msg, err_msg
+            # Assert expected_error_messages[test_vector] in err_msg, err_msg

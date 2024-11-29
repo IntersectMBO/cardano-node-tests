@@ -48,7 +48,7 @@ class TestBasicTransactions:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
@@ -76,7 +76,7 @@ class TestBasicTransactions:
             ]
             fixture_cache.value = new_byron_addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *new_byron_addrs,
             cluster_obj=cluster,
@@ -99,7 +99,7 @@ class TestBasicTransactions:
             cluster_obj=cluster,
         )
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
@@ -121,7 +121,7 @@ class TestBasicTransactions:
             cluster_obj=cluster,
         )
 
-        # fund source address
+        # Fund source address
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -379,7 +379,7 @@ class TestBasicTransactions:
         src_address = payment_addrs_disposable[1].address
         dst_address = payment_addrs_disposable[0].address
 
-        # amount value -1 means all available funds
+        # Amount value -1 means all available funds
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[1].skey_file])
 
@@ -420,7 +420,7 @@ class TestBasicTransactions:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -1175,7 +1175,7 @@ class TestBasicTransactions:
             tx_files=tx_files,
         )
 
-        # check `transaction view` command, this will check if the tx era is the expected
+        # Check `transaction view` command, this will check if the tx era is the expected
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
@@ -1202,7 +1202,7 @@ class TestMultiInOut:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -1225,9 +1225,9 @@ class TestMultiInOut:
     ):
         """Test 1 tx from `from_num` payment addresses to `to_num` payment addresses."""
         src_address = payment_addrs[0].address
-        # addr1..addr<from_num+1>
+        # Addr1..addr<from_num+1>
         from_addr_recs = payment_addrs[1 : from_num + 1]
-        # addr<from_num+1>..addr<from_num+to_num+1>
+        # Addr<from_num+1>..addr<from_num+to_num+1>
         dst_addresses = [
             payment_addrs[i].address for i in range(from_num + 1, from_num + to_num + 1)
         ]
@@ -1503,7 +1503,7 @@ class TestIncrementalSigning:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
@@ -1609,7 +1609,7 @@ class TestIncrementalSigning:
         # Incrementally sign the already signed Tx with rest of the skeys, excluding the
         # required skey
         for idx, skey in enumerate(payment_skey_files[1:5], start=1):
-            # sign multiple times with the same skey to see that it doesn't affect Tx fee
+            # Sign multiple times with the same skey to see that it doesn't affect Tx fee
             for r in range(5):
                 tx_signed = cluster.g_transaction.sign_tx(
                     tx_file=tx_signed,

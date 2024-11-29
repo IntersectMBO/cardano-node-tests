@@ -39,7 +39,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -111,7 +111,7 @@ class TestNegativeInlineDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
 
         redeem_cost = plutus_common.compute_cost(
@@ -119,7 +119,7 @@ class TestNegativeInlineDatum:
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
-        # create a Tx output with an invalid inline datum at the script address
+        # Create a Tx output with an invalid inline datum at the script address
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             spend_raw._fund_script(
@@ -159,7 +159,7 @@ class TestNegativeInlineDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
@@ -252,7 +252,7 @@ class TestNegativeInlineDatum:
         )
         assert plutus_op.execution_cost  # for mypy
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -298,7 +298,7 @@ class TestNegativeInlineDatum:
 
         plutus_op = spend_raw.PLUTUS_OP_ALWAYS_SUCCEEDS
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file

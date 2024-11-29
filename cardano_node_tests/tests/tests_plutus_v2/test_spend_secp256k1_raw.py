@@ -34,7 +34,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -93,7 +93,7 @@ class TestSECP256k1:
                 amount=amount + redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,
                 inline_datum_file=plutus_common.DATUM_42_TYPED,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
         ]
 
@@ -132,7 +132,7 @@ class TestSECP256k1:
         """
         amount = 2_000_000
 
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         algorithm, script_utxos, collateral_utxos = fund_script_secp
         temp_template = common.get_test_id(cluster)
@@ -163,12 +163,12 @@ class TestSECP256k1:
             execution_cost=execution_units,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.script_file
         assert plutus_op.redeemer_file
         assert plutus_op.execution_cost
 
-        # spend the "locked" UTxO
+        # Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -206,7 +206,7 @@ class TestSECP256k1:
             )
             raise
 
-        # check that script address UTxO was spent
+        # Check that script address UTxO was spent
         assert not cluster.g_query.get_utxo(
             utxo=script_utxos[0]
         ), f"Script address UTxO was NOT spent `{script_utxos}`"

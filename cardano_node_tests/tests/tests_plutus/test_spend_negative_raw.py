@@ -46,7 +46,7 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
@@ -425,7 +425,7 @@ class TestNegative:
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
-        # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
+        # Increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
         execution_cost = plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost
         execution_cost_increased = dataclasses.replace(execution_cost, fixed_cost=2_000_000)
         plutus_op = plutus_common.PlutusOp(
@@ -520,7 +520,7 @@ class TestNegative:
             script_data_file=plutus_op2.datum_file
         )
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files_fund = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -536,7 +536,7 @@ class TestNegative:
                 amount=amount + redeem_cost2.fee + spend_raw.FEE_REDEEM_TXSIZE,
                 datum_hash=datum_hash2,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
@@ -714,7 +714,7 @@ class TestNegativeRedeemer:
             cluster_obj=cluster_obj,
         )
 
-        # fund source address
+        # Fund source address
         clusterlib_utils.fund_from_faucet(
             payment_addrs[0],
             cluster_obj=cluster_obj,
@@ -949,7 +949,7 @@ class TestNegativeRedeemer:
         per_time = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_time
         per_space = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_space
 
-        # try to spend the "locked" UTxO
+        # Try to spend the "locked" UTxO
 
         fee_redeem = (
             round(per_time * cost_per_unit.per_time + per_space * cost_per_unit.per_space)
@@ -1115,7 +1115,7 @@ class TestNegativeRedeemer:
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
             json.dump({"bytes": redeemer_value.hex()}, outfile)
 
-        # try to spend the "locked" UTxO
+        # Try to spend the "locked" UTxO
 
         per_time = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_time
         per_space = plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.per_space
@@ -1194,7 +1194,7 @@ class TestNegativeRedeemer:
             {"constructor": 0, "fields": [{"bytes": redeemer_value.hex()}]}
         )
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
 
         redeemer_file = f"{temp_template}.redeemer"
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
@@ -1270,7 +1270,7 @@ class TestNegativeRedeemer:
 
         redeemer_content = json.dumps({"constructor": 0, "fields": [{"int": redeemer_value.hex()}]})
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
         err = self._failed_tx_build(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1311,7 +1311,7 @@ class TestNegativeRedeemer:
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({"int": redeemer_value.hex()})
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
         err = self._failed_tx_build(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1352,7 +1352,7 @@ class TestNegativeRedeemer:
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({"constructor": 0, "fields": [{"bytes": redeemer_value}]})
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
         err = self._failed_tx_build(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1393,7 +1393,7 @@ class TestNegativeRedeemer:
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({"bytes": redeemer_value})
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
         err = self._failed_tx_build(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1434,7 +1434,7 @@ class TestNegativeRedeemer:
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = f'{{"{redeemer_value}"}}'
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
         err = self._failed_tx_build(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1475,7 +1475,7 @@ class TestNegativeRedeemer:
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({redeemer_type: 42})
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
         err = self._failed_tx_build(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1522,7 +1522,7 @@ class TestNegativeRedeemer:
         script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
         redeemer_content = json.dumps({redeemer_type: 42})
 
-        # try to build a Tx for spending the "locked" UTxO
+        # Try to build a Tx for spending the "locked" UTxO
         err = self._failed_tx_build(
             cluster_obj=cluster,
             temp_template=temp_template,

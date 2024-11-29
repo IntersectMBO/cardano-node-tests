@@ -10,7 +10,7 @@ from cardano_node_tests.utils import configuration
 if configuration.IS_XDIST:
     from filelock import FileLock
 
-    # suppress messages from filelock
+    # Suppress messages from filelock
     logging.getLogger("filelock").setLevel(logging.WARNING)
 
     FileLockIfXdist: tp.Any = FileLock

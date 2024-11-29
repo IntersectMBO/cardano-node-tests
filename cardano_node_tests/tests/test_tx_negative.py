@@ -60,7 +60,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,  # noqa: ARG002
     ) -> clusterlib.ClusterLib:
         # pylint: disable=unused-argument
-        # the `cluster` argument (representing the `cluster` fixture) needs to be present
+        # The `cluster` argument (representing the `cluster` fixture) needs to be present
         # in order to have an actual cluster instance assigned at the time this fixture
         # is executed
         return cluster_nodes.get_cluster_type().get_cluster_obj(
@@ -85,7 +85,7 @@ class TestNegative:
             )
             fixture_cache.value = created_users
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *created_users,
             cluster_obj=cluster,
@@ -106,7 +106,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=addr, amount=1_000_000)]
 
-        # it should NOT be possible to build a transaction using an invalid address
+        # It should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
                 cluster_obj.g_transaction.build_tx(
@@ -140,7 +140,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_000_000)]
 
-        # it should NOT be possible to build a transaction using an invalid address
+        # It should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if use_build_cmd:
                 cluster_obj.g_transaction.build_tx(
@@ -171,7 +171,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_000_000)]
 
-        # it should NOT be possible to build a transaction using an invalid change address
+        # It should NOT be possible to build a transaction using an invalid change address
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.g_transaction.build_tx(
                 src_address=pool_users[0].payment.address,
@@ -271,7 +271,7 @@ class TestNegative:
             tx_name=temp_template,
         )
 
-        # it should NOT be possible to submit a transaction with negative ttl
+        # It should NOT be possible to submit a transaction with negative ttl
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.g_transaction.submit_tx_bare(out_file_signed)
         exc_val = str(excinfo.value)
@@ -450,7 +450,7 @@ class TestNegative:
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
-        # valid values are <= `common.MAX_INT64`
+        # Valid values are <= `common.MAX_INT64`
         before_value = common.MAX_INT64 + 5
 
         __, err_str, *__ = self._submit_wrong_validity(
@@ -504,7 +504,7 @@ class TestNegative:
         # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
         assert slot_no is not None
 
-        # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
+        # We cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
         # a regular test `test_before_negative_overflow`
         assert slot_no > 0, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
@@ -552,7 +552,7 @@ class TestNegative:
         # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
         assert slot_no is not None
 
-        # we cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
+        # We cannot XFAIL in PBT, so we'll pass on the xfail condition and re-test using
         # a regular test `test_before_positive_overflow`
         assert slot_no == before_value - 1, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
@@ -615,7 +615,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
-        # build and sign a transaction
+        # Build and sign a transaction
         fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
@@ -635,7 +635,7 @@ class TestNegative:
             tx_name=temp_template,
         )
 
-        # submit a transaction for the first time
+        # Submit a transaction for the first time
         cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
@@ -647,7 +647,7 @@ class TestNegative:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        # it should NOT be possible to submit a transaction twice
+        # It should NOT be possible to submit a transaction twice
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(out_file_signed)
         assert "ValueNotConservedUTxO" in str(excinfo.value)
@@ -736,11 +736,11 @@ class TestNegative:
         """
         temp_template = common.get_test_id(cluster)
 
-        # use wrong signing key
+        # Use wrong signing key
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[1].payment.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_500_000)]
 
-        # it should NOT be possible to submit a transaction with wrong signing key
+        # It should NOT be possible to submit a transaction with wrong signing key
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address,
@@ -768,7 +768,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         destinations = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_500_000)]
 
-        # it should NOT be possible to submit a transaction when TX era > network era
+        # It should NOT be possible to submit a transaction when TX era > network era
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_wrong_tx_era.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address,
@@ -1252,7 +1252,7 @@ class TestNegative:
         if use_build_cmd:
             assert (
                 "The UTxO is empty" in err
-                # in 1.35.3 and older
+                # In 1.35.3 and older
                 or "The following tx input(s) were not present in the UTxO" in err
             ), err
         else:
@@ -1287,7 +1287,7 @@ class TestNegative:
         if use_build_cmd:
             assert (
                 "The UTxO is empty" in err
-                # in 1.35.3 and older
+                # In 1.35.3 and older
                 or "The following tx input(s) were not present in the UTxO" in err
             ), err
         else:

@@ -217,7 +217,7 @@ def register_stake_address(
     deposit_amt: int = -1,
 ) -> clusterlib.TxRawOutput:
     """Register stake address."""
-    # files for registering stake address
+    # Files for registering stake address
     addr_reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
         addr_name=name_template,
         deposit_amt=deposit_amt,
@@ -332,7 +332,7 @@ def create_pool_users(
     """Create PoolUsers."""
     pool_users = []
     for i in range(no_of_addr):
-        # create key pairs and addresses
+        # Create key pairs and addresses
         stake_addr_rec = create_stake_addr_records(
             f"{name_template}_addr{i}", cluster_obj=cluster_obj, destination_dir=destination_dir
         )[0]
@@ -342,7 +342,7 @@ def create_pool_users(
             stake_vkey_file=stake_addr_rec.vkey_file,
             destination_dir=destination_dir,
         )[0]
-        # create pool user struct
+        # Create pool user struct
         pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
         pool_users.append(pool_user)
 
@@ -525,7 +525,7 @@ def update_params_build(
     cli_args = list(itertools.chain.from_iterable(_cli_args))
     temp_template = helpers.get_timestamped_rand_str()
 
-    # assumption is update proposals are submitted near beginning of epoch
+    # Assumption is update proposals are submitted near beginning of epoch
     epoch = cluster_obj.g_query.get_epoch()
 
     out_file = cluster_obj.g_governance.gen_update_proposal(
@@ -576,7 +576,7 @@ def mint_or_burn_witness(
     token_mint_addr = new_tokens[0].token_mint_addr
     signing_key_files = list({*issuers_skey_files, token_mint_addr.skey_file})
 
-    # create TX body
+    # Create TX body
     mint = [
         clusterlib.Mint(
             txouts=[
@@ -594,7 +594,7 @@ def mint_or_burn_witness(
     ]
     txouts = []
     if mint_txouts:
-        # meet the minimum required UTxO value
+        # Meet the minimum required UTxO value
         lovelace_amount = 2_000_000 + math.ceil(len(mint_txouts) / 8) * 1_000_000
         txouts = [
             clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=lovelace_amount),
@@ -631,21 +631,21 @@ def mint_or_burn_witness(
             invalid_before=invalid_before,
         )
 
-    # sign incrementally (just to check that it works)
+    # Sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
-        # create witness file for first required key
+        # Create witness file for first required key
         witness_file = cluster_obj.g_transaction.witness_tx(
             tx_body_file=tx_output.out_file,
             witness_name=f"{temp_template}_skey0",
             signing_key_files=signing_key_files[:1],
         )
-        # sign Tx using witness file
+        # Sign Tx using witness file
         tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
             tx_body_file=tx_output.out_file,
             witness_files=[witness_file],
             tx_name=f"{temp_template}_sign0",
         )
-        # incrementally sign the already signed Tx with rest of required skeys
+        # Incrementally sign the already signed Tx with rest of required skeys
         for idx, skey in enumerate(signing_key_files[1:], start=1):
             tx_witnessed_file = cluster_obj.g_transaction.sign_tx(
                 tx_file=tx_witnessed_file,
@@ -653,7 +653,7 @@ def mint_or_burn_witness(
                 tx_name=f"{temp_template}_sign{idx}",
             )
     else:
-        # create witness file for each required key
+        # Create witness file for each required key
         witness_files = [
             cluster_obj.g_transaction.witness_tx(
                 tx_body_file=tx_output.out_file,
@@ -663,7 +663,7 @@ def mint_or_burn_witness(
             for idx, skey in enumerate(signing_key_files)
         ]
 
-        # sign Tx using witness files
+        # Sign Tx using witness files
         tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
             tx_body_file=tx_output.out_file,
             witness_files=witness_files,
@@ -699,7 +699,7 @@ def mint_or_burn_sign(
     token_mint_addr = new_tokens[0].token_mint_addr
     signing_key_files = list({*issuers_skey_files, token_mint_addr.skey_file})
 
-    # build and sign a transaction
+    # Build and sign a transaction
     mint = [
         clusterlib.Mint(
             txouts=[
@@ -716,7 +716,7 @@ def mint_or_burn_sign(
     ]
     txouts = []
     if mint_txouts:
-        # meet the minimum required UTxO value
+        # Meet the minimum required UTxO value
         lovelace_amount = 2_000_000 + math.ceil(len(mint_txouts) / 8) * 1_000_000
         txouts = [
             clusterlib.TxOut(address=new_tokens[0].token_mint_addr.address, amount=lovelace_amount),
@@ -749,14 +749,14 @@ def mint_or_burn_sign(
             fee=fee,
         )
 
-    # sign incrementally (just to check that it works)
+    # Sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
         out_file_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=signing_key_files[:1],
             tx_name=f"{temp_template}_sign0",
         )
-        # incrementally sign the already signed Tx with rest of required skeys
+        # Incrementally sign the already signed Tx with rest of required skeys
         for idx, skey in enumerate(signing_key_files[1:], start=1):
             out_file_signed = cluster_obj.g_transaction.sign_tx(
                 tx_file=out_file_signed,
@@ -815,7 +815,7 @@ def withdraw_reward_w_build(
         witness_override=len(tx_files_withdrawal.signing_key_files),
         destination_dir=destination_dir,
     )
-    # sign incrementally (just to check that it works)
+    # Sign incrementally (just to check that it works)
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_withdrawal_output.out_file,
         signing_key_files=[dst_addr_record.skey_file],
@@ -831,7 +831,7 @@ def withdraw_reward_w_build(
     if not verify:
         return tx_raw_withdrawal_output
 
-    # check that reward is 0
+    # Check that reward is 0
     if (
         cluster_obj.g_query.get_stake_addr_info(stake_addr_record.address).reward_account_balance
         != 0
@@ -839,7 +839,7 @@ def withdraw_reward_w_build(
         msg = "Not all rewards were transferred."
         raise AssertionError(msg)
 
-    # check that rewards were transferred
+    # Check that rewards were transferred
     src_reward_balance = cluster_obj.g_query.get_address_balance(dst_address)
     if (
         src_reward_balance
@@ -862,7 +862,7 @@ def new_tokens(
     amount: int,
 ) -> list[TokenRecord]:
     """Mint new token, sign using skeys."""
-    # create simple script
+    # Create simple script
     keyhash = cluster_obj.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
     script_content = {"keyHash": keyhash, "type": "sig"}
     script = pl.Path(f"{temp_template}.script")
@@ -889,7 +889,7 @@ def new_tokens(
             )
         )
 
-    # token minting
+    # Token minting
     mint_or_burn_sign(
         cluster_obj=cluster_obj,
         new_tokens=tokens_to_mint,
@@ -1042,17 +1042,17 @@ def wait_for_epoch_interval(
 
     start_epoch = cluster_obj.g_query.get_epoch()
 
-    # wait for new block so we start counting with an up-to-date slot number
+    # Wait for new block so we start counting with an up-to-date slot number
     cluster_obj.wait_for_new_block()
 
     for __ in range(40):
         s_from_epoch_start = cluster_obj.time_from_epoch_start()
 
-        # return if we are in the required interval
+        # Return if we are in the required interval
         if start_abs <= s_from_epoch_start <= stop_abs:
             break
 
-        # if we are already after the required interval, wait for next epoch
+        # If we are already after the required interval, wait for next epoch
         if stop_abs < s_from_epoch_start:
             if force_epoch:
                 msg = (
@@ -1068,13 +1068,13 @@ def wait_for_epoch_interval(
             cluster_obj.wait_for_new_epoch()
             continue
 
-        # sleep until `start_abs`
+        # Sleep until `start_abs`
         to_sleep = start_abs - s_from_epoch_start
         if to_sleep > 0:
             # `to_sleep` is float, wait for at least 1 second
             time.sleep(to_sleep if to_sleep > 1 else 1)
 
-        # we can finish if slot number of last minted block doesn't need
+        # We can finish if slot number of last minted block doesn't need
         # to match the time interval
         if not check_slot:
             break
@@ -1105,7 +1105,7 @@ def load_tx_metadata(tx_body_file: pl.Path) -> TxMetadata:
     if not metadata_section:
         return TxMetadata(metadata={}, aux_data=[])
 
-    # the `metadata_section` can be either list or `CBORTag`- check if it is `CBORTag`
+    # The `metadata_section` can be either list or `CBORTag`- check if it is `CBORTag`
     try:
         metadata_value = metadata_section.value
     except AttributeError:
@@ -1115,7 +1115,7 @@ def load_tx_metadata(tx_body_file: pl.Path) -> TxMetadata:
             metadata=metadata_value.get(0) or {}, aux_data=metadata_value.get(1) or []
         )
 
-    # now we know the `metadata_section` is list
+    # Now we know the `metadata_section` is list
     try:
         metadata: dict = metadata_section[0]
     except KeyError:

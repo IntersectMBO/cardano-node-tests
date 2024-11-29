@@ -53,7 +53,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         Example:
             example/loadsuite/test/test_gamma.py::test_beta0[param]@group_name@long
         """
-        # check the index of ']' to avoid the case: parametrize mark value has '@'
+        # Check the index of ']' to avoid the case: parametrize mark value has '@'
         param_end_idx = nodeid.rfind("]")
         scope_start_idx = param_end_idx if param_end_idx != -1 else 0
 
@@ -105,11 +105,11 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         assigned_to_node = self.assigned_work.setdefault(node, collections.OrderedDict())
         scope, work_unit = None, None
 
-        # check if there are any long-running tests already pending
+        # Check if there are any long-running tests already pending
         long_pending = self._is_long_pending(assigned_to_node)
 
         if long_pending:
-            # try to find a work unit with no long-running test if there is already a long-running
+            # Try to find a work unit with no long-running test if there is already a long-running
             # test pending
             scope = self._get_short_scope()
             if scope:
@@ -121,14 +121,14 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
             if scope:
                 work_unit = self.workqueue.pop(scope)
 
-        # grab the first unit of work if none was grabbed above
+        # Grab the first unit of work if none was grabbed above
         if work_unit is None:
             scope, work_unit = self.workqueue.popitem(last=False)
 
-        # keep track of the assigned work
+        # Keep track of the assigned work
         assigned_to_node[scope] = work_unit
 
-        # ask the node to execute the workload
+        # Ask the node to execute the workload
         worker_collection = self.registered_collections[node]
         nodeids_indexes = [
             worker_collection.index(nodeid)
@@ -150,7 +150,7 @@ def pytest_collection_modifyitems(items: list) -> None:
 
         comps = [item.nodeid]
 
-        # add the group name to nodeid as suffix
+        # Add the group name to nodeid as suffix
         if group_marker:
             gname = (
                 group_marker.args[0]
@@ -159,7 +159,7 @@ def pytest_collection_modifyitems(items: list) -> None:
             )
             comps.append(gname)
 
-        # add "long" to nodeid as suffix
+        # Add "long" to nodeid as suffix
         if long_marker:
             comps.append(LONG_MARKER)
 
