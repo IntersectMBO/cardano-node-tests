@@ -17,12 +17,12 @@ def fund_from_faucet(
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: dict | None = None,
     all_faucets: dict[str, dict] | None = None,
-    amount: None | int | list[int] = None,
+    amount: int | list[int] | None = None,
     tx_name: str | None = None,
     destination_dir: clusterlib.FileType = ".",
     force: bool = False,
 ) -> clusterlib.TxRawOutput | None:
-    """Send `amount` from faucet addr to all `dst_addrs`."""
+    """Transfer `amount` from faucet addr to all `dst_addrs`."""
     if amount is None:
         amount = 1000_000_000
 
@@ -32,8 +32,7 @@ def fund_from_faucet(
 
     # Get payment AddressRecord out of PoolUser
     dst_addr_records: list[clusterlib.AddressRecord] = [
-        (r.payment if hasattr(r, "payment") else r)
-        for r in dst_addrs  # type: ignore
+        (r.payment if hasattr(r, "payment") else r) for r in dst_addrs
     ]
     if isinstance(amount, int):
         amount = [amount] * len(dst_addr_records)
@@ -78,7 +77,7 @@ def return_funds_to_faucet(
     tx_name: str | None = None,
     destination_dir: cl_types.FileType = ".",
 ) -> None:
-    """Send `amount` from all `src_addrs` to `faucet_addr`.
+    """Transfer `amount` from all `src_addrs` to `faucet_addr`.
 
     The amount of "-1" means all available funds.
     """
