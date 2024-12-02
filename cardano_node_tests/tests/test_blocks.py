@@ -55,14 +55,13 @@ class TestLeadershipSchedule:
         """
         # pylint: disable=unused-argument
         cluster, pool_name = cluster_use_pool
+        pool_short_name = f"{pool_name.replace('node-', '')}"
         temp_template = common.get_test_id(cluster)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.g_stake_pool.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
-        pool_log = (
-            cluster_nodes.get_cluster_env().state_dir / f"{pool_name.replace('node-', '')}.stdout"
-        )
+        pool_log = cluster_nodes.get_cluster_env().state_dir / f"{pool_short_name}.stdout"
         seek_offset = helpers.get_eof_offset(pool_log)
         timestamp = time.time()
 
@@ -75,10 +74,12 @@ class TestLeadershipSchedule:
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster,
                 start=-int(300 * cluster.slot_length),
-                stop=-10,
+                stop=-15,
                 check_slot=True,
             )
             queried_epoch = cluster.g_query.get_epoch() + 1
+
+        debug_log_template = (f"{temp_template}_ep{queried_epoch}_pool_{pool_short_name}",)
 
         # Query leadership schedule for selected pool
         leadership_schedule = cluster.g_query.get_leadership_schedule(
@@ -86,10 +87,12 @@ class TestLeadershipSchedule:
             cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
             for_next=for_epoch != "current",
         )
+        with open(f"{debug_log_template}_schedule.txt", "w", encoding="utf-8") as out_fp:
+            out_fp.write("\n".join(str(s) for s in leadership_schedule))
         slots_when_scheduled = {r.slot_no for r in leadership_schedule}
 
         # Wait for epoch that comes after the queried epoch
-        cluster.wait_for_epoch(epoch_no=queried_epoch + 1, padding_seconds=10)
+        cluster.wait_for_epoch(epoch_no=queried_epoch + 1, padding_seconds=10, future_is_ok=False)
 
         # Get number of minted blocks from ledger
         ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
@@ -112,18 +115,22 @@ class TestLeadershipSchedule:
                 seek_offset=seek_offset,
                 timestamp=timestamp,
             )
+
             tip = cluster.g_query.get_tip()
-            last_slot_queried_epoch = int(tip["slot"]) - int(tip["slotInEpoch"] - 1)
-            first_slot_queried_epoch = (
-                last_slot_queried_epoch - int(cluster.genesis["epochLength"]) + 1
-            )
+            ep_num_after_queried = int(tip["epoch"]) - queried_epoch
+            ep_length = int(cluster.genesis["epochLength"])
+            first_slot_this_ep = int(tip["slot"]) - int(tip["slotInEpoch"])
+            first_slot_queried_ep = first_slot_this_ep - (ep_num_after_queried * ep_length)
+            last_slot_queried_ep = first_slot_queried_ep + ep_length - 1
             slots_pattern = re.compile(r'"slot",Number (\d+)\.0')
             slots_when_minted = {
                 s
                 for m in minted_lines
                 if (o := slots_pattern.search(m)) is not None
-                and first_slot_queried_epoch <= (s := int(o.group(1))) <= last_slot_queried_epoch
+                and first_slot_queried_ep <= (s := int(o.group(1))) <= last_slot_queried_ep
             }
+            with open(f"{debug_log_template}_minted.txt", "w", encoding="utf-8") as out_fp:
+                out_fp.write(f"{pool_id_dec}: {slots_when_minted}")
 
             # Compare leadership schedule with blocks that were actually minted
             difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
@@ -155,6 +162,8 @@ class TestLeadershipSchedule:
                 )
             )
             slots_when_minted = {r.slot_no for r in minted_blocks}
+            with open(f"{debug_log_template}_db_minted.txt", "w", encoding="utf-8") as out_fp:
+                out_fp.write(f"{pool_id_dec}: {slots_when_minted}")
 
             # Compare leadership schedule with blocks that were actually minted
             difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
