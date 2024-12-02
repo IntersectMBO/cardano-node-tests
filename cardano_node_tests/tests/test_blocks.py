@@ -89,7 +89,7 @@ class TestLeadershipSchedule:
         slots_when_scheduled = {r.slot_no for r in leadership_schedule}
 
         # Wait for epoch that comes after the queried epoch
-        cluster.wait_for_epoch(epoch_no=queried_epoch + 1, padding_seconds=10)
+        cluster.wait_for_epoch(epoch_no=queried_epoch + 1, padding_seconds=10, future_is_ok=False)
 
         # Get number of minted blocks from ledger
         ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
@@ -112,17 +112,19 @@ class TestLeadershipSchedule:
                 seek_offset=seek_offset,
                 timestamp=timestamp,
             )
+
             tip = cluster.g_query.get_tip()
-            last_slot_queried_epoch = int(tip["slot"]) - int(tip["slotInEpoch"] - 1)
-            first_slot_queried_epoch = (
-                last_slot_queried_epoch - int(cluster.genesis["epochLength"]) + 1
-            )
+            ep_num_after_queried = int(tip["epoch"]) - queried_epoch
+            ep_length = int(cluster.genesis["epochLength"])
+            first_slot_this_ep = int(tip["slot"]) - int(tip["slotInEpoch"])
+            first_slot_queried_ep = first_slot_this_ep - (ep_num_after_queried * ep_length)
+            last_slot_queried_ep = first_slot_queried_ep + ep_length - 1
             slots_pattern = re.compile(r'"slot",Number (\d+)\.0')
             slots_when_minted = {
                 s
                 for m in minted_lines
                 if (o := slots_pattern.search(m)) is not None
-                and first_slot_queried_epoch <= (s := int(o.group(1))) <= last_slot_queried_epoch
+                and first_slot_queried_ep <= (s := int(o.group(1))) <= last_slot_queried_ep
             }
 
             # Compare leadership schedule with blocks that were actually minted
