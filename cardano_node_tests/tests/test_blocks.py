@@ -55,14 +55,13 @@ class TestLeadershipSchedule:
         """
         # pylint: disable=unused-argument
         cluster, pool_name = cluster_use_pool
+        pool_short_name = f"{pool_name.replace('node-', '')}"
         temp_template = common.get_test_id(cluster)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.g_stake_pool.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
-        pool_log = (
-            cluster_nodes.get_cluster_env().state_dir / f"{pool_name.replace('node-', '')}.stdout"
-        )
+        pool_log = cluster_nodes.get_cluster_env().state_dir / f"{pool_short_name}.stdout"
         seek_offset = helpers.get_eof_offset(pool_log)
         timestamp = time.time()
 
@@ -80,12 +79,16 @@ class TestLeadershipSchedule:
             )
             queried_epoch = cluster.g_query.get_epoch() + 1
 
+        debug_log_template = (f"{temp_template}_ep{queried_epoch}_pool_{pool_short_name}",)
+
         # Query leadership schedule for selected pool
         leadership_schedule = cluster.g_query.get_leadership_schedule(
             vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
             cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
             for_next=for_epoch != "current",
         )
+        with open(f"{debug_log_template}_schedule.txt", "w", encoding="utf-8") as out_fp:
+            out_fp.write("\n".join(str(s) for s in leadership_schedule))
         slots_when_scheduled = {r.slot_no for r in leadership_schedule}
 
         # Wait for epoch that comes after the queried epoch
@@ -126,6 +129,8 @@ class TestLeadershipSchedule:
                 if (o := slots_pattern.search(m)) is not None
                 and first_slot_queried_ep <= (s := int(o.group(1))) <= last_slot_queried_ep
             }
+            with open(f"{debug_log_template}_minted.txt", "w", encoding="utf-8") as out_fp:
+                out_fp.write(f"{pool_id_dec}: {slots_when_minted}")
 
             # Compare leadership schedule with blocks that were actually minted
             difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
@@ -157,6 +162,8 @@ class TestLeadershipSchedule:
                 )
             )
             slots_when_minted = {r.slot_no for r in minted_blocks}
+            with open(f"{debug_log_template}_db_minted.txt", "w", encoding="utf-8") as out_fp:
+                out_fp.write(f"{pool_id_dec}: {slots_when_minted}")
 
             # Compare leadership schedule with blocks that were actually minted
             difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
