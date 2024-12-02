@@ -75,7 +75,7 @@ class TestLeadershipSchedule:
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster,
                 start=-int(300 * cluster.slot_length),
-                stop=-10,
+                stop=-15,
                 check_slot=True,
             )
             queried_epoch = cluster.g_query.get_epoch() + 1
