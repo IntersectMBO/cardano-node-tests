@@ -58,6 +58,7 @@ def cluster_lock_42stake(
         use_resources=[
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
             cluster_management.Resources.REWARDS,
+            cluster_management.Resources.PLUTUS,
         ],
     )
     pool_name = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)[

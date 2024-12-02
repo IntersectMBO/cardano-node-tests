@@ -49,7 +49,10 @@ def cluster_guardrails(
     Cleanup (== respin the cluster instance) after the tests are finished.
     """
     cluster_obj = cluster_manager.get(
-        use_resources=cluster_management.Resources.ALL_POOLS,
+        use_resources=[
+            *cluster_management.Resources.ALL_POOLS,
+            cluster_management.Resources.PLUTUS,
+        ],
         lock_resources=[cluster_management.Resources.COMMITTEE, cluster_management.Resources.DREPS],
         cleanup=True,
     )

@@ -44,6 +44,7 @@ def cluster_lock_gov_script(
         use_resources=[
             *cluster_management.Resources.ALL_POOLS,
             cluster_management.Resources.REWARDS,
+            cluster_management.Resources.PLUTUS,
         ],
         lock_resources=[
             cluster_management.Resources.COMMITTEE,
