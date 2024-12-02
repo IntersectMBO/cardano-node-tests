@@ -1734,24 +1734,24 @@ class TestTransfer:
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
 
-        ma_destinations = [
+        ma_txouts = [
             clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token),
         ]
 
         # Destinations with both native token and Lovelace (it doesn't matter on the amounts) for
         # calculating minimum required Lovelace value for tx output
-        calc_destinations = [
-            *ma_destinations,
+        calc_txouts = [
+            *ma_txouts,
             clusterlib.TxOut(address=dst_address, amount=2_000_000),
         ]
 
-        min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=calc_destinations)
+        min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=calc_txouts)
         assert min_value.coin.lower() in (clusterlib.DEFAULT_COIN, "coin")
         assert min_value.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace = min_value.value
 
-        destinations = [
-            *ma_destinations,
+        txouts = [
+            *ma_txouts,
             clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
         ]
 
@@ -1759,7 +1759,7 @@ class TestTransfer:
 
         if use_build_cmd:
             # TODO: add ADA txout for change address - see node issue #3057
-            destinations.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
+            txouts.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
 
             if VERSIONS.transaction_era == VERSIONS.ALONZO:
                 err_str = ""
@@ -1767,7 +1767,7 @@ class TestTransfer:
                     cluster.g_transaction.build_tx(
                         src_address=src_address,
                         tx_name=temp_template,
-                        txouts=destinations,
+                        txouts=txouts,
                         fee_buffer=2_000_000,
                         tx_files=tx_files,
                     )
@@ -1782,8 +1782,8 @@ class TestTransfer:
                 min_reported_utxo = _min_reported_utxo.group(1)
                 amount_lovelace = int(min_reported_utxo)
 
-                destinations = [
-                    *ma_destinations,
+                txouts = [
+                    *ma_txouts,
                     clusterlib.TxOut(address=dst_address, amount=amount_lovelace),
                     clusterlib.TxOut(address=src_address, amount=2_000_000),
                 ]
@@ -1791,7 +1791,7 @@ class TestTransfer:
             tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
@@ -1802,10 +1802,10 @@ class TestTransfer:
             )
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster.g_transaction.send_funds(
+            tx_raw_output = cluster.g_transaction.send_tx(
                 src_address=src_address,
-                destinations=destinations,
                 tx_name=temp_template,
+                txouts=txouts,
                 tx_files=tx_files,
             )
 
@@ -1880,44 +1880,44 @@ class TestTransfer:
         dst_address1 = payment_addrs[1].address
         dst_address2 = payment_addrs[2].address
 
-        ma_destinations_address1 = []
-        ma_destinations_address2 = []
+        ma_txouts_address1 = []
+        ma_txouts_address2 = []
         for t in new_tokens:
-            ma_destinations_address1.append(
+            ma_txouts_address1.append(
                 clusterlib.TxOut(address=dst_address1, amount=amount, coin=t.token)
             )
-            ma_destinations_address2.append(
+            ma_txouts_address2.append(
                 clusterlib.TxOut(address=dst_address2, amount=amount, coin=t.token)
             )
 
         # Destinations with both native token and Lovelace (it doesn't matter on the amounts) for
         # calculating minimum required Lovelace value for tx output
-        calc_destinations_address1 = [
-            *ma_destinations_address1,
+        calc_txouts_address1 = [
+            *ma_txouts_address1,
             clusterlib.TxOut(address=dst_address1, amount=2_000_000),
         ]
-        calc_destinations_address2 = [
-            *ma_destinations_address2,
+        calc_txouts_address2 = [
+            *ma_txouts_address2,
             clusterlib.TxOut(address=dst_address2, amount=2_000_000),
         ]
 
         min_value_address1 = cluster.g_transaction.calculate_min_req_utxo(
-            txouts=calc_destinations_address1
+            txouts=calc_txouts_address1
         )
         assert min_value_address1.coin.lower() in (clusterlib.DEFAULT_COIN, "coin")
         assert min_value_address1.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address1 = min_value_address1.value
 
         min_value_address2 = cluster.g_transaction.calculate_min_req_utxo(
-            txouts=calc_destinations_address2
+            txouts=calc_txouts_address2
         )
         assert min_value_address2.value, "No Lovelace required for `min-ada-value`"
         amount_lovelace_address2 = min_value_address2.value
 
-        destinations = [
-            *ma_destinations_address1,
+        txouts = [
+            *ma_txouts_address1,
             clusterlib.TxOut(address=dst_address1, amount=amount_lovelace_address1),
-            *ma_destinations_address2,
+            *ma_txouts_address2,
             clusterlib.TxOut(address=dst_address2, amount=amount_lovelace_address2),
         ]
 
@@ -1927,7 +1927,7 @@ class TestTransfer:
 
         if use_build_cmd:
             # TODO: add ADA txout for change address
-            destinations.append(clusterlib.TxOut(address=src_address, amount=4_000_000))
+            txouts.append(clusterlib.TxOut(address=src_address, amount=4_000_000))
 
             # TODO: see node issue #4297
             if VERSIONS.transaction_era == VERSIONS.ALONZO:
@@ -1936,7 +1936,7 @@ class TestTransfer:
                     cluster.g_transaction.build_tx(
                         src_address=src_address,
                         tx_name=temp_template,
-                        txouts=destinations,
+                        txouts=txouts,
                         fee_buffer=2_000_000,
                         tx_files=tx_files,
                     )
@@ -1951,10 +1951,10 @@ class TestTransfer:
                 min_reported_utxo = _min_reported_utxo.group(1)
                 amount_lovelace_address1 = amount_lovelace_address2 = int(min_reported_utxo)
 
-                destinations = [
-                    *ma_destinations_address1,
+                txouts = [
+                    *ma_txouts_address1,
                     clusterlib.TxOut(address=dst_address1, amount=amount_lovelace_address1),
-                    *ma_destinations_address2,
+                    *ma_txouts_address2,
                     clusterlib.TxOut(address=dst_address2, amount=amount_lovelace_address2),
                     clusterlib.TxOut(address=src_address, amount=4_000_000),
                 ]
@@ -1962,7 +1962,7 @@ class TestTransfer:
             tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 fee_buffer=2_000_000,
                 tx_files=tx_files,
             )
@@ -1973,10 +1973,10 @@ class TestTransfer:
             )
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
         else:
-            tx_raw_output = cluster.g_transaction.send_funds(
+            tx_raw_output = cluster.g_transaction.send_tx(
                 src_address=src_address,
-                destinations=destinations,
                 tx_name=temp_template,
+                txouts=txouts,
                 tx_files=tx_files,
             )
 
@@ -2043,19 +2043,19 @@ class TestTransfer:
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token)]
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
         if use_build_cmd:
             expected_error = "Minimum required UTxO:"
             # TODO: add ADA txout for change address
-            destinations.append(clusterlib.TxOut(address=src_address, amount=3500_000))
+            txouts.append(clusterlib.TxOut(address=src_address, amount=3500_000))
 
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 cluster.g_transaction.build_tx(
                     src_address=src_address,
                     tx_name=temp_template,
-                    txouts=destinations,
+                    txouts=txouts,
                     fee_buffer=2_000_000,
                     tx_files=tx_files,
                 )
@@ -2064,10 +2064,10 @@ class TestTransfer:
             expected_error = "OutputTooSmallUTxO"
 
             try:
-                cluster.g_transaction.send_funds(
+                cluster.g_transaction.send_tx(
                     src_address=src_address,
-                    destinations=destinations,
                     tx_name=temp_template,
+                    txouts=txouts,
                     tx_files=tx_files,
                 )
             except clusterlib.CLIError as err:
@@ -2098,14 +2098,14 @@ class TestTransfer:
         src_address = new_token.token_mint_addr.address
         dst_address = payment_addrs[2].address
 
-        ma_destinations = [
+        ma_txouts = [
             clusterlib.TxOut(address=dst_address, amount=token_amount, coin=new_token.token),
         ]
 
         min_amount_lovelace = 4_000_000
 
-        destinations = [
-            *ma_destinations,
+        txouts = [
+            *ma_txouts,
             clusterlib.TxOut(address=dst_address, amount=min_amount_lovelace),
         ]
 
@@ -2114,16 +2114,14 @@ class TestTransfer:
         if use_build_cmd:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 # Add ADA txout for change address - see node issue #3057
-                destinations.append(
-                    clusterlib.TxOut(address=src_address, amount=min_amount_lovelace)
-                )
+                txouts.append(clusterlib.TxOut(address=src_address, amount=min_amount_lovelace))
 
                 try:
                     logging.disable(logging.ERROR)
                     cluster.g_transaction.build_tx(
                         src_address=src_address,
                         tx_name=temp_template,
-                        txouts=destinations,
+                        txouts=txouts,
                         fee_buffer=2_000_000,
                         tx_files=tx_files,
                     )
@@ -2140,9 +2138,9 @@ class TestTransfer:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 try:
                     logging.disable(logging.ERROR)
-                    cluster.g_transaction.send_funds(
+                    cluster.g_transaction.send_tx(
                         src_address=src_address,
-                        destinations=destinations,
+                        txouts=txouts,
                         tx_name=temp_template,
                         tx_files=tx_files,
                         fee=80_000,
