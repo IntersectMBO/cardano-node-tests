@@ -18,6 +18,7 @@ class Resources:
     )
     # Reserve one pool for all tests where the pool will stop producing blocks
     POOL_FOR_OFFLINE: tp.Final[str] = POOL2
+    PLUTUS: tp.Final[str] = "plutus"
     RESERVES: tp.Final[str] = "reserves"
     TREASURY: tp.Final[str] = "treasury"
     REWARDS: tp.Final[str] = "rewards"
