@@ -87,14 +87,14 @@ class TestFee:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=10)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=10)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.send_funds(
+            cluster.g_transaction.send_tx(
                 src_address=src_address,
-                destinations=destinations,
                 tx_name=temp_template,
+                txouts=txouts,
                 tx_files=tx_files,
                 fee=fee,
             )
@@ -119,7 +119,7 @@ class TestFee:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=10)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=10)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         fee = 0.0
@@ -128,17 +128,17 @@ class TestFee:
                 cluster.g_transaction.calculate_tx_fee(
                     src_address=src_address,
                     tx_name=temp_template,
-                    txouts=destinations,
+                    txouts=txouts,
                     tx_files=tx_files,
                 )
                 / fee_change
             )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.send_funds(
+            cluster.g_transaction.send_tx(
                 src_address=src_address,
-                destinations=destinations,
                 tx_name=temp_template,
+                txouts=txouts,
                 tx_files=tx_files,
                 fee=int(fee),
             )
@@ -161,22 +161,22 @@ class TestFee:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         fee = (
             cluster.g_transaction.calculate_tx_fee(
                 src_address=src_address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
             )
             + fee_add
         )
 
-        tx_raw_output = cluster.g_transaction.send_funds(
+        tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_address,
-            destinations=destinations,
             tx_name=temp_template,
+            txouts=txouts,
             tx_files=tx_files,
             fee=fee,
         )

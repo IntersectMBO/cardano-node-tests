@@ -266,14 +266,14 @@ class TestNoRewards:
         pledge_amount = loaded_data.pool_pledge // 2
 
         # Withdraw part of the pledge
-        destinations = [
+        txouts = [
             clusterlib.TxOut(address=delegation_out.pool_user.payment.address, amount=pledge_amount)
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_owner.payment.skey_file])
-        cluster.g_transaction.send_funds(
+        cluster.g_transaction.send_tx(
             src_address=pool_owner.payment.address,
-            destinations=destinations,
             tx_name=f"{temp_template}_withdraw_pledge",
+            txouts=txouts,
             tx_files=tx_files,
         )
 
@@ -325,7 +325,7 @@ class TestNoRewards:
             )
 
             # Return pledge
-            destinations = [
+            txouts = [
                 clusterlib.TxOut(
                     address=pool_owner.payment.address, amount=pledge_amount + 100_000_000
                 )
@@ -333,10 +333,10 @@ class TestNoRewards:
             tx_files = clusterlib.TxFiles(
                 signing_key_files=[delegation_out.pool_user.payment.skey_file]
             )
-            cluster.g_transaction.send_funds(
+            cluster.g_transaction.send_tx(
                 src_address=delegation_out.pool_user.payment.address,
-                destinations=destinations,
                 tx_name=f"{temp_template}_return_pledge",
+                txouts=txouts,
                 tx_files=tx_files,
             )
 
