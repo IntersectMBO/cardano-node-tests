@@ -24,8 +24,18 @@ CLUSTER_START_CMDS_LOG = "start_cluster_cmds.log"
 
 ADDRS_DATA_DIRNAME = "addrs_data"
 
+RE_RESNAME = re.compile("_@@(.+)@@_")
 
-def _get_resources_from_paths(paths: tp.Iterator[pl.Path]) -> tp.List[str]:
+
+def _get_res(path: pl.Path) -> str:
+    out = RE_RESNAME.search(str(path))
+    if out is None:
+        err = f"Resource name not found in path: {path}"
+        raise ValueError(err)
+    return out.group(1)
+
+
+def get_resources_from_path(paths: tp.Iterator[pl.Path]) -> list[str]:
     """Get resources names from status files path."""
-    resources = [re.search("_@@(.+)@@_", str(r)).group(1) for r in paths]  # type: ignore
+    resources = [_get_res(p) for p in paths]
     return resources

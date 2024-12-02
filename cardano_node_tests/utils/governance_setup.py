@@ -17,10 +17,8 @@ LOGGER = logging.getLogger(__name__)
 GOV_DATA_DIR = "governance_data"
 GOV_DATA_STORE = "governance_data.pickle"
 
-DREPS_NUM = 5
 
-
-def _get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
+def _get_committee_val(data: dict[str, tp.Any]) -> dict[str, tp.Any]:
     return data.get("committee") or data.get("commitee") or {}
 
 
@@ -101,7 +99,7 @@ def create_vote_stake(
     cluster_obj: clusterlib.ClusterLib,
     no_of_addr: int,
     destination_dir: clusterlib.FileType = ".",
-) -> tp.List[clusterlib.PoolUser]:
+) -> list[clusterlib.PoolUser]:
     pool_users = clusterlib_utils.create_pool_users(
         cluster_obj=cluster_obj,
         name_template=name_template,
@@ -113,7 +111,7 @@ def create_vote_stake(
     clusterlib_utils.fund_from_faucet(
         *pool_users,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        faucet_data=cluster_manager.cache.addrs_data["faucet"],
         amount=500_000_000_000,
         destination_dir=destination_dir,
     )
@@ -121,7 +119,7 @@ def create_vote_stake(
     return pool_users
 
 
-def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_utils.CCKeyMember]:
+def load_committee(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.CCKeyMember]:
     genesis_cc_members = cluster_obj.conway_genesis.get("committee", {}).get("members") or {}
     if not genesis_cc_members:
         return []
@@ -156,43 +154,74 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> tp.List[governance_uti
     return cc_members
 
 
+def load_dreps(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.DRepRegistration]:
+    """Load DReps from the state directory."""
+    data_dir = cluster_obj.state_dir / GOV_DATA_DIR
+    deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+
+    dreps = []
+    for vkey_file in sorted(data_dir.glob("default_drep_*_drep.vkey")):
+        skey_file = vkey_file.with_suffix(".skey")
+        fpath = vkey_file.parent
+        reg_cert = fpath / vkey_file.name.replace(".vkey", "_reg.cert")
+        drep_id = cluster_obj.g_conway_governance.drep.get_id(
+            drep_vkey_file=vkey_file,
+            out_format="hex",
+        )
+        dreps.append(
+            governance_utils.DRepRegistration(
+                registration_cert=reg_cert,
+                key_pair=clusterlib.KeyPair(vkey_file=vkey_file, skey_file=skey_file),
+                drep_id=drep_id,
+                deposit=deposit_amt,
+            )
+        )
+
+    return dreps
+
+
+def load_drep_users(cluster_obj: clusterlib.ClusterLib) -> list[clusterlib.PoolUser]:
+    """Load DReps users from the state directory."""
+    data_dir = cluster_obj.state_dir / GOV_DATA_DIR
+
+    users = []
+    for stake_vkey_file in sorted(data_dir.glob("vote_stake_addr*_stake.vkey")):
+        fpath = stake_vkey_file.parent
+
+        stake_skey_file = stake_vkey_file.with_suffix(".skey")
+        stake_address = clusterlib.read_address_from_file(stake_vkey_file.with_suffix(".addr"))
+
+        payment_vkey_file = fpath / stake_vkey_file.name.replace("_stake.vkey", ".vkey")
+        payment_skey_file = payment_vkey_file.with_suffix(".skey")
+        payment_address = clusterlib.read_address_from_file(payment_vkey_file.with_suffix(".addr"))
+
+        users.append(
+            clusterlib.PoolUser(
+                payment=clusterlib.AddressRecord(
+                    address=payment_address,
+                    vkey_file=payment_vkey_file,
+                    skey_file=payment_skey_file,
+                ),
+                stake=clusterlib.AddressRecord(
+                    address=stake_address, vkey_file=stake_vkey_file, skey_file=stake_skey_file
+                ),
+            )
+        )
+
+    return users
+
+
 def setup(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
-    destination_dir: clusterlib.FileType = ".",
 ) -> governance_utils.GovernanceRecords:
     cc_members = load_committee(cluster_obj=cluster_obj)
-    vote_stake = create_vote_stake(
-        name_template="vote_stake",
-        cluster_manager=cluster_manager,
-        cluster_obj=cluster_obj,
-        no_of_addr=DREPS_NUM,
-        destination_dir=destination_dir,
-    )
-    drep_reg_records, drep_users = governance_utils.create_dreps(
-        name_template="default_drep",
-        num=DREPS_NUM,
-        cluster_obj=cluster_obj,
-        payment_addr=vote_stake[0].payment,
-        pool_users=vote_stake,
-        destination_dir=destination_dir,
-    )
+    drep_reg_records = load_dreps(cluster_obj=cluster_obj)
+    drep_users = load_drep_users(cluster_obj=cluster_obj)
     node_cold_records = [
         cluster_manager.cache.addrs_data[pn]["cold_key_pair"]
         for pn in cluster_management.Resources.ALL_POOLS
     ]
-
-    cluster_obj.wait_for_new_epoch(padding_seconds=5)
-
-    # Check delegation to DReps
-    deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster_obj)
-    drep_id = drep_reg_records[0].drep_id
-    stake_addr_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
-        stake_vkey_file=drep_users[0].stake.vkey_file
-    )
-    governance_utils.check_drep_delegation(
-        deleg_state=deleg_state, drep_id=drep_id, stake_addr_hash=stake_addr_hash
-    )
 
     gov_data = save_default_governance(
         dreps_reg=drep_reg_records,
@@ -201,6 +230,19 @@ def setup(
         pools_cold=node_cold_records,
     )
 
+    # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
+    # to be usable. DReps don't vote in PV9.
+    if (
+        drep_reg_records
+        and cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10
+    ):
+        cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
+
+        drep1_rec = cluster_obj.g_conway_governance.query.drep_stake_distribution(
+            drep_vkey_file=drep_reg_records[0].key_pair.vkey_file
+        )
+        assert drep1_rec, "DRep stake distribution not found"
+
     return gov_data
 
 
@@ -208,23 +250,32 @@ def get_default_governance(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
 ) -> governance_utils.GovernanceRecords:
+    """Get default governance data for CC members, DReps and SPOs."""
+    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+        err = "Default governance is not available on testnets"
+        raise ValueError(err)
+
     cluster_env = cluster_nodes.get_cluster_env()
     gov_data_dir = cluster_env.state_dir / GOV_DATA_DIR
     gov_data_store = gov_data_dir / GOV_DATA_STORE
     governance_data = None
 
-    def _setup_gov() -> tp.Optional[governance_utils.GovernanceRecords]:
-        with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
-            if gov_data_store.exists():
-                return None
+    def _setup_gov() -> governance_utils.GovernanceRecords | None:
+        if gov_data_store.exists():
+            return None
 
-            return setup(
-                cluster_obj=cluster_obj,
-                cluster_manager=cluster_manager,
-                destination_dir=gov_data_dir,
-            )
+        gov_records = setup(
+            cluster_obj=cluster_obj,
+            cluster_manager=cluster_manager,
+        )
 
-    if not gov_data_store.exists():
+        if not gov_data_store.exists():
+            msg = f"File `{gov_data_store}` not found"
+            raise FileNotFoundError(msg)
+
+        return gov_records
+
+    with locking.FileLockIfXdist(str(cluster_env.state_dir / f".{GOV_DATA_STORE}.lock")):
         governance_data = _setup_gov()
 
     gov_data_checksum = helpers.checksum(gov_data_store)
@@ -233,7 +284,7 @@ def get_default_governance(
         if fixture_cache.value:
             return fixture_cache.value  # type: ignore
 
-        if not governance_data and gov_data_store.exists():
+        if governance_data is None:
             with open(gov_data_store, "rb") as in_data:
                 governance_data = pickle.load(in_data)
 
@@ -242,10 +293,10 @@ def get_default_governance(
 
 
 def save_default_governance(
-    dreps_reg: tp.List[governance_utils.DRepRegistration],
-    drep_delegators: tp.List[clusterlib.PoolUser],
-    cc_members: tp.List[governance_utils.CCKeyMember],
-    pools_cold: tp.List[clusterlib.ColdKeyPair],
+    dreps_reg: list[governance_utils.DRepRegistration],
+    drep_delegators: list[clusterlib.PoolUser],
+    cc_members: list[governance_utils.CCKeyMember],
+    pools_cold: list[clusterlib.ColdKeyPair],
 ) -> governance_utils.GovernanceRecords:
     """Save governance data to a pickle, so it can be reused.
 
@@ -272,7 +323,7 @@ def save_default_governance(
 
 def refresh_cc_keys(
     cluster_obj: clusterlib.ClusterLib,
-    cc_members: tp.List[governance_utils.CCKeyMember],
+    cc_members: list[governance_utils.CCKeyMember],
     governance_data: governance_utils.GovernanceRecords,
 ) -> governance_utils.GovernanceRecords:
     """Refresh hot certs for original CC members."""
@@ -331,7 +382,7 @@ def refresh_cc_keys(
 
 def auth_cc_members(
     cluster_obj: clusterlib.ClusterLib,
-    cc_members: tp.List[governance_utils.CCKeyMember],
+    cc_members: list[governance_utils.CCKeyMember],
     name_template: str,
     payment_addr: clusterlib.AddressRecord,
 ) -> None:

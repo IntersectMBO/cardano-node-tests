@@ -18,24 +18,22 @@ LOGGER = logging.getLogger(__name__)
 
 @dataclasses.dataclass(frozen=True)
 class PParamPropRec:
-    proposals: tp.List[clusterlib_utils.UpdateProposal]
+    proposals: list[clusterlib_utils.UpdateProposal]
     action_txid: str
     action_ix: int
-    proposal_names: tp.Set[str]
-    future_pparams: tp.Dict[str, tp.Any]
+    proposal_names: set[str]
+    future_pparams: dict[str, tp.Any]
 
 
 def is_in_bootstrap(
     cluster_obj: clusterlib.ClusterLib,
 ) -> bool:
     """Check if the cluster is in bootstrap period."""
-    pv = cluster_obj.g_conway_governance.query.gov_state()["currentPParams"]["protocolVersion"][
-        "major"
-    ]
+    pv = cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"]
     return bool(pv == 9)
 
 
-def get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
+def get_committee_val(data: dict[str, tp.Any]) -> dict[str, tp.Any]:
     """Get the committee value from the data.
 
     The key can be either correctly "committee", or with typo "commitee".
@@ -44,7 +42,7 @@ def get_committee_val(data: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
     return data.get("committee") or data.get("commitee") or {}
 
 
-def possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
+def possible_rem_issue(gov_state: dict[str, tp.Any], epoch: int) -> bool:
     """Check if the unexpected removed action situation can be result of known ledger issue.
 
     When the issue manifests, only single expired action gets removed and all other expired or
@@ -52,10 +50,8 @@ def possible_rem_issue(gov_state: tp.Dict[str, tp.Any], epoch: int) -> bool:
 
     See https://github.com/IntersectMBO/cardano-ledger/issues/3979
     """
-    removed_actions: tp.List[tp.Dict[str, tp.Any]] = gov_state["nextRatifyState"][
-        "expiredGovActions"
-    ]
-    proposals: tp.List[tp.Dict[str, tp.Any]] = gov_state["proposals"]
+    removed_actions: list[dict[str, tp.Any]] = gov_state["nextRatifyState"]["expiredGovActions"]
+    proposals: list[dict[str, tp.Any]] = gov_state["proposals"]
 
     if len(removed_actions) != 1 or len(proposals) == 1:
         return False
@@ -93,13 +89,13 @@ def get_no_abstain_vote(idx: int) -> clusterlib.Votes:
     return clusterlib.Votes.ABSTAIN
 
 
-def save_gov_state(gov_state: tp.Dict[str, tp.Any], name_template: str) -> None:
+def save_gov_state(gov_state: dict[str, tp.Any], name_template: str) -> None:
     """Save governance state to a file."""
     with open(f"{name_template}_gov_state.json", "w", encoding="utf-8") as out_fp:
         json.dump(gov_state, out_fp, indent=2)
 
 
-def save_committee_state(committee_state: tp.Dict[str, tp.Any], name_template: str) -> None:
+def save_committee_state(committee_state: dict[str, tp.Any], name_template: str) -> None:
     """Save CC state to a file."""
     with open(f"{name_template}_committee_state.json", "w", encoding="utf-8") as out_fp:
         json.dump(committee_state, out_fp, indent=2)
@@ -143,7 +139,7 @@ def get_registered_pool_user(
     clusterlib_utils.fund_from_faucet(
         pool_user.payment,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=fund_amount,
     )
 
@@ -178,8 +174,8 @@ def submit_vote(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     payment_addr: clusterlib.AddressRecord,
-    votes: tp.List[governance_utils.VotesAllT],
-    keys: tp.List[clusterlib.FileType],
+    votes: list[governance_utils.VotesAllT],
+    keys: list[clusterlib.FileType],
     script_votes: clusterlib.OptionalScriptVotes = (),
     submit_method: str = "",
     use_build_cmd: bool = True,
@@ -221,9 +217,9 @@ def cast_vote(
     payment_addr: clusterlib.AddressRecord,
     action_txid: str,
     action_ix: int,
-    approve_cc: tp.Optional[bool] = None,
-    approve_drep: tp.Optional[bool] = None,
-    approve_spo: tp.Optional[bool] = None,
+    approve_cc: bool | None = None,
+    approve_drep: bool | None = None,
+    approve_spo: bool | None = None,
     cc_skip_votes: bool = False,
     drep_skip_votes: bool = False,
     spo_skip_votes: bool = False,
@@ -313,10 +309,10 @@ def cast_vote(
     drep_script_witnesses = [r.skey_file for r in drep_script_key_pairs]
     spo_keys = [r.skey_file for r in governance_data.pools_cold] if votes_spo else []
 
-    votes_simple: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep_keys, *votes_spo]
+    votes_simple: list[governance_utils.VotesAllT] = [*votes_cc, *votes_drep_keys, *votes_spo]
     keys_all = [*cc_keys, *drep_keys, *drep_script_witnesses, *spo_keys]
 
-    script_votes: tp.List[clusterlib.ScriptVote] = []
+    script_votes: list[clusterlib.ScriptVote] = []
 
     if votes_drep_scripts:
         drep_script_reg_certs = [r.registration_cert for r in governance_data.drep_scripts_reg]
@@ -368,7 +364,7 @@ def cast_vote(
 def resign_ccs(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
-    ccs_to_resign: tp.List[clusterlib.CCMember],
+    ccs_to_resign: list[clusterlib.CCMember],
     payment_addr: clusterlib.AddressRecord,
 ) -> clusterlib.TxRawOutput:
     """Resign multiple CC Members."""
@@ -418,7 +414,7 @@ def propose_change_constitution(
     constitution_hash: str,
     pool_user: clusterlib.PoolUser,
     constitution_script_hash: str = "",
-) -> tp.Tuple[clusterlib.ActionConstitution, str, int]:
+) -> tuple[clusterlib.ActionConstitution, str, int]:
     """Propose a constitution change."""
     deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
 
@@ -492,8 +488,8 @@ def propose_pparams_update(
     anchor_url: str,
     anchor_data_hash: str,
     pool_user: clusterlib.PoolUser,
-    proposals: tp.List[clusterlib_utils.UpdateProposal],
-    prev_action_rec: tp.Optional[governance_utils.PrevActionRec] = None,
+    proposals: list[clusterlib_utils.UpdateProposal],
+    prev_action_rec: governance_utils.PrevActionRec | None = None,
 ) -> PParamPropRec:
     """Propose a pparams update."""
     deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]

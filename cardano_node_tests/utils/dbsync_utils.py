@@ -119,7 +119,7 @@ def get_utxo(address: str) -> dbsync_types.PaymentAddrRecord:
     )
 
 
-def get_pool_data(pool_id_bech32: str) -> tp.Optional[dbsync_types.PoolDataRecord]:
+def get_pool_data(pool_id_bech32: str) -> dbsync_types.PoolDataRecord | None:
     """Get pool data from db-sync."""
     pools = list(dbsync_queries.query_pool_data(pool_id_bech32))
     if not pools:
@@ -175,11 +175,11 @@ def get_pool_data(pool_id_bech32: str) -> tp.Optional[dbsync_types.PoolDataRecor
 
 def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     """Get first batch of transaction data from db-sync."""
-    utxo_out: tp.List[dbsync_types.UTxORecord] = []
+    utxo_out: list[dbsync_types.UTxORecord] = []
     seen_tx_out_ids = set()
-    ma_utxo_out: tp.List[dbsync_types.UTxORecord] = []
+    ma_utxo_out: list[dbsync_types.UTxORecord] = []
     seen_ma_tx_out_ids = set()
-    mint_utxo_out: tp.List[dbsync_types.UTxORecord] = []
+    mint_utxo_out: list[dbsync_types.UTxORecord] = []
     seen_ma_tx_mint_ids = set()
     tx_id = -1
 
@@ -258,9 +258,9 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     return txdata
 
 
-def get_txins(txhash: str) -> tp.List[dbsync_types.UTxORecord]:
+def get_txins(txhash: str) -> list[dbsync_types.UTxORecord]:
     """Get txins of a transaction from db-sync."""
-    txins: tp.List[dbsync_types.UTxORecord] = []
+    txins: list[dbsync_types.UTxORecord] = []
     seen_txins_out_ids = set()
     seen_txins_ma_ids = set()
 
@@ -533,7 +533,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> dbsync_types.TxRecor
 
 def get_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
-) -> tp.Optional[dbsync_types.TxRecord]:
+) -> dbsync_types.TxRecord | None:
     """Get a transaction data from db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -546,7 +546,7 @@ def get_tx(
 
 def check_tx(
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput, retry_num: int = 3
-) -> tp.Optional[dbsync_types.TxRecord]:
+) -> dbsync_types.TxRecord | None:
     """Check a transaction in db-sync."""
     response = get_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output, retry_num=retry_num)
 
@@ -562,7 +562,7 @@ def check_tx_phase_2_failure(
     tx_raw_output: clusterlib.TxRawOutput,
     collateral_charged: int,
     retry_num: int = 3,
-) -> tp.Optional[dbsync_types.TxRecord]:
+) -> dbsync_types.TxRecord | None:
     """Check a transaction in db-sync when a phase 2 failure happens."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -601,7 +601,7 @@ def check_tx_phase_2_failure(
 
 def check_pool_deregistration(
     pool_id: str, retiring_epoch: int
-) -> tp.Optional[dbsync_types.PoolDataRecord]:
+) -> dbsync_types.PoolDataRecord | None:
     """Check pool retirement in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -622,7 +622,7 @@ def check_pool_deregistration(
 
 def check_pool_data(  # noqa: C901
     ledger_pool_data: dict, pool_id: str
-) -> tp.Optional[dbsync_types.PoolDataRecord]:
+) -> dbsync_types.PoolDataRecord | None:
     """Check comparison for pool data between ledger and db-sync."""
     # pylint: disable=too-many-branches
     if not configuration.HAS_DBSYNC:
@@ -754,7 +754,7 @@ def check_pool_off_chain_fetch_error(
 
 
 def check_plutus_cost(
-    redeemer_record: dbsync_types.RedeemerRecord, cost_record: tp.Dict[str, tp.Any]
+    redeemer_record: dbsync_types.RedeemerRecord, cost_record: dict[str, tp.Any]
 ) -> None:
     """Compare cost of Plutus script with data from db-sync."""
     errors = []
@@ -776,8 +776,8 @@ def check_plutus_cost(
 
 
 def check_plutus_costs(
-    redeemer_records: tp.List[dbsync_types.RedeemerRecord],
-    cost_records: tp.List[tp.Dict[str, tp.Any]],
+    redeemer_records: list[dbsync_types.RedeemerRecord],
+    cost_records: list[dict[str, tp.Any]],
 ) -> None:
     """Compare cost of multiple Plutus scripts with data from db-sync."""
     # Sort records first by total cost, second by hash
@@ -809,7 +809,7 @@ def check_plutus_costs(
         raise AssertionError("\n".join(errors))
 
 
-def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
+def check_param_proposal(protocol_params: dict) -> dbsync_queries.ParamProposalDBRow | None:
     """Check expected values in the `param_proposal` table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -854,7 +854,7 @@ def check_param_proposal(protocol_params: dict) -> tp.Optional[dbsync_queries.Pa
     return param_proposal_db
 
 
-def _get_float_pparam(pparam: tp.Any) -> tp.Optional[float]:
+def _get_float_pparam(pparam: tp.Any) -> float | None:
     if pparam is None:
         return None
     if isinstance(pparam, dict):
@@ -864,43 +864,43 @@ def _get_float_pparam(pparam: tp.Any) -> tp.Optional[float]:
     return float(pparam)
 
 
-def map_params_to_db_convention(pp: dict) -> tp.Dict[str, tp.Any]:
+def map_params_to_db_convention(pparams: dict) -> dict[str, tp.Any]:
     # Get the prices of memory and steps
-    prices = pp.get("executionUnitPrices", {})
+    prices = pparams.get("executionUnitPrices", {})
     price_mem = _get_float_pparam(prices.get("priceMemory"))
     price_steps = _get_float_pparam(prices.get("priceSteps"))
 
-    dvt = pp.get("dRepVotingThresholds", {})
-    pvt = pp.get("poolVotingThresholds", {})
+    dvt = pparams.get("dRepVotingThresholds", {})
+    pvt = pparams.get("poolVotingThresholds", {})
 
     params_mapping = {
         # Network proposals group
-        "max_block_size": pp.get("maxBlockBodySize"),
-        "max_tx_size": pp.get("maxTxSize"),
-        "max_bh_size": pp.get("maxBlockHeaderSize"),
-        "max_val_size": pp.get("maxValueSize"),
-        "max_tx_ex_mem": pp.get("maxTxExecutionUnits", {}).get("memory"),
-        "max_tx_ex_steps": pp.get("maxTxExecutionUnits", {}).get("steps"),
-        "max_block_ex_mem": pp.get("maxBlockExecutionUnits", {}).get("memory"),
-        "max_block_ex_steps": pp.get("maxBlockExecutionUnits", {}).get("steps"),
-        "max_collateral_inputs": pp.get("maxCollateralInputs"),
+        "max_block_size": pparams.get("maxBlockBodySize"),
+        "max_tx_size": pparams.get("maxTxSize"),
+        "max_bh_size": pparams.get("maxBlockHeaderSize"),
+        "max_val_size": pparams.get("maxValueSize"),
+        "max_tx_ex_mem": pparams.get("maxTxExecutionUnits", {}).get("memory"),
+        "max_tx_ex_steps": pparams.get("maxTxExecutionUnits", {}).get("steps"),
+        "max_block_ex_mem": pparams.get("maxBlockExecutionUnits", {}).get("memory"),
+        "max_block_ex_steps": pparams.get("maxBlockExecutionUnits", {}).get("steps"),
+        "max_collateral_inputs": pparams.get("maxCollateralInputs"),
         # Economic proposals group
-        "min_fee_a": pp.get("txFeePerByte"),
-        "min_fee_b": pp.get("txFeeFixed"),
-        "key_deposit": pp.get("stakeAddressDeposit"),
-        "pool_deposit": pp.get("stakePoolDeposit"),
-        "monetary_expand_rate": _get_float_pparam(pp.get("monetaryExpansion")),
-        "treasury_growth_rate": _get_float_pparam(pp.get("treasuryCut")),
-        "min_pool_cost": pp.get("minPoolCost"),
-        "coins_per_utxo_size": pp.get("utxoCostPerByte"),
-        "min_fee_ref_script_cost_per_byte": pp.get("minFeeRefScriptCostPerByte"),
+        "min_fee_a": pparams.get("txFeePerByte"),
+        "min_fee_b": pparams.get("txFeeFixed"),
+        "key_deposit": pparams.get("stakeAddressDeposit"),
+        "pool_deposit": pparams.get("stakePoolDeposit"),
+        "monetary_expand_rate": _get_float_pparam(pparams.get("monetaryExpansion")),
+        "treasury_growth_rate": _get_float_pparam(pparams.get("treasuryCut")),
+        "min_pool_cost": pparams.get("minPoolCost"),
+        "coins_per_utxo_size": pparams.get("utxoCostPerByte"),
+        "min_fee_ref_script_cost_per_byte": pparams.get("minFeeRefScriptCostPerByte"),
         "price_mem": price_mem,
         "price_step": price_steps,
         # Technical proposals group
-        "influence": _get_float_pparam(pp.get("poolPledgeInfluence")),
-        "max_epoch": pp.get("poolRetireMaxEpoch"),
-        "optimal_pool_count": pp.get("stakePoolTargetNum"),
-        "collateral_percent": pp.get("collateralPercentage"),
+        "influence": _get_float_pparam(pparams.get("poolPledgeInfluence")),
+        "max_epoch": pparams.get("poolRetireMaxEpoch"),
+        "optimal_pool_count": pparams.get("stakePoolTargetNum"),
+        "collateral_percent": pparams.get("collateralPercentage"),
         # Governance proposal group
         # - DReps
         "dvt_committee_no_confidence": _get_float_pparam(dvt.get("committeeNoConfidence")),
@@ -920,19 +920,19 @@ def map_params_to_db_convention(pp: dict) -> tp.Dict[str, tp.Any]:
         "pvt_motion_no_confidence": _get_float_pparam(pvt.get("motionNoConfidence")),
         "pvtpp_security_group": _get_float_pparam(pvt.get("ppSecurityGroup")),
         # General
-        "gov_action_lifetime": pp.get("govActionLifetime"),
-        "gov_action_deposit": pp.get("govActionDeposit"),
-        "drep_deposit": pp.get("dRepDeposit"),
-        "drep_activity": pp.get("dRepActivity"),
-        "committee_min_size": pp.get("committeeMinSize"),
-        "committee_max_term_length": pp.get("committeeMaxTermLength"),
+        "gov_action_lifetime": pparams.get("govActionLifetime"),
+        "gov_action_deposit": pparams.get("govActionDeposit"),
+        "drep_deposit": pparams.get("dRepDeposit"),
+        "drep_activity": pparams.get("dRepActivity"),
+        "committee_min_size": pparams.get("committeeMinSize"),
+        "committee_max_term_length": pparams.get("committeeMaxTermLength"),
     }
 
     return params_mapping
 
 
 def _check_param_proposal(
-    param_proposal_db: tp.Union[dbsync_queries.ParamProposalDBRow, dbsync_queries.EpochParamDBRow],
+    param_proposal_db: dbsync_queries.ParamProposalDBRow | dbsync_queries.EpochParamDBRow,
     params_map: dict,
 ) -> list:
     """Check parameter proposal against db-sync."""
@@ -950,13 +950,13 @@ def _check_param_proposal(
 
 def check_conway_param_update_proposal(
     param_proposal_ledger: dict,
-) -> tp.Optional[dbsync_queries.ParamProposalDBRow]:
+) -> dbsync_queries.ParamProposalDBRow | None:
     """Check comparison for param proposal between ledger and db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
     param_proposal_db = dbsync_queries.query_param_proposal()
-    params_map = map_params_to_db_convention(param_proposal_ledger)
+    params_map = map_params_to_db_convention(pparams=param_proposal_ledger)
     failures = []
 
     # Get cost models
@@ -975,16 +975,15 @@ def check_conway_param_update_proposal(
 
 
 def check_conway_param_update_enactment(
-    gov_state: dict, epoch_no: int
-) -> tp.Optional[dbsync_queries.EpochParamDBRow]:
+    pparams: dict, epoch_no: int
+) -> dbsync_queries.EpochParamDBRow | None:
     """Check params enactment between ledger and epoch param in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
 
-    curr_params_db = dbsync_queries.query_epoch_param(epoch_no)
-    curr_params_ledger = gov_state["currentPParams"]
-    params_map = map_params_to_db_convention(curr_params_ledger)
-    failures = _check_param_proposal(curr_params_db, params_map)
+    curr_params_db = dbsync_queries.query_epoch_param(epoch_no=epoch_no)
+    params_map = map_params_to_db_convention(pparams=pparams)
+    failures = _check_param_proposal(param_proposal_db=curr_params_db, params_map=params_map)
 
     if failures:
         failures_str = "\n".join(failures)
@@ -1017,7 +1016,7 @@ def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
 
 def check_conway_gov_action_proposal_description(
     update_proposal: dict, txhash: str = "", action_ix: int = 0
-) -> tp.Optional[dbsync_queries.GovActionProposalDBRow]:
+) -> dbsync_queries.GovActionProposalDBRow | None:
     """Check expected values in the gov_action_proposal table in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1036,13 +1035,13 @@ def check_conway_gov_action_proposal_description(
 
 def get_gov_action_proposals(
     txhash: str = "", type: str = ""
-) -> tp.List[dbsync_queries.GovActionProposalDBRow]:
+) -> list[dbsync_queries.GovActionProposalDBRow]:
     """Get government action proposal from db-sync."""
     gov_action_proposals = list(dbsync_queries.query_gov_action_proposal(txhash=txhash, type=type))
     return gov_action_proposals
 
 
-def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
+def get_committee_member(cold_key: str) -> dbsync_types.CommitteeRegistrationRecord | None:
     """Get committee member data from db-sync."""
     cc_members = list(dbsync_queries.query_committee_registration(cold_key=cold_key))
     if not cc_members:
@@ -1063,7 +1062,7 @@ def get_committee_member(cold_key: str) -> tp.Optional[dbsync_types.CommitteeReg
 
 def check_committee_member_registration(
     cc_member_cold_key: str,
-) -> tp.Optional[dbsync_types.CommitteeRegistrationRecord]:
+) -> dbsync_types.CommitteeRegistrationRecord | None:
     """Check committee member registration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1080,7 +1079,7 @@ def check_committee_member_registration(
 
 def get_deregistered_committee_member(
     cold_key: str,
-) -> tp.Optional[dbsync_types.CommitteeDeregistrationRecord]:
+) -> dbsync_types.CommitteeDeregistrationRecord | None:
     """Get deregistered committee member data from db-sync."""
     deregistered_cc_members = list(dbsync_queries.query_committee_deregistration(cold_key=cold_key))
     if not deregistered_cc_members:
@@ -1101,7 +1100,7 @@ def get_deregistered_committee_member(
 
 def check_committee_member_deregistration(
     cc_member_cold_key: str,
-) -> tp.Optional[dbsync_types.CommitteeDeregistrationRecord]:
+) -> dbsync_types.CommitteeDeregistrationRecord | None:
     """Check committee member deregistration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1117,7 +1116,7 @@ def check_committee_member_deregistration(
     return cc_member_data
 
 
-def get_drep(drep_hash: str, drep_deposit: int) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+def get_drep(drep_hash: str, drep_deposit: int) -> dbsync_types.DrepRegistrationRecord | None:
     """Get drep data from db-sync."""
     dreps = list(dbsync_queries.query_drep_registration(drep_hash, drep_deposit))
     if not dreps:
@@ -1140,8 +1139,8 @@ def get_drep(drep_hash: str, drep_deposit: int) -> tp.Optional[dbsync_types.Drep
 
 
 def check_drep_registration(
-    drep: governance_utils.DRepRegistration, drep_state: tp.List[tp.List[tp.Dict[str, tp.Any]]]
-) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+    drep: governance_utils.DRepRegistration, drep_state: list[list[dict[str, tp.Any]]]
+) -> dbsync_types.DrepRegistrationRecord | None:
     """Check drep registration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1161,7 +1160,7 @@ def check_drep_registration(
 
 def check_drep_deregistration(
     drep: governance_utils.DRepRegistration,
-) -> tp.Optional[dbsync_types.DrepRegistrationRecord]:
+) -> dbsync_types.DrepRegistrationRecord | None:
     """Check drep deregistration in db-sync."""
     if not configuration.HAS_DBSYNC:
         return None
@@ -1247,7 +1246,7 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
     )
 
 
-def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], txhash: str) -> None:
+def check_treasury_withdrawal(stake_address: str, transfer_amts: list[int], txhash: str) -> None:
     """Check treasury_withdrawal in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
@@ -1271,15 +1270,14 @@ def check_treasury_withdrawal(stake_address: str, transfer_amts: tp.List[int], t
         rem_amts.remove(r_amount)
         assert row.ratified_epoch, "Action not marked as ratified in db-sync"
         assert row.enacted_epoch, "Action not marked as enacted in db-sync"
+        assert not row.dropped_epoch, "Action marked as dropped in db-sync"
+        assert not row.expired_epoch, "Action marked as expired in db-sync"
         assert (
             row.enacted_epoch == row.ratified_epoch + 1
         ), "Wrong relation between enacted and ratified epochs in db-sync"
-        assert (
-            row.enacted_epoch == row.dropped_epoch
-        ), "Wrong relation between enacted and dropped epochs in db-sync"
 
 
-def check_reward_rest(stake_address: str, transfer_amts: tp.List[int], type: str = "") -> None:
+def check_reward_rest(stake_address: str, transfer_amts: list[int], type: str = "") -> None:
     """Check reward_rest in db-sync."""
     if not configuration.HAS_DBSYNC:
         return
@@ -1356,7 +1354,7 @@ def check_off_chain_drep_registration(
         raise AssertionError("\n".join(errors))
 
 
-def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteDataRecord]:  # noqa: C901
+def get_action_data(data_hash: str) -> dbsync_types.OffChainVoteDataRecord | None:  # noqa: C901
     """Get off chain action data from db-sync."""
     votes = list(dbsync_queries.query_off_chain_vote_data(data_hash))
     if not votes:
@@ -1390,7 +1388,7 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
                 "rationale": vote.gov_act_rationale,
             }
         if vote.ref_id:
-            reference: tp.Dict[str, tp.Union[str, tp.Optional[tp.Dict[str, str]]]]
+            reference: dict[str, str | dict[str, str] | None]
             reference = {"label": vote.ref_label, "uri": vote.ref_uri}
             if vote.ref_hash_digest and vote.ref_hash_alg:
                 reference["referenceHash"] = {
@@ -1432,7 +1430,7 @@ def get_action_data(data_hash: str) -> tp.Optional[dbsync_types.OffChainVoteData
 
 
 def check_action_data(  # noqa: C901
-    json_anchor_file: tp.Dict[str, tp.Any],
+    json_anchor_file: dict[str, tp.Any],
     anchor_data_hash: str,
 ) -> None:
     """Compare anchor json file with off chain action's data from db-sync."""

@@ -3,7 +3,6 @@
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import hypothesis
@@ -34,7 +33,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -42,11 +41,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=1_000_000_000,
     )
 
@@ -63,7 +62,7 @@ class TestDatum:
     def test_datum_on_key_credential_address(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test creating UTxO with datum on address with key credentials (non-script address).
 
@@ -112,7 +111,7 @@ class TestDatum:
     def test_embed_datum_without_pparams(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test 'build --tx-out-datum-embed' without providing protocol params file."""
@@ -174,7 +173,7 @@ class TestNegativeDatum:
     def pbt_script_addresses(
         self,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.Dict[str, str]:
+    ) -> dict[str, str]:
         """Get Plutus script addresses.
 
         Meant for property-based tests, so this expensive operation gets executed only once.
@@ -199,7 +198,7 @@ class TestNegativeDatum:
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         address_type: str,
         plutus_version: str,
     ):
@@ -287,7 +286,7 @@ class TestNegativeDatum:
                 or "points to a script hash that is not known" in err_str
             ), err_str
 
-        # check expected fees
+        # Check expected fees
         expected_fee_fund = 199_087
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
@@ -300,7 +299,7 @@ class TestNegativeDatum:
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         datum_value: str,
         plutus_version: str,
     ):
@@ -340,7 +339,7 @@ class TestNegativeDatum:
     def test_unlock_tx_wrong_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output and try to spend it with a wrong datum.
@@ -364,7 +363,7 @@ class TestNegativeDatum:
             plutus_op=plutus_op_1,
         )
 
-        # use a wrong datum to try to unlock the funds
+        # Use a wrong datum to try to unlock the funds
         plutus_op_2 = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             datum_file=plutus_common.DATUM_42,
@@ -401,7 +400,7 @@ class TestNegativeDatum:
     def test_unlock_non_script_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Try to spend a non-script UTxO with datum as if it was script locked UTxO.
@@ -428,7 +427,7 @@ class TestNegativeDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
-        # create datum and collateral UTxOs
+        # Create datum and collateral UTxOs
 
         txouts = [
             clusterlib.TxOut(
@@ -467,7 +466,7 @@ class TestNegativeDatum:
             datum_utxo.datum_hash == datum_hash
         ), f"UTxO should have datum hash '{datum_hash}': {datum_utxo}"
 
-        # try to spend the "locked" UTxO
+        # Try to spend the "locked" UTxO
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             spend_build._build_spend_locked_txin(
@@ -494,8 +493,8 @@ class TestNegativeDatum:
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        pbt_script_addresses: tp.Dict[str, str],
+        payment_addrs: list[clusterlib.AddressRecord],
+        pbt_script_addresses: dict[str, str],
         datum_value: bytes,
         plutus_version: str,
     ):
@@ -519,7 +518,7 @@ class TestNegativeDatum:
 
         script_address = pbt_script_addresses[plutus_version]
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],

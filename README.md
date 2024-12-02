@@ -45,7 +45,7 @@ Sometimes it is useful to run individual tests and keep the local cluster runnin
 
     ```sh
     nix flake update --accept-flake-config --override-input cardano-node "github:IntersectMBO/cardano-node/master"  # change `master` to rev you want
-    nix develop --accept-flake-config .#venv
+    nix develop --accept-flake-config
     ```
 
 1. prepare testing environment
@@ -74,6 +74,12 @@ Sometimes it is useful to run individual tests and keep the local cluster runnin
     ./dev_workdir/conway_fast/stop-cluster
     ```
 
+To reuse the existing testing environment in another nix shell, source the `.source` file that was generated during setup:
+
+```sh
+source ./dev_workdir/.source
+```
+
 ## Variables for configuring testrun
 
 Tests execution can be configured using env variables.
@@ -86,7 +92,7 @@ Tests execution can be configured using env variables.
 * `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script (default: conway)
 * `COMMAND_ERA` – era for cardano-cli commands – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset)
 * `NUM_POOLS` – number of stake pools created in each cluster instance (default: 3)
-* `ENABLE_P2P` – use P2P networking instead of the default legacy networking (default: unset)
+* `ENABLE_LEGACY` – use legacy networking instead of the default P2P networking (default: unset)
 * `MIXED_P2P` – use mix of P2P and legacy networking; half of stake pools using legacy and the other half P2P (default: unset)
 * `UTXO_BACKEND` – 'mem' or 'disk', default is 'mem' (or legacy) backend if unset (default: unset)
 * `SCRIPTS_DIRNAME` – path to a dir with local cluster start/stop scripts and configuration files (default: unset)
@@ -129,7 +135,7 @@ Install and configure poetry, follow [Poetry documentation](https://python-poetr
 
 ### Preparing Python virtual environment
 
-Create a Python virtual environment (requires Python v3.8 or newer) and install this package together with development requirements:
+Create a Python virtual environment and install this package together with development requirements:
 
 ```sh
 ./setup_dev_venv.sh

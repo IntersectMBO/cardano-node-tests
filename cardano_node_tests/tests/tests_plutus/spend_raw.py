@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -14,7 +13,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-# approx. fee for Tx size
+# Approx. fee for Tx size
 FEE_REDEEM_TXSIZE = 400_000
 
 
@@ -27,15 +26,12 @@ def _fund_script(
     amount: int,
     fee_txsize: int = FEE_REDEEM_TXSIZE,
     deposit_amount: int = 0,
-    tokens: tp.Optional[
-        tp.List[plutus_common.Token]
-    ] = None,  # tokens must already be in `payment_addr`
-    tokens_collateral: tp.Optional[
-        tp.List[plutus_common.Token]
-    ] = None,  # tokens must already be in `payment_addr`
+    tokens: list[plutus_common.Token] | None = None,  # tokens must already be in `payment_addr`
+    tokens_collateral: list[plutus_common.Token]
+    | None = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
     embed_datum: bool = False,
-) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
     # pylint: disable=too-many-locals,too-many-arguments
     assert plutus_op.execution_cost  # for mypy
@@ -53,7 +49,7 @@ def _fund_script(
         collateral_fraction_offset=collateral_fraction_offset,
     )
 
-    # create a Tx output with a datum hash at the script address
+    # Create a Tx output with a datum hash at the script address
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -68,7 +64,7 @@ def _fund_script(
 
     txouts = [
         script_txout,
-        # for collateral
+        # For collateral
         clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
@@ -130,20 +126,20 @@ def _spend_locked_txin(  # noqa: C901
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
     dst_addr: clusterlib.AddressRecord,
-    script_utxos: tp.List[clusterlib.UTXOData],
-    collateral_utxos: tp.List[clusterlib.UTXOData],
+    script_utxos: list[clusterlib.UTXOData],
+    collateral_utxos: list[clusterlib.UTXOData],
     plutus_op: plutus_common.PlutusOp,
     amount: int,
     fee_txsize: int = FEE_REDEEM_TXSIZE,
     txins: clusterlib.OptionalUTXOData = (),
-    tx_files: tp.Optional[clusterlib.TxFiles] = None,
-    invalid_hereafter: tp.Optional[int] = None,
-    invalid_before: tp.Optional[int] = None,
-    tokens: tp.Optional[tp.List[plutus_common.Token]] = None,
+    tx_files: clusterlib.TxFiles | None = None,
+    invalid_hereafter: int | None = None,
+    invalid_before: int | None = None,
+    tokens: list[plutus_common.Token] | None = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
-) -> tp.Tuple[str, clusterlib.TxRawOutput]:
+) -> tuple[str, clusterlib.TxRawOutput]:
     """Spend the locked UTxO."""
     # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
     assert plutus_op.execution_cost
@@ -151,7 +147,7 @@ def _spend_locked_txin(  # noqa: C901
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 
-    # change will be returned to address of the first script
+    # Change will be returned to address of the first script
     change_rec = script_utxos[0]
 
     redeem_cost = plutus_common.compute_cost(
@@ -164,7 +160,7 @@ def _spend_locked_txin(  # noqa: C901
         utxos=[*script_utxos_lovelace, *txins]
     )
 
-    # spend the "locked" UTxO
+    # Spend the "locked" UTxO
 
     plutus_txins = [
         clusterlib.ScriptTxIn(
@@ -188,7 +184,7 @@ def _spend_locked_txin(  # noqa: C901
     txouts = [
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
     ]
-    # append change
+    # Append change
     if script_lovelace_balance > amount + redeem_cost.fee + fee_txsize:
         txouts.append(
             clusterlib.TxOut(
@@ -202,7 +198,7 @@ def _spend_locked_txin(  # noqa: C901
         txouts.append(
             clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
         )
-        # append change
+        # Append change
         script_token_balance = clusterlib.calculate_utxos_balance(
             utxos=script_utxos, coin=token.coin
         )
@@ -303,7 +299,7 @@ def _spend_locked_txin(  # noqa: C901
                 utxo=u, coins=[token.coin]
             ), f"Token inputs were NOT spent for `{u.address}`"
 
-    # check tx view
+    # Check tx view
     tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)

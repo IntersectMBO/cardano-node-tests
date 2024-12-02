@@ -28,7 +28,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -36,11 +36,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -52,7 +52,7 @@ class TestSECP256k1:
         self,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         script_file: pl.Path,
         redeemer_file: pl.Path,
     ):
@@ -142,7 +142,7 @@ class TestSECP256k1:
     def test_use_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         algorithm: str,
         plutus_version: str,
     ):
@@ -194,7 +194,7 @@ class TestSECP256k1:
     def test_negative_secp_builtin_functions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         test_vector: str,
         algorithm: str,
         plutus_version: str,
@@ -261,4 +261,4 @@ class TestSECP256k1:
             assert is_forbidden or is_overspending, err_msg
         else:
             assert re.search(expected_error_messages[test_vector], err_msg), err_msg
-            # assert expected_error_messages[test_vector] in err_msg, err_msg
+            # Assert expected_error_messages[test_vector] in err_msg, err_msg

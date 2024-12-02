@@ -9,7 +9,6 @@ import os
 import pathlib as pl
 import shutil
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -50,7 +49,7 @@ class TestRollback:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
         num_addrs = 4 if ROLLBACK_PAUSE else 3
@@ -72,7 +71,7 @@ class TestRollback:
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -115,7 +114,7 @@ class TestRollback:
         state_dir = cluster_nodes.get_cluster_env().state_dir
         topology_files = list(state_dir.glob("topology*.json"))
 
-        prefix = "p2p-split" if configuration.ENABLE_P2P else "split"
+        prefix = "split" if configuration.ENABLE_LEGACY else "p2p-split"
 
         for f in topology_files:
             shutil.copy(split_topology_dir / f"{prefix}-{f.name}", f)
@@ -137,8 +136,8 @@ class TestRollback:
         cluster_obj: clusterlib.ClusterLib,
         node: str,
         address: str = "",
-        tx_raw_output: tp.Optional[clusterlib.TxRawOutput] = None,
-    ) -> tp.List[clusterlib.UTXOData]:
+        tx_raw_output: clusterlib.TxRawOutput | None = None,
+    ) -> list[clusterlib.UTXOData]:
         """Query UTxO on given node."""
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
@@ -198,11 +197,19 @@ class TestRollback:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
 
     @allure.link(helpers.get_vcs_link())
+    # There's a submission delay of 60 sec. Therefore on testnet with low `securityParam`,
+    # it is not possible to restart the nodes, submit transaction, and still be under
+    # `securityParam` blocks.
+    @pytest.mark.skipif(
+        "mainnet_fast" not in configuration.SCRIPTS_DIRNAME,
+        reason="cannot run on testnet with low `securityParam`",
+    )
+    @pytest.mark.long
     def test_consensus_reached(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         backup_topology: pl.Path,
         split_topology_dir: pl.Path,
     ):
@@ -306,11 +313,12 @@ class TestRollback:
             ), "The Tx number 3 doesn't exist on cluster 2"
 
             # Wait for new block to let chains progress.
-            # We can't wait for too long, because if both clusters has produced more than
-            # `securityParam` number of blocks while the topology was fragmented, it would not be
-            # possible to bring the the clusters back into global consensus. On local cluster,
-            # the value of `securityParam` is 10.
-            cluster.wait_for_new_block()
+            # If both clusters has produced more than `securityParam` number of blocks while
+            # the topology was fragmented, it would not be possible to bring the the clusters
+            # back into global consensus.
+            # On fast epoch local cluster, the value of `securityParam` is 10.
+            # On mainnet, the value of `securityParam` is 2160.
+            cluster.wait_for_new_block(new_blocks=15)
 
             if ROLLBACK_PAUSE:
                 print("PHASE2: cluster with separated into cluster1 and cluster2")
@@ -361,12 +369,16 @@ class TestRollback:
         ), "Neither Tx number 2 nor Tx number 3 was rolled back"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        "mainnet" in configuration.SCRIPTS_DIRNAME,
+        reason="cannot run on testnet with high `securityParam`",
+    )
     @pytest.mark.long
     def test_permanent_fork(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         backup_topology: pl.Path,
         split_topology_dir: pl.Path,
     ):

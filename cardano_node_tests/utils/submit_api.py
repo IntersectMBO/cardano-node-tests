@@ -5,8 +5,9 @@ import dataclasses
 import json
 import logging
 import pathlib as pl
+import random
 import shutil
-import typing as tp
+import time
 
 import requests
 from cardano_clusterlib import clusterlib
@@ -57,7 +58,19 @@ def post_cbor(cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     headers = {"Content-Type": "application/cbor"}
     with open(cbor_file, "rb") as in_fp:
         cbor_binary = in_fp.read()
-        response = requests.post(url, headers=headers, data=cbor_binary, timeout=10)
+
+    for i in range(5):
+        delay = False
+        if i > 0:
+            LOGGER.warning("Resubmitting transaction to submit-api.")
+        try:
+            response = requests.post(url, headers=headers, data=cbor_binary, timeout=20)
+        except requests.exceptions.ReadTimeout:
+            delay = True
+        else:
+            break
+        if delay:
+            time.sleep(random.random())
     return response
 
 
@@ -91,7 +104,7 @@ def submit_tx_bare(tx_file: clusterlib.FileType) -> SubmitApiOut:
 def submit_tx(
     cluster_obj: clusterlib.ClusterLib,
     tx_file: clusterlib.FileType,
-    txins: tp.List[clusterlib.UTXOData],
+    txins: list[clusterlib.UTXOData],
     wait_blocks: int = 2,
 ) -> None:
     """Submit a transaction, resubmit if the transaction didn't make it to the chain.

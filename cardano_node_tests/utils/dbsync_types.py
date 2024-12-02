@@ -47,7 +47,7 @@ class RewardEpochRecord:
 @dataclasses.dataclass(frozen=True, order=True)
 class RewardRecord:
     address: str
-    rewards: tp.List[RewardEpochRecord]
+    rewards: list[RewardEpochRecord]
     reward_sum: int
 
     def __bool__(self) -> bool:
@@ -64,8 +64,8 @@ class UTxORecord:
     decoded_coin: str = ""
     datum_hash: str = ""
     inline_datum_hash: str = ""
-    inline_datum: tp.Optional[tp.Union[str, dict]] = None
-    reference_script: tp.Optional[dict] = None
+    inline_datum: str | dict | None = None
+    reference_script: dict | None = None
     reference_script_hash: str = ""
 
 
@@ -81,9 +81,9 @@ class GetUTxORecord:
 @dataclasses.dataclass(frozen=True, order=True)
 class PaymentAddrRecord:
     payment_address: str
-    stake_address: tp.Optional[str]
+    stake_address: str | None
     amount_sum: int
-    utxos: tp.List[GetUTxORecord]
+    utxos: list[GetUTxORecord]
 
     def __bool__(self) -> bool:
         return self.amount_sum > 0
@@ -100,17 +100,17 @@ class PoolDataRecord:
     pledge: int
     reward_addr: str
     active_epoch_no: int
-    meta_id: tp.Optional[int]
+    meta_id: int | None
     margin: float
     fixed_cost: int
     registered_tx_id: int
     metadata_url: str
     metadata_hash: str
-    owners: tp.List[str]
-    relays: tp.List[tp.Dict[str, tp.Dict[str, tp.Any]]]
-    retire_cert_index: tp.Optional[int]
-    retire_announced_tx_id: tp.Optional[int]
-    retiring_epoch: tp.Optional[int]
+    owners: list[str]
+    relays: list[dict[str, dict[str, tp.Any]]]
+    retire_cert_index: int | None
+    retire_announced_tx_id: int | None
+    retiring_epoch: int | None
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -141,26 +141,26 @@ class TxRecord:
     fee: int
     deposit: int
     size: int
-    invalid_before: tp.Optional[int]
-    invalid_hereafter: tp.Optional[int]
+    invalid_before: int | None
+    invalid_hereafter: int | None
     treasury_donation: int
-    txins: tp.List[UTxORecord]
-    txouts: tp.List[UTxORecord]
-    mint: tp.List[UTxORecord]
-    collaterals: tp.List[UTxORecord]
-    collateral_outputs: tp.List[clusterlib.UTXOData]
-    reference_inputs: tp.List[UTxORecord]
-    scripts: tp.List[ScriptRecord]
-    redeemers: tp.List[RedeemerRecord]
-    metadata: tp.List[MetadataRecord]
-    reserve: tp.List[ADAStashRecord]
-    treasury: tp.List[ADAStashRecord]
-    pot_transfers: tp.List[PotTransferRecord]
-    stake_registration: tp.List[str]
-    stake_deregistration: tp.List[str]
-    stake_delegation: tp.List[DelegationRecord]
-    withdrawals: tp.List[clusterlib.TxOut]
-    extra_key_witness: tp.List[str]
+    txins: list[UTxORecord]
+    txouts: list[UTxORecord]
+    mint: list[UTxORecord]
+    collaterals: list[UTxORecord]
+    collateral_outputs: list[clusterlib.UTXOData]
+    reference_inputs: list[UTxORecord]
+    scripts: list[ScriptRecord]
+    redeemers: list[RedeemerRecord]
+    metadata: list[MetadataRecord]
+    reserve: list[ADAStashRecord]
+    treasury: list[ADAStashRecord]
+    pot_transfers: list[PotTransferRecord]
+    stake_registration: list[str]
+    stake_deregistration: list[str]
+    stake_delegation: list[DelegationRecord]
+    withdrawals: list[clusterlib.TxOut]
+    extra_key_witness: list[str]
 
     def _convert_metadata(self) -> dict:
         """Convert list of `MetadataRecord`s to metadata dictionary."""
@@ -170,9 +170,9 @@ class TxRecord:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class TxPrelimRecord:
-    utxo_out: tp.List[UTxORecord]
-    ma_utxo_out: tp.List[UTxORecord]
-    mint_utxo_out: tp.List[UTxORecord]
+    utxo_out: list[UTxORecord]
+    ma_utxo_out: list[UTxORecord]
+    mint_utxo_out: list[UTxORecord]
     last_row: dbsync_queries.TxDBRow
 
 
@@ -204,7 +204,7 @@ class DrepRegistrationRecord:
     cert_index: int
     deposit: int
     drep_hash_id: int
-    voting_anchor_id: tp.Optional[int]
+    voting_anchor_id: int | None
     hash_hex: str
     hash_bech32: str
     has_script: bool
@@ -217,12 +217,12 @@ class OffChainVoteDataRecord:
     hash: str
     json: dict
     bytes: str
-    warning: tp.Optional[str]
+    warning: str | None
     language: str
-    comment: tp.Optional[str]
-    is_valid: tp.Optional[bool]
-    authors: tp.List[tp.Dict[str, tp.Any]]
-    references: tp.List[tp.Dict[str, tp.Any]]
-    gov_action_data: tp.Dict[str, tp.Any]
-    external_updates: tp.List[tp.Dict[str, tp.Any]]
-    voting_anchor: tp.Dict[str, tp.Any]
+    comment: str | None
+    is_valid: bool | None
+    authors: list[dict[str, tp.Any]]
+    references: list[dict[str, tp.Any]]
+    gov_action_data: dict[str, tp.Any]
+    external_updates: list[dict[str, tp.Any]]
+    voting_anchor: dict[str, tp.Any]

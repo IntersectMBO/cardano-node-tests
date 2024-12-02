@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "::group::plutus-apps setup"
-
 pushd "$WORKDIR" || exit 1
 
 case "${PLUTUS_APPS_REV:-""}" in
@@ -43,5 +41,3 @@ PATH="$(readlink -m create-script-context-build/bin)":"$PATH"
 export PATH
 
 pushd "$REPODIR" || exit 1
-
-echo "::endgroup::"

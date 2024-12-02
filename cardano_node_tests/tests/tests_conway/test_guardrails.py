@@ -11,6 +11,7 @@ import typing as tp
 
 import allure
 import pytest
+import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -48,8 +49,10 @@ def cluster_guardrails(
     Cleanup (== respin the cluster instance) after the tests are finished.
     """
     cluster_obj = cluster_manager.get(
-        mark="guardrails",
-        use_resources=cluster_management.Resources.ALL_POOLS,
+        use_resources=[
+            *cluster_management.Resources.ALL_POOLS,
+            cluster_management.Resources.PLUTUS,
+        ],
         lock_resources=[cluster_management.Resources.COMMITTEE, cluster_management.Resources.DREPS],
         cleanup=True,
     )
@@ -66,13 +69,11 @@ def pool_user(
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_guardrails
-    key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
     return conway_common.get_registered_pool_user(
         cluster_manager=cluster_manager,
         name_template=name_template,
         cluster_obj=cluster,
-        caching_key=key,
     )
 
 
@@ -83,21 +84,16 @@ def payment_addr(
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster, __ = cluster_guardrails
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"payment_addr_{cluster_manager.cluster_instance_num}",
-            cluster_obj=cluster,
-        )[0]
-        fixture_cache.value = addr
+    addr = clusterlib_utils.create_payment_addr_records(
+        f"payment_addr_{cluster_manager.cluster_instance_num}",
+        cluster_obj=cluster,
+    )[0]
 
     # Fund source address
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=10_000_000_000,
     )
 
@@ -111,10 +107,10 @@ class ClusterWithConstitutionRecord:
     cluster: clusterlib.ClusterLib
     constitution_script_file: pl.Path
     constitution_script_hash: str
-    default_constitution: tp.Dict[str, tp.Any]
+    default_constitution: dict[str, tp.Any]
     pool_user: clusterlib.PoolUser
     payment_addr: clusterlib.AddressRecord
-    collaterals: tp.List[clusterlib.UTXOData]
+    collaterals: list[clusterlib.UTXOData]
 
 
 @pytest.fixture
@@ -147,6 +143,8 @@ def cluster_with_constitution(
 
             constitution_url = "http://www.const-with-plutus.com"
             constitution_hash = "0000000000000000000000000000000000000000000000000000000000000000"
+
+            governance_utils.wait_delayed_ratification(cluster_obj=cluster)
 
             _, action_txid, action_ix = conway_common.propose_change_constitution(
                 cluster_obj=cluster,
@@ -222,7 +220,7 @@ def cluster_with_constitution(
 
 def propose_param_changes(
     cluster_with_constitution: ClusterWithConstitutionRecord,
-    proposals: tp.List[clusterlib_utils.UpdateProposal],
+    proposals: list[clusterlib_utils.UpdateProposal],
 ) -> str:
     """Build and submit update pparams action with specified proposals."""
     cluster = cluster_with_constitution.cluster
@@ -294,7 +292,7 @@ def propose_param_changes(
 
 def check_invalid_proposals(  # noqa: C901
     cluster_with_constitution: ClusterWithConstitutionRecord,
-    proposals: tp.List[clusterlib_utils.UpdateProposal],
+    proposals: list[clusterlib_utils.UpdateProposal],
 ):
     """Check that the guardrails are enforced."""
     action_txid = ""
@@ -345,7 +343,7 @@ def check_invalid_proposals(  # noqa: C901
 
 def check_valid_proposals(
     cluster_with_constitution: ClusterWithConstitutionRecord,
-    proposals: tp.List[clusterlib_utils.UpdateProposal],
+    proposals: list[clusterlib_utils.UpdateProposal],
 ):
     action_txid = propose_param_changes(
         cluster_with_constitution=cluster_with_constitution, proposals=proposals
@@ -363,7 +361,7 @@ def _get_rational_str(value: float) -> str:
 
 def _get_param_min_value(
     cluster_with_constitution: ClusterWithConstitutionRecord, key: str
-) -> tp.Union[float, int]:
+) -> float | int:
     """Get the min value from the default constitution for a param."""
     param_predicates = cluster_with_constitution.default_constitution[key]
     min_val_dicts = list(filter(lambda x: "minValue" in x, param_predicates["predicates"]))
@@ -388,7 +386,7 @@ def _get_param_min_value(
 
 def _get_param_max_value(
     cluster_with_constitution: ClusterWithConstitutionRecord, key: str
-) -> tp.Union[float, int]:
+) -> float | int:
     """Get the max value from the default constitution for a param."""
     param_predicates = cluster_with_constitution.default_constitution[key]
     max_value_dicts = list(filter(lambda x: "maxValue" in x, param_predicates["predicates"]))
@@ -418,15 +416,15 @@ class GuardrailTestParam:
     param_key: str  # key in the default constitution json file
     param_cli_arg: str  # CLI argument for the parameter
     param_name: str  # name of the protocol parameter
-    param_lower_limit: tp.Union[int, None] = None  # optional lower limit of the parameter
-    param_upper_limit: tp.Union[int, None] = None  # optional upper limit of the parameter
+    param_lower_limit: int | None = None  # optional lower limit of the parameter
+    param_upper_limit: int | None = None  # optional upper limit of the parameter
 
 
 def check_min_value_proposals(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    min_value: tp.Union[int, float],
-    dependent_proposals: tp.Union[tp.List[clusterlib_utils.UpdateProposal], tp.Tuple],
+    min_value: int | float,
+    dependent_proposals: list[clusterlib_utils.UpdateProposal] | tuple,
 ):
     """Check invalid proposals for min value predicate (must not be lower than)."""
     if min_value == 0:
@@ -470,8 +468,8 @@ def check_min_value_proposals(
 def check_max_value_proposals(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    max_value: tp.Union[int, float],
-    dependent_proposals: tp.Union[tp.List[clusterlib_utils.UpdateProposal], tp.Tuple],
+    max_value: int | float,
+    dependent_proposals: list[clusterlib_utils.UpdateProposal] | tuple,
     type_upper_limit: int,
 ):
     """Check invalid proposals for max value predicate (must not exceed)."""
@@ -497,7 +495,7 @@ def check_max_value_proposals(
 def perform_predicates_check_with_dependent_params(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    dependent_params: tp.List[GuardrailTestParam],
+    dependent_params: list[GuardrailTestParam],
 ):
     """
     Check for predicates defined in the constitution with dependent parameters.
@@ -560,7 +558,7 @@ def get_upper_limit_according_to_type(type: str) -> int:
 def perform_predicates_check(
     cluster_with_constitution: ClusterWithConstitutionRecord,
     param: GuardrailTestParam,
-    dependent_proposals: tp.Union[tp.List[clusterlib_utils.UpdateProposal], tp.Tuple] = (),
+    dependent_proposals: list[clusterlib_utils.UpdateProposal] | tuple = (),
 ):
     """Check for predicates defined in the constitution.
 
@@ -648,22 +646,13 @@ def perform_predicates_check(
     )
 
 
-class TestGovernanceGuardrails:
-    """Test governance guardrails using plutus script constitution.
+def get_subtests() -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
+    """Get the guardrails scenarios.
 
-    * Enact a new constitution with a plutus script
-    * Propose parameter change for different guardrail checks
-    * Check that the guardrails are enforced
-    * Expecting plutus error in case of invalid proposals
-    * Expecting valid proposals to be accepted
-    * Data file used : data/defaultConstitution.json
+    The scenarios are executed as subtests in the `test_guardrails` test.
     """
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_tx_fee_per_byte(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    def tx_fee_per_byte(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test txFeePerByte guardrails defined in the key "0" of default constitution."""
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.gr001, reqc.cip066)]
@@ -677,9 +666,9 @@ class TestGovernanceGuardrails:
         )
         [r.success() for r in (reqc.gr001, reqc.cip066)]
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_tx_fee_fixed(self, cluster_with_constitution: ClusterWithConstitutionRecord):
+    yield tx_fee_per_byte
+
+    def tx_fee_fixed(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test txFeeFixed guardrails defined in the key "1" of default constitution."""
         reqc.gr002.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -692,11 +681,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr002.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_monetary_expansion(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield tx_fee_fixed
+
+    def monetary_expansion(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test monetaryExpansion guardrails defined in the key "10" of default constitution."""
         reqc.gr003.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -709,9 +696,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr003.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_treasury_cut(self, cluster_with_constitution: ClusterWithConstitutionRecord):
+    yield monetary_expansion
+
+    def treasury_cut(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test treasuryCut guardrails defined in the key "11" of default constitution."""
         reqc.gr004.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -724,11 +711,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr004.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_min_pool_cost(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield treasury_cut
+
+    def min_pool_cost(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test minPoolCost guardrails defined in the key "16" of default constitution."""
         reqc.gr005.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -741,11 +726,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr005.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_utxo_cost_per_byte(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield min_pool_cost
+
+    def utxo_cost_per_byte(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test utxoCostPerByte guardrails defined in the key "17" of default constitution."""
         reqc.gr006.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -758,11 +741,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr006.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_execution_unit_prices(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield utxo_cost_per_byte
+
+    def execution_unit_prices(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test executionUnitPrices guardrails defined in the key "19" of default constitution."""
         ex_units_prices_memory_param = GuardrailTestParam(
             param_key="19[0]",
@@ -794,11 +775,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr007b.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_max_block_body_size(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield execution_unit_prices
+
+    def max_block_body_size(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test maxBlockBodySize guardrails defined in the key "2" of default constitution."""
         reqc.gr008.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -811,11 +790,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr008.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_max_tx_execution_units(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield max_block_body_size
+
+    def max_tx_execution_units(cluster_with_constitution: ClusterWithConstitutionRecord):
         """
         Test maxTxExecutionUnits guardrail defined in the key "20" of default constitution.
 
@@ -879,11 +856,9 @@ class TestGovernanceGuardrails:
         )
         [r.success() for r in (reqc.gr009a, reqc.gr009b)]
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_max_block_execution_units(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield max_tx_execution_units
+
+    def max_block_execution_units(cluster_with_constitution: ClusterWithConstitutionRecord):
         """
         Test maxBlockExecutionUnits guardrails defined in the key "21" of default constitution.
 
@@ -947,11 +922,9 @@ class TestGovernanceGuardrails:
         )
         [r.success() for r in (reqc.gr010a, reqc.gr010b)]
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_max_value_size(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield max_block_execution_units
+
+    def max_value_size(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test maxValueSize guardrails defined in the key "22" of default constitution."""
         reqc.gr011.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -964,11 +937,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr011.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_collateral_percentage(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield max_value_size
+
+    def collateral_percentage(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test collateralPercentage guardrails defined in the key "23" of default constitution."""
         reqc.gr012.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -981,11 +952,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr012.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_max_collateral_inputs(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield collateral_percentage
+
+    def max_collateral_inputs(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test maxCollateralInputs guardrails defined in the key "24" of default constitution."""
         reqc.gr013.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -998,11 +967,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr013.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_pool_voting_thresholds(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield max_collateral_inputs
+
+    def pool_voting_thresholds(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test for poolVotingThresholds defined in the key "25" of default constitution."""
         pool_motion_no_confidence_param = GuardrailTestParam(
             param_key="25[0]",
@@ -1104,11 +1071,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr014e.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_drep_voting_thresholds(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield pool_voting_thresholds
+
+    def drep_voting_thresholds(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test for dRepVotingThresholds defined in the key "26" of default constitution."""
         drep_motion_no_confidence_param = GuardrailTestParam(
             param_key="26[0]",
@@ -1360,10 +1325,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr015j.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_committee_min_size(
-        self,
+    yield drep_voting_thresholds
+
+    def committee_min_size(
         cluster_with_constitution: ClusterWithConstitutionRecord,
     ):
         """Test committeeMinSize guardrails defined in the key "27" of default constitution."""
@@ -1378,11 +1342,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr016.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_committee_max_term_limit(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield committee_min_size
+
+    def committee_max_term_limit(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test committeeMaxTermLimit guardrails defined in the key "28" of default constitution."""
         reqc.gr017.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1395,11 +1357,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr017.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_gov_action_lifetime(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield committee_max_term_limit
+
+    def gov_action_lifetime(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test govActionLifetime guardrails defined in the key "29" of default constitution."""
         reqc.gr018.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1412,9 +1372,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr018.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_max_tx_size(self, cluster_with_constitution: ClusterWithConstitutionRecord):
+    yield gov_action_lifetime
+
+    def max_tx_size(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test maxTxSize guardrails defined in the key "3" of default constitution."""
         reqc.gr019.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1427,9 +1387,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr019.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_gov_deposit(self, cluster_with_constitution: ClusterWithConstitutionRecord):
+    yield max_tx_size
+
+    def gov_deposit(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test govDeposit guardrails defined in the key "30" of default constitution."""
         reqc.gr020.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1442,9 +1402,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr020.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_drep_deposit(self, cluster_with_constitution: ClusterWithConstitutionRecord):
+    yield gov_deposit
+
+    def drep_deposit(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test dRepDeposit guardrails defined in the key "31" of default constitution."""
         reqc.gr021.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1457,11 +1417,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr021.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_drep_activity(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield drep_deposit
+
+    def drep_activity(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test dRepActivity guardrails defined in the key "32" of default constitution."""
         reqc.gr022.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1474,10 +1432,10 @@ class TestGovernanceGuardrails:
         )
         reqc.gr022.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_min_fee_ref_script_coins_per_byte(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
+    yield drep_activity
+
+    def min_fee_ref_script_coins_per_byte(
+        cluster_with_constitution: ClusterWithConstitutionRecord,
     ):
         """Test minFeeRefScriptCoinsPerByte defined in the key "33" of default constitution."""
         reqc.gr023.start(url=helpers.get_vcs_link())
@@ -1491,11 +1449,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr023.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_max_block_header_size(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield min_fee_ref_script_coins_per_byte
+
+    def max_block_header_size(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test maxBlockHeaderSize guardrails defined in the key "4" of default constitution."""
         reqc.gr024.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1508,11 +1464,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr024.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_stake_address_deposit(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield max_block_header_size
+
+    def stake_address_deposit(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test stakeAddressDeposit guardrails defined in the key "5" of default constitution."""
         reqc.gr025.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1525,11 +1479,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr025.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_stake_pool_deposit(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield stake_address_deposit
+
+    def stake_pool_deposit(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test stakePoolDeposit guardrails defined in the key "6" of default constitution."""
         reqc.gr026.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1542,11 +1494,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr026.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_pool_retire_max_epoch(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield stake_pool_deposit
+
+    def pool_retire_max_epoch(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test poolRetireMaxEpoch guardrails defined in the key "7" of default constitution."""
         reqc.gr027.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1559,11 +1509,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr027.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_stake_pool_target_num(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield pool_retire_max_epoch
+
+    def stake_pool_target_num(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test stakePoolTargetNum guardrails defined in the key "8" of default constitution."""
         reqc.gr028.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1576,11 +1524,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr028.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_pool_pledge_influence(
-        self, cluster_with_constitution: ClusterWithConstitutionRecord
-    ):
+    yield stake_pool_target_num
+
+    def pool_pledge_influence(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test poolPledgeInfluence guardrails defined in the key "9" of default constitution."""
         reqc.gr029.start(url=helpers.get_vcs_link())
         perform_predicates_check(
@@ -1595,9 +1541,9 @@ class TestGovernanceGuardrails:
         )
         reqc.gr029.success()
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.testnets
-    def test_guardrail_cost_models(self, cluster_with_constitution: ClusterWithConstitutionRecord):
+    yield pool_pledge_influence
+
+    def cost_models(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test costModels guardrails defined in the key "18" of default constitution."""
         # Sample cost model data file
         data_dir = pl.Path(__file__).parent.parent / "data"
@@ -1617,3 +1563,29 @@ class TestGovernanceGuardrails:
             cluster_with_constitution=cluster_with_constitution, proposals=valid_proposals
         )
         [r.success() for r in (reqc.cip028, reqc.cip036)]
+
+    yield cost_models
+
+
+class TestGovernanceGuardrails:
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
+    def test_guardrails(
+        self,
+        cluster_with_constitution: ClusterWithConstitutionRecord,
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Test governance guardrails using plutus script constitution.
+
+        * Enact a new constitution with a plutus script
+        * Propose parameter change for different guardrail checks
+        * Check that the guardrails are enforced
+        * Expecting plutus error in case of invalid proposals
+        * Expecting valid proposals to be accepted
+        * Data file used : data/defaultConstitution.json
+        """
+        common.get_test_id(cluster_with_constitution.cluster)
+
+        for subt in get_subtests():
+            with subtests.test(scenario=subt.__name__):
+                subt(cluster_with_constitution)

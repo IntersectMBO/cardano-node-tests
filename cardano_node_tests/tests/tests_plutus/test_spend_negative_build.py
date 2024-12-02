@@ -4,13 +4,13 @@ import dataclasses
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -18,6 +18,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -40,11 +41,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=1_000_000_000,
     )
 
@@ -62,7 +63,7 @@ class TestNegative:
     def test_wrong_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while using wrong Plutus script.
@@ -118,7 +119,7 @@ class TestNegative:
     def test_no_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while passing no Plutus script.
@@ -172,7 +173,7 @@ class TestNegative:
     def test_collateral_w_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while collateral contains native tokens.
@@ -216,7 +217,8 @@ class TestNegative:
             tokens_collateral=tokens_rec,
         )
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        exc_str = ""
+        try:
             spend_build._build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
@@ -227,11 +229,15 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=2_000_000,
             )
+        except clusterlib.CLIError as exc:
+            exc_str = str(exc)
 
-        err_str = str(excinfo.value)
-        assert "CollateralContainsNonADA" in err_str, err_str
+        if VERSIONS.cli >= version.parse("10.0.0.0"):
+            assert not exc_str, exc_str
+        else:
+            assert "CollateralContainsNonADA" in exc_str, exc_str
 
-        # check expected fees
+        # Check expected fees
         expected_fee_fund = 173597
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
@@ -243,7 +249,7 @@ class TestNegative:
     def test_same_collateral_txin(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending the locked UTxO while using the same UTxO as collateral.
@@ -293,11 +299,11 @@ class TestNegative:
             "expected to be key witnessed but are actually script witnessed: "
             f'["{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"]'
             in err_str
-            # in 1.35.3 and older
+            # In 1.35.3 and older
             or "Expected key witnessed collateral" in err_str
         ), err_str
 
-        # check expected fees
+        # Check expected fees
         expected_fee_fund = 168_845
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
@@ -317,7 +323,7 @@ class TestNegative:
     def test_invalid_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         variant: str,
         plutus_version: str,
     ):
@@ -387,7 +393,7 @@ class TestNegative:
     def test_two_scripts_spending_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx, one fails.
@@ -443,7 +449,7 @@ class TestNegative:
             script_data_file=plutus_op2.datum_file
         )
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files_fund = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -459,7 +465,7 @@ class TestNegative:
                 amount=script_fund,
                 datum_hash=datum_hash2,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
@@ -545,8 +551,8 @@ class TestNegativeRedeemer:
     def fund_script_guessing_game_v1(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-    ) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]]:
+        payment_addrs: list[clusterlib.AddressRecord],
+    ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]]:
         """Fund a PlutusV1 script and create the locked UTxO and collateral UTxO.
 
         Uses `cardano-cli transaction build` command for building the transactions.
@@ -573,8 +579,8 @@ class TestNegativeRedeemer:
     def fund_script_guessing_game_v2(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-    ) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]]:
+        payment_addrs: list[clusterlib.AddressRecord],
+    ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]]:
         """Fund a PlutusV2 script and create the locked UTxO and collateral UTxO.
 
         Uses `cardano-cli transaction build` command for building the transactions.
@@ -601,8 +607,8 @@ class TestNegativeRedeemer:
         self,
         cluster: clusterlib.ClusterLib,
         temp_template: str,
-        script_utxos: tp.List[clusterlib.UTXOData],
-        collateral_utxos: tp.List[clusterlib.UTXOData],
+        script_utxos: list[clusterlib.UTXOData],
+        collateral_utxos: list[clusterlib.UTXOData],
         payment_addr: clusterlib.AddressRecord,
         dst_addr: clusterlib.AddressRecord,
         redeemer_value: int,
@@ -659,13 +665,9 @@ class TestNegativeRedeemer:
     def test_wrong_value_inside_range(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -726,13 +728,9 @@ class TestNegativeRedeemer:
     def test_wrong_value_above_range(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -768,13 +766,9 @@ class TestNegativeRedeemer:
     def test_wrong_value_bellow_range(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -809,13 +803,9 @@ class TestNegativeRedeemer:
     def test_wrong_type(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -867,13 +857,9 @@ class TestNegativeRedeemer:
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -928,13 +914,9 @@ class TestNegativeRedeemer:
     def test_json_schema_typed_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -989,13 +971,9 @@ class TestNegativeRedeemer:
     def test_json_schema_untyped_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -1050,13 +1028,9 @@ class TestNegativeRedeemer:
     def test_json_schema_typed_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -1112,13 +1086,9 @@ class TestNegativeRedeemer:
     def test_json_schema_untyped_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -1174,13 +1144,9 @@ class TestNegativeRedeemer:
     def test_invalid_json(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_value: str,
     ):
@@ -1232,13 +1198,9 @@ class TestNegativeRedeemer:
     def test_json_schema_typed_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_type: str,
     ):
@@ -1295,13 +1257,9 @@ class TestNegativeRedeemer:
     def test_json_schema_untyped_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_script_guessing_game_v1: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
-        fund_script_guessing_game_v2: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData]
-        ],
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_script_guessing_game_v1: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
+        fund_script_guessing_game_v2: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         plutus_version: str,
         redeemer_type: str,
     ):

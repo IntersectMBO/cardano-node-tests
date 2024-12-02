@@ -4,7 +4,6 @@ import functools
 import logging
 import random
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -41,7 +40,7 @@ class TestManyUTXOs:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         addrs = clusterlib_utils.create_payment_addr_records(
             *[f"tiny_tx_addr_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(3)],
@@ -52,7 +51,7 @@ class TestManyUTXOs:
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            faucet_data=cluster_manager.cache.addrs_data["faucet"],
             amount=800_000_000_000,
         )
 
@@ -62,7 +61,7 @@ class TestManyUTXOs:
         self,
         cluster_obj: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
-        out_addrs: tp.List[clusterlib.AddressRecord],
+        out_addrs: list[clusterlib.AddressRecord],
         tx_name: str,
         amount: int,
     ):
@@ -70,11 +69,11 @@ class TestManyUTXOs:
         src_address = payment_addr.address
         dst_addresses = [rec.address for rec in out_addrs]
 
-        # create TX data
+        # Create TX data
         txouts = [clusterlib.TxOut(address=addr, amount=amount) for addr in dst_addresses]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-        # send TX
+        # Send TX
         cluster_obj.g_transaction.send_tx(
             src_address=src_address,  # change is returned to `src_address`
             tx_name=tx_name,
@@ -87,8 +86,8 @@ class TestManyUTXOs:
     def many_utxos(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-    ) -> tp.Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
+        payment_addrs: list[clusterlib.AddressRecord],
+    ) -> tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
         """Generate many UTxOs (100000+) with 1-2 ADA."""
         temp_template = common.get_test_id(cluster)
 
@@ -105,7 +104,7 @@ class TestManyUTXOs:
                 amount = less_than_1_ada + 1_000_000
 
                 # Repeat transaction when "BadInputsUTxO" error happens
-                excp: tp.Optional[clusterlib.CLIError] = None
+                excp: clusterlib.CLIError | None = None
                 for r in range(2):
                     if r > 0:
                         cluster.wait_for_new_block(2)
@@ -158,7 +157,7 @@ class TestManyUTXOs:
     def test_mini_transactions(
         self,
         cluster: clusterlib.ClusterLib,
-        many_utxos: tp.Tuple[clusterlib.AddressRecord, clusterlib.AddressRecord],
+        many_utxos: tuple[clusterlib.AddressRecord, clusterlib.AddressRecord],
         subtests: pytest_subtests.SubTests,
     ):
         """Test transaction with many UTxOs (300+) with small amounts of ADA (1-10).
@@ -215,7 +214,7 @@ class TestManyUTXOs:
                     txins_optimized.append(popped_txin)
                     break
 
-            # build, sign and submit the transaction
+            # Build, sign and submit the transaction
             data_for_build = clusterlib.collect_data_for_build(
                 clusterlib_obj=cluster,
                 src_address=src_address,

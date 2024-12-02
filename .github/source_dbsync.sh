@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "::group::db-sync setup"
-
 TEST_THREADS="${TEST_THREADS:-15}"
 CLUSTERS_COUNT="${CLUSTERS_COUNT:-4}"
 export TEST_THREADS CLUSTERS_COUNT
@@ -9,6 +7,8 @@ export TEST_THREADS CLUSTERS_COUNT
 pushd "$WORKDIR" || exit 1
 
 stop_postgres() {
+  echo "Stopping postgres"
+
   local psql_pid_file="$WORKDIR/postgres/postgres.pid"
   if [ ! -f "$psql_pid_file" ]; then
     return 0
@@ -121,5 +121,3 @@ export PGPORT=5432
 
 # start and setup postgres
 ./scripts/postgres-start.sh "$WORKDIR/postgres" -k
-
-echo "::endgroup::"

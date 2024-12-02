@@ -56,7 +56,7 @@ def payment_addr_comm(
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
 
     return addr
@@ -105,8 +105,8 @@ class TestCommittee:
     @pytest.mark.smoke
     def test_register_hot_key_no_cc_member(
         self,
-        cluster_use_committee: governance_utils.GovClusterT,
-        payment_addr_comm: clusterlib.AddressRecord,
+        cluster: clusterlib.ClusterLib,
+        pool_user: clusterlib.PoolUser,
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -114,7 +114,6 @@ class TestCommittee:
 
         Expect failure.
         """
-        cluster, __ = cluster_use_committee
         temp_template = common.get_test_id(cluster)
 
         cc_auth_record = governance_utils.get_cc_member_auth_record(
@@ -124,7 +123,7 @@ class TestCommittee:
 
         tx_files_auth = clusterlib.TxFiles(
             certificate_files=[cc_auth_record.auth_cert],
-            signing_key_files=[payment_addr_comm.skey_file, cc_auth_record.cold_key_pair.skey_file],
+            signing_key_files=[pool_user.payment.skey_file, cc_auth_record.cold_key_pair.skey_file],
         )
 
         # Try to submit a Hot Credential Authorization certificate without being a CC member
@@ -132,7 +131,7 @@ class TestCommittee:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_auth",
-                src_address=payment_addr_comm.address,
+                src_address=pool_user.payment.address,
                 submit_method=submit_method,
                 use_build_cmd=use_build_cmd,
                 tx_files=tx_files_auth,
@@ -340,7 +339,7 @@ class TestCommittee:
         # undelegated stake is treated as Abstain. If undelegated stake was treated as No, it
         # would not be possible to approve any action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparams = cluster.g_query.get_protocol_params()
         drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["committeeNormal"]
         spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["committeeNormal"]
         is_drep_total_below_threshold = (
@@ -377,8 +376,14 @@ class TestCommittee:
 
         [r.success() for r in (reqc.cli003, reqc.cli004, reqc.cli005, reqc.cli006)]
 
+        # Make sure we have enough time to submit the proposals in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 10
+        )
+        actions_epoch = cluster.g_query.get_epoch()
+
         # New CC members to be added
-        cc_member1_expire = cluster.g_query.get_epoch() + 3
+        cc_member1_expire = actions_epoch + 3
         cc_members = [
             clusterlib.CCMember(
                 epoch=cc_member1_expire,
@@ -451,7 +456,7 @@ class TestCommittee:
                 ), "CC Member should not be recognized"
             [r.success() for r in (reqc.cli032, reqc.cip002, reqc.cip004)]
 
-        def _add_members() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+        def _add_members() -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Add new CC members."""
             anchor_url_add = "http://www.cc-add.com"
             anchor_data_hash_add = (
@@ -567,7 +572,7 @@ class TestCommittee:
 
         def _remove_member(
             rem_member: clusterlib.CCMember, prev_action_txid: str, prev_action_ix: int
-        ) -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+        ) -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove a CC member."""
             anchor_url_rem = "http://www.cc-rem.com"
             anchor_data_hash_rem = (
@@ -672,9 +677,7 @@ class TestCommittee:
                     tx_files=tx_files_res,
                 )
 
-        def _check_cc_member1_expired(
-            committee_state: tp.Dict[str, tp.Any], curr_epoch: int
-        ) -> None:
+        def _check_cc_member1_expired(committee_state: dict[str, tp.Any], curr_epoch: int) -> None:
             member_rec = committee_state["committee"][cc_member1_key]
             if curr_epoch <= cc_member1_expire:
                 assert member_rec["status"] != "Expired", "CC Member is already expired"
@@ -685,13 +688,13 @@ class TestCommittee:
             elif curr_epoch > cc_member1_expire:
                 assert member_rec["status"] == "Expired", "CC Member should be expired"
 
-        def _check_cc_member2_removed(gov_state: tp.Dict[str, tp.Any]):
+        def _check_cc_member2_removed(gov_state: dict[str, tp.Any]):
             cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
                 cc_member2_key
             )
             assert not cc_member_val, "Removed committee member still present"
 
-        def _check_add_state(gov_state: tp.Dict[str, tp.Any]):
+        def _check_add_state(gov_state: dict[str, tp.Any]):
             for i, _cc_member_key in enumerate((cc_member1_key, cc_member2_key, cc_member3_key)):
                 cc_member_val = conway_common.get_committee_val(data=gov_state)["members"].get(
                     _cc_member_key
@@ -706,12 +709,6 @@ class TestCommittee:
             dbsync_utils.check_committee_member_deregistration(
                 cc_member_cold_key=res_member.cold_vkey_hash
             )
-
-        # Make sure we have enough time to submit the proposals in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 10
-        )
-        actions_epoch = cluster.g_query.get_epoch()
 
         # Create an action to add new CC members
         add_cc_action, action_add_txid, action_add_ix = _add_members()
@@ -1105,7 +1102,7 @@ class TestCommittee:
                 proposals=update_proposals,
             )
 
-        def _rem_committee() -> tp.Tuple[clusterlib.ActionUpdateCommittee, str, int]:
+        def _rem_committee() -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove all CC members."""
             anchor_url_rem = "http://www.cc-rem-all.com"
             anchor_data_hash_rem = (
@@ -1180,7 +1177,7 @@ class TestCommittee:
 
         def _check_rat_gov_state(
             name_template: str, action_txid: str, action_ix: int, epoch_no: int
-        ) -> tp.Dict[str, tp.Any]:
+        ) -> dict[str, tp.Any]:
             gov_state = cluster.g_conway_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=gov_state, name_template=f"{name_template}_{epoch_no}"

@@ -2,18 +2,14 @@
 
 import json
 import logging
-import typing as tp
 
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
-from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,10 +28,15 @@ PROTOCOL_STATE_KEYS = frozenset(
 PROTOCOL_PARAM_KEYS = frozenset(
     (
         "collateralPercentage",
+        "committeeMaxTermLength",
+        "committeeMinSize",
         "costModels",
-        "decentralization",
+        "dRepActivity",
+        "dRepDeposit",
+        "dRepVotingThresholds",
         "executionUnitPrices",
-        "extraPraosEntropy",
+        "govActionDeposit",
+        "govActionLifetime",
         "maxBlockBodySize",
         "maxBlockExecutionUnits",
         "maxBlockHeaderSize",
@@ -43,11 +44,12 @@ PROTOCOL_PARAM_KEYS = frozenset(
         "maxTxExecutionUnits",
         "maxTxSize",
         "maxValueSize",
+        "minFeeRefScriptCostPerByte",
         "minPoolCost",
-        "minUTxOValue",
         "monetaryExpansion",
         "poolPledgeInfluence",
         "poolRetireMaxEpoch",
+        "poolVotingThresholds",
         "protocolVersion",
         "stakeAddressDeposit",
         "stakePoolDeposit",
@@ -55,29 +57,8 @@ PROTOCOL_PARAM_KEYS = frozenset(
         "treasuryCut",
         "txFeeFixed",
         "txFeePerByte",
-        "utxoCostPerWord",
+        "utxoCostPerByte",
     )
-)
-PROTOCOL_PARAM_KEYS_1_35_2 = frozenset(("utxoCostPerByte",))
-
-PROTOCOL_PARAM_KEYS_CONWAY = frozenset(
-    (
-        "govActionLifetime",
-        "govActionDeposit",
-        "committeeMaxTermLength",
-        "dRepDeposit",
-        "poolVotingThresholds",
-        "dRepVotingThresholds",
-        "committeeMinSize",
-        "minFeeRefScriptCostPerByte",
-        "dRepActivity",
-    )
-)
-
-PROTOCOL_PARAM_KEYS_MISSING_8_6_0 = frozenset(("utxoCostPerWord",))
-
-PROTOCOL_PARAM_KEYS_MISSING_8_12_0 = frozenset(
-    ("minUTxOValue", "decentralization", "extraPraosEntropy")
 )
 
 
@@ -130,18 +111,8 @@ class TestProtocol:
         common.get_test_id(cluster)
         protocol_params = cluster.g_query.get_protocol_params()
 
-        union_with: tp.FrozenSet[str] = frozenset()
-        if clusterlib_utils.cli_has(
-            "legacy governance create-update-proposal --utxo-cost-per-byte"
-        ):
-            union_with = union_with.union(PROTOCOL_PARAM_KEYS_1_35_2)
-        if VERSIONS.cluster_era >= VERSIONS.CONWAY:
-            union_with = union_with.union(PROTOCOL_PARAM_KEYS_CONWAY)
-
-        rem: tp.FrozenSet[str] = frozenset()
-        if clusterlib_utils.cli_has("conway"):
-            rem = rem.union(PROTOCOL_PARAM_KEYS_MISSING_8_6_0)
-        if VERSIONS.node >= version.parse("8.12.0"):
-            rem = rem.union(PROTOCOL_PARAM_KEYS_MISSING_8_12_0)
+        # The sets were updated for Conway, so there's nothing to add or remove at the moment.
+        union_with: frozenset[str] = frozenset()
+        rem: frozenset[str] = frozenset()
 
         assert set(protocol_params) == PROTOCOL_PARAM_KEYS.union(union_with).difference(rem)

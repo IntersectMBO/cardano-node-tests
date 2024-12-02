@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -21,14 +20,11 @@ def _build_fund_script(
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
-    tokens: tp.Optional[
-        tp.List[plutus_common.Token]
-    ] = None,  # tokens must already be in `payment_addr`
-    tokens_collateral: tp.Optional[
-        tp.List[plutus_common.Token]
-    ] = None,  # tokens must already be in `payment_addr`
+    tokens: list[plutus_common.Token] | None = None,  # tokens must already be in `payment_addr`
+    tokens_collateral: list[plutus_common.Token]
+    | None = None,  # tokens must already be in `payment_addr`
     embed_datum: bool = False,
-) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
@@ -49,7 +45,7 @@ def _build_fund_script(
         protocol_params=cluster_obj.g_query.get_protocol_params(),
     )
 
-    # create a Tx output with a datum hash at the script address
+    # Create a Tx output with a datum hash at the script address
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -64,7 +60,7 @@ def _build_fund_script(
 
     txouts = [
         script_txout,
-        # for collateral
+        # For collateral
         clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
@@ -133,20 +129,20 @@ def _build_spend_locked_txin(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
-    script_utxos: tp.List[clusterlib.UTXOData],
-    collateral_utxos: tp.List[clusterlib.UTXOData],
+    script_utxos: list[clusterlib.UTXOData],
+    collateral_utxos: list[clusterlib.UTXOData],
     plutus_op: plutus_common.PlutusOp,
     amount: int,
     deposit_amount: int = 0,
     txins: clusterlib.OptionalUTXOData = (),
-    tx_files: tp.Optional[clusterlib.TxFiles] = None,
-    invalid_hereafter: tp.Optional[int] = None,
-    invalid_before: tp.Optional[int] = None,
-    tokens: tp.Optional[tp.List[plutus_common.Token]] = None,
+    tx_files: clusterlib.TxFiles | None = None,
+    invalid_hereafter: int | None = None,
+    invalid_before: int | None = None,
+    tokens: list[plutus_common.Token] | None = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,
-) -> tp.Tuple[str, tp.Optional[clusterlib.TxRawOutput], list]:
+) -> tuple[str, clusterlib.TxRawOutput | None, list]:
     """Spend the locked UTxO.
 
     Uses `cardano-cli transaction build` command for building the transactions.
@@ -161,7 +157,7 @@ def _build_spend_locked_txin(  # noqa: C901
     # datum hash (datum hash is not provided for change that is handled by `build` command).
     script_change_rec = script_utxos[0]
 
-    # spend the "locked" UTxO
+    # Spend the "locked" UTxO
 
     plutus_txins = [
         clusterlib.ScriptTxIn(
@@ -189,7 +185,7 @@ def _build_spend_locked_txin(  # noqa: C901
         txouts.append(
             clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
         )
-        # append change
+        # Append change
         script_token_balance = clusterlib.calculate_utxos_balance(
             utxos=script_utxos, coin=token.coin
         )
@@ -203,7 +199,7 @@ def _build_spend_locked_txin(  # noqa: C901
                     datum_hash=script_change_rec.datum_hash,
                 )
             )
-    # add minimum (+ some) required Lovelace to change Tx output
+    # Add minimum (+ some) required Lovelace to change Tx output
     if lovelace_change_needed:
         txouts.append(
             clusterlib.TxOut(
@@ -286,7 +282,7 @@ def _build_spend_locked_txin(  # noqa: C901
 
         return "", tx_output, []
 
-    # calculate cost of Plutus script
+    # Calculate cost of Plutus script
     plutus_costs = cluster_obj.g_transaction.calculate_plutus_script_cost(
         src_address=payment_addr.address,
         tx_name=f"{temp_template}_step2",
@@ -320,11 +316,11 @@ def _build_spend_locked_txin(  # noqa: C901
                 utxo=u, coins=[token.coin]
             ), f"Token inputs were NOT spent for `{u.address}`"
 
-    # check tx view
+    # Check tx view
     tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
-    # compare cost of Plutus script with data from db-sync
+    # Compare cost of Plutus script with data from db-sync
     if tx_db_record:
         dbsync_utils.check_plutus_costs(
             redeemer_records=tx_db_record.redeemers, cost_records=plutus_costs

@@ -1,28 +1,29 @@
 """Tests for node upgrade."""
 
+import json
 import logging
 import os
+import pathlib as pl
 import shutil
-import typing as tp
 
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_setup
+from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
+DATA_DIR = pl.Path(__file__).parent / "data"
 UPGRADE_TESTS_STEP = int(os.environ.get("UPGRADE_TESTS_STEP") or 0)
-BASE_REVISION = version.parse(os.environ.get("BASE_REVISION") or "0.0.0")
-UPGRADE_REVISION = version.parse(os.environ.get("UPGRADE_REVISION") or "0.0.0")
-GOV_DATA_DIR = "governance_data"
 
 pytestmark = [
     pytest.mark.skipif(not UPGRADE_TESTS_STEP, reason="not upgrade testing"),
@@ -43,11 +44,11 @@ def payment_addr_locked(
         cluster_obj=cluster,
     )[0]
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
 
     return addr
@@ -57,7 +58,7 @@ def payment_addr_locked(
 def payment_addrs_disposable(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new disposable payment addresses."""
     temp_template = common.get_test_id(cluster)
 
@@ -67,11 +68,11 @@ def payment_addrs_disposable(
         cluster_obj=cluster,
     )
 
-    # fund source addresses
+    # Fund source addresses
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
     )
 
     return addrs
@@ -83,6 +84,20 @@ class TestSetup:
     Special tests that run outside of normal test run.
     """
 
+    @pytest.fixture
+    def pool_user_singleton(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+    ) -> clusterlib.PoolUser:
+        """Create a pool user for singleton."""
+        name_template = common.get_test_id(cluster_singleton)
+        return conway_common.get_registered_pool_user(
+            cluster_manager=cluster_manager,
+            name_template=name_template,
+            cluster_obj=cluster_singleton,
+        )
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(UPGRADE_TESTS_STEP < 2, reason="runs only on step >= 2 of upgrade testing")
     def test_ignore_log_errors(
@@ -91,25 +106,240 @@ class TestSetup:
         worker_id: str,
     ):
         """Ignore selected errors in log right after node upgrade."""
-        cluster = cluster_singleton
-        common.get_test_id(cluster)
+        common.get_test_id(cluster_singleton)
 
-        if UPGRADE_REVISION >= version.parse("9.0.0") > BASE_REVISION:
-            logfiles.add_ignore_rule(
-                files_glob="*.stdout",
-                regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure "
-                ".*expected list len or indef",
-                ignore_file_id=worker_id,
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure "
+            ".* expected change in the serialization format",
+            ignore_file_id=worker_id,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(UPGRADE_TESTS_STEP != 2, reason="runs only on step 2 of upgrade testing")
+    def test_update_cost_models(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+        pool_user_singleton: clusterlib.PoolUser,
+    ):
+        """Test cost model update."""
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+        cost_proposal_file = DATA_DIR / "cost_models_pv10.json"
+
+        governance_data = governance_setup.get_default_governance(
+            cluster_manager=cluster_manager, cluster_obj=cluster
+        )
+        governance_utils.wait_delayed_ratification(cluster_obj=cluster)
+
+        proposals = [
+            clusterlib_utils.UpdateProposal(
+                arg="--cost-model-file",
+                value=str(cost_proposal_file),
+                name="",  # costModels
+            ),
+        ]
+
+        with open(cost_proposal_file, encoding="utf-8") as fp:
+            cost_models_in = json.load(fp)
+
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        def _propose_pparams_update(
+            name_template: str,
+            proposals: list[clusterlib_utils.UpdateProposal],
+        ) -> conway_common.PParamPropRec:
+            anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
+            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+            return conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=name_template,
+                anchor_url=anchor_url,
+                anchor_data_hash=anchor_data_hash,
+                pool_user=pool_user_singleton,
+                proposals=proposals,
+                prev_action_rec=prev_action_rec,
             )
 
+        def _check_models(cost_models: dict):
+            for m in ("PlutusV1", "PlutusV2", "PlutusV3"):
+                if m not in cost_models_in:
+                    continue
+                assert len(cost_models_in[m]) == len(cost_models[m]), f"Unexpected length for {m}"
 
-@pytest.mark.upgrade
+        # Propose the action
+        prop_rec = _propose_pparams_update(name_template=temp_template, proposals=proposals)
+        _check_models(prop_rec.future_pparams["costModels"])
+
+        # Vote & approve the action by CC
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_cc",
+            payment_addr=pool_user_singleton.payment,
+            action_txid=prop_rec.action_txid,
+            action_ix=prop_rec.action_ix,
+            approve_cc=True,
+        )
+        vote_epoch = cluster.g_query.get_epoch()
+
+        # Check ratification
+        rat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+        )
+
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=rat_gov_state, action_txid=prop_rec.action_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
+
+        next_rat_state = rat_gov_state["nextRatifyState"]
+        _check_models(next_rat_state["nextEnactState"]["curPParams"]["costModels"])
+        assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
+
+        # Check enactment
+        enact_epoch = cluster.wait_for_epoch(
+            epoch_no=vote_epoch + 2, padding_seconds=5, future_is_ok=False
+        )
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
+        )
+        _check_models(enact_gov_state["currentPParams"]["costModels"])
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
+    def test_hardfork(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+        pool_user_singleton: clusterlib.PoolUser,
+    ):
+        """Test hard fork."""
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+
+        governance_data = governance_setup.get_default_governance(
+            cluster_manager=cluster_manager, cluster_obj=cluster
+        )
+        governance_utils.wait_delayed_ratification(cluster_obj=cluster)
+
+        # Create an action
+        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        anchor_url = "http://www.hardfork-upgrade-pv10.com"
+        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.HARDFORK,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        hardfork_action = cluster.g_conway_governance.action.create_hardfork(
+            action_name=temp_template,
+            deposit_amt=deposit_amt,
+            anchor_url=anchor_url,
+            anchor_data_hash=anchor_data_hash,
+            protocol_major_version=10,
+            protocol_minor_version=0,
+            prev_action_txid=prev_action_rec.txid,
+            prev_action_ix=prev_action_rec.ix,
+            deposit_return_stake_vkey_file=pool_user_singleton.stake.vkey_file,
+        )
+
+        tx_files_action = clusterlib.TxFiles(
+            proposal_files=[hardfork_action.action_file],
+            signing_key_files=[
+                pool_user_singleton.payment.skey_file,
+            ],
+        )
+
+        # Make sure we have enough time to submit the proposal and the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 20
+        )
+        init_epoch = cluster.g_query.get_epoch()
+
+        tx_output_action = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_action",
+            src_address=pool_user_singleton.payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files_action,
+        )
+
+        action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
+        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        action_epoch = cluster.g_query.get_epoch()
+        conway_common.save_gov_state(
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
+        )
+        prop_action = governance_utils.lookup_proposal(
+            gov_state=action_gov_state, action_txid=action_txid
+        )
+        assert prop_action, "Hardfork action not found"
+        assert (
+            prop_action["proposalProcedure"]["govAction"]["tag"]
+            == governance_utils.ActionTags.HARDFORK_INIT.value
+        ), "Incorrect action tag"
+
+        action_ix = prop_action["actionId"]["govActionIx"]
+
+        # Vote & approve the action
+        conway_common.cast_vote(
+            cluster_obj=cluster,
+            governance_data=governance_data,
+            name_template=f"{temp_template}_yes",
+            payment_addr=pool_user_singleton.payment,
+            action_txid=action_txid,
+            action_ix=action_ix,
+            approve_cc=True,
+            approve_spo=True,
+        )
+
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Epoch changed and it would affect other checks"
+
+        # Check ratification
+        rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
+        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
+        )
+        rat_action = governance_utils.lookup_ratified_actions(
+            gov_state=rat_gov_state, action_txid=action_txid
+        )
+        assert rat_action, "Action not found in ratified actions"
+
+        assert (
+            rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9
+        ), "Incorrect major version"
+
+        # Check enactment
+        enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
+        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        conway_common.save_gov_state(
+            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
+        )
+        assert (
+            enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10
+        ), "Incorrect major version"
+
+
 class TestUpgrade:
     """Tests for node upgrade testing."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(UPGRADE_TESTS_STEP > 2, reason="doesn't run on step > 2 of upgrade testing")
     @pytest.mark.order(-1)
+    @pytest.mark.upgrade_step1
+    @pytest.mark.upgrade_step2
+    @pytest.mark.upgrade_step3
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "for_step",
@@ -133,7 +363,7 @@ class TestUpgrade:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs_disposable: tp.List[clusterlib.AddressRecord],
+        payment_addrs_disposable: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         for_step: int,
         file_type: str,
@@ -209,6 +439,9 @@ class TestUpgrade:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(UPGRADE_TESTS_STEP < 2, reason="runs only on step >= 2 of upgrade testing")
     @pytest.mark.order(5)
+    @pytest.mark.upgrade_step1
+    @pytest.mark.upgrade_step2
+    @pytest.mark.upgrade_step3
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize(
         "for_step",

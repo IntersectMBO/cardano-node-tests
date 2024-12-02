@@ -12,7 +12,7 @@ class TestSubtests:
         # In subtest, don't return any other outcome than success or failure.
         # Allure doesn't work well with subtests. It will use outcome of the first non-successful
         # subtest as the overall test outcome.
-        # Therefore skiped / xfailed subtests could mask subtest failures. As a workaround,
+        # Therefore skipped / xfailed subtests could mask subtest failures. As a workaround,
         # record the outcome of the subtest and use it as the outcome of the main test.
         def _subtest(num: int) -> None:
             if num > 200:

@@ -6,7 +6,7 @@
 # BASE_REVISION - revision of cardano-node to upgrade from (alternative to BASE_TAR_URL)
 # UPGRADE_REVISION - revision of cardano-node to upgrade to
 
-set -xeuo pipefail
+set -euo pipefail
 
 if [[ -z "${BASE_TAR_URL:-""}" && -z "${BASE_REVISION:-""}" ]]; then
   echo "BASE_TAR_URL or BASE_REVISION must be set"
@@ -53,7 +53,15 @@ rm -rf "${COVERAGE_DIR:?}"
 mkdir -p "$COVERAGE_DIR"
 
 export SCHEDULING_LOG=scheduling.log
-true > "$SCHEDULING_LOG"
+: > "$SCHEDULING_LOG"
+
+export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
+unset ENABLE_LEGACY MIXED_P2P
+
+echo "::endgroup::"  # end group for "Script setup"
+
+echo "::group::Nix env setup step1"
+printf "start: %(%H:%M:%S)T\n" -1
 
 # shellcheck disable=SC1090,SC1091
 . .github/nix_override_cardano_node.sh
@@ -70,26 +78,21 @@ else
   NODE_OVERRIDE=$(node_override)
 fi
 
-export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
-unset ENABLE_P2P MIXED_P2P
-
-echo "::group::Nix env setup"
-printf "start: %(%H:%M:%S)T\n" -1
-
 set +e
 # shellcheck disable=SC2086
 nix flake update --accept-flake-config $NODE_OVERRIDE
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step1"
-  printf "finish: %(%H:%M:%S)T\n" -1
-  echo "::endgroup::"  # end group for "Nix env setup"
+  echo "::endgroup::"  # end group for "Nix env setup step1"
 
-  echo "::group::Python venv setup"
+  echo "::group::Python venv setup step1"
+  printf "start: %(%H:%M:%S)T\n" -1
   . .github/setup_venv.sh clean
-  echo "::endgroup::"  # end group for "Python venv setup"
+  echo "::endgroup::"  # end group for "Python venv setup step1"
 
-  echo "::group::Pytest step1"
+  echo "::group::🧪 Testrun Step1"
+  printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
   ./.github/node_upgrade_pytest.sh step1
@@ -104,8 +107,10 @@ fi
 # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we don't want to continue
 [ "$retval" -le 1 ] || exit "$retval"
 
-echo "::endgroup::"  # end group for "Pytest step1"
-echo "::group::Pytest step2"
+echo "::endgroup::"  # end group for "Testrun Step1"
+
+echo "::group::Nix env setup steps 2 & 3"
+printf "start: %(%H:%M:%S)T\n" -1
 
 # update cardano-node to specified branch and/or revision, or to the latest available revision
 if [ -n "${UPGRADE_REVISION:-""}" ]; then
@@ -119,34 +124,39 @@ nix flake update --accept-flake-config $NODE_OVERRIDE
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
   : > "$WORKDIR/.nix_step2"
-  df -h .
+  echo "::endgroup::"  # end group for "Nix env setup steps 2 & 3"
 
-  echo "::group::Python venv setup"
+  echo "::group::Python venv setup steps 2 & 3"
+  printf "start: %(%H:%M:%S)T\n" -1
   . .github/setup_venv.sh clean
-  echo "::endgroup::"  # end group for "Python venv setup"
+  echo "::endgroup::"  # end group for "Python venv setup steps 2 & 3"
 
+  echo "::group::🧪 Testrun Step2"
+  printf "start: %(%H:%M:%S)T\n" -1
+  df -h .
   # update cluster nodes, run smoke tests
   ./.github/node_upgrade_pytest.sh step2
   retval="$?"
   # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we dont want to continue
   [ "$retval" -le 1 ] || exit "$retval"
-  echo "::endgroup::"  # end group for "Pytest step2"
+  echo "::endgroup::"  # end group for "Testrun Step2"
 
-  echo "::group::Pytest step3"
+  echo "::group::🧪 Testrun Step3"
+  printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # update to Conway, run smoke tests
   ./.github/node_upgrade_pytest.sh step3
   retval="$?"
-  echo "::endgroup::"  # end group for "Pytest step3"
+  df -h .
+  echo "::endgroup::"  # end group for "Testrun Step3"
 
-  echo "::group::Cluster teardown & artifacts"
+  echo "::group::Teardown cluster & collect artifacts"
+  printf "start: %(%H:%M:%S)T\n" -1
   # teardown cluster
   ./.github/node_upgrade_pytest.sh finish
   exit $retval
 '
 retval="$?"
-
-df -h .
 
 if [ ! -e "$WORKDIR/.nix_step2" ]; then
   echo "Nix env setup failed, exiting"
@@ -172,7 +182,5 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   echo "Dir content:"
   ls -1a
 fi
-
-echo "::endgroup::" # end group for "Cluster teardown & artifacts"
 
 exit "$retval"

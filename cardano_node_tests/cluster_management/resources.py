@@ -13,15 +13,16 @@ class Resources:
     POOL1: tp.Final[str] = "node-pool1"
     POOL2: tp.Final[str] = "node-pool2"
     POOL3: tp.Final[str] = "node-pool3"
-    ALL_POOLS: tp.Final[tp.Tuple[str, ...]] = tuple(
+    ALL_POOLS: tp.Final[tuple[str, ...]] = tuple(
         f"node-pool{i}" for i in range(1, configuration.NUM_POOLS + 1)
     )
     # Reserve one pool for all tests where the pool will stop producing blocks
     POOL_FOR_OFFLINE: tp.Final[str] = POOL2
+    PLUTUS: tp.Final[str] = "plutus"
     RESERVES: tp.Final[str] = "reserves"
     TREASURY: tp.Final[str] = "treasury"
     REWARDS: tp.Final[str] = "rewards"
-    POTS: tp.Final[tp.Tuple[str, ...]] = (RESERVES, TREASURY, REWARDS)
+    POTS: tp.Final[tuple[str, ...]] = (RESERVES, TREASURY, REWARDS)
     PERF: tp.Final[str] = "performance"
     DREPS: tp.Final[str] = "dreps"
     COMMITTEE: tp.Final[str] = "committee"
@@ -36,6 +37,6 @@ def sanitize_res_name(s: str) -> str:
     return sanitized
 
 
-def get_unsanitized(ls: tp.Iterable[str]) -> tp.List[str]:
+def get_unsanitized(ls: tp.Iterable[str]) -> list[str]:
     """Return unsanitized resource names from the list."""
     return [s for s in ls if s != sanitize_res_name(s)]

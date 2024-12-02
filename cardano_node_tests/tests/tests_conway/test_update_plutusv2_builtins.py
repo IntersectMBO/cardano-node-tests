@@ -2,7 +2,6 @@
 
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import pytest
@@ -28,12 +27,12 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def pool_user_lg(
+def pool_user_lgp(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_utils.GovClusterT,
+    cluster_lock_governance_plutus: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
     """Create a pool user for "lock governance"."""
-    cluster, __ = cluster_lock_governance
+    cluster, __ = cluster_lock_governance_plutus
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
     return conway_common.get_registered_pool_user(
@@ -46,23 +45,23 @@ def pool_user_lg(
 
 
 @pytest.fixture
-def payment_addrs_lg(
+def payment_addrs_lgp(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_utils.GovClusterT,
-) -> tp.List[clusterlib.AddressRecord]:
+    cluster_lock_governance_plutus: governance_utils.GovClusterT,
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    cluster, __ = cluster_lock_governance
+    cluster, __ = cluster_lock_governance_plutus
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
         *[f"{test_id}_payment_addr_{i}" for i in range(2)],
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -75,12 +74,14 @@ class TestUpdateBuiltIns:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long
-    @pytest.mark.upgrade
+    @pytest.mark.upgrade_step1
     def test_update_in_pv9(
         self,
-        cluster_lock_governance: governance_utils.GovClusterT,
-        payment_addrs_lg: tp.List[clusterlib.AddressRecord],
-        pool_user_lg: clusterlib.PoolUser,
+        # The test is changing protocol parameters, so it is not safe to run Plutus tests at that
+        # time. It could e.g. lead to `PPViewHashesDontMatch` errors on transaction submits.
+        cluster_lock_governance_plutus: governance_utils.GovClusterT,
+        payment_addrs_lgp: list[clusterlib.AddressRecord],
+        pool_user_lgp: clusterlib.PoolUser,
     ):
         """Test updating PlutusV2 cost model in PV9.
 
@@ -91,11 +92,15 @@ class TestUpdateBuiltIns:
         * update the PlutusV2 cost model
         * check again that the Plutus script fails as expected in PV9
         """
-        cluster, governance_data = cluster_lock_governance
+        cluster, governance_data = cluster_lock_governance_plutus
         temp_template = common.get_test_id(cluster)
 
         if not conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Can run only during bootstrap period.")
+
+        init_cost_model = cluster.g_query.get_protocol_params()["costModels"]["PlutusV2"]
+        if len(init_cost_model) >= 185:
+            pytest.skip("PlutusV2 cost model was already updated.")
 
         cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
 
@@ -117,7 +122,7 @@ class TestUpdateBuiltIns:
                 name_template=_name_template,
                 anchor_url=anchor_url,
                 anchor_data_hash=anchor_data_hash,
-                pool_user=pool_user_lg,
+                pool_user=pool_user_lgp,
                 proposals=update_proposals,
             )
 
@@ -130,7 +135,7 @@ class TestUpdateBuiltIns:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{_name_template}_yes",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=cost_model_proposal.action_txid,
                 action_ix=cost_model_proposal.action_ix,
                 approve_cc=True,
@@ -159,17 +164,15 @@ class TestUpdateBuiltIns:
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
             )
-            pparams = (
-                enact_gov_state.get("curPParams") or enact_gov_state.get("currentPParams") or {}
-            )
+            pparams = enact_gov_state.get("currentPParams") or {}
             assert len(pparams["costModels"]["PlutusV2"]) == 185
 
         # Check that Plutus script fails as expected in PV9
         mint_raw.check_missing_builtin(
             cluster_obj=cluster,
             temp_template=temp_template,
-            payment_addr=payment_addrs_lg[0],
-            issuer_addr=payment_addrs_lg[1],
+            payment_addr=payment_addrs_lgp[0],
+            issuer_addr=payment_addrs_lgp[1],
         )
 
         # Update the PlutusV2 cost model
@@ -179,6 +182,6 @@ class TestUpdateBuiltIns:
         mint_raw.check_missing_builtin(
             cluster_obj=cluster,
             temp_template=temp_template,
-            payment_addr=payment_addrs_lg[0],
-            issuer_addr=payment_addrs_lg[1],
+            payment_addr=payment_addrs_lgp[0],
+            issuer_addr=payment_addrs_lgp[1],
         )

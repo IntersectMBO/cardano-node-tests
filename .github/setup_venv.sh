@@ -1,16 +1,25 @@
 #!/bin/bash
 
-VENV_DIR="${VENV_DIR:-"$WORKDIR/.env"}"
+_VENV_DIR="${_VENV_DIR:-"$WORKDIR/.venv"}"
 
 if [ "${1:-""}" = "clean" ]; then
-  rm -rf "$VENV_DIR"
+  rm -rf "$_VENV_DIR"
 fi
 
-python3 -m venv "$VENV_DIR"
+_REQS_INSTALLED="true"
+if [ ! -e "$_VENV_DIR" ]; then
+  _REQS_INSTALLED=""
+  python3 -m venv "$_VENV_DIR"
+fi
+
 # shellcheck disable=SC1090,SC1091
-. "$VENV_DIR/bin/activate"
+. "$_VENV_DIR/bin/activate"
 
 PYTHONPATH="$(echo "$VIRTUAL_ENV"/lib/python3*/site-packages):$PYTHONPATH"
 export PYTHONPATH
 
-pip install -r requirements_freeze.txt
+if [ -z "$_REQS_INSTALLED" ]; then
+  poetry install -n
+fi
+
+unset _VENV_DIR _REQS_INSTALLED

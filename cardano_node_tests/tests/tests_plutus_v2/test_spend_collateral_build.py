@@ -1,11 +1,11 @@
 """Tests for collateral while spending with Plutus V2 using `transaction build`."""
 
 import logging
-import typing as tp
 
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -30,7 +30,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -38,11 +38,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=1_000_000_000,
     )
 
@@ -58,13 +58,13 @@ class TestCollateralOutput:
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         dst_addr: clusterlib.AddressRecord,
-        script_utxos: tp.List[clusterlib.UTXOData],
-        collateral_utxos: tp.List[clusterlib.UTXOData],
+        script_utxos: list[clusterlib.UTXOData],
+        collateral_utxos: list[clusterlib.UTXOData],
         plutus_op: plutus_common.PlutusOp,
-        total_collateral_amount: tp.Optional[int] = None,
+        total_collateral_amount: int | None = None,
         return_collateral_txouts: clusterlib.OptionalTxOuts = (),
     ) -> clusterlib.TxRawOutput:
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.redeemer_cbor_file
 
@@ -88,7 +88,7 @@ class TestCollateralOutput:
         txouts_redeem = [
             clusterlib.TxOut(address=dst_addr.address, amount=2_000_000),
         ]
-        # include any payment txin
+        # Include any payment txin
         txins = [
             r
             for r in cluster.g_query.get_utxo(
@@ -135,7 +135,7 @@ class TestCollateralOutput:
     def test_with_total_return_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_return_collateral: bool,
         use_total_collateral: bool,
     ):
@@ -232,11 +232,28 @@ class TestCollateralOutput:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "use_return_collateral",
+        (
+            True,
+            pytest.param(
+                False,
+                marks=pytest.mark.skipif(
+                    VERSIONS.cli < version.parse("10.0.0.0"),
+                    reason="not supported in cardano-cli < 10.0.0.0",
+                ),
+            ),
+        ),
+        ids=("using_return_collateral", "without_return_collateral"),
+    )
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_with_tokens(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        use_return_collateral: bool,
     ):
         """Test failing script using collaterals with tokens.
 
@@ -256,14 +273,20 @@ class TestCollateralOutput:
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        redeem_cost = plutus_common.compute_cost(
-            execution_cost=plutus_op.execution_cost,
-            protocol_params=cluster.g_query.get_protocol_params(),
-        )
-
         token_amount = 100
-        amount_for_collateral = redeem_cost.collateral * 4
-        return_collateral_amount = amount_for_collateral - redeem_cost.collateral
+
+        if use_return_collateral:
+            redeem_cost = plutus_common.compute_cost(
+                execution_cost=plutus_op.execution_cost,
+                protocol_params=cluster.g_query.get_protocol_params(),
+            )
+            total_collateral_amount = redeem_cost.collateral
+            amount_for_collateral = total_collateral_amount * 4
+            return_collateral_amount = amount_for_collateral - total_collateral_amount
+        else:
+            total_collateral_amount = None
+            amount_for_collateral = None
+            return_collateral_amount = 0
 
         # Create the token
         token_rand = clusterlib.get_rand_str(5)
@@ -291,15 +314,19 @@ class TestCollateralOutput:
 
         # Spend the "locked" UTxO
 
-        txouts_return_collateral = [
-            clusterlib.TxOut(
-                address=dst_addr.address,
-                amount=return_collateral_amount,
-            ),
-            clusterlib.TxOut(
-                address=dst_addr.address, amount=token_amount, coin=tokens_rec[0].coin
-            ),
-        ]
+        txouts_return_collateral = (
+            [
+                clusterlib.TxOut(
+                    address=dst_addr.address,
+                    amount=return_collateral_amount,
+                ),
+                clusterlib.TxOut(
+                    address=dst_addr.address, amount=token_amount, coin=tokens_rec[0].coin
+                ),
+            ]
+            if return_collateral_amount
+            else []
+        )
 
         try:
             tx_output_redeem = self._build_spend_locked_txin(
@@ -310,7 +337,7 @@ class TestCollateralOutput:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                total_collateral_amount=redeem_cost.collateral,
+                total_collateral_amount=total_collateral_amount,
                 return_collateral_txouts=txouts_return_collateral,
             )
         except clusterlib.CLIError as exc:

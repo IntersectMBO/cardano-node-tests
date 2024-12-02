@@ -1,5 +1,4 @@
 import logging
-import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -19,7 +18,7 @@ def _fund_issuer(
     amount: int,
     collateral_utxo_num: int = 1,
     submit_method: str = submit_utils.SubmitMethods.CLI,
-) -> tp.Tuple[tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund the token issuer."""
     single_collateral_amount = minting_cost.collateral // collateral_utxo_num
     collateral_amounts = [single_collateral_amount for __ in range(collateral_utxo_num - 1)]
@@ -44,7 +43,7 @@ def _fund_issuer(
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
-        # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+        # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,
     )
     tx_signed = cluster_obj.g_transaction.sign_tx(

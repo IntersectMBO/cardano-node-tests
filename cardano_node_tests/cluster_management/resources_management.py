@@ -11,7 +11,7 @@ class BaseFilter:
         assert not isinstance(resources, str), "`resources` can't be single string"
         self.resources = resources
 
-    def filter(self, unavailable: tp.Iterable[str], **kwargs: tp.Any) -> tp.List[str]:
+    def filter(self, unavailable: tp.Iterable[str], **kwargs: tp.Any) -> list[str]:
         """Filter resources."""
         raise NotImplementedError
 
@@ -26,7 +26,7 @@ class OneOf(BaseFilter):
         self,
         unavailable: tp.Iterable[str],
         **kwargs: tp.Any,  # noqa: ARG002
-    ) -> tp.List[str]:
+    ) -> list[str]:
         assert not isinstance(unavailable, str), "`unavailable` can't be single string"
 
         usable = [r for r in self.resources if r not in unavailable]
@@ -36,13 +36,13 @@ class OneOf(BaseFilter):
         return [random.choice(usable)]
 
 
-ResourcesType = tp.Iterable[tp.Union[str, BaseFilter]]
+ResourcesType = tp.Iterable[str | BaseFilter]
 
 
 def get_resources(
     resources: ResourcesType,
     unavailable: tp.Iterable[str],
-) -> tp.List[str]:
+) -> list[str]:
     """Get resources that can be used or locked."""
     # The "named resources", i.e. resources specified by string, are always mandatory.
     # If any of these is not available, the selection cannot continue.
@@ -56,7 +56,7 @@ def get_resources(
     # If any of the filters returns empty list, the selection cannot continue.
     already_unavailable = {*unavailable, *named_resources}
     resources_w_filter = [r for r in resources if not isinstance(r, str)]
-    selected_resources: tp.List[str] = []
+    selected_resources: list[str] = []
     for res_filter in resources_w_filter:
         filtered = res_filter.filter(unavailable=[*already_unavailable, *selected_resources])
         if not filtered:

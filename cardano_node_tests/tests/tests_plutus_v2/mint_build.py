@@ -1,6 +1,5 @@
 import logging
 import pathlib as pl
-import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -17,12 +16,12 @@ def _fund_issuer(
     issuer_addr: clusterlib.AddressRecord,
     minting_cost: plutus_common.ScriptCost,
     amount: int,
-    reference_script: tp.Optional[pl.Path] = None,
-    inline_datum: tp.Optional[pl.Path] = None,
-) -> tp.Tuple[
-    tp.List[clusterlib.UTXOData],
-    tp.List[clusterlib.UTXOData],
-    tp.Optional[clusterlib.UTXOData],
+    reference_script: pl.Path | None = None,
+    inline_datum: pl.Path | None = None,
+) -> tuple[
+    list[clusterlib.UTXOData],
+    list[clusterlib.UTXOData],
+    clusterlib.UTXOData | None,
     clusterlib.TxRawOutput,
 ]:
     """Fund the token issuer."""
@@ -34,14 +33,14 @@ def _fund_issuer(
             address=issuer_addr.address,
             amount=amount,
         ),
-        # for collateral
+        # For collateral
         clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost.collateral),
     ]
 
     reference_amount = 0
     if reference_script:
         reference_amount = 20_000_000
-        # for reference UTxO
+        # For reference UTxO
         txouts.append(
             clusterlib.TxOut(
                 address=issuer_addr.address,
@@ -57,7 +56,7 @@ def _fund_issuer(
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
-        # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+        # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
         join_txouts=False,
     )
     tx_signed = cluster_obj.g_transaction.sign_tx(

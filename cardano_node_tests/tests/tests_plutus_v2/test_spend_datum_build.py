@@ -32,7 +32,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -40,11 +40,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=1_000_000_000,
     )
 
@@ -73,7 +73,7 @@ class TestInlineDatum:
             addr_name=temp_template, payment_script_file=plutus_op.script_file
         )
 
-        # small datum
+        # Small datum
 
         txouts_with_small_inline_datum = [
             clusterlib.TxOut(
@@ -113,7 +113,7 @@ class TestInlineDatum:
             min_utxo_small_datum_hash, expected_min_small_datum_hash, frac=0.15
         )
 
-        # big datum
+        # Big datum
 
         txouts_with_big_inline_datum = [
             clusterlib.TxOut(
@@ -153,7 +153,7 @@ class TestInlineDatum:
             min_utxo_big_datum_hash, expected_min_big_datum_hash, frac=0.15
         )
 
-        # check that the min UTxO value with an inline datum depends on the size of the datum
+        # Check that the min UTxO value with an inline datum depends on the size of the datum
 
         assert (
             min_utxo_small_inline_datum < min_utxo_small_datum_hash
@@ -190,7 +190,7 @@ class TestNegativeInlineDatum:
     def test_lock_tx_invalid_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         datum_value: str,
     ):
         """Test locking a Tx output with an invalid datum.
@@ -210,7 +210,7 @@ class TestNegativeInlineDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_V2_COST,
         )
 
-        # create a Tx output with an invalid inline datum at the script address
+        # Create a Tx output with an invalid inline datum at the script address
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             spend_build._build_fund_script(
@@ -230,7 +230,7 @@ class TestNegativeInlineDatum:
     def test_lock_tx_v1_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an inline datum and a v1 script.
 
@@ -246,11 +246,11 @@ class TestNegativeInlineDatum:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
             cluster=cluster,
@@ -259,7 +259,7 @@ class TestNegativeInlineDatum:
             plutus_op=plutus_op,
         )
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -301,7 +301,7 @@ class TestNegativeInlineDatum:
     def test_lock_tx_big_datum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_script_address: str,
         datum_content: str,
     ):
@@ -353,7 +353,7 @@ class TestNegativeInlineDatum:
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_datum_as_witness(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]
     ):
         """Test unlock a Tx output with a datum as witness.
 
@@ -364,12 +364,12 @@ class TestNegativeInlineDatum:
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
             cluster=cluster,

@@ -11,15 +11,15 @@ LOGGER = logging.getLogger(__name__)
 class GHIssue:
     """GitHub issue."""
 
-    TOKEN: tp.ClassVar[tp.Optional[str]] = None
+    TOKEN: tp.ClassVar[str | None] = None
 
-    issue_cache: tp.ClassVar[tp.Dict[str, str]] = {}
+    issue_cache: tp.ClassVar[dict[str, str]] = {}
 
-    _github_instance: tp.ClassVar[tp.Optional[github.Github]] = None
+    _github_instance: tp.ClassVar[github.Github | None] = None
     _github_instance_error: tp.ClassVar[bool] = False
 
     @classmethod
-    def _get_github(cls) -> tp.Optional[github.Github]:
+    def _get_github(cls) -> github.Github | None:
         """Get GitHub instance."""
         if cls._github_instance is not None:
             return cls._github_instance
@@ -45,14 +45,14 @@ class GHIssue:
         self.repo = repo
 
     @property
-    def github(self) -> tp.Optional[github.Github]:
+    def github(self) -> github.Github | None:
         return self._get_github()
 
     @property
     def url(self) -> str:
         return f"https://github.com/{self.repo}/issues/{self.number}"
 
-    def get_state(self) -> tp.Optional[str]:
+    def get_state(self) -> str | None:
         """Get issue state."""
         if not self.github:
             LOGGER.error("Failed to get GitHub instance")

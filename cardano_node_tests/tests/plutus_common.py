@@ -1,12 +1,12 @@
 import dataclasses
 import itertools
 import pathlib as pl
-import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import issues
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -87,7 +87,7 @@ class ExecutionCost:
     fixed_cost: int
 
 
-# scripts execution cost for Txs with single UTxO input and single Plutus script
+# Scripts execution cost for Txs with single UTxO input and single Plutus script
 ALWAYS_FAILS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
 ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=368_100, per_space=1_700, fixed_cost=125)
 GUESSING_GAME_COST = ExecutionCost(per_time=236_715_138, per_space=870_842, fixed_cost=67_315)
@@ -105,10 +105,10 @@ BYTE_STRING_ROUNDTRIP_V2_COST = ExecutionCost(
     per_time=168_868_800, per_space=540_612, fixed_cost=43_369
 )
 SECP256K1_ECDSA_LOOP_COST = ExecutionCost(
-    per_time=397_863_996, per_space=128_584, fixed_cost=36_106
+    per_time=470_000_000, per_space=128_584, fixed_cost=36_106
 )
 SECP256K1_SCHNORR_LOOP_COST = ExecutionCost(
-    per_time=430_445_916, per_space=128_584, fixed_cost=38_455
+    per_time=470_000_000, per_space=128_584, fixed_cost=38_455
 )
 
 ALWAYS_FAILS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
@@ -283,16 +283,198 @@ MINTING_SECP256K1_SCHNORR = {
 }
 
 
+# ----- Succeeding bitwise tests ----- #
+
+UNKNOWN_FIXED_COST = 777_777
+
+MINTING_ANDBYTESTRING_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingAndByteStringPolicyScriptV3.plutus"
+MINTING_ANDBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_ANDBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(
+        per_time=19269680, per_space=102266, fixed_cost=UNKNOWN_FIXED_COST
+    ),
+)
+
+MINTING_ORBYTESTRING_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingOrByteStringPolicyScriptV3.plutus"
+MINTING_ORBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_ORBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(
+        per_time=19269680, per_space=102266, fixed_cost=UNKNOWN_FIXED_COST
+    ),
+)
+
+MINTING_XORBYTESTRING_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingXorByteStringPolicyScriptV3.plutus"
+MINTING_XORBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_XORBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(
+        per_time=19269680, per_space=102266, fixed_cost=UNKNOWN_FIXED_COST
+    ),
+)
+
+MINTING_COMPLEMENTBYTESTRING_PLUTUS_V3 = (
+    SCRIPTS_V3_DIR / "succeedingComplementByteStringPolicyScriptV3.plutus"
+)
+MINTING_COMPLEMENTBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_COMPLEMENTBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=5863431, per_space=30027, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_COUNTSETBITS_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingCountSetBitsPolicyScriptV3.plutus"
+MINTING_COUNTSETBITS_V3 = PlutusScriptData(
+    script_file=MINTING_COUNTSETBITS_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=9211420, per_space=45324, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_FINDFIRSTSET_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingFindFirstSetBitPolicyScriptV3.plutus"
+MINTING_FINDFIRSTSET_V3 = PlutusScriptData(
+    script_file=MINTING_FINDFIRSTSET_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=8071583, per_space=40221, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_READBIT_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingReadBitPolicyScriptV3.plutus"
+MINTING_READBIT_V3 = PlutusScriptData(
+    script_file=MINTING_READBIT_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=15272720, per_space=82724, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_REPLICATEBYTE_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingReplicateBytePolicyScriptV3.plutus"
+MINTING_REPLICATEBYTE_V3 = PlutusScriptData(
+    script_file=MINTING_REPLICATEBYTE_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=4549650, per_space=22946, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_ROTATEBYTESTRING_PLUTUS_V3 = (
+    SCRIPTS_V3_DIR / "succeedingRotateByteStringPolicyScriptV3.plutus"
+)
+MINTING_ROTATEBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_ROTATEBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(
+        per_time=22778618, per_space=109004, fixed_cost=UNKNOWN_FIXED_COST
+    ),
+)
+
+MINTING_SHIFTBYTESTRING_PLUTUS_V3 = (
+    SCRIPTS_V3_DIR / "succeedingShiftByteStringPolicyScriptV3.plutus"
+)
+MINTING_SHIFTBYTESTRING_V3 = PlutusScriptData(
+    script_file=MINTING_SHIFTBYTESTRING_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=17922844, per_space=85787, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_WRITEBITS_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingWriteBitsPolicyScriptV3.plutus"
+MINTING_WRITEBITS_V3 = PlutusScriptData(
+    script_file=MINTING_WRITEBITS_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(
+        per_time=90646820, per_space=462457, fixed_cost=UNKNOWN_FIXED_COST
+    ),
+)
+
+# ----- All succeeding bitwise tests ----- #
+
+SUCCEEDING_MINTING_BITWISE_SCRIPTS_V3 = (
+    MINTING_ANDBYTESTRING_V3,
+    MINTING_ORBYTESTRING_V3,
+    MINTING_XORBYTESTRING_V3,
+    MINTING_COMPLEMENTBYTESTRING_V3,
+    MINTING_COUNTSETBITS_V3,
+    MINTING_FINDFIRSTSET_V3,
+    MINTING_READBIT_V3,
+    MINTING_REPLICATEBYTE_V3,
+    MINTING_ROTATEBYTESTRING_V3,
+    MINTING_SHIFTBYTESTRING_V3,
+    MINTING_WRITEBITS_V3,
+)
+
+
+# ----- All failing bitwise tests ----- #
+
+FAILING_BITWISE_SCRIPT_FILES_V3 = (
+    "failingReadBitPolicyScriptV3_1.plutus",
+    "failingReadBitPolicyScriptV3_2.plutus",
+    "failingReadBitPolicyScriptV3_3.plutus",
+    "failingReadBitPolicyScriptV3_4.plutus",
+    "failingReadBitPolicyScriptV3_5.plutus",
+    "failingReadBitPolicyScriptV3_6.plutus",
+    "failingReadBitPolicyScriptV3_7.plutus",
+    "failingReadBitPolicyScriptV3_8.plutus",
+    "failingReadBitPolicyScriptV3_9.plutus",
+    "failingReadBitPolicyScriptV3_10.plutus",
+    "failingReadBitPolicyScriptV3_11.plutus",
+    "failingReadBitPolicyScriptV3_12.plutus",
+    "failingReadBitPolicyScriptV3_13.plutus",
+    "failingReadBitPolicyScriptV3_14.plutus",
+    "failingReplicateBytePolicyScriptV3_1.plutus",
+    "failingReplicateBytePolicyScriptV3_2.plutus",
+    "failingReplicateBytePolicyScriptV3_3.plutus",
+    "failingReplicateBytePolicyScriptV3_4.plutus",
+    "failingReplicateBytePolicyScriptV3_5.plutus",
+    "failingReplicateBytePolicyScriptV3_6.plutus",
+    "failingWriteBitsPolicyScriptV3_1.plutus",
+    "failingWriteBitsPolicyScriptV3_2.plutus",
+    "failingWriteBitsPolicyScriptV3_3.plutus",
+    "failingWriteBitsPolicyScriptV3_4.plutus",
+    "failingWriteBitsPolicyScriptV3_5.plutus",
+    "failingWriteBitsPolicyScriptV3_6.plutus",
+    "failingWriteBitsPolicyScriptV3_7.plutus",
+    "failingWriteBitsPolicyScriptV3_8.plutus",
+    "failingWriteBitsPolicyScriptV3_9.plutus",
+    "failingWriteBitsPolicyScriptV3_10.plutus",
+    "failingWriteBitsPolicyScriptV3_11.plutus",
+    "failingWriteBitsPolicyScriptV3_12.plutus",
+    "failingWriteBitsPolicyScriptV3_13.plutus",
+    "failingWriteBitsPolicyScriptV3_14.plutus",
+    "failingWriteBitsPolicyScriptV3_15.plutus",
+    "failingWriteBitsPolicyScriptV3_16.plutus",
+    "failingWriteBitsPolicyScriptV3_17.plutus",
+    "failingWriteBitsPolicyScriptV3_18.plutus",
+    "failingWriteBitsPolicyScriptV3_19.plutus",
+)
+
+# We're not currently checking the costs (and it seems to be difficult when the
+# script fails anyway), so the values here don't really matter.
+UNDETERMINED_COST = ExecutionCost(per_time=1_000_000, per_space=100_000, fixed_cost=1234)
+
+
+FAILING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in FAILING_BITWISE_SCRIPT_FILES_V3
+)
+
+MINTING_RIPEMD_160_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingRipemd_160Policy.plutus"
+MINTING_RIPEMD_160_V3 = PlutusScriptData(
+    script_file=MINTING_RIPEMD_160_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=6598460, per_space=14710, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
+
+
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusOp:
     script_file: clusterlib.FileType
-    datum_file: tp.Optional[pl.Path] = None
-    datum_cbor_file: tp.Optional[pl.Path] = None
-    datum_value: tp.Optional[str] = None
-    redeemer_file: tp.Optional[pl.Path] = None
-    redeemer_cbor_file: tp.Optional[pl.Path] = None
-    redeemer_value: tp.Optional[str] = None
-    execution_cost: tp.Optional[ExecutionCost] = None
+    datum_file: pl.Path | None = None
+    datum_cbor_file: pl.Path | None = None
+    datum_value: str | None = None
+    redeemer_file: pl.Path | None = None
+    redeemer_cbor_file: pl.Path | None = None
+    redeemer_value: str | None = None
+    execution_cost: ExecutionCost | None = None
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -309,13 +491,17 @@ class ScriptCost:
 
 
 def check_plutus_costs(
-    plutus_costs: tp.List[dict], expected_costs: tp.List[ExecutionCost], frac: float = 0.15
-):
+    plutus_costs: list[dict], expected_costs: list[ExecutionCost], frac: float = 0.15
+) -> None:
     """Check plutus transaction cost.
 
     units: the time is in picoseconds and the space is in bytes.
     """
-    # sort records by total cost
+    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+        # We have the costs calibrated only for local testnet
+        return
+
+    # Sort records by total cost
     sorted_plutus = sorted(
         plutus_costs,
         key=lambda x: x["executionUnits"]["memory"]  # type: ignore
@@ -424,7 +610,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
     return_collateral_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     protocol_params = cluster_obj.g_query.get_protocol_params()
 
-    # when total collateral amount is specified, it is necessary to specify also return
+    # When total collateral amount is specified, it is necessary to specify also return
     # collateral `TxOut` to get the change, otherwise all collaterals will be collected
     if tx_output.total_collateral_amount and not tx_output.return_collateral_txouts:
         assert not return_collateral_utxos, "Return collateral UTxO was unexpectedly created"
@@ -433,10 +619,10 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
     if not (tx_output.return_collateral_txouts or tx_output.total_collateral_amount):
         return
 
-    # check that correct return collateral UTxO was created
+    # Check that correct return collateral UTxO was created
     assert return_collateral_utxos, "Return collateral UTxO was NOT created"
 
-    # check that return collateral is the only output and that the index matches
+    # Check that return collateral is the only output and that the index matches
     out_utxos_ix = {r.utxo_ix for r in return_collateral_utxos}
     assert len(out_utxos_ix) == 1, "There are other outputs other than return collateral"
     # TODO: the index of change can be either 0 (in old node versions) or `txouts_count`,
@@ -486,9 +672,9 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
                 utxos=tx_output.return_collateral_txouts, coin=coin
             ), f"Incorrect return collateral token balance for token '{coin}'"
 
-    # automatic return collateral with `transaction build` command
+    # Automatic return collateral with `transaction build` command
     elif tx_output.change_address:
-        # check that the collateral amount charged corresponds to 'collateralPercentage'
+        # Check that the collateral amount charged corresponds to 'collateralPercentage'
         assert collateral_charged == round(
             tx_output.fee * protocol_params["collateralPercentage"] / 100
         ), "The collateral amount charged is not the expected amount"
@@ -497,7 +683,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
             tx_output.change_address == return_collateral_utxos[0].address
         ), "Return collateral address doesn't match change address"
 
-        # the returned amount is the total of all collaterals minus fee
+        # The returned amount is the total of all collaterals minus fee
         expected_return_amount = int(tx_collaterals_amount - collateral_charged)
 
         assert returned_amount == expected_return_amount, (
@@ -547,7 +733,7 @@ def create_script_context_w_blockers(
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
     redeemer_file: pl.Path,
-    tx_file: tp.Optional[pl.Path] = None,
+    tx_file: pl.Path | None = None,
 ) -> None:
     """Run the `create-script-context` command (available in plutus-apps).
 

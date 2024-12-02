@@ -71,7 +71,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v29
+        uses: cachix/install-nix-action@v30
         with:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GH_TOKEN }}
@@ -106,9 +106,13 @@ jobs:
             curl -s -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/pypassed" > deselected_tests.txt
             echo "DESELECT_FROM_FILE=deselected_tests.txt" >> $GITHUB_ENV
           fi
-      - name: Run CLI regression tests
+      - name: ▶️ Run Regression Tests
         id: testing-step
-        run: .github/regression.sh
+        run: |
+          # env
+          echo "::group::Script setup"
+          .github/regression.sh
+          echo "::endgroup::"
       - name: Report test results
         if: (success() || failure()) && inputs.testrun_name
         run: |
@@ -116,13 +120,13 @@ jobs:
             testrun_name_strip="$(echo "${{ inputs.testrun_name }}" | sed 's/[^a-zA-Z0-9_-]//g')"
             curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@testrun-report.xml"
           fi
-      - name: Upload testing artifacts on failure
+      - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: testing-artifacts
           path: testing_artifacts.tar.xz
-      - name: Upload Allure results
+      - name: ↟ Upload Allure results
         uses: actions/upload-artifact@v4
         # When using `always()`, you lose ability to manually cancel the workflow.
         # Use `success() || failure()` instead.
@@ -130,13 +134,13 @@ jobs:
         with:
           name: allure-results
           path: allure-results.tar.xz
-      - name: Upload HTML report
+      - name: ↟ Upload HTML report
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: testrun-report
           path: testrun-report.html
-      - name: Upload testrun files
+      - name: ↟ Upload testrun files
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
@@ -147,14 +151,14 @@ jobs:
             testrun-report.xml
             deselected_tests.txt
             requirements_coverage.json
-      - name: Upload CLI coverage
+      - name: ↟ Upload CLI coverage
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: cli-coverage
           path: cli_coverage.json
-      - name: Mail failure report
-        uses: dawidd6/action-send-mail@v3
+      - name: ✉ Mail failure report
+        uses: dawidd6/action-send-mail@v4
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS
         with:
           server_address: smtp.gmail.com

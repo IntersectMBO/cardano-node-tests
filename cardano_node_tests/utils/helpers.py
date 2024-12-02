@@ -98,13 +98,13 @@ def environ(env: dict) -> tp.Iterator[None]:
 
 
 def run_command(
-    command: tp.Union[str, list],
+    command: str | list,
     workdir: ttypes.FileType = "",
     ignore_fail: bool = False,
     shell: bool = False,
 ) -> bytes:
     """Run command."""
-    cmd: tp.Union[str, list]
+    cmd: str | list
     if isinstance(command, str):
         cmd = command if shell else command.split()
         cmd_str = command
@@ -152,7 +152,7 @@ def get_rand_str(length: int = 8) -> str:
 
 
 # TODO: unify with the implementation in clusterlib
-def prepend_flag(flag: str, contents: tp.Iterable) -> tp.List[str]:
+def prepend_flag(flag: str, contents: tp.Iterable) -> list[str]:
     """Prepend flag to every item of the sequence.
 
     Args:
@@ -160,7 +160,7 @@ def prepend_flag(flag: str, contents: tp.Iterable) -> tp.List[str]:
         contents: A list (iterable) of content to be prepended.
 
     Returns:
-        List[str]: A list of flag followed by content, see below.
+        list[str]: A list of flag followed by content, see below.
 
     >>> prepend_flag("--foo", [1, 2, 3])
     ['--foo', '1', '--foo', '2', '--foo', '3']
@@ -233,7 +233,7 @@ def encode_bech32(prefix: str, data: str) -> str:
     return run_command(f"echo '{data}' | bech32 {prefix}", shell=True).decode().strip()
 
 
-def check_dir_arg(dir_path: str) -> tp.Optional[pl.Path]:
+def check_dir_arg(dir_path: str) -> pl.Path | None:
     """Check that the dir passed as argparse parameter is a valid existing dir."""
     if not dir_path:
         return None
@@ -244,7 +244,7 @@ def check_dir_arg(dir_path: str) -> tp.Optional[pl.Path]:
     return abs_path
 
 
-def check_file_arg(file_path: str) -> tp.Optional[pl.Path]:
+def check_file_arg(file_path: str) -> pl.Path | None:
     """Check that the file passed as argparse parameter is a valid existing file."""
     if not file_path:
         return None
@@ -306,8 +306,8 @@ def flatten(
 
 
 def validate_dict_values(
-    dict1: tp.Dict[str, tp.Any], dict2: tp.Dict[str, tp.Any], keys: tp.Iterable[str]
-) -> tp.List[str]:
+    dict1: dict[str, tp.Any], dict2: dict[str, tp.Any], keys: tp.Iterable[str]
+) -> list[str]:
     """Compare values for specified keys between two dictionaries and return discrepancies.
 
     Args:

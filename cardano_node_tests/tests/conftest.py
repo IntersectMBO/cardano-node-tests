@@ -30,11 +30,12 @@ from cardano_node_tests.utils import testnet_cleanup
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
+INTERRUPTED_NAME = ".session_interrupted"
 
-# make sure there's enough time to stop all cluster instances at the end of session
+# Make sure there's enough time to stop all cluster instances at the end of session
 workermanage.NodeManager.EXIT_TIMEOUT = 30
 
-# use custom xdist scheduler
+# Use custom xdist scheduler
 pytest_plugins = ("cardano_node_tests.pytest_plugins.xdist_scheduler",)
 
 
@@ -66,7 +67,7 @@ def pytest_addoption(parser: tp.Any) -> None:
 
 
 def pytest_configure(config: tp.Any) -> None:
-    # don't bother collecting metadata if all tests are skipped
+    # Don't bother collecting metadata if all tests are skipped
     if config.getvalue("skipall"):
         return
 
@@ -79,7 +80,7 @@ def pytest_configure(config: tp.Any) -> None:
     config.stash[metadata_key]["CLUSTER_ERA"] = configuration.CLUSTER_ERA
     config.stash[metadata_key]["COMMAND_ERA"] = configuration.COMMAND_ERA
     config.stash[metadata_key]["SCRIPTS_DIRNAME"] = configuration.SCRIPTS_DIRNAME
-    config.stash[metadata_key]["ENABLE_P2P"] = str(configuration.ENABLE_P2P)
+    config.stash[metadata_key]["ENABLE_LEGACY"] = str(configuration.ENABLE_LEGACY)
     config.stash[metadata_key]["MIXED_P2P"] = str(configuration.MIXED_P2P)
     config.stash[metadata_key]["NUM_POOLS"] = str(configuration.NUM_POOLS)
     config.stash[metadata_key]["UTXO_BACKEND"] = configuration.UTXO_BACKEND
@@ -143,7 +144,7 @@ def _skip_all_tests(config: tp.Any, items: list) -> bool:
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa: C901
-    # prevent on slave nodes (xdist)
+    # Prevent on slave nodes (xdist)
     if hasattr(config, "slaveinput"):
         return
 
@@ -157,12 +158,12 @@ def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa:
         if "needs_dbsync" not in item.keywords:
             return
 
-        # all tests marked with 'needs_dbsync' are db-sync tests, and should be marked
+        # All tests marked with 'needs_dbsync' are db-sync tests, and should be marked
         # with the 'dbsync' marker as well
         if "dbsync" not in item.keywords:
             item.add_marker(pytest.mark.dbsync)
 
-        # skip all tests that require db-sync when db-sync is not available
+        # Skip all tests that require db-sync when db-sync is not available
         if not configuration.HAS_DBSYNC:
             item.add_marker(skip_dbsync_marker)
 
@@ -181,6 +182,13 @@ def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa:
     for item in items:
         _mark_needs_dbsync(item)
         _skip_disabled(item)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_keyboard_interrupt() -> None:
+    """Create a status file indicating that the test run was interrupted."""
+    session_basetemp = temptools.get_basetemp()
+    (session_basetemp / INTERRUPTED_NAME).touch()
 
 
 @pytest.fixture(scope="session")
@@ -210,7 +218,7 @@ def _save_all_cluster_instances_artifacts(
     """Save artifacts of all cluster instances after all tests are finished."""
     cluster_manager_obj.log("running `_save_all_cluster_instances_artifacts`")
 
-    # stop all cluster instances
+    # Stop all cluster instances
     with helpers.ignore_interrupt():
         cluster_manager_obj.save_all_clusters_artifacts()
 
@@ -219,7 +227,7 @@ def _stop_all_cluster_instances(cluster_manager_obj: cluster_management.ClusterM
     """Stop all cluster instances after all tests are finished."""
     cluster_manager_obj.log("running `_stop_all_cluster_instances`")
 
-    # stop all cluster instances
+    # Stop all cluster instances
     with helpers.ignore_interrupt():
         cluster_manager_obj.stop_all_clusters()
 
@@ -229,7 +237,7 @@ def _testnet_cleanup(pytest_root_tmp: pl.Path) -> None:
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET:
         return
 
-    # there's only one cluster instance for testnets, so we don't need to use cluster manager
+    # There's only one cluster instance for testnets, so we don't need to use cluster manager
     cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
 
     destdir = pytest_root_tmp.parent / f"cleanup-{pytest_root_tmp.stem}-{helpers.get_rand_str(8)}"
@@ -247,7 +255,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
         return
 
     alluredir = configuration.LAUNCH_PATH / alluredir
-    metadata: tp.Dict[str, tp.Any] = pytest_config.stash[metadata_key]  # type: ignore
+    metadata: dict[str, tp.Any] = pytest_config.stash[metadata_key]  # type: ignore
     with open(alluredir / "environment.properties", "w+", encoding="utf-8") as infile:
         for k, v in metadata.items():
             if isinstance(v, dict):
@@ -262,6 +270,7 @@ def testenv_setup_teardown(
 ) -> tp.Generator[None, None, None]:
     """Setup and teardown test environment."""
     pytest_root_tmp = temptools.get_pytest_root_tmp()
+    session_basetemp = temptools.get_basetemp()
     running_session_glob = ".running_session"
 
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
@@ -269,19 +278,27 @@ def testenv_setup_teardown(
         if not list(pytest_root_tmp.glob(f"{running_session_glob}_*")):
             _save_env_for_allure(request.config)
 
+        # Remove dangling files from previous interrupted test run
+        (session_basetemp / INTERRUPTED_NAME).unlink(missing_ok=True)
+
+        # Create file indicating that testing session on this worker is running
         (pytest_root_tmp / f"{running_session_glob}_{worker_id}").touch()
 
     yield
 
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
+        # Remove file indicating that testing session on this worker is running
+        (pytest_root_tmp / f"{running_session_glob}_{worker_id}").unlink()
+
         # Save CLI coverage to dir specified by `--cli-coverage-dir`
         cluster_manager_obj = cluster_management.ClusterManager(
             worker_id=worker_id, pytest_config=request.config
         )
         cluster_manager_obj.save_worker_cli_coverage()
 
-        # Remove file indicating that testing session on this worker is running
-        (pytest_root_tmp / f"{running_session_glob}_{worker_id}").unlink()
+        # Don't do any cleanup on keyboard interrupt
+        if (session_basetemp / INTERRUPTED_NAME).exists():
+            return None
 
         # Perform cleanup if this is the last running pytest worker
         if not list(pytest_root_tmp.glob(f"{running_session_glob}_*")):
@@ -322,7 +339,7 @@ def testfile_temp_dir() -> pl.Path:
 
     The dir is specific to a single test file.
     """
-    # get a dir path based on the test file running
+    # Get a dir path based on the test file running
     dir_path = (
         (os.environ.get("PYTEST_CURRENT_TEST") or "unknown")
         .split("::")[0]
@@ -351,7 +368,7 @@ def cluster_manager(
     request: FixtureRequest,
 ) -> tp.Generator[cluster_management.ClusterManager, None, None]:
     """Return instance of `cluster_management.ClusterManager`."""
-    # hide from traceback to make logs errors more readable
+    # Hide from traceback to make logs errors more readable
     __tracebackhide__ = True  # pylint: disable=unused-variable
 
     cluster_manager_obj = cluster_management.ClusterManager(
@@ -418,7 +435,7 @@ def cluster_singleton(
 @pytest.fixture
 def cluster_lock_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     """Lock any pool and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         lock_resources=[
@@ -434,7 +451,7 @@ def cluster_lock_pool(
 @pytest.fixture
 def cluster_use_pool(
     cluster_manager: cluster_management.ClusterManager,
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     """Mark any pool as "in use" and return instance of `clusterlib.ClusterLib`."""
     cluster_obj = cluster_manager.get(
         use_resources=[

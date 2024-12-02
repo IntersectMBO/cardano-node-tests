@@ -1,6 +1,5 @@
 import json
 import logging
-import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -50,14 +49,13 @@ def _build_fund_script(
     plutus_op: plutus_common.PlutusOp,
     use_reference_script: bool = False,
     use_inline_datum: bool = True,
-    collateral_amount: tp.Optional[int] = None,
-    tokens_collateral: tp.Optional[
-        tp.List[plutus_common.Token]
-    ] = None,  # tokens must already be in `payment_addr`
-) -> tp.Tuple[
-    tp.List[clusterlib.UTXOData],
-    tp.List[clusterlib.UTXOData],
-    tp.Optional[clusterlib.UTXOData],
+    collateral_amount: int | None = None,
+    tokens_collateral: list[plutus_common.Token]
+    | None = None,  # tokens must already be in `payment_addr`
+) -> tuple[
+    list[clusterlib.UTXOData],
+    list[clusterlib.UTXOData],
+    clusterlib.UTXOData | None,
     clusterlib.TxRawOutput,
 ]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO and reference script.
@@ -66,7 +64,7 @@ def _build_fund_script(
     """
     # pylint: disable=too-many-arguments
 
-    # for mypy
+    # For mypy
     assert plutus_op.execution_cost
 
     script_fund = 200_000_000
@@ -80,7 +78,7 @@ def _build_fund_script(
         protocol_params=cluster.g_query.get_protocol_params(),
     )
 
-    # create a Tx output with a datum hash at the script address
+    # Create a Tx output with a datum hash at the script address
 
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
@@ -103,7 +101,7 @@ def _build_fund_script(
                 plutus_op.datum_value if plutus_op.datum_value and not use_inline_datum else ""
             ),
         ),
-        # for collateral
+        # For collateral
         clusterlib.TxOut(
             address=dst_addr.address, amount=collateral_amount or redeem_cost.collateral
         ),
@@ -160,7 +158,7 @@ def _build_fund_script(
     if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
-        # check if inline datum is returned by 'query utxo'
+        # Check if inline datum is returned by 'query utxo'
         if use_inline_datum:
             if plutus_op.datum_file:
                 with open(plutus_op.datum_file, encoding="utf-8") as json_datum:
@@ -172,7 +170,7 @@ def _build_fund_script(
                 script_utxos[0].inline_datum == expected_datum
             ), "The inline datum returned by 'query utxo' is different than the expected"
 
-    # check "transaction view"
+    # Check "transaction view"
     tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
 
     return script_utxos, collateral_utxos, reference_utxo, tx_output
@@ -183,8 +181,8 @@ def _build_reference_txin(
     cluster: clusterlib.ClusterLib,
     amount: int,
     payment_addr: clusterlib.AddressRecord,
-    dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
-) -> tp.List[clusterlib.UTXOData]:
+    dst_addr: clusterlib.AddressRecord | None = None,
+) -> list[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 
     Uses `cardano-cli transaction build` command for building the transaction.

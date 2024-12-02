@@ -28,7 +28,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -36,11 +36,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=1_000_000_000,
     )
 
@@ -59,7 +59,7 @@ class TestReferenceScripts:
     def test_reference_multiple_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_same_script: bool,
     ):
         """Test locking two Tx output with a V2 reference script and spending it.
@@ -79,12 +79,12 @@ class TestReferenceScripts:
         else:
             plutus_op2 = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
-        # for mypy
+        # For mypy
         assert plutus_op1.execution_cost and plutus_op2.execution_cost
         assert plutus_op1.datum_file and plutus_op2.datum_file
         assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         script_fund = 100_000_000
 
@@ -121,7 +121,7 @@ class TestReferenceScripts:
                 amount=script_fund,
                 inline_datum_file=plutus_op2.datum_file,
             ),
-            # for reference script
+            # For reference script
             clusterlib.TxOut(
                 address=payment_addrs[1].address,
                 amount=10_000_000,
@@ -132,7 +132,7 @@ class TestReferenceScripts:
                 amount=10_000_000,
                 reference_script_file=plutus_op2.script_file,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost_1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost_2.collateral),
         ]
@@ -163,7 +163,7 @@ class TestReferenceScripts:
         collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
         collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 5)
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -216,14 +216,14 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UTxOs were spent
+        # Check that script address UTxOs were spent
 
         assert not (
             cluster.g_query.get_utxo(utxo=script_utxos1[0])
             or cluster.g_query.get_utxo(utxo=script_utxos2[0])
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
-        # check min required UTxO with reference script
+        # Check min required UTxO with reference script
 
         min_required_utxo = cluster.g_transaction.calculate_min_req_utxo(txouts=[txouts[2]]).value
 
@@ -236,7 +236,7 @@ class TestReferenceScripts:
     def test_reference_same_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking two Tx output with the same V2 reference script and spending it.
 
@@ -249,12 +249,12 @@ class TestReferenceScripts:
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         script_fund = 200_000_000
 
@@ -282,13 +282,13 @@ class TestReferenceScripts:
             clusterlib.TxOut(
                 address=script_address_2, amount=script_fund, inline_datum_file=plutus_op.datum_file
             ),
-            # for reference script
+            # For reference script
             clusterlib.TxOut(
                 address=payment_addrs[1].address,
                 amount=2_000_000,
                 reference_script_file=plutus_op.script_file,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost.collateral),
         ]
@@ -318,7 +318,7 @@ class TestReferenceScripts:
         collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)
         collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -371,7 +371,7 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UTxOs were spent
+        # Check that script address UTxOs were spent
         assert not (
             cluster.g_query.get_utxo(utxo=script_utxos1[0])
             or cluster.g_query.get_utxo(utxo=script_utxos2[0])
@@ -383,7 +383,7 @@ class TestReferenceScripts:
     def test_mix_reference_attached_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an attached V2 script and one using reference V2 script.
 
@@ -397,12 +397,12 @@ class TestReferenceScripts:
         plutus_op1 = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
         plutus_op2 = spend_build.PLUTUS_OP_GUESSING_GAME_UNTYPED
 
-        # for mypy
+        # For mypy
         assert plutus_op1.execution_cost and plutus_op2.execution_cost
         assert plutus_op1.datum_file and plutus_op2.datum_file
         assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
 
-        # create the necessary UTxOs
+        # Create the necessary UTxOs
 
         script_fund = 100_000_000
 
@@ -439,13 +439,13 @@ class TestReferenceScripts:
                 amount=script_fund,
                 inline_datum_file=plutus_op2.datum_file,
             ),
-            # for reference script
+            # For reference script
             clusterlib.TxOut(
                 address=payment_addrs[1].address,
                 amount=2_000_000,
                 reference_script_file=plutus_op2.script_file,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
@@ -475,7 +475,7 @@ class TestReferenceScripts:
         collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)
         collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
 
-        #  spend the "locked" UTxOs
+        #  Spend the "locked" UTxOs
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -531,13 +531,13 @@ class TestReferenceScripts:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that script address UTxOs were spent
+        # Check that script address UTxOs were spent
         assert not (
             cluster.g_query.get_utxo(utxo=script_utxos1[0])
             or cluster.g_query.get_utxo(utxo=script_utxos2[0])
         ), f"Script address UTxOs were NOT spent - `{script_utxos1}` and `{script_utxos2}`"
 
-        # check that the script hash is included for all scripts
+        # Check that the script hash is included for all scripts
         for script in plutus_costs:
             assert script.get(
                 "scriptHash"
@@ -551,7 +551,7 @@ class TestReferenceScripts:
     def test_spend_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
         address_type: str,
     ):
@@ -570,12 +570,12 @@ class TestReferenceScripts:
 
         reference_addr = payment_addrs[1]
         if address_type == "byron":
-            # create reference UTxO on Byron address
+            # Create reference UTxO on Byron address
             reference_addr = clusterlib_utils.gen_byron_addr(
                 cluster_obj=cluster, name_template=temp_template
             )
 
-        # create a Tx output with the reference script
+        # Create a Tx output with the reference script
         reference_utxo, __ = clusterlib_utils.create_reference_utxo(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -587,7 +587,7 @@ class TestReferenceScripts:
         assert reference_utxo.reference_script, "Reference script is missing"
         assert reference_utxo.amount == amount, "Incorrect amount transferred"
 
-        # spend the Tx output with the reference script
+        # Spend the Tx output with the reference script
         txouts = [clusterlib.TxOut(address=payment_addr.address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[reference_addr.skey_file])
 
@@ -608,7 +608,7 @@ class TestReferenceScripts:
 
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        # check that reference script utxo was spent
+        # Check that reference script utxo was spent
         assert not cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), f"Reference script UTxO was NOT spent: '{reference_utxo}`"
@@ -620,7 +620,7 @@ class TestReferenceScripts:
     def test_spend_regular_utxo_and_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spend an UTxO and use a reference a script on the same transaction.
@@ -716,7 +716,7 @@ class TestNegativeReferenceScripts:
     def test_not_a_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an invalid reference script.
 
@@ -731,7 +731,7 @@ class TestNegativeReferenceScripts:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_V2_COST,
         )
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             spend_build._build_fund_script(
@@ -751,7 +751,7 @@ class TestNegativeReferenceScripts:
     def test_two_scripts_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking two Tx with different Plutus reference scripts in single Tx, one fails.
 
@@ -762,12 +762,12 @@ class TestNegativeReferenceScripts:
         plutus_op1 = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
         plutus_op2 = spend_build.PLUTUS_OP_ALWAYS_FAILS
 
-        # for mypy
+        # For mypy
         assert plutus_op1.execution_cost and plutus_op2.execution_cost
         assert plutus_op1.datum_file and plutus_op2.datum_file
         assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         script_fund = 100_000_000
 
@@ -804,7 +804,7 @@ class TestNegativeReferenceScripts:
                 amount=script_fund,
                 inline_datum_file=plutus_op2.datum_file,
             ),
-            # for reference script
+            # For reference script
             clusterlib.TxOut(
                 address=payment_addrs[1].address,
                 amount=2_000_000,
@@ -815,7 +815,7 @@ class TestNegativeReferenceScripts:
                 amount=10_000_000,
                 reference_script_file=plutus_op2.script_file,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
@@ -846,7 +846,7 @@ class TestNegativeReferenceScripts:
         collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
         collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 5)
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -900,7 +900,7 @@ class TestNegativeReferenceScripts:
     def test_lock_tx_v1_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a Plutus V1 reference script.
 
@@ -915,12 +915,12 @@ class TestNegativeReferenceScripts:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS["v1"].execution_cost,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         script_utxos, collateral_utxos, reference_utxo, __ = spend_build._build_fund_script(
             temp_template=temp_template,
@@ -932,7 +932,7 @@ class TestNegativeReferenceScripts:
         )
         assert reference_utxo, "No reference script UTxO"
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -976,7 +976,7 @@ class TestNegativeReferenceScripts:
     def test_v1_attached_v2_reference(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with an attached V1 script and one using reference V2 script.
 
@@ -996,12 +996,12 @@ class TestNegativeReferenceScripts:
 
         plutus_op2 = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
-        # for mypy
+        # For mypy
         assert plutus_op1.execution_cost and plutus_op2.execution_cost
         assert plutus_op1.datum_file and plutus_op2.datum_file
         assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         script_fund = 200_000_000
 
@@ -1036,13 +1036,13 @@ class TestNegativeReferenceScripts:
                 amount=script_fund,
                 inline_datum_file=plutus_op2.datum_file,
             ),
-            # for reference script
+            # For reference script
             clusterlib.TxOut(
                 address=payment_addrs[1].address,
                 amount=2_000_000,
                 reference_script_file=plutus_op2.script_file,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost_1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost_2.collateral),
         ]
@@ -1072,7 +1072,7 @@ class TestNegativeReferenceScripts:
         collateral_utxos1 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 3)
         collateral_utxos2 = clusterlib.filter_utxos(utxos=fund_utxos, utxo_ix=utxo_ix_offset + 4)
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -1124,7 +1124,7 @@ class TestNegativeReferenceScripts:
     def test_lock_byron_reference_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test locking a Tx output with a Plutus V2 reference script on Byron address.
 
@@ -1135,12 +1135,12 @@ class TestNegativeReferenceScripts:
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create a Tx output with an inline datum at the script address
+        # Create a Tx output with an inline datum at the script address
 
         script_utxos, collateral_utxos, *__ = spend_build._build_fund_script(
             temp_template=temp_template,
@@ -1151,7 +1151,7 @@ class TestNegativeReferenceScripts:
             use_reference_script=False,
         )
 
-        # create reference UTxO on Byron address
+        # Create reference UTxO on Byron address
         byron_addr = clusterlib_utils.gen_byron_addr(
             cluster_obj=cluster, name_template=temp_template
         )
@@ -1166,7 +1166,7 @@ class TestNegativeReferenceScripts:
         assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
         assert reference_utxo.reference_script, "Reference script is missing"
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(

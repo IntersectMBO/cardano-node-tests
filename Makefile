@@ -93,7 +93,6 @@ tests: .dirs .run_tests
 # run tests that are supposed to run on PR level
 .PHONY: testpr
 testpr: export TESTPR=1
-testpr: export SCRIPTS_DIRNAME := $(or $(SCRIPTS_DIRNAME),babbage_fast)
 testpr: export CLUSTERS_COUNT := $(or $(CLUSTERS_COUNT),5)
 testpr: TEST_THREADS := $(or $(TEST_THREADS),20)
 testpr: MARKEXPR := $(or $(MARKEXPR),-m "smoke")
@@ -104,6 +103,6 @@ testpr: .dirs .run_tests
 .PHONY: testnets
 testnets: export CLUSTERS_COUNT=1
 testnets: export FORBID_RESTART=1
-testnets: TEST_THREADS := $(or $(TEST_THREADS),20)
+testnets: TEST_THREADS := $(or $(TEST_THREADS),15)
 testnets: MARKEXPR := $(or $(MARKEXPR),-m "testnets")
 testnets: .dirs .run_tests

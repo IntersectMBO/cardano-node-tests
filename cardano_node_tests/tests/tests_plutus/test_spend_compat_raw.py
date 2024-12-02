@@ -1,7 +1,6 @@
 """Compatibility tests for spending with Plutus using `transaction build-raw`."""
 
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -26,7 +25,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -34,11 +33,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -59,7 +58,7 @@ class TestCompatibility:
     def test_plutusv2_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test spending a UTxO locked with PlutusV2 script using old Tx era.
 
@@ -113,7 +112,7 @@ class TestCompatibility:
     def test_plutusv1_old_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test spending a UTxO locked with PlutusV1 script using old Tx era.
 

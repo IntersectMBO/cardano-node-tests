@@ -37,7 +37,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -45,11 +45,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -60,7 +60,7 @@ def payment_addrs(
 def pool_users(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.PoolUser]:
+) -> list[clusterlib.PoolUser]:
     """Create new pool users."""
     test_id = common.get_test_id(cluster)
     created_users = clusterlib_utils.create_pool_users(
@@ -69,11 +69,11 @@ def pool_users(
         no_of_addr=2,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         created_users[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -139,7 +139,7 @@ class TestLocking:
     def test_txout_locking(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
@@ -198,7 +198,7 @@ class TestLocking:
     def test_context_equivalence(
         self,
         cluster: clusterlib.ClusterLib,
-        pool_users: tp.List[clusterlib.PoolUser],
+        pool_users: list[clusterlib.PoolUser],
     ):
         """Test context equivalence while spending a locked UTxO.
 
@@ -215,7 +215,7 @@ class TestLocking:
         amount = 10_000_000
         deposit_amount = cluster.g_query.get_address_deposit()
 
-        # create stake address registration cert
+        # Create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
@@ -224,7 +224,7 @@ class TestLocking:
 
         tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
 
-        # generate a dummy redeemer in order to create a txbody from which
+        # Generate a dummy redeemer in order to create a txbody from which
         # we can generate a tx and then derive the correct redeemer
         redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
         clusterlib_utils.create_script_context(
@@ -238,7 +238,7 @@ class TestLocking:
             execution_cost=plutus_common.CONTEXT_EQUIVALENCE_COST,
         )
 
-        # fund the script address
+        # Fund the script address
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
             temp_template=temp_template,
             cluster_obj=cluster,
@@ -267,7 +267,7 @@ class TestLocking:
         )
         assert tx_output_dummy
 
-        # generate the "real" redeemer
+        # Generate the "real" redeemer
         redeemer_file = pl.Path(f"{temp_template}_script_context.redeemer")
 
         plutus_common.create_script_context_w_blockers(
@@ -311,7 +311,7 @@ class TestLocking:
     def test_guessing_game(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         embed_datum: bool,
         variant: str,
         plutus_version: str,
@@ -331,12 +331,12 @@ class TestLocking:
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
-        datum_file: tp.Optional[pl.Path] = None
-        datum_cbor_file: tp.Optional[pl.Path] = None
-        datum_value: tp.Optional[str] = None
-        redeemer_file: tp.Optional[pl.Path] = None
-        redeemer_cbor_file: tp.Optional[pl.Path] = None
-        redeemer_value: tp.Optional[str] = None
+        datum_file: pl.Path | None = None
+        datum_cbor_file: pl.Path | None = None
+        datum_value: str | None = None
+        redeemer_file: pl.Path | None = None
+        redeemer_cbor_file: pl.Path | None = None
+        redeemer_value: str | None = None
 
         if variant == "typed_json":
             script_file = plutus_common.GUESSING_GAME[plutus_version].script_file
@@ -412,7 +412,7 @@ class TestLocking:
     def test_two_scripts_spending(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx.
@@ -432,7 +432,7 @@ class TestLocking:
         script_file1_v1 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1
         execution_cost1_v1 = plutus_common.ALWAYS_SUCCEEDS_COST
         script_file2_v1 = plutus_common.GUESSING_GAME_PLUTUS_V1
-        # this is higher than `plutus_common.GUESSING_GAME_COST`, because the script
+        # This is higher than `plutus_common.GUESSING_GAME_COST`, because the script
         # context has changed to include more stuff
         execution_cost2_v1 = plutus_common.ExecutionCost(
             per_time=280_668_068, per_space=1_031_312, fixed_cost=79_743
@@ -508,7 +508,7 @@ class TestLocking:
             script_data_file=plutus_op2.datum_file
         )
 
-        # create a Tx output with a datum hash at the script address
+        # Create a Tx output with a datum hash at the script address
 
         tx_files_fund = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file],
@@ -524,7 +524,7 @@ class TestLocking:
                 amount=amount + redeem_cost2.fee + spend_raw.FEE_REDEEM_TXSIZE,
                 datum_hash=datum_hash2,
             ),
-            # for collateral
+            # For collateral
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost1.collateral),
             clusterlib.TxOut(address=payment_addrs[1].address, amount=redeem_cost2.collateral),
         ]
@@ -561,7 +561,7 @@ class TestLocking:
 
         # Step 2: spend the "locked" UTxOs
 
-        # for mypy
+        # For mypy
         assert plutus_op1.execution_cost and plutus_op2.execution_cost
         assert plutus_op1.datum_file and plutus_op2.datum_file
         assert plutus_op1.redeemer_cbor_file and plutus_op2.redeemer_cbor_file
@@ -629,7 +629,7 @@ class TestLocking:
                 utxo=u, coins=[clusterlib.DEFAULT_COIN]
             ), f"Inputs were NOT spent for `{u.address}`"
 
-        # check tx view
+        # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -641,7 +641,7 @@ class TestLocking:
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
@@ -701,7 +701,7 @@ class TestLocking:
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test failing script together with the `--script-invalid` argument - collateral is taken.
@@ -732,7 +732,7 @@ class TestLocking:
             amount=amount,
         )
 
-        # include any payment txin
+        # Include any payment txin
         txins = [
             r
             for r in cluster.g_query.get_utxo(
@@ -768,7 +768,7 @@ class TestLocking:
     def test_txout_token_locking(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test locking a Tx output with native tokens and spending the locked UTxO.
@@ -831,7 +831,7 @@ class TestLocking:
     def test_partial_spending(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
@@ -853,7 +853,7 @@ class TestLocking:
         token_amount_fund = 100
         token_amount_spend = 20
 
-        # add extra fee for tokens
+        # Add extra fee for tokens
         fee_redeem_txsize = spend_raw.FEE_REDEEM_TXSIZE + 5_000
 
         plutus_op = plutus_common.PlutusOp(
@@ -903,7 +903,7 @@ class TestLocking:
         txid_spend = cluster.g_transaction.get_txid(tx_body_file=tx_output_spend.out_file)
         change_utxos = cluster.g_query.get_utxo(txin=f"{txid_spend}#1")
 
-        # check that the expected amounts of Lovelace and native tokens were spent and change UTxOs
+        # Check that the expected amounts of Lovelace and native tokens were spent and change UTxOs
         # with appropriate datum hash were created
         token_amount_exp = token_amount_fund - token_amount_spend
         assert len(change_utxos) == len(tokens_spend_rec) + 1
@@ -923,7 +923,7 @@ class TestLocking:
     def test_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         scenario: str,
         plutus_version: str,
     ):
@@ -951,7 +951,7 @@ class TestLocking:
 
         if scenario == "max":
             collateral_num = max_collateral_ins
-            exp_errors: tp.Tuple[str, ...] = ()
+            exp_errors: tuple[str, ...] = ()
             collateral_fraction_offset = 250_000.0
         elif scenario == "max+1":
             collateral_num = max_collateral_ins + 1
@@ -986,7 +986,7 @@ class TestLocking:
         )
 
         if collateral_num:
-            # instead of using the collateral UTxO created by `_fund_script`, create multiple new
+            # Instead of using the collateral UTxO created by `_fund_script`, create multiple new
             # collateral UTxOs with the combined amount matching the original UTxO
             collateral_amount_part = int(fund_collateral_utxos[0].amount // collateral_num) + 1
             txouts_collaterals = [

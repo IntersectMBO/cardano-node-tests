@@ -119,9 +119,9 @@ def collect_executed_req(base_dir: pl.Path) -> dict:
     return collected
 
 
-def merge_reqs(*reqs: tp.Dict[str, dict]) -> dict:
+def merge_reqs(*reqs: dict[str, dict]) -> dict:
     """Merge requirements."""
-    merged: tp.Dict[str, dict] = {}
+    merged: dict[str, dict] = {}
     for report in reqs:
         for gname, greqs in report.items():
             merged_group = merged.get(gname) or {}
@@ -140,14 +140,14 @@ def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C901
     with open(mapping, encoding="utf-8") as in_fp:
         requirements_mapping = json.load(in_fp)
 
-    errors: tp.Dict[str, tp.Set[str]] = {}
+    errors: dict[str, set[str]] = {}
     for group, reqs in requirements_mapping.items():
         reqs_set = set(reqs.keys())
         executed_group = executed_req.get(group) or {}
         if not executed_group:
             executed_req[group] = executed_group
 
-        group_errors: tp.Set[str] = set()
+        group_errors: set[str] = set()
         for req_id, dependencies in reqs.items():
             deps_in_reqs = reqs_set.intersection(dependencies)
             if deps_in_reqs:

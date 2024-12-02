@@ -30,7 +30,7 @@ if VERSIONS.transaction_era != VERSIONS.cluster_era:
     _BLD_SKIP_REASON = "transaction era must be the same as node era"
 BUILD_UNUSABLE = bool(_BLD_SKIP_REASON)
 
-# common `skipif`s
+# Common `skipif`s
 SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
     BUILD_UNUSABLE,
     reason=(
@@ -79,7 +79,7 @@ SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
 )
 
 
-# common parametrization
+# Common parametrization
 PARAM_USE_BUILD_CMD = pytest.mark.parametrize(
     "use_build_cmd",
     (
@@ -118,16 +118,16 @@ PARAM_PLUTUS2ONWARDS_VERSION = pytest.mark.parametrize(
 )
 
 
-# intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)
+# Intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)
 if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:
-    # time buffer at the end of an epoch, enough to do something that takes several transactions
+    # Time buffer at the end of an epoch, enough to do something that takes several transactions
     EPOCH_STOP_SEC_BUFFER = -40
-    # time when all ledger state info is available for the current epoch
+    # Time when all ledger state info is available for the current epoch
     EPOCH_START_SEC_LEDGER_STATE = -19
-    # time buffer at the end of an epoch after getting ledger state info
+    # Time buffer at the end of an epoch after getting ledger state info
     EPOCH_STOP_SEC_LEDGER_STATE = -15
 else:
-    # we can be more generous on testnets
+    # We can be more generous on testnets
     EPOCH_STOP_SEC_BUFFER = -200
     EPOCH_START_SEC_LEDGER_STATE = -300
     EPOCH_STOP_SEC_LEDGER_STATE = -200
@@ -166,7 +166,7 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
         f"{curr_test.test_function}{curr_test.test_params}_ci{cluster_obj.cluster_id}_{rand_str}"
     )
 
-    # log test ID to cluster manager log file - getting test ID happens early
+    # Log test ID to cluster manager log file - getting test ID happens early
     # after the start of a test, so the log entry can be used for determining
     # time of the test start
     cm: cluster_management.ClusterManager = cluster_obj._cluster_manager  # type: ignore
@@ -177,10 +177,10 @@ def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
 
 def get_nodes_missing_utxos(
     cluster_obj: clusterlib.ClusterLib,
-    utxos: tp.List[clusterlib.UTXOData],
-) -> tp.Set[str]:
+    utxos: list[clusterlib.UTXOData],
+) -> set[str]:
     """Return set of nodes that don't have the given UTxOs."""
-    missing_nodes: tp.Set[str] = set()
+    missing_nodes: set[str] = set()
 
     known_nodes = cluster_nodes.get_cluster_type().NODES
     # Skip the check if there is only one node
@@ -208,7 +208,7 @@ def get_nodes_missing_utxos(
 
 def check_missing_utxos(
     cluster_obj: clusterlib.ClusterLib,
-    utxos: tp.List[clusterlib.UTXOData],
+    utxos: list[clusterlib.UTXOData],
 ) -> None:
     """Fail if any node is missing the given UTxOs."""
     missing_nodes = get_nodes_missing_utxos(cluster_obj=cluster_obj, utxos=utxos)
@@ -222,10 +222,10 @@ def detect_fork(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
-) -> tp.Tuple[tp.Set[str], tp.Set[str]]:
+) -> tuple[set[str], set[str]]:
     """Detect if one or more nodes have forked blockchain or is out of sync."""
-    forked_nodes: tp.Set[str] = set()
-    unsynced_nodes: tp.Set[str] = set()
+    forked_nodes: set[str] = set()
+    unsynced_nodes: set[str] = set()
 
     known_nodes = cluster_nodes.get_cluster_type().NODES
     if len(known_nodes) <= 1:
@@ -241,7 +241,7 @@ def detect_fork(
     tx_raw_output = clusterlib_utils.fund_from_faucet(
         payment_rec,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=2_000_000,
     )
     assert tx_raw_output
@@ -294,7 +294,7 @@ def fail_on_fork(
         err_msg.append(f"Following nodes appear to be out of sync: {sorted(unsynced_nodes)}")
 
     if err_msg:
-        # the local cluster needs to be respun before it is usable again
+        # The local cluster needs to be respun before it is usable again
         cluster_manager.set_needs_respin()
         raise AssertionError("\n".join(err_msg))
 

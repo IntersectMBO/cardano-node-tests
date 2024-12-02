@@ -13,18 +13,16 @@ on:
         type: choice
         description: "Cluster era"
         options:
-        - babbage
-        default: babbage
+        - conway 9
+        - conway 10
+        default: conway 9
       tx_era:
         type: choice
         description: "Tx era"
         options:
         - default
+        - conway
         - babbage
-        - alonzo
-        - mary
-        - allegra
-        - shelley
         default: default
       markexpr:
         type: choice
@@ -35,7 +33,9 @@ on:
         - smoke
         - plutus
         - plutus and smoke
+        - team_plutus
         - not long
+        - conway only
         - dbsync and smoke
         - dbsync and plutus
         - dbsync and not long
@@ -44,10 +44,10 @@ on:
         type: choice
         description: "Network topology"
         options:
-        - legacy
         - p2p
+        - legacy
         - mixed
-        default: legacy
+        default: p2p
       byron_cluster:
         type: boolean
         default: false

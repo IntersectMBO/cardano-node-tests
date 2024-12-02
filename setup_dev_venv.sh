@@ -2,7 +2,7 @@
 #
 # Install cardano_node_tests and its dependencies into a virtual environment.
 
-PYTHON_VERSION="3.10"
+PYTHON_VERSION="3.11"
 
 abort_install=0
 

@@ -5,7 +5,6 @@ import fractions
 import logging
 import pathlib as pl
 import random
-import typing as tp
 
 import allure
 import pytest
@@ -114,9 +113,9 @@ def _get_rational_str(value: float) -> str:
 
 
 def _check_w_denominator(
-    update_proposal: clusterlib_utils.UpdateProposal, pparam: tp.Union[float, dict]
+    update_proposal: clusterlib_utils.UpdateProposal, pparam: float | dict
 ) -> bool:
-    exp_val: tp.Union[float, dict, str] = pparam
+    exp_val: float | dict | str = pparam
     if isinstance(pparam, dict):
         exp_val = f"{pparam['numerator']}/{pparam['denominator']}"
     return bool(update_proposal.value == exp_val)
@@ -201,13 +200,13 @@ class TestPParamUpdate:
     """Tests for protocol parameters update."""
 
     @pytest.fixture
-    def pool_user_lg(
+    def pool_user_lgp(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance: governance_utils.GovClusterT,
+        cluster_lock_governance_plutus: governance_utils.GovClusterT,
     ) -> clusterlib.PoolUser:
         """Create a pool user for "lock governance"."""
-        cluster, __ = cluster_lock_governance
+        cluster, __ = cluster_lock_governance_plutus
         key = helpers.get_current_line_str()
         name_template = common.get_test_id(cluster)
         return conway_common.get_registered_pool_user(
@@ -223,8 +222,10 @@ class TestPParamUpdate:
     @pytest.mark.dbsync
     def test_pparam_update(  # noqa: C901
         self,
-        cluster_lock_governance: governance_utils.GovClusterT,
-        pool_user_lg: clusterlib.PoolUser,
+        # The test is changing protocol parameters, so it is not safe to run Plutus tests at that
+        # time. It could e.g. lead to `PPViewHashesDontMatch` errors on transaction submits.
+        cluster_lock_governance_plutus: governance_utils.GovClusterT,
+        pool_user_lgp: clusterlib.PoolUser,
     ):
         """Test enactment of protocol parameter update.
 
@@ -247,7 +248,7 @@ class TestPParamUpdate:
           and enacted actions
         """
         # pylint: disable=too-many-locals,too-many-statements
-        cluster, governance_data = cluster_lock_governance
+        cluster, governance_data = cluster_lock_governance_plutus
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
         db_errors_final = []
@@ -257,14 +258,14 @@ class TestPParamUpdate:
             pytest.skip("The test doesn't work in bootstrap period without CC.")
 
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
-            pool_user_lg.stake.address
+            pool_user_lgp.stake.address
         ).reward_account_balance
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as Yes, then
         # missing votes would approve the action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparams = cluster.g_query.get_protocol_params()
         drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["ppGovGroup"]
         spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["ppSecurityGroup"]
         is_drep_total_below_threshold = (
@@ -590,7 +591,7 @@ class TestPParamUpdate:
         ]
 
         # Hand-picked parameters and values that can stay changed even for other tests
-        cur_pparams = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparams = cluster.g_query.get_protocol_params()
         fin_update_proposals = [
             # From network group
             clusterlib_utils.UpdateProposal(
@@ -649,7 +650,7 @@ class TestPParamUpdate:
 
         def _propose_pparams_update(
             name_template: str,
-            proposals: tp.List[clusterlib_utils.UpdateProposal],
+            proposals: list[clusterlib_utils.UpdateProposal],
         ) -> conway_common.PParamPropRec:
             anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
             anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
@@ -661,7 +662,7 @@ class TestPParamUpdate:
                 name_template=name_template,
                 anchor_url=anchor_url,
                 anchor_data_hash=anchor_data_hash,
-                pool_user=pool_user_lg,
+                pool_user=pool_user_lgp,
                 proposals=proposals,
                 prev_action_rec=prev_action_rec,
             )
@@ -669,7 +670,7 @@ class TestPParamUpdate:
         proposed_pparams_errors = []
 
         def _check_proposed_pparams(
-            update_proposals: tp.List[clusterlib_utils.UpdateProposal], protocol_params: dict
+            update_proposals: list[clusterlib_utils.UpdateProposal], protocol_params: dict
         ) -> None:
             try:
                 clusterlib_utils.check_updated_params(
@@ -708,7 +709,7 @@ class TestPParamUpdate:
                     cluster_obj=cluster,
                     governance_data=governance_data,
                     name_template=f"{temp_template}_net_nodrep_bootstrap",
-                    payment_addr=pool_user_lg.payment,
+                    payment_addr=pool_user_lgp.payment,
                     action_txid=net_nodrep_prop_rec.action_txid,
                     action_ix=net_nodrep_prop_rec.action_ix,
                     approve_cc=True,
@@ -724,7 +725,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_net_nodrep",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=net_nodrep_prop_rec.action_txid,
                 action_ix=net_nodrep_prop_rec.action_ix,
                 approve_cc=True,
@@ -756,7 +757,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_net_nocc",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=net_nocc_prop_rec.action_txid,
                 action_ix=net_nocc_prop_rec.action_ix,
                 approve_cc=False,
@@ -780,7 +781,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_eco_nodrep",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=eco_nodrep_prop_rec.action_txid,
                 action_ix=eco_nodrep_prop_rec.action_ix,
                 approve_cc=True,
@@ -810,7 +811,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_eco_nocc",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=eco_nocc_prop_rec.action_txid,
                 action_ix=eco_nocc_prop_rec.action_ix,
                 approve_cc=False,
@@ -840,7 +841,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_fin_with_spos",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=tech_nodrep_prop_rec.action_txid,
                 action_ix=tech_nodrep_prop_rec.action_ix,
                 approve_cc=False,
@@ -860,7 +861,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_tech_nodrep",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=tech_nodrep_prop_rec.action_txid,
                 action_ix=tech_nodrep_prop_rec.action_ix,
                 approve_cc=True,
@@ -886,7 +887,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_tech_nocc",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=tech_nocc_prop_rec.action_txid,
                 action_ix=tech_nocc_prop_rec.action_ix,
                 approve_cc=None,
@@ -912,7 +913,7 @@ class TestPParamUpdate:
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_sec_nonespo",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_lgp.payment,
             action_txid=sec_nonespo_prop_rec.action_txid,
             action_ix=sec_nonespo_prop_rec.action_ix,
             approve_cc=True,
@@ -929,7 +930,7 @@ class TestPParamUpdate:
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_sec_nospo",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_lgp.payment,
             action_txid=sec_nospo_prop_rec.action_txid,
             action_ix=sec_nospo_prop_rec.action_ix,
             approve_cc=True,
@@ -952,7 +953,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_gov_nodrep",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=gov_nodrep_prop_rec.action_txid,
                 action_ix=gov_nodrep_prop_rec.action_ix,
                 approve_cc=True,
@@ -982,7 +983,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_gov_nocc",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=gov_nocc_prop_rec.action_txid,
                 action_ix=gov_nocc_prop_rec.action_ix,
                 approve_cc=False,
@@ -1015,7 +1016,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_mix_nodrep",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=mix_nodrep_prop_rec.action_txid,
                 action_ix=mix_nodrep_prop_rec.action_ix,
                 approve_cc=True,
@@ -1058,7 +1059,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_mix_nocc",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=mix_nocc_prop_rec.action_txid,
                 action_ix=mix_nocc_prop_rec.action_ix,
                 approve_cc=False,
@@ -1071,7 +1072,7 @@ class TestPParamUpdate:
         # Vote on the "final" action that will be enacted
         reqc.cip037.start(url=helpers.get_vcs_link())
         fin_prop_rec = _propose_pparams_update(
-            name_template=f"{temp_template}_fin_no", proposals=fin_update_proposals
+            name_template=f"{temp_template}_fin", proposals=fin_update_proposals
         )
         _check_proposed_pparams(
             update_proposals=fin_prop_rec.proposals,
@@ -1083,7 +1084,7 @@ class TestPParamUpdate:
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_fin_no",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_lgp.payment,
             action_txid=fin_prop_rec.action_txid,
             action_ix=fin_prop_rec.action_ix,
             approve_cc=False,
@@ -1098,7 +1099,7 @@ class TestPParamUpdate:
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_fin_yes",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_lgp.payment,
             action_txid=fin_prop_rec.action_txid,
             action_ix=fin_prop_rec.action_ix,
             approve_cc=True,
@@ -1143,7 +1144,7 @@ class TestPParamUpdate:
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_mix_approved",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_lgp.payment,
             action_txid=mix_approved_prop_rec.action_txid,
             action_ix=mix_approved_prop_rec.action_ix,
             approve_cc=True,
@@ -1179,7 +1180,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_after_ratification",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=fin_prop_rec.action_txid,
                 action_ix=fin_prop_rec.action_ix,
                 approve_cc=False,
@@ -1245,7 +1246,9 @@ class TestPParamUpdate:
         # db-sync check
         try:
             reqc.db024.start(url=helpers.get_vcs_link())
-            dbsync_utils.check_conway_param_update_enactment(enact_gov_state, enact_epoch)
+            dbsync_utils.check_conway_param_update_enactment(
+                pparams=enact_gov_state["currentPParams"], epoch_no=enact_epoch
+            )
             reqc.db024.success()
         except AssertionError as exc:
             db_errors_final.append(f"db-sync params enactment error: {exc}")
@@ -1260,7 +1263,7 @@ class TestPParamUpdate:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_enacted",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_lgp.payment,
                 action_txid=fin_prop_rec.action_txid,
                 action_ix=fin_prop_rec.action_ix,
                 approve_cc=False,
@@ -1274,7 +1277,7 @@ class TestPParamUpdate:
         # (all the remaining pparam proposals in our case).
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
         total_deposit_return = cluster.g_query.get_stake_addr_info(
-            pool_user_lg.stake.address
+            pool_user_lgp.stake.address
         ).reward_account_balance
         # Check total deposit return accounting for both expired and enacted actions
         assert (
@@ -1290,7 +1293,7 @@ class TestPParamUpdate:
 
         try:
             dbsync_utils.check_proposal_refunds(
-                stake_address=pool_user_lg.stake.address, refunds_num=submitted_proposal_count
+                stake_address=pool_user_lgp.stake.address, refunds_num=submitted_proposal_count
             )
         except AssertionError as exc:
             db_errors_final.append(f"db-sync proposal refunds error: {exc}")
@@ -1353,7 +1356,7 @@ class TestPParamData:
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
 
-        cur_pparam = cluster.g_conway_governance.query.gov_state()["currentPParams"]
+        cur_pparam = cluster.g_query.get_protocol_params()
         cur_pparam_keys = set(cur_pparam.keys())
         known_pparam_keys = set().union(
             NETWORK_GROUP_PPARAMS,
@@ -1399,7 +1402,7 @@ class TestLegacyProposals:
         clusterlib_utils.fund_from_faucet(
             addr,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         return addr

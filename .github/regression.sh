@@ -1,7 +1,7 @@
 #! /usr/bin/env -S nix develop --accept-flake-config .#base -c bash
-# shellcheck shell=bash
+# shellcheck shell=bash disable=SC2317
 
-set -xeuo pipefail
+set -euo pipefail
 
 nix --version
 df -h .
@@ -26,50 +26,8 @@ mkdir -p "$WORKDIR"
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
-# setup dbsync (disabled by default)
-case "${DBSYNC_REV:-""}" in
-  "" )
-    ;;
-  "none" )
-    unset DBSYNC_REV
-    ;;
-  * )
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_dbsync.sh
-    df -h .
-    ;;
-esac
-
-# Setup plutus-apps (disabled by default).
-# The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
-# Plutus tests that are testing script context.
-# TODO: The `create-script-context` tool is broken for a very long time, hence disabled.
-# See https://github.com/IntersectMBO/plutus-apps/issues/1107
-case "${PLUTUS_APPS_REV:="none"}" in
-  "none" )
-    unset PLUTUS_APPS_REV
-    ;;
-  * )
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_plutus_apps.sh
-    ;;
-esac
-
-# setup cardano-cli (use the built-in version by default)
-case "${CARDANO_CLI_REV:-""}" in
-  "" )
-    ;;
-  "none" )
-    unset CARDANO_CLI_REV
-    ;;
-  * )
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_cardano_cli.sh
-    ;;
-esac
-
-if [ "${CI_TOPOLOGY:-""}" = "p2p" ]; then
-  export ENABLE_P2P=1
+if [ "${CI_TOPOLOGY:-""}" = "legacy" ]; then
+  export ENABLE_LEGACY=1
 elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
   export MIXED_P2P=1
   export NUM_POOLS="${NUM_POOLS:-4}"
@@ -79,7 +37,7 @@ export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 rm -rf "${ARTIFACTS_DIR:?}"
 
 export SCHEDULING_LOG=scheduling.log
-true > "$SCHEDULING_LOG"
+: > "$SCHEDULING_LOG"
 
 MARKEXPR="${MARKEXPR:-""}"
 if [ "$MARKEXPR" = "all" ]; then
@@ -127,23 +85,105 @@ if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   export MAKE_TARGET="${MAKE_TARGET:-"testnets"}"
 fi
 
-# function to update cardano-node to specified branch and/or revision, or to the latest available
-# shellcheck disable=SC1090,SC1091
-. .github/nix_override_cardano_node.sh
+echo "### Dependencies setup ###"
+
+# setup dbsync (disabled by default)
+case "${DBSYNC_REV:-""}" in
+  "" )
+    ;;
+  "none" )
+    unset DBSYNC_REV
+    ;;
+  * )
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_dbsync.sh
+    ;;
+esac
+
+# Setup plutus-apps (disabled by default).
+# The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
+# Plutus tests that are testing script context.
+# TODO: The `create-script-context` tool is broken for a very long time, hence disabled.
+# See https://github.com/IntersectMBO/plutus-apps/issues/1107
+case "${PLUTUS_APPS_REV:="none"}" in
+  "none" )
+    unset PLUTUS_APPS_REV
+    ;;
+  * )
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_plutus_apps.sh
+    ;;
+esac
+
+# setup cardano-cli (use the built-in version by default)
+case "${CARDANO_CLI_REV:-""}" in
+  "" )
+    ;;
+  "none" )
+    unset CARDANO_CLI_REV
+    ;;
+  * )
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_cardano_cli.sh
+    ;;
+esac
+
+echo "### Cleanup setup ###"
 
 _cleanup() {
   # stop all running cluster instances
   stop_instances "$WORKDIR"
 
   # stop postgres if running
-  stop_postgres || true
+  if command -v stop_postgres >/dev/null 2>&1; then
+    stop_postgres || :
+  fi
+}
+
+_cleanup_testnet_on_interrupt() {
+  [ -z "${BOOTSTRAP_DIR:-""}" ] && return
+
+  _PYTEST_CURRENT="$(find "$WORKDIR" -type l -name pytest-current)"
+  [ -z "$_PYTEST_CURRENT" ] && return
+  _PYTEST_CURRENT="$(readlink -m "$_PYTEST_CURRENT")"
+  export _PYTEST_CURRENT
+
+  echo "::endgroup::" # end group for the group that was interrupted
+
+  echo "::group::Testnet cleanup"
+  printf "start: %(%H:%M:%S)T\n" -1
+
+  # shellcheck disable=SC2016
+  nix develop --accept-flake-config .#venv --command bash -c '
+    . .github/setup_venv.sh
+    export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
+    export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
+    cleanup_dir="${_PYTEST_CURRENT}/../cleanup-${_PYTEST_CURRENT##*/}-script"
+    mkdir "$cleanup_dir"
+    cd "$cleanup_dir"
+    testnet-cleanup -a "$_PYTEST_CURRENT"
+  '
+
+  echo "::endgroup::"
 }
 
 # cleanup on Ctrl+C
-trap 'set +e; _cleanup; exit 130' SIGINT
+_interrupted() {
+  # Do testnet cleanup only on interrupted testrun. When not interrupted,
+  # cleanup is done as part of a testrun.
+  _cleanup_testnet_on_interrupt
+  _cleanup
+}
+trap 'set +e; _interrupted; exit 130' SIGINT
+
+echo "::endgroup::"  # end group for "Script setup"
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
+
+# function to update cardano-node to specified branch and/or revision, or to the latest available
+# shellcheck disable=SC1090,SC1091
+. .github/nix_override_cardano_node.sh
 
 # run tests and generate report
 set +e
@@ -151,29 +191,30 @@ set +e
 nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
-  printf "finish: %(%H:%M:%S)T\n" -1
-  df -h .
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
-  . .github/setup_venv.sh
+  printf "start: %(%H:%M:%S)T\n" -1
+  . .github/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup"
 
-  echo "::group::Pytest run"
+  echo "::group::🧪 Testrun"
+  printf "start: %(%H:%M:%S)T\n" -1
+  df -h .
   export PATH="${PWD}/.bin":"$WORKDIR/cardano-cli/cardano-cli-build/bin":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   make "${MAKE_TARGET:-"tests"}"
   retval="$?"
-  echo "::endgroup::"
+  df -h .
+  echo "::endgroup::"  # end group for "Testrun"
 
-  echo "::group::Collect artifacts"
+  echo "::group::Collect artifacts & teardown cluster"
+  printf "start: %(%H:%M:%S)T\n" -1
   ./.github/cli_coverage.sh
   ./.github/reqs_coverage.sh
   exit "$retval"
 '
 retval="$?"
-
-df -h .
 
 # move reports to root dir
 mv .reports/testrun-report.* ./
@@ -185,13 +226,10 @@ mv .reports/testrun-report.* ./
 # Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
 # After any key is pressed, resume this script and stop all running cluster instances.
 if [ "${KEEP_CLUSTERS_RUNNING:-""}" = 1 ]; then
-  sets="$-"
-  set +x
   echo
   echo "KEEP_CLUSTERS_RUNNING is set, leaving clusters running until any key is pressed."
   echo "Press any key to continue..."
   read -r
-  set -"$sets"
 fi
 
 _cleanup
@@ -212,7 +250,5 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   echo "Dir content:"
   ls -1a
 fi
-
-echo "::endgroup::" # end group for "Collect artifacts"
 
 exit "$retval"

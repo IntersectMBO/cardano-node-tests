@@ -83,8 +83,20 @@ cli_860 = blockers.GH(
 cli_904 = blockers.GH(
     issue=904,
     repo="IntersectMBO/cardano-cli",
-    fixed_in="9.5.0.0",  # Fixed in some release after 9.4.1.0
+    fixed_in="10.1.2.1",  # Fixed in some release after 10.1.2.0
     message="Negative pparam proposal values overflow to positive.",
+)
+cli_942 = blockers.GH(
+    issue=942,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="10.0.0.1",  # Fixed in some release after 10.0.0.0
+    message="build command doesn't balance key deposit.",
+)
+cli_953 = blockers.GH(
+    issue=953,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="10.1.2.0",  # Fixed in some release after 10.1.1.0
+    message="query tip is not a top level command.",
 )
 
 consensus_973 = blockers.GH(
@@ -155,6 +167,12 @@ ledger_4349 = blockers.GH(
     repo="IntersectMBO/cardano-ledger",
     fixed_in="8.12.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="Inconsistent listing of DRep expiry.",
+)
+ledger_4772 = blockers.GH(
+    issue=4772,
+    repo="IntersectMBO/cardano-ledger",
+    fixed_in="10.1.3.0",  # Unknown yet, will be fixed/changed sometime in the future
+    message="Delegation to DRep2 removed after retirement of DRep1.",
 )
 
 node_3788 = blockers.GH(

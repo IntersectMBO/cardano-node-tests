@@ -36,7 +36,7 @@ if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
 
 def _get_manager_fixture_line_str() -> str:
     """Get `filename#lineno` of current fixture, called from contextmanager."""
-    # get past `cache_fixture` and `contextmanager` to the fixture
+    # Get past `cache_fixture` and `contextmanager` to the fixture
     calling_frame = inspect.currentframe().f_back.f_back.f_back  # type: ignore
     assert calling_frame
     return helpers.get_line_str_from_frame(frame=calling_frame)
@@ -173,7 +173,7 @@ class ClusterManager:
         """Stop all cluster instances."""
         self.log("called `stop_all_clusters`")
 
-        # don't stop cluster if it was started outside of test framework
+        # Don't stop cluster if it was started outside of test framework
         if configuration.DEV_CLUSTER_RUNNING:
             LOGGER.warning("Ignoring request to stop clusters as 'DEV_CLUSTER_RUNNING' is set.")
             return
@@ -261,26 +261,26 @@ class ClusterManager:
             if not list(self.instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*")):
                 logfiles.clean_ignore_rules(ignore_file_id=self.worker_id)
 
-            # remove resource locking files created by the worker, ignore resources that have mark
+            # Remove resource locking files created by the worker, ignore resources that have mark
             resource_locking_files = list(
                 self.instance_dir.glob(f"{common.RESOURCE_LOCKED_GLOB}_@@*@@_{self.worker_id}")
             )
             for f in resource_locking_files:
                 f.unlink()
 
-            # remove "resource in use" files created by the worker, ignore resources that have mark
+            # Remove "resource in use" files created by the worker, ignore resources that have mark
             resource_in_use_files = list(
                 self.instance_dir.glob(f"{common.RESOURCE_IN_USE_GLOB}_@@*@@_{self.worker_id}")
             )
             for f in resource_in_use_files:
                 f.unlink()
 
-            # remove file that indicates that a test is running on the worker
+            # Remove file that indicates that a test is running on the worker
             next(
                 iter(self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*_{self.worker_id}"))
             ).unlink(missing_ok=True)
 
-            # log names of tests that keep running on the cluster instance
+            # Log names of tests that keep running on the cluster instance
             tnames = [
                 tf.read_text().strip()
                 for tf in self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*")
@@ -290,13 +290,13 @@ class ClusterManager:
     def _get_resources_by_glob(
         self,
         glob: str,
-        from_set: tp.Optional[tp.Iterable[str]] = None,
-    ) -> tp.List[str]:
+        from_set: tp.Iterable[str] | None = None,
+    ) -> list[str]:
         if from_set is not None and isinstance(from_set, str):
             msg = "`from_set` cannot be a string"
             raise AssertionError(msg)
 
-        resources_locked = set(common._get_resources_from_paths(paths=self.instance_dir.glob(glob)))
+        resources_locked = set(common.get_resources_from_path(paths=self.instance_dir.glob(glob)))
 
         if from_set is not None:
             return list(resources_locked.intersection(from_set))
@@ -305,9 +305,9 @@ class ClusterManager:
 
     def get_locked_resources(
         self,
-        from_set: tp.Optional[tp.Iterable[str]] = None,
-        worker_id: tp.Optional[str] = None,
-    ) -> tp.List[str]:
+        from_set: tp.Iterable[str] | None = None,
+        worker_id: str | None = None,
+    ) -> list[str]:
         """Get resources locked by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
@@ -317,9 +317,9 @@ class ClusterManager:
 
     def get_used_resources(
         self,
-        from_set: tp.Optional[tp.Iterable[str]] = None,
-        worker_id: tp.Optional[str] = None,
-    ) -> tp.List[str]:
+        from_set: tp.Iterable[str] | None = None,
+        worker_id: str | None = None,
+    ) -> list[str]:
         """Get resources used by worker.
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
@@ -339,14 +339,14 @@ class ClusterManager:
     def _reload_cluster_obj(self, state_dir: pl.Path) -> None:
         """Reload cluster instance data if necessary."""
         addrs_data_checksum = helpers.checksum(state_dir / cluster_nodes.ADDRS_DATA)
-        # the checksum will not match when cluster was respun
+        # The checksum will not match when cluster was respun
         if addrs_data_checksum == self.cache.last_checksum:
             return
 
-        # save CLI coverage collected by the old `cluster_obj` instance
+        # Save CLI coverage collected by the old `cluster_obj` instance
         self._save_cli_coverage()
 
-        # replace the old `cluster_obj` instance and reload data
+        # Replace the old `cluster_obj` instance and reload data
         self.cache.cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
         self.cache.test_data = {}
         self.cache.addrs_data = cluster_nodes.load_addrs_data()
@@ -367,7 +367,7 @@ class ClusterManager:
 
         **IMPORTANT**: This method must be called before any other method of this class.
         """
-        # get number of initialized cluster instance once it is possible to start a test
+        # Get number of initialized cluster instance once it is possible to start a test
         instance_num = cluster_getter.ClusterGetter(
             worker_id=self.worker_id,
             pytest_config=self.pytest_config,
@@ -383,11 +383,11 @@ class ClusterManager:
         )
         self._cluster_instance_num = instance_num
 
-        # reload cluster instance data if necessary
+        # Reload cluster instance data if necessary
         state_dir = cluster_nodes.get_cluster_env().state_dir
         self._reload_cluster_obj(state_dir=state_dir)
 
-        # initialize `cardano_clusterlib.ClusterLib` object
+        # Initialize `cardano_clusterlib.ClusterLib` object
         cluster_obj = self.cache.cluster_obj
         if not cluster_obj:
             msg = "`cluster_obj` not available, that cannot happen"

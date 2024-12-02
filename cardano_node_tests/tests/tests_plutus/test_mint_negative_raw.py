@@ -3,7 +3,6 @@
 import dataclasses
 import datetime
 import logging
-import typing as tp
 
 import allure
 import hypothesis
@@ -31,7 +30,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -39,11 +38,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -61,12 +60,10 @@ class TestMintingNegative:
     def fund_execution_units_above_limit(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pparams: dict,
         request: SubRequest,
-    ) -> tp.Tuple[
-        tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], plutus_common.PlutusOp
-    ]:
+    ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], plutus_common.PlutusOp]:
         plutus_version = request.param
         temp_template = common.get_test_id(cluster)
 
@@ -77,7 +74,7 @@ class TestMintingNegative:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
 
         minting_cost = plutus_common.compute_cost(
@@ -109,7 +106,7 @@ class TestMintingNegative:
     def test_witness_redeemer_missing_signer(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script with invalid signers.
@@ -206,7 +203,7 @@ class TestMintingNegative:
     def test_low_budget(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token when budget is too low.
@@ -260,7 +257,7 @@ class TestMintingNegative:
                 txouts=mint_txouts,
                 script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
-                # set execution units too low - to half of the expected values
+                # Set execution units too low - to half of the expected values
                 execution_units=(
                     plutus_v_record.execution_cost.per_time // 2,
                     plutus_v_record.execution_cost.per_space // 2,
@@ -304,7 +301,7 @@ class TestMintingNegative:
     def test_low_fee(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token when fee is set too low.
@@ -370,7 +367,7 @@ class TestMintingNegative:
 
         fee_subtract = 300_000
         txouts_step2 = [
-            # add subtracted fee to the transferred Lovelace amount so the Tx remains balanced
+            # Add subtracted fee to the transferred Lovelace amount so the Tx remains balanced
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount + fee_subtract),
             *mint_txouts,
         ]
@@ -406,9 +403,9 @@ class TestMintingNegative:
     def test_execution_units_above_limit(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        fund_execution_units_above_limit: tp.Tuple[
-            tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], plutus_common.PlutusOp
+        payment_addrs: list[clusterlib.AddressRecord],
+        fund_execution_units_above_limit: tuple[
+            list[clusterlib.UTXOData], list[clusterlib.UTXOData], plutus_common.PlutusOp
         ],
         pparams: dict,
         data: st.DataObject,
@@ -461,7 +458,7 @@ class TestMintingNegative:
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
 
         policyid = cluster.g_transaction.get_policyid(plutus_op.script_file)
@@ -524,7 +521,7 @@ class TestMintingNegative:
     def test_time_range_missing_tx_validity(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a time constraints Plutus script and no TX validity.
@@ -630,7 +627,7 @@ class TestNegativeCollateral:
     def test_minting_with_invalid_collaterals(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script with invalid collaterals.
@@ -719,7 +716,7 @@ class TestNegativeCollateral:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with an invalid collateral
+        # It should NOT be possible to mint with an invalid collateral
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         assert "NoCollateralInputs" in str(excinfo.value)
@@ -731,7 +728,7 @@ class TestNegativeCollateral:
     def test_minting_with_insufficient_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script with insufficient collateral.
@@ -755,7 +752,7 @@ class TestNegativeCollateral:
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
-        # increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
+        # Increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
         execution_cost = dataclasses.replace(plutus_v_record.execution_cost, fixed_cost=2_000_000)
 
         minting_cost = plutus_common.compute_cost(
@@ -823,7 +820,7 @@ class TestNegativeCollateral:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with a collateral with insufficient funds
+        # It should NOT be possible to mint with a collateral with insufficient funds
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         assert "InsufficientCollateral" in str(excinfo.value)

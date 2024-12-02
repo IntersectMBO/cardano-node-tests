@@ -27,7 +27,7 @@ STOP_SCRIPT = "supervisord_stop"
 class InstanceFiles:
     start_script: pl.Path
     stop_script: pl.Path
-    start_script_args: tp.List[str]
+    start_script_args: list[str]
     dir: pl.Path
 
 
@@ -68,7 +68,7 @@ class InstancePorts:
     pool3: int
     ekg_pool3: int
     prometheus_pool3: int
-    node_ports: tp.Tuple[NodePorts, ...]
+    node_ports: tuple[NodePorts, ...]
 
 
 class ScriptsTypes:
@@ -112,7 +112,7 @@ class ScriptsTypes:
 class LocalScripts(ScriptsTypes):
     """Scripts for starting local cluster."""
 
-    _has_dns_rebinding_protection: tp.ClassVar[tp.Optional[bool]] = None
+    _has_dns_rebinding_protection: tp.ClassVar[bool | None] = None
 
     def __init__(self, num_pools: int = -1) -> None:
         super().__init__()
@@ -190,27 +190,27 @@ class LocalScripts(ScriptsTypes):
             metrics_submit_api=last_port - 1,
             submit_api=last_port - 2,
             supervisor=12001 + instance_num,
-            # relay1
+            # Relay1
             relay1=0,
             ekg_relay1=0,
             prometheus_relay1=0,
-            # bft1
+            # Bft1
             bft1=base,
             ekg_bft1=base + 1,
             prometheus_bft1=base + 2,
-            # pool1
+            # Pool1
             pool1=base + 5,
             ekg_pool1=base + 6,
             prometheus_pool1=base + 7,
-            # pool2
+            # Pool2
             pool2=base + 10,
             ekg_pool2=base + 11,
             prometheus_pool2=base + 12,
-            # pool3
+            # Pool3
             pool3=base + 15,
             ekg_pool3=base + 16,
             prometheus_pool3=base + 17,
-            # all nodes
+            # All nodes
             node_ports=node_ports,
         )
         return ports
@@ -250,23 +250,23 @@ class LocalScripts(ScriptsTypes):
     ) -> str:
         """Replace instance variables in given content."""
         content = infile.read_text()
-        # replace cluster instance number
+        # Replace cluster instance number
         new_content = content.replace("%%INSTANCE_NUM%%", str(instance_num))
-        # replace number of pools
+        # Replace number of pools
         new_content = new_content.replace("%%NUM_POOLS%%", str(self.num_pools))
-        # replace node port number strings
+        # Replace node port number strings
         new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base))
-        # replace number of reserved ports per node
+        # Replace number of reserved ports per node
         new_content = new_content.replace("%%PORTS_PER_NODE%%", str(ports_per_node))
-        # reconfigure supervisord port
+        # Reconfigure supervisord port
         new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
-        # reconfigure submit-api port
+        # Reconfigure submit-api port
         new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
-        # reconfigure submit-api metrics port
+        # Reconfigure submit-api metrics port
         new_content = new_content.replace(
             "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
         )
-        # reconfigure webserver port
+        # Reconfigure webserver port
         new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
         return new_content
 
@@ -283,7 +283,7 @@ class LocalScripts(ScriptsTypes):
         topology = {"Producers": producers}
         return topology
 
-    def _gen_p2p_topology(self, addr: str, ports: tp.List[int], fixed_ports: tp.List[int]) -> dict:
+    def _gen_p2p_topology(self, addr: str, ports: list[int], fixed_ports: list[int]) -> dict:
         """Generate p2p topology for given ports."""
         # Select fixed ports and several randomly selected ports
         sample_ports = random.sample(ports, 3) if len(ports) > 3 else ports
@@ -359,7 +359,7 @@ class LocalScripts(ScriptsTypes):
 
             # P2P topology
 
-            # bft1 and first three pools
+            # Bft1 and first three pools
             fixed_ports = all_except[:4]
 
             p2p_topology = self._gen_p2p_topology(
@@ -376,11 +376,11 @@ class LocalScripts(ScriptsTypes):
         ports_per_node = instance_ports.pool1 - instance_ports.bft1
         addr = self._preselect_addr(instance_num=instance_num)
 
-        # reconfigure cluster instance files
+        # Reconfigure cluster instance files
         for infile in indir.glob("*"):
             fname = infile.name
 
-            # skip template files
+            # Skip template files
             if fname.startswith("template-"):
                 continue
 
@@ -393,11 +393,11 @@ class LocalScripts(ScriptsTypes):
             )
             outfile.write_text(f"{dest_content}\n")
 
-            # make `*.sh` files and files without extension executable
+            # Make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
                 outfile.chmod(0o755)
 
-        # generate config and topology files from templates
+        # Generate config and topology files from templates
         for node_rec in instance_ports.node_ports:
             if node_rec.num != 0:
                 supervisor_script = destdir / f"cardano-node-pool{node_rec.num}"
@@ -510,7 +510,7 @@ class LocalScripts(ScriptsTypes):
 class TestnetScripts(ScriptsTypes):
     """Scripts for starting a node on testnet."""
 
-    TESTNET_GLOBS: tp.ClassVar[tp.Tuple[str, ...]] = (
+    TESTNET_GLOBS: tp.ClassVar[tuple[str, ...]] = (
         "config*.json",
         "genesis-*.json",
         "topology-*.json",
@@ -589,7 +589,7 @@ class TestnetScripts(ScriptsTypes):
         )
 
     def _reconfigure_testnet(
-        self, indir: pl.Path, destdir: pl.Path, instance_num: int, globs: tp.List[str]
+        self, indir: pl.Path, destdir: pl.Path, instance_num: int, globs: list[str]
     ) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
@@ -602,21 +602,21 @@ class TestnetScripts(ScriptsTypes):
             with open(infile, encoding="utf-8") as in_fp:
                 content = in_fp.read()
 
-            # replace cluster instance number
+            # Replace cluster instance number
             new_content = content.replace("%%INSTANCE_NUM%%", str(instance_num))
-            # replace node port number strings
+            # Replace node port number strings
             new_content = new_content.replace("%%NODE_PORT_RELAY1%%", str(instance_ports.relay1))
-            # reconfigure supervisord port
+            # Reconfigure supervisord port
             new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
-            # reconfigure submit-api port
+            # Reconfigure submit-api port
             new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
-            # reconfigure submit-api metrics port
+            # Reconfigure submit-api metrics port
             new_content = new_content.replace(
                 "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
             )
-            # reconfigure EKG metrics port
+            # Reconfigure EKG metrics port
             new_content = new_content.replace("%%EKG_PORT_RELAY1%%", str(instance_ports.ekg_relay1))
-            # reconfigure prometheus metrics port
+            # Reconfigure prometheus metrics port
             new_content = new_content.replace(
                 "%%PROMETHEUS_PORT_RELAY1%%", str(instance_ports.prometheus_relay1)
             )
@@ -624,7 +624,7 @@ class TestnetScripts(ScriptsTypes):
             with open(outfile, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
 
-            # make `*.sh` files and files without extension executable
+            # Make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
                 outfile.chmod(0o755)
 
@@ -639,7 +639,7 @@ class TestnetScripts(ScriptsTypes):
         with open(outfile, "w", encoding="utf-8") as out_fp:
             out_fp.write("".join(new_content))
 
-    def _reconfigure_bootstrap(self, indir: pl.Path, destdir: pl.Path, globs: tp.List[str]) -> None:
+    def _reconfigure_bootstrap(self, indir: pl.Path, destdir: pl.Path, globs: list[str]) -> None:
         """Copy and reconfigure config files from bootstrap dir."""
         _infiles = [list(indir.glob(g)) for g in globs]
         infiles = list(itertools.chain.from_iterable(_infiles))

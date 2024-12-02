@@ -4,7 +4,6 @@ import datetime
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import hypothesis
@@ -30,8 +29,8 @@ pytestmark = [
     pytest.mark.plutus,
 ]
 
-FundTupleT = tp.Tuple[
-    tp.List[clusterlib.UTXOData], tp.List[clusterlib.UTXOData], tp.List[clusterlib.AddressRecord]
+FundTupleT = tuple[
+    list[clusterlib.UTXOData], list[clusterlib.UTXOData], list[clusterlib.AddressRecord]
 ]
 
 
@@ -39,7 +38,7 @@ FundTupleT = tp.Tuple[
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -47,11 +46,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -65,7 +64,7 @@ class TestBuildMintingNegative:
     def fund_issuer_long_asset_name(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ) -> FundTupleT:
         """Fund the token issuer and create the collateral UTxO."""
         temp_template = common.get_test_id(cluster)
@@ -101,7 +100,7 @@ class TestBuildMintingNegative:
     def test_witness_redeemer_missing_signer(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
         submit_method: str,
     ):
@@ -200,7 +199,7 @@ class TestBuildMintingNegative:
     def test_redeemer_with_simple_minting_script(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test minting a token passing a redeemer for a simple minting script.
 
@@ -380,7 +379,7 @@ class TestBuildMintingNegative:
     def test_time_range_missing_tx_validity(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a time constraints Plutus script and no TX validity.

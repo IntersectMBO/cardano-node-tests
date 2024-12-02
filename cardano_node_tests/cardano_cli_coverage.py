@@ -92,7 +92,7 @@ def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
             dict_a[key] = sorted(new_list)
         elif key in dict_a and isinstance(value, addable) and isinstance(dict_a[key], addable):
             dict_a[key] += value
-        # skipped arguments and commands are not in the available commands dict
+        # Skipped arguments and commands are not in the available commands dict
         elif key not in dict_a:
             continue
         elif not isinstance(value, dict):
@@ -111,7 +111,7 @@ def cli(cli_args: tp.Iterable[str]) -> str:
     return stderr.decode()
 
 
-def parse_cmd_output(output: str) -> tp.List[str]:
+def parse_cmd_output(output: str) -> list[str]:
     """Parse `cardano-cli` command output, return sub-commands and options names."""
     section_start = False
     cli_args = []
@@ -120,17 +120,17 @@ def parse_cmd_output(output: str) -> tp.List[str]:
             section_start = True
             continue
         if section_start:
-            # skip line with wrapped description from previous command
+            # Skip line with wrapped description from previous command
             if line.startswith("    "):
                 continue
-            # skip line with subsection description
+            # Skip line with subsection description
             if not line.startswith(" "):
                 continue
             line_s = line.strip()
             if not line_s:
                 continue
             item = line_s.split()[0]
-            # in case the item looks like "-h,--help", take only the long option
+            # In case the item looks like "-h,--help", take only the long option
             arg = item.split(",")[-1].strip()
             cli_args.append(arg)
 
@@ -165,7 +165,7 @@ def get_log_coverage(log_file: pl.Path) -> dict:
     return coverage_dict
 
 
-def get_coverage(coverage_files: tp.List[pl.Path], available_commands: dict) -> dict:
+def get_coverage(coverage_files: list[pl.Path], available_commands: dict) -> dict:
     """Get coverage info by merging available data."""
     coverage_dict = copy.deepcopy(available_commands)
     for in_coverage in coverage_files:
@@ -186,7 +186,7 @@ def get_coverage(coverage_files: tp.List[pl.Path], available_commands: dict) -> 
 
 def get_report(
     arg_name: str, coverage: dict, uncovered_only: bool = False
-) -> tp.Tuple[dict, int, int]:
+) -> tuple[dict, int, int]:
     """Generate coverage report."""
     uncovered_db: dict = {}
     covered_count = 0

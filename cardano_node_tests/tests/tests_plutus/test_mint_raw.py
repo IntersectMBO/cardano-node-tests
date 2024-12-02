@@ -5,7 +5,6 @@ import datetime
 import logging
 import pathlib as pl
 import shutil
-import typing as tp
 
 import allure
 import pytest
@@ -34,7 +33,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -42,11 +41,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -110,7 +109,7 @@ class TestMinting:
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting two tokens with a single Plutus script.
@@ -192,7 +191,7 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
-            # ttl is optional in this test
+            # Ttl is optional in this test
             invalid_hereafter=cluster.g_query.get_slot_no() + 200,
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(
@@ -225,7 +224,7 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check tx view
+        # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
@@ -257,7 +256,7 @@ class TestMinting:
     def test_witness_redeemer(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         key: str,
         plutus_version: str,
     ):
@@ -343,7 +342,7 @@ class TestMinting:
             fee=minting_cost.fee + mint_raw.FEE_MINT_TXSIZE,
             required_signers=[signing_key_golden],
         )
-        # sign incrementally (just to check that it works)
+        # Sign incrementally (just to check that it works)
         tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
             signing_key_files=[issuer_addr.skey_file],
@@ -369,7 +368,7 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check tx_view
+        # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
@@ -390,7 +389,7 @@ class TestMinting:
     def test_time_range_minting(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a time constraints Plutus script.
@@ -497,7 +496,7 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check tx_view
+        # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
@@ -518,7 +517,7 @@ class TestMinting:
     def test_two_scripts_minting(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting two tokens with two different Plutus scripts.
@@ -543,7 +542,7 @@ class TestMinting:
         script_file1_v2 = plutus_common.MINTING_PLUTUS_V2
         script_file1_v3 = plutus_common.MINTING_PLUTUS_V3
 
-        # this is higher than `plutus_common.MINTING*_COST`, because the script context has changed
+        # This is higher than `plutus_common.MINTING*_COST`, because the script context has changed
         # to include more stuff
         minting_cost1_v1 = plutus_common.ExecutionCost(
             per_time=297_744_405, per_space=1_126_016, fixed_cost=86_439
@@ -593,7 +592,7 @@ class TestMinting:
         )
         txouts_step1 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount + fee_step2_total),
-            # for collaterals
+            # For collaterals
             clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost1.collateral),
             clusterlib.TxOut(address=issuer_addr.address, amount=minting_cost2.collateral),
         ]
@@ -605,7 +604,7 @@ class TestMinting:
             tx_files=tx_files_step1,
             # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
             witness_count_add=2,
-            # don't join 'change' and 'collateral' txouts, we need separate UTxOs
+            # Don't join 'change' and 'collateral' txouts, we need separate UTxOs
             join_txouts=False,
         )
 
@@ -653,7 +652,7 @@ class TestMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token2)
         ]
 
-        # mint the tokens
+        # Mint the tokens
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts1,
@@ -727,10 +726,10 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check tx_view
+        # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
-        # check transactions in db-sync
+        # Check transactions in db-sync
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
@@ -741,7 +740,7 @@ class TestMinting:
     def test_minting_policy_executed_once1(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test that minting policy is executed only once even when the same policy is used twice.
 
@@ -797,7 +796,7 @@ class TestMinting:
             plutus_common.MINTING_TOKENNAME_PLUTUS_V1
         )
 
-        # qacoinA
+        # QacoinA
         asset_name_a_dec = f"qacoinA{clusterlib.get_rand_str(4)}"
         asset_name_a = asset_name_a_dec.encode("utf-8").hex()
         token_a = f"{policyid_tokenname}.{asset_name_a}"
@@ -805,7 +804,7 @@ class TestMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_a)
         ]
 
-        # qacoinB
+        # QacoinB
         asset_name_b_dec = f"qacoinB{clusterlib.get_rand_str(4)}"
         asset_name_b = asset_name_b_dec.encode("utf-8").hex()
         token_b = f"{policyid_tokenname}.{asset_name_b}"
@@ -813,7 +812,7 @@ class TestMinting:
             clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token_b)
         ]
 
-        # mint the tokens
+        # Mint the tokens
         plutus_mint_data = [
             # First redeemer and first script are ignored when there are
             # multiple scripts for the same minting policy. Even though we
@@ -823,7 +822,7 @@ class TestMinting:
             clusterlib.Mint(
                 txouts=mint_txouts_a,
                 script_file=plutus_common.MINTING_TOKENNAME_PLUTUS_V1,
-                # execution units are too low, but it doesn't matter as they get ignored anyway
+                # Execution units are too low, but it doesn't matter as they get ignored anyway
                 execution_units=(1, 1),
                 redeemer_value='"ignored_value"',
             ),
@@ -885,10 +884,10 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check tx_view
+        # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
-        # check transactions in db-sync
+        # Check transactions in db-sync
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
@@ -899,7 +898,7 @@ class TestMinting:
     def test_minting_policy_executed_once2(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test that minting policy is executed only once even when the same policy is used twice.
 
@@ -950,12 +949,12 @@ class TestMinting:
 
         policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TOKENNAME_PLUTUS_V1)
 
-        # qacoinA
+        # QacoinA
         asset_name_a_dec = f"qacoinA{clusterlib.get_rand_str(4)}"
         asset_name_a = asset_name_a_dec.encode("utf-8").hex()
         token_a = f"{policyid}.{asset_name_a}"
 
-        # qacoinB
+        # QacoinB
         asset_name_b_dec = f"qacoinB{clusterlib.get_rand_str(4)}"
         asset_name_b = asset_name_b_dec.encode("utf-8").hex()
         token_b = f"{policyid}.{asset_name_b}"
@@ -974,7 +973,7 @@ class TestMinting:
                     plutus_common.MINTING_TOKENNAME_COST.per_time,
                     plutus_common.MINTING_TOKENNAME_COST.per_space,
                 ),
-                # both tokens will be minted even though the redeemer value
+                # Both tokens will be minted even though the redeemer value
                 # matches the name of only the second one
                 redeemer_value=f'"{asset_name_b_dec}"',
             )
@@ -1042,7 +1041,7 @@ class TestMinting:
                 expected_costs=[plutus_common.MINTING_TOKENNAME_COST],
             )
 
-        # check tx view
+        # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step1)
@@ -1058,7 +1057,7 @@ class TestMinting:
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_minting_context_equivalence(
-        self, cluster: clusterlib.ClusterLib, payment_addrs: tp.List[clusterlib.AddressRecord]
+        self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]
     ):
         """Test context equivalence while minting a token.
 
@@ -1117,7 +1116,7 @@ class TestMinting:
             *mint_txouts,
         ]
 
-        # generate a dummy redeemer in order to create a txbody from which
+        # Generate a dummy redeemer in order to create a txbody from which
         # we can generate a tx and then derive the correct redeemer
         redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
         clusterlib_utils.create_script_context(
@@ -1151,7 +1150,7 @@ class TestMinting:
         )
         assert tx_output_dummy
 
-        # generate the "real" redeemer
+        # Generate the "real" redeemer
         redeemer_file = pl.Path(f"{temp_template}_script_context.redeemer")
 
         plutus_common.create_script_context_w_blockers(
@@ -1214,7 +1213,7 @@ class TestMinting:
     def test_ttl_horizon(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         ttl_offset: int,
         plutus_version: str,
     ):
@@ -1285,15 +1284,15 @@ class TestMinting:
             *mint_txouts,
         ]
 
-        # calculate 3k/f
+        # Calculate 3k/f
         offset_3kf = round(
             3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"]
         )
 
-        # use 3k/f + `epoch_length` slots for ttl - this will not meet the `expect_pass` condition
+        # Use 3k/f + `epoch_length` slots for ttl - this will not meet the `expect_pass` condition
         if ttl_offset == -1:
             ttl_offset = offset_3kf + cluster.epoch_length
-        # use 3k/f - 100 slots for ttl - this will meet the `expect_pass` condition
+        # Use 3k/f - 100 slots for ttl - this will meet the `expect_pass` condition
         elif ttl_offset == -2:
             ttl_offset = offset_3kf - 100
 
@@ -1307,7 +1306,7 @@ class TestMinting:
             cluster_obj=cluster, slot_no=invalid_hereafter
         )
 
-        # the TTL will pass if it's in epoch 'e' and the slot of the latest applied block + 3k/f
+        # The TTL will pass if it's in epoch 'e' and the slot of the latest applied block + 3k/f
         # is greater than the first slot of 'e'
         expect_pass = slot_no_3kf >= ttl_epoch_info.first_slot
 
@@ -1335,7 +1334,7 @@ class TestMinting:
         last_slot_diff = cluster.g_query.get_slot_no() - last_slot_init
         expect_pass_finish = slot_no_3kf + last_slot_diff >= ttl_epoch_info.first_slot
         if expect_pass != expect_pass_finish:
-            # we have hit a boundary and it is hard to say if the test should have passed or not
+            # We have hit a boundary and it is hard to say if the test should have passed or not
             assert not err or "TimeTranslationPastHorizon" in err, err
             pytest.skip("Boundary hit, skipping")
             return
@@ -1359,7 +1358,7 @@ class TestCollateralOutput:
     def test_duplicated_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script while using the same collateral input twice.
@@ -1440,17 +1439,17 @@ class TestCollateralOutput:
 
         altered_build_args = tx_raw_output_step2.build_args[:]
 
-        # add a duplicate collateral
+        # Add a duplicate collateral
         collateral_idx = altered_build_args.index("--tx-in-collateral") + 1
         altered_build_args.insert(collateral_idx + 1, "--tx-in-collateral")
         altered_build_args.insert(collateral_idx + 2, altered_build_args[collateral_idx])
 
-        # change the output file
+        # Change the output file
         tx_body_step2 = pl.Path(f"{tx_raw_output_step2.out_file.stem}_altered.body")
         out_file_idx = altered_build_args.index("--out-file") + 1
         altered_build_args[out_file_idx] = str(tx_body_step2)
 
-        # build the transaction using altered arguments
+        # Build the transaction using altered arguments
         cluster.cli(altered_build_args)
 
         tx_signed_step2 = cluster.g_transaction.sign_tx(

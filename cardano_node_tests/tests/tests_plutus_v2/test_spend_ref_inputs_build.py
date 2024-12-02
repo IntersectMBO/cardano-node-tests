@@ -31,7 +31,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -39,11 +39,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=1_000_000_000,
     )
 
@@ -61,7 +61,7 @@ class TestReadonlyReferenceInputs:
     def test_use_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         reference_input_scenario: str,
     ):
         """Test use a reference input when unlock some funds.
@@ -78,12 +78,12 @@ class TestReadonlyReferenceInputs:
 
         reference_input_amount = 2_000_000
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
@@ -101,7 +101,7 @@ class TestReadonlyReferenceInputs:
             amount=reference_input_amount,
         )
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -147,7 +147,7 @@ class TestReadonlyReferenceInputs:
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
         )
 
-        # check that the reference input was not spent
+        # Check that the reference input was not spent
         assert cluster.g_query.get_utxo(
             utxo=reference_input[0]
         ), f"The reference input was spent `{reference_input[0]}`"
@@ -157,7 +157,7 @@ class TestReadonlyReferenceInputs:
             tx_output_redeem.fee, expected_redeem_fee, frac=0.15
         ), "Expected fee doesn't match the actual fee"
 
-        # check "transaction view"
+        # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -169,7 +169,7 @@ class TestReadonlyReferenceInputs:
     def test_same_input_as_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test use a reference input that is also a regular input of the same transaction.
 
@@ -185,12 +185,12 @@ class TestReadonlyReferenceInputs:
 
         reference_input_amount = 2_000_000
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
@@ -209,7 +209,7 @@ class TestReadonlyReferenceInputs:
             amount=reference_input_amount,
         )
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -259,12 +259,12 @@ class TestReadonlyReferenceInputs:
                 raise
             return
 
-        # check that the input used also as reference was spent
+        # Check that the input used also as reference was spent
         assert not cluster.g_query.get_utxo(
             utxo=reference_input[0]
         ), f"The reference input was NOT spent `{reference_input[0]}`"
 
-        # check "transaction view"
+        # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
@@ -274,7 +274,7 @@ class TestReadonlyReferenceInputs:
         self,
         cluster: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test 2 transactions using the same reference input in the same block.
 
@@ -286,14 +286,14 @@ class TestReadonlyReferenceInputs:
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
-        # fund payment address
+        # Fund payment address
         clusterlib_utils.fund_from_faucet(
             payment_addrs[1],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
-        # create the reference input
+        # Create the reference input
 
         reference_input = spend_build._build_reference_txin(
             temp_template=temp_template,
@@ -302,7 +302,7 @@ class TestReadonlyReferenceInputs:
             amount=amount,
         )
 
-        #  build 2 tx using the same readonly reference input
+        #  Build 2 tx using the same readonly reference input
 
         tx_address_combinations = [
             {"payment_addr": payment_addrs[0], "dst_addr": payment_addrs[1]},
@@ -339,7 +339,7 @@ class TestReadonlyReferenceInputs:
 
         clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=txins)
 
-        # check that the reference input was not spent
+        # Check that the reference input was not spent
         assert cluster.g_query.get_utxo(
             utxo=reference_input[0]
         ), f"The reference input was spent `{reference_input[0]}`"
@@ -351,7 +351,7 @@ class TestReadonlyReferenceInputs:
     def test_reference_input_non_plutus(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test using a read-only reference input in non-Plutus transaction.
 
@@ -389,12 +389,12 @@ class TestReadonlyReferenceInputs:
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
-        # check that the reference input was not spent
+        # Check that the reference input was not spent
         assert cluster.g_query.get_utxo(
             utxo=reference_input[0]
         ), f"The reference input was spent `{reference_input[0]}`"
 
-        # check expected balances
+        # Check expected balances
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=src_addr.address)[0].amount
@@ -406,7 +406,7 @@ class TestReadonlyReferenceInputs:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check "transaction view"
+        # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
@@ -422,7 +422,7 @@ class TestNegativeReadonlyReferenceInputs:
     def test_reference_spent_output(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test use a reference input that was already spent.
 
@@ -435,12 +435,12 @@ class TestNegativeReadonlyReferenceInputs:
 
         reference_input_amount = 2_000_000
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
@@ -459,7 +459,7 @@ class TestNegativeReadonlyReferenceInputs:
             amount=reference_input_amount,
         )
 
-        #  spend the output that will be used as reference input
+        #  Spend the output that will be used as reference input
 
         tx_output_spend_reference_input = cluster.g_transaction.build_tx(
             src_address=payment_addrs[1].address,
@@ -477,12 +477,12 @@ class TestNegativeReadonlyReferenceInputs:
             tx_file=tx_signed, txins=tx_output_spend_reference_input.txins
         )
 
-        # check that the input used also as reference was spent
+        # Check that the input used also as reference was spent
         assert not cluster.g_query.get_utxo(
             utxo=reference_input[0]
         ), f"The reference input was NOT spent `{reference_input[0]}`"
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -534,7 +534,7 @@ class TestNegativeReadonlyReferenceInputs:
     def test_v1_script_with_reference_input(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test use a reference input with a v1 Plutus script.
 
@@ -550,12 +550,12 @@ class TestNegativeReadonlyReferenceInputs:
             execution_cost=plutus_common.ALWAYS_SUCCEEDS_COST,
         )
 
-        # for mypy
+        # For mypy
         assert plutus_op.execution_cost
         assert plutus_op.datum_file
         assert plutus_op.redeemer_cbor_file
 
-        # create the necessary Tx outputs
+        # Create the necessary Tx outputs
 
         script_utxos, collateral_utxos, __, __ = spend_build._build_fund_script(
             temp_template=temp_template,
@@ -566,7 +566,7 @@ class TestNegativeReadonlyReferenceInputs:
             use_inline_datum=False,
         )
 
-        # create the reference input
+        # Create the reference input
 
         reference_input = spend_build._build_reference_txin(
             temp_template=temp_template,
@@ -575,7 +575,7 @@ class TestNegativeReadonlyReferenceInputs:
             amount=2_000_000,
         )
 
-        #  spend the "locked" UTxO
+        #  Spend the "locked" UTxO
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -619,7 +619,7 @@ class TestNegativeReadonlyReferenceInputs:
     def test_reference_input_without_spend_anything(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test using a read-only reference input without spending any UTxO.
 

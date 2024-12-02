@@ -58,7 +58,7 @@ def get_pool_id(
 def cluster_and_pool(
     cluster_manager: cluster_management.ClusterManager,
     use_resources: resources_management.ResourcesType = (),
-) -> tp.Tuple[clusterlib.ClusterLib, str]:
+) -> tuple[clusterlib.ClusterLib, str]:
     """Return instance of `clusterlib.ClusterLib`, and pool id to delegate to.
 
     We need to mark the pool as "in use" when requesting local cluster
@@ -78,9 +78,9 @@ def cluster_and_pool(
                     return cluster_obj, pool_id
 
         blocks_before = clusterlib_utils.get_blocks_before(cluster_obj)
-        # sort pools by how many blocks they produce
+        # Sort pools by how many blocks they produce
         pool_ids_s = sorted(blocks_before, key=blocks_before.get, reverse=True)  # type: ignore
-        # select a pool with reasonable margin
+        # Select a pool with reasonable margin
         for pool_id in pool_ids_s:
             pool_params = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id)
             if pool_params.pool_params["margin"] <= 0.5 and not pool_params.retiring:
@@ -106,8 +106,8 @@ def cluster_and_pool(
 
 
 def db_check_delegation(
-    pool_user: tp.Union[clusterlib.PoolUser, PoolUserScript],
-    db_record: tp.Optional[dbsync_types.TxRecord],
+    pool_user: clusterlib.PoolUser | PoolUserScript,
+    db_record: dbsync_types.TxRecord | None,
     deleg_epoch: int,
     pool_id: str,
     check_registration: bool = True,
@@ -128,14 +128,14 @@ def delegate_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     addrs_data: dict,
     temp_template: str,
-    pool_user: tp.Optional[clusterlib.PoolUser] = None,
+    pool_user: clusterlib.PoolUser | None = None,
     pool_id: str = "",
-    cold_vkey: tp.Optional[pl.Path] = None,
+    cold_vkey: pl.Path | None = None,
     amount: int = 100_000_000,
     use_build_cmd: bool = False,
 ) -> DelegationOut:
     """Submit registration certificate and delegate to pool."""
-    # create key pairs and addresses
+    # Create key pairs and addresses
     if not pool_user:
         stake_addr_rec = clusterlib_utils.create_stake_addr_records(
             f"{temp_template}_addr0", cluster_obj=cluster_obj
@@ -148,15 +148,15 @@ def delegate_stake_addr(
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_rec, stake=stake_addr_rec)
 
-        # fund payment address
+        # Fund payment address
         clusterlib_utils.fund_from_faucet(
             pool_user.payment,
             cluster_obj=cluster_obj,
-            faucet_data=addrs_data["user1"],
+            all_faucets=addrs_data,
             amount=amount,
         )
 
-    # create stake address registration cert if address is not already registered
+    # Create stake address registration cert if address is not already registered
     if cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
         stake_addr_reg_cert_file = None
     else:
@@ -166,10 +166,11 @@ def delegate_stake_addr(
             stake_vkey_file=pool_user.stake.vkey_file,
         )
 
-    # create stake address delegation cert
-    deleg_kwargs: tp.Dict[str, tp.Any] = {
+    # Create stake address delegation cert
+    deleg_kwargs: dict[str, tp.Any] = {
         "addr_name": f"{temp_template}_addr0",
         "stake_vkey_file": pool_user.stake.vkey_file,
+        "always_abstain": True,
     }
     if pool_id:
         deleg_kwargs["stake_pool_id"] = pool_id
@@ -177,14 +178,14 @@ def delegate_stake_addr(
         deleg_kwargs["cold_vkey_file"] = cold_vkey
         pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(cold_vkey)
 
-    stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
+    stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_and_vote_delegation_cert(
         **deleg_kwargs
     )
 
     src_address = pool_user.payment.address
     src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
-    # register stake address and delegate it to pool
+    # Register stake address and delegate it to pool
     certificate_files = [stake_addr_deleg_cert_file]
     if stake_addr_reg_cert_file:
         certificate_files.insert(0, stake_addr_reg_cert_file)
@@ -212,16 +213,17 @@ def delegate_stake_addr(
             src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
         )
 
-    # check that the balance for source address was correctly updated
+    # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit() if stake_addr_reg_cert_file else 0
     assert (
         cluster_obj.g_query.get_address_balance(src_address)
         == src_init_balance - deposit - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
-    # check that the stake address was delegated
+    # Check that the stake address was delegated
     stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
     assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
-    assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
+    assert stake_addr_info.delegation == pool_id, "Stake address delegated to wrong pool"
+    assert stake_addr_info.vote_delegation == "alwaysAbstain"
 
     return DelegationOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_raw_output)

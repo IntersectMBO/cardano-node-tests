@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xuo pipefail
+set -uo pipefail
 
 retval=1
 
@@ -11,6 +11,9 @@ export COMMAND_ERA="$CLUSTER_ERA"
 
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
+
+NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+export NETWORK_MAGIC
 
 # init dir for step1 binaries
 STEP1_BIN="$WORKDIR/step1-bin"
@@ -29,6 +32,7 @@ if [ "$1" = "step1" ]; then
   printf "STEP1 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=1
+  export ENABLE_LEGACY=1
 
   if [ -n "${BASE_TAR_URL:-""}" ]; then
     # download and extract base revision binaries
@@ -68,15 +72,14 @@ if [ "$1" = "step1" ]; then
 
   # backup the original genesis files
   cp -f "$STATE_CLUSTER/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.step1.json"
-  if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
-    cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway.step1.json"
-  fi
+  cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway.step1.json"
 
   # run smoke tests
+  printf "STEP1 tests: %(%H:%M:%S)T\n" -1
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade" \
+    -m "smoke or upgrade_step1" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
@@ -102,6 +105,8 @@ elif [ "$1" = "step2" ]; then
   printf "STEP2 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=2
+  export MIXED_P2P=1
+  unset ENABLE_LEGACY
 
   # Setup `cardano-cli` binary
   if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
@@ -116,33 +121,35 @@ elif [ "$1" = "step2" ]; then
 
   # generate config and topology files for the "mixed" mode
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_mixed/state-cluster0/bft1.socket" \
-    MIXED_P2P=1 \
     DRY_RUN=1 \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
-
-  # hashes of old and new Conway genesis files
-  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$WORKDIR/dry_mixed/state-cluster0/config-bft1.json")"
-  CONWAY_GENESIS_STEP1_HASH=""
-  if [ -e "$STATE_CLUSTER/shelley/genesis.conway.json" ]; then
-    CONWAY_GENESIS_STEP1_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  fi
-
-  # hashes of old and new Alonzo genesis files
-  ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$WORKDIR/dry_mixed/state-cluster0/config-bft1.json")"
-  ALONZO_GENESIS_STEP1_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-
-  # use the original genesis files
-  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
 
   # copy newly generated topology files to the cluster state dir
   cp -f "$WORKDIR"/dry_mixed/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
-  # copy newly generated Alonzo genesis to the cluster state dir
-  cp -f "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley"
+  if [ -n "${REPLACE_GENESIS_STEP2:-""}" ]; then
+    # Copy newly generated Alonzo genesis to the cluster state dir
+    cp -f "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley"
 
-  # copy newly generated Conway genesis file to the cluster state dir
-  cp -f "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley"
+    # Copy newly generated Conway genesis file to the cluster state dir, use committee members from the original
+    # Conway genesis.
+    jq \
+      --argfile src "$STATE_CLUSTER/shelley/genesis.conway.step1.json" \
+      '.committee.members = $src.committee.members' \
+      "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
+  fi
+
+  # use the original shelley and byron genesis files
+  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  # hashes of the original alonzo and conway genesis files
+  CONWAY_GENESIS_STEP1_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  ALONZO_GENESIS_STEP1_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  # hashes of genesis files that were potentially replaced
+  ALONZO_GENESIS_HASH="$(cardano-cli legacy genesis hash --genesis \
+    "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
+  CONWAY_GENESIS_HASH="$(cardano-cli legacy genesis hash --genesis \
+    "$STATE_CLUSTER/shelley/genesis.conway.json")"
 
   # copy newly generated config files to the cluster state dir
   for conf in "$WORKDIR"/dry_mixed/state-cluster0/config-*.json; do
@@ -184,6 +191,8 @@ elif [ "$1" = "step2" ]; then
 
   # Restart local cluster nodes with binaries from new cluster-node version.
   # It is necessary to restart supervisord with new environment.
+  "$STATE_CLUSTER/supervisorctl" stop all
+  sleep 5
   "$STATE_CLUSTER/supervisord_stop"
   sleep 3
   "$STATE_CLUSTER/supervisord_start" || exit 6
@@ -204,19 +213,13 @@ elif [ "$1" = "step2" ]; then
     exit 6
   fi
 
-  # waiting for node to fully start
-  for _ in {1..10}; do
-    if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
-      break
-    fi
-    sleep 5
-  done
-  [ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start node" >&2; exit 6; }  # assert
+  # Tx submission delay
+  sleep 60
 
   # waiting to make sure the chain is synced
-  NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   for _ in {1..10}; do
-    sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
+    sync_progress="$(cardano-cli latest query tip \
+      --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
     if [ "$sync_progress" = "100.00" ]; then
       break
     fi
@@ -228,11 +231,15 @@ elif [ "$1" = "step2" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
   err_retval="$?"
 
+  # Update PlutusV3 cost models.
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 6
+
   # run smoke tests
+  printf "STEP2 tests: %(%H:%M:%S)T\n" -1
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade" \
+    -m "smoke or upgrade_step2" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
@@ -260,6 +267,7 @@ elif [ "$1" = "step3" ]; then
   printf "STEP3 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=3
+  unset ENABLE_LEGACY MIXED_P2P
 
   # Setup `cardano-cli` binary
   if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
@@ -274,7 +282,6 @@ elif [ "$1" = "step3" ]; then
 
   # generate config and topology files for p2p mode
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_p2p/state-cluster0/bft1.socket" \
-    ENABLE_P2P=1 \
     DRY_RUN=1 \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
@@ -320,15 +327,34 @@ elif [ "$1" = "step3" ]; then
     exit 6
   fi
 
+  # Tx submission delay
+  sleep 60
+
+  # waiting to make sure the chain on pool3 is synced
+  for _ in {1..10}; do
+    sync_progress="$(cardano-cli latest query tip \
+      --testnet-magic "$NETWORK_MAGIC" \
+      --socket-path "${STATE_CLUSTER}/pool3.socket" | jq -r '.syncProgress')"
+    if [ "$sync_progress" = "100.00" ]; then
+      break
+    fi
+    sleep 5
+  done
+  [ "$sync_progress" = "100.00" ] || { echo "Failed to sync node" >&2; exit 6; }  # assert
+
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
   err_retval="$?"
 
+  # Hard fork to PV10.
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 6
+
   # Run smoke tests
+  printf "STEP3 tests: %(%H:%M:%S)T\n" -1
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade" \
+    -m "smoke or upgrade_step3" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \

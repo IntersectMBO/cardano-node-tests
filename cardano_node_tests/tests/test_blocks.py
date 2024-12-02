@@ -6,11 +6,11 @@ Other block production checks may be present in `test_staking.py`.
 import logging
 import os
 import random
+import re
 import shutil
 import signal
 import sqlite3
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -26,6 +26,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -34,19 +35,13 @@ LOGGER = logging.getLogger(__name__)
 class TestLeadershipSchedule:
     """Tests for cardano-cli leadership-schedule."""
 
-    @pytest.fixture(scope="class")
-    def skip_leadership_schedule(self):
-        if not clusterlib_utils.cli_has("query leadership-schedule"):
-            pytest.skip("The `cardano-cli query leadership-schedule` command is not available.")
-
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.needs_dbsync
+    @pytest.mark.dbsync
     @pytest.mark.parametrize("for_epoch", ("current", "next"))
-    def test_pool_blocks(
+    def test_pool_blocks(  # noqa: C901
         self,
-        skip_leadership_schedule: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_pool: tp.Tuple[clusterlib.ClusterLib, str],
+        cluster_use_pool: tuple[clusterlib.ClusterLib, str],
         for_epoch: str,
     ):
         """Check that blocks were minted according to leadership schedule.
@@ -55,7 +50,8 @@ class TestLeadershipSchedule:
         * wait for epoch that comes after the queried epoch
         * get info about minted blocks in queried epoch for the selected pool
         * compare leadership schedule with blocks that were actually minted
-        * compare db-sync records with ledger state dump
+        * compare log records with ledger state dump
+        * (optional) check minted blocks in db-sync
         """
         # pylint: disable=unused-argument
         cluster, pool_name = cluster_use_pool
@@ -64,12 +60,18 @@ class TestLeadershipSchedule:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_id = cluster.g_stake_pool.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
+        pool_log = (
+            cluster_nodes.get_cluster_env().state_dir / f"{pool_name.replace('node-', '')}.stdout"
+        )
+        seek_offset = helpers.get_eof_offset(pool_log)
+        timestamp = time.time()
+
         if for_epoch == "current":
-            # wait for beginning of an epoch
+            # Wait for beginning of an epoch
             queried_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         else:
-            # wait for stable stake distribution for next epoch, that is last 300 slots of
-            # current epoch
+            # Wait for stable stake distribution for next epoch, that is last 300 slots of
+            # current epoch.
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster,
                 start=-int(300 * cluster.slot_length),
@@ -78,55 +80,107 @@ class TestLeadershipSchedule:
             )
             queried_epoch = cluster.g_query.get_epoch() + 1
 
-        # query leadership schedule for selected pool
+        # Query leadership schedule for selected pool
         leadership_schedule = cluster.g_query.get_leadership_schedule(
             vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
             cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
             for_next=for_epoch != "current",
         )
-
-        # wait for epoch that comes after the queried epoch
-        cluster.wait_for_epoch(epoch_no=queried_epoch + 1)
-
-        # get info about minted blocks in queried epoch for the selected pool
-        minted_blocks = list(
-            dbsync_queries.query_blocks(
-                pool_id_bech32=pool_id, epoch_from=queried_epoch, epoch_to=queried_epoch
-            )
-        )
-        slots_when_minted = {r.slot_no for r in minted_blocks}
-
-        errors: tp.List[str] = []
-
-        # compare leadership schedule with blocks that were actually minted
         slots_when_scheduled = {r.slot_no for r in leadership_schedule}
 
-        difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
-        if difference_scheduled:
-            errors.append(
-                f"Some blocks were minted in other slots than scheduled: {difference_scheduled}"
-            )
+        # Wait for epoch that comes after the queried epoch
+        cluster.wait_for_epoch(epoch_no=queried_epoch + 1, padding_seconds=10)
 
-        difference_minted = slots_when_scheduled.difference(slots_when_minted)
-        if len(difference_minted) > len(leadership_schedule) // 2:
-            errors.append(f"Lot of slots missed: {difference_minted}")
-
-        # compare db-sync records with ledger state dump
+        # Get number of minted blocks from ledger
         ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
             state_name=temp_template,
             ledger_state=ledger_state,
         )
-        blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+        blocks_before: dict[str, int] = ledger_state["blocksBefore"]
         pool_id_dec = helpers.decode_bech32(pool_id)
         minted_blocks_ledger = blocks_before.get(pool_id_dec) or 0
-        minted_blocks_db = len(slots_when_minted)
-        if minted_blocks_ledger != minted_blocks_db:
-            errors.append(
-                "Numbers of minted blocks reported by ledger state and db-sync don't match: "
-                f"{minted_blocks_ledger} vs {minted_blocks_db}"
+
+        errors: list[str] = []
+
+        def _check_logs() -> None:
+            # Get info about minted blocks in queried epoch for the selected pool
+            minted_lines = logfiles.find_msgs_in_logs(
+                regex='"TraceForgedBlock"',
+                logfile=pool_log,
+                seek_offset=seek_offset,
+                timestamp=timestamp,
             )
+            tip = cluster.g_query.get_tip()
+            last_slot_queried_epoch = int(tip["slot"]) - int(tip["slotInEpoch"] - 1)
+            first_slot_queried_epoch = (
+                last_slot_queried_epoch - int(cluster.genesis["epochLength"]) + 1
+            )
+            slots_pattern = re.compile(r'"slot",Number (\d+)\.0')
+            slots_when_minted = {
+                s
+                for m in minted_lines
+                if (o := slots_pattern.search(m)) is not None
+                and first_slot_queried_epoch <= (s := int(o.group(1))) <= last_slot_queried_epoch
+            }
+
+            # Compare leadership schedule with blocks that were actually minted
+            difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
+            if difference_scheduled:
+                errors.append(
+                    f"Some blocks were minted in other slots than scheduled: {difference_scheduled}"
+                )
+
+            difference_minted = slots_when_scheduled.difference(slots_when_minted)
+            if len(difference_minted) > len(leadership_schedule) // 5:
+                errors.append(f"Lot of slots missed: {difference_minted}")
+
+            # Compare log records with ledger state dump
+            minted_blocks_logs = len(slots_when_minted)
+            # Some minted block may not be adopted, and so the total number of adopted blocks
+            # may be lower than the number of minted blocks.
+            if minted_blocks_ledger > minted_blocks_logs:
+                errors.append(
+                    "Number of minted blocks reported by ledger state "
+                    "is higher than number extracted from log file: "
+                    f"{minted_blocks_ledger} vs {minted_blocks_logs}"
+                )
+
+        def _check_dbsync() -> None:
+            # Get info about minted blocks in queried epoch for the selected pool
+            minted_blocks = list(
+                dbsync_queries.query_blocks(
+                    pool_id_bech32=pool_id, epoch_from=queried_epoch, epoch_to=queried_epoch
+                )
+            )
+            slots_when_minted = {r.slot_no for r in minted_blocks}
+
+            # Compare leadership schedule with blocks that were actually minted
+            difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
+            if difference_scheduled:
+                errors.append(
+                    "DB-Sync: Some blocks were minted in other slots than scheduled: "
+                    f"{difference_scheduled}"
+                )
+
+            difference_minted = slots_when_scheduled.difference(slots_when_minted)
+            if len(difference_minted) > len(leadership_schedule) // 3:
+                errors.append(f"DB-Sync: Lot of slots missed: {difference_minted}")
+
+            # Compare db-sync records with ledger state dump
+            minted_blocks_db = len(slots_when_minted)
+            if minted_blocks_ledger != minted_blocks_db:
+                errors.append(
+                    "DB-Sync: Numbers of minted blocks reported by ledger state "
+                    "and db-sync don't match: "
+                    f"{minted_blocks_ledger} vs {minted_blocks_db}"
+                )
+
+        _check_logs()
+
+        if configuration.HAS_DBSYNC:
+            _check_dbsync()
 
         if errors:
             # Xfail if cardano-api GH-269 is still open
@@ -143,7 +197,6 @@ class TestLeadershipSchedule:
     @allure.link(helpers.get_vcs_link())
     def test_unstable_stake_distribution(
         self,
-        skip_leadership_schedule: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ):
@@ -157,7 +210,7 @@ class TestLeadershipSchedule:
         pool_name = cluster_management.Resources.POOL3
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
-        # wait for epoch interval where stake distribution for next epoch is unstable,
+        # Wait for epoch interval where stake distribution for next epoch is unstable,
         # that is anytime before last 300 slots of current epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster,
@@ -165,7 +218,7 @@ class TestLeadershipSchedule:
             stop=-int(300 * cluster.slot_length + 5),
         )
 
-        # it should NOT be possible to query leadership schedule
+        # It should NOT be possible to query leadership schedule
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_leadership_schedule(
                 vrf_skey_file=pool_rec["vrf_key_pair"].skey_file,
@@ -191,7 +244,7 @@ class TestCollectData:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -206,11 +259,11 @@ class TestCollectData:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -219,7 +272,7 @@ class TestCollectData:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Record number of blocks produced by each pool over multiple epochs.
 
@@ -235,11 +288,11 @@ class TestCollectData:
         rand = clusterlib.get_rand_str(5)
         num_epochs = int(os.environ.get("BLOCK_PRODUCTION_EPOCHS") or 50)
 
-        topology = "legacy"
+        topology = "p2p"
         if configuration.MIXED_P2P:
             topology = "mixed"
-        elif configuration.ENABLE_P2P:
-            topology = "p2p"
+        elif configuration.ENABLE_LEGACY:
+            topology = "legacy"
 
         pool_mapping = {}
         for idx, pn in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
@@ -249,7 +302,7 @@ class TestCollectData:
             pool_id_dec = helpers.decode_bech32(pool_id)
             pool_mapping[pool_id_dec] = {"pool_id": pool_id, "pool_idx": idx}
 
-            # delegate to each pool
+            # Delegate to each pool
             delegation.delegate_stake_addr(
                 cluster_obj=cluster,
                 addrs_data=cluster_manager.cache.addrs_data,
@@ -257,7 +310,7 @@ class TestCollectData:
                 pool_id=pool_id,
             )
 
-        # create sqlite db
+        # Create sqlite db
         conn = sqlite3.connect(configuration.BLOCK_PRODUCTION_DB)
         cur = conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS runs(run_id, topology)")
@@ -283,9 +336,9 @@ class TestCollectData:
                 state_name=f"{temp_template}_epoch{curr_epoch}",
                 ledger_state=ledger_state,
             )
-            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+            blocks_before: dict[str, int] = ledger_state["blocksBefore"]
 
-            # save blocks data to sqlite db
+            # Save blocks data to sqlite db
             cur = conn.cursor()
             for pool_id_dec, num_blocks in blocks_before.items():
                 pool_rec = pool_mapping[pool_id_dec]
@@ -321,7 +374,7 @@ class TestCollectData:
                 curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
                 epoch_end_timestamp = cluster.time_to_epoch_end() + time.time()
 
-            # send tx
+            # Send tx
             src_addr, dst_addr = random.sample(payment_addrs, 2)
             destinations = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
             tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
@@ -336,13 +389,13 @@ class TestCollectData:
             time.sleep(2)
             curr_time = time.time()
 
-        # save also data for the last epoch
+        # Save also data for the last epoch
         _save_state(cluster.g_query.get_epoch())
 
         conn.close()
 
 
-@pytest.mark.skipif(not configuration.ENABLE_P2P, reason="runs only on P2P enabled clusters")
+@pytest.mark.skipif(configuration.ENABLE_LEGACY, reason="runs only on P2P enabled clusters")
 class TestDynamicBlockProd:
     """Tests for P2P dynamic block production."""
 
@@ -379,32 +432,27 @@ class TestDynamicBlockProd:
         with open(supervisor_conf, "w", encoding="utf-8") as fp_out:
             fp_out.write(supervisor_conf_content)
 
-        cluster_nodes.reload_supervisor_config()
+        cluster_nodes.reload_supervisor_config(delay=0)
 
     @pytest.fixture
     def payment_addrs(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
 
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"addr_dyn_prod_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(20)],
+            cluster_obj=cluster,
+        )
 
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"addr_dyn_prod_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(20)],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -414,7 +462,7 @@ class TestDynamicBlockProd:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Check dynamic block production.
 
@@ -442,23 +490,15 @@ class TestDynamicBlockProd:
             )
         )
 
-        def _save_state(curr_epoch: int) -> tp.Dict[str, int]:
+        def _save_state(curr_epoch: int) -> dict[str, int]:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
             clusterlib_utils.save_ledger_state(
                 cluster_obj=cluster,
                 state_name=f"{temp_template}_epoch{curr_epoch}",
                 ledger_state=ledger_state,
             )
-            blocks_before: tp.Dict[str, int] = ledger_state["blocksBefore"]
+            blocks_before: dict[str, int] = ledger_state["blocksBefore"]
             return blocks_before
-
-        # Blocks are produced by BFT node in Byron epoch and first Shelley epoch on local cluster
-        # that starts in Byron era.
-        if (
-            cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
-            and not cluster_nodes.get_cluster_type().uses_shortcut
-        ):
-            cluster.wait_for_epoch(epoch_no=2)
 
         # The network needs to be at least in epoch 1
         cluster.wait_for_epoch(epoch_no=1)
@@ -470,8 +510,9 @@ class TestDynamicBlockProd:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster,
             start=(cluster.epoch_length_sec // 2),
-            stop=-50,
+            stop=-(configuration.TX_SUBMISSION_DELAY + 20),
         )
+        reconf_epoch = cluster.g_query.get_epoch()
 
         # The cluster needs respin after this point
         cluster_manager.set_needs_respin()
@@ -481,9 +522,13 @@ class TestDynamicBlockProd:
         cluster_nodes.restart_all_nodes()
 
         tip = cluster.g_query.get_tip()
-        epoch_end = cluster.time_to_epoch_end(tip)
         curr_epoch = int(tip["epoch"])
-        reconf_epoch = curr_epoch
+
+        assert (
+            reconf_epoch == curr_epoch
+        ), "Failed to finish reconfiguration in single epoch, it would affect other checks"
+
+        epoch_end = cluster.time_to_epoch_end(tip)
         curr_time = time.time()
         epoch_end_timestamp = curr_time + epoch_end
         test_end_timestamp = epoch_end_timestamp + (num_epochs * cluster.epoch_length_sec)

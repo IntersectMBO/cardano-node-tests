@@ -37,8 +37,8 @@ class ClusterEnv:
 class ServiceStatus:
     name: str
     status: str
-    pid: tp.Optional[int]
-    uptime: tp.Optional[str]
+    pid: int | None
+    uptime: str | None
     message: str = ""
 
 
@@ -54,9 +54,15 @@ class ClusterType:
 
     LOCAL: tp.Final[str] = "local"
     TESTNET: tp.Final[str] = "testnet"
-    test_addr_records: tp.ClassVar[tp.Tuple[str, ...]] = ("user1",)
+    test_addr_records: tp.ClassVar[tuple[str, ...]] = (
+        "user1",
+        "user2",
+        "user3",
+        "user4",
+        "user5",
+    )
 
-    NODES: tp.ClassVar[tp.Set[str]] = set()
+    NODES: tp.ClassVar[set[str]] = set()
 
     def __init__(self) -> None:
         self.type = "unknown"
@@ -79,7 +85,7 @@ class ClusterType:
 
     def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
-    ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+    ) -> dict[str, dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         msg = f"Not implemented for cluster type '{self.type}'."
         raise NotImplementedError(msg)
@@ -88,7 +94,7 @@ class ClusterType:
 class LocalCluster(ClusterType):
     """Local cluster type (full cardano mode)."""
 
-    NODES: tp.ClassVar[tp.Set[str]] = {
+    NODES: tp.ClassVar[set[str]] = {
         "bft1",
         *(f"pool{i}" for i in range(1, configuration.NUM_POOLS + 1)),
     }
@@ -122,15 +128,15 @@ class LocalCluster(ClusterType):
 
     def create_addrs_data(
         self, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
-    ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+    ) -> dict[str, dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         destination_dir = pl.Path(destination_dir).expanduser()
         destination_dir.mkdir(parents=True, exist_ok=True)
         cluster_env = get_cluster_env()
         instance_num = cluster_env.instance_num
 
-        # create new addresses
-        new_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {}
+        # Create new addresses
+        new_addrs_data: dict[str, dict[str, tp.Any]] = {}
         for addr_name in self.test_addr_records:
             addr_name_instance = f"{addr_name}_ci{instance_num}"
             payment = cluster_obj.g_address.gen_payment_addr_and_keys(
@@ -141,8 +147,8 @@ class LocalCluster(ClusterType):
                 "payment": payment,
             }
 
-        # create records for existing addresses
-        faucet_addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {"faucet": {"payment": None}}
+        # Create records for existing addresses
+        faucet_addrs_data: dict[str, dict[str, tp.Any]] = {"faucet": {"payment": None}}
         byron_dir = cluster_env.state_dir / "byron"
         shelley_dir = cluster_env.state_dir / "shelley"
 
@@ -162,14 +168,15 @@ class LocalCluster(ClusterType):
             msg = "Faucet address file doesn't exist."
             raise RuntimeError(msg)
 
-        # fund new addresses from faucet address
+        # Fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
         to_fund = [d["payment"] for d in new_addrs_data.values()]
+        amount_per_address = 100_000_000_000_000 // len(self.test_addr_records)
         faucet.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
             faucet_data=faucet_addrs_data["faucet"],
-            amount=100_000_000_000_000,
+            amount=amount_per_address,
             destination_dir=destination_dir,
             force=True,
         )
@@ -181,22 +188,22 @@ class LocalCluster(ClusterType):
 class TestnetCluster(ClusterType):
     """Testnet cluster type (full cardano mode)."""
 
-    TESTNETS: tp.ClassVar[tp.Dict[int, dict]] = {
+    TESTNETS: tp.ClassVar[dict[int, dict]] = {
         1506203091: {"type": Testnets.mainnet, "shelley_start": "2020-07-29T21:44:51Z"},
         1654041600: {"type": Testnets.preprod, "byron_epochs": 4},
         1666656000: {"type": Testnets.preview, "byron_epochs": 0},
     }
 
-    NODES: tp.ClassVar[tp.Set[str]] = {"relay1"}
+    NODES: tp.ClassVar[set[str]] = {"relay1"}
 
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
-        self.cluster_scripts: tp.Union[
-            cluster_scripts.ScriptsTypes, cluster_scripts.TestnetScripts
-        ] = cluster_scripts.TestnetScripts()
+        self.cluster_scripts: cluster_scripts.ScriptsTypes | cluster_scripts.TestnetScripts = (
+            cluster_scripts.TestnetScripts()
+        )
 
-        # cached values
+        # Cached values
         self._testnet_type = ""
 
     @property
@@ -236,21 +243,45 @@ class TestnetCluster(ClusterType):
         self,
         cluster_obj: clusterlib.ClusterLib,
         destination_dir: clusterlib.FileType = ".",
-    ) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+    ) -> dict[str, dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
+        # Store record of the original faucet address
         shelley_dir = get_cluster_env().state_dir / "shelley"
+        faucet_rec = clusterlib.AddressRecord(
+            address=clusterlib.read_address_from_file(shelley_dir / "faucet.addr"),
+            vkey_file=shelley_dir / "faucet.vkey",
+            skey_file=shelley_dir / "faucet.skey",
+        )
+        faucet_addrs_data: dict[str, dict[str, tp.Any]] = {
+            self.test_addr_records[1]: {"payment": faucet_rec}
+        }
 
-        addrs_data: tp.Dict[str, tp.Dict[str, tp.Any]] = {}
-        for addr_name in self.test_addr_records:
-            faucet_addr = {
-                "payment": clusterlib.AddressRecord(
-                    address=clusterlib.read_address_from_file(shelley_dir / "faucet.addr"),
-                    vkey_file=shelley_dir / "faucet.vkey",
-                    skey_file=shelley_dir / "faucet.skey",
-                )
+        # Create new addresses
+        new_addrs_data: dict[str, dict[str, tp.Any]] = {}
+        for addr_name in self.test_addr_records[1:]:
+            payment = cluster_obj.g_address.gen_payment_addr_and_keys(
+                name=addr_name,
+                destination_dir=destination_dir,
+            )
+            new_addrs_data[addr_name] = {
+                "payment": payment,
             }
-            addrs_data[addr_name] = faucet_addr
 
+        # Fund new addresses from faucet address
+        LOGGER.debug("Funding created addresses.")
+        to_fund = [d["payment"] for d in new_addrs_data.values()]
+        faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_rec.address)
+        amount_per_address = faucet_balance // len(self.test_addr_records)
+        faucet.fund_from_faucet(
+            *to_fund,
+            cluster_obj=cluster_obj,
+            faucet_data=faucet_addrs_data[self.test_addr_records[1]],
+            amount=amount_per_address,
+            destination_dir=destination_dir,
+            force=True,
+        )
+
+        addrs_data = {**new_addrs_data, **faucet_addrs_data}
         return addrs_data
 
 
@@ -316,7 +347,7 @@ def get_cluster_env() -> ClusterEnv:
 
 
 def reload_supervisor_config(
-    instance_num: tp.Optional[int] = None, delay: int = configuration.TX_SUBMISSION_DELAY
+    instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
     """Reload supervisor configuration."""
     LOGGER.info("Reloading supervisor configuration.")
@@ -338,7 +369,7 @@ def reload_supervisor_config(
         time.sleep(delay)
 
 
-def start_cluster(cmd: str, args: tp.List[str]) -> clusterlib.ClusterLib:
+def start_cluster(cmd: str, args: list[str]) -> clusterlib.ClusterLib:
     """Start cluster."""
     args_str = " ".join(args)
     args_str = f" {args_str}" if args_str else ""
@@ -349,7 +380,7 @@ def start_cluster(cmd: str, args: tp.List[str]) -> clusterlib.ClusterLib:
 
 
 def restart_all_nodes(
-    instance_num: tp.Optional[int] = None, delay: int = configuration.TX_SUBMISSION_DELAY
+    instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
@@ -371,9 +402,7 @@ def restart_all_nodes(
         time.sleep(delay)
 
 
-def services_action(
-    service_names: tp.List[str], action: str, instance_num: tp.Optional[int] = None
-) -> None:
+def services_action(service_names: list[str], action: str, instance_num: int | None = None) -> None:
     """Perform action on services on the running cluster."""
     LOGGER.info(f"Performing '{action}' action on services {service_names}.")
 
@@ -393,21 +422,21 @@ def services_action(
             ) from exc
 
 
-def start_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) -> None:
+def start_nodes(node_names: list[str], instance_num: int | None = None) -> None:
     """Start list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="start", instance_num=instance_num)
 
 
-def stop_nodes(node_names: tp.List[str], instance_num: tp.Optional[int] = None) -> None:
+def stop_nodes(node_names: list[str], instance_num: int | None = None) -> None:
     """Stop list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="stop", instance_num=instance_num)
 
 
 def restart_nodes(
-    node_names: tp.List[str],
-    instance_num: tp.Optional[int] = None,
+    node_names: list[str],
+    instance_num: int | None = None,
     delay: int = configuration.TX_SUBMISSION_DELAY,
 ) -> None:
     """Restart list of Cardano nodes of the running cluster."""
@@ -420,8 +449,8 @@ def restart_nodes(
 
 
 def services_status(
-    service_names: tp.Optional[tp.List[str]] = None, instance_num: tp.Optional[int] = None
-) -> tp.List[ServiceStatus]:
+    service_names: list[str] | None = None, instance_num: int | None = None
+) -> list[ServiceStatus]:
     """Return status info for list of services running on the running cluster (all by default)."""
     if instance_num is None:
         instance_num = get_cluster_env().instance_num

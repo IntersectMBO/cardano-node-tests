@@ -23,14 +23,14 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 
-# all tests in this module need dbsync
+# All tests in this module need dbsync
 pytestmark = pytest.mark.needs_dbsync
 
 
 class TestDBSync:
     """General db-sync tests."""
 
-    DBSYNC_TABLES: tp.Final[tp.Set[str]] = {
+    DBSYNC_TABLES: tp.Final[set[str]] = {
         "ada_pots",
         "block",
         "collateral_tx_in",
@@ -128,13 +128,13 @@ class TestDBSync:
         block_no = int(tip["block"])
         epoch = int(tip["epoch"])
 
-        # check records for last 50 epochs
+        # Check records for last 50 epochs
         epoch_from = epoch - 50
         epoch_from = epoch_from if epoch_from >= 0 else 0
 
         rec = None
         prev_rec = None
-        errors: tp.List[str] = []
+        errors: list[str] = []
         for rec in dbsync_queries.query_blocks(epoch_from=epoch_from):
             if not prev_rec:
                 prev_rec = rec
@@ -230,7 +230,7 @@ class TestDBSync:
             )
             raise AssertionError(msg)
 
-        # if cardano-node knows about Babbage and network is in Alonzo or higher era, check that
+        # If cardano-node knows about Babbage and network is in Alonzo or higher era, check that
         # the highest known protocol major version matches the expected value
         if rec and not (rec.proto_major == 8 and rec.proto_minor == 0):
             pytest.xfail(
@@ -303,18 +303,18 @@ class TestDBSync:
 
         cluster_nodes.restart_all_nodes()
 
-        # create source and destination payment addresses
+        # Create source and destination payment addresses
         payment_addrs = clusterlib_utils.create_payment_addr_records(
             f"{temp_template}_src",
             f"{temp_template}_dst",
             cluster_obj=cluster,
         )
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             payment_addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=10_000_000,
         )
 

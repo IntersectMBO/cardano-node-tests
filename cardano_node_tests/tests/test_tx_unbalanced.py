@@ -1,7 +1,6 @@
 """Tests for unbalanced transactions."""
 
 import logging
-import typing as tp
 
 import allure
 import hypothesis
@@ -29,7 +28,7 @@ class TestUnbalanced:
         self,
         cluster: clusterlib.ClusterLib,
         temp_template: str,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
@@ -69,7 +68,7 @@ class TestUnbalanced:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -82,11 +81,11 @@ class TestUnbalanced:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         return addrs
@@ -95,7 +94,7 @@ class TestUnbalanced:
     def pbt_highest_utxo(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ) -> clusterlib.UTXOData:
         """Get UTxO with highest amount of Lovelace.
 
@@ -109,7 +108,7 @@ class TestUnbalanced:
     def test_negative_change(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Try to build a transaction with a negative change.
 
@@ -133,9 +132,9 @@ class TestUnbalanced:
 
         src_addr_highest_utxo = cluster.g_query.get_utxo_with_highest_amount(src_address)
 
-        # use only the UTxO with the highest amount
+        # Use only the UTxO with the highest amount
         txins = [src_addr_highest_utxo]
-        # try to transfer +1 Lovelace more than available and use a negative change (-1)
+        # Try to transfer +1 Lovelace more than available and use a negative change (-1)
         txouts = [
             clusterlib.TxOut(address=dst_address, amount=src_addr_highest_utxo.amount - fee + 1),
             clusterlib.TxOut(address=src_address, amount=-1),
@@ -173,7 +172,7 @@ class TestUnbalanced:
     def test_build_transfer_unavailable_funds(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         transfer_add: int,
     ):
@@ -188,10 +187,10 @@ class TestUnbalanced:
 
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        # use only the UTxO with the highest amount
+        # Use only the UTxO with the highest amount
         txins = [pbt_highest_utxo]
         amount = min(MAX_LOVELACE_AMOUNT, pbt_highest_utxo.amount + transfer_add)
-        # try to transfer whole balance
+        # Try to transfer whole balance
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -218,7 +217,7 @@ class TestUnbalanced:
     def test_wrong_balance(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         change_amount: int,
     ):
@@ -239,7 +238,7 @@ class TestUnbalanced:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.g_transaction.calculate_tx_ttl()
 
-        # use only the UTxO with the highest amount
+        # Use only the UTxO with the highest amount
         txins = [pbt_highest_utxo]
         txouts = [
             clusterlib.TxOut(address=dst_address, amount=transferred_amount),
@@ -262,7 +261,7 @@ class TestUnbalanced:
             tx_name=temp_template,
         )
 
-        # it should NOT be possible to submit an unbalanced transaction
+        # It should NOT be possible to submit an unbalanced transaction
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(out_file_signed)
         exc_val = str(excinfo.value)
@@ -279,7 +278,7 @@ class TestUnbalanced:
     def test_out_of_bounds_amount(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         change_amount: int,
     ):
@@ -291,7 +290,7 @@ class TestUnbalanced:
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         ttl = cluster.g_transaction.calculate_tx_ttl()
 
-        # use only the UTxO with the highest amount
+        # Use only the UTxO with the highest amount
         txins = [pbt_highest_utxo]
         txouts = [
             clusterlib.TxOut(address=payment_addrs[0].address, amount=change_amount),
@@ -324,7 +323,7 @@ class TestUnbalanced:
     def test_build_transfer_amount_bellow_minimum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
@@ -355,7 +354,7 @@ class TestUnbalanced:
     def test_build_transfer_negative_amount(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
@@ -388,7 +387,7 @@ class TestUnbalanced:
     def test_transfer_amount_bellow_minimum(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
@@ -427,7 +426,7 @@ class TestUnbalanced:
 
         cluster.cli(build_args)
 
-        # create signed transaction
+        # Create signed transaction
         out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=out_file,
             signing_key_files=[payment_addrs[0].skey_file],
@@ -435,7 +434,7 @@ class TestUnbalanced:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo_build:
-            # submit the signed transaction
+            # Submit the signed transaction
             cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
 
         exc_val = str(excinfo_build.value)
@@ -451,7 +450,7 @@ class TestUnbalanced:
     def test_transfer_negative_amount(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):

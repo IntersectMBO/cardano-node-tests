@@ -3,7 +3,6 @@
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import pytest
@@ -30,7 +29,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -38,11 +37,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -54,9 +53,9 @@ def _build_reference_txin(
     temp_template: str,
     amount: int,
     payment_addr: clusterlib.AddressRecord,
-    dst_addr: tp.Optional[clusterlib.AddressRecord] = None,
-    datum_file: tp.Optional[pl.Path] = None,
-) -> tp.List[clusterlib.UTXOData]:
+    dst_addr: clusterlib.AddressRecord | None = None,
+    datum_file: pl.Path | None = None,
+) -> list[clusterlib.UTXOData]:
     """Create a basic txin to use as readonly reference input.
 
     Uses `cardano-cli transaction build-raw` command for building the transaction.
@@ -102,7 +101,7 @@ class TestMinting:
     def test_minting_two_tokens(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_reference_script: bool,
         plutus_version: str,
     ):
@@ -194,7 +193,7 @@ class TestMinting:
             mint=plutus_mint_data,
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
-            # ttl is optional in this test
+            # Ttl is optional in this test
             invalid_hereafter=cluster.g_query.get_slot_no() + 200,
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(
@@ -227,7 +226,7 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check tx view
+        # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
@@ -239,7 +238,7 @@ class TestMinting:
     def test_datum_hash_visibility(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         scenario: str,
     ):
         """Test visibility of datum hash on reference inputs by the plutus script.
@@ -278,7 +277,7 @@ class TestMinting:
             datum_file=plutus_common.DATUM_42,
         )
 
-        # to check datum hash on readonly reference input
+        # To check datum hash on readonly reference input
         with_reference_input = scenario != "reference_script"
         different_datum = scenario == "different_datum"
         datum_file = plutus_common.DATUM_43_TYPED if different_datum else plutus_common.DATUM_42
@@ -309,7 +308,7 @@ class TestMinting:
             script_data_file=plutus_common.DATUM_42
         )
 
-        # the redeemer file will be composed by the datum hash
+        # The redeemer file will be composed by the datum hash
         redeemer_file = f"{temp_template}.redeemer"
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
             json.dump({"bytes": datum_hash}, outfile)
@@ -337,7 +336,7 @@ class TestMinting:
             *mint_txouts,
         ]
 
-        # the plutus script checks if all reference inputs have the same datum hash
+        # The plutus script checks if all reference inputs have the same datum hash
         # it will fail if the datums hash are not the same in all reference inputs and
         # succeed if all datums hash match
         if different_datum:
@@ -373,7 +372,7 @@ class TestMinting:
             readonly_reference_txins=reference_input,
         )
 
-        # check that the token was minted
+        # Check that the token was minted
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
         token_utxo = clusterlib.filter_utxos(
             utxos=out_utxos, address=issuer_addr.address, coin=token
@@ -382,7 +381,7 @@ class TestMinting:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check that reference UTxO was NOT spent
+        # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(
             utxo=reference_utxo
         ), "Reference UTxO was spent"
@@ -392,7 +391,7 @@ class TestMinting:
     def test_missing_builtin(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Test builtins added to PlutusV2 from PlutusV3.
 

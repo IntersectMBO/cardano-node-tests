@@ -45,6 +45,7 @@ cp "$TESTNET_CONF_DIR"/genesis-*.json "$STATE_CLUSTER"
 ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.json"
+ln -rs "$STATE_CLUSTER/genesis-conway.json" "$STATE_CLUSTER/shelley/genesis.conway.json"
 
 # edit port numbers in configuration
 RELAY1_EKG="%%EKG_PORT_RELAY1%%"

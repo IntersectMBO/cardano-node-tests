@@ -3,7 +3,6 @@
 import logging
 import pathlib as pl
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -36,7 +35,7 @@ def get_payment_addr(
     clusterlib_utils.fund_from_faucet(
         addr,
         cluster_obj=cluster_obj,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=amount,
     )
 
@@ -50,17 +49,17 @@ def _gen_signed_tx(
     out_addr: clusterlib.AddressRecord,
     tx_name: str,
     fee: int,
-    invalid_hereafter: tp.Optional[int] = None,
-) -> tp.Tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, pl.Path]:
+    invalid_hereafter: int | None = None,
+) -> tuple[clusterlib.UTXOData, clusterlib.TxRawOutput, pl.Path]:
     """Generate Tx and return Tx output in a format that can be used as input for next Tx."""
     send_amount = txin.amount - fee
     out_file = f"{tx_name}_tx.body"
 
-    # create Tx data
+    # Create Tx data
     txout = clusterlib.TxOut(address=out_addr.address, amount=send_amount)
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
-    # build Tx
+    # Build Tx
     tx_raw_output = cluster_obj.g_transaction.build_raw_tx_bare(
         out_file=out_file,
         txouts=[txout],
@@ -70,14 +69,14 @@ def _gen_signed_tx(
         invalid_hereafter=invalid_hereafter,
     )
 
-    # sign Tx
+    # Sign Tx
     tx_file = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         tx_name=tx_name,
         signing_key_files=tx_files.signing_key_files,
     )
 
-    # transform output of this Tx (`TxOut`) to input for next Tx (`UTXOData`)
+    # Transform output of this Tx (`TxOut`) to input for next Tx (`UTXOData`)
     txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
     out_utxo = clusterlib.UTXOData(
         utxo_hash=txid,
@@ -139,7 +138,7 @@ class TestTxChaining:
         iterations = 1_000
         min_utxo_value = 1_000_000
 
-        tx_raw_outputs: tp.List[clusterlib.TxRawOutput] = []
+        tx_raw_outputs: list[clusterlib.TxRawOutput] = []
         submit_err = ""
 
         # It can happen that a Tx is removed from mempool without making it to the blockchain.
@@ -195,7 +194,7 @@ class TestTxChaining:
                 raise AssertionError(submit_err)
 
         if configuration.HAS_DBSYNC:
-            # wait a bit for all Txs to appear in db-sync
+            # Wait a bit for all Txs to appear in db-sync
             time.sleep(5)
 
             check_tx_outs = [

@@ -6,7 +6,6 @@ import itertools
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 from cardano_clusterlib import clusterlib
 
@@ -17,7 +16,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> tp.List[clusterlib.TxOut]:
+def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> list[clusterlib.TxOut]:
     """Calculate minting amount sum for records with the same token.
 
     Remove address information - minting tokens doesn't include address, only amount and asset ID,
@@ -25,7 +24,7 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> tp.List[clusterlib.Tx
     Remove also datum hash, which is not available as well.
     MA output is handled in Tx output checks.
     """
-    mint_txouts: tp.Dict[str, clusterlib.TxOut] = {}
+    mint_txouts: dict[str, clusterlib.TxOut] = {}
 
     for mt in txouts:
         if mt.coin in mint_txouts:
@@ -41,8 +40,8 @@ def _sum_mint_txouts(txouts: clusterlib.OptionalTxOuts) -> tp.List[clusterlib.Tx
 
 def _get_scripts_hashes(
     cluster_obj: clusterlib.ClusterLib,
-    records: tp.Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint],
-) -> tp.Dict[str, tp.Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]]:
+    records: clusterlib.OptionalScriptTxIn | clusterlib.OptionalMint,
+) -> dict[str, clusterlib.OptionalScriptTxIn | clusterlib.OptionalMint]:
     """Create a hash table of Tx Plutus data indexed by script hash."""
     hashes_db: dict = {}
 
@@ -68,8 +67,8 @@ def _get_script_data_hash(cluster_obj: clusterlib.ClusterLib, script_data: dict)
 
 
 def _db_redeemer_hashes(
-    records: tp.List[dbsync_types.RedeemerRecord],
-) -> tp.Dict[str, tp.List[dbsync_types.RedeemerRecord]]:
+    records: list[dbsync_types.RedeemerRecord],
+) -> dict[str, list[dbsync_types.RedeemerRecord]]:
     """Create a hash table of redeemers indexed by script hash."""
     hashes_db: dict = {}
 
@@ -85,7 +84,7 @@ def _db_redeemer_hashes(
 
 
 def _compare_redeemer_value(
-    tx_rec: tp.Union[clusterlib.ScriptTxIn, clusterlib.Mint], db_redeemer: dict
+    tx_rec: clusterlib.ScriptTxIn | clusterlib.Mint, db_redeemer: dict
 ) -> bool:
     """Compare the value of the tx redeemer with the value stored on dbsync."""
     if not (tx_rec.redeemer_file or tx_rec.redeemer_value):
@@ -108,8 +107,8 @@ def _compare_redeemer_value(
 
 
 def _compare_redeemers(
-    tx_data: tp.Dict[str, tp.Union[clusterlib.OptionalScriptTxIn, clusterlib.OptionalMint]],
-    db_data: tp.Dict[str, tp.List[dbsync_types.RedeemerRecord]],
+    tx_data: dict[str, clusterlib.OptionalScriptTxIn | clusterlib.OptionalMint],
+    db_data: dict[str, list[dbsync_types.RedeemerRecord]],
     purpose: str,
 ) -> None:
     """Compare redeemers data available in Tx data with data in db-sync."""
@@ -186,7 +185,7 @@ def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
 
 
 def utxodata2txout(
-    utxodata: tp.Union[dbsync_types.UTxORecord, clusterlib.UTXOData],
+    utxodata: dbsync_types.UTxORecord | clusterlib.UTXOData,
 ) -> clusterlib.TxOut:
     """Convert `UTxORecord` or `UTxOData` to `clusterlib.TxOut`."""
     return clusterlib.TxOut(
@@ -249,7 +248,7 @@ def check_tx_ins(
     response: dbsync_types.TxRecord,
 ) -> None:
     """Check that the Tx inputs match the data from db-sync."""
-    combined_txins: tp.List[clusterlib.UTXOData] = [
+    combined_txins: list[clusterlib.UTXOData] = [
         *tx_raw_output.txins,
         *[p.txins[0] for p in tx_raw_output.script_txins if p.txins],
     ]
@@ -351,7 +350,9 @@ def check_tx_collaterals(
             *tx_raw_output.script_withdrawals,
         )
     ]
-    tx_collaterals = set(itertools.chain.from_iterable(tx_collaterals_nested))
+    tx_collaterals_flat = set(itertools.chain.from_iterable(tx_collaterals_nested))
+    # TODO: support multi-assets in collateral inputs
+    tx_collaterals = {r for r in tx_collaterals_flat if r.coin == clusterlib.DEFAULT_COIN}
     db_collaterals = {utxorecord2utxodata(utxorecord=r) for r in response.collaterals}
 
     assert (

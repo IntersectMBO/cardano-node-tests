@@ -4,7 +4,6 @@
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import pytest
@@ -55,6 +54,7 @@ class TestInfo:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
     @pytest.mark.dbsync
+    @pytest.mark.upgrade_step1
     def test_info(
         self,
         cluster_use_governance: governance_utils.GovClusterT,
@@ -185,7 +185,7 @@ class TestInfo:
         ]
         [r.success() for r in (reqc.cli021, reqc.cip059)]
 
-        votes: tp.List[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
+        votes: list[governance_utils.VotesAllT] = [*votes_cc, *votes_drep, *votes_spo]
         vote_keys = [
             *[r.hot_keys.hot_skey_file for r in governance_data.cc_key_members],
             *[r.key_pair.skey_file for r in governance_data.dreps_reg],

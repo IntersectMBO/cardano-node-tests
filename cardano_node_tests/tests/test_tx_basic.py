@@ -4,7 +4,6 @@ import dataclasses
 import itertools
 import logging
 import re
-import typing as tp
 
 import allure
 import pytest
@@ -36,7 +35,7 @@ class TestBasicTransactions:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -49,11 +48,11 @@ class TestBasicTransactions:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -62,7 +61,7 @@ class TestBasicTransactions:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create 2 new Byron payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -77,11 +76,11 @@ class TestBasicTransactions:
             ]
             fixture_cache.value = new_byron_addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *new_byron_addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return new_byron_addrs
 
@@ -90,7 +89,7 @@ class TestBasicTransactions:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
         temp_template = common.get_test_id(cluster)
 
@@ -100,11 +99,11 @@ class TestBasicTransactions:
             cluster_obj=cluster,
         )
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *addrs,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -113,7 +112,7 @@ class TestBasicTransactions:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for `test_build_no_change`."""
         test_id = common.get_test_id(cluster)
         addrs = clusterlib_utils.create_payment_addr_records(
@@ -122,11 +121,11 @@ class TestBasicTransactions:
             cluster_obj=cluster,
         )
 
-        # fund source address
+        # Fund source address
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
         return addrs
 
@@ -166,8 +165,8 @@ class TestBasicTransactions:
     def test_transfer_funds(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        byron_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
+        byron_addrs: list[clusterlib.AddressRecord],
         src_addr_type: str,
         dst_addr_type: str,
         amount: int,
@@ -227,8 +226,8 @@ class TestBasicTransactions:
     def test_byron_fee_too_small(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
-        byron_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
+        byron_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Test cardano-node issue #4752.
@@ -278,7 +277,7 @@ class TestBasicTransactions:
     def test_build_no_change(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs_no_change: tp.List[clusterlib.AddressRecord],
+        payment_addrs_no_change: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Send funds to payment address and balance the outputs so that there is no change.
@@ -364,7 +363,7 @@ class TestBasicTransactions:
     def test_transfer_all_funds(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs_disposable: tp.List[clusterlib.AddressRecord],
+        payment_addrs_disposable: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Send ALL funds from one payment address to another.
@@ -380,7 +379,7 @@ class TestBasicTransactions:
         src_address = payment_addrs_disposable[1].address
         dst_address = payment_addrs_disposable[0].address
 
-        # amount value -1 means all available funds
+        # Amount value -1 means all available funds
         destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[1].skey_file])
 
@@ -421,7 +420,7 @@ class TestBasicTransactions:
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
-        # check `transaction view` command
+        # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -435,7 +434,7 @@ class TestBasicTransactions:
     def test_funds_to_valid_address(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -496,7 +495,7 @@ class TestBasicTransactions:
     def test_get_txid(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -552,7 +551,7 @@ class TestBasicTransactions:
     def test_extra_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Send a transaction with extra signing key.
@@ -617,7 +616,7 @@ class TestBasicTransactions:
     def test_duplicate_signing_keys(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Send a transaction with duplicate signing key.
@@ -682,7 +681,7 @@ class TestBasicTransactions:
     def test_sign_wrong_file(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         file_type: str,
         submit_method: str,
     ):
@@ -770,7 +769,7 @@ class TestBasicTransactions:
         clusterlib_utils.fund_from_faucet(
             src_record,
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=2_000_000,
         )
 
@@ -802,7 +801,7 @@ class TestBasicTransactions:
     def test_missing_tx_out(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Build a transaction with a missing `--tx-out` parameter."""
         temp_template = common.get_test_id(cluster)
@@ -843,7 +842,7 @@ class TestBasicTransactions:
     def test_missing_ttl(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter."""
@@ -905,7 +904,7 @@ class TestBasicTransactions:
     def test_multiple_same_txins(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Try to build a transaction with multiple identical txins."""
@@ -969,7 +968,7 @@ class TestBasicTransactions:
     def test_build_multiple_same_txins(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
     ):
         """Build a transaction with multiple identical txins.
 
@@ -1018,7 +1017,7 @@ class TestBasicTransactions:
     def test_utxo_with_datum_hash(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Create a UTxO with datum hash in a regular address and spend it.
@@ -1086,7 +1085,7 @@ class TestBasicTransactions:
     def test_far_future_ttl(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Send a transaction with ttl far in the future."""
@@ -1147,7 +1146,7 @@ class TestBasicTransactions:
         self,
         cluster: clusterlib.ClusterLib,
         cluster_default_tx_era: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -1176,7 +1175,7 @@ class TestBasicTransactions:
             tx_files=tx_files,
         )
 
-        # check `transaction view` command, this will check if the tx era is the expected
+        # Check `transaction view` command, this will check if the tx era is the expected
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
 
 
@@ -1188,7 +1187,7 @@ class TestMultiInOut:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create 201 new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -1203,11 +1202,11 @@ class TestMultiInOut:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
             amount=90_000_000_000,
         )
 
@@ -1216,7 +1215,7 @@ class TestMultiInOut:
     def _from_to_transactions(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         tx_name: str,
         from_num: int,
         to_num: int,
@@ -1226,9 +1225,9 @@ class TestMultiInOut:
     ):
         """Test 1 tx from `from_num` payment addresses to `to_num` payment addresses."""
         src_address = payment_addrs[0].address
-        # addr1..addr<from_num+1>
+        # Addr1..addr<from_num+1>
         from_addr_recs = payment_addrs[1 : from_num + 1]
-        # addr<from_num+1>..addr<from_num+to_num+1>
+        # Addr<from_num+1>..addr<from_num+to_num+1>
         dst_addresses = [
             payment_addrs[i].address for i in range(from_num + 1, from_num + to_num + 1)
         ]
@@ -1306,7 +1305,7 @@ class TestMultiInOut:
     def test_10_transactions(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Send 10 transactions to payment address.
@@ -1362,7 +1361,7 @@ class TestMultiInOut:
     def test_transaction_to_10_addrs_from_1_addr(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
         submit_method: str,
@@ -1394,7 +1393,7 @@ class TestMultiInOut:
     def test_transaction_to_1_addr_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
         submit_method: str,
@@ -1426,7 +1425,7 @@ class TestMultiInOut:
     def test_transaction_to_10_addrs_from_10_addrs(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
         submit_method: str,
@@ -1458,7 +1457,7 @@ class TestMultiInOut:
     def test_transaction_to_100_addrs_from_50_addrs(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
         use_build_cmd: bool,
         submit_method: str,
@@ -1489,7 +1488,7 @@ class TestIncrementalSigning:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> tp.List[clusterlib.AddressRecord]:
+    ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value:
@@ -1504,11 +1503,11 @@ class TestIncrementalSigning:
             )
             fixture_cache.value = addrs
 
-        # fund source addresses
+        # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             addrs[0],
             cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["user1"],
+            all_faucets=cluster_manager.cache.addrs_data,
         )
 
         return addrs
@@ -1523,7 +1522,7 @@ class TestIncrementalSigning:
     def test_incremental_signing(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         use_build_cmd: bool,
         tx_is: str,
         submit_method: str,
@@ -1610,7 +1609,7 @@ class TestIncrementalSigning:
         # Incrementally sign the already signed Tx with rest of the skeys, excluding the
         # required skey
         for idx, skey in enumerate(payment_skey_files[1:5], start=1):
-            # sign multiple times with the same skey to see that it doesn't affect Tx fee
+            # Sign multiple times with the same skey to see that it doesn't affect Tx fee
             for r in range(5):
                 tx_signed = cluster.g_transaction.sign_tx(
                     tx_file=tx_signed,

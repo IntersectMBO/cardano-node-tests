@@ -5,7 +5,6 @@ import logging
 import os
 import pathlib as pl
 import shutil
-import typing as tp
 
 from _pytest.config import Config
 from cardano_clusterlib import clusterlib
@@ -19,9 +18,7 @@ ARTIFACTS_BASE_DIR_ARG = "--artifacts-base-dir"
 CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
 
 
-def save_cli_coverage(
-    cluster_obj: clusterlib.ClusterLib, pytest_config: Config
-) -> tp.Optional[pl.Path]:
+def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> pl.Path | None:
     """Save CLI coverage info."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and cluster_obj.cli_coverage):
@@ -36,7 +33,7 @@ def save_cli_coverage(
     return json_file
 
 
-def save_start_script_coverage(log_file: pl.Path, pytest_config: Config) -> tp.Optional[pl.Path]:
+def save_start_script_coverage(log_file: pl.Path, pytest_config: Config) -> pl.Path | None:
     """Save info about CLI commands executed by cluster start script."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and log_file.exists()):

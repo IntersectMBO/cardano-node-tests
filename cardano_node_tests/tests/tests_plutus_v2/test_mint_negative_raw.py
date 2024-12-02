@@ -1,7 +1,6 @@
 """Negative tests for minting with Plutus V2 using `transaction build-raw`."""
 
 import logging
-import typing as tp
 
 import allure
 import pytest
@@ -26,7 +25,7 @@ pytestmark = [
 def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.List[clusterlib.AddressRecord]:
+) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     test_id = common.get_test_id(cluster)
     addrs = clusterlib_utils.create_payment_addr_records(
@@ -34,11 +33,11 @@ def payment_addrs(
         cluster_obj=cluster,
     )
 
-    # fund source address
+    # Fund source address
     clusterlib_utils.fund_from_faucet(
         addrs[0],
         cluster_obj=cluster,
-        faucet_data=cluster_manager.cache.addrs_data["user1"],
+        all_faucets=cluster_manager.cache.addrs_data,
         amount=3_000_000_000,
     )
 
@@ -55,7 +54,7 @@ class TestNegativeCollateralOutput:
     def test_minting_with_limited_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         plutus_version: str,
     ):
         """Test minting a token with a Plutus script with limited collateral amount.
@@ -131,7 +130,7 @@ class TestNegativeCollateralOutput:
             *mint_txouts,
         ]
 
-        # limit the amount of collateral that can be used and balance the return collateral txout
+        # Limit the amount of collateral that can be used and balance the return collateral txout
         total_collateral_amount = minting_cost.min_collateral // 2
         return_collateral_txouts = [
             clusterlib.TxOut(
@@ -155,7 +154,7 @@ class TestNegativeCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with a collateral with insufficient funds
+        # It should NOT be possible to mint with a collateral with insufficient funds
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)
@@ -173,7 +172,7 @@ class TestNegativeCollateralOutput:
     def test_minting_with_unbalanced_total_collateral(
         self,
         cluster: clusterlib.ClusterLib,
-        payment_addrs: tp.List[clusterlib.AddressRecord],
+        payment_addrs: list[clusterlib.AddressRecord],
         with_return_collateral: bool,
         plutus_version: str,
     ):
@@ -264,7 +263,7 @@ class TestNegativeCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        # it should NOT be possible to mint with an unbalanced total collateral
+        # It should NOT be possible to mint with an unbalanced total collateral
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
         err_str = str(excinfo.value)

@@ -25,22 +25,22 @@ class PoolDataDBRow:
     reward_addr: memoryview
     reward_addr_view: str
     active_epoch_no: int
-    meta_id: tp.Optional[int]
+    meta_id: int | None
     margin: decimal.Decimal
     fixed_cost: int
-    deposit: tp.Optional[decimal.Decimal]
+    deposit: decimal.Decimal | None
     registered_tx_id: int
-    metadata_url: tp.Optional[str]
-    metadata_hash: tp.Optional[memoryview]
+    metadata_url: str | None
+    metadata_hash: memoryview | None
     owner_stake_address_id: int
     owner: memoryview
-    ipv4: tp.Optional[str]
-    ipv6: tp.Optional[str]
-    dns_name: tp.Optional[str]
-    port: tp.Optional[int]
-    retire_cert_index: tp.Optional[int]
-    retire_announced_tx_id: tp.Optional[int]
-    retiring_epoch: tp.Optional[int]
+    ipv4: str | None
+    ipv6: str | None
+    dns_name: str | None
+    port: int | None
+    retire_cert_index: int | None
+    retire_announced_tx_id: int | None
+    retiring_epoch: int | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
@@ -80,18 +80,18 @@ class TxDBRow:
     fee: decimal.Decimal
     deposit: int
     size: int
-    invalid_before: tp.Optional[decimal.Decimal]
-    invalid_hereafter: tp.Optional[decimal.Decimal]
+    invalid_before: decimal.Decimal | None
+    invalid_hereafter: decimal.Decimal | None
     treasury_donation: int
-    tx_out_id: tp.Optional[int]
-    tx_out_tx_id: tp.Optional[int]
-    utxo_ix: tp.Optional[int]
-    tx_out_addr: tp.Optional[str]
-    tx_out_addr_has_script: tp.Optional[bool]
-    tx_out_value: tp.Optional[decimal.Decimal]
-    tx_out_data_hash: tp.Optional[memoryview]
-    tx_out_inline_datum_hash: tp.Optional[memoryview]
-    tx_out_reference_script_hash: tp.Optional[memoryview]
+    tx_out_id: int | None
+    tx_out_tx_id: int | None
+    utxo_ix: int | None
+    tx_out_addr: str | None
+    tx_out_addr_has_script: bool | None
+    tx_out_value: decimal.Decimal | None
+    tx_out_data_hash: memoryview | None
+    tx_out_inline_datum_hash: memoryview | None
+    tx_out_reference_script_hash: memoryview | None
     metadata_count: int
     reserve_count: int
     treasury_count: int
@@ -106,14 +106,14 @@ class TxDBRow:
     script_count: int
     redeemer_count: int
     extra_key_witness_count: int
-    ma_tx_out_id: tp.Optional[int]
-    ma_tx_out_policy: tp.Optional[memoryview]
-    ma_tx_out_name: tp.Optional[memoryview]
-    ma_tx_out_quantity: tp.Optional[decimal.Decimal]
-    ma_tx_mint_id: tp.Optional[int]
-    ma_tx_mint_policy: tp.Optional[memoryview]
-    ma_tx_mint_name: tp.Optional[memoryview]
-    ma_tx_mint_quantity: tp.Optional[decimal.Decimal]
+    ma_tx_out_id: int | None
+    ma_tx_out_policy: memoryview | None
+    ma_tx_out_name: memoryview | None
+    ma_tx_out_quantity: decimal.Decimal | None
+    ma_tx_mint_id: int | None
+    ma_tx_mint_policy: memoryview | None
+    ma_tx_mint_name: memoryview | None
+    ma_tx_mint_quantity: decimal.Decimal | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
@@ -153,9 +153,9 @@ class StakeAddrDBRow:
 @pydantic.dataclasses.dataclass(frozen=True)
 class StakeDelegDBRow:
     tx_id: int
-    active_epoch_no: tp.Optional[int]
-    pool_id: tp.Optional[str]
-    address: tp.Optional[str]
+    active_epoch_no: int | None
+    pool_id: str | None
+    address: str | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True)
@@ -172,14 +172,14 @@ class TxInDBRow:
     address: str
     value: decimal.Decimal
     tx_hash: memoryview
-    reference_script_hash: tp.Optional[memoryview]
-    reference_script_json: tp.Optional[dict]
-    reference_script_bytes: tp.Optional[memoryview]
-    reference_script_type: tp.Optional[str]
-    ma_tx_out_id: tp.Optional[int]
-    ma_tx_out_policy: tp.Optional[memoryview]
-    ma_tx_out_name: tp.Optional[memoryview]
-    ma_tx_out_quantity: tp.Optional[decimal.Decimal]
+    reference_script_hash: memoryview | None
+    reference_script_json: dict | None
+    reference_script_bytes: memoryview | None
+    reference_script_type: str | None
+    ma_tx_out_id: int | None
+    ma_tx_out_policy: memoryview | None
+    ma_tx_out_name: memoryview | None
+    ma_tx_out_quantity: decimal.Decimal | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
@@ -189,10 +189,10 @@ class TxInNoMADBRow:
     address: str
     value: decimal.Decimal
     tx_hash: memoryview
-    reference_script_hash: tp.Optional[memoryview]
-    reference_script_json: tp.Optional[dict]
-    reference_script_bytes: tp.Optional[memoryview]
-    reference_script_type: tp.Optional[str]
+    reference_script_hash: memoryview | None
+    reference_script_json: dict | None
+    reference_script_bytes: memoryview | None
+    reference_script_type: str | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
@@ -210,7 +210,7 @@ class ScriptDBRow:
     tx_id: int
     hash: memoryview
     type: str
-    serialised_size: tp.Optional[int]
+    serialised_size: int | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
@@ -248,7 +248,7 @@ class RewardDBRow:
     amount: decimal.Decimal
     earned_epoch: int
     spendable_epoch: int
-    pool_id: tp.Optional[str] = ""
+    pool_id: str | None = ""
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
@@ -256,24 +256,24 @@ class UTxODBRow:
     tx_hash: memoryview
     utxo_ix: int
     payment_address: str
-    stake_address: tp.Optional[str]
+    stake_address: str | None
     has_script: bool
     value: int
-    data_hash: tp.Optional[memoryview]
+    data_hash: memoryview | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True)
 class BlockDBRow:
     id: int
-    epoch_no: tp.Optional[int]
-    slot_no: tp.Optional[int]
-    epoch_slot_no: tp.Optional[int]
-    block_no: tp.Optional[int]
-    previous_id: tp.Optional[int]
-    tx_count: tp.Optional[int]
-    proto_major: tp.Optional[int]
-    proto_minor: tp.Optional[int]
-    pool_id: tp.Optional[str]
+    epoch_no: int | None
+    slot_no: int | None
+    epoch_slot_no: int | None
+    block_no: int | None
+    previous_id: int | None
+    tx_count: int | None
+    proto_major: int | None
+    proto_minor: int | None
+    pool_id: str | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
@@ -295,60 +295,60 @@ class SchemaVersionStages:
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class ParamProposalDBRow:
     id: int
-    epoch_no: tp.Optional[int]
-    key: tp.Optional[memoryview]
-    min_fee_a: tp.Optional[int]
-    min_fee_b: tp.Optional[int]
-    max_block_size: tp.Optional[int]
-    max_tx_size: tp.Optional[int]
-    max_bh_size: tp.Optional[int]
-    key_deposit: tp.Optional[int]
-    pool_deposit: tp.Optional[int]
-    max_epoch: tp.Optional[int]
-    optimal_pool_count: tp.Optional[int]
-    influence: tp.Optional[float]
-    monetary_expand_rate: tp.Optional[float]
-    treasury_growth_rate: tp.Optional[float]
-    decentralisation: tp.Optional[float]
-    entropy: tp.Optional[memoryview]
-    protocol_major: tp.Optional[int]
-    protocol_minor: tp.Optional[int]
-    min_utxo_value: tp.Optional[int]
-    min_pool_cost: tp.Optional[int]
-    coins_per_utxo_size: tp.Optional[int]
-    cost_model_id: tp.Optional[int]
-    price_mem: tp.Optional[float]
-    price_step: tp.Optional[float]
-    max_tx_ex_mem: tp.Optional[int]
-    max_tx_ex_steps: tp.Optional[int]
-    max_block_ex_mem: tp.Optional[int]
-    max_block_ex_steps: tp.Optional[int]
-    max_val_size: tp.Optional[int]
-    collateral_percent: tp.Optional[int]
-    max_collateral_inputs: tp.Optional[int]
-    registered_tx_id: tp.Optional[int]
-    pvt_motion_no_confidence: tp.Optional[float]
-    pvt_committee_normal: tp.Optional[float]
-    pvt_committee_no_confidence: tp.Optional[float]
-    pvt_hard_fork_initiation: tp.Optional[float]
-    dvt_motion_no_confidence: tp.Optional[float]
-    dvt_committee_normal: tp.Optional[float]
-    dvt_committee_no_confidence: tp.Optional[float]
-    dvt_update_to_constitution: tp.Optional[float]
-    dvt_hard_fork_initiation: tp.Optional[float]
-    dvt_p_p_network_group: tp.Optional[float]
-    dvt_p_p_economic_group: tp.Optional[float]
-    dvt_p_p_technical_group: tp.Optional[float]
-    dvt_p_p_gov_group: tp.Optional[float]
-    dvt_treasury_withdrawal: tp.Optional[float]
-    committee_min_size: tp.Optional[int]
-    committee_max_term_length: tp.Optional[int]
-    gov_action_lifetime: tp.Optional[int]
-    gov_action_deposit: tp.Optional[int]
-    drep_deposit: tp.Optional[int]
-    drep_activity: tp.Optional[decimal.Decimal]
-    pvtpp_security_group: tp.Optional[float]
-    min_fee_ref_script_cost_per_byte: tp.Optional[float]
+    epoch_no: int | None
+    key: memoryview | None
+    min_fee_a: int | None
+    min_fee_b: int | None
+    max_block_size: int | None
+    max_tx_size: int | None
+    max_bh_size: int | None
+    key_deposit: int | None
+    pool_deposit: int | None
+    max_epoch: int | None
+    optimal_pool_count: int | None
+    influence: float | None
+    monetary_expand_rate: float | None
+    treasury_growth_rate: float | None
+    decentralisation: float | None
+    entropy: memoryview | None
+    protocol_major: int | None
+    protocol_minor: int | None
+    min_utxo_value: int | None
+    min_pool_cost: int | None
+    coins_per_utxo_size: int | None
+    cost_model_id: int | None
+    price_mem: float | None
+    price_step: float | None
+    max_tx_ex_mem: int | None
+    max_tx_ex_steps: int | None
+    max_block_ex_mem: int | None
+    max_block_ex_steps: int | None
+    max_val_size: int | None
+    collateral_percent: int | None
+    max_collateral_inputs: int | None
+    registered_tx_id: int | None
+    pvt_motion_no_confidence: float | None
+    pvt_committee_normal: float | None
+    pvt_committee_no_confidence: float | None
+    pvt_hard_fork_initiation: float | None
+    dvt_motion_no_confidence: float | None
+    dvt_committee_normal: float | None
+    dvt_committee_no_confidence: float | None
+    dvt_update_to_constitution: float | None
+    dvt_hard_fork_initiation: float | None
+    dvt_p_p_network_group: float | None
+    dvt_p_p_economic_group: float | None
+    dvt_p_p_technical_group: float | None
+    dvt_p_p_gov_group: float | None
+    dvt_treasury_withdrawal: float | None
+    committee_min_size: int | None
+    committee_max_term_length: int | None
+    gov_action_lifetime: int | None
+    gov_action_deposit: int | None
+    drep_deposit: int | None
+    drep_activity: decimal.Decimal | None
+    pvtpp_security_group: float | None
+    min_fee_ref_script_cost_per_byte: float | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True)
@@ -394,7 +394,7 @@ class EpochParamDBRow:
     collateral_percent: int
     max_collateral_inputs: int
     block_id: int
-    extra_entropy: tp.Optional[memoryview]
+    extra_entropy: memoryview | None
     coins_per_utxo_size: int
     pvt_motion_no_confidence: float
     pvt_committee_normal: float
@@ -445,7 +445,7 @@ class DrepRegistrationDBRow:
     cert_index: int
     deposit: int
     drep_hash_id: int
-    voting_anchor_id: tp.Optional[int]
+    voting_anchor_id: int | None
     hash_raw: memoryview
     hash_view: str
     has_script: bool
@@ -456,7 +456,7 @@ class GovActionProposalDBRow:
     id: int
     tx_id: int
     action_ix: int
-    prev_gov_action_proposal: tp.Optional[int]
+    prev_gov_action_proposal: int | None
     deposit: int
     return_address: int
     expiration: int
@@ -464,19 +464,19 @@ class GovActionProposalDBRow:
     type: str
     description: dict
     param_proposal: int
-    ratified_epoch: tp.Optional[int]
-    enacted_epoch: tp.Optional[int]
-    dropped_epoch: tp.Optional[int]
-    expired_epoch: tp.Optional[int]
+    ratified_epoch: int | None
+    enacted_epoch: int | None
+    dropped_epoch: int | None
+    expired_epoch: int | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True)
 class VotingProcedureDBRow:
     id: int
     voter_role: str
-    committee_voter: tp.Optional[int]
-    drep_voter: tp.Optional[int]
-    pool_voter: tp.Optional[int]
+    committee_voter: int | None
+    drep_voter: int | None
+    pool_voter: int | None
     vote: str
 
 
@@ -503,10 +503,10 @@ class TreasuryWithdrawalDBRow:
     tx_id: int
     action_ix: int
     expiration: int
-    ratified_epoch: tp.Optional[int]
-    enacted_epoch: tp.Optional[int]
-    dropped_epoch: tp.Optional[int]
-    expired_epoch: tp.Optional[int]
+    ratified_epoch: int | None
+    enacted_epoch: int | None
+    dropped_epoch: int | None
+    expired_epoch: int | None
     addr_view: str
     amount: decimal.Decimal
 
@@ -523,11 +523,11 @@ class OffChainVoteDrepDataDBRow:
     id: int
     hash: memoryview
     language: str
-    comment: tp.Optional[str]
+    comment: str | None
     json: dict
     bytes: memoryview
-    warning: tp.Optional[str]
-    is_valid: tp.Optional[bool]
+    warning: str | None
+    is_valid: bool | None
     payment_address: str
     given_name: str
     objectives: str
@@ -544,28 +544,28 @@ class OffChainVoteDataDBRow:
     data_hash: memoryview
     data_json: dict
     data_bytes: memoryview
-    data_warning: tp.Optional[str]
+    data_warning: str | None
     data_language: str
-    data_comment: tp.Optional[str]
-    data_is_valid: tp.Optional[bool]
-    auth_name: tp.Optional[str]
-    auth_wit_alg: tp.Optional[str]
-    auth_pub_key: tp.Optional[str]
-    auth_signature: tp.Optional[str]
-    auth_warning: tp.Optional[str]
-    ext_update_id: tp.Optional[int]
-    ext_update_title: tp.Optional[str]
-    ext_update_uri: tp.Optional[str]
-    gov_act_id: tp.Optional[int]
-    gov_act_title: tp.Optional[str]
-    gov_act_abstract: tp.Optional[str]
-    gov_act_motivation: tp.Optional[str]
-    gov_act_rationale: tp.Optional[str]
-    ref_id: tp.Optional[int]
-    ref_label: tp.Optional[str]
-    ref_uri: tp.Optional[str]
-    ref_hash_digest: tp.Optional[str]
-    ref_hash_alg: tp.Optional[str]
+    data_comment: str | None
+    data_is_valid: bool | None
+    auth_name: str | None
+    auth_wit_alg: str | None
+    auth_pub_key: str | None
+    auth_signature: str | None
+    auth_warning: str | None
+    ext_update_id: int | None
+    ext_update_title: str | None
+    ext_update_uri: str | None
+    gov_act_id: int | None
+    gov_act_title: str | None
+    gov_act_abstract: str | None
+    gov_act_motivation: str | None
+    gov_act_rationale: str | None
+    ref_id: int | None
+    ref_label: str | None
+    ref_uri: str | None
+    ref_hash_digest: str | None
+    ref_hash_alg: str | None
     vot_anchor_url: str
     vot_anchor_data_hash: memoryview
     vot_anchor_type: str
@@ -582,7 +582,7 @@ class DelegationVoteDBRow:
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
 class NewConstitutionInfoDBRow:
     id: int
-    script_hash: tp.Optional[memoryview]
+    script_hash: memoryview | None
     gov_action_type: str
     gap_id: int
     tx_id: int
@@ -633,7 +633,7 @@ def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensio
 class SchemaVersion:
     """Query and cache db-sync schema version."""
 
-    _stages: tp.ClassVar[tp.Optional[SchemaVersionStages]] = None
+    _stages: tp.ClassVar[SchemaVersionStages | None] = None
 
     @classmethod
     def stages(cls) -> SchemaVersionStages:
@@ -1153,7 +1153,7 @@ def query_blocks(
             yield BlockDBRow(*result)
 
 
-def query_table_names() -> tp.List[str]:
+def query_table_names() -> list[str]:
     """Query table names in db-sync."""
     query = (
         "SELECT tablename "
@@ -1163,7 +1163,7 @@ def query_table_names() -> tp.List[str]:
     )
 
     with execute(query=query) as cur:
-        results: tp.List[tp.Tuple[str]] = cur.fetchall()
+        results: list[tuple[str]] = cur.fetchall()
         table_names = [r[0] for r in results]
         return table_names
 
@@ -1177,14 +1177,14 @@ def query_datum(datum_hash: str) -> tp.Generator[DatumDBRow, None, None]:
             yield DatumDBRow(*result)
 
 
-def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> tp.Dict[str, tp.Dict[str, tp.Any]]:
+def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> dict[str, dict[str, tp.Any]]:
     """Query cost model record in db-sync.
 
     If `model_id` is specified, query the cost model that corresponds to the given id.
     If `epoch_no` is specified, query the cost model used in the given epoch.
     Otherwise query the latest cost model.
     """
-    query_var: tp.Union[int, str]
+    query_var: int | str
 
     if model_id != -1:
         subquery = "WHERE cm.id = %s "
@@ -1203,7 +1203,7 @@ def query_cost_model(model_id: int = -1, epoch_no: int = -1) -> tp.Dict[str, tp.
 
     with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()
-        cost_model: tp.Dict[str, tp.Dict[str, tp.Any]] = results[1] if results else {}
+        cost_model: dict[str, dict[str, tp.Any]] = results[1] if results else {}
         return cost_model
 
 

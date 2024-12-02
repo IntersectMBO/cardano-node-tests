@@ -24,46 +24,48 @@ classifiers = [
 packages = [{include = "cardano_node_tests"}]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
+python = ">=3.10,<4.0"
 allure-pytest = "^2.13.5"
-cardano-clusterlib = "^0.7.0a3"
-cbor2 = "^5.6.4"
-filelock = "^3.15.4"
-hypothesis = "^6.108.5"
-psycopg2-binary = "^2.9.9"
-pydantic = "^2.8.2"
-pygithub = "^2.3.0"
-pytest = "^8.3.2"
+cardano-clusterlib = "^0.7.0a4"
+cbor2 = "^5.6.5"
+filelock = "^3.16.1"
+hypothesis = "^6.118.8"
+psycopg2-binary = "^2.9.10"
+pydantic = "^2.9.2"
+pygithub = "^2.5.0"
+pytest = "^8.3.3"
 pytest-html = "^4.1.1"
 pytest-metadata = "^3.1.1"
-pytest-order = "^1.2.1"
+pytest-order = "^1.3.0"
 pytest-select = "^0.1.2"
 pytest-xdist = "^3.6.1"
-PyYAML = "^6.0.1"
+PyYAML = "^6.0.2"
 requests = "^2.32.3"
 pytest-subtests = "^0.13.1"
+supervisor = "^4.2.5"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^3.8.0"
-types-PyYAML = "^6.0.12.20240724"
-types-requests = "^2.32.0.20240712"
-mypy = "^1.11.0"
-ipython = "^8.14.0"
+pre-commit = "^4.0.1"
+types-PyYAML = "^6.0.12.20240917"
+types-requests = "^2.32.0.20241016"
+mypy = "^1.13.0"
+ipython = "^8.29.0"
 
 [tool.poetry.group.docs]
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-Sphinx = "7.4.7"
+Sphinx = "^8.1.3"
 m2r2 = "^0.3.3.post2"
-sphinx-rtd-theme = "^2.0.0"
+sphinx-rtd-theme = "^3.0.1"
 sphinxemoji = "^0.3.1"
 
 [tool.poetry.scripts]
 testnet-cleanup = "cardano_node_tests.testnet_cleanup:main"
+defragment-utxos = "cardano_node_tests.defragment_utxos:main"
 prepare-cluster-scripts = "cardano_node_tests.prepare_cluster_scripts:main"
 split-topology = "cardano_node_tests.split_topology:main"
 cardano-cli-coverage = "cardano_node_tests.cardano_cli_coverage:main"
@@ -133,8 +135,11 @@ markers = [
     "testnets: test(s) can run on testnets, like Shelley_qa",
     "long: test(s) run for a long time on testnets",
     "smoke: fast test(s) under 1 minute",
-    "upgrade: test(s) for upgrade testing",
+    "upgrade_step1: test(s) for upgrade testing in step1",
+    "upgrade_step2: test(s) for upgrade testing in step2",
+    "upgrade_step3: test(s) for upgrade testing in step3",
     "plutus: test(s) for plutus",
+    "team_plutus: test(s) from Plutus dev team",
     "disabled: temporarily disabled test(s)",
     "noop: placeholder marker",
 ]
