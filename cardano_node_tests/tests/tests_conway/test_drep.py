@@ -774,7 +774,6 @@ class TestNegativeDReps:
     def test_no_multiple_delegation(
         self,
         cluster_rewards: clusterlib.ClusterLib,
-        cluster_manager: cluster_management.ClusterManager,
         payment_addr_rewards: clusterlib.AddressRecord,
         pool_user_rewards: clusterlib.PoolUser,
         testfile_temp_dir: pl.Path,
@@ -790,22 +789,16 @@ class TestNegativeDReps:
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()
-        key1 = helpers.get_current_line_str()
-        drep1 = get_custom_drep(
-            name_template=f"custom_drep_1_{temp_template}",
-            cluster_manager=cluster_manager,
-            cluster_obj=cluster,
-            payment_addr=payment_addr_rewards,
-            caching_key=key1,
-        )
 
-        key2 = helpers.get_current_line_str()
-        drep2 = get_custom_drep(
-            name_template=f"custom_drep_2_{temp_template}",
-            cluster_manager=cluster_manager,
+        drep1 = create_drep(
+            name_template=f"custom_drep_1_{temp_template}",
             cluster_obj=cluster,
             payment_addr=payment_addr_rewards,
-            caching_key=key2,
+        )
+        drep2 = create_drep(
+            name_template=f"custom_drep_2_{temp_template}",
+            cluster_obj=cluster,
+            payment_addr=payment_addr_rewards,
         )
 
         # Create stake address registration cert
