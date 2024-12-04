@@ -1,6 +1,7 @@
 #!/bin/bash
 
-pushd "$WORKDIR" || exit 1
+_origpwd="$PWD"
+cd "$WORKDIR" || exit 1
 
 case "${PLUTUS_APPS_REV:-""}" in
   "" )
@@ -15,7 +16,7 @@ case "${PLUTUS_APPS_REV:-""}" in
       git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/IntersectMBO/plutus-apps.git
     fi
 
-    pushd plutus-apps || exit 1
+    cd plutus-apps || exit 1
     git fetch origin main
     ;;
 
@@ -24,7 +25,7 @@ case "${PLUTUS_APPS_REV:-""}" in
       git clone --recurse-submodules https://github.com/IntersectMBO/plutus-apps.git
     fi
 
-    pushd plutus-apps || exit 1
+    cd plutus-apps || exit 1
     git fetch
     ;;
 esac
@@ -40,4 +41,5 @@ nix build --accept-flake-config .#create-script-context -o create-script-context
 PATH="$(readlink -m create-script-context-build/bin)":"$PATH"
 export PATH
 
-pushd "$REPODIR" || exit 1
+cd "$_origpwd" || exit 1
+unset _origpwd

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-pushd "$WORKDIR" || exit 1
+_origpwd="$PWD"
+cd "$WORKDIR" || exit 1
 
 case "${CARDANO_CLI_REV:-""}" in
   "" )
@@ -15,7 +16,7 @@ case "${CARDANO_CLI_REV:-""}" in
       git clone --depth 1 https://github.com/IntersectMBO/cardano-cli.git
     fi
 
-    pushd cardano-cli || exit 1
+    cd cardano-cli || exit 1
     git fetch origin main
     ;;
 
@@ -24,7 +25,7 @@ case "${CARDANO_CLI_REV:-""}" in
       git clone https://github.com/IntersectMBO/cardano-cli.git
     fi
 
-    pushd cardano-cli || exit 1
+    cd cardano-cli || exit 1
     git fetch
     ;;
 esac
@@ -36,4 +37,5 @@ git rev-parse HEAD
 nix build --accept-flake-config .#cardano-cli -o cardano-cli-build || exit 1
 [ -e cardano-cli-build/bin/cardano-cli ] || exit 1
 
-pushd "$REPODIR" || exit 1
+cd "$_origpwd" || exit 1
+unset _origpwd

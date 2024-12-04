@@ -4,7 +4,8 @@ TEST_THREADS="${TEST_THREADS:-15}"
 CLUSTERS_COUNT="${CLUSTERS_COUNT:-4}"
 export TEST_THREADS CLUSTERS_COUNT
 
-pushd "$WORKDIR" || exit 1
+_origpwd="$PWD"
+cd "$WORKDIR" || exit 1
 
 stop_postgres() {
   echo "Stopping postgres"
@@ -57,7 +58,7 @@ case "${DBSYNC_REV:-""}" in
       git clone --depth 1 https://github.com/IntersectMBO/cardano-db-sync.git
     fi
 
-    pushd cardano-db-sync || exit 1
+    cd cardano-db-sync || exit 1
     git fetch origin master
     ;;
 
@@ -66,7 +67,7 @@ case "${DBSYNC_REV:-""}" in
       git clone https://github.com/IntersectMBO/cardano-db-sync.git
     fi
 
-    pushd cardano-db-sync || exit 1
+    cd cardano-db-sync || exit 1
     git fetch
     ;;
 esac
@@ -112,7 +113,7 @@ fi
 [ -e db-sync-node/bin/cardano-db-sync ] || exit 1
 export DBSYNC_REPO="$PWD"
 
-pushd "$REPODIR" || exit 1
+cd "$REPODIR" || exit 1
 
 # set postgres env variables
 export PGHOST=localhost
@@ -121,3 +122,6 @@ export PGPORT=5432
 
 # start and setup postgres
 ./scripts/postgres-start.sh "$WORKDIR/postgres" -k
+
+cd "$_origpwd" || exit 1
+unset _origpwd
