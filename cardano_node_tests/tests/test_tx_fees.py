@@ -2,6 +2,7 @@
 
 import itertools
 import logging
+import pathlib as pl
 
 import allure
 import hypothesis
@@ -14,6 +15,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -338,16 +340,19 @@ class TestExpectedFees:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+            )
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1_000,
             pool_cost=15,
             pool_margin=0.2,
-            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -392,16 +397,19 @@ class TestExpectedFees:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+            )
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
             pool_cost=123,
             pool_margin=0.512,
-            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 

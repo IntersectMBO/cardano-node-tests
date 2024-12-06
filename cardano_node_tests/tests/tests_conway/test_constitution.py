@@ -22,6 +22,7 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -348,10 +349,13 @@ class TestConstitution:
 
         # Create an action
 
-        anchor_url = f"http://www.const-action-{rand_str}.com"
-        anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+        anchor_text = f"Change constitution action, temp ID {rand_str}"
+        anchor_data = governance_utils.get_anchor_data(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            anchor_text=anchor_text,
+        )
 
-        constitution_file = f"{temp_template}_constitution.txt"
         constitution_text = (
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
             "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
@@ -361,10 +365,10 @@ class TestConstitution:
             "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia "
             "deserunt mollit anim id est laborum."
         )
-        with open(constitution_file, "w", encoding="utf-8") as out_fp:
-            out_fp.write(constitution_text)
+        constitution_file = pl.Path(f"{temp_template}_constitution.txt")
+        constitution_file.write_text(data=constitution_text, encoding="utf-8")
+        constitution_url = web.publish(file_path=constitution_file)
 
-        constitution_url = f"http://www.const-new-{rand_str}.com"
         reqc.cli002.start(url=helpers.get_vcs_link())
         constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
             file_text=constitution_file
@@ -377,8 +381,8 @@ class TestConstitution:
                 conway_common.propose_change_constitution(
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_constitution_bootstrap",
-                    anchor_url=anchor_url,
-                    anchor_data_hash=anchor_data_hash,
+                    anchor_url=anchor_data.url,
+                    anchor_data_hash=anchor_data.hash,
                     constitution_url=constitution_url,
                     constitution_hash=constitution_hash,
                     pool_user=pool_user_lg,
@@ -397,8 +401,8 @@ class TestConstitution:
         ) = conway_common.propose_change_constitution(
             cluster_obj=cluster,
             name_template=f"{temp_template}_constitution",
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
+            anchor_url=anchor_data.url,
+            anchor_data_hash=anchor_data.hash,
             constitution_url=constitution_url,
             constitution_hash=constitution_hash,
             pool_user=pool_user_lg,

@@ -652,16 +652,15 @@ class TestPParamUpdate:
             name_template: str,
             proposals: list[clusterlib_utils.UpdateProposal],
         ) -> conway_common.PParamPropRec:
-            anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
-            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+            anchor_data = governance_utils.get_default_anchor_data()
             # Increment count for a submitted proposal
             nonlocal submitted_proposal_count
             submitted_proposal_count += 1
             return conway_common.propose_pparams_update(
                 cluster_obj=cluster,
                 name_template=name_template,
-                anchor_url=anchor_url,
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 pool_user=pool_user_lgp,
                 proposals=proposals,
                 prev_action_rec=prev_action_rec,
@@ -1316,12 +1315,13 @@ class TestPParamUpdate:
         )
 
         update_args = clusterlib_utils.get_pparams_update_args(update_proposals=[proposal])
+        anchor_data = governance_utils.get_default_anchor_data()
         try:
             action_data = cluster.g_conway_governance.action.create_pparams_update(
                 action_name=temp_template,
                 deposit_amt=100000000,
-                anchor_url="http://www.pparam-action.com",
-                anchor_data_hash="fb013f4b7ddb08fa20dd2974b8a4447598477886f544d71033da53390325cd37",
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 cli_args=update_args,
                 deposit_return_stake_vkey_file=DATA_DIR / "golden_stake.vkey",
             )

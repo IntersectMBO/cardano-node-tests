@@ -13,6 +13,7 @@ from cardano_clusterlib import clusterlib
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import web
 
 LOGGER = logging.getLogger(__name__)
 
@@ -143,6 +144,13 @@ class ActionTags(enum.Enum):
     INFO_ACTION = "InfoAction"
     NO_CONFIDENCE = "NoConfidence"
     HARDFORK_INIT = "HardForkInitiation"
+
+
+@dataclasses.dataclass(frozen=True)
+class AnchorData:
+    url: str
+    hash: str
+    data_file: pl.Path | None
 
 
 def get_drep_cred_name(drep_id: str) -> str:
@@ -821,3 +829,26 @@ def create_script_dreps(
     )
 
     return drep_script_data, drep_users
+
+
+def get_anchor_data(
+    cluster_obj: clusterlib.ClusterLib, name_template: str, anchor_text: str
+) -> AnchorData:
+    """Publish anchor data and return the URL and data hash."""
+    anchor_file = pl.Path(f"{name_template}_anchor.txt")
+    anchor_file.write_text(anchor_text, encoding="utf-8")
+    url = web.publish(file_path=anchor_file)
+    data_hash = cluster_obj.g_conway_governance.get_anchor_data_hash(file_text=anchor_file)
+    return AnchorData(url=url, hash=data_hash, data_file=anchor_file)
+
+
+def get_default_anchor_data() -> AnchorData:
+    """Return the default anchor data."""
+    data = "Default Anchor"
+    data_hash = "2d5975261fae751c4129475badee4ce9e9c84c537c925b728aa02417b2254a3f"
+
+    try:
+        url = web.create_file(name="default_anchor.txt", data=data)
+    except FileExistsError:
+        url = web.get_published_url(name="default_anchor.txt")
+    return AnchorData(url=url, hash=data_hash, data_file=None)

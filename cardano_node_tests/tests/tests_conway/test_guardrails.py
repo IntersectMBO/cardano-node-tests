@@ -27,6 +27,7 @@ from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
+from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -138,19 +139,22 @@ def cluster_with_constitution(
 
         def _enact_script_constitution():
             """Enact a new constitution with a plutus script."""
-            anchor_url = "http://www.const-action.com"
-            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+            anchor_data = governance_utils.get_default_anchor_data()
 
-            constitution_url = "http://www.const-with-plutus.com"
-            constitution_hash = "0000000000000000000000000000000000000000000000000000000000000000"
+            constitution_file = pl.Path(f"{temp_template}_constitution.txt")
+            constitution_file.write_text(data="Constitution is here", encoding="utf-8")
+            constitution_url = web.publish(file_path=constitution_file)
+            constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
+                file_text=constitution_file
+            )
 
             governance_utils.wait_delayed_ratification(cluster_obj=cluster)
 
             _, action_txid, action_ix = conway_common.propose_change_constitution(
                 cluster_obj=cluster,
                 name_template=temp_template,
-                anchor_url=anchor_url,
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 constitution_url=constitution_url,
                 constitution_hash=constitution_hash,
                 pool_user=pool_user,
@@ -228,8 +232,7 @@ def propose_param_changes(
     payment_addr = cluster_with_constitution.payment_addr
 
     temp_template = common.get_test_id(cluster)
-    anchor_url = f"http://www.pparam-action-{clusterlib.get_rand_str(4)}.com"
-    anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+    anchor_data = governance_utils.get_default_anchor_data()
     deposit_amt = cluster.conway_genesis["govActionDeposit"]
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
@@ -245,8 +248,8 @@ def propose_param_changes(
     pparams_action = cluster.g_conway_governance.action.create_pparams_update(
         action_name=temp_template,
         deposit_amt=deposit_amt,
-        anchor_url=anchor_url,
-        anchor_data_hash=anchor_data_hash,
+        anchor_url=anchor_data.url,
+        anchor_data_hash=anchor_data.hash,
         cli_args=update_args,
         prev_action_txid=prev_action_rec.txid,
         prev_action_ix=prev_action_rec.ix,

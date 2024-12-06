@@ -31,6 +31,7 @@ from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
+from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -354,13 +355,14 @@ class TestDReps:
         """
         reqc.cip085.start(url=helpers.get_vcs_link())
         temp_template = common.get_test_id(cluster)
-        drep_metadata_url = "https://www.the-drep.com"
-        drep_metadata_file = f"{temp_template}_drep_metadata.json"
+        drep_metadata_file = pl.Path(f"{temp_template}_drep_metadata.json")
         drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
         helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
+        drep_metadata_url = web.publish(file_path=drep_metadata_file)
+
         # Get a DRep registration record
         reg_drep = governance_utils.get_drep_reg_record(
             cluster_obj=cluster,
@@ -369,6 +371,7 @@ class TestDReps:
             drep_metadata_hash=drep_metadata_hash,
         )
         vkey_file_path = reg_drep.key_pair.vkey_file
+
         # Get DRep vkey from vkey file
         with open(vkey_file_path) as vkey_file:
             vkey_file_json = json.loads(vkey_file.read())
@@ -381,6 +384,8 @@ class TestDReps:
             hash_digest = blake2b_224.hexdigest()
             assert reg_drep.drep_id == hash_digest, "DRep ID hash is not blake2b_224."
             reqc.cip085.success()
+
+        web.unpublish(url=drep_metadata_url)
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -984,13 +989,13 @@ class TestNegativeDReps:
         * Expect ConwayDRepAlreadyRegistered on the second time
         """
         temp_template = common.get_test_id(cluster)
-        drep_metadata_url = "https://www.the-drep.com"
-        drep_metadata_file = f"{temp_template}_drep_metadata.json"
+        drep_metadata_file = pl.Path(f"{temp_template}_drep_metadata.json")
         drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
         helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
+        drep_metadata_url = web.publish(file_path=drep_metadata_file)
 
         payment_addr = get_payment_addr(
             name_template=temp_template,
@@ -1716,8 +1721,7 @@ class TestDRepActivity:
             governance_data: governance_utils.GovernanceRecords,
             action_id: str,
         ) -> str:
-            anchor_url = f"http://www.drep-activity-{action_id}.com"
-            anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url)
+            anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
                 gov_state=cluster.g_conway_governance.query.gov_state(),
@@ -1734,8 +1738,8 @@ class TestDRepActivity:
             prop_rec = conway_common.propose_pparams_update(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_{action_id}_drep_activity",
-                anchor_url=anchor_url,
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 pool_user=pool_user_lg,
                 proposals=proposals,
                 prev_action_rec=prev_action_rec,

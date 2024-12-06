@@ -75,8 +75,7 @@ class TestHardfork:
 
         # Create an action
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-        anchor_url = "http://www.hardfork.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.HARDFORK,
             gov_state=cluster.g_conway_governance.query.gov_state(),
@@ -91,8 +90,8 @@ class TestHardfork:
         hardfork_action = cluster.g_conway_governance.action.create_hardfork(
             action_name=temp_template,
             deposit_amt=deposit_amt,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
+            anchor_url=anchor_data.url,
+            anchor_data_hash=anchor_data.hash,
             protocol_major_version=10,
             protocol_minor_version=0,
             prev_action_txid=prev_action_rec.txid,
