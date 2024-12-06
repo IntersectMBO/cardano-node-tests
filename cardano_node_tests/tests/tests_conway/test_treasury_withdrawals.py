@@ -6,6 +6,7 @@ import logging
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -176,27 +177,42 @@ class TestTreasuryWithdrawals:
             reqc.cip026_03.success()
             return
 
+        if VERSIONS.cli > version.parse("10.1.1.0"):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_action_build",
+                    src_address=pool_user_ug_treasury.payment.address,
+                    use_build_cmd=True,
+                    tx_files=tx_files_action,
+                )
+            err_str = str(excinfo.value)
+            assert (
+                "Stake credential specified in the proposal is not registered on-chain" in err_str
+            ), err_str
+
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
+        actions_deposit_combined = action_deposit_amt * actions_num
+
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            name_template=f"{temp_template}_action",
+            name_template=f"{temp_template}_action_build_raw",
             src_address=pool_user_ug_treasury.payment.address,
             submit_method=submit_utils.SubmitMethods.API
             if submit_utils.is_submit_api_available()
             else submit_utils.SubmitMethods.CLI,
-            use_build_cmd=True,
+            use_build_cmd=False,
             tx_files=tx_files_action,
+            deposit=actions_deposit_combined + stake_deposit_amt,
         )
 
         assert cluster.g_query.get_stake_addr_info(
             recv_stake_addr_rec.address
         ).address, f"Stake address is not registered: {recv_stake_addr_rec.address}"
-
-        actions_deposit_combined = action_deposit_amt * actions_num
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
