@@ -153,6 +153,21 @@ class TestTreasuryWithdrawals:
         ]
         [r.success() for r in (reqc.cli015, reqc.cip031a_06, reqc.cip031f, reqc.cip054_05)]
 
+        # Check that duplicated proposals are discarded when building the transaction.
+        # This one is the same as one that already exists in `withdrawal_actions`,
+        # and will not be taken into account.
+        withdrawal_actions.append(
+            cluster.g_conway_governance.action.create_treasury_withdrawal(
+                action_name=f"{temp_template}_duplicated",
+                transfer_amt=transfer_amts[0],
+                deposit_amt=action_deposit_amt,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
+                funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
+                deposit_return_stake_vkey_file=pool_user_ug_treasury.stake.vkey_file,
+            )
+        )
+
         tx_files_action = clusterlib.TxFiles(
             certificate_files=[recv_stake_addr_reg_cert],
             proposal_files=[w.action_file for w in withdrawal_actions],
