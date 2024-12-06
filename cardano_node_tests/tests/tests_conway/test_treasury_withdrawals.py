@@ -131,9 +131,9 @@ class TestTreasuryWithdrawals:
         # Create an action and register stake address
 
         action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
-        transfer_amt = 10_000_000_000
+        transfer_amts = list(range(10_000_000_000, 10_000_000_000 + actions_num))
 
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data = governance_utils.get_default_anchor_data()
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli015, reqc.cip031a_06, reqc.cip031f, reqc.cip054_05)]
@@ -141,14 +141,14 @@ class TestTreasuryWithdrawals:
         withdrawal_actions = [
             cluster.g_conway_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_{a}",
-                transfer_amt=transfer_amt,
+                transfer_amt=a,
                 deposit_amt=action_deposit_amt,
-                anchor_url=f"http://www.withdrawal-action{a}.com",
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
                 deposit_return_stake_vkey_file=pool_user_ug_treasury.stake.vkey_file,
             )
-            for a in range(actions_num)
+            for i, a in enumerate(transfer_amts, start=1)
         ]
         [r.success() for r in (reqc.cli015, reqc.cip031a_06, reqc.cip031f, reqc.cip054_05)]
 
@@ -356,10 +356,9 @@ class TestTreasuryWithdrawals:
 
         # Check enactment
         cluster.wait_for_epoch(epoch_no=approved_epoch + 2, padding_seconds=5)
-        assert (
-            cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).reward_account_balance
-            == transfer_amt * actions_num
-        ), "Incorrect reward account balance"
+        assert cluster.g_query.get_stake_addr_info(
+            recv_stake_addr_rec.address
+        ).reward_account_balance == sum(transfer_amts), "Incorrect reward account balance"
         [r.success() for r in (reqc.cip033, reqc.cip048)]
 
         # Try to vote on enacted action
@@ -386,7 +385,6 @@ class TestTreasuryWithdrawals:
         # Check dbsync
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cip084, reqc.db009, reqc.db022)]
-        transfer_amts = [transfer_amt] * actions_num
         dbsync_utils.check_treasury_withdrawal(
             stake_address=recv_stake_addr_rec.address,
             transfer_amts=transfer_amts,
@@ -448,7 +446,7 @@ class TestTreasuryWithdrawals:
             pool_user_ug.stake.address
         ).reward_account_balance
 
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data = governance_utils.get_default_anchor_data()
 
         if not is_in_bootstrap:
             reqc.cip030ex.start(url=helpers.get_vcs_link())
@@ -457,8 +455,8 @@ class TestTreasuryWithdrawals:
                 action_name=f"{temp_template}_{a}",
                 transfer_amt=transfer_amt + a,
                 deposit_amt=action_deposit_amt,
-                anchor_url=f"http://www.withdrawal-expire{a}.com",
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 funds_receiving_stake_vkey_file=recv_stake_addr_rec.vkey_file,
                 deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
             )
@@ -471,7 +469,7 @@ class TestTreasuryWithdrawals:
             signing_key_files=[pool_user_ug.payment.skey_file, recv_stake_addr_rec.skey_file],
         )
 
-        actions_deposit_combined = action_deposit_amt * len(withdrawal_actions)
+        actions_deposit_combined = action_deposit_amt * actions_num
 
         if is_in_bootstrap:
             with pytest.raises(clusterlib.CLIError) as excinfo:

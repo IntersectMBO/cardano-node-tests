@@ -3,6 +3,7 @@
 # pylint: disable=expression-not-assigned
 import dataclasses
 import logging
+import pathlib as pl
 
 import allure
 import pytest
@@ -18,6 +19,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -99,8 +101,7 @@ class TestNoConfidence:
 
         # Create an action
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-        anchor_url = "http://www.cc-no-confidence.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data = governance_utils.get_default_anchor_data()
 
         _url = helpers.get_vcs_link()
         [
@@ -117,8 +118,8 @@ class TestNoConfidence:
         no_confidence_action = cluster.g_conway_governance.action.create_no_confidence(
             action_name=temp_template,
             deposit_amt=deposit_amt,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
+            anchor_url=anchor_data.url,
+            anchor_data_hash=anchor_data.hash,
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
             deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
@@ -362,8 +363,10 @@ class TestNoConfidence:
         # failure.
         with cluster_manager.respin_on_failure():
             # Try to ratify a "create constitution" action
-            anchor_url = "http://www.const-action.com"
-            constitution_url = "http://www.const-new.com"
+            anchor_data = governance_utils.get_default_anchor_data()
+            constitution_file = pl.Path(f"{temp_template}_constitution.txt")
+            constitution_file.write_text(data="Constitution is here", encoding="utf-8")
+            constitution_url = web.publish(file_path=constitution_file)
             (
                 __,
                 const_action_txid,
@@ -371,11 +374,11 @@ class TestNoConfidence:
             ) = conway_common.propose_change_constitution(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_constitution",
-                anchor_url=anchor_url,
-                anchor_data_hash=cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url),
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 constitution_url=constitution_url,
                 constitution_hash=cluster.g_conway_governance.get_anchor_data_hash(
-                    text=constitution_url
+                    file_text=constitution_file
                 ),
                 pool_user=pool_user_lg,
             )

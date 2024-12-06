@@ -105,8 +105,7 @@ class TestUpdateBuiltIns:
         cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
 
         def _update_cost_model() -> None:
-            anchor_url = "http://www.update-cost-model.com"
-            anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+            anchor_data = governance_utils.get_default_anchor_data()
             _name_template = f"{temp_template}_cost_model"
 
             update_proposals = [
@@ -120,8 +119,8 @@ class TestUpdateBuiltIns:
             cost_model_proposal = conway_common.propose_pparams_update(
                 cluster_obj=cluster,
                 name_template=_name_template,
-                anchor_url=anchor_url,
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 pool_user=pool_user_lgp,
                 proposals=update_proposals,
             )

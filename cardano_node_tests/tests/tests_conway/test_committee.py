@@ -25,6 +25,7 @@ from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
+from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -180,8 +181,7 @@ class TestCommittee:
         ]
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-        anchor_url = "http://www.cc-update.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
             gov_state=cluster.g_conway_governance.query.gov_state(),
@@ -191,8 +191,8 @@ class TestCommittee:
         update_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
+            anchor_url=anchor_data.url,
+            anchor_data_hash=anchor_data.hash,
             threshold=threshold,
             add_cc_members=cc_members,
             prev_action_txid=prev_action_rec.txid,
@@ -458,10 +458,7 @@ class TestCommittee:
 
         def _add_members() -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Add new CC members."""
-            anchor_url_add = "http://www.cc-add.com"
-            anchor_data_hash_add = (
-                "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-            )
+            anchor_data_add = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
                 gov_state=cluster.g_conway_governance.query.gov_state(),
@@ -472,8 +469,8 @@ class TestCommittee:
             add_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_add",
                 deposit_amt=deposit_amt,
-                anchor_url=anchor_url_add,
-                anchor_data_hash=anchor_data_hash_add,
+                anchor_url=anchor_data_add.url,
+                anchor_data_hash=anchor_data_add.hash,
                 threshold=str(cluster.conway_genesis["committee"]["threshold"]),
                 add_cc_members=[*cc_members, cc_members[0]],  # test adding the same member twice
                 prev_action_txid=prev_action_rec.txid,
@@ -532,11 +529,19 @@ class TestCommittee:
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cli007, reqc.cip012)]
 
+            res_metadata_file = pl.Path(f"{temp_template}_res_metadata.json")
+            res_metadata_content = {"name": "Resigned CC member"}
+            helpers.write_json(out_file=res_metadata_file, content=res_metadata_content)
+            res_metadata_hash = cluster.g_conway_governance.get_anchor_data_hash(
+                file_text=res_metadata_file
+            )
+            res_metadata_url = web.publish(file_path=res_metadata_file)
+
             res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
                 key_name=temp_template,
                 cold_vkey_file=res_member.cold_vkey_file,
-                resignation_metadata_url="http://www.cc-resign.com",
-                resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+                resignation_metadata_url=res_metadata_url,
+                resignation_metadata_hash=res_metadata_hash,
             )
             reqc.cli007.success()
 
@@ -574,17 +579,14 @@ class TestCommittee:
             rem_member: clusterlib.CCMember, prev_action_txid: str, prev_action_ix: int
         ) -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove a CC member."""
-            anchor_url_rem = "http://www.cc-rem.com"
-            anchor_data_hash_rem = (
-                "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-            )
+            anchor_data_rem = governance_utils.get_default_anchor_data()
 
             reqc.cip005.start(url=helpers.get_vcs_link())
             rem_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_rem",
                 deposit_amt=deposit_amt,
-                anchor_url=anchor_url_rem,
-                anchor_data_hash=anchor_data_hash_rem,
+                anchor_url=anchor_data_rem.url,
+                anchor_data_hash=anchor_data_rem.hash,
                 threshold=str(cluster.conway_genesis["committee"]["threshold"]),
                 rem_cc_members=[rem_member],
                 prev_action_txid=prev_action_txid,
@@ -646,14 +648,25 @@ class TestCommittee:
                     cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
                 )
 
+                def _get_res_cert(idx: int, cc_auth: governance_utils.CCMemberAuth) -> pl.Path:
+                    res_metadata_file = pl.Path(f"{temp_template}_{idx}_res_metadata.json")
+                    res_metadata_content = {"name": "Resigned CC member", "idx": idx}
+                    helpers.write_json(out_file=res_metadata_file, content=res_metadata_content)
+                    res_metadata_hash = cluster.g_conway_governance.get_anchor_data_hash(
+                        file_text=res_metadata_file
+                    )
+                    res_metadata_url = web.publish(file_path=res_metadata_file)
+                    cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
+                        key_name=f"{temp_template}_res{idx}",
+                        cold_vkey_file=cc_auth.cold_key_pair.vkey_file,
+                        resignation_metadata_url=res_metadata_url,
+                        resignation_metadata_hash=res_metadata_hash,
+                    )
+                    return cert
+
                 auth_committee_state = cluster.g_conway_governance.query.committee_state()
                 res_certs = [
-                    cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
-                        key_name=f"{temp_template}_res{i}",
-                        cold_vkey_file=r.cold_key_pair.vkey_file,
-                        resignation_metadata_url="http://www.cc-resign.com",
-                        resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
-                    )
+                    _get_res_cert(idx=i, cc_auth=r)
                     for i, r in enumerate((cc_auth_record1, cc_auth_record2, cc_auth_record3))
                     if governance_utils.is_cc_active(
                         auth_committee_state["committee"].get(f"keyHash-{r.key_hash}") or {}
@@ -1072,8 +1085,7 @@ class TestCommittee:
 
         def _set_zero_committee_pparam() -> conway_common.PParamPropRec:
             """Set the `committeeMinSize` pparam to 0."""
-            anchor_url = "http://www.pparam-cc-min-size.com"
-            anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+            anchor_data = governance_utils.get_default_anchor_data()
 
             update_proposals = [
                 clusterlib_utils.UpdateProposal(
@@ -1086,18 +1098,15 @@ class TestCommittee:
             return conway_common.propose_pparams_update(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_zero_cc",
-                anchor_url=anchor_url,
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 pool_user=pool_user_lg,
                 proposals=update_proposals,
             )
 
         def _rem_committee() -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
             """Remove all CC members."""
-            anchor_url_rem = "http://www.cc-rem-all.com"
-            anchor_data_hash_rem = (
-                "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
-            )
+            anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
                 gov_state=cluster.g_conway_governance.query.gov_state(),
@@ -1106,8 +1115,8 @@ class TestCommittee:
             rem_cc_action = cluster.g_conway_governance.action.update_committee(
                 action_name=f"{temp_template}_rem",
                 deposit_amt=deposit_amt,
-                anchor_url=anchor_url_rem,
-                anchor_data_hash=anchor_data_hash_rem,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 threshold="0.0",
                 rem_cc_members=[r.cc_member for r in governance_data.cc_key_members],
                 prev_action_txid=prev_action_rec.txid,
@@ -1294,13 +1303,14 @@ class TestCommittee:
         # Change Constitution without needing CC votes
 
         # Create an action to change Constitution
-        anchor_url_const = "http://www.const-action.com"
-        anchor_data_hash_const = cluster.g_conway_governance.get_anchor_data_hash(
-            text=anchor_url_const
-        )
+        anchor_data_const = governance_utils.get_default_anchor_data()
 
-        constitution_url = "http://www.const-new.com"
-        constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(text=constitution_url)
+        constitution_file = pl.Path(f"{temp_template}_constitution.txt")
+        constitution_file.write_text(data="Constitution is here", encoding="utf-8")
+        constitution_url = web.publish(file_path=constitution_file)
+        constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
+            file_text=constitution_file
+        )
 
         (
             const_action,
@@ -1309,8 +1319,8 @@ class TestCommittee:
         ) = conway_common.propose_change_constitution(
             cluster_obj=cluster,
             name_template=f"{temp_template}_constitution",
-            anchor_url=anchor_url_const,
-            anchor_data_hash=anchor_data_hash_const,
+            anchor_url=anchor_data_const.url,
+            anchor_data_hash=anchor_data_const.hash,
             constitution_url=constitution_url,
             constitution_hash=constitution_hash,
             pool_user=pool_user_lg,
@@ -1371,8 +1381,7 @@ class TestCommittee:
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-        anchor_url = "http://www.cc-update.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
             gov_state=cluster.g_conway_governance.query.gov_state(),
@@ -1382,8 +1391,8 @@ class TestCommittee:
             cluster.g_conway_governance.action.update_committee(
                 action_name=temp_template,
                 deposit_amt=deposit_amt,
-                anchor_url=anchor_url,
-                anchor_data_hash=anchor_data_hash,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
                 threshold=str(threshold),
                 prev_action_txid=prev_action_rec.txid,
                 prev_action_ix=prev_action_rec.ix,
@@ -1453,8 +1462,7 @@ class TestCommittee:
             assert prev_action_rec.txid == action_txid, "Action not enacted"
 
         deposit_amt = cluster.conway_genesis["govActionDeposit"]
-        anchor_url = "http://www.cc-update.com"
-        anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+        anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
             gov_state=cluster.g_conway_governance.query.gov_state(),
@@ -1464,8 +1472,8 @@ class TestCommittee:
         update_threshold_action = cluster.g_conway_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
-            anchor_url=anchor_url,
-            anchor_data_hash=anchor_data_hash,
+            anchor_url=anchor_data.url,
+            anchor_data_hash=anchor_data.hash,
             threshold="0",
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
@@ -1526,8 +1534,13 @@ class TestCommittee:
         )
 
         # Try to ratify a "create constitution" action that is expecting approval from the CC
-        anchor_url = "http://www.const-action.com"
-        constitution_url = "http://www.const-new.com"
+        anchor_data = governance_utils.get_default_anchor_data()
+        constitution_file = pl.Path(f"{temp_template}_constitution.txt")
+        constitution_file.write_text(data="Constitution is here", encoding="utf-8")
+        constitution_url = web.publish(file_path=constitution_file)
+        constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
+            file_text=constitution_file
+        )
         (
             const_action,
             const_action_txid,
@@ -1535,12 +1548,10 @@ class TestCommittee:
         ) = conway_common.propose_change_constitution(
             cluster_obj=cluster,
             name_template=f"{temp_template}_constitution",
-            anchor_url=anchor_url,
-            anchor_data_hash=cluster.g_conway_governance.get_anchor_data_hash(text=anchor_url),
+            anchor_url=anchor_data.url,
+            anchor_data_hash=anchor_data.hash,
             constitution_url=constitution_url,
-            constitution_hash=cluster.g_conway_governance.get_anchor_data_hash(
-                text=constitution_url
-            ),
+            constitution_hash=constitution_hash,
             pool_user=pool_user_lg,
         )
 

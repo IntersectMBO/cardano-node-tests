@@ -31,6 +31,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils import web
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
@@ -723,16 +724,19 @@ class TestStakePool:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+            )
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=1_000,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
-            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -858,16 +862,19 @@ class TestStakePool:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+            )
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
-            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -1001,16 +1008,19 @@ class TestStakePool:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+            )
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
-            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -1162,16 +1172,19 @@ class TestStakePool:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+            )
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=222,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.512,
-            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -1306,9 +1319,10 @@ class TestStakePool:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(out_file=f"{pool_name}_reg_metadata.json", content=pool_metadata)
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         pool_metadata_updated = {
             "name": f"{pool_name}_U",
@@ -1316,23 +1330,26 @@ class TestStakePool:
             "ticker": "QA22",
             "homepage": "www.qa22.com",
         }
-        pool_metadata_updated_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata_updated.json",
-            content=pool_metadata_updated,
+        pool_metadata_updated_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_reg_metadata_updtd.json",
+                content=pool_metadata_updated,
+            )
         )
+        pool_metadata_updated_url = web.publish(file_path=pool_metadata_updated_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
             pool_pledge=4567,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.01,
-            pool_metadata_url="https://init_location.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
         pool_data_updated = dataclasses.replace(
             pool_data,
-            pool_metadata_url="https://www.updated_location.com",
+            pool_metadata_url=pool_metadata_updated_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(
                 pool_metadata_updated_file
             ),
@@ -1438,9 +1455,12 @@ class TestStakePool:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = helpers.write_json(
-            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+        pool_metadata_file = pl.Path(
+            helpers.write_json(
+                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
+            )
         )
+        pool_metadata_url = web.publish(file_path=pool_metadata_file)
 
         min_pool_cost = cluster.g_query.get_protocol_params().get("minPoolCost", 500)
 
@@ -1449,7 +1469,7 @@ class TestStakePool:
             pool_pledge=4_567,
             pool_cost=min_pool_cost,
             pool_margin=0.01,
-            pool_metadata_url="https://www.where_metadata_file_is_located.com",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
@@ -2461,7 +2481,7 @@ class TestNegative:
             pool_pledge=1_000,
             pool_cost=500_000_000,
             pool_margin=0.2,
-            pool_metadata_url=(f"https://gist.githubusercontent.com/{metadata_url}.json"),
+            pool_metadata_url=f"https://gist.githubusercontent.com/{metadata_url}.json",
             pool_metadata_hash=pool_metadata_hash,
         )
 

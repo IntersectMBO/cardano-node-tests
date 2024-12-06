@@ -4,6 +4,7 @@ import dataclasses
 import itertools
 import json
 import logging
+import pathlib as pl
 import typing as tp
 
 from cardano_clusterlib import clusterlib
@@ -12,6 +13,8 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
+from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import web
 
 LOGGER = logging.getLogger(__name__)
 
@@ -233,6 +236,7 @@ def cast_vote(
     votes_drep_keys = []  # DRep votes with key
     votes_drep_scripts = []  # DRep votes with script
     votes_spo = []
+    anchor_data = governance_utils.get_default_anchor_data()
 
     if approve_cc is not None:
         _votes_cc = [
@@ -244,8 +248,8 @@ def cast_vote(
                 action_ix=action_ix,
                 vote=get_yes_abstain_vote(i) if approve_cc else get_no_abstain_vote(i),
                 cc_hot_vkey_file=m.hot_keys.hot_vkey_file,
-                anchor_url=f"http://www.cc-vote{i}.com",
-                anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
             )
             for i, m in enumerate(governance_data.cc_key_members, start=1)
         ]
@@ -261,8 +265,8 @@ def cast_vote(
                 action_ix=action_ix,
                 vote=get_yes_abstain_vote(i) if approve_drep else get_no_abstain_vote(i),
                 drep_vkey_file=d.key_pair.vkey_file,
-                anchor_url=f"http://www.drep-vote{i}.com",
-                anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
             )
             for i, d in enumerate(governance_data.dreps_reg, start=1)
         ]
@@ -275,8 +279,8 @@ def cast_vote(
                 action_ix=action_ix,
                 vote=get_yes_abstain_vote(i) if approve_drep else get_no_abstain_vote(i),
                 drep_script_hash=d.script_hash,
-                anchor_url=f"http://www.sdrep-vote{i}.com",
-                anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
             )
             for i, d in enumerate(governance_data.drep_scripts_reg, start=1)
         ]
@@ -294,8 +298,8 @@ def cast_vote(
                 action_ix=action_ix,
                 vote=get_yes_abstain_vote(i) if approve_spo else get_no_abstain_vote(i),
                 cold_vkey_file=p.vkey_file,
-                anchor_url=f"http://www.spo-vote{i}.com",
-                anchor_data_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
             )
             for i, p in enumerate(governance_data.pools_cold, start=1)
         ]
@@ -368,12 +372,19 @@ def resign_ccs(
     payment_addr: clusterlib.AddressRecord,
 ) -> clusterlib.TxRawOutput:
     """Resign multiple CC Members."""
+    res_metadata_file = pl.Path(f"{name_template}_res_metadata.json")
+    res_metadata_content = {"name": "Resigned CC member"}
+    helpers.write_json(out_file=res_metadata_file, content=res_metadata_content)
+    res_metadata_hash = cluster_obj.g_conway_governance.get_anchor_data_hash(
+        file_text=res_metadata_file
+    )
+    res_metadata_url = web.publish(file_path=res_metadata_file)
     res_certs = [
         cluster_obj.g_conway_governance.committee.gen_cold_key_resignation_cert(
             key_name=f"{name_template}_{i}",
             cold_vkey_file=r.cold_vkey_file,
-            resignation_metadata_url=f"http://www.cc-resign{i}.com",
-            resignation_metadata_hash="5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d",
+            resignation_metadata_url=res_metadata_url,
+            resignation_metadata_hash=res_metadata_hash,
         )
         for i, r in enumerate(ccs_to_resign, start=1)
     ]

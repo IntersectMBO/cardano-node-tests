@@ -1328,8 +1328,6 @@ if [ -n "${PV10:-""}" ]; then
       --governance-action-tx-id "$ACTION_TXID" \
       --governance-action-index 0 \
       --cc-hot-verification-key-file "$f" \
-      --anchor-url "http://www.cc-vote${INDEX}-hf-pv10.com" \
-      --anchor-data-hash 5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d \
       --out-file "${PV10_ACTION}_cc${INDEX}.vote"
   done
 
@@ -1341,8 +1339,6 @@ if [ -n "${PV10:-""}" ]; then
       --governance-action-tx-id "$ACTION_TXID" \
       --governance-action-index 0 \
       --cold-verification-key-file "$f" \
-      --anchor-url "http://www.spo-vote${INDEX}-hf-pv10.com" \
-      --anchor-data-hash 5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d \
       --out-file "${PV10_ACTION}_spo${INDEX}.vote"
   done
 

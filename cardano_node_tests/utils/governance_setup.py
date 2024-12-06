@@ -437,8 +437,7 @@ def reinstate_committee(
     # Create an "update committee" action
 
     deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
-    anchor_url = "http://www.cc-reinstate.com"
-    anchor_data_hash = "5d372dca1a4cc90d7d16d966c48270e33e3aa0abcb0e78f0d5ca7ff330d2245d"
+    anchor_data = governance_utils.get_default_anchor_data()
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.COMMITTEE,
         gov_state=cluster_obj.g_conway_governance.query.gov_state(),
@@ -447,8 +446,8 @@ def reinstate_committee(
     update_action = cluster_obj.g_conway_governance.action.update_committee(
         action_name=name_template,
         deposit_amt=deposit_amt,
-        anchor_url=anchor_url,
-        anchor_data_hash=anchor_data_hash,
+        anchor_url=anchor_data.url,
+        anchor_data_hash=anchor_data.hash,
         threshold=str(cluster_obj.conway_genesis["committee"]["threshold"]),
         add_cc_members=[r.cc_member for r in governance_data.cc_key_members],
         prev_action_txid=prev_action_rec.txid,
