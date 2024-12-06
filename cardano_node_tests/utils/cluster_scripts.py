@@ -328,7 +328,7 @@ class LocalScripts(ScriptsTypes):
                 "\n[group:nodes]",
                 f"programs={','.join(programs)}",
                 "\n[program:webserver]",
-                f"command=python -m http.server {instance_ports.webserver}",
+                f"command=python -m http.server --bind 127.0.0.1 {instance_ports.webserver}",
                 f"directory=./state-cluster{instance_num}/webserver",
                 "\n[rpcinterface:supervisor]",
                 "supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface",
