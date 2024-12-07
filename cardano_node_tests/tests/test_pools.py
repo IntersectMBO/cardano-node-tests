@@ -699,7 +699,6 @@ class TestStakePool:
             dbsync_utils.retry_query(query_func=_query_func, timeout=300)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -708,7 +707,6 @@ class TestStakePool:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         request: FixtureRequest,
-        use_build_cmd: bool,
     ):
         """Create and register a stake pool with metadata file not available.
 
@@ -724,12 +722,10 @@ class TestStakePool:
             "ticker": "QA1",
             "homepage": "www.test1.com",
         }
-        pool_metadata_file = pl.Path(
-            helpers.write_json(
-                out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
-            )
+        pool_metadata_file = helpers.write_json(
+            out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
-        pool_metadata_url = web.publish(file_path=pool_metadata_file)
+        pool_metadata_url = "https://www.where_metadata_file_is_located.com"
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
@@ -763,7 +759,7 @@ class TestStakePool:
             temp_dir=pl.Path(),
             pool_data=pool_data,
             request=request,
-            use_build_cmd=use_build_cmd,
+            use_build_cmd=False,
         )
 
         # Check dbsync `PoolOffChainFetchError` table
