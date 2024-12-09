@@ -891,7 +891,10 @@ class TestNegativeReferenceScripts:
                 script_txins=plutus_txins,
             )
         err_str = str(excinfo.value)
-        assert "The Plutus script evaluation failed" in err_str, err_str
+        assert (
+            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
+            or "Plutus script evaluation failed" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke

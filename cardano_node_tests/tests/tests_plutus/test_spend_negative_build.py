@@ -384,7 +384,10 @@ class TestNegative:
             )
 
         err_str = str(excinfo.value)
-        assert "The Plutus script evaluation failed" in err_str, err_str
+        assert (
+            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
+            or "Plutus script evaluation failed" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -538,7 +541,10 @@ class TestNegative:
             )
 
         err_str = str(excinfo.value)
-        assert "The Plutus script evaluation failed" in err_str, err_str
+        assert (
+            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
+            or "Plutus script evaluation failed" in err_str
+        ), err_str
 
 
 class TestNegativeRedeemer:
@@ -716,7 +722,10 @@ class TestNegativeRedeemer:
             )
 
         err_str = str(excinfo.value)
-        assert "The Plutus script evaluation failed" in err_str, err_str
+        assert (
+            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
+            or "Plutus script evaluation failed" in err_str
+        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=common.MAX_UINT64 + 1))
@@ -846,7 +855,7 @@ class TestNegativeRedeemer:
             )
 
         err_str = str(excinfo.value)
-        assert "Script debugging logs: Incorrect datum. Expected 42." in err_str, err_str
+        assert "logs: Incorrect datum. Expected 42." in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(min_size=65))

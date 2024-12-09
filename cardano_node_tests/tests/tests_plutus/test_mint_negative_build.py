@@ -279,8 +279,10 @@ class TestBuildMintingNegative:
 
         err_str = str(excinfo.value)
         assert (
-            "expected a script in the Plutus script language, but it is actually "
-            "using SimpleScriptLanguage" in err_str
+            'Error in $: key "description" not found' in err_str  # In cli 10.1.1.0+
+            or "expected a script in the Plutus script language, but it is actually "
+            "using SimpleScriptLanguage"
+            in err_str
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
@@ -463,7 +465,10 @@ class TestBuildMintingNegative:
                 txins=mint_utxos,
                 txouts=txouts_step2,
                 mint=plutus_mint_data,
-                invalid_hereafter=None,  # required validity interval is missing here
+                invalid_hereafter=None,  # Required validity interval is missing here
             )
         err_str = str(excinfo.value)
-        assert "Plutus script evaluation failed" in err_str, err_str
+        assert (
+            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
+            or "Plutus script evaluation failed" in err_str
+        ), err_str

@@ -57,8 +57,9 @@ class TestUnbalanced:
 
         if amount < 0:
             assert (
-                "Negative quantity" in err_str
-                or "Illegal Value in TxOut" in err_str  # In node version 9.2.0+
+                "Value must be positive in UTxO" in err_str  # In cli 10.1.1.0+
+                or "Illegal Value in TxOut" in err_str  # In node 9.2.0+
+                or "Negative quantity" in err_str
             ), err_str
         else:
             assert "Minimum UTxO threshold not met for tx output" in err_str, err_str
@@ -491,6 +492,7 @@ class TestUnbalanced:
             cluster.cli(build_args)
         err_str_build = str(excinfo_build.value)
         assert (
-            "Negative quantity" in err_str_build
+            "Value must be positive in UTxO" in err_str_build  # In cli 10.1.1.0+
             or "Illegal Value in TxOut" in err_str_build  # In node 9.2.0+
+            or "Negative quantity" in err_str_build
         ), err_str_build
