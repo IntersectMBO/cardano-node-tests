@@ -46,6 +46,13 @@ Nightly results
    * Constitutional Commitee has 5 members
    * cluster starts directly in Conway era
    * DB Sync testing enabled
+* `nightly-cli <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-cli/>`__:  |nightly-cli-badge|
+   * latest `cardano-cli` master
+   * network in Conway era
+   * protocol version 10
+   * P2P network topology
+   * Constitutional Commitee has 5 members
+   * cluster starts directly in Conway era
 
 Nightly upgrade testing
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -81,6 +88,9 @@ Nightly upgrade testing
 
 .. |nightly-dbsync-pv10-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-dbsync-pv10%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-dbsync-pv10/
+
+.. |nightly-cli-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-cli%2Fbadge.json
+   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-cli/
 
 .. |nightly-upgrade-step1-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-upgrade%2Fstep1%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step1/

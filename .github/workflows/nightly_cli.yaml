@@ -1,17 +1,17 @@
-name: Nightly tests upgrade
+name: Nightly tests CLI
 
 on:
   schedule:
-    - cron: '15 04 * * *'
+    - cron: '15 03 * * *'
   workflow_dispatch:
 
 jobs:
   nightly_job:
     if: github.repository_owner == 'IntersectMBO' || github.event_name != 'schedule'
     # reusable workflow from local repo and same branch as this config
-    uses: ./.github/workflows/upgrade_reusable.yaml
+    uses: ./.github/workflows/regression_reusable.yaml
     with:
-      env-path: .github/env_nightly_upgrade
+      env-path: .github/env_nightly_cli
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}
