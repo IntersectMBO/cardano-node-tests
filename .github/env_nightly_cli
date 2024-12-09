@@ -1,0 +1,4 @@
+CLUSTER_ERA=conway
+COMMAND_ERA=conway
+CARDANO_CLI_REV=master
+PV10=true
