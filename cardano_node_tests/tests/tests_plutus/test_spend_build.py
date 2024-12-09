@@ -691,7 +691,10 @@ class TestBuildLocking:
             amount=2_000_000,
             expect_failure=True,
         )
-        assert "The Plutus script evaluation failed" in err, err
+        assert (
+            "following scripts have execution failures" in err  # In cli 10.1.1.0+
+            or "The Plutus script evaluation failed" in err
+        ), err
 
         # Check expected fees
         expected_fee_fund = 168_845
