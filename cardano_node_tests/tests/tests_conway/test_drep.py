@@ -324,18 +324,33 @@ class TestDReps:
 
         web.unpublish(url=drep_metadata_url)
 
+    DREP_METADATA_PARAMS = (
+        {
+            "drep_metadata_file": DATA_DIR / "drep_metadata_url.json",
+            "drep_metadata_url": "https://tinyurl.com/w7vd3ek6",
+            "expected_hash": "18b4b10150eab04ba66c8f9cb497ff05c6c31b9c9825388481c1790ce76b6b90",
+        },
+        {
+            "drep_metadata_file": DATA_DIR / "drep_metadata_ipfs.json",
+            "drep_metadata_url": "https://tinyurl.com/drep-ipfs",
+            "expected_hash": "7b45535061dce55fca685fedfec6e41a195c4fe4ef812767c34505390b413ff3",
+        },
+    )
+
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.parametrize("drep_metadata", DREP_METADATA_PARAMS)
     def test_register_and_retire_drep(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         use_build_cmd: bool,
         submit_method: str,
+        drep_metadata: dict,
     ):
         """Test DRep registration and retirement.
 
@@ -348,10 +363,11 @@ class TestDReps:
         temp_template = common.get_test_id(cluster)
         errors_final = []
 
-        drep_metadata_file = DATA_DIR / "drep_metadata.json"
+        drep_metadata_file = drep_metadata["drep_metadata_file"]
+        drep_metadata_url = drep_metadata["drep_metadata_url"]
+        expected_hash = drep_metadata["expected_hash"]
 
         # Register DRep
-        drep_metadata_url = "https://tinyurl.com/w7vd3ek6"
         reqc.cli012.start(url=helpers.get_vcs_link())
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
@@ -401,9 +417,7 @@ class TestDReps:
 
         metadata_anchor = reg_drep_state[0][1]["anchor"]
         assert (
-            metadata_anchor["dataHash"]
-            == drep_metadata_hash
-            == "18b4b10150eab04ba66c8f9cb497ff05c6c31b9c9825388481c1790ce76b6b90"
+            metadata_anchor["dataHash"] == drep_metadata_hash == expected_hash
         ), "Unexpected metadata hash"
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
         try:

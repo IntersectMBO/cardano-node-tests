@@ -1,0 +1,62 @@
+{
+    "@context": {
+        "CIP100": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0100/README.md#",
+        "CIP119": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0119/README.md#",
+        "hashAlgorithm": "CIP100:hashAlgorithm",
+        "body": {
+            "@id": "CIP119:body",
+            "@context": {
+                "references": {
+                    "@id": "CIP119:references",
+                    "@container": "@set",
+                    "@context": {
+                        "GovernanceMetadata": "CIP100:GovernanceMetadataReference",
+                        "Other": "CIP100:OtherReference",
+                        "label": "CIP100:reference-label",
+                        "uri": "CIP100:reference-uri"
+                    }
+                },
+                "paymentAddress": "CIP119:paymentAddress",
+                "givenName": "CIP119:givenName",
+                "image": {
+                    "@id": "CIP119:image",
+                    "@context": {
+                        "ImageObject": "https://schema.org/ImageObject"
+                    }
+                },
+                "objectives": "CIP119:objectives",
+                "motivations": "CIP119:motivations",
+                "qualifications": "CIP119:qualifications"
+            }
+        }
+    },
+    "hashAlgorithm": "blake2b-256",
+    "body": {
+        "paymentAddress": "addr1q9fevl7te5a6cp50ckgs87mp9337e30s6463hpdurt48advyt5slzns482tjz00w2qexkzdfh4cf9xaj8w8nhsmpshmqwr2ju7",
+        "givenName": "Artur Wieczorek",
+        "image": {
+            "@type": "ImageObject",
+            "contentUrl": "data:image/png;base64,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"
+        },
+        "objectives": "Ensure the quality, functionality, and reliability of Cardano products by identifying defects, verifying requirements, and validating that the software meets user and business needs.",
+        "motivations": "Improve coverage of cardano-db-sync product.",
+        "qualifications": "Software Test Enginner.",
+        "references": [
+            {
+                "@type": "Link",
+                "label": "GitHub Project",
+                "uri": "https://github.com/IntersectMBO/cardano-node-tests"
+            },
+            {
+                "@type": "Link",
+                "label": "Cardano Forum Website",
+                "uri": "https://forum.cardano.org/"
+            },
+            {
+                "@type": "Identity",
+                "label": "GitHub Organization Profile",
+                "uri": "https://github.com/IntersectMBO"
+            }
+        ]
+    }
+}
