@@ -1335,6 +1335,8 @@ def check_off_chain_drep_registration(
     db_metadata = drep_off_chain_metadata[0]
     expected_metadata = metadata["body"]
 
+    #from IPython import embed; embed()
+
     if db_metadata.payment_address != expected_metadata["paymentAddress"]:
         errors.append("'paymentAddress' value is different than expected;")
 
@@ -1349,6 +1351,39 @@ def check_off_chain_drep_registration(
 
     if db_metadata.qualifications != expected_metadata["qualifications"]:
         errors.append("'qualifications' value is different than expected;")
+
+    # Handle image hash and content URL validation
+    if "image" in expected_metadata:
+        image_data = expected_metadata["image"]
+
+        # Validate base64 encoded image or URL
+        # off_chain_drep_data.image_url includes the image base64 with the data uri header prefix 
+        # stripped and the off_chain_drep_data.image_sha256 remains empty
+        if "contentUrl" in image_data:
+            content_url = image_data["contentUrl"]
+            
+            # Check if the contentUrl is base64-encoded image
+            if content_url.startswith("data:"):
+                if 'base64' not in content_url:
+                    errors.append("Image is not Base64 encoded")
+                elif not content_url.startswith("data:image/"):
+                    errors.append("Base64 encoded image should start with 'data:image/'")
+                base64_image_data = content_url.split('base64,')[1]
+                if db_metadata.image_url != base64_image_data:
+                    errors.append("'image_url' value is different than expected Base64 'contentUrl';")
+
+            else:
+                if db_metadata.image_url != content_url:
+                    errors.append("'image_url' value is different than expected 'contentUrl';")
+                # If it's a URL, ensure SHA256 exists
+                if "sha256" not in image_data:
+                    errors.append("SHA256 hash is required for image URL.")
+                else:
+                    if db_metadata.image_hash != image_data["sha256"]:
+                        errors.append("'image_hash' value is different than expected;")
+                    # Add any additional logic to validate the sha256 hash (e.g., by downloading the image)
+        else:
+            errors.append("Image contentUrl must be provided. See: https://cips.cardano.org/cip/CIP-0119")
 
     if errors:
         raise AssertionError("\n".join(errors))

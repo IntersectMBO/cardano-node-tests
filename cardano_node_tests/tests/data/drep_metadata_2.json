@@ -1,0 +1,62 @@
+{
+    "@context": {
+        "CIP100": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0100/README.md#",
+        "CIP119": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0119/README.md#",
+        "hashAlgorithm": "CIP100:hashAlgorithm",
+        "body": {
+            "@id": "CIP119:body",
+            "@context": {
+                "references": {
+                    "@id": "CIP119:references",
+                    "@container": "@set",
+                    "@context": {
+                        "GovernanceMetadata": "CIP100:GovernanceMetadataReference",
+                        "Other": "CIP100:OtherReference",
+                        "label": "CIP100:reference-label",
+                        "uri": "CIP100:reference-uri"
+                    }
+                },
+                "paymentAddress": "CIP119:paymentAddress",
+                "givenName": "CIP119:givenName",
+                "image": {
+                    "@id": "CIP119:image",
+                    "@context": {
+                        "ImageObject": "https://schema.org/ImageObject"
+                    }
+                },
+                "objectives": "CIP119:objectives",
+                "motivations": "CIP119:motivations",
+                "qualifications": "CIP119:qualifications"
+            }
+        }
+    },
+    "hashAlgorithm": "blake2b-256",
+    "body": {
+        "paymentAddress": "addr1qyn04nuejghr54x5srvmhpczqcvysy4s3m36ye2mhqngx57w5qtnashrgkt3400nmch2kffh6l52r62hlunj82y2xnuq3xtl2y",
+        "givenName": "Benjamin Braatz",
+        "image": {
+            "@type": "ImageObject",
+            "contentUrl": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMTc4MCIgaGVpZ2h0PSIxNzgwIiB2aWV3Qm94PSItODkwIC04OTAgMTc4MCAxNzgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8c3R5bGU+LmJ7ZmlsbDojMTYyNjMzfS5ze3N0cm9rZTojNDQ2OTg3fS5je2ZpbGw6IzQ0Njk4N30uaHtzdHJva2U6I2JjZGFmOH1wYXRoe2ZpbGw6bm9uZTtzdHJva2Utd2lkdGg6MjQ7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kfTwvc3R5bGU+CjxyZWN0IGNsYXNzPSJiIiB4PSItODkwIiB5PSItODkwIiB3aWR0aD0iMTc4MCIgaGVpZ2h0PSIxNzgwIi8+CjxwYXRoIGNsYXNzPSJzIiBkPSJtLTcwMCAwYTcwMCA3MDAgMCAwIDEgMTQwMCAwIDY1MCA2NTAgMCAwIDEtMTMwMCAwIDYwMCA2MDAgMCAwIDEgMTIwMCAwIDU1MCA1NTAgMCAwIDEtMTEwMCAwIDUwMCA1MDAgMCAwIDEgMWUzIDAgNDUwIDQ1MCAwIDAgMS05MDAgMCA0MDAgNDAwIDAgMCAxIDgwMCAwIDM1MCAzNTAgMCAwIDEtNzAwIDAgMzAwIDMwMCAwIDAgMSA2MDAgMCAyNTAgMjUwIDAgMCAxLTUwMCAwIDIwMCAyMDAgMCAwIDEgNDAwIDAgMTUwIDE1MCAwIDAgMS0zMDAgMCAxMDAgMTAwIDAgMCAxIDIwMCAwIDUwIDUwIDAgMCAxLTEwMCAwIi8+CjxjaXJjbGUgY2xhc3M9ImMiIHI9IjI0Ii8+CjxwYXRoIGNsYXNzPSJoIiBkPSJtMC03MDAtMzA0IDEzMzEgODUxLTEwNjctMTIyOSA1OTJoMTM2NGwtMTIyOS01OTIgODUxIDEwNjd6Ii8+Cjwvc3ZnPgo="
+        },
+        "objectives": "Emancipate Cardano from IOG and especially its founder and CEO, further decentralise power, especially the informal power of the ones controlling the code and the narratives now, prevent wasting the treasury, only spend on basic infrastructure – nodes, libraries, wallet apps, preferably not controlled by the powers that be.",
+        "motivations": "I think the dRep concept is bad and dangerous (https://forum.cardano.org/t/why-i-voted-no-on-the-cip-1694-polls/125539). So, I definitely won't delegate to someone else, but have to register to vote for myself.",
+        "qualifications": "PhD in Theoretical Computer Science, exploring Cardano since 2021, doing a lot of support in various Cardano channels, able to read specifications and code, no paid development work on Cardano.",
+        "references": [
+            {
+                "@type": "Identity",
+                "label": "HeptaSean's Cardano-related X account",
+                "uri": "https://x.com/HeptaCardano"
+            },
+            {
+                "@type": "Identity",
+                "label": "HeptaSean's Cardano Forum account",
+                "uri": "https://forum.cardano.org/u/heptasean"
+            },
+            {
+                "@type": "Link",
+                "label": "HeptaSean's GitHub profile",
+                "uri": "https://github.com/HeptaSean"
+            }
+        ]
+    }
+}
