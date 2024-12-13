@@ -383,6 +383,170 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_registration
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("key_type", ("stake", "payment"))
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
+    def test_multisig_deregister_registered(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: list[clusterlib.PoolUser],
+        use_build_cmd: bool,
+        key_type: str,
+    ):
+        """Deregister a registered multisig stake address.
+
+        * Create a multisig script to be used as stake credentials
+        * Create stake address registration certificate
+        * Create a Tx for the registration certificate
+        * Incrementally sign the Tx and submit the registration certificate
+        * Check that the address is registered
+        * Create stake address deregistration certificate
+        * Create a Tx for the deregistration certificate
+        * Incrementally sign the Tx and submit the deregistration certificate
+        * Check that the address is no longer registered
+        * (optional) check records in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+        payment_addr = pool_users[0].payment
+
+        # Create a multisig script to be used as stake credentials
+        if key_type == "stake":
+            stake_key_recs = [
+                cluster.g_stake_address.gen_stake_key_pair(key_name=f"{temp_template}_sig_{i}")
+                for i in range(1, 6)
+            ]
+            multisig_script = clusterlib_utils.build_stake_multisig_script(
+                cluster_obj=cluster,
+                script_name=temp_template,
+                script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+                stake_vkey_files=[r.vkey_file for r in stake_key_recs],
+            )
+        else:
+            stake_key_recs = [
+                cluster.g_address.gen_payment_key_pair(key_name=f"{temp_template}_sig_{i}")
+                for i in range(1, 6)
+            ]
+            multisig_script = cluster.g_transaction.build_multisig_script(
+                script_name=temp_template,
+                script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+                payment_vkey_files=[r.vkey_file for r in stake_key_recs],
+            )
+
+        stake_address = cluster.g_stake_address.gen_stake_addr(
+            addr_name=temp_template, stake_script_file=multisig_script
+        )
+
+        # Create stake address registration cert
+        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_script_file=multisig_script,
+        )
+        reg_cert_script = clusterlib.ComplexCert(
+            certificate_file=stake_addr_reg_cert_file,
+            script_file=multisig_script,
+        )
+
+        signing_key_files = [payment_addr.skey_file, *[r.skey_file for r in stake_key_recs]]
+        witness_len = len(signing_key_files)
+
+        def _submit_tx(
+            name_template: str, complex_certs: list[clusterlib.ComplexCert]
+        ) -> clusterlib.TxRawOutput:
+            if use_build_cmd:
+                tx_output = cluster.g_transaction.build_tx(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    complex_certs=complex_certs,
+                    fee_buffer=2_000_000,
+                    witness_override=witness_len,
+                )
+            else:
+                fee = cluster.g_transaction.calculate_tx_fee(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    complex_certs=complex_certs,
+                    witness_count_add=witness_len,
+                )
+                tx_output = cluster.g_transaction.build_raw_tx(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    complex_certs=complex_certs,
+                    fee=fee,
+                )
+
+            # Create witness file for each key
+            witness_files = [
+                cluster.g_transaction.witness_tx(
+                    tx_body_file=tx_output.out_file,
+                    witness_name=f"{name_template}_skey{idx}",
+                    signing_key_files=[skey],
+                )
+                for idx, skey in enumerate(signing_key_files, start=1)
+            ]
+
+            # Sign TX using witness files
+            tx_witnessed_file = cluster.g_transaction.assemble_tx(
+                tx_body_file=tx_output.out_file,
+                witness_files=witness_files,
+                tx_name=name_template,
+            )
+
+            # Submit signed TX
+            cluster.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_output.txins)
+
+            return tx_output
+
+        # Build a Tx with the registration certificate
+        src_init_balance = cluster.g_query.get_address_balance(payment_addr.address)
+
+        tx_output_reg = _submit_tx(
+            name_template=f"{temp_template}_reg", complex_certs=[reg_cert_script]
+        )
+
+        # Check that the stake address is registered
+        stake_addr_info = cluster.g_query.get_stake_addr_info(stake_address)
+        assert stake_addr_info, f"Stake address is not registered: {stake_address}"
+
+        # Create stake address deregistration cert
+        stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_script_file=multisig_script,
+        )
+        dereg_cert_script = clusterlib.ComplexCert(
+            certificate_file=stake_addr_dereg_cert_file,
+            script_file=multisig_script,
+        )
+
+        # Build a Tx with the deregistration certificate
+        tx_output_dereg = _submit_tx(
+            name_template=f"{temp_template}_dereg", complex_certs=[dereg_cert_script]
+        )
+
+        # Check that the balance for source address was correctly updated and that key deposit
+        # was needed
+        assert (
+            cluster.g_query.get_address_balance(payment_addr.address)
+            == src_init_balance - tx_output_reg.fee - tx_output_dereg.fee
+        ), f"Incorrect balance for source address `{payment_addr.address}`"
+
+        # Check records in db-sync
+        tx_db_record_reg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_reg)
+        if tx_db_record_reg:
+            assert stake_address in tx_db_record_reg.stake_registration
+
+        tx_db_record_dereg = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_output_dereg
+        )
+        if tx_db_record_dereg:
+            assert stake_address in tx_db_record_dereg.stake_deregistration
+
 
 class TestNegative:
     """Tests that are expected to fail."""
