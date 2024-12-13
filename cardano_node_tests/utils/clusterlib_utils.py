@@ -1412,3 +1412,53 @@ def create_collaterals(
     utxo_ix_offset = get_utxo_ix_offset(utxos=utxos, txouts=tx_output.txouts)
     # Return collateral UTxOs according to the order in `tx_outs`
     return utxos[utxo_ix_offset : utxo_ix_offset + len(tx_outs)]
+
+
+def build_stake_multisig_script(
+    cluster_obj: clusterlib.ClusterLib,
+    script_name: str,
+    script_type_arg: str,
+    stake_vkey_files: tp.Iterable[pl.Path],
+    required: int = 0,
+    slot: int = 0,
+    slot_type_arg: str = "",
+) -> pl.Path:
+    """Build a stake multi-signature script.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        script_name: A name of the script.
+        script_type_arg: A script type, see `MultiSigTypeArgs`.
+        stake_vkey_files: A list of paths to stake vkey files.
+        required: A number of required keys for the "atLeast" script type (optional).
+        slot: A slot that sets script validity, depending on value of `slot_type_arg`
+            (optional).
+        slot_type_arg: A slot validity type, see `MultiSlotTypeArgs` (optional).
+
+    Returns:
+        Path: A path to the script file.
+    """
+    out_file = pl.Path(f"{script_name}_multisig.script")
+
+    scripts_l: list[dict] = [
+        {
+            "keyHash": cluster_obj.g_stake_address.get_stake_vkey_hash(stake_vkey_file=f),
+            "type": "sig",
+        }
+        for f in stake_vkey_files
+    ]
+    if slot:
+        scripts_l.append({"slot": slot, "type": slot_type_arg})
+
+    script: dict = {
+        "scripts": scripts_l,
+        "type": script_type_arg,
+    }
+
+    if script_type_arg == clusterlib.MultiSigTypeArgs.AT_LEAST:
+        script["required"] = required
+
+    with open(out_file, "w", encoding="utf-8") as fp_out:
+        json.dump(script, fp_out, indent=4)
+
+    return out_file
