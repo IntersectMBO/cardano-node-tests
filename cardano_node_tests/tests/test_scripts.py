@@ -258,6 +258,70 @@ class TestBasic:
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
+    def test_stake_keys_multisig_all(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        use_build_cmd: bool,
+        submit_method: str,
+    ):
+        """Use stake keys to witness a Tx (instead of payment keys).
+
+        Send funds to and from script address using the *all* script.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        # Create a multisig script that uses stake keys
+        stake_key_recs = [
+            cluster.g_stake_address.gen_stake_key_pair(key_name=f"{temp_template}_sig_{i}")
+            for i in range(1, 6)
+        ]
+        multisig_script = clusterlib_utils.build_stake_multisig_script(
+            cluster_obj=cluster,
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            stake_vkey_files=[r.vkey_file for r in stake_key_recs],
+        )
+
+        # Create script address
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=temp_template, payment_script_file=multisig_script
+        )
+
+        # Send funds to script address
+        tx_out_to = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_to",
+            src_address=payment_addrs[0].address,
+            dst_address=script_address,
+            amount=5_000_000,
+            payment_skey_files=[payment_addrs[0].skey_file],
+            use_build_cmd=use_build_cmd,
+            submit_method=submit_method,
+        )
+
+        # Send funds from script address
+        tx_out_from = multisig_tx(
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_from",
+            src_address=script_address,
+            dst_address=payment_addrs[0].address,
+            amount=2_000_000,
+            payment_skey_files=[payment_addrs[0].skey_file, *[r.skey_file for r in stake_key_recs]],
+            multisig_script=multisig_script,
+            use_build_cmd=use_build_cmd,
+            submit_method=submit_method,
+        )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
     def test_multisig_any(
         self,
         cluster: clusterlib.ClusterLib,
