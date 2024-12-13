@@ -100,9 +100,10 @@ class ClusterManager:
         if not configuration.SCHEDULING_LOG:
             return
 
-        with locking.FileLockIfXdist(self.log_lock), open(
-            configuration.SCHEDULING_LOG, "a", encoding="utf-8"
-        ) as logfile:
+        with (
+            locking.FileLockIfXdist(self.log_lock),
+            open(configuration.SCHEDULING_LOG, "a", encoding="utf-8") as logfile,
+        ):
             logfile.write(
                 f"{datetime.datetime.now(tz=datetime.timezone.utc)} on {self.worker_id}: {msg}\n"
             )
