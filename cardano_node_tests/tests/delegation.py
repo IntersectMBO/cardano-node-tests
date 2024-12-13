@@ -45,6 +45,13 @@ class DelegationOut:
     tx_raw_output: clusterlib.TxRawOutput
 
 
+@dataclasses.dataclass(frozen=True, order=True)
+class DelegationScriptOut:
+    pool_user: PoolUserScript
+    pool_id: str
+    tx_raw_output: clusterlib.TxRawOutput
+
+
 def get_pool_id(
     cluster_obj: clusterlib.ClusterLib,
     addrs_data: dict,
@@ -134,7 +141,7 @@ def delegate_stake_addr(
     amount: int = 100_000_000,
     use_build_cmd: bool = False,
 ) -> DelegationOut:
-    """Submit registration certificate and delegate to pool."""
+    """Submit registration certificate and delegate a stake address to a pool."""
     # Create key pairs and addresses
     if not pool_user:
         stake_addr_rec = clusterlib_utils.create_stake_addr_records(
@@ -227,3 +234,118 @@ def delegate_stake_addr(
     assert stake_addr_info.vote_delegation == "alwaysAbstain"
 
     return DelegationOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_raw_output)
+
+
+def delegate_multisig_stake_addr(
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+    pool_user: PoolUserScript,
+    skey_files: tp.Iterable[clusterlib.FileType],
+    pool_id: str = "",
+    cold_vkey: pl.Path | None = None,
+    use_build_cmd: bool = False,
+) -> DelegationScriptOut:
+    """Submit registration certificate and delegate a multisig stake address to a pool."""
+    # Create stake address registration cert if address is not already registered
+    if cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
+        stake_addr_reg_cert_file = None
+    else:
+        stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+            stake_script_file=pool_user.stake.script_file,
+        )
+
+    # Create stake address delegation cert
+    deleg_kwargs: dict[str, tp.Any] = {
+        "addr_name": f"{temp_template}_addr0",
+        "stake_script_file": pool_user.stake.script_file,
+        "always_abstain": True,
+    }
+    if pool_id:
+        deleg_kwargs["stake_pool_id"] = pool_id
+    elif cold_vkey:
+        deleg_kwargs["cold_vkey_file"] = cold_vkey
+        pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(cold_vkey)
+
+    stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_and_vote_delegation_cert(
+        **deleg_kwargs
+    )
+
+    src_address = pool_user.payment.address
+    src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
+
+    # Register stake address and delegate it to pool
+    deleg_cert_script = clusterlib.ComplexCert(
+        certificate_file=stake_addr_deleg_cert_file,
+        script_file=pool_user.stake.script_file,
+    )
+
+    complex_certs = [deleg_cert_script]
+
+    if stake_addr_reg_cert_file:
+        reg_cert_script = clusterlib.ComplexCert(
+            certificate_file=stake_addr_reg_cert_file,
+            script_file=pool_user.stake.script_file,
+        )
+        complex_certs.insert(0, reg_cert_script)
+
+    signing_key_files = [pool_user.payment.skey_file, *skey_files]
+    witness_len = len(signing_key_files)
+
+    if use_build_cmd:
+        tx_output = cluster_obj.g_transaction.build_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            fee_buffer=2_000_000,
+            witness_override=witness_len,
+        )
+    else:
+        fee = cluster_obj.g_transaction.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            witness_count_add=witness_len,
+        )
+        tx_output = cluster_obj.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            fee=fee,
+        )
+
+    # Create witness file for each key
+    witness_files = [
+        cluster_obj.g_transaction.witness_tx(
+            tx_body_file=tx_output.out_file,
+            witness_name=f"{temp_template}_skey{idx}",
+            signing_key_files=[skey],
+        )
+        for idx, skey in enumerate(signing_key_files, start=1)
+    ]
+
+    # Sign TX using witness files
+    tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
+        tx_body_file=tx_output.out_file,
+        witness_files=witness_files,
+        tx_name=temp_template,
+    )
+
+    # Submit signed TX
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_output.txins)
+
+    # Check that the balance for source address was correctly updated
+    deposit = cluster_obj.g_query.get_address_deposit() if stake_addr_reg_cert_file else 0
+    assert (
+        cluster_obj.g_query.get_address_balance(src_address)
+        == src_init_balance - deposit - tx_output.fee
+    ), f"Incorrect balance for source address `{src_address}`"
+
+    # Check that the stake address was delegated
+    stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
+    assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
+    assert stake_addr_info.delegation == pool_id, "Stake address delegated to wrong pool"
+    assert stake_addr_info.vote_delegation == "alwaysAbstain"
+
+    return DelegationScriptOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_output)

@@ -563,6 +563,177 @@ class TestDelegateAddr:
     @pytest.mark.order(7)
     @pytest.mark.dbsync
     @pytest.mark.long
+    def test_delegate_multisig(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_and_pool_and_rewards: tuple[clusterlib.ClusterLib, str],
+    ):
+        """Deregister a delegated stake address.
+
+        * Create a multisig script to be used as stake credentials
+        * Create stake address registration and delegation certs
+        * Create a Tx for the registration and delegation certificates
+        * Incrementally sign the Tx and submit the registration certificate
+        * Check that the address is registered and delegated to a pool
+        * Create stake address deregistration cert
+        * Create a Tx for the deregistration certificate
+        * Incrementally sign the Tx and submit the deregistration certificate
+        * Attempt to deregister the stake address - deregistration is expected to fail
+          because there are rewards in the stake address
+        * Withdraw rewards to payment address and deregister stake address
+        * Check that the key deposit was returned and rewards withdrawn
+        * Check that the stake address is no longer delegated
+        * (optional) check records in db-sync
+        """
+        cluster, pool_id = cluster_and_pool_and_rewards
+        temp_template = common.get_test_id(cluster)
+
+        stake_key_recs = [
+            cluster.g_stake_address.gen_stake_key_pair(key_name=f"{temp_template}_sig_{i}")
+            for i in range(1, 6)
+        ]
+        stake_skey_files = [r.skey_file for r in stake_key_recs]
+        stake_vkey_files = [r.vkey_file for r in stake_key_recs]
+
+        # Create a multisig script to be used as stake credentials
+        multisig_script = clusterlib_utils.build_stake_multisig_script(
+            cluster_obj=cluster,
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            stake_vkey_files=stake_vkey_files,
+        )
+
+        pool_user = delegation.PoolUserScript(
+            payment=cluster.g_address.gen_payment_addr_and_keys(
+                name=f"{temp_template}_script_pool_user",
+                stake_script_file=multisig_script,
+            ),
+            # Create script address
+            stake=delegation.AddressRecordScript(
+                address=cluster.g_stake_address.gen_stake_addr(
+                    addr_name=temp_template, stake_script_file=multisig_script
+                ),
+                script_file=multisig_script,
+            ),
+        )
+
+        # Fund payment address
+        clusterlib_utils.fund_from_faucet(
+            pool_user.payment,
+            cluster_obj=cluster,
+            all_faucets=cluster_manager.cache.addrs_data,
+        )
+
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+        init_epoch = cluster.g_query.get_epoch()
+
+        # Submit registration certificate and delegate to pool
+        delegation_out = delegation.delegate_multisig_stake_addr(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            pool_user=pool_user,
+            skey_files=stake_skey_files,
+            pool_id=pool_id,
+        )
+
+        assert (
+            cluster.g_query.get_epoch() == init_epoch
+        ), "Delegation took longer than expected and would affect other checks"
+
+        src_address = delegation_out.pool_user.payment.address
+
+        LOGGER.info("Waiting 4 epochs for first reward.")
+        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
+        assert cluster.g_query.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance, f"User of pool '{pool_id}' hasn't received any rewards"
+
+        # Make sure we have enough time to finish deregistration in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        # Files for deregistering stake address
+        stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            stake_script_file=delegation_out.pool_user.stake.script_file,
+        )
+        dereg_cert_script = clusterlib.ComplexCert(
+            certificate_file=stake_addr_dereg_cert,
+            script_file=delegation_out.pool_user.stake.script_file,
+        )
+        tx_files_deregister = clusterlib.TxFiles(
+            signing_key_files=[
+                delegation_out.pool_user.payment.skey_file,
+                *stake_skey_files,
+            ],
+        )
+
+        # Attempt to deregister the stake address - deregistration is expected to fail
+        # because there are rewards in the stake address
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=src_address,
+                tx_name=f"{temp_template}_dereg_fail",
+                tx_files=tx_files_deregister,
+                complex_certs=[dereg_cert_script],
+            )
+        err_msg = str(excinfo.value)
+        assert (
+            "StakeKeyNonZeroAccountBalanceDELEG" in err_msg
+            or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in err_msg
+        ), err_msg
+
+        src_payment_balance = cluster.g_query.get_address_balance(src_address)
+        reward_balance = cluster.g_query.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        ).reward_account_balance
+
+        # Withdraw rewards to payment address, deregister stake address
+        tx_raw_deregister_output = cluster.g_transaction.send_tx(
+            src_address=src_address,
+            tx_name=f"{temp_template}_dereg_withdraw",
+            tx_files=tx_files_deregister,
+            complex_certs=[dereg_cert_script],
+            withdrawals=[
+                clusterlib.TxOut(address=delegation_out.pool_user.stake.address, amount=-1)
+            ],
+        )
+
+        # Check that the key deposit was returned and rewards withdrawn
+        assert (
+            cluster.g_query.get_address_balance(src_address)
+            == src_payment_balance
+            - tx_raw_deregister_output.fee
+            + reward_balance
+            + cluster.g_query.get_address_deposit()
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        # Check that the stake address is no longer delegated
+        stake_addr_info = cluster.g_query.get_stake_addr_info(
+            delegation_out.pool_user.stake.address
+        )
+        assert (
+            not stake_addr_info.delegation
+        ), f"Stake address is still delegated: {stake_addr_info}"
+
+        tx_db_dereg = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
+        )
+        if tx_db_dereg:
+            assert delegation_out.pool_user.stake.address in tx_db_dereg.stake_deregistration
+            assert (
+                cluster.g_query.get_address_balance(src_address)
+                == dbsync_utils.get_utxo(address=src_address).amount_sum
+            ), f"Unexpected balance for source address `{src_address}` in db-sync"
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(7)
+    @pytest.mark.dbsync
+    @pytest.mark.long
     def test_undelegate(
         self,
         cluster_manager: cluster_management.ClusterManager,
