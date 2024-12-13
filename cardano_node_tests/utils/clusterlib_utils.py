@@ -1338,18 +1338,11 @@ def get_snapshot_rec(ledger_snapshot: dict) -> dict[str, int | list]:
     """Get uniform record for ledger state snapshot."""
     hashes: dict[str, int | list] = {}
 
-    for r in ledger_snapshot:
-        r_hash_rec = r[0]
+    for rk, r_value in ledger_snapshot.items():
         # In node 8.4+ the format is not list of dicts, but a dict like
         # {'keyHash-12d36d11cd0e570dde3c87360d4fb6074a1925e08a1a55513d7f7641': 1500000,
         #  'scriptHash-9c8e9da7f81e3ca90485f32ebefc98137c8ac260a072a00c4aaf142d': 17998926079, ...}
-        if r_hash_rec in ("k", "s"):
-            r_hash = r.split("-")[1]
-            r_value = ledger_snapshot[r]
-        else:
-            r_hash = r_hash_rec.get("key hash") or r_hash_rec.get("script hash")
-            r_value = r[1]
-
+        r_hash = rk.split("-")[1]
         if r_hash in hashes:
             hashes[r_hash] += r_value
         else:
@@ -1362,18 +1355,11 @@ def get_snapshot_delegations(ledger_snapshot: dict) -> dict[str, list[str]]:
     """Get delegations data from ledger state snapshot."""
     delegations: dict[str, list[str]] = {}
 
-    for r in ledger_snapshot:
-        r_hash_rec = r[0]
+    for rk, r_pool_id in ledger_snapshot.items():
         # In node 8.4+ the format is not list of dicts, but dict like
         # {'keyHash-12d36d11cd0e570dde3c87360d4fb6074a1925e08a1a55513d7f7641': POOL_ID,
         #  'scriptHash-9c8e9da7f81e3ca90485f32ebefc98137c8ac260a072a00c4aaf142d: POOL_ID, ...}
-        if r_hash_rec in ("k", "s"):
-            r_hash = r.split("-")[1]
-            r_pool_id = ledger_snapshot[r]
-        else:
-            r_hash = r_hash_rec.get("key hash") or r_hash_rec.get("script hash")
-            r_pool_id = r[1]
-
+        r_hash = rk.split("-")[1]
         if r_pool_id in delegations:
             delegations[r_pool_id].append(r_hash)
         else:
