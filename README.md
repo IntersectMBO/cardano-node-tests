@@ -1,7 +1,6 @@
 # README for cardano-node-tests
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 System and end-to-end (E2E) tests for cardano-node.
 
@@ -358,6 +357,6 @@ Install this package and its dependencies as described above.
 
 Run `pre-commit install` to set up the Git hook scripts that will check your changes before every commit. Alternatively, run `make lint` manually before pushing your changes.
 
-Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html), with the exception that formatting is handled automatically by [Black](https://github.com/psf/black) (through the `pre-commit` command).
+Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html), with the exception that formatting is handled automatically by [Ruff](https://github.com/astral-sh/ruff) (through the `pre-commit` command).
 
 See the [CONTRIBUTING](https://github.com/IntersectMBO/cardano-node-tests/blob/master/CONTRIBUTING.md) document for more details.
