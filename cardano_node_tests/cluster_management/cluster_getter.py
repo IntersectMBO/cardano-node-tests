@@ -14,6 +14,7 @@ import pytest
 from _pytest.config import Config
 
 from cardano_node_tests.cluster_management import common
+from cardano_node_tests.cluster_management import netstat_tools
 from cardano_node_tests.cluster_management import resources
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.utils import artifacts
@@ -34,35 +35,6 @@ else:
         secs: float,
     ) -> None:
         """No need to sleep if tests are running on a single worker."""
-
-
-def _kill_supervisor(instance_num: int) -> None:
-    """Attempt to kill the `supervisord` process."""
-    try:
-        netstat = helpers.run_command("netstat -plnt").decode().splitlines()
-    except Exception:
-        return
-
-    port_num = (
-        cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
-    )
-    port_str = f":{port_num}"
-
-    for line in netstat:
-        if port_str not in line:
-            continue
-        line_p = line.replace("  ", " ").strip()
-        pid = line_p.split()[-1].split("/")[0]
-        os.kill(int(pid), 15)
-        return
-
-
-def _get_netstat_out() -> str:
-    """Get output of the `netstat` command."""
-    try:
-        return helpers.run_command("netstat -plnt").decode()
-    except Exception:
-        return ""
 
 
 @dataclasses.dataclass
@@ -198,10 +170,7 @@ class ClusterGetter:
             except Exception as err:
                 self.log(f"c{self.cluster_instance_num}: failed to stop cluster:\n{err}")
 
-            _kill_supervisor(self.cluster_instance_num)
-
-            # Give the cluster time to stop
-            time.sleep(5)
+            netstat_tools.kill_old_cluster(instance_num=self.cluster_instance_num)
 
             # Save artifacts only when produced during this test run
             if cluster_running_file.exists() or i > 0:
@@ -229,7 +198,7 @@ class ClusterGetter:
             if _cluster_started:
                 break
         else:
-            netstat_out = _get_netstat_out()
+            netstat_out = netstat_tools.get_netstat_out()
             self.log(
                 f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}"
                 f"\nnetstat:\n{netstat_out}"
