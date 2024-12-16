@@ -1,6 +1,7 @@
 """Tests for stake address registration."""
 
 import logging
+import pathlib as pl
 
 import allure
 import pytest
@@ -668,3 +669,141 @@ class TestNegative:
                 )
         err_msg = str(excinfo.value)
         assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
+
+    @allure.link(helpers.get_vcs_link())
+    @common.PARAM_USE_BUILD_CMD
+    @pytest.mark.parametrize("issue", ("missing_script", "missing_skey"))
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    def test_incomplete_multisig(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: list[clusterlib.PoolUser],
+        use_build_cmd: bool,
+        issue: str,
+    ):
+        """Try to register a multisig stake address while missing either a script or an skey.
+
+        Expect failure.
+
+        * Create a multisig script to be used as stake credentials
+        * Create stake address registration certificate
+        * Create a Tx for the registration certificate
+        * Scenario1: Build a Tx with the registration certificate, without passing the the script
+          to the transaction build command
+        * Scenario 2: One skey is missing when witnesing the Tx
+        * Incrementally sign the Tx and submit the registration certificate
+        * Check the expected failure
+        """
+        temp_template = common.get_test_id(cluster)
+        payment_addr = pool_users[0].payment
+
+        # Create a multisig script to be used as stake credentials
+        stake_key_recs = [
+            cluster.g_stake_address.gen_stake_key_pair(key_name=f"{temp_template}_sig_{i}")
+            for i in range(1, 6)
+        ]
+        multisig_script = clusterlib_utils.build_stake_multisig_script(
+            cluster_obj=cluster,
+            script_name=temp_template,
+            script_type_arg=clusterlib.MultiSigTypeArgs.ALL,
+            stake_vkey_files=[r.vkey_file for r in stake_key_recs],
+        )
+
+        # Create stake address registration cert
+        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+
+        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_script_file=multisig_script,
+        )
+
+        signing_key_files = [payment_addr.skey_file, *[r.skey_file for r in stake_key_recs]]
+
+        def _submit_tx(
+            name_template: str,
+            tx_files: clusterlib.TxFiles | None = None,
+            complex_certs: list[clusterlib.ComplexCert] | tuple[()] = (),
+            signing_key_files: list[pl.Path] | tuple[()] = (),
+        ) -> clusterlib.TxRawOutput:
+            witness_len = len(signing_key_files)
+
+            if use_build_cmd:
+                tx_output = cluster.g_transaction.build_tx(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    tx_files=tx_files,
+                    complex_certs=complex_certs,
+                    fee_buffer=2_000_000,
+                    witness_override=witness_len,
+                )
+            else:
+                fee = cluster.g_transaction.calculate_tx_fee(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    tx_files=tx_files,
+                    complex_certs=complex_certs,
+                    witness_count_add=witness_len,
+                )
+                tx_output = cluster.g_transaction.build_raw_tx(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    tx_files=tx_files,
+                    complex_certs=complex_certs,
+                    fee=fee,
+                )
+
+            # Create witness file for each key
+            witness_files = [
+                cluster.g_transaction.witness_tx(
+                    tx_body_file=tx_output.out_file,
+                    witness_name=f"{name_template}_skey{idx}",
+                    signing_key_files=[skey],
+                )
+                for idx, skey in enumerate(signing_key_files, start=1)
+            ]
+
+            # Sign TX using witness files
+            tx_witnessed_file = cluster.g_transaction.assemble_tx(
+                tx_body_file=tx_output.out_file,
+                witness_files=witness_files,
+                tx_name=name_template,
+            )
+
+            # Submit signed TX
+            cluster.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_output.txins)
+
+            return tx_output
+
+        # Scenario1: Build a Tx with the registration certificate, without passing the the script
+        # to the transaction build command.
+        if issue == "missing_script":
+            tx_files_script = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _submit_tx(
+                    name_template=temp_template,
+                    tx_files=tx_files_script,
+                    signing_key_files=signing_key_files,
+                )
+            err_msg = str(excinfo.value)
+            assert "MissingScriptWitnessesUTXOW" in err_msg, err_msg
+
+        # Scenario2: One skey is missing when witnesing the Tx
+        elif issue == "missing_skey":
+            reg_cert_script = clusterlib.ComplexCert(
+                certificate_file=stake_addr_reg_cert_file,
+                script_file=multisig_script,
+            )
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                _submit_tx(
+                    name_template=temp_template,
+                    complex_certs=[reg_cert_script],
+                    signing_key_files=signing_key_files[:-1],
+                )
+            err_msg = str(excinfo.value)
+            assert "ScriptWitnessNotValidatingUTXOW" in err_msg, err_msg
+
+        else:
+            err = f"Invalid issue: {issue}"
+            raise ValueError(err)
