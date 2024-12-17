@@ -74,24 +74,13 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.PoolUser]:
         """Create pool users."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            created_users = clusterlib_utils.create_pool_users(
-                cluster_obj=cluster,
-                name_template=f"test_negative_ci{cluster_manager.cluster_instance_num}",
-                no_of_addr=3,
-            )
-            fixture_cache.value = created_users
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            *created_users,
+        created_users = common.get_pool_users(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=3,
+            caching_key=helpers.get_current_line_str(),
         )
-
         return created_users
 
     def _send_funds_to_invalid_address(
