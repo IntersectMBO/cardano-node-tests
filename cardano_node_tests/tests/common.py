@@ -324,3 +324,40 @@ def get_conway_address_deposit(cluster_obj: clusterlib.ClusterLib) -> int:
         stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
     return stake_deposit_amt
+
+
+def get_payment_addr(
+    name_template: str,
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+    caching_key: str = "",
+    amount: int | None = None,
+) -> clusterlib.AddressRecord:
+    """Create new payment address."""
+
+    def _create_addr() -> clusterlib.AddressRecord:
+        addr = clusterlib_utils.create_payment_addr_records(
+            f"{name_template}_fund_addr",
+            cluster_obj=cluster_obj,
+        )[0]
+        return addr
+
+    if caching_key:
+        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addr = _create_addr()
+            fixture_cache.value = addr
+    else:
+        addr = _create_addr()
+
+    # Fund source address
+    clusterlib_utils.fund_from_faucet(
+        addr,
+        cluster_obj=cluster_obj,
+        all_faucets=cluster_manager.cache.addrs_data,
+        amount=amount,
+    )
+
+    return addr

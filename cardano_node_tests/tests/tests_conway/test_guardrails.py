@@ -85,19 +85,12 @@ def payment_addr(
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster, __ = cluster_guardrails
-    addr = clusterlib_utils.create_payment_addr_records(
-        f"payment_addr_{cluster_manager.cluster_instance_num}",
+    addr = common.get_payment_addr(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
-    )[0]
-
-    # Fund source address
-    clusterlib_utils.fund_from_faucet(
-        addr,
-        cluster_obj=cluster,
-        all_faucets=cluster_manager.cache.addrs_data,
         amount=10_000_000_000,
     )
-
     return addr
 
 

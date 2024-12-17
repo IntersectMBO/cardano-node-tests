@@ -58,43 +58,6 @@ class DRepRatRecord:
     ratified: bool
 
 
-def get_payment_addr(
-    name_template: str,
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_obj: clusterlib.ClusterLib,
-    caching_key: str = "",
-    amount: int | None = None,
-) -> clusterlib.AddressRecord:
-    """Create new payment address."""
-
-    def _create_addr() -> clusterlib.AddressRecord:
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"{name_template}_fund_addr",
-            cluster_obj=cluster_obj,
-        )[0]
-        return addr
-
-    if caching_key:
-        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addr = _create_addr()
-            fixture_cache.value = addr
-    else:
-        addr = _create_addr()
-
-    # Fund source address
-    clusterlib_utils.fund_from_faucet(
-        addr,
-        cluster_obj=cluster_obj,
-        all_faucets=cluster_manager.cache.addrs_data,
-        amount=amount,
-    )
-
-    return addr
-
-
 def get_pool_user(
     name_template: str,
     cluster_manager: cluster_management.ClusterManager,
@@ -208,7 +171,7 @@ def payment_addr(
         key = ""
 
     test_id = common.get_test_id(cluster)
-    return get_payment_addr(
+    return common.get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -254,7 +217,7 @@ def payment_addr_wpr(
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return get_payment_addr(
+    return common.get_payment_addr(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -297,7 +260,7 @@ def payment_addr_rewards(
 ) -> clusterlib.AddressRecord:
     test_id = common.get_test_id(cluster_rewards)
     key = helpers.get_current_line_str()
-    return get_payment_addr(
+    return common.get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_rewards,
@@ -997,7 +960,7 @@ class TestNegativeDReps:
         )
         drep_metadata_url = web.publish(file_path=drep_metadata_file)
 
-        payment_addr = get_payment_addr(
+        payment_addr = common.get_payment_addr(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
