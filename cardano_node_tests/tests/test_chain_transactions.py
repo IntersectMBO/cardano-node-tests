@@ -10,36 +10,12 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-
-
-def get_payment_addr(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_obj: clusterlib.ClusterLib,
-) -> clusterlib.AddressRecord:
-    """Create new payment address."""
-    amount = 205_000_000
-
-    addr = clusterlib_utils.create_payment_addr_records(
-        f"chain_tx_addr_{clusterlib.get_rand_str(4)}_ci{cluster_manager.cluster_instance_num}",
-        cluster_obj=cluster_obj,
-    )[0]
-
-    # Fund source address
-    clusterlib_utils.fund_from_faucet(
-        addr,
-        cluster_obj=cluster_obj,
-        all_faucets=cluster_manager.cache.addrs_data,
-        amount=amount,
-    )
-
-    return addr
 
 
 def _gen_signed_tx(
@@ -151,7 +127,12 @@ class TestTxChaining:
             next_try = False
             tx_raw_outputs.clear()
 
-            payment_addr = get_payment_addr(cluster_manager=cluster_manager, cluster_obj=cluster)
+            payment_addr = common.get_payment_addr(
+                name_template=temp_template,
+                cluster_manager=cluster_manager,
+                cluster_obj=cluster,
+                amount=205_000_000,
+            )
             init_utxo = cluster.g_query.get_utxo(address=payment_addr.address)[0]
             assert (
                 init_utxo.amount - (fee * iterations) >= min_utxo_value

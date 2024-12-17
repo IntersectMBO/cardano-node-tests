@@ -47,21 +47,12 @@ class TestPoll:
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""
-        amount = 200_000_000
-
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"chain_tx_addr_ci{cluster_manager.cluster_instance_num}",
+        addr = common.get_payment_addr(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-        )[0]
-
-        # Fund source address
-        clusterlib_utils.fund_from_faucet(
-            addr,
-            cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
-            amount=amount,
+            amount=200_000_000,
         )
-
         return addr
 
     @allure.link(helpers.get_vcs_link())
