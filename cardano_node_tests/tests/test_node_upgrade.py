@@ -37,20 +37,11 @@ def payment_addr_locked(
 ) -> clusterlib.AddressRecord:
     """Create new payment addresses."""
     cluster = cluster_singleton
-    temp_template = common.get_test_id(cluster)
-
-    addr = clusterlib_utils.create_payment_addr_records(
-        f"{temp_template}_payment_addr_0",
+    addr = common.get_payment_addr(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
-    )[0]
-
-    # Fund source addresses
-    clusterlib_utils.fund_from_faucet(
-        addr,
-        cluster_obj=cluster,
-        all_faucets=cluster_manager.cache.addrs_data,
     )
-
     return addr
 
 
@@ -60,21 +51,13 @@ def payment_addrs_disposable(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new disposable payment addresses."""
-    temp_template = common.get_test_id(cluster)
-
-    addrs = clusterlib_utils.create_payment_addr_records(
-        f"{temp_template}_payment_addr_disposable_0",
-        f"{temp_template}_payment_addr_disposable_1",
+    addrs = common.get_payment_addrs(
+        name_template=f"{common.get_test_id(cluster)}_disposable",
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
+        num=2,
+        fund_idx=[0],
     )
-
-    # Fund source addresses
-    clusterlib_utils.fund_from_faucet(
-        addrs[0],
-        cluster_obj=cluster,
-        all_faucets=cluster_manager.cache.addrs_data,
-    )
-
     return addrs
 
 

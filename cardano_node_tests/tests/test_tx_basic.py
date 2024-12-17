@@ -37,22 +37,12 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                f"addr_basic_ci{cluster_manager.cluster_instance_num}_0",
-                f"addr_basic_ci{cluster_manager.cluster_instance_num}_1",
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            *addrs,
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=2,
+            caching_key=helpers.get_current_line_str(),
         )
         return addrs
 
@@ -91,19 +81,11 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        temp_template = common.get_test_id(cluster)
-
-        addrs = clusterlib_utils.create_payment_addr_records(
-            f"{temp_template}_addr_0",
-            f"{temp_template}_addr_1",
+        addrs = common.get_payment_addrs(
+            name_template=f"{common.get_test_id(cluster)}_disposable",
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-        )
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            *addrs,
-            cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=2,
         )
         return addrs
 
@@ -114,18 +96,12 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for `test_build_no_change`."""
-        test_id = common.get_test_id(cluster)
-        addrs = clusterlib_utils.create_payment_addr_records(
-            f"{test_id}_addr_no_change_0",
-            f"{test_id}_addr_no_change_1",
+        addrs = common.get_payment_addrs(
+            name_template=f"{common.get_test_id(cluster)}_no_change",
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-        )
-
-        # Fund source address
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
-            cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=2,
+            fund_idx=[0],
         )
         return addrs
 
@@ -1189,27 +1165,15 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 201 new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_in_out_addr_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(201)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=201,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
             amount=90_000_000_000,
         )
-
         return addrs
 
     def _from_to_transactions(
@@ -1490,24 +1454,13 @@ class TestIncrementalSigning:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_addr_inc_signing_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(10)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=10,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
 
         return addrs

@@ -14,7 +14,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 
@@ -32,20 +31,14 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    test_id = common.get_test_id(cluster)
-    addrs = clusterlib_utils.create_payment_addr_records(
-        *[f"{test_id}_payment_addr_{i}" for i in range(3)],
+    addrs = common.get_payment_addrs(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
-    )
-
-    # Fund source address
-    clusterlib_utils.fund_from_faucet(
-        addrs[0],
-        cluster_obj=cluster,
-        all_faucets=cluster_manager.cache.addrs_data,
+        num=3,
+        fund_idx=[0],
         amount=3_000_000_000,
     )
-
     return addrs
 
 

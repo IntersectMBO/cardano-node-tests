@@ -14,7 +14,6 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -44,26 +43,12 @@ class TestNodeReconnect:
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
-        num_addrs = 2
-
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"addr_rollback_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(num_addrs)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            *addrs,
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=2,
+            caching_key=helpers.get_current_line_str(),
         )
         return addrs
 

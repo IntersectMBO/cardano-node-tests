@@ -12,7 +12,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
@@ -42,19 +41,14 @@ class TestManyUTXOs:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"tiny_tx_addr_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(3)],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-        )
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
-            cluster_obj=cluster,
-            faucet_data=cluster_manager.cache.addrs_data["faucet"],
+            num=3,
+            fund_idx=[0],
             amount=800_000_000_000,
         )
-
         return addrs
 
     def _from_to_transactions(

@@ -144,24 +144,15 @@ class TestBasic:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"multi_addr_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(20)],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=20,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
             amount=10_000_000_000,
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
@@ -751,26 +742,14 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_neg_addr_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(10)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=10,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
@@ -995,26 +974,14 @@ class TestTimeLocking:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_addr_time_locking_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(20)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=20,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
-
         return addrs
 
     @pytest.fixture
@@ -1661,26 +1628,14 @@ class TestAuxiliaryScripts:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_addr_aux_scripts_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(20)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=20,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
@@ -1895,26 +1850,14 @@ class TestIncrementalSigning:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_addr_inc_signing_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(20)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=20,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
@@ -2095,26 +2038,14 @@ class TestDatum:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_addr_datum_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(5)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=5,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
@@ -2207,24 +2138,15 @@ class TestReferenceUTxO:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"multi_addr_ref_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(5)],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=5,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
             amount=100_000_000,
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
@@ -2479,26 +2401,14 @@ class TestNested:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[
-                    f"multi_addr_nested_ci{cluster_manager.cluster_instance_num}_{i}"
-                    for i in range(20)
-                ],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=20,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
@@ -2909,23 +2819,14 @@ class TestCompatibility:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addrs = clusterlib_utils.create_payment_addr_records(
-                *[f"test_compat_ci{cluster_manager.cluster_instance_num}_{i}" for i in range(5)],
-                cluster_obj=cluster,
-            )
-            fixture_cache.value = addrs
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            addrs[0],
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=5,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
         )
-
         return addrs
 
     @allure.link(helpers.get_vcs_link())
