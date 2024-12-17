@@ -8,7 +8,6 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -24,19 +23,13 @@ class TestMempool:
         cluster_singleton: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for 'test_query_mempool_txin'."""
-        temp_template = common.get_test_id(cluster_singleton)
-
-        addrs = clusterlib_utils.create_payment_addr_records(
-            f"{temp_template}_addr_0",
-            f"{temp_template}_addr_1",
-            cluster_obj=cluster_singleton,
-        )
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            *addrs,
-            cluster_obj=cluster_singleton,
-            all_faucets=cluster_manager.cache.addrs_data,
+        cluster = cluster_singleton
+        addrs = common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=2,
+            amount=1_000_000_000,
         )
         return addrs
 

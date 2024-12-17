@@ -12,7 +12,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -94,22 +93,13 @@ def payment_addrs(
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     # pylint: disable=unused-argument
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        addrs = clusterlib_utils.create_payment_addr_records(
-            f"addr_socket_ci{cluster_manager.cluster_instance_num}_0",
-            f"addr_socket_ci{cluster_manager.cluster_instance_num}_1",
-            cluster_obj=cluster,
-        )
-        fixture_cache.value = addrs
-
-    # Fund source addresses
-    clusterlib_utils.fund_from_faucet(
-        addrs[0],
+    addrs = common.get_payment_addrs(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
-        all_faucets=cluster_manager.cache.addrs_data,
+        num=2,
+        fund_idx=[0],
+        caching_key=helpers.get_current_line_str(),
         amount=100_000_000,
     )
     return addrs

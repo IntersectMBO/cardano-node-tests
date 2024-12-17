@@ -326,6 +326,50 @@ def get_conway_address_deposit(cluster_obj: clusterlib.ClusterLib) -> int:
     return stake_deposit_amt
 
 
+def get_payment_addrs(
+    name_template: str,
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+    num: int,
+    fund_idx: list[int] | None = None,
+    caching_key: str = "",
+    amount: int | None = None,
+) -> list[clusterlib.AddressRecord]:
+    """Create new payment addresses."""
+    if num < 1:
+        err = f"Number of addresses must be at least 1, got: {num}"
+        raise ValueError(err)
+
+    def _create_addrs() -> list[clusterlib.AddressRecord]:
+        addrs = clusterlib_utils.create_payment_addr_records(
+            *[f"{name_template}_fund_addr_{i}" for i in range(1, num + 1)],
+            cluster_obj=cluster_obj,
+        )
+        return addrs
+
+    if caching_key:
+        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            addrs = _create_addrs()
+            fixture_cache.value = addrs
+    else:
+        addrs = _create_addrs()
+
+    # Fund source address
+    fund_addresses = addrs if fund_idx is None else [addrs[i] for i in fund_idx]
+    if fund_addresses:
+        clusterlib_utils.fund_from_faucet(
+            *fund_addresses,
+            cluster_obj=cluster_obj,
+            all_faucets=cluster_manager.cache.addrs_data,
+            amount=amount,
+        )
+
+    return addrs
+
+
 def get_payment_addr(
     name_template: str,
     cluster_manager: cluster_management.ClusterManager,
@@ -333,31 +377,12 @@ def get_payment_addr(
     caching_key: str = "",
     amount: int | None = None,
 ) -> clusterlib.AddressRecord:
-    """Create new payment address."""
-
-    def _create_addr() -> clusterlib.AddressRecord:
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"{name_template}_fund_addr",
-            cluster_obj=cluster_obj,
-        )[0]
-        return addr
-
-    if caching_key:
-        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            addr = _create_addr()
-            fixture_cache.value = addr
-    else:
-        addr = _create_addr()
-
-    # Fund source address
-    clusterlib_utils.fund_from_faucet(
-        addr,
+    """Create a single new payment address."""
+    return get_payment_addrs(
+        name_template=name_template,
+        cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,
-        all_faucets=cluster_manager.cache.addrs_data,
+        num=1,
+        caching_key=caching_key,
         amount=amount,
-    )
-
-    return addr
+    )[0]
