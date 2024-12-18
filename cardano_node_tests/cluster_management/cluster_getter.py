@@ -157,6 +157,7 @@ class ClusterGetter:
         )
 
         excp: Exception | None = None
+        netstat_out = ""
         for i in range(2):
             if i > 0:
                 self.log(
@@ -170,6 +171,10 @@ class ClusterGetter:
             except Exception as err:
                 self.log(f"c{self.cluster_instance_num}: failed to stop cluster:\n{err}")
 
+            # Give the cluster time to stop
+            time.sleep(10)
+
+            # Kill the leftover processes
             netstat_tools.kill_old_cluster(instance_num=self.cluster_instance_num)
 
             # Save artifacts only when produced during this test run
@@ -197,13 +202,14 @@ class ClusterGetter:
             # `else` cannot be used together with `finally`
             if _cluster_started:
                 break
-        else:
+
             netstat_out = netstat_tools.get_netstat_out()
             self.log(
                 f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}"
                 f"\nnetstat:\n{netstat_out}"
-                "\ncluster dead"
             )
+        else:
+            self.log(f"c{self.cluster_instance_num}: cluster dead")
             logfiles.framework_logger().error(
                 "Failed to start cluster instance 'c%s':\n%s\nnetstat:\n%s",
                 self.cluster_instance_num,
