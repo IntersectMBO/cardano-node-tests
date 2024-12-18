@@ -56,21 +56,14 @@ def pool_users(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.PoolUser]:
     """Create new pool users."""
-    test_id = common.get_test_id(cluster)
-    created_users = clusterlib_utils.create_pool_users(
+    created_users = common.get_pool_users(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
-        name_template=f"{test_id}_pool_users",
-        no_of_addr=2,
-    )
-
-    # Fund source address
-    clusterlib_utils.fund_from_faucet(
-        created_users[0],
-        cluster_obj=cluster,
-        all_faucets=cluster_manager.cache.addrs_data,
+        num=2,
+        fund_idx=[0],
         amount=3_000_000_000,
     )
-
     return created_users
 
 

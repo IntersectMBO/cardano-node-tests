@@ -331,13 +331,13 @@ def create_pool_users(
 ) -> list[clusterlib.PoolUser]:
     """Create PoolUsers."""
     pool_users = []
-    for i in range(no_of_addr):
+    for i in range(1, no_of_addr + 1):
         # Create key pairs and addresses
         stake_addr_rec = create_stake_addr_records(
-            f"{name_template}_addr{i}", cluster_obj=cluster_obj, destination_dir=destination_dir
+            f"{name_template}_addr_{i}", cluster_obj=cluster_obj, destination_dir=destination_dir
         )[0]
         payment_addr_rec = create_payment_addr_records(
-            f"{name_template}_addr{i}",
+            f"{name_template}_addr_{i}",
             cluster_obj=cluster_obj,
             stake_vkey_file=stake_addr_rec.vkey_file,
             destination_dir=destination_dir,

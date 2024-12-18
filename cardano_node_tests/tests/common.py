@@ -357,7 +357,7 @@ def get_payment_addrs(
     else:
         addrs = _create_addrs()
 
-    # Fund source address
+    # Fund source addresses
     fund_addresses = addrs if fund_idx is None else [addrs[i] for i in fund_idx]
     if fund_addresses:
         clusterlib_utils.fund_from_faucet(
@@ -379,6 +379,69 @@ def get_payment_addr(
 ) -> clusterlib.AddressRecord:
     """Create a single new payment address."""
     return get_payment_addrs(
+        name_template=name_template,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster_obj,
+        num=1,
+        caching_key=caching_key,
+        amount=amount,
+    )[0]
+
+
+def get_pool_users(
+    name_template: str,
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+    num: int,
+    fund_idx: list[int] | None = None,
+    caching_key: str = "",
+    amount: int | None = None,
+) -> list[clusterlib.PoolUser]:
+    """Create new pool users."""
+    if num < 1:
+        err = f"Number of pool users must be at least 1, got: {num}"
+        raise ValueError(err)
+
+    def _create_pool_users() -> list[clusterlib.PoolUser]:
+        users = clusterlib_utils.create_pool_users(
+            cluster_obj=cluster_obj,
+            name_template=f"{name_template}_pool_user",
+            no_of_addr=num,
+        )
+        return users
+
+    if caching_key:
+        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
+            if fixture_cache.value:
+                return fixture_cache.value  # type: ignore
+
+            users = _create_pool_users()
+            fixture_cache.value = users
+    else:
+        users = _create_pool_users()
+
+    # Fund source addresses
+    fund_users = users if fund_idx is None else [users[i] for i in fund_idx]
+    if fund_users:
+        clusterlib_utils.fund_from_faucet(
+            *fund_users,
+            cluster_obj=cluster_obj,
+            all_faucets=cluster_manager.cache.addrs_data,
+            amount=amount,
+        )
+
+    return users
+
+
+def get_pool_user(
+    name_template: str,
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+    caching_key: str = "",
+    amount: int | None = None,
+) -> clusterlib.PoolUser:
+    """Create a single new pool user."""
+    return get_pool_users(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,

@@ -58,33 +58,6 @@ class DRepRatRecord:
     ratified: bool
 
 
-def get_pool_user(
-    name_template: str,
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_obj: clusterlib.ClusterLib,
-    caching_key: str,
-) -> clusterlib.PoolUser:
-    """Create a pool user."""
-    with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        pool_user = clusterlib_utils.create_pool_users(
-            cluster_obj=cluster_obj,
-            name_template=f"{name_template}_pool_user",
-            no_of_addr=1,
-        )[0]
-        fixture_cache.value = pool_user
-
-    # Fund the payment address with some ADA
-    clusterlib_utils.fund_from_faucet(
-        pool_user.payment,
-        cluster_obj=cluster_obj,
-        all_faucets=cluster_manager.cache.addrs_data,
-    )
-    return pool_user
-
-
 def create_drep(
     name_template: str,
     cluster_obj: clusterlib.ClusterLib,
@@ -187,7 +160,7 @@ def pool_user(
 ) -> clusterlib.PoolUser:
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return get_pool_user(
+    return common.get_pool_user(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -230,7 +203,7 @@ def pool_user_wpr(
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return get_pool_user(
+    return common.get_pool_user(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -275,7 +248,7 @@ def pool_user_rewards(
 ) -> clusterlib.PoolUser:
     test_id = common.get_test_id(cluster_rewards)
     key = helpers.get_current_line_str()
-    return get_pool_user(
+    return common.get_pool_user(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_rewards,

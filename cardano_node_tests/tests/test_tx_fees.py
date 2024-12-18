@@ -13,7 +13,6 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
-from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
@@ -195,24 +194,14 @@ class TestExpectedFees:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.PoolUser]:
         """Create pool users."""
-        with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
-
-            created_users = clusterlib_utils.create_pool_users(
-                cluster_obj=cluster,
-                name_template=f"test_expected_fees_ci{cluster_manager.cluster_instance_num}",
-                no_of_addr=201,
-            )
-            fixture_cache.value = created_users
-
-        # Fund source addresses
-        clusterlib_utils.fund_from_faucet(
-            *created_users[:10],
+        created_users = common.get_pool_users(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=201,
+            fund_idx=list(range(10)),
+            caching_key=helpers.get_current_line_str(),
         )
-
         return created_users
 
     def _create_pool_certificates(
