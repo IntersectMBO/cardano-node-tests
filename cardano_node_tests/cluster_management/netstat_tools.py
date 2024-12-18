@@ -15,7 +15,7 @@ def get_netstat_out() -> str:
     """Get output of the `netstat` command."""
     try:
         return helpers.run_command(
-            "netstat -pant | grep -E 'LISTEN|TIME_WAIT|CLOSE'", ignore_fail=True, shell=True
+            "netstat -pant | grep -E 'LISTEN|TIME_WAIT'", ignore_fail=True, shell=True
         ).decode()
     except Exception as excp:
         LOGGER.error(f"Failed to fetch netstat output: {excp}")  # noqa: TRY400
