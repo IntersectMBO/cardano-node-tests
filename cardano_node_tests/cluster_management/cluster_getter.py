@@ -156,6 +156,9 @@ class ClusterGetter:
             f"stop_cmd='{startup_files.stop_script}'"
         )
 
+        def _netstat_log_func(msg: str) -> None:
+            self.log(f"c{self.cluster_instance_num}: {msg}")
+
         excp: Exception | None = None
         netstat_out = ""
         for i in range(2):
@@ -175,7 +178,9 @@ class ClusterGetter:
             time.sleep(10)
 
             # Kill the leftover processes
-            netstat_tools.kill_old_cluster(instance_num=self.cluster_instance_num)
+            netstat_tools.kill_old_cluster(
+                instance_num=self.cluster_instance_num, log_func=_netstat_log_func
+            )
 
             # Save artifacts only when produced during this test run
             if cluster_running_file.exists() or i > 0:
