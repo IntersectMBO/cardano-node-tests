@@ -26,7 +26,7 @@ def kill_old_cluster(instance_num: int) -> None:  # noqa: C901
     """Attempt to kill all processes left over from a previous cluster instance."""
 
     def _get_netstat_split() -> list[str]:
-        return get_netstat_out().splitlines()
+        return get_netstat_out().replace("\t", "    ").splitlines()
 
     def _get_pid(line: str) -> int | None:
         try:
@@ -44,7 +44,9 @@ def kill_old_cluster(instance_num: int) -> None:  # noqa: C901
 
     port_nums = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(instance_num)
     port_strs = [
-        f":{p}"
+        # Add whitestpace to the end of each port number to avoid matching a port number that is a
+        # prefix of another port number.
+        f":{p} "
         for p in (
             port_nums.supervisor,
             port_nums.webserver,
