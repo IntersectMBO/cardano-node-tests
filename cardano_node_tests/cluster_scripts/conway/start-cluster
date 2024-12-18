@@ -56,8 +56,7 @@ if [ "$NUM_POOLS" -lt 3 ]; then
 fi
 
 cardano_cli_log() {
-  local out
-  local retval
+  local out retval _
 
   echo cardano-cli "$@" >> "${STATE_CLUSTER}/start_cluster_cmds.log"
 
@@ -122,6 +121,7 @@ wait_for_epoch() {
   local sec_to_epoch_end
   local sec_to_sleep
   local curr_epoch
+  local _
 
   start_epoch="$(get_epoch)"
 
@@ -149,7 +149,8 @@ wait_for_epoch() {
 
 check_spend_success() {
   for _ in {1..10}; do
-    if ! cardano_cli_log latest query utxo "$@" --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
+    if ! cardano_cli_log latest query utxo "$@" \
+      --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
       return 0
     fi
     sleep 3
@@ -165,18 +166,28 @@ get_txins() {
 
   stop_txin_amount="$((stop_txin_amount + 2000000))"
 
-  TXINS=()
-  TXIN_AMOUNT=0
-  while read -r txhash txix amount _; do
-    TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
-    TXINS+=("--tx-in" "${txhash}#${txix}")
+  # Repeat in case `query utxo` fails
+  for _ in {1..3}; do
+    TXINS=()
+    TXIN_AMOUNT=0
+    while read -r txhash txix amount _; do
+      if [ -z "$txhash" ] || [ -z "$txix" ] || [ "$amount" -lt 1000000 ]; then
+        continue
+      fi
+      TXIN_AMOUNT="$((TXIN_AMOUNT + amount))"
+      TXINS+=("--tx-in" "${txhash}#${txix}")
+      if [ "$TXIN_AMOUNT" -ge "$stop_txin_amount" ]; then
+        break
+      fi
+    done <<< "$(cardano_cli_log conway query utxo \
+                --testnet-magic "$NETWORK_MAGIC" \
+                --address "$txin_addr" |
+                grep -E "lovelace$|[0-9]$|lovelace \+ TxOutDatumNone$")"
+
     if [ "$TXIN_AMOUNT" -ge "$stop_txin_amount" ]; then
       break
     fi
-  done <<< "$(cardano_cli_log latest query utxo --testnet-magic \
-              "$NETWORK_MAGIC" \
-              --address "$txin_addr" |
-              grep -E "lovelace$|[0-9]$|lovelace \+ TxOutDatumNone$")"
+  done
 }
 
 ENABLE_SUBMIT_API="$(type cardano-submit-api >/dev/null 2>&1 && echo 1 || echo 0)"
