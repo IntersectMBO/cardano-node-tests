@@ -177,6 +177,8 @@ class TestTreasuryWithdrawals:
             ],
         )
 
+        actions_deposit_combined = action_deposit_amt * actions_num
+
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             reqc.cip026_03.start(url=helpers.get_vcs_link())
             with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -184,8 +186,9 @@ class TestTreasuryWithdrawals:
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_action_bootstrap",
                     src_address=pool_user_ug_treasury.payment.address,
-                    use_build_cmd=True,
+                    use_build_cmd=False,
                     tx_files=tx_files_action,
+                    deposit=actions_deposit_combined + stake_deposit_amt,
                 )
             err_str = str(excinfo.value)
             assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
@@ -210,8 +213,6 @@ class TestTreasuryWithdrawals:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-
-        actions_deposit_combined = action_deposit_amt * actions_num
 
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
