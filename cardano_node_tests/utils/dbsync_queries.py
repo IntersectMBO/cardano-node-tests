@@ -600,7 +600,6 @@ class DrepDistributionDBRow:
 
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
-    # pylint: disable=redefined-builtin
     cur = None
     try:
         cur = dbsync_conn.conn().cursor()

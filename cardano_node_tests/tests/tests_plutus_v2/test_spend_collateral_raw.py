@@ -216,7 +216,6 @@ class TestCollateralOutput:
         * spend the locked UTxO
         * check that the expected amount of collateral was spent
         """
-        # pylint: disable=too-many-locals, too-many-statements
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]

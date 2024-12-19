@@ -121,7 +121,6 @@ class TestDBSync:
     @pytest.mark.smoke
     def test_blocks(self, cluster: clusterlib.ClusterLib):  # noqa: C901
         """Check expected values in the `block` table in db-sync."""
-        # pylint: disable=too-many-branches
         common.get_test_id(cluster)
 
         tip = cluster.g_query.get_tip()

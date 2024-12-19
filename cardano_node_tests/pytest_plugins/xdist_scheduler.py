@@ -45,8 +45,6 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
            }
     """
 
-    # pylint: disable=abstract-method
-
     def _split_scope(self, nodeid: str) -> str:
         """Determine the scope (grouping) of a nodeid.
 

@@ -114,7 +114,6 @@ class TestMinting:
         * check that the tokens were minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -262,7 +261,6 @@ class TestMinting:
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -394,7 +392,6 @@ class TestMinting:
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -523,7 +520,6 @@ class TestMinting:
         * check transaction view output
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -758,7 +754,6 @@ class TestMinting:
         * check transaction view output
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -912,7 +907,6 @@ class TestMinting:
         * check transaction view output
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -1063,7 +1057,6 @@ class TestMinting:
         * check that the token was minted and collateral UTxO was not spent
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -1219,7 +1212,6 @@ class TestMinting:
         * check that minting failed because of 'PastHorizon' failure when ttl is too far
           in the future
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]

@@ -63,7 +63,6 @@ class TestReferenceScripts:
         * spend the locked UTxOs using the reference UTxOs
         * check that the UTxOs were correctly spent
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         plutus_op1 = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS

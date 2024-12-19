@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/IntersectMBO/cardano-node-tests"
 
-TCallable = tp.TypeVar("TCallable", bound=tp.Callable)  # pylint: disable=invalid-name
+TCallable = tp.TypeVar("TCallable", bound=tp.Callable)
 
 
 def callonce(func: TCallable) -> TCallable:
@@ -114,7 +114,6 @@ def run_command(
 
     LOGGER.debug("Running `%s`", cmd_str)
 
-    # pylint: disable=consider-using-with
     if workdir:
         with change_cwd(workdir):
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)

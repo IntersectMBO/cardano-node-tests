@@ -55,8 +55,6 @@ def _fund_script(
     clusterlib.TxRawOutput,
 ]:
     """Fund a Plutus script and create the locked UTxO, collateral UTxO and reference script."""
-    # pylint: disable=too-many-arguments
-
     script_address = cluster.g_address.gen_payment_addr(
         addr_name=temp_template, payment_script_file=plutus_op.script_file
     )

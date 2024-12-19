@@ -142,7 +142,6 @@ class TestSECP256k1:
         * mint the tokens using a Plutus script with a SECP256k1 function
         * check that the token was minted
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         script_file = (

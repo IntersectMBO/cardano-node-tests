@@ -344,7 +344,6 @@ class TestDReps:
         * Check that DRep was retired
         * Check that deposit was returned to source address
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         errors_final = []
 
@@ -1016,7 +1015,6 @@ class TestDelegDReps:
 
         * Check that the stake address is registered
         """
-        # pylint: disable=too-many-statements,too-many-locals
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
         deposit_amt = cluster.g_query.get_address_deposit()

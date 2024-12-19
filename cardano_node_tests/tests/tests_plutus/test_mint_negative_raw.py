@@ -112,7 +112,6 @@ class TestMintingNegative:
           the required signer
         * check that the minting failed because the required signers were not provided
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -209,7 +208,6 @@ class TestMintingNegative:
           of the expected values
         * check that the minting failed because the budget was overspent
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -526,7 +524,6 @@ class TestMintingNegative:
         * try to mint the token using a Plutus script and a TX without validity interval
         * check that the minting failed
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -632,7 +629,6 @@ class TestNegativeCollateral:
         * mint the token using a Plutus script
         * check that the minting failed because no valid collateral was provided
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -733,7 +729,6 @@ class TestNegativeCollateral:
         * mint the token using a Plutus script
         * check that the minting failed because a collateral with insufficient funds was provided
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]

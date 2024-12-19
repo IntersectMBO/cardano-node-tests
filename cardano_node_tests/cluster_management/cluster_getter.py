@@ -1,6 +1,5 @@
 """Functionality for obtaining and setting up a cluster instance."""
 
-# pylint: disable=abstract-class-instantiated
 import dataclasses
 import logging
 import os
@@ -111,7 +110,6 @@ class ClusterGetter:
 
         Not called under global lock!
         """
-        # pylint: disable=too-many-branches,too-many-statements
         cluster_running_file = self.instance_dir / common.CLUSTER_RUNNING_FILE
 
         # Don't respin cluster if it was started outside of test framework
@@ -735,7 +733,6 @@ class ClusterGetter:
                 ("singleton" tests).
             start_cmd: Custom command to start the cluster.
         """
-        # pylint: disable=too-many-statements,too-many-branches
         assert not isinstance(lock_resources, str), "`lock_resources` can't be single string"
         assert not isinstance(use_resources, str), "`use_resources` can't be single string"
 
@@ -800,7 +797,6 @@ class ClusterGetter:
 
             # Sleep for a while to avoid too many checks in a short time
             _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
-            # pylint: disable=consider-using-max-builtin
             cget_status.sleep_delay = max(cget_status.sleep_delay, 1)
 
             # Nothing time consuming can go under this lock as all other workers will need to wait

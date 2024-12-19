@@ -114,7 +114,6 @@ class TestBuildMinting:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -373,7 +372,6 @@ class TestBuildMinting:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -535,7 +533,6 @@ class TestBuildMinting:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -800,7 +797,6 @@ class TestBuildMinting:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -1002,7 +998,6 @@ class TestBuildMinting:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -1159,7 +1154,6 @@ class TestBuildMinting:
         * check that minting failed because of 'PastHorizon' failure when ttl is too far
           in the future
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]
@@ -1280,7 +1274,6 @@ class TestCollateralOutput:
         * check that the token was minted and collateral UTxO was not spent
         * check that the return collateral amount is the expected
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
 
         payment_addr = payment_addrs[0]

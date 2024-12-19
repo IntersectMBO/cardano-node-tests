@@ -1,6 +1,5 @@
 """Tests for Conway governance state of no confidence."""
 
-# pylint: disable=expression-not-assigned
 import dataclasses
 import logging
 import pathlib as pl
@@ -70,7 +69,6 @@ class TestNoConfidence:
         * check that the action is enacted
         * check that it's not possible to vote on enacted action
         """
-        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
@@ -336,7 +334,6 @@ class TestNoConfidence:
         * check that the action is not ratified
         * reinstate the original CC members
         """
-        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 

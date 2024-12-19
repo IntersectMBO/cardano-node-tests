@@ -955,7 +955,6 @@ class TestAdvancedQueries:
         option: str,
         temp_template: str,
     ):
-        # pylint: disable=too-many-branches,too-many-statements
         pool_ids = cluster_obj.g_query.get_stake_pools()
         if not pool_ids:
             pytest.skip("No stake pools are available.")
@@ -1264,7 +1263,6 @@ class TestPing:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `cardano-cli ping` on local node using host and port."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         count = 5
@@ -1309,7 +1307,6 @@ class TestPing:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `cardano-cli ping` on local node using unix socket."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
         count = 5
         ignore_file_id = "ping_unix_socket"
@@ -1374,7 +1371,6 @@ class TestQuerySlotNumber:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `query slot-number`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -1398,7 +1394,6 @@ class TestQuerySlotNumber:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         timestamp_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
@@ -1421,7 +1416,6 @@ class TestQuerySlotNumber:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         now = datetime.datetime.now(datetime.timezone.utc)

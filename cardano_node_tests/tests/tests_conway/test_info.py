@@ -1,6 +1,5 @@
 """Tests for Conway governance info."""
 
-# pylint: disable=expression-not-assigned
 import json
 import logging
 import pathlib as pl
@@ -67,7 +66,6 @@ class TestInfo:
         * check the votes
         * check for deposit return
         """
-        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
         action_deposit_amt = cluster.conway_genesis["govActionDeposit"]

@@ -261,7 +261,6 @@ class TestLobsterChallenge:
         * perform voting and check that the final value matches the expected value
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]

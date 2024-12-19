@@ -1,6 +1,5 @@
 """Tests for KES period."""
 
-# pylint: disable=abstract-class-instantiated
 import datetime
 import json
 import logging
@@ -154,7 +153,6 @@ class TestKES:
         * check KES period info command with an operational certificate with an expired KES
         * check KES period info command with operational certificates with a valid KES
         """
-        # pylint: disable=too-many-statements,too-many-locals
         cluster = cluster_kes
         temp_template = common.get_test_id(cluster)
 
@@ -369,7 +367,6 @@ class TestKES:
         * generate new operational certificate with valid `--kes-period` and restart the node
         * check that the pool is minting blocks again
         """
-        # pylint: disable=too-many-statements,too-many-branches,too-many-locals
         __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE
@@ -617,7 +614,6 @@ class TestKES:
           minting blocks again
         * check `kes-period-info` with the old (replaced) operational certificate
         """
-        # pylint: disable=too-many-statements,too-many-locals
         __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE

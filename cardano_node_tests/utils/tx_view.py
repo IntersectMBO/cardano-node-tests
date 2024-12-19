@@ -233,8 +233,6 @@ def check_tx_view(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> dict[str, tp.Any]:
     """Check output of the `transaction view` command."""
-    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
-
     tx_loaded = load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_raw_output.out_file)
 
     # Check inputs

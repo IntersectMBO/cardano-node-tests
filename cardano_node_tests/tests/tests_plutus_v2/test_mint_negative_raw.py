@@ -59,7 +59,6 @@ class TestNegativeCollateralOutput:
         * mint the token using a Plutus script while limiting the usable collateral amount
         * check that the minting failed because insufficient collateral amount was provided
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -173,7 +172,6 @@ class TestNegativeCollateralOutput:
 
         Expect failure.
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]

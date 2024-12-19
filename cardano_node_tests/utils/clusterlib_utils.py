@@ -88,7 +88,6 @@ def build_and_submit_tx(
     Use `use_build_cmd` to switch between `transaction build` and `transaction build-raw`.
     Use `submit_method` to switch between `cardano-cli transaction submit` and submit-api.
     """
-    # pylint: disable=too-many-arguments,too-many-locals
     tx_files = tx_files or clusterlib.TxFiles()
     submit_method = submit_method or submit_utils.SubmitMethods.CLI
 
@@ -1223,7 +1222,6 @@ def create_reference_utxo(
     amount: int,
 ) -> tuple[clusterlib.UTXOData, clusterlib.TxRawOutput]:
     """Create a reference script UTxO."""
-    # pylint: disable=too-many-arguments
     tx_files = clusterlib.TxFiles(
         signing_key_files=[payment_addr.skey_file],
     )

@@ -43,7 +43,6 @@ class ServiceStatus:
 
 
 class Testnets:
-    # pylint: disable=invalid-name
     preview: tp.Final[str] = "preview"
     preprod: tp.Final[str] = "preprod"
     mainnet: tp.Final[str] = "mainnet"
@@ -360,9 +359,7 @@ def reload_supervisor_config(
         helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} update")
     except Exception as exc:
         msg = "Failed to reload configuration."
-        raise Exception(  # pylint: disable=broad-exception-raised
-            msg
-        ) from exc
+        raise Exception(msg) from exc
 
     # Wait for potential nodes restart
     if delay > 0:
@@ -393,9 +390,7 @@ def restart_all_nodes(
         helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
     except Exception as exc:
         msg = "Failed to restart cluster nodes."
-        raise Exception(  # pylint: disable=broad-exception-raised
-            msg
-        ) from exc
+        raise Exception(msg) from exc
 
     # Wait for nodes to start
     if delay > 0:
@@ -417,9 +412,7 @@ def services_action(service_names: list[str], action: str, instance_num: int | N
             )
         except Exception as exc:
             msg = f"Failed to {action} service `{service_name}`"
-            raise Exception(  # pylint: disable=broad-exception-raised
-                msg
-            ) from exc
+            raise Exception(msg) from exc
 
 
 def start_nodes(node_names: list[str], instance_num: int | None = None) -> None:

@@ -79,7 +79,6 @@ class TestUpdateProposals:
         * check that parameters were updated with the values submitted in the second
           update proposal, i.e. the second update proposal overwritten the first one
         """
-        # pylint: disable=too-many-statements
         cluster = cluster_update_proposal
         temp_template = common.get_test_id(cluster)
 

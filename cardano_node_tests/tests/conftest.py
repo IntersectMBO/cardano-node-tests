@@ -1,4 +1,3 @@
-# pylint: disable=abstract-class-instantiated
 import json
 import logging
 import os
@@ -330,7 +329,6 @@ def session_autouse(
     testenv_setup_teardown: tp.Any,
 ) -> None:
     """Autouse session fixtures that are required for session setup and teardown."""
-    # pylint: disable=unused-argument,unnecessary-pass
 
 
 @pytest.fixture(scope="module")
@@ -369,7 +367,7 @@ def cluster_manager(
 ) -> tp.Generator[cluster_management.ClusterManager, None, None]:
     """Return instance of `cluster_management.ClusterManager`."""
     # Hide from traceback to make logs errors more readable
-    __tracebackhide__ = True  # pylint: disable=unused-variable
+    __tracebackhide__ = True
 
     cluster_manager_obj = cluster_management.ClusterManager(
         worker_id=worker_id, pytest_config=request.config
@@ -413,7 +411,6 @@ def function_autouse(
     respin_on_large_db: tp.Generator[None, None, None],
 ) -> None:
     """Autouse function fixtures that are required for each test setup and teardown."""
-    # pylint: disable=unused-argument,unnecessary-pass
 
 
 @pytest.fixture

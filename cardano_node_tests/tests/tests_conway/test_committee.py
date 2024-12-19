@@ -1,6 +1,5 @@
 """Tests for Conway governance Constitutional Committee functionality."""
 
-# pylint: disable=expression-not-assigned
 import logging
 import pathlib as pl
 import typing as tp
@@ -322,7 +321,6 @@ class TestCommittee:
         * check deposit is returned to user reward account after enactment
         * (optional) check committee members in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
@@ -1073,7 +1071,6 @@ class TestCommittee:
             - check that the action is ratified
             - check that the action is enacted
         """
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         __: tp.Any  # mypy workaround
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)

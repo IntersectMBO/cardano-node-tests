@@ -518,8 +518,6 @@ class TestRegisterAddr:
         * check that the stake address is no longer registered
         * (optional) check records in db-sync
         """
-        # pylint: disable=too-many-locals
-
         # The test checks the following issues:
         #  - cardano-cli 299: Cannot de-register Plutus script stake address
 
@@ -685,7 +683,6 @@ class TestDelegateAddr:
         * check that the stake address is no longer delegated
         * (optional) check records in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         cluster, pool_id = cluster_lock_42stake
         temp_template = common.get_test_id(cluster)
 
@@ -896,8 +893,6 @@ class TestDelegateAddr:
         * check that the stake address is no longer delegated
         * (optional) check records in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
-
         # The test checks the following issues:
         #  - cardano-cli 297: Cannot delegate Plutus script stake address
         #  - cardano-cli 299: Cannot de-register Plutus script stake address

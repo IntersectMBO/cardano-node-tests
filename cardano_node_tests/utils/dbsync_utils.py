@@ -56,7 +56,6 @@ def get_address_reward(
         return dbsync_types.RewardRecord(address=address, reward_sum=0, rewards=[])
 
     reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
-    # pylint: disable=undefined-loop-variable
     return dbsync_types.RewardRecord(address=db_row.address, reward_sum=reward_sum, rewards=rewards)
 
 
@@ -110,7 +109,6 @@ def get_utxo(address: str) -> dbsync_types.PaymentAddrRecord:
         )
 
     amount_sum = functools.reduce(lambda x, y: x + y.amount, utxos, 0)
-    # pylint: disable=undefined-loop-variable
     return dbsync_types.PaymentAddrRecord(
         payment_address=db_row.payment_address,
         stake_address=db_row.stake_address,
@@ -147,7 +145,6 @@ def get_pool_data(pool_id_bech32: str) -> dbsync_types.PoolDataRecord | None:
             if host_address not in single_host_addresses:
                 single_host_addresses.append(host_address)
 
-    # pylint: disable=undefined-loop-variable
     pool_data = dbsync_types.PoolDataRecord(
         id=pool.id,
         hash=pool.hash.hex(),
@@ -247,7 +244,6 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
         msg = "No results were returned by the TX SQL query."
         raise RuntimeError(msg)
 
-    # pylint: disable=undefined-loop-variable
     txdata = dbsync_types.TxPrelimRecord(
         utxo_out=utxo_out,
         ma_utxo_out=ma_utxo_out,
@@ -307,7 +303,6 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
 
     Compile data from multiple SQL queries to get as much information about the TX as possible.
     """
-    # pylint: disable=too-many-branches
     txdata = get_prelim_tx_record(txhash)
     txins = get_txins(txhash)
 
@@ -624,7 +619,6 @@ def check_pool_data(  # noqa: C901
     ledger_pool_data: dict, pool_id: str
 ) -> dbsync_types.PoolDataRecord | None:
     """Check comparison for pool data between ledger and db-sync."""
-    # pylint: disable=too-many-branches
     if not configuration.HAS_DBSYNC:
         return None
 

@@ -774,7 +774,6 @@ class TestNoRewards:
         * check that pool deposit was needed
         * check that pool owner is receiving rewards
         """
-        # pylint: disable=too-many-statements,too-many-locals
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_use_rewards
         pool_num = int(pool_name.replace("node-pool", ""))

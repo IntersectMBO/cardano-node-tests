@@ -7,7 +7,6 @@
 * pool reregistration
 """
 
-# pylint: disable=abstract-class-instantiated
 import dataclasses
 import json
 import logging

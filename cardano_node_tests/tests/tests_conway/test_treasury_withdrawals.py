@@ -1,6 +1,5 @@
 """Tests for Conway governance treasury withdrawals."""
 
-# pylint: disable=expression-not-assigned
 import logging
 
 import allure
@@ -112,7 +111,6 @@ class TestTreasuryWithdrawals:
         * check that the action are enacted
         * check that it's not possible to vote on enacted action
         """
-        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance_lock_treasury
         temp_template = common.get_test_id(cluster)
         actions_num = 3
@@ -452,7 +450,6 @@ class TestTreasuryWithdrawals:
         * check that the actions are not ratified
         * check that the actions expire and action deposits are returned
         """
-        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)

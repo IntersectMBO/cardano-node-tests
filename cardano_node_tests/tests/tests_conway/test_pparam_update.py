@@ -1,6 +1,5 @@
 """Tests for Conway governance protocol parameters update."""
 
-# pylint: disable=expression-not-assigned
 import fractions
 import logging
 import pathlib as pl
@@ -247,7 +246,6 @@ class TestPParamUpdate:
         * check that all deposit required for actions is returned back for both expired
           and enacted actions
         """
-        # pylint: disable=too-many-locals,too-many-statements
         cluster, governance_data = cluster_lock_governance_plutus
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"

@@ -433,7 +433,6 @@ def reinstate_committee(
     pool_user: clusterlib.PoolUser,
 ) -> None:
     """Reinstate the original CC members."""
-    # pylint: disable=too-many-statements
     # Create an "update committee" action
 
     deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
