@@ -12,8 +12,8 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-def get_netstat_out() -> str:
-    """Get output of the `netstat` command."""
+def get_netstat_listen() -> str:
+    """Get listing of listening services from the `netstat` command."""
     try:
         return helpers.run_command(
             "netstat -pant | grep -E 'LISTEN|TIME_WAIT'", ignore_fail=True, shell=True
@@ -23,11 +23,23 @@ def get_netstat_out() -> str:
         return ""
 
 
+def get_netstat_conn() -> str:
+    """Get listing of connections from the `netstat` command."""
+    try:
+        return helpers.run_command("netstat -pant", ignore_fail=True).decode()
+    except Exception as excp:
+        LOGGER.error(f"Failed to fetch netstat output: {excp}")  # noqa: TRY400
+        return ""
+
+
 def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> None:  # noqa: C901
     """Attempt to kill all processes left over from a previous cluster instance."""
 
-    def _get_netstat_split() -> list[str]:
-        return get_netstat_out().replace("\t", "    ").splitlines()
+    def _get_listen_split() -> list[str]:
+        return get_netstat_listen().replace("\t", "    ").splitlines()
+
+    def _get_conn_split() -> list[str]:
+        return get_netstat_conn().replace("\t", "    ").splitlines()
 
     def _get_pid(line: str) -> int | None:
         try:
@@ -64,11 +76,12 @@ def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> N
             *port_nums.node_ports,
         )
     ]
+    ports_re = re.compile(r"|".join(re.escape(p) for p in port_strs))
 
     # Attempt to kill the `supervisord` process first. If successful, this will also kill all the
     # processes started by supervisor.
     port_supervisor_str = port_strs[0]
-    for line in _get_netstat_split():
+    for line in _get_listen_split():
         if port_supervisor_str not in line:
             continue
         pid = _get_pid(line)
@@ -79,10 +92,9 @@ def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> N
         break
 
     # Kill all the leftover processes, if possible, and wait for them to finish
-    ports_re = re.compile(r"|".join(re.escape(p) for p in port_strs))
     for _ in range(5):
         found = False
-        for line in _get_netstat_split():
+        for line in _get_listen_split():
             if not ports_re.search(line):
                 continue
             found = True
@@ -91,6 +103,18 @@ def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> N
                 cmdline = _get_proc_cmdline(pid)
                 log_func(f"Killing leftover process: PID {pid}; cmdline: {cmdline}")
                 _try_kill(pid)
+            time.sleep(5)
+            break
+        if not found:
+            break
+
+    # Wait until all connections are closed
+    for _ in range(3):
+        found = False
+        for line in _get_conn_split():
+            if not ports_re.search(line):
+                continue
+            found = True
             time.sleep(5)
             break
         if not found:

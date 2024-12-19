@@ -208,7 +208,7 @@ class ClusterGetter:
             if _cluster_started:
                 break
 
-            netstat_out = netstat_tools.get_netstat_out()
+            netstat_out = netstat_tools.get_netstat_conn()
             self.log(
                 f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}"
                 f"\nnetstat:\n{netstat_out}"
