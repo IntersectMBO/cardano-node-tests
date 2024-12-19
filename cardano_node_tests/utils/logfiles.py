@@ -1,4 +1,3 @@
-# pylint: disable=abstract-class-instantiated
 import contextlib
 import dataclasses
 import fnmatch

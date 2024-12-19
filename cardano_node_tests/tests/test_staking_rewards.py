@@ -334,7 +334,6 @@ class TestRewards:
         * burn native tokens
         * (optional) check records in db-sync
         """
-        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_use_pool_and_rewards
 
@@ -652,7 +651,6 @@ class TestRewards:
            - expected pool id
            - expected reward types
         """
-        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_and_pots
 
@@ -1155,7 +1153,6 @@ class TestRewards:
            - reward amounts received each epoch
            - expected pool ids
         """
-        # pylint: disable=too-many-statements,too-many-branches,too-many-locals
         cluster, pool1_name, pool2_name = cluster_lock_two_pools
 
         temp_template = common.get_test_id(cluster)
@@ -1409,7 +1406,6 @@ class TestRewards:
 
         * (optional) check records in db-sync
         """
-        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         __: tp.Any  # mypy workaround
         cluster, pool1_name, pool2_name = cluster_use_two_pools_and_rewards
 

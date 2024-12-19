@@ -108,7 +108,6 @@ class CCMemberAuth:
 @dataclasses.dataclass(frozen=True, order=True)
 class PrevActionRec:
     txid: str
-    # pylint: disable-next=invalid-name
     ix: int
 
     def __bool__(self) -> bool:
@@ -124,7 +123,7 @@ class StakeDelegation:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class VotedVotes:
-    cc: list[clusterlib.VoteCC]  # pylint: disable=invalid-name
+    cc: list[clusterlib.VoteCC]
     drep: list[clusterlib.VoteDrep]
     spo: list[clusterlib.VoteSPO]
 
@@ -355,7 +354,6 @@ def check_action_view(  # noqa: C901
     recv_addr_vkey_hash: str = "",
 ) -> None:
     """Check `governance action view` output."""
-    # pylint: disable=too-many-branches
     if not return_addr_vkey_hash:
         if action_data.deposit_return_stake_vkey_file:
             return_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
@@ -512,7 +510,6 @@ def check_vote_view(  # noqa: C901
     vote_data: VotesAllT,
 ) -> None:
     """Check `governance vote view` output."""
-    # pylint: disable=too-many-branches
     vote_key = ""
 
     if isinstance(vote_data, clusterlib.VoteCC):

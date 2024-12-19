@@ -36,7 +36,6 @@ class TestLedgerState:
     @pytest.mark.smoke
     def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):  # noqa: C901
         """Test the `stake-snapshot` and `ledger-state` commands and ledger state values."""
-        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         temp_template = common.get_test_id(cluster)
 
         # Make sure the queries can be finished in single epoch

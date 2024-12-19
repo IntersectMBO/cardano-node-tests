@@ -54,7 +54,6 @@ def multisig_tx(
     submit_method: str = submit_utils.SubmitMethods.CLI,
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
-    # pylint: disable=too-many-arguments
     # Create TX body
     script_txins = (
         # Empty `txins` means Tx inputs will be selected automatically by ClusterLib magic
@@ -2617,7 +2616,6 @@ class TestNested:
         submit_method: str,
     ):
         """Test scenarios where it's NOT possible to spend from a script address."""
-        # pylint: disable=too-many-statements
         temp_template = common.get_test_id(cluster)
 
         dst_addr1 = payment_addrs[1]

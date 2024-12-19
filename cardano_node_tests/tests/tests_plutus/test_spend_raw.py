@@ -410,7 +410,6 @@ class TestLocking:
         * check that the expected amount was spent
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 

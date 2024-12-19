@@ -1,6 +1,5 @@
 """Tests for Conway governance constitution."""
 
-# pylint: disable=expression-not-assigned
 import dataclasses
 import itertools
 import logging

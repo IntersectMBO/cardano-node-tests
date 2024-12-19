@@ -38,7 +38,6 @@ class Req:
         url: str = "",
         enabled: bool = True,
     ) -> None:
-        # pylint: disable=invalid-name,redefined-builtin
         self.id = str(id)
         self.group = group
         self.url = url

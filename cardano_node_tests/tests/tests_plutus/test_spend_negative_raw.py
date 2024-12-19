@@ -471,7 +471,6 @@ class TestNegative:
         * try to spend the locked UTxOs
         * check that the expected error was raised
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 

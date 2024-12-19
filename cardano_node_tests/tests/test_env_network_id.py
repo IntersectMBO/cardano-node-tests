@@ -68,7 +68,6 @@ def skip_on_no_env(
     set_network_id_env: None,  # noqa: ARG001
 ) -> None:
     """Skip test if `CARDANO_NODE_NETWORK_ID` is not available."""
-    # pylint: disable=unused-argument
     try:
         cluster.g_query.get_tip()
     except clusterlib.CLIError as exc:
@@ -100,7 +99,6 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    # pylint: disable=unused-argument
     addrs = common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
@@ -126,7 +124,6 @@ class TestNetworkIdEnv:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `query protocol-state`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
         state = cluster.g_query.get_protocol_state()
         assert "lastSlot" in state
@@ -141,7 +138,6 @@ class TestNetworkIdEnv:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `query stake-distribution`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
         distrib = cluster.g_query.get_stake_distribution()
         assert next(iter(distrib)).startswith("pool")
@@ -156,7 +152,6 @@ class TestNetworkIdEnv:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `query protocol-parameters`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
         protocol_params = cluster.g_query.get_protocol_params()
         assert "protocolVersion" in protocol_params
@@ -171,7 +166,6 @@ class TestNetworkIdEnv:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `query pool-state`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
         cluster.g_query.get_pool_state(stake_pool_id=POOL_ID)
 
@@ -185,7 +179,6 @@ class TestNetworkIdEnv:
         cluster: clusterlib.ClusterLib,
     ):
         """Test `query stake-address-info`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
         cluster.g_query.get_stake_addr_info(stake_addr=STAKE_ADDR)
 
@@ -207,7 +200,6 @@ class TestNetworkIdEnv:
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
 
         src_addr = payment_addrs[0]
@@ -272,7 +264,6 @@ class TestNegativeNetworkIdEnv:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
@@ -303,7 +294,6 @@ class TestNegativeNetworkIdEnv:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
@@ -333,7 +323,6 @@ class TestNegativeNetworkIdEnv:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
@@ -363,7 +352,6 @@ class TestNegativeNetworkIdEnv:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
@@ -393,7 +381,6 @@ class TestNegativeNetworkIdEnv:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)
@@ -427,7 +414,6 @@ class TestNegativeNetworkIdEnv:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, arg_scenario=arg_scenario)

@@ -33,7 +33,6 @@ def _fund_script(
     embed_datum: bool = False,
 ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
     """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
-    # pylint: disable=too-many-locals,too-many-arguments
     assert plutus_op.execution_cost  # for mypy
 
     stokens = tokens or ()
@@ -141,7 +140,6 @@ def _spend_locked_txin(  # noqa: C901
     submit_tx: bool = True,
 ) -> tuple[str, clusterlib.TxRawOutput]:
     """Spend the locked UTxO."""
-    # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
     assert plutus_op.execution_cost
 
     tx_files = tx_files or clusterlib.TxFiles()

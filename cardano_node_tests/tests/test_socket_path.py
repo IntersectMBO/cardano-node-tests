@@ -92,7 +92,6 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    # pylint: disable=unused-argument
     addrs = common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
@@ -119,7 +118,6 @@ class TestSocketPath:
         env_scenario: str,
     ):
         """Test `query protocol-state`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -138,7 +136,6 @@ class TestSocketPath:
         env_scenario: str,
     ):
         """Test `query stake-distribution`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -157,7 +154,6 @@ class TestSocketPath:
         env_scenario: str,
     ):
         """Test `query protocol-parameters`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -176,7 +172,6 @@ class TestSocketPath:
         env_scenario: str,
     ):
         """Test `query pool-state`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -194,7 +189,6 @@ class TestSocketPath:
         env_scenario: str,
     ):
         """Test `query stake-address-info`."""
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -220,7 +214,6 @@ class TestSocketPath:
         * send funds from 1 source address to 1 destination address
         * check expected balances for both source and destination addresses
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -283,7 +276,6 @@ class TestNegativeSocketPath:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(
@@ -310,7 +302,6 @@ class TestNegativeSocketPath:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(
@@ -337,7 +328,6 @@ class TestNegativeSocketPath:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(
@@ -364,7 +354,6 @@ class TestNegativeSocketPath:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(
@@ -391,7 +380,6 @@ class TestNegativeSocketPath:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         _setup_scenarios(
@@ -422,7 +410,6 @@ class TestNegativeSocketPath:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
 
         _setup_scenarios(

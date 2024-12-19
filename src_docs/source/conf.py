@@ -1,4 +1,3 @@
-# pylint: skip-file
 # type: ignore
 # Configuration file for the Sphinx documentation builder.
 #

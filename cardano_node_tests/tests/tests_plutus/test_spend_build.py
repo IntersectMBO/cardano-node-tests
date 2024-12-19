@@ -387,7 +387,6 @@ class TestBuildLocking:
         * check expected Plutus cost
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
         script_fund = 200_000_000

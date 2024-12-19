@@ -53,7 +53,6 @@ class TestLeadershipSchedule:
         * compare log records with ledger state dump
         * (optional) check minted blocks in db-sync
         """
-        # pylint: disable=unused-argument
         cluster, pool_name = cluster_use_pool
         pool_short_name = f"{pool_name.replace('node-', '')}"
         temp_template = common.get_test_id(cluster)
@@ -213,7 +212,6 @@ class TestLeadershipSchedule:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         common.get_test_id(cluster)
 
         pool_name = cluster_management.Resources.POOL3
@@ -280,7 +278,6 @@ class TestCollectData:
            - each epoch save block production data to sqlite db
            - transfer funds between multiple addresses to create activity
         """
-        # pylint: disable=too-many-statements
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(5)
         num_epochs = int(os.environ.get("BLOCK_PRODUCTION_EPOCHS") or 50)

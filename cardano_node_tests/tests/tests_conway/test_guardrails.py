@@ -1,6 +1,5 @@
 """Tests for Conway governance guardrails."""
 
-# pylint: disable=expression-not-assigned
 import dataclasses
 import fractions
 import json

@@ -28,7 +28,6 @@ class RewardRecord:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class PoolRecord:
-    # pylint: disable=invalid-name
     name: str
     id: str
     id_dec: str
@@ -230,7 +229,6 @@ class TestPoolSaturation:
         * compare proportionality of rewards in epochs where pools were non-saturated,
           saturated and oversaturated
         """
-        # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         cluster = cluster_lock_pools
         temp_template = common.get_test_id(cluster)
 
@@ -465,9 +463,7 @@ class TestPoolSaturation:
                                 "Withdrawal likely happened at epoch boundary and the reward "
                                 "amounts no longer match"
                             )
-                            raise Exception(  # pylint: disable=broad-exception-raised
-                                msg
-                            ) from exc
+                            raise Exception(msg) from exc
                         raise
 
                     return_to_addrs = []

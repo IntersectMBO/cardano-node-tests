@@ -134,7 +134,6 @@ else:
 
 
 def hypothesis_settings(max_examples: int = 100) -> tp.Any:
-    # pylint: disable=import-outside-toplevel
     import hypothesis
 
     return hypothesis.settings(

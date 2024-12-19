@@ -33,7 +33,6 @@ class GHIssue:
                 github.Github(login_or_token=cls.TOKEN) if cls.TOKEN else github.Github()
             )
         except Exception:
-            # pylint: disable=broad-except
             LOGGER.exception("Failed to get GitHub instance")
             cls._github_instance_error = True
             return None
@@ -69,7 +68,6 @@ class GHIssue:
                 LOGGER.exception("Unknown issue '%s'", identifier)
                 cached_state = "unknown"
             except Exception:
-                # pylint: disable=broad-except
                 LOGGER.exception("Failed to get issue '%s'", identifier)
                 cached_state = "get_state_failure"
             self.issue_cache[identifier] = cached_state

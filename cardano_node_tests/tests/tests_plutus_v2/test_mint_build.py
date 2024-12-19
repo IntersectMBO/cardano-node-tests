@@ -371,7 +371,6 @@ class TestBuildMinting:
         * check that the token was minted
         * check that the reference UTxO was not spent
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -517,7 +516,6 @@ class TestBuildMinting:
         * check that the token was minted
         * check that the reference UTxO was not spent
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
@@ -648,7 +646,6 @@ class TestBuildMinting:
         * check that the token was minted
         * check that the reference UTxO was not spent
         """
-        # pylint: disable=too-many-locals
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]

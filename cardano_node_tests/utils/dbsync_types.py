@@ -91,7 +91,6 @@ class PaymentAddrRecord:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class PoolDataRecord:
-    # pylint: disable-next=invalid-name
     id: int
     hash: str
     view: str
@@ -132,7 +131,6 @@ class RedeemerRecord:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class TxRecord:
-    # pylint: disable=too-many-instance-attributes
     tx_id: int
     tx_hash: str
     block_id: int
@@ -178,7 +176,6 @@ class TxPrelimRecord:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class CommitteeRegistrationRecord:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int
@@ -188,7 +185,6 @@ class CommitteeRegistrationRecord:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class CommitteeDeregistrationRecord:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int
@@ -198,7 +194,6 @@ class CommitteeDeregistrationRecord:
 
 @dataclasses.dataclass(frozen=True, order=True)
 class DrepRegistrationRecord:
-    # pylint: disable-next=invalid-name
     id: int
     tx_id: int
     cert_index: int

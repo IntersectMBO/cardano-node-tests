@@ -37,8 +37,6 @@ ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 class TestNegative:
     """Transaction tests that are expected to fail."""
 
-    # pylint: disable=too-many-public-methods
-
     @pytest.fixture(scope="class")
     def skip_on_last_era(self) -> None:
         if VERSIONS.cluster_era == VERSIONS.LAST_KNOWN_ERA:
@@ -59,7 +57,6 @@ class TestNegative:
         skip_unknown_last_era: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,  # noqa: ARG002
     ) -> clusterlib.ClusterLib:
-        # pylint: disable=unused-argument
         # The `cluster` argument (representing the `cluster` fixture) needs to be present
         # in order to have an actual cluster instance assigned at the time this fixture
         # is executed

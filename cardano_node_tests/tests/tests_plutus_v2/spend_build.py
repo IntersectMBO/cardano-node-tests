@@ -62,8 +62,6 @@ def _build_fund_script(
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
-    # pylint: disable=too-many-arguments
-
     # For mypy
     assert plutus_op.execution_cost
 

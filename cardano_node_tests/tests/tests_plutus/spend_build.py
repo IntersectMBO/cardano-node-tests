@@ -147,7 +147,6 @@ def _build_spend_locked_txin(  # noqa: C901
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
-    # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
 

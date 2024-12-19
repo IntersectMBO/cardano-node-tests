@@ -112,7 +112,6 @@ def _compare_redeemers(
     purpose: str,
 ) -> None:
     """Compare redeemers data available in Tx data with data in db-sync."""
-    # pylint: disable=too-many-branches
     for script_hash, tx_recs in tx_data.items():
         if not tx_recs:
             return

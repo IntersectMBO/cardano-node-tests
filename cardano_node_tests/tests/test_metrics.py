@@ -107,7 +107,6 @@ class TestPrometheus:
         wait_epochs,  # noqa: ARG002
     ):
         """Test that list of available metrics == list of expected metrics."""
-        # pylint: disable=unused-argument
         prometheus_port = (
             cluster_nodes.get_cluster_type()
             .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
@@ -131,7 +130,6 @@ class TestEKG:
         wait_epochs,  # noqa: ARG002
     ):
         """Test that available EKG metrics matches the expected schema."""
-        # pylint: disable=unused-argument
         ekg_port = (
             cluster_nodes.get_cluster_type()
             .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())

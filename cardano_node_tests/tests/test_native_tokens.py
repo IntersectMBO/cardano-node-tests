@@ -718,7 +718,6 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         rand = clusterlib.get_rand_str(8)
         temp_template = f"{common.get_test_id(cluster)}_{rand}"
 
@@ -868,7 +867,6 @@ class TestMinting:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         rand = clusterlib.get_rand_str(8)
         temp_template = f"{common.get_test_id(cluster)}_{rand}"
 
@@ -1842,7 +1840,6 @@ class TestTransfer:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals,too-many-statements
         temp_template = common.get_test_id(cluster)
         amount = 1_000
         rand = clusterlib.get_rand_str(5)
@@ -2310,7 +2307,6 @@ class TestCLITxOutSyntax:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         expected_fee = 187_105
 
         temp_template = common.get_test_id(cluster)
@@ -2462,7 +2458,6 @@ class TestReferenceUTxO:
         * check fees in Lovelace
         * (optional) check transactions in db-sync
         """
-        # pylint: disable=too-many-locals
         expected_fee = 188821
 
         temp_template = common.get_test_id(cluster)

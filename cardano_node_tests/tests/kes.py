@@ -35,7 +35,6 @@ def check_kes_period_info_result(  # noqa: C901
 
     When `pool_num` is specified, prometheus metrics are checked.
     """
-    # pylint: disable=too-many-branches
     output_scenario = "unknown"
     errors = []
 

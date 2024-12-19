@@ -230,7 +230,6 @@ def cast_vote(
     witness_count_add: int = 0,
 ) -> governance_utils.VotedVotes:
     """Cast a vote."""
-    # pylint: disable=too-many-arguments
     votes_cc = []
     votes_drep = []  # All DRep votes
     votes_drep_keys = []  # DRep votes with key

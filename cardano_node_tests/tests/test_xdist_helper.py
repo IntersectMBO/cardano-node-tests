@@ -21,5 +21,4 @@ pytestmark = pytest.mark.skipif(
 def test_dummy(
     for_worker: int,  # noqa: ARG001
 ) -> None:
-    # pylint: disable=unused-argument
     pytest.skip("Dummy helper for `pytest-xdist` scheduling")

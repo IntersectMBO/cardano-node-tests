@@ -4,7 +4,6 @@
 * setup of scripts and their configuration for starting of multiple cluster instances
 """
 
-# pylint: disable=abstract-method
 # ruff: noqa: ARG002
 import contextlib
 import dataclasses

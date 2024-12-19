@@ -79,7 +79,6 @@ class TestPoll:
         * verify poll answer
         * (optional) check create-poll transaction in db-sync
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
 
         # Publish the poll on chain
@@ -205,7 +204,6 @@ class TestPoll:
         * create Tx with the answer
         * verify poll answer
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
 
         poll_file = DATA_DIR / "governance_poll.json"
@@ -273,7 +271,6 @@ class TestPoll:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         hypothesis.assume(answer_index not in (0, 1))
 
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
@@ -305,7 +302,6 @@ class TestPoll:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
         poll_file = DATA_DIR / "governance_poll.json"
 
@@ -343,7 +339,6 @@ class TestPoll:
 
         Expect failure.
         """
-        # pylint: disable=unused-argument
         temp_template = common.get_test_id(cluster)
         poll_file = DATA_DIR / "governance_poll.json"
 
