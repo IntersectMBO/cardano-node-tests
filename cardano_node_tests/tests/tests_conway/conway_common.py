@@ -42,7 +42,7 @@ def get_committee_val(data: dict[str, tp.Any]) -> dict[str, tp.Any]:
     The key can be either correctly "committee", or with typo "commitee".
     TODO: Remove this function when the typo is fixed in the ledger.
     """
-    return data.get("committee") or data.get("commitee") or {}
+    return dict(data.get("committee") or data.get("commitee") or {})
 
 
 def possible_rem_issue(gov_state: dict[str, tp.Any], epoch: int) -> bool:
