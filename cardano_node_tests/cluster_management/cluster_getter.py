@@ -20,9 +20,9 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import framework_log
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
-from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
@@ -215,7 +215,7 @@ class ClusterGetter:
             )
         else:
             self.log(f"c{self.cluster_instance_num}: cluster dead")
-            logfiles.framework_logger().error(
+            framework_log.framework_logger().error(
                 "Failed to start cluster instance 'c%s':\n%s\nnetstat:\n%s",
                 self.cluster_instance_num,
                 excp,
@@ -251,7 +251,7 @@ class ClusterGetter:
                 f"c{self.cluster_instance_num}: failed to setup test addresses:\n{err}\n"
                 "cluster dead"
             )
-            logfiles.framework_logger().error(
+            framework_log.framework_logger().error(
                 "Failed to setup test addresses on instance 'c%s':\n%s",
                 self.cluster_instance_num,
                 excp,
