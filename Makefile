@@ -14,7 +14,7 @@ init_lint:
 .PHONY: lint
 lint:
 	pre-commit run -a
-	if command -v pytype >/dev/null 2>&1; then pytype cardano_node_tests; fi
+	if command -v pytype >/dev/null 2>&1; then pytype -k -j auto cardano_node_tests; fi
 
 
 # generate sphinx documentation

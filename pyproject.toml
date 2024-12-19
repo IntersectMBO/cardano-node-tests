@@ -94,11 +94,11 @@ ignore = ["B905", "D10", "D203", "D212", "D213", "D214", "D215", "D404", "D405",
 force-single-line = true
 
 [tool.pytype]
-python_version = "3.10"
+python_version = "3.11"
 disable = ["import-error"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 show_error_context = true
 verbosity = 0
 ignore_missing_imports = true

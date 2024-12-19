@@ -561,6 +561,7 @@ class TestDReps:
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
         drep_data = dbsync_utils.get_drep(drep_hash=reg_drep.drep_id, drep_deposit=reg_drep.deposit)
+        assert drep_data and drep_data.voting_anchor_id
 
         def _query_func():
             dbsync_utils.check_off_chain_vote_fetch_error(

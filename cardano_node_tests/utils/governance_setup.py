@@ -19,7 +19,7 @@ GOV_DATA_STORE = "governance_data.pickle"
 
 
 def _get_committee_val(data: dict[str, tp.Any]) -> dict[str, tp.Any]:
-    return data.get("committee") or data.get("commitee") or {}
+    return dict(data.get("committee") or data.get("commitee") or {})
 
 
 def _cast_vote(
