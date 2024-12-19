@@ -129,7 +129,7 @@ class TestDBSync:
 
         # Check records for last 50 epochs
         epoch_from = epoch - 50
-        epoch_from = epoch_from if epoch_from >= 0 else 0
+        epoch_from = max(epoch_from, 0)
 
         rec = None
         prev_rec = None

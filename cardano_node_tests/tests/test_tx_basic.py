@@ -1202,7 +1202,7 @@ class TestMultiInOut:
         # The "from" addresses has zero balance after each test.
         fund_amount = int(amount * len(dst_addresses) / len(from_addr_recs))
         # Min UTxO on testnets is 1.x ADA
-        fund_amount = fund_amount if fund_amount >= 1_500_000 else 1_500_000
+        fund_amount = max(fund_amount, 1500000)
         fund_dst = [
             clusterlib.TxOut(address=d.address, amount=fund_amount) for d in from_addr_recs[:-1]
         ]

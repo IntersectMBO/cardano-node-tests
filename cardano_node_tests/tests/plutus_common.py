@@ -551,7 +551,7 @@ def compute_cost(
 
     collateral_fraction = protocol_params["collateralPercentage"] / 100
     min_collateral = int(fee_redeem * collateral_fraction * collateral_fraction_offset)
-    collateral_amount = min_collateral if min_collateral >= 2_000_000 else 2_000_000
+    collateral_amount = max(min_collateral, 2000000)
 
     return ScriptCost(fee=fee_redeem, collateral=collateral_amount, min_collateral=min_collateral)
 
