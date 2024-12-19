@@ -26,37 +26,42 @@ def get_address_reward(
 
     The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
     """
-    rewards = []
-    for db_row in dbsync_queries.query_address_reward(
-        address=address, epoch_from=epoch_from, epoch_to=epoch_to
-    ):
-        rewards.append(
-            dbsync_types.RewardEpochRecord(
-                amount=int(db_row.amount),
-                earned_epoch=db_row.earned_epoch,
-                spendable_epoch=db_row.spendable_epoch,
-                type=db_row.type,
-                pool_id=db_row.pool_id or "",
-            )
+    rewards: list[dbsync_types.RewardEpochRecord] = []
+    rewards.extend(
+        dbsync_types.RewardEpochRecord(
+            amount=int(db_row.amount),
+            earned_epoch=db_row.earned_epoch,
+            spendable_epoch=db_row.spendable_epoch,
+            type=db_row.type,
+            pool_id=db_row.pool_id or "",
         )
+        for db_row in dbsync_queries.query_address_reward(
+            address=address, epoch_from=epoch_from, epoch_to=epoch_to
+        )
+    )
 
-    for db_row in dbsync_queries.query_address_reward_rest(
-        address=address, epoch_from=epoch_from, epoch_to=epoch_to
-    ):
-        rewards.append(
-            dbsync_types.RewardEpochRecord(
-                amount=int(db_row.amount),
-                earned_epoch=db_row.earned_epoch,
-                spendable_epoch=db_row.spendable_epoch,
-                type=db_row.type,
-                pool_id=db_row.pool_id or "",
-            )
+    reward_rest = list(
+        dbsync_queries.query_address_reward_rest(
+            address=address, epoch_from=epoch_from, epoch_to=epoch_to
         )
+    )
+    rewards.extend(
+        dbsync_types.RewardEpochRecord(
+            amount=int(db_row.amount),
+            earned_epoch=db_row.earned_epoch,
+            spendable_epoch=db_row.spendable_epoch,
+            type=db_row.type,
+            pool_id=db_row.pool_id or "",
+        )
+        for db_row in reward_rest
+    )
     if not rewards:
         return dbsync_types.RewardRecord(address=address, reward_sum=0, rewards=[])
 
     reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
-    return dbsync_types.RewardRecord(address=db_row.address, reward_sum=reward_sum, rewards=rewards)
+    return dbsync_types.RewardRecord(
+        address=reward_rest[-1].address, reward_sum=reward_sum, rewards=rewards
+    )
 
 
 def check_address_reward(
@@ -796,7 +801,7 @@ def check_plutus_costs(
     for db_record, cost_record in zip(sorted_db, sorted_costs):
         try:
             check_plutus_cost(redeemer_record=db_record, cost_record=cost_record)
-        except AssertionError as err:
+        except AssertionError as err:  # noqa: PERF203
             errors.append(f"{db_record.script_hash}:\n{err}")
 
     if errors:

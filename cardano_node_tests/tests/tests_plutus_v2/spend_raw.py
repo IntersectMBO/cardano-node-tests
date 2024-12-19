@@ -106,14 +106,14 @@ def _fund_script(
             )
         )
 
-    for token in tokens_collateral or []:
-        txouts.append(
-            clusterlib.TxOut(
-                address=dst_addr.address,
-                amount=token.amount,
-                coin=token.coin,
-            )
+    txouts.extend(
+        clusterlib.TxOut(
+            address=dst_addr.address,
+            amount=token.amount,
+            coin=token.coin,
         )
+        for token in tokens_collateral or []
+    )
 
     tx_raw_output = cluster.g_transaction.send_tx(
         src_address=payment_addr.address,

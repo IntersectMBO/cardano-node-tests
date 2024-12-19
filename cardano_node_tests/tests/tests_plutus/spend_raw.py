@@ -67,17 +67,18 @@ def _fund_script(
         clusterlib.TxOut(address=dst_addr.address, amount=redeem_cost.collateral),
     ]
 
-    for token in stokens:
-        txouts.append(dataclasses.replace(script_txout, amount=token.amount, coin=token.coin))
+    txouts.extend(
+        dataclasses.replace(script_txout, amount=token.amount, coin=token.coin) for token in stokens
+    )
 
-    for token in ctokens:
-        txouts.append(
-            clusterlib.TxOut(
-                address=dst_addr.address,
-                amount=token.amount,
-                coin=token.coin,
-            )
+    txouts.extend(
+        clusterlib.TxOut(
+            address=dst_addr.address,
+            amount=token.amount,
+            coin=token.coin,
         )
+        for token in ctokens
+    )
 
     tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,

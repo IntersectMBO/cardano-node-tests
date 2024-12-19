@@ -146,7 +146,7 @@ def linkcode_resolve(domain, info):
         for part in info["fullname"].split("."):
             try:
                 obj = getattr(obj, part)
-            except Exception:
+            except Exception:  # noqa: PERF203
                 return None
 
         # strip decorators, which would resolve to the source of the decorator

@@ -410,7 +410,7 @@ def services_action(service_names: list[str], action: str, instance_num: int | N
             helpers.run_command(
                 f"supervisorctl -s http://localhost:{supervisor_port} {action} {service_name}"
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: PERF203
             msg = f"Failed to {action} service `{service_name}`"
             raise Exception(msg) from exc
 
