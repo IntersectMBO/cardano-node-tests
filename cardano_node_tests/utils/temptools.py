@@ -1,11 +1,13 @@
+import os
 import pathlib as pl
 import tempfile
 import typing as tp
 
 from _pytest.tmpdir import TempPathFactory
 
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+
+IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
 
 class PytestTempDirs:
@@ -26,7 +28,7 @@ class PytestTempDirs:
         worker_tmp = pl.Path(tmp_path_factory.getbasetemp())
         cls.pytest_worker_tmp = worker_tmp
 
-        root_tmp = worker_tmp.parent if configuration.IS_XDIST else worker_tmp
+        root_tmp = worker_tmp.parent if IS_XDIST else worker_tmp
         cls.pytest_root_tmp = root_tmp
 
         shared_tmp = root_tmp / "tmp"

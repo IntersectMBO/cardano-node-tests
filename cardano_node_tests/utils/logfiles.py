@@ -11,6 +11,7 @@ import time
 import typing as tp
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import framework_log
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
@@ -87,11 +88,6 @@ class RotableLog:
     logfile: pl.Path
     seek: int
     timestamp: float
-
-
-@helpers.callonce
-def get_framework_log_path() -> pl.Path:
-    return temptools.get_pytest_worker_tmp() / "framework.log"
 
 
 def _look_back_found(buffer: list[str]) -> bool:
@@ -450,7 +446,7 @@ def search_framework_log() -> list[tuple[pl.Path, str]]:
     """Search framework log for errors."""
     # It is not necessary to lock the `framework.log` file because there is one log file per worker.
     # Each worker is checking only its own log file.
-    logfile = get_framework_log_path()
+    logfile = framework_log.get_framework_log_path()
     errors = []
 
     # Get seek offset (from where to start searching) and timestamp of last search
@@ -499,28 +495,6 @@ def search_supervisord_logs() -> list[tuple[pl.Path, str]]:
         )
 
     return errors
-
-
-@helpers.callonce
-def framework_logger() -> logging.Logger:
-    """Get logger for the `framework.log` file.
-
-    The logger is configured per worker. It can be used for logging (and later reporting) events
-    like a failure to start a cluster instance.
-    """
-
-    class UTCFormatter(logging.Formatter):
-        converter = time.gmtime
-
-    formatter = UTCFormatter("%(asctime)s %(levelname)s %(message)s")
-    handler = logging.FileHandler(get_framework_log_path())
-    handler.setFormatter(formatter)
-
-    logger = logging.getLogger("framework")
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
-
-    return logger
 
 
 def clean_ignore_rules(ignore_file_id: str) -> None:
