@@ -88,7 +88,7 @@ class TestMempool:
         for r in range(5):
             try:
                 cluster.g_transaction.submit_tx_bare(tx_file=out_file_signed)
-            except clusterlib.CLIError as exc:
+            except clusterlib.CLIError as exc:  # noqa: PERF203
                 if r == 0 or "(BadInputsUTxO" not in str(exc):
                     raise
                 break

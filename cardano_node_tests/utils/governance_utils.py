@@ -448,9 +448,9 @@ def check_action_view(  # noqa: C901
             cvkey_hash = _get_cvkey_hash(member=_m)
             added_members[f"keyHash-{cvkey_hash}"] = _m.epoch
 
-        removed_members = []
-        for _m in action_data.rem_cc_members:
-            removed_members.append({"keyHash": _get_cvkey_hash(member=_m)})
+        removed_members = [
+            {"keyHash": _get_cvkey_hash(member=_m)} for _m in action_data.rem_cc_members
+        ]
 
         gov_action = {
             "contents": [
