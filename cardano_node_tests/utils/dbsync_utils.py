@@ -503,7 +503,7 @@ def get_tx_record_retry(txhash: str, retry_num: int = 3) -> dbsync_types.TxRecor
 
     Under load it might be necessary to wait a bit and retry the query.
     """
-    retry_num = retry_num if retry_num >= 0 else 0
+    retry_num = max(retry_num, 0)
     response = None
 
     # First try + number of retries
