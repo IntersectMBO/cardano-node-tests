@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import time
+import typing as tp
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
@@ -22,7 +23,7 @@ def get_netstat_out() -> str:
         return ""
 
 
-def kill_old_cluster(instance_num: int) -> None:  # noqa: C901
+def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> None:  # noqa: C901
     """Attempt to kill all processes left over from a previous cluster instance."""
 
     def _get_netstat_split() -> list[str]:
@@ -39,8 +40,17 @@ def kill_old_cluster(instance_num: int) -> None:  # noqa: C901
         try:
             os.kill(pid, 15)
         except Exception as excp:
-            LOGGER.error(f"Failed to kill leftover process PID {pid}: {excp}")  # noqa: TRY400
+            log_func(f"Failed to kill leftover process PID {pid}: {excp}")
             return
+
+    def _get_proc_cmdline(pid: int) -> str:
+        try:
+            with open(f"/proc/{pid}/cmdline") as f:
+                cmdline = f.read().replace("\0", " ").strip()
+        except Exception:
+            cmdline = ""
+
+        return cmdline
 
     port_nums = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(instance_num)
     port_strs = [
@@ -63,7 +73,7 @@ def kill_old_cluster(instance_num: int) -> None:  # noqa: C901
             continue
         pid = _get_pid(line)
         if pid:
-            LOGGER.info(f"Killing supervisor process: PID {pid}")
+            log_func(f"Killing supervisor process: PID {pid}")
             _try_kill(pid)
         time.sleep(5)
         break
@@ -78,7 +88,8 @@ def kill_old_cluster(instance_num: int) -> None:  # noqa: C901
             found = True
             pid = _get_pid(line)
             if pid:
-                LOGGER.info(f"Killing leftover process: PID {pid}")
+                cmdline = _get_proc_cmdline(pid)
+                log_func(f"Killing leftover process: PID {pid}; cmdline: {cmdline}")
                 _try_kill(pid)
             time.sleep(5)
             break
