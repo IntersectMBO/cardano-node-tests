@@ -6,21 +6,16 @@ on:
       node_rev:
         description: "cardano-node revision"
         default: master
+      cli_rev:
+        description: "cardano-cli revision (optional)"
+        default: ""
       cluster_era:
         type: choice
         description: "Cluster era"
         options:
-        - conway 9
         - conway 10
-        default: conway 9
-      tx_era:
-        type: choice
-        description: "Tx era"
-        options:
-        - default
-        - conway
-        - babbage
-        default: default
+        - conway 9
+        default: conway 10
       markexpr:
         type: choice
         description: "Selection of tests"
@@ -61,8 +56,8 @@ jobs:
     uses: ./.github/workflows/regression_reusable.yaml
     with:
       node_rev: ${{ inputs.node_rev }}
+      cli_rev: ${{ inputs.cli_rev }}
       cluster_era: ${{ inputs.cluster_era }}
-      tx_era: ${{ inputs.tx_era }}
       markexpr: ${{ inputs.markexpr }}
       topology: ${{ inputs.topology }}
       byron_cluster: ${{ inputs.byron_cluster }}
