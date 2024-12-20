@@ -1,6 +1,7 @@
 """Functionality for interacting with db-sync."""
 
 import functools
+import itertools
 import logging
 import time
 import typing as tp
@@ -26,26 +27,15 @@ def get_address_reward(
 
     The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
     """
-    rewards: list[dbsync_types.RewardEpochRecord] = []
-    rewards.extend(
-        dbsync_types.RewardEpochRecord(
-            amount=int(db_row.amount),
-            earned_epoch=db_row.earned_epoch,
-            spendable_epoch=db_row.spendable_epoch,
-            type=db_row.type,
-            pool_id=db_row.pool_id or "",
-        )
-        for db_row in dbsync_queries.query_address_reward(
+    rewards_out = itertools.chain(
+        dbsync_queries.query_address_reward(
             address=address, epoch_from=epoch_from, epoch_to=epoch_to
-        )
-    )
-
-    reward_rest = list(
+        ),
         dbsync_queries.query_address_reward_rest(
             address=address, epoch_from=epoch_from, epoch_to=epoch_to
-        )
+        ),
     )
-    rewards.extend(
+    rewards: list[dbsync_types.RewardEpochRecord] = [
         dbsync_types.RewardEpochRecord(
             amount=int(db_row.amount),
             earned_epoch=db_row.earned_epoch,
@@ -53,15 +43,13 @@ def get_address_reward(
             type=db_row.type,
             pool_id=db_row.pool_id or "",
         )
-        for db_row in reward_rest
-    )
+        for db_row in rewards_out
+    ]
     if not rewards:
         return dbsync_types.RewardRecord(address=address, reward_sum=0, rewards=[])
 
     reward_sum = functools.reduce(lambda x, y: x + y.amount, rewards, 0)
-    return dbsync_types.RewardRecord(
-        address=reward_rest[-1].address, reward_sum=reward_sum, rewards=rewards
-    )
+    return dbsync_types.RewardRecord(address=address, reward_sum=reward_sum, rewards=rewards)
 
 
 def check_address_reward(
