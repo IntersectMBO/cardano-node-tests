@@ -258,7 +258,7 @@ def get_default_governance(
     cluster_env = cluster_nodes.get_cluster_env()
     gov_data_dir = cluster_env.state_dir / GOV_DATA_DIR
     gov_data_store = gov_data_dir / GOV_DATA_STORE
-    governance_data = None
+    governance_data: governance_utils.GovernanceRecords | None = None
 
     def _setup_gov() -> governance_utils.GovernanceRecords | None:
         if gov_data_store.exists():
@@ -280,16 +280,17 @@ def get_default_governance(
 
     gov_data_checksum = helpers.checksum(gov_data_store)
 
+    fixture_cache: cluster_management.FixtureCache[governance_utils.GovernanceRecords | None]
     with cluster_manager.cache_fixture(key=gov_data_checksum) as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
+        if fixture_cache.value is not None:
+            return fixture_cache.value
 
         if governance_data is None:
             with open(gov_data_store, "rb") as in_data:
                 governance_data = pickle.load(in_data)
 
         fixture_cache.value = governance_data
-        return fixture_cache.value  # type: ignore
+        return fixture_cache.value
 
 
 def save_default_governance(

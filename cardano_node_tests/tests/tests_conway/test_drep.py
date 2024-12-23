@@ -98,9 +98,10 @@ def get_custom_drep(
     if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
         pytest.skip("runs only on local cluster")
 
+    fixture_cache: cluster_management.FixtureCache[governance_utils.DRepRegistration | None]
     with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
+        if fixture_cache.value is not None:
+            return fixture_cache.value
 
         reg_drep = create_drep(
             name_template=name_template,

@@ -129,9 +129,10 @@ def get_registered_pool_user(
         return pool_user
 
     if caching_key:
+        fixture_cache: cluster_management.FixtureCache[clusterlib.PoolUser | None]
         with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+            if fixture_cache.value is not None:
+                return fixture_cache.value
 
             pool_user = _create_user()
             fixture_cache.value = pool_user
