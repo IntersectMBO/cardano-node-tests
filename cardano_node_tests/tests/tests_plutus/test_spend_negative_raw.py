@@ -702,16 +702,12 @@ class TestNegativeRedeemer:
         plutus_version: str,
     ) -> FundTupleT:
         """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
-        payment_addrs = clusterlib_utils.create_payment_addr_records(
-            *[f"{temp_template}_payment_addr_{i}" for i in range(2)],
+        payment_addrs = common.get_payment_addrs(
+            name_template=temp_template,
+            cluster_manager=cluster_manager,
             cluster_obj=cluster_obj,
-        )
-
-        # Fund source address
-        clusterlib_utils.fund_from_faucet(
-            payment_addrs[0],
-            cluster_obj=cluster_obj,
-            all_faucets=cluster_manager.cache.addrs_data,
+            num=2,
+            fund_idx=[0],
             amount=3_000_000_000,
         )
 
