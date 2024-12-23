@@ -42,23 +42,12 @@ def payment_addr_comm(
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster, __ = cluster_use_committee
-    with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
-
-        addr = clusterlib_utils.create_payment_addr_records(
-            f"committee_addr_ci{cluster_manager.cluster_instance_num}",
-            cluster_obj=cluster,
-        )[0]
-        fixture_cache.value = addr
-
-    # Fund source address
-    clusterlib_utils.fund_from_faucet(
-        addr,
+    addr = common.get_payment_addr(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
-        all_faucets=cluster_manager.cache.addrs_data,
+        caching_key=helpers.get_current_line_str(),
     )
-
     return addr
 
 

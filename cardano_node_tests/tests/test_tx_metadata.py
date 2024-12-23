@@ -590,13 +590,10 @@ class TestMetadata:
         """
         temp_template = common.get_test_id(cluster)
 
-        src_record = clusterlib_utils.create_payment_addr_records(
-            f"{temp_template}_0", cluster_obj=cluster
-        )[0]
-        clusterlib_utils.fund_from_faucet(
-            src_record,
+        src_record = common.get_payment_addr(
+            name_template=temp_template,
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            all_faucets=cluster_manager.cache.addrs_data,
             amount=2_000_000,
         )
 
