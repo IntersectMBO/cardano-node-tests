@@ -29,6 +29,8 @@ from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
+T = tp.TypeVar("T")
+
 if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
     msg = "Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set."
     raise RuntimeError(msg)
@@ -43,10 +45,10 @@ def _get_manager_fixture_line_str() -> str:
 
 
 @dataclasses.dataclass
-class FixtureCache:
+class FixtureCache(tp.Generic[T]):
     """Cache for a fixture."""
 
-    value: tp.Any
+    value: T | None
 
 
 class ClusterManager:
@@ -219,12 +221,12 @@ class ClusterManager:
             raise
 
     @contextlib.contextmanager
-    def cache_fixture(self, key: str = "") -> tp.Iterator[FixtureCache]:
+    def cache_fixture(self, key: str = "") -> tp.Iterator[FixtureCache[tp.Any]]:
         """Cache fixture value - context manager."""
         key_str = key or _get_manager_fixture_line_str()
         key_hash = int(hashlib.sha1(key_str.encode("utf-8")).hexdigest(), 16)
         cached_value = self.cache.test_data.get(key_hash)
-        container = FixtureCache(value=cached_value)
+        container: FixtureCache[tp.Any] = FixtureCache(value=cached_value)
 
         yield container
 

@@ -32,6 +32,8 @@ pytestmark = [
     pytest.mark.plutus,
 ]
 
+PHorizonFundsT = tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]
+
 
 @pytest.fixture
 def payment_addrs(
@@ -59,11 +61,12 @@ class TestBuildMinting:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-    ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
+    ) -> PHorizonFundsT:
         """Create UTxOs for `test_ttl_horizon`."""
+        fixture_cache: cluster_management.FixtureCache[PHorizonFundsT | None]
         with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+            if fixture_cache.value is not None:
+                return fixture_cache.value
 
             temp_template = common.get_test_id(cluster)
             payment_addr = payment_addrs[0]
@@ -1140,9 +1143,7 @@ class TestBuildMinting:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        past_horizon_funds: tuple[
-            list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput
-        ],
+        past_horizon_funds: PHorizonFundsT,
         plutus_version: str,
         ttl_offset: int,
     ):

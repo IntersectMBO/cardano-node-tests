@@ -82,9 +82,10 @@ def registered_users(
     """Register pool user's stake address."""
     registered = pool_users[1:3]
 
+    fixture_cache: cluster_management.FixtureCache[list[clusterlib.PoolUser] | None]
     with cluster_manager.cache_fixture() as fixture_cache:
-        if fixture_cache.value:
-            return fixture_cache.value  # type: ignore
+        if fixture_cache.value is not None:
+            return fixture_cache.value
         fixture_cache.value = registered
 
     for i, pool_user in enumerate(registered):

@@ -53,9 +53,10 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new Byron payment addresses."""
+        fixture_cache: cluster_management.FixtureCache[list[clusterlib.AddressRecord] | None]
         with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+            if fixture_cache.value is not None:
+                return fixture_cache.value
 
             new_byron_addrs = [
                 clusterlib_utils.gen_byron_addr(

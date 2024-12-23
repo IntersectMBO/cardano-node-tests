@@ -347,9 +347,10 @@ def get_payment_addrs(
         return addrs
 
     if caching_key:
+        fixture_cache: cluster_management.FixtureCache[list[clusterlib.AddressRecord] | None]
         with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+            if fixture_cache.value is not None:
+                return fixture_cache.value
 
             addrs = _create_addrs()
             fixture_cache.value = addrs
@@ -410,9 +411,10 @@ def get_pool_users(
         return users
 
     if caching_key:
+        fixture_cache: cluster_management.FixtureCache[list[clusterlib.PoolUser] | None]
         with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+            if fixture_cache.value is not None:
+                return fixture_cache.value
 
             users = _create_pool_users()
             fixture_cache.value = users

@@ -734,9 +734,10 @@ class TestNegativeRedeemer:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> FundTupleT:
+        fixture_cache: cluster_management.FixtureCache[FundTupleT | None]
         with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+            if fixture_cache.value is not None:
+                return fixture_cache.value
 
             temp_template = common.get_test_id(cluster)
 
@@ -756,9 +757,10 @@ class TestNegativeRedeemer:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> FundTupleT:
+        fixture_cache: cluster_management.FixtureCache[FundTupleT | None]
         with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value:
-                return fixture_cache.value  # type: ignore
+            if fixture_cache.value is not None:
+                return fixture_cache.value
 
             temp_template = common.get_test_id(cluster)
 
