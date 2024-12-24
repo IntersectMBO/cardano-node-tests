@@ -534,7 +534,7 @@ class OffChainVoteDrepDataDBRow:
     motivations: str
     qualifications: str
     image_url: str
-    image_hash: str
+    image_hash: str | None
 
 
 @pydantic.dataclasses.dataclass(frozen=True, config=_CONF_ARBITRARY_T_ALLOWED)
