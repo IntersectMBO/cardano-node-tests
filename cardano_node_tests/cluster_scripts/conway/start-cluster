@@ -16,6 +16,7 @@ SCRIPT_DIR="$(readlink -m "${0%/*}")"
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
+SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
 
 INSTANCE_NUM="%%INSTANCE_NUM%%"
 if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
@@ -234,6 +235,15 @@ case "${UTXO_BACKEND:=""}" in
     exit 1
     ;;
 esac
+
+cat >> "${STATE_CLUSTER}/supervisor.conf" <<EoF
+
+[unix_http_server]
+file = ${SUPERVISORD_SOCKET_PATH}
+
+[supervisorctl]
+serverurl = unix:///${SUPERVISORD_SOCKET_PATH}
+EoF
 
 # enable db-sync service
 if [ -n "${DBSYNC_REPO:-""}" ]; then
@@ -656,9 +666,9 @@ for i in $(seq 1 "$NUM_DREPS"); do
 done
 
 # create scripts for cluster starting / stopping
-printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start all" > "${STATE_CLUSTER}/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% restart nodes:" > "${STATE_CLUSTER}/supervisorctl_restart_nodes"
-printf "#!/bin/sh\n\nsupervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% \"\$@\"" > "${STATE_CLUSTER}/supervisorctl"
+printf "#!/bin/sh\n\nsupervisorctl -s unix:///%s start all" "$SUPERVISORD_SOCKET_PATH" > "${STATE_CLUSTER}/supervisorctl_start"
+printf "#!/bin/sh\n\nsupervisorctl -s unix:///%s restart nodes:" "$SUPERVISORD_SOCKET_PATH" > "${STATE_CLUSTER}/supervisorctl_restart_nodes"
+printf "#!/bin/sh\n\nsupervisorctl -s unix:///%s \"\$@\"" "$SUPERVISORD_SOCKET_PATH" > "${STATE_CLUSTER}/supervisorctl"
 
 cat > "${STATE_CLUSTER}/supervisord_start" <<EoF
 #!/usr/bin/env bash
@@ -680,7 +690,7 @@ set -uo pipefail
 SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
 PID_FILE="\${SCRIPT_DIR}/supervisord.pid"
 
-supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
+supervisorctl -s unix:///${SUPERVISORD_SOCKET_PATH} stop all
 
 if [ ! -f "\$PID_FILE" ]; then
   echo "Cluster is not running!"
@@ -765,7 +775,7 @@ SHELLEY_EPOCH="$(get_epoch)"
 # start db-sync
 if [ -n "${DBSYNC_REPO:-""}" ]; then
   echo "Starting db-sync"
-  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start dbsync
+  supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start dbsync
 fi
 
 sleep "$PROPOSAL_DELAY"
@@ -1009,7 +1019,7 @@ ALONZO_PV6_EPOCH="$(get_epoch)"
 # start cardano-submit-api
 if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
   echo "Starting cardano-submit-api"
-  supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% start submit_api
+  supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start submit_api
 fi
 
 cardano_cli_log alonzo query protocol-parameters \

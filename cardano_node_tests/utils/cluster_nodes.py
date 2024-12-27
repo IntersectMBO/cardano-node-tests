@@ -345,18 +345,28 @@ def get_cluster_env() -> ClusterEnv:
     return cluster_env
 
 
+def run_supervisorctl(
+    args: list[str], instance_num: int | None = None, ignore_fail: bool = False
+) -> bytes:
+    """Run `supervisorctl` command."""
+    if instance_num is None:
+        state_dir = get_cluster_env().state_dir
+    else:
+        socket_path = pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+        state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
+        state_dir = socket_path.parent.parent / state_cluster_dirname
+    script = state_dir / "supervisorctl"
+    return helpers.run_command([str(script), *args], ignore_fail=ignore_fail)
+
+
 def reload_supervisor_config(
     instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
     """Reload supervisor configuration."""
     LOGGER.info("Reloading supervisor configuration.")
 
-    if instance_num is None:
-        instance_num = get_cluster_env().instance_num
-
-    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     try:
-        helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} update")
+        run_supervisorctl(args=["update"], instance_num=instance_num)
     except Exception as exc:
         msg = "Failed to reload configuration."
         raise Exception(msg) from exc
@@ -382,12 +392,8 @@ def restart_all_nodes(
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
 
-    if instance_num is None:
-        instance_num = get_cluster_env().instance_num
-
-    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     try:
-        helpers.run_command(f"supervisorctl -s http://localhost:{supervisor_port} restart nodes:")
+        run_supervisorctl(args=["restart", "nodes:"], instance_num=instance_num)
     except Exception as exc:
         msg = "Failed to restart cluster nodes."
         raise Exception(msg) from exc
@@ -401,15 +407,9 @@ def services_action(service_names: list[str], action: str, instance_num: int | N
     """Perform action on services on the running cluster."""
     LOGGER.info(f"Performing '{action}' action on services {service_names}.")
 
-    if instance_num is None:
-        instance_num = get_cluster_env().instance_num
-
-    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
     for service_name in service_names:
         try:
-            helpers.run_command(
-                f"supervisorctl -s http://localhost:{supervisor_port} {action} {service_name}"
-            )
+            run_supervisorctl(args=[action, service_name], instance_num=instance_num)
         except Exception as exc:  # noqa: PERF203
             msg = f"Failed to {action} service `{service_name}`"
             raise Exception(msg) from exc
@@ -445,21 +445,20 @@ def services_status(
     service_names: list[str] | None = None, instance_num: int | None = None
 ) -> list[ServiceStatus]:
     """Return status info for list of services running on the running cluster (all by default)."""
-    if instance_num is None:
-        instance_num = get_cluster_env().instance_num
+    service_names_arg = service_names if service_names else ["all"]
 
-    supervisor_port = get_cluster_type().cluster_scripts.get_instance_ports(instance_num).supervisor
-    service_names_arg = " ".join(service_names) if service_names else "all"
-
-    status_out = (
-        helpers.run_command(
-            f"supervisorctl -s http://localhost:{supervisor_port} status {service_names_arg}",
-            ignore_fail=True,
+    try:
+        status_out = (
+            run_supervisorctl(
+                args=["status", *service_names_arg], instance_num=instance_num, ignore_fail=True
+            )
+            .decode()
+            .strip()
+            .split("\n")
         )
-        .decode()
-        .strip()
-        .split("\n")
-    )
+    except Exception as exc:
+        msg = "Failed to get services status."
+        raise Exception(msg) from exc
 
     statuses = []
     for status_line in status_out:

@@ -5,6 +5,7 @@ set -uo pipefail
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 PID_FILE="${STATE_CLUSTER}/supervisord.pid"
+SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
 
 INSTANCE_NUM="%%INSTANCE_NUM%%"
 if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
@@ -12,7 +13,9 @@ if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
   exit 1
 fi
 
-supervisorctl -s http://127.0.0.1:%%SUPERVISOR_PORT%% stop all
+if [ -e "$SUPERVISORD_SOCKET_PATH" ]; then
+  supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" stop all
+fi
 
 if [ ! -f "$PID_FILE" ]; then
   echo "Cluster is not running!"

@@ -302,8 +302,8 @@ class LocalScripts(ScriptsTypes):
     def _gen_supervisor_conf(self, instance_num: int, instance_ports: InstancePorts) -> str:
         """Generate supervisor configuration for given instance."""
         lines = [
-            "[inet_http_server]",
-            f"port=127.0.0.1:{instance_ports.supervisor}",
+            "# [inet_http_server]",
+            f"# port=127.0.0.1:{instance_ports.supervisor}",
         ]
 
         programs = []
