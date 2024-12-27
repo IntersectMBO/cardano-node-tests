@@ -18,6 +18,7 @@ from cardano_node_tests.cluster_management import resources
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import framework_log
 from cardano_node_tests.utils import helpers
@@ -98,6 +99,13 @@ class ClusterGetter:
         )
         return _instance_dir
 
+    @property
+    def ports(self) -> cluster_scripts.InstancePorts:
+        """Return port mappings for current cluster instance."""
+        return cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
+            self.cluster_instance_num
+        )
+
     def _create_startup_files_dir(self, instance_num: int) -> pl.Path:
         _instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
         rand_str = helpers.get_rand_str(8)
@@ -159,6 +167,7 @@ class ClusterGetter:
 
         excp: Exception | None = None
         netstat_out = ""
+        ports = self.ports
         for i in range(2):
             if i > 0:
                 self.log(
@@ -209,14 +218,16 @@ class ClusterGetter:
             netstat_out = netstat_tools.get_netstat_conn()
             self.log(
                 f"c{self.cluster_instance_num}: failed to start cluster:\n{excp}"
+                f"\nports:\n{ports}"
                 f"\nnetstat:\n{netstat_out}"
             )
         else:
             self.log(f"c{self.cluster_instance_num}: cluster dead")
             framework_log.framework_logger().error(
-                "Failed to start cluster instance 'c%s':\n%s\nnetstat:\n%s",
+                "Failed to start cluster instance 'c%s':\n%s\nports:\n{ports}\nnetstat:\n%s",
                 self.cluster_instance_num,
                 excp,
+                ports,
                 netstat_out,
             )
             if not configuration.IS_XDIST:

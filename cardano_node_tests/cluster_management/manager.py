@@ -90,13 +90,6 @@ class ClusterManager:
         )
         return instance_dir
 
-    @property
-    def ports(self) -> cluster_scripts.InstancePorts:
-        """Return port mappings for current cluster instance."""
-        return cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
-            self.cluster_instance_num
-        )
-
     def log(self, msg: str) -> None:
         """Log a message."""
         if not configuration.SCHEDULING_LOG:
