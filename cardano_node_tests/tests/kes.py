@@ -5,12 +5,12 @@ import logging
 import typing as tp
 
 import pytest
-import requests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import http_client
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,7 +85,9 @@ def check_kes_period_info_result(  # noqa: C901
             cluster_nodes.get_instance_num()
         )
         prometheus_port = instance_ports.node_ports[pool_num].prometheus
-        response = requests.get(f"http://localhost:{prometheus_port}/metrics", timeout=10)
+        response = http_client.get_session().get(
+            f"http://localhost:{prometheus_port}/metrics", timeout=10
+        )
 
         _prometheus_metrics_raw = [m.split() for m in response.text.strip().split("\n")]
         prometheus_metrics_raw = {m[0]: m[-1] for m in _prometheus_metrics_raw}

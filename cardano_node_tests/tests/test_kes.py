@@ -10,7 +10,6 @@ import typing as tp
 
 import allure
 import pytest
-import requests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -21,6 +20,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import http_client
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
@@ -86,7 +86,7 @@ def _save_metrics(pool_num: int, temp_template: str) -> None:
     )
     port = instance_ports.node_ports[pool_num].prometheus
 
-    response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
+    response = http_client.get_session().get(f"http://localhost:{port}/metrics", timeout=10)
     assert response, f"Request failed, status code {response.status_code}"
 
     with open(f"{temp_template}_pool{pool_num}_metrics.txt", "w", encoding="utf-8") as fp_out:

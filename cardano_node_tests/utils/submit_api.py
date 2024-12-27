@@ -13,6 +13,7 @@ import requests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import http_client
 
 LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +65,9 @@ def post_cbor(cbor_file: clusterlib.FileType, url: str) -> requests.Response:
         if i > 0:
             LOGGER.warning("Resubmitting transaction to submit-api.")
         try:
-            response = requests.post(url, headers=headers, data=cbor_binary, timeout=20)
+            response = http_client.get_session().post(
+                url, headers=headers, data=cbor_binary, timeout=20
+            )
         except requests.exceptions.ReadTimeout:
             delay = True
         else:

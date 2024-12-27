@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import http_client
 from cardano_node_tests.utils import model_ekg
 
 LOGGER = logging.getLogger(__name__)
@@ -27,13 +28,13 @@ def wait_epochs(cluster: clusterlib.ClusterLib):
 
 
 def get_prometheus_metrics(port: int) -> requests.Response:
-    response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
+    response = http_client.get_session().get(f"http://localhost:{port}/metrics", timeout=10)
     assert response, f"Request failed, status code {response.status_code}"
     return response
 
 
 def get_ekg_metrics(port: int) -> requests.Response:
-    response = requests.get(
+    response = http_client.get_session().get(
         f"http://localhost:{port}/", headers={"Accept": "application/json"}, timeout=10
     )
     assert response, f"Request failed, status code {response.status_code}"
