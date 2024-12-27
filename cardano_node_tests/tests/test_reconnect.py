@@ -16,6 +16,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import http_client
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -119,7 +120,7 @@ class TestNodeReconnect:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
 
     def get_prometheus_metrics(self, port: int) -> requests.Response:
-        response = requests.get(f"http://localhost:{port}/metrics", timeout=10)
+        response = http_client.get_session().get(f"http://localhost:{port}/metrics", timeout=10)
         assert response, f"Request failed, status code {response.status_code}"
         return response
 
