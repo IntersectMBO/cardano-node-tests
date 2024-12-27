@@ -15,9 +15,7 @@ LOGGER = logging.getLogger(__name__)
 def get_netstat_listen() -> str:
     """Get listing of listening services from the `netstat` command."""
     try:
-        return helpers.run_command(
-            "netstat -pant | grep -E 'LISTEN|TIME_WAIT'", ignore_fail=True, shell=True
-        ).decode()
+        return helpers.run_command("netstat -plnt", ignore_fail=True).decode()
     except Exception as excp:
         LOGGER.error(f"Failed to fetch netstat output: {excp}")  # noqa: TRY400
         return ""
@@ -91,7 +89,7 @@ def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> N
         time.sleep(5)
         break
 
-    # Kill all the leftover processes, if possible, and wait for them to finish
+    # Kill all the leftover processes
     for _ in range(5):
         found = False
         for line in _get_listen_split():
@@ -108,14 +106,15 @@ def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> N
         if not found:
             break
 
-    # Wait until all connections are closed
-    for _ in range(3):
+    # Wait until all connections are closed.
+    # The connection can be in TIME_WAIT state for 60 sec.
+    for _ in range(6):
         found = False
         for line in _get_conn_split():
             if not ports_re.search(line):
                 continue
             found = True
-            time.sleep(5)
+            time.sleep(10)
             break
         if not found:
             break
