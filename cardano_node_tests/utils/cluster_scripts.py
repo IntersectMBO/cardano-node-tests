@@ -169,7 +169,7 @@ class LocalScripts(ScriptsTypes):
         # Allocate 100 ports per each 18 pools
         ports_per_instance = ((self.num_pools - 1) // 18 + 1) * 100
         offset = instance_num * ports_per_instance
-        base = 32000 + offset
+        base = configuration.PORTS_BASE + offset
         last_port = base + ports_per_instance - 1
         ports_per_node = 5
 

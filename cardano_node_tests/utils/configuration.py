@@ -31,6 +31,10 @@ TX_SUBMISSION_DELAY = 60
 DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
+# Make sure the ports don't overlap with ephemeral port range. It's usually 32768 to 60999.
+# See `cat /proc/sys/net/ipv4/ip_local_port_range`.
+PORTS_BASE = int(os.environ.get("PORTS_BASE") or 23000)
+
 # Used also in startup scripts as `if [ -n "$VAR" ]...`
 ENABLE_LEGACY = (os.environ.get("ENABLE_LEGACY") or "") != ""
 # Used also in startup scripts as `if [ -n "$VAR" ]...`
