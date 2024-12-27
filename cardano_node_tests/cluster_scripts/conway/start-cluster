@@ -725,10 +725,10 @@ for _ in {1..5}; do
   if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
     break
   fi
-  echo "Waiting 5 seconds for bft node to start"
+  echo "Waiting 5 seconds for the nodes to start"
   sleep 5
 done
-[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the bft node, line $LINENO" >&2; exit 1; }  # assert
+[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the nodes, line $LINENO" >&2; exit 1; }  # assert
 
 echo "Sleeping for initial Tx submission delay of $TX_SUBMISSION_DELAY seconds"
 sleep "$TX_SUBMISSION_DELAY"
