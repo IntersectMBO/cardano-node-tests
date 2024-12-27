@@ -98,6 +98,7 @@ Tests execution can be configured using env variables.
 * `BOOTSTRAP_DIR` – path to a bootstrap dir for the given testnet (genesis files, config files, faucet data) (default: unset)
 * `KEEP_CLUSTERS_RUNNING` – don't stop cluster instances after testrun is finished
   (WARNING: this implies interactive behavior when running tests using the `./.github/regression.sh` script)
+* `PORTS_BASE` - base port number for ports range used by cluster instances (default: 23000)
 
 When running tests using the `./.github/regression.sh` script, you can also use
 

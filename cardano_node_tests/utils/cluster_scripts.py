@@ -166,11 +166,12 @@ class LocalScripts(ScriptsTypes):
 
     def get_instance_ports(self, instance_num: int) -> InstancePorts:
         """Return ports mapping for given cluster instance."""
-        ports_per_instance = 100
-        ports_per_node = 5
+        # Allocate 100 ports per each 18 pools
+        ports_per_instance = ((self.num_pools - 1) // 18 + 1) * 100
         offset = instance_num * ports_per_instance
-        base = 32000 + offset
+        base = configuration.PORTS_BASE + offset
         last_port = base + ports_per_instance - 1
+        ports_per_node = 5
 
         def _get_node_ports(num: int) -> NodePorts:
             rec_base = base + (num * ports_per_node)
