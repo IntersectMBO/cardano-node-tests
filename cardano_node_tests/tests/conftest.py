@@ -118,9 +118,9 @@ def pytest_configure(config: tp.Any) -> None:
         config.stash[metadata_key]["db-sync exe"] = str(configuration.DBSYNC_BIN)
 
     if "nix/store" not in config.stash[metadata_key]["cardano-cli exe"]:
-        LOGGER.warning("WARNING: Not using `cardano-cli` from nix store!")
+        LOGGER.warning(" WARNING: Using `cardano-cli` from custom path!")
     if "nix/store" not in config.stash[metadata_key]["cardano-node exe"]:
-        LOGGER.warning("WARNING: Not using `cardano-node` from nix store!")
+        LOGGER.warning(" WARNING: Using `cardano-node` from custom path!")
 
 
 def _skip_all_tests(config: tp.Any, items: list) -> bool:
