@@ -25,6 +25,14 @@ PREVIEW_POOL_IDS = (
     "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7",  # HODLr
 )
 
+PREPROD_POOL_IDS = (
+    "pool1nmfr5j5rnqndprtazre802glpc3h865sy50mxdny65kfgf3e5eh",  # GRADA
+    "pool132jxjzyw4awr3s75ltcdx5tv5ecv6m042306l630wqjckhfm32r",  # ADACT
+    "pool10dtwvn64akqjdtn9d4pd2mnhpxfgp76hvsfkgmfwugrsxef3y2p",  # RABIT
+    "pool1tjc56tq7adk64nnq2ldu3f4nh6sxkphhmnejlu67ux7acq8y7rx",  # PSBT
+    "pool1z05xqzuxnpl8kg8u2wwg8ftng0fwtdluv3h20ruryfqc5gc3efl",  # HODLr
+)
+
 
 @dataclasses.dataclass(frozen=True, order=True)
 class AddressRecordScript:
@@ -77,10 +85,15 @@ def cluster_and_pool(
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get(use_resources=use_resources)
 
         # Getting ledger state on official testnet is too expensive,
-        # use one of hardcoded pool IDs if possible
+        # use one of hardcoded pool IDs if possible.
+        testnet_pools = None
         if cluster_type.testnet_type == cluster_nodes.Testnets.preview:
+            testnet_pools = PREVIEW_POOL_IDS
+        elif cluster_type.testnet_type == cluster_nodes.Testnets.preprod:
+            testnet_pools = PREPROD_POOL_IDS
+        if testnet_pools:
             stake_pools = cluster_obj.g_query.get_stake_pools()
-            for pool_id in PREVIEW_POOL_IDS:
+            for pool_id in testnet_pools:
                 if pool_id in stake_pools:
                     return cluster_obj, pool_id
 
