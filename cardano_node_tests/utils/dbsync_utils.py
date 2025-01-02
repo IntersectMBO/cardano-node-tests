@@ -1300,7 +1300,7 @@ def check_reward_rest(stake_address: str, transfer_amts: list[int], type: str = 
     assert not rem_amts, f"Not all expected amounts found in db-sync: {rem_amts}"
 
 
-def check_off_chain_drep_registration(
+def check_off_chain_drep_registration(  # noqa: C901
     drep_data: dbsync_types.DrepRegistrationRecord, metadata: dict
 ) -> None:
     """Check DRep off chain data in db-sync."""
@@ -1322,6 +1322,39 @@ def check_off_chain_drep_registration(
     db_metadata = drep_off_chain_metadata[0]
     expected_metadata = metadata["body"]
 
+    # For the image rules refer to: https://cips.cardano.org/cip/CIP-0119
+    # off_chain_drep_data.image_url includes the image base64 with the data uri
+    # header prefix stripped and the off_chain_drep_data.image_sha256 remains empty.
+    def _check_image() -> None:
+        if "image" not in expected_metadata:
+            return
+
+        image_data = expected_metadata["image"]
+
+        match image_data.get("contentUrl"):
+            case None:
+                errors.append("Invalid metadata: image 'contentUrl' must be provided.")
+            case content_url if content_url.startswith("data:"):
+                if not content_url.startswith("data:image/"):
+                    errors.append(
+                        "Invalid metadata: base64 encoded image should start with 'data:image/'"
+                    )
+                if "base64" in content_url:
+                    base64_image_data = content_url.split("base64,")[1]
+                    if db_metadata.image_url != base64_image_data:
+                        errors.append(
+                            "'image_url' value is different than expected Base64 'contentUrl';"
+                        )
+                else:
+                    errors.append("Invalid metadata: image is not Base64 encoded")
+            case content_url:
+                if db_metadata.image_url != content_url:
+                    errors.append("'image_url' value is different than expected 'contentUrl';")
+                if "sha256" not in image_data:
+                    errors.append("SHA256 hash is required for image URL.")
+                elif db_metadata.image_hash != image_data["sha256"]:
+                    errors.append("'image_hash' value is different than expected;")
+
     if db_metadata.payment_address != expected_metadata["paymentAddress"]:
         errors.append("'paymentAddress' value is different than expected;")
 
@@ -1336,6 +1369,8 @@ def check_off_chain_drep_registration(
 
     if db_metadata.qualifications != expected_metadata["qualifications"]:
         errors.append("'qualifications' value is different than expected;")
+
+    _check_image()
 
     if errors:
         raise AssertionError("\n".join(errors))

@@ -330,12 +330,28 @@ class TestDReps:
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
+    @pytest.mark.parametrize(
+        "drep_metadata",
+        (
+            {
+                "drep_metadata_file": DATA_DIR / "drep_metadata_url.json",
+                "drep_metadata_url": "https://tinyurl.com/w7vd3ek6",
+                "expected_hash": "18b4b10150eab04ba66c8f9cb497ff05c6c31b9c9825388481c1790ce76b6b90",
+            },
+            {
+                "drep_metadata_file": DATA_DIR / "drep_metadata_ipfs.json",
+                "drep_metadata_url": "https://tinyurl.com/drep-ipfs",
+                "expected_hash": "7b45535061dce55fca685fedfec6e41a195c4fe4ef812767c34505390b413ff3",
+            },
+        ),
+    )
     def test_register_and_retire_drep(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         use_build_cmd: bool,
         submit_method: str,
+        drep_metadata: dict,
     ):
         """Test DRep registration and retirement.
 
@@ -348,10 +364,11 @@ class TestDReps:
         temp_template = common.get_test_id(cluster)
         errors_final = []
 
-        drep_metadata_file = DATA_DIR / "drep_metadata.json"
+        drep_metadata_file = drep_metadata["drep_metadata_file"]
+        drep_metadata_url = drep_metadata["drep_metadata_url"]
+        expected_hash = drep_metadata["expected_hash"]
 
         # Register DRep
-        drep_metadata_url = "https://tinyurl.com/w7vd3ek6"
         reqc.cli012.start(url=helpers.get_vcs_link())
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
@@ -401,29 +418,35 @@ class TestDReps:
 
         metadata_anchor = reg_drep_state[0][1]["anchor"]
         assert (
-            metadata_anchor["dataHash"]
-            == drep_metadata_hash
-            == "18b4b10150eab04ba66c8f9cb497ff05c6c31b9c9825388481c1790ce76b6b90"
+            metadata_anchor["dataHash"] == drep_metadata_hash == expected_hash
         ), "Unexpected metadata hash"
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
-        try:
-            _url = helpers.get_vcs_link()
-            [r.start(url=_url) for r in (reqc.db001, reqc.db006)]
-            drep_data = dbsync_utils.check_drep_registration(
-                drep=reg_drep, drep_state=reg_drep_state
-            )
-            [r.success() for r in (reqc.db001, reqc.db006)]
 
-            def _query_func():
-                dbsync_utils.check_off_chain_drep_registration(
-                    drep_data=drep_data, metadata=drep_metadata_content
+        if configuration.HAS_DBSYNC:
+            try:
+                _url = helpers.get_vcs_link()
+                [r.start(url=_url) for r in (reqc.db001, reqc.db006)]
+                drep_data = dbsync_utils.check_drep_registration(
+                    drep=reg_drep, drep_state=reg_drep_state
                 )
+                [r.success() for r in (reqc.db001, reqc.db006)]
 
-            dbsync_utils.retry_query(query_func=_query_func, timeout=360)
+                # The same metadata is used for all the parametrized tests. Therefore the data will
+                # be present in db-sync once the first parametrized test runs. Therefore it doesn't
+                # make sense to check the metadata for all combinations of parameters.
+                if use_build_cmd and submit_method == "cli":
 
-        except AssertionError as exc:
-            str_exc = str(exc)
-            errors_final.append(f"DB-Sync unexpected DRep registration error: {str_exc}")
+                    def _query_func():
+                        dbsync_utils.check_off_chain_drep_registration(
+                            drep_data=drep_data, metadata=drep_metadata_content
+                        )
+
+                    dbsync_utils.retry_query(query_func=_query_func, timeout=360)
+
+            except AssertionError as exc:
+                str_exc = str(exc)
+                errors_final.append(f"DB-Sync unexpected DRep registration error: {str_exc}")
+
         reqc.cli012.success()
 
         # Retire DRep
@@ -466,11 +489,13 @@ class TestDReps:
             - tx_output_ret.fee
             + reg_drep.deposit
         ), f"Incorrect balance for source address `{payment_addr.address}`"
+
         try:
             dbsync_utils.check_drep_deregistration(drep=reg_drep)
         except AssertionError as exc:
             str_exc = str(exc)
             errors_final.append(f"DB-Sync unexpected DRep deregistration error: {str_exc}")
+
         if errors_final:
             raise AssertionError("\n".join(errors_final))
 
