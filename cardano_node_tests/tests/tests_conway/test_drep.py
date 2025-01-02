@@ -335,7 +335,7 @@ class TestDReps:
         (
             {
                 "drep_metadata_file": DATA_DIR / "drep_metadata_url.json",
-                "drep_metadata_url": "https://tinyurl.com/w7vd3ek6",
+                "drep_metadata_url": "https://tinyurl.com/drep-url",
                 "expected_hash": "18b4b10150eab04ba66c8f9cb497ff05c6c31b9c9825388481c1790ce76b6b90",
             },
             {
@@ -519,7 +519,7 @@ class TestDReps:
         drep_metadata_file = DATA_DIR / "governance_action_anchor.json"
 
         # Register DRep
-        drep_metadata_url = "https://tinyurl.com/w7vd3ek6"
+        drep_metadata_url = "https://tinyurl.com/drep-url"
         drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
