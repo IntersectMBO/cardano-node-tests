@@ -42,6 +42,7 @@
         "CIP062": ["intCIP062-01", "intCIP062-02"],
         "CIP064": ["intCIP064-01", "intCIP064-02", "intCIP064-03", "intCIP064-04"],
         "CIP069": ["intCIP069en", "intCIP069ex"],
-        "CIP073": ["intCIP073-01", "intCIP073-02", "intCIP073-03", "intCIP073-04"]
+        "CIP073": ["intCIP073-01", "intCIP073-02", "intCIP073-03", "intCIP073-04"],
+        "epoch_state": ["int-epoch_state-01", "int-epoch_state-02"]
     }
 }
