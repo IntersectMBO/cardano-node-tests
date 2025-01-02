@@ -419,7 +419,7 @@ class TestDReps:
                     drep_data=drep_data, metadata=drep_metadata_content
                 )
 
-            dbsync_utils.retry_query(query_func=_query_func, timeout=300)
+            dbsync_utils.retry_query(query_func=_query_func, timeout=360)
 
         except AssertionError as exc:
             str_exc = str(exc)
