@@ -218,7 +218,6 @@ class TestNegativeInlineDatum:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_v1_script(
         self,
@@ -290,7 +289,6 @@ class TestNegativeInlineDatum:
     @hypothesis.given(datum_content=st.text(alphabet=string.ascii_letters, min_size=65))
     @common.hypothesis_settings(max_examples=100)
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_lock_tx_big_datum(
         self,
         cluster: clusterlib.ClusterLib,
@@ -343,7 +341,6 @@ class TestNegativeInlineDatum:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_datum_as_witness(
         self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]

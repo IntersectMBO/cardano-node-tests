@@ -47,7 +47,6 @@ class TestCompatibility:
         reason="doesn't run with Tx era > Alonzo",
     )
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_plutusv2_old_tx_era(
         self,

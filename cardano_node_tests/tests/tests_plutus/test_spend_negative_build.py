@@ -52,7 +52,6 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_wrong_script(
         self,
@@ -108,7 +107,6 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_no_script(
         self,
@@ -162,7 +160,6 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_w_tokens(
         self,
@@ -238,7 +235,6 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_same_collateral_txin(
         self,
@@ -312,7 +308,6 @@ class TestNegative:
     )
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_invalid_guessing_game(
         self,
@@ -386,7 +381,6 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_two_scripts_spending_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
@@ -660,7 +654,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_wrong_value_inside_range(
         self,
         cluster: clusterlib.ClusterLib,
@@ -726,7 +719,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_wrong_value_above_range(
         self,
         cluster: clusterlib.ClusterLib,
@@ -764,7 +756,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_wrong_value_bellow_range(
         self,
         cluster: clusterlib.ClusterLib,
@@ -801,7 +792,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_wrong_type(
         self,
         cluster: clusterlib.ClusterLib,
@@ -855,7 +845,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=100)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,
@@ -912,7 +901,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_json_schema_typed_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -969,7 +957,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_json_schema_untyped_int_bytes_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1026,7 +1013,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_json_schema_typed_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1084,7 +1070,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_json_schema_untyped_bytes_int_declared(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1142,7 +1127,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_invalid_json(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1196,7 +1180,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_json_schema_typed_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1255,7 +1238,6 @@ class TestNegativeRedeemer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_json_schema_untyped_invalid_type(
         self,
         cluster: clusterlib.ClusterLib,

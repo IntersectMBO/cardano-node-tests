@@ -315,7 +315,6 @@ class TestNegativeReadonlyReferenceInputs:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_reference_spent_output(
         self,
@@ -422,7 +421,6 @@ class TestNegativeReadonlyReferenceInputs:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_v1_script_with_reference_input(
         self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]
