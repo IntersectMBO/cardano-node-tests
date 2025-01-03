@@ -47,7 +47,6 @@ class TestDatum:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_datum_on_key_credential_address(
         self,
@@ -126,7 +125,6 @@ class TestNegativeDatum:
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_no_datum_txout(
         self,
         cluster: clusterlib.ClusterLib,

@@ -223,7 +223,6 @@ class TestSECP256k1:
     )
     @common.hypothesis_settings(max_examples=200)
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_overspending_execution_budget(
         self,
         cluster: clusterlib.ClusterLib,
@@ -233,7 +232,7 @@ class TestSECP256k1:
     ):
         """Try to build a transaction with a plutus script that overspend the execution budget.
 
-        * Expect failure.
+        Expect failure.
         """
         # Create the necessary Tx outputs
 

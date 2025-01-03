@@ -623,7 +623,6 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_always_fails(
         self,
         cluster: clusterlib.ClusterLib,
@@ -683,7 +682,6 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
@@ -812,7 +810,6 @@ class TestLocking:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_partial_spending(
         self,
@@ -904,7 +901,6 @@ class TestLocking:
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
     @common.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collaterals(
         self,

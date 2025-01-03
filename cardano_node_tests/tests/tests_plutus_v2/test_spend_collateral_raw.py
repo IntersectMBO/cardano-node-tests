@@ -56,7 +56,6 @@ class TestCollateralOutput:
         ids=("using_total_collateral", "without_total_collateral"),
     )
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_with_total_return_collateral(
         self,
@@ -202,7 +201,6 @@ class TestCollateralOutput:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_collateral_with_tokens(
         self,

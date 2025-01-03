@@ -740,7 +740,6 @@ class TestNegativeReferenceScripts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_two_scripts_one_fail(
         self,
         cluster: clusterlib.ClusterLib,
@@ -891,7 +890,6 @@ class TestNegativeReferenceScripts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_tx_v1_reference_script(
         self,
@@ -968,7 +966,6 @@ class TestNegativeReferenceScripts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_v1_attached_v2_reference(
         self,
         cluster: clusterlib.ClusterLib,
@@ -1115,7 +1112,6 @@ class TestNegativeReferenceScripts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_lock_byron_reference_script(
         self,
