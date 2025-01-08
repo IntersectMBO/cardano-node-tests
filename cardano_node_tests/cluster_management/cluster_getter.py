@@ -16,6 +16,7 @@ from cardano_node_tests.cluster_management import common
 from cardano_node_tests.cluster_management import netstat_tools
 from cardano_node_tests.cluster_management import resources
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.cluster_management import status_files
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
@@ -81,7 +82,7 @@ class ClusterGetter:
         self.log = log_func
 
         self.pytest_tmp_dir = temptools.get_pytest_root_tmp()
-        self.cluster_lock = f"{self.pytest_tmp_dir}/{common.CLUSTER_LOCK}"
+        self.cluster_lock = common.get_cluster_lock_file()
 
         self._cluster_instance_num = -1
 
@@ -94,10 +95,7 @@ class ClusterGetter:
 
     @property
     def instance_dir(self) -> pl.Path:
-        _instance_dir = (
-            self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
-        )
-        return _instance_dir
+        return status_files.get_instance_dir(instance_num=self.cluster_instance_num)
 
     @property
     def ports(self) -> cluster_scripts.InstancePorts:
@@ -107,9 +105,9 @@ class ClusterGetter:
         )
 
     def _create_startup_files_dir(self, instance_num: int) -> pl.Path:
-        _instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
+        inst_dir = status_files.get_instance_dir(instance_num=instance_num)
         rand_str = helpers.get_rand_str(8)
-        startup_files_dir = _instance_dir / "startup_files" / rand_str
+        startup_files_dir = inst_dir / "startup_files" / rand_str
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
 
@@ -118,7 +116,9 @@ class ClusterGetter:
 
         Not called under global lock!
         """
-        cluster_running_file = self.instance_dir / common.CLUSTER_RUNNING_FILE
+        cluster_running_file = status_files.get_cluster_running_file(
+            instance_num=self.cluster_instance_num
+        )
 
         # Don't respin cluster if it was started outside of test framework
         if configuration.DEV_CLUSTER_RUNNING:
@@ -141,7 +141,10 @@ class ClusterGetter:
 
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
-        if state_dir.exists() and not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists():
+        if (
+            state_dir.exists()
+            and not status_files.get_started_by_framework_file(state_dir=state_dir).exists()
+        ):
             self.log(
                 f"c{self.cluster_instance_num}: ERROR: state dir exists but cluster "
                 "was not started by the framework"
@@ -210,7 +213,7 @@ class ClusterGetter:
                 excp = err
             finally:
                 if state_dir.exists():
-                    (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).touch()
+                    status_files.create_started_by_framework_file(state_dir=state_dir)
             # `else` cannot be used together with `finally`
             if _cluster_started:
                 break
@@ -232,7 +235,7 @@ class ClusterGetter:
             )
             if not configuration.IS_XDIST:
                 pytest.exit(reason="Failed to start cluster", returncode=1)
-            (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
+            status_files.create_cluster_dead_file(instance_num=self.cluster_instance_num)
             return False
 
         # Generate ID for the new cluster instance so it is possible to match log entries with
@@ -269,12 +272,11 @@ class ClusterGetter:
                 pytest.exit(
                     reason=f"Failed to setup test addresses, exception: {err}", returncode=1
                 )
-            (self.instance_dir / common.CLUSTER_DEAD_FILE).touch()
+            status_files.create_cluster_dead_file(instance_num=self.cluster_instance_num)
             return False
 
         # Create file that indicates that the cluster is running
-        if not cluster_running_file.exists():
-            cluster_running_file.touch()
+        cluster_running_file.touch()
 
         return True
 
@@ -310,13 +312,12 @@ class ClusterGetter:
 
     def _cluster_needs_respin(self, instance_num: int) -> bool:
         """Check if it is necessary to respin cluster."""
-        instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
         # If cluster instance is not started yet
-        if not (instance_dir / common.CLUSTER_RUNNING_FILE).exists():
+        if not status_files.get_cluster_running_file(instance_num=instance_num).exists():
             return True
 
         # If it was indicated that the cluster instance needs to be respun
-        if list(instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*")):
+        if status_files.list_respin_needed_files(instance_num=instance_num):
             return True
 
         # If a service failed on cluster instance.
@@ -341,32 +342,25 @@ class ClusterGetter:
     def _on_marked_test_stop(self, instance_num: int, mark: str) -> None:
         """Perform actions after all marked tests are finished."""
         self.log(f"c{instance_num}: in `_on_marked_test_stop`")
-        instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
 
         # Set cluster instance to be respun if needed
-        respin_after_mark_files = list(
-            instance_dir.glob(f"{common.RESPIN_AFTER_MARK_GLOB}_@@{mark}@@_*")
+        respin_after_mark_files = status_files.rm_respin_after_mark_files(
+            instance_num=instance_num, mark=mark
         )
         if respin_after_mark_files:
-            for f in respin_after_mark_files:
-                f.unlink()
             self.log(f"c{instance_num}: in `_on_marked_test_stop`, creating 'respin needed' file")
-            (instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
+            status_files.create_respin_needed_file(
+                instance_num=instance_num, worker_id=self.worker_id
+            )
 
         # Remove files that indicates that the mark is ready
-        marked_ready_sfiles = instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_@@{mark}@@_*")
-        for f in marked_ready_sfiles:
-            f.unlink()
+        status_files.rm_curr_mark_files(instance_num=instance_num, mark=mark)
 
         # Remove file that indicates resources that are locked by the marked tests
-        marked_lock_files = instance_dir.glob(f"{common.RESOURCE_LOCKED_GLOB}_*_%%{mark}%%_*")
-        for f in marked_lock_files:
-            f.unlink()
+        status_files.rm_resource_locked_files(instance_num=instance_num, mark=mark)
 
         # Remove file that indicates resources that are in-use by the marked tests
-        marked_use_files = instance_dir.glob(f"{common.RESOURCE_IN_USE_GLOB}_*_%%{mark}%%_*")
-        for f in marked_use_files:
-            f.unlink()
+        status_files.rm_resource_used_files(instance_num=instance_num, mark=mark)
 
     def _get_marked_tests_status(
         self, marked_tests_cache: dict[int, dict[str, int]], instance_num: int
@@ -391,12 +385,12 @@ class ClusterGetter:
         test was running for some time.
         """
         # No need to continue if there are no marked tests
-        if not list(cget_status.instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_*")):
+        if not status_files.list_curr_mark_files(instance_num=cget_status.instance_num):
             return
 
         # Marked tests don't need to be running yet if the cluster is being respun
-        respin_in_progress = list(
-            cget_status.instance_dir.glob(f"{common.RESPIN_IN_PROGRESS_GLOB}_*")
+        respin_in_progress = status_files.list_respin_progress_files(
+            instance_num=cget_status.instance_num
         )
         if respin_in_progress:
             return
@@ -407,11 +401,9 @@ class ClusterGetter:
         )
 
         # Update marked tests status
-        instance_num = cget_status.instance_num
-        marks_in_progress = [
-            f.name.split("@@")[1]
-            for f in cget_status.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}_@@*")
-        ]
+        marks_in_progress = status_files.get_marks_in_progress(
+            instance_num=cget_status.instance_num
+        )
 
         for m in marks_in_progress:
             marked_tests_status[m] = 0
@@ -422,22 +414,22 @@ class ClusterGetter:
             # Clean the stale status files if we are waiting too long for the next marked test
             if marked_tests_status[m] >= 20:
                 self.log(
-                    f"c{instance_num}: no marked tests running for a while, "
+                    f"c{cget_status.instance_num}: no marked tests running for a while, "
                     "cleaning the mark status file"
                 )
-                self._on_marked_test_stop(instance_num=instance_num, mark=m)
+                self._on_marked_test_stop(instance_num=cget_status.instance_num, mark=m)
 
     def _resolve_resources_availability(self, cget_status: _ClusterGetStatus) -> bool:
         """Resolve availability of required "use" and "lock" resources."""
-        resources_locked = common.get_resources_from_path(
-            paths=cget_status.instance_dir.glob(f"{common.RESOURCE_LOCKED_GLOB}_*")
+        resources_locked = status_files.get_resources_from_path(
+            paths=status_files.list_resource_locked_files(instance_num=cget_status.instance_num)
         )
 
         # This test wants to lock some resources, check if these are not in use
         res_lockable = []
         if cget_status.lock_resources:
-            resources_used = common.get_resources_from_path(
-                paths=cget_status.instance_dir.glob(f"{common.RESOURCE_IN_USE_GLOB}_*")
+            resources_used = status_files.get_resources_from_path(
+                paths=status_files.list_resource_used_files(instance_num=cget_status.instance_num)
             )
             unlockable_resources = {*resources_locked, *resources_used}
             res_lockable = resources_management.get_resources(
@@ -490,11 +482,7 @@ class ClusterGetter:
 
     def _is_already_running(self) -> bool:
         """Check if the test is already setup and running."""
-        test_on_worker = list(
-            self.pytest_tmp_dir.glob(
-                f"{common.CLUSTER_DIR_TEMPLATE}*/{common.TEST_RUNNING_GLOB}*_{self.worker_id}"
-            )
-        )
+        test_on_worker = status_files.list_test_running_files(worker_id=self.worker_id)
 
         # Test is already running, nothing to set up
         if test_on_worker and self._cluster_instance_num != -1:
@@ -508,11 +496,14 @@ class ClusterGetter:
         # A "prio" test has priority in obtaining cluster instance. Non-priority
         # tests can continue with their setup only if they are already locked to a
         # cluster instance.
-        if not (
-            cget_status.prio_here
-            or cget_status.selected_instance != -1
-            or cget_status.marked_running_my_anywhere
-        ) and list(self.pytest_tmp_dir.glob(f"{common.PRIO_IN_PROGRESS_GLOB}_*")):
+        if (
+            not (
+                cget_status.prio_here
+                or cget_status.selected_instance != -1
+                or cget_status.marked_running_my_anywhere
+            )
+            and status_files.list_prio_in_progress_files()
+        ):
             self.log("'prio' test setup in progress, cannot continue")
             return True
 
@@ -523,9 +514,7 @@ class ClusterGetter:
         if not cget_status.prio:
             return
 
-        prio_status_file = self.pytest_tmp_dir / f"{common.PRIO_IN_PROGRESS_GLOB}_{self.worker_id}"
-        if not prio_status_file.exists():
-            prio_status_file.touch()
+        status_files.create_prio_in_progress_file(worker_id=self.worker_id)
         cget_status.prio_here = True
         self.log(f"setting 'prio' for '{cget_status.current_test}'")
 
@@ -534,8 +523,8 @@ class ClusterGetter:
         if cget_status.respin_here:
             return False
 
-        respin_in_progress = list(
-            cget_status.instance_dir.glob(f"{common.RESPIN_IN_PROGRESS_GLOB}_*")
+        respin_in_progress = status_files.list_respin_progress_files(
+            instance_num=cget_status.instance_num
         )
         return bool(respin_in_progress)
 
@@ -561,9 +550,7 @@ class ClusterGetter:
 
     def _fail_on_all_dead(self) -> None:
         """Fail if all cluster instances are dead."""
-        dead_clusters = list(
-            self.pytest_tmp_dir.glob(f"{common.CLUSTER_DIR_TEMPLATE}*/{common.CLUSTER_DEAD_FILE}")
-        )
+        dead_clusters = status_files.list_cluster_dead_files()
         if len(dead_clusters) == self.num_of_instances:
             msg = "All clusters are dead, cannot run."
             raise RuntimeError(msg)
@@ -576,8 +563,7 @@ class ClusterGetter:
         cget_status.respin_ready = False
 
         # Remove status files that are checked by other workers
-        for sf in cget_status.instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_*"):
-            sf.unlink()
+        status_files.rm_curr_mark_files(instance_num=cget_status.instance_num)
 
     def _init_respin(self, cget_status: _ClusterGetStatus) -> bool:
         """Initialize respin of this cluster instance on this worker."""
@@ -602,15 +588,12 @@ class ClusterGetter:
         cget_status.respin_here = True
         cget_status.selected_instance = cget_status.instance_num
 
-        respin_in_progress_file = (
-            cget_status.instance_dir / f"{common.RESPIN_IN_PROGRESS_GLOB}_{self.worker_id}"
+        status_files.create_respin_progress_file(
+            instance_num=cget_status.instance_num, worker_id=self.worker_id
         )
-        if not respin_in_progress_file.exists():
-            respin_in_progress_file.touch()
 
         # Remove mark status files as these will not be valid after respin
-        for f in cget_status.instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_*"):
-            f.unlink()
+        status_files.rm_curr_mark_files(instance_num=cget_status.instance_num)
 
         return True
 
@@ -626,10 +609,9 @@ class ClusterGetter:
             cget_status.respin_here = False
 
             # Remove status files that are no longer valid after respin
-            for f in cget_status.instance_dir.glob(f"{common.RESPIN_IN_PROGRESS_GLOB}_*"):
-                f.unlink()
-            for f in cget_status.instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*"):
-                f.unlink()
+            status_files.rm_respin_progress_files(instance_num=cget_status.instance_num)
+            status_files.rm_respin_needed_files(instance_num=cget_status.instance_num)
+
             return True
 
         # NOTE: when `_respin` is called, the env variables needed for cluster start scripts need
@@ -645,52 +627,54 @@ class ClusterGetter:
         if not cget_status.mark:
             return
 
-        self.log(f"c{cget_status.instance_num}: starting '{cget_status.mark}' test")
-        (
-            self.instance_dir
-            / f"{common.TEST_CURR_MARK_GLOB}_@@{cget_status.mark}@@_{self.worker_id}"
-        ).touch()
+        status_files.create_curr_mark_file(
+            instance_num=cget_status.instance_num, worker_id=self.worker_id, mark=cget_status.mark
+        )
 
     def _create_test_status_files(self, cget_status: _ClusterGetStatus) -> None:
         """Create status files for test that is about to start on this cluster instance."""
-        mark_res_str = f"_%%{cget_status.mark}%%" if cget_status.mark else ""
-
         # Create status file for each in-use resource
-        for r in cget_status.final_use_resources:
-            (
-                self.instance_dir
-                / f"{common.RESOURCE_IN_USE_GLOB}_@@{r}@@{mark_res_str}_{self.worker_id}"
-            ).touch()
+        status_files.create_resource_used_files(
+            instance_num=cget_status.instance_num,
+            worker_id=self.worker_id,
+            use_names=cget_status.final_use_resources,
+            mark=cget_status.mark,
+        )
 
         # Create status file for each locked resource
-        for r in cget_status.final_lock_resources:
-            (
-                self.instance_dir
-                / f"{common.RESOURCE_LOCKED_GLOB}_@@{r}@@{mark_res_str}_{self.worker_id}"
-            ).touch()
+        status_files.create_resource_locked_files(
+            instance_num=cget_status.instance_num,
+            worker_id=self.worker_id,
+            lock_names=cget_status.final_lock_resources,
+            mark=cget_status.mark,
+        )
 
         # Cleanup = cluster respin after test (group of tests) is finished
         if cget_status.cleanup:
             # Cleanup after group of test that are marked with a marker
             if cget_status.mark:
                 self.log(f"c{cget_status.instance_num}: cleanup and mark")
-                (
-                    self.instance_dir
-                    / f"{common.RESPIN_AFTER_MARK_GLOB}_@@{cget_status.mark}@@_{self.worker_id}"
-                ).touch()
+                status_files.create_respin_after_mark_file(
+                    instance_num=cget_status.instance_num,
+                    worker_id=self.worker_id,
+                    mark=cget_status.mark,
+                )
             # Cleanup after single test (e.g. singleton)
             else:
                 self.log(f"c{cget_status.instance_num}: cleanup and not mark")
-                (self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
+                status_files.create_respin_needed_file(
+                    instance_num=cget_status.instance_num, worker_id=self.worker_id
+                )
 
         self.log(f"c{self.cluster_instance_num}: creating 'test running' status file")
-        mark_run_str = f"_@@{cget_status.mark}@@" if cget_status.mark else ""
-        test_running_file = (
-            self.instance_dir / f"{common.TEST_RUNNING_GLOB}{mark_run_str}_{self.worker_id}"
+        status_files.create_test_running_file(
+            instance_num=self.cluster_instance_num,
+            worker_id=self.worker_id,
+            # Write the name of the test that is starting on this cluster instance, leave out the
+            # '(setup)' part
+            test_id=cget_status.current_test.split(" ")[0],
+            mark=cget_status.mark,
         )
-        # Write the name of the test that is starting on this cluster instance, leave out the
-        # '(setup)' part
-        test_running_file.write_text(cget_status.current_test.split(" ")[0])
 
     def _init_use_resources(
         self,
@@ -820,11 +804,8 @@ class ClusterGetter:
 
                 if mark:
                     # Check if tests with my mark are already locked to any cluster instance
-                    cget_status.marked_running_my_anywhere = list(
-                        self.pytest_tmp_dir.glob(
-                            f"{common.CLUSTER_DIR_TEMPLATE}*/"
-                            f"{common.TEST_CURR_MARK_GLOB}_@@{mark}@@_*"
-                        )
+                    cget_status.marked_running_my_anywhere = status_files.list_curr_mark_files(
+                        mark=mark
                     )
 
                 # A "prio" test has priority in obtaining cluster instance. Check if it is needed
@@ -845,13 +826,15 @@ class ClusterGetter:
                         continue
 
                     cget_status.instance_num = instance_num
-                    cget_status.instance_dir = (
-                        self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
+                    cget_status.instance_dir = status_files.get_instance_dir(
+                        instance_num=instance_num
                     )
                     cget_status.instance_dir.mkdir(exist_ok=True)
 
                     # Cleanup cluster instance where attempt to start cluster failed repeatedly
-                    if (cget_status.instance_dir / common.CLUSTER_DEAD_FILE).exists():
+                    if status_files.get_cluster_dead_file(
+                        instance_num=cget_status.instance_num
+                    ).exists():
                         self._cleanup_dead_clusters(cget_status)
                         continue
 
@@ -861,13 +844,13 @@ class ClusterGetter:
                         continue
 
                     # Are there tests already running on this cluster instance?
-                    cget_status.started_tests_sfiles = list(
-                        cget_status.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}_*")
+                    cget_status.started_tests_sfiles = status_files.list_test_running_files(
+                        instance_num=cget_status.instance_num
                     )
 
                     # "marked tests" = group of tests marked with my mark
-                    cget_status.marked_ready_sfiles = list(
-                        cget_status.instance_dir.glob(f"{common.TEST_CURR_MARK_GLOB}_@@{mark}@@_*")
+                    cget_status.marked_ready_sfiles = status_files.list_curr_mark_files(
+                        instance_num=cget_status.instance_num, mark=mark
                     )
 
                     # If marked tests are already running, update their status
@@ -927,9 +910,7 @@ class ClusterGetter:
 
                     # Remove "prio" status file
                     if prio:
-                        (
-                            self.pytest_tmp_dir / f"{common.PRIO_IN_PROGRESS_GLOB}_{self.worker_id}"
-                        ).unlink(missing_ok=True)
+                        status_files.rm_prio_in_progress_files(worker_id=self.worker_id)
 
                     # Create status file for marked tests.
                     # This must be done before the cluster is re-spun, so that other marked tests
