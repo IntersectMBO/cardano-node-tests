@@ -180,18 +180,20 @@ class TestCLI:
         common.get_test_id(cluster)
 
         tx_body = cluster.g_transaction.view_tx(tx_body_file=self.TX_BODY_FILE)
-        tx = cluster.g_transaction.view_tx(tx_file=self.TX_FILE)
 
         if '"redeemers":' not in tx_body:
+            pytest.skip("unsupported old output format")
+        if '"datums":' not in tx_body:
             pytest.skip("unsupported old output format")
 
         with open(self.TX_BODY_OUT_JSON, encoding="utf-8") as infile:
             tx_body_golden = infile.read()
+        assert tx_body == tx_body_golden.strip()
+
+        tx = cluster.g_transaction.view_tx(tx_file=self.TX_FILE)
 
         if '"governance actions":' in tx:
             issues.cli_799.finish_test()
-
-        assert tx_body == tx_body_golden.strip()
 
         with open(self.TX_OUT_JSON, encoding="utf-8") as infile:
             tx_golden = infile.read()

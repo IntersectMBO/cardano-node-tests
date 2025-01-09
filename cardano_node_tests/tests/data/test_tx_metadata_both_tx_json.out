@@ -2,6 +2,7 @@
     "auxiliary scripts": null,
     "certificates": null,
     "collateral inputs": [],
+    "datums": [],
     "era": "Babbage",
     "fee": "190279 Lovelace",
     "inputs": [
@@ -32,6 +33,7 @@
     "reference inputs": [],
     "required signers (payment key hashes needed for scripts)": null,
     "return collateral": null,
+    "scripts": [],
     "total collateral": null,
     "update proposal": null,
     "validity range": {
