@@ -18,6 +18,7 @@ from cardano_node_tests.cluster_management import cache
 from cardano_node_tests.cluster_management import cluster_getter
 from cardano_node_tests.cluster_management import common
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.cluster_management import status_files
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
@@ -81,14 +82,11 @@ class ClusterManager:
 
     @property
     def cache(self) -> cache.ClusterManagerCache:
-        return cache.CacheManager.get_instance_cache(self.cluster_instance_num)
+        return cache.CacheManager.get_instance_cache(instance_num=self.cluster_instance_num)
 
     @property
     def instance_dir(self) -> pl.Path:
-        instance_dir = (
-            self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{self.cluster_instance_num}"
-        )
-        return instance_dir
+        return status_files.get_instance_dir(instance_num=self.cluster_instance_num)
 
     def log(self, msg: str) -> None:
         """Log a message."""
@@ -121,11 +119,11 @@ class ClusterManager:
     def _is_valid_cluster_instance(self, work_dir: pl.Path, instance_num: int) -> bool:
         """Check if cluster instance is valid."""
         state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}{instance_num}"
-        instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
-        cluster_stopped = (instance_dir / common.CLUSTER_STOPPED_FILE).exists()
-        cluster_started_or_dead = (instance_dir / common.CLUSTER_RUNNING_FILE).exists() or (
-            instance_dir / common.CLUSTER_DEAD_FILE
-        ).exists()
+        cluster_stopped = status_files.get_cluster_stopped_file(instance_num=instance_num).exists()
+        cluster_started_or_dead = (
+            status_files.get_cluster_running_file(instance_num=instance_num).exists()
+            or status_files.get_cluster_dead_file(instance_num=instance_num).exists()
+        )
 
         if cluster_stopped or not cluster_started_or_dead:
             self.log(f"c{instance_num}: cluster instance not running")
@@ -135,7 +133,7 @@ class ClusterManager:
             self.log(f"c{instance_num}: cluster instance state dir '{state_dir}' doesn't exist")
             return False
 
-        if not (state_dir / common.CLUSTER_STARTED_BY_FRAMEWORK).exists():
+        if not status_files.get_started_by_framework_file(state_dir=state_dir).exists():
             self.log(f"c{instance_num}: cluster instance was not started by framework")
             return False
 
@@ -194,15 +192,16 @@ class ClusterManager:
 
             shutil.rmtree(state_dir, ignore_errors=True)
 
-            instance_dir = self.pytest_tmp_dir / f"{common.CLUSTER_DIR_TEMPLATE}{instance_num}"
-            (instance_dir / common.CLUSTER_STOPPED_FILE).touch()
+            status_files.create_cluster_stopped_file(instance_num=instance_num)
             self.log(f"c{instance_num}: stopped cluster instance")
 
     def set_needs_respin(self) -> None:
         """Indicate that the cluster instance needs respin."""
         with locking.FileLockIfXdist(self.cluster_lock):
             self.log(f"c{self.cluster_instance_num}: called `set_needs_respin`")
-            (self.instance_dir / f"{common.RESPIN_NEEDED_GLOB}_{self.worker_id}").touch()
+            status_files.create_respin_needed_file(
+                instance_num=self.cluster_instance_num, worker_id=self.worker_id
+            )
 
     @contextlib.contextmanager
     def respin_on_failure(self) -> tp.Iterator[None]:
@@ -254,50 +253,43 @@ class ClusterManager:
             # If the ignored error continues to get printed into log file, tests that are still
             # running on the cluster instance would report that error. Therefore if the cluster
             # instance is scheduled for respin, don't delete the rules file.
-            if not list(self.instance_dir.glob(f"{common.RESPIN_NEEDED_GLOB}_*")):
+            if not status_files.list_respin_needed_files(instance_num=self.cluster_instance_num):
                 logfiles.clean_ignore_rules(ignore_file_id=self.worker_id)
 
-            # Remove resource locking files created by the worker, ignore resources that have mark
-            resource_locking_files = list(
-                self.instance_dir.glob(f"{common.RESOURCE_LOCKED_GLOB}_@@*@@_{self.worker_id}")
+            # Remove "resource locked" files created by the worker, ignore resources that have mark
+            status_files.rm_resource_locked_files(
+                instance_num=self.cluster_instance_num, worker_id=self.worker_id, mark=""
             )
-            for f in resource_locking_files:
-                f.unlink()
 
-            # Remove "resource in use" files created by the worker, ignore resources that have mark
-            resource_in_use_files = list(
-                self.instance_dir.glob(f"{common.RESOURCE_IN_USE_GLOB}_@@*@@_{self.worker_id}")
+            # Remove "resource used" files created by the worker, ignore resources that have mark
+            status_files.rm_resource_used_files(
+                instance_num=self.cluster_instance_num, worker_id=self.worker_id, mark=""
             )
-            for f in resource_in_use_files:
-                f.unlink()
 
             # Remove file that indicates that a test is running on the worker
-            next(
-                iter(self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*_{self.worker_id}"))
-            ).unlink(missing_ok=True)
+            status_files.rm_test_running_files(
+                instance_num=self.cluster_instance_num, worker_id=self.worker_id
+            )
 
             # Log names of tests that keep running on the cluster instance
-            tnames = [
-                tf.read_text().strip()
-                for tf in self.instance_dir.glob(f"{common.TEST_RUNNING_GLOB}*")
-            ]
+            tnames = status_files.get_test_names(instance_num=self.cluster_instance_num)
             self.log(f"c{self._cluster_instance_num}: running tests: {tnames}")
 
-    def _get_resources_by_glob(
+    def _get_resources_from_paths(
         self,
-        glob: str,
+        paths: tp.Iterable[pl.Path],
         from_set: tp.Iterable[str] | None = None,
     ) -> list[str]:
         if from_set is not None and isinstance(from_set, str):
             msg = "`from_set` cannot be a string"
             raise AssertionError(msg)
 
-        resources_locked = set(common.get_resources_from_path(paths=self.instance_dir.glob(glob)))
+        resources = set(status_files.get_resources_from_path(paths=paths))
 
         if from_set is not None:
-            return list(resources_locked.intersection(from_set))
+            return list(resources.intersection(from_set))
 
-        return list(resources_locked)
+        return list(resources)
 
     def get_locked_resources(
         self,
@@ -308,8 +300,10 @@ class ClusterManager:
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
         """
-        glob = f"{common.RESOURCE_LOCKED_GLOB}_@@*@@_*{worker_id or self.worker_id}"
-        return self._get_resources_by_glob(glob=glob, from_set=from_set)
+        paths = status_files.list_resource_locked_files(
+            instance_num=self.cluster_instance_num, worker_id=worker_id or self.worker_id
+        )
+        return self._get_resources_from_paths(paths=paths, from_set=from_set)
 
     def get_used_resources(
         self,
@@ -320,8 +314,10 @@ class ClusterManager:
 
         It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
         """
-        glob = f"{common.RESOURCE_IN_USE_GLOB}_@@*@@_*{worker_id or self.worker_id}"
-        return self._get_resources_by_glob(glob=glob, from_set=from_set)
+        paths = status_files.list_resource_used_files(
+            instance_num=self.cluster_instance_num, worker_id=worker_id or self.worker_id
+        )
+        return self._get_resources_from_paths(paths=paths, from_set=from_set)
 
     def _save_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this `cluster_obj` instance."""
