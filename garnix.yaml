@@ -2,3 +2,4 @@ builds:
   exclude: []
   # turn off garnix
   include: []
+  branch: garnix_off
