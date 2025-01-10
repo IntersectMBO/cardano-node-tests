@@ -43,6 +43,9 @@ MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
 # Used also in startup scripts as `if [ -n "$VAR" ]...`
 HAS_CC = (os.environ.get("NO_CC") or "") == ""
 
+# Number of new blocks before the Tx is considered confirmed. Use default value if set to 0.
+CONFIRM_BLOCKS_NUM = int(os.environ.get("CONFIRM_BLOCKS_NUM") or 0)
+
 # Used also in startup scripts as `if [ -n "$VAR" ]...`
 PV10 = (os.environ.get("PV10") or "") == ""
 
