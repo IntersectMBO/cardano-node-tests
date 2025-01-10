@@ -122,7 +122,11 @@ class LocalCluster(ClusterType):
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
-        cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
+        # Overwrite default settings for number of new blocks before the Tx is considered confirmed
+        if configuration.CONFIRM_BLOCKS_NUM:
+            cluster_obj.confirm_blocks = configuration.CONFIRM_BLOCKS_NUM
+        # TODO: hardcoded `minUTxOValue`
+        cluster_obj._min_change_value = 2_000_000
         return cluster_obj
 
     def create_addrs_data(
@@ -235,7 +239,10 @@ class TestnetCluster(ClusterType):
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
         cluster_obj.overwrite_outfiles = not (configuration.DONT_OVERWRITE_OUTFILES)
-        cluster_obj._min_change_value = 2_000_000  # TODO: hardcoded `minUTxOValue`
+        # Increase default number of new blocks before the Tx is considered confirmed
+        cluster_obj.confirm_blocks = configuration.CONFIRM_BLOCKS_NUM or 3
+        # TODO: hardcoded `minUTxOValue`
+        cluster_obj._min_change_value = 2_000_000
         return cluster_obj
 
     def create_addrs_data(
