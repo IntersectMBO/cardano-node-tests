@@ -20,4 +20,4 @@ if [ "$abort_install" -eq 1 ]; then
   exit 1
 fi
 
-poetry lock --no-update "$@"
+poetry lock "$@"
