@@ -779,11 +779,11 @@ class TestMinting:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
-                    # On older cardano-node releases
-                    "OutputTooBigUTxO" in err_msg  # For `build-raw` command
-                    or "balance of the transaction is negative" in err_msg  # For `build` command
                     # On cardano-node 10.0.0+
-                    or re.search(rf"MaxTxSizeUTxO \d+ {max_tx_size}", err_msg)
+                    re.search(rf"MaxTxSizeUTxO .* {max_tx_size}", err_msg)
+                    # On older cardano-node releases
+                    or "OutputTooBigUTxO" in err_msg  # For `build-raw` command
+                    or "balance of the transaction is negative" in err_msg  # For `build` command
                 ), "Unexpected error message"
             finally:
                 logging.disable(logging.NOTSET)
@@ -929,11 +929,11 @@ class TestMinting:
                     _mint_tokens()
                 err_msg = str(excinfo.value)
                 assert (
-                    # On older cardano-node releases
-                    "OutputTooBigUTxO" in err_msg  # For `build-raw` command
-                    or "balance of the transaction is negative" in err_msg  # For `build` command
                     # On cardano-node 10.0.0+
-                    or re.search(rf"MaxTxSizeUTxO \d+ {max_tx_size}", err_msg)
+                    re.search(rf"MaxTxSizeUTxO .* {max_tx_size}", err_msg)
+                    # On older cardano-node releases
+                    or "OutputTooBigUTxO" in err_msg  # For `build-raw` command
+                    or "balance of the transaction is negative" in err_msg  # For `build` command
                 ), "Unexpected error message"
             finally:
                 logging.disable(logging.NOTSET)
