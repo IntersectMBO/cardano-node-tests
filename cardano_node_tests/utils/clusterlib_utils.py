@@ -138,33 +138,47 @@ def build_and_submit_tx(
             withdrawals=withdrawals,
             script_withdrawals=script_withdrawals,
         )
-        fee = raw_fee or cluster_obj.g_transaction.calculate_tx_fee(
-            src_address=src_address,
-            tx_name=name_template,
-            txins=txins,
-            txouts=txouts,
-            readonly_reference_txins=readonly_reference_txins,
-            script_txins=script_txins,
-            return_collateral_txouts=return_collateral_txouts,
-            total_collateral_amount=total_collateral_amount,
-            mint=mint,
-            tx_files=tx_files,
-            complex_certs=complex_certs,
-            complex_proposals=complex_proposals,
-            required_signers=required_signers,
-            required_signer_hashes=required_signer_hashes,
-            withdrawals=withdrawals,
-            script_withdrawals=script_withdrawals,
-            script_votes=script_votes,
-            deposit=deposit,
-            current_treasury_value=current_treasury_value,
-            treasury_donation=treasury_donation,
-            invalid_hereafter=invalid_hereafter,
-            invalid_before=invalid_before,
-            witness_count_add=witness_count_add,
-            join_txouts=join_txouts,
-            destination_dir=destination_dir,
+        # Get UTxOs for src address here so the records can be passed around, and it is
+        # not necessary to get them once for fee calculation and again for the final transaction
+        # building.
+        src_addr_utxos = (
+            cluster_obj.g_query.get_utxo(address=src_address)
+            if raw_fee is None and not txins
+            else None
         )
+        fee = (
+            raw_fee
+            if raw_fee is not None
+            else cluster_obj.g_transaction.calculate_tx_fee(
+                src_address=src_address,
+                tx_name=name_template,
+                txins=txins,
+                txouts=txouts,
+                readonly_reference_txins=readonly_reference_txins,
+                script_txins=script_txins,
+                return_collateral_txouts=return_collateral_txouts,
+                total_collateral_amount=total_collateral_amount,
+                mint=mint,
+                tx_files=tx_files,
+                complex_certs=complex_certs,
+                complex_proposals=complex_proposals,
+                required_signers=required_signers,
+                required_signer_hashes=required_signer_hashes,
+                withdrawals=withdrawals,
+                script_withdrawals=script_withdrawals,
+                script_votes=script_votes,
+                deposit=deposit,
+                current_treasury_value=current_treasury_value,
+                treasury_donation=treasury_donation,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+                src_addr_utxos=src_addr_utxos,
+                witness_count_add=witness_count_add,
+                join_txouts=join_txouts,
+                destination_dir=destination_dir,
+            )
+        )
+
         tx_output = cluster_obj.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=name_template,
@@ -189,6 +203,7 @@ def build_and_submit_tx(
             treasury_donation=treasury_donation,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
+            src_addr_utxos=src_addr_utxos,
             join_txouts=join_txouts,
             destination_dir=destination_dir,
         )
