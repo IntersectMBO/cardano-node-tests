@@ -98,6 +98,12 @@ cli_953 = blockers.GH(
     fixed_in="10.1.2.0",  # Fixed in some release after 10.1.1.0
     message="query tip is not a top level command.",
 )
+cli_1023 = blockers.GH(
+    issue=1023,
+    repo="IntersectMBO/cardano-cli",
+    fixed_in="10.3.0.0",  # Unknown yet, will be fixed sometime in the future
+    message="Plutus cost too low.",
+)
 
 consensus_973 = blockers.GH(
     issue=973,
