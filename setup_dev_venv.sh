@@ -50,4 +50,5 @@ fi
 poetry env use "python$PYTHON_VERSION"
 poetry install --with docs --with dev
 
-echo "Run \`poetry shell\` to activate the virtual env."
+# shellcheck disable=SC2016
+echo 'Run \`source "$(poetry env info --path)"/bin/activate\` to activate the virtual env.'

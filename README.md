@@ -181,7 +181,7 @@ When running tests, the testing framework starts and stops cluster instances as 
 1. activate virtual env
 
     ```sh
-    poetry shell
+    source "$(poetry env info --path)"/bin/activate
     ```
 
 1. add virtual env to `PYTHONPATH`
@@ -278,7 +278,7 @@ It is sufficient to activate the Python virtual environment before running linte
 1. activate virtual env
 
     ```sh
-    poetry shell
+    source "$(poetry env info --path)"/bin/activate
     ```
 
 1. run linters
@@ -295,7 +295,7 @@ To install cardano-clusterlib in development mode:
 1. activate virtual env
 
     ```sh
-    poetry shell
+    source "$(poetry env info --path)"/bin/activate
     ```
 
 1. update virtual env (answer 'y' to question "Install into the current virtual env? [y/N]")
