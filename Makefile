@@ -20,7 +20,7 @@ lint:
 # generate and deploy sphinx documentation
 .PHONY: check_dev_env
 check_dev_env:
-	./scripts/check_dev_env.sh
+	@./scripts/check_dev_env.sh
 
 
 # build sphinx documentation

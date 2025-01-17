@@ -232,7 +232,6 @@ To check that the development environment was correctly setup, run the `make che
 
 ```text
 $ make check_dev_env
-./scripts/check_dev_env.sh
 'cardano-node' available: ✔
 'cardano-cli' available: ✔
 'python' available: ✔
