@@ -231,7 +231,7 @@ Restaring the running development cluster is useful mainly when using the "conwa
 To check that the development environment was correctly setup, run the `make check_dev_env` script.
 
 ```text
-$ make ./check_dev_env
+$ make check_dev_env
 ./scripts/check_dev_env.sh
 'cardano-node' available: ✔
 'cardano-cli' available: ✔
@@ -350,7 +350,7 @@ Edit `pyproject.toml` and run
 Build and deploy documentation:
 
 ```sh
-make deploy_doc
+make doc
 ```
 
 ## Contributing
