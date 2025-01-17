@@ -1,7 +1,7 @@
 # install cardano_node_tests and its dependencies into a virtual environment
 .PHONY: install
 install:
-	./setup_venv.sh
+	./scripts/setup_dev_venv.sh
 
 # initialize linters
 .PHONY: init_linters
@@ -17,6 +17,12 @@ lint:
 	if command -v pytype >/dev/null 2>&1; then pytype -k -j auto cardano_node_tests; fi
 
 
+# generate and deploy sphinx documentation
+.PHONY: check_dev_env
+check_dev_env:
+	./scripts/check_dev_env.sh
+
+
 # generate sphinx documentation
 .PHONY: doc
 doc:
@@ -28,7 +34,7 @@ doc:
 # generate and deploy sphinx documentation
 .PHONY: doc_deploy
 doc_deploy:
-	./deploy_doc.sh
+	./scripts/deploy_doc.sh
 
 # run tests
 
