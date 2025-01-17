@@ -17,7 +17,7 @@ lint:
 	if command -v pytype >/dev/null 2>&1; then pytype -k -j auto cardano_node_tests; fi
 
 
-# generate and deploy sphinx documentation
+# check if development environment is set up correctly
 .PHONY: check_dev_env
 check_dev_env:
 	@./scripts/check_dev_env.sh
