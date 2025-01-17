@@ -23,17 +23,17 @@ check_dev_env:
 	./scripts/check_dev_env.sh
 
 
-# generate sphinx documentation
-.PHONY: doc
-doc:
+# build sphinx documentation
+.PHONY: build_doc
+build_doc:
 	mkdir -p src_docs/build
 	$(MAKE) -C src_docs clean
 	$(MAKE) -C src_docs html
 
 
-# generate and deploy sphinx documentation
-.PHONY: doc_deploy
-doc_deploy:
+# build and deploy sphinx documentation
+.PHONY: doc
+doc:
 	./scripts/deploy_doc.sh
 
 # run tests

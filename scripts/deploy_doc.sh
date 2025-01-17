@@ -32,9 +32,9 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 # build documentation
-make doc
+make build_doc
 
-# drop changes made automatically by `make doc`
+# drop changes made automatically by `make build_doc`
 if ! git diff-index --quiet HEAD -- "$DOC_SRC"; then
   git stash -- "$DOC_SRC"
   git stash drop
