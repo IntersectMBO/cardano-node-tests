@@ -631,8 +631,7 @@ class SchemaVersion:
             return cls._stages
 
         query = (
-            "SELECT stage_one, stage_two, stage_three "
-            "FROM schema_version ORDER BY id DESC LIMIT 1;"
+            "SELECT stage_one, stage_two, stage_three FROM schema_version ORDER BY id DESC LIMIT 1;"
         )
 
         with execute(query=query) as cur:

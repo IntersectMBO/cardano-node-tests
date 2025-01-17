@@ -153,9 +153,9 @@ class TestCompatibility:
         # Attempt to use Babbage features in older era transactions should fail. If we are here,
         # it was not the case.
 
-        assert (
-            reference_utxo and not reference_utxo.reference_script
-        ), "Reference script was NOT ignored"
+        assert reference_utxo and not reference_utxo.reference_script, (
+            "Reference script was NOT ignored"
+        )
 
         issues.node_4424.finish_test()
 

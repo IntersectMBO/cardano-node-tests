@@ -212,9 +212,9 @@ class TestSECP256k1:
         )
 
         # Check that script address UTxO was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=script_utxos[0]
-        ), f"Script address UTxO was NOT spent `{script_utxos}`"
+        assert not cluster.g_query.get_utxo(utxo=script_utxos[0]), (
+            f"Script address UTxO was NOT spent `{script_utxos}`"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("build_fund_script_secp", ("ecdsa", "schnorr"), indirect=True)

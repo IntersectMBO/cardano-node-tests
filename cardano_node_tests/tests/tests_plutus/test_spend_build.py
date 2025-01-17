@@ -525,12 +525,12 @@ class TestBuildLocking:
         assert script_utxos1 and script_utxos2, "No script UTxOs"
         assert collateral_utxos1 and collateral_utxos2, "No collateral UTxOs"
 
-        assert (
-            script_utxos1[0].amount == script_fund
-        ), f"Incorrect balance for script address `{script_utxos1[0].address}`"
-        assert (
-            script_utxos2[0].amount == script_fund
-        ), f"Incorrect balance for script address `{script_utxos2[0].address}`"
+        assert script_utxos1[0].amount == script_fund, (
+            f"Incorrect balance for script address `{script_utxos1[0].address}`"
+        )
+        assert script_utxos2[0].amount == script_fund, (
+            f"Incorrect balance for script address `{script_utxos2[0].address}`"
+        )
 
         # Step 2: spend the "locked" UTxOs
 
@@ -600,9 +600,9 @@ class TestBuildLocking:
             u for u in [*script_utxos1, *script_utxos2] if u.coin == clusterlib.DEFAULT_COIN
         ]
         for u in script_utxos_lovelace:
-            assert not cluster.g_query.get_utxo(
-                utxo=u, coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were NOT spent for `{u.address}`"
+            assert not cluster.g_query.get_utxo(utxo=u, coins=[clusterlib.DEFAULT_COIN]), (
+                f"Inputs were NOT spent for `{u.address}`"
+            )
 
         # Check expected fees
         assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
@@ -1064,9 +1064,9 @@ class TestBuildLocking:
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
         for u in script_utxos:
-            assert not cluster.g_query.get_utxo(
-                utxo=u, coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were NOT spent for `{script_address}`"
+            assert not cluster.g_query.get_utxo(utxo=u, coins=[clusterlib.DEFAULT_COIN]), (
+                f"Inputs were NOT spent for `{script_address}`"
+            )
 
         # Check expected fees
         expected_fee_step1 = 168_845

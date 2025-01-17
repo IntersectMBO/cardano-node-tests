@@ -134,9 +134,9 @@ class TestTxChaining:
                 amount=205_000_000,
             )
             init_utxo = cluster.g_query.get_utxo(address=payment_addr.address)[0]
-            assert (
-                init_utxo.amount - (fee * iterations) >= min_utxo_value
-            ), f"Not enough funds to do {iterations} iterations"
+            assert init_utxo.amount - (fee * iterations) >= min_utxo_value, (
+                f"Not enough funds to do {iterations} iterations"
+            )
 
             # Generate signed Txs
             invalid_hereafter = (

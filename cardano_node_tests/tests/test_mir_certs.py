@@ -717,12 +717,12 @@ class TestMIRCerts:
             )
             assert tx_db_record_reserves
 
-            assert (
-                not tx_db_record_treasury.reserve
-            ), f"Reserve record is not empty: {tx_db_record_treasury.reserve}"
-            assert (
-                not tx_db_record_reserves.treasury
-            ), f"Treasury record is not empty: {tx_db_record_reserves.treasury}"
+            assert not tx_db_record_treasury.reserve, (
+                f"Reserve record is not empty: {tx_db_record_treasury.reserve}"
+            )
+            assert not tx_db_record_reserves.treasury, (
+                f"Treasury record is not empty: {tx_db_record_reserves.treasury}"
+            )
 
             db_treasury = tx_db_record_treasury.treasury[0]
             assert db_treasury.amount == amount, (
@@ -740,8 +740,7 @@ class TestMIRCerts:
                 f"({db_reserve.amount} != {amount})"
             )
             assert db_reserve.address == registered_user.stake.address, (
-                "Incorrect stake address "
-                f"({db_reserve.address} != {registered_user.stake.address})"
+                f"Incorrect stake address ({db_reserve.address} != {registered_user.stake.address})"
             )
 
     @allure.link(helpers.get_vcs_link())
@@ -1002,9 +1001,11 @@ class TestMIRCerts:
         # Wait for next epoch and check the reward
         cluster.wait_for_new_epoch()
 
-        assert (
-            not cluster.g_query.get_stake_addr_info(pool_user.stake.address).reward_account_balance
-        ), f"Reward was added for unregistered stake address `{pool_user.stake.address}`"
+        assert not cluster.g_query.get_stake_addr_info(
+            pool_user.stake.address
+        ).reward_account_balance, (
+            f"Reward was added for unregistered stake address `{pool_user.stake.address}`"
+        )
 
         if tx_db_record:
             # Check that the amount was not transferred out of the pot

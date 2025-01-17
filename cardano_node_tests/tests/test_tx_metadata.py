@@ -188,9 +188,9 @@ class TestMetadata:
                 tx_files=tx_files,
             )
         str_err = str(excinfo.value)
-        assert (
-            "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err
-        ), str_err
+        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err, (
+            str_err
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -219,9 +219,9 @@ class TestMetadata:
                 fee_buffer=1_000_000,
             )
         str_err = str(excinfo.value)
-        assert (
-            "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err
-        ), str_err
+        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err, (
+            str_err
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -253,17 +253,17 @@ class TestMetadata:
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
-        assert (
-            json_body_metadata == json_file_metadata
-        ), "Metadata in TX body doesn't match the original metadata"
+        assert json_body_metadata == json_file_metadata, (
+            "Metadata in TX body doesn't match the original metadata"
+        )
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -306,17 +306,17 @@ class TestMetadata:
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
-        assert (
-            json_body_metadata == json_file_metadata
-        ), "Metadata in TX body doesn't match the original metadata"
+        assert json_body_metadata == json_file_metadata, (
+            "Metadata in TX body doesn't match the original metadata"
+        )
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -345,17 +345,17 @@ class TestMetadata:
         with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp:
             cbor_file_metadata = cbor2.load(metadata_fp)
 
-        assert (
-            cbor_body_metadata.metadata == cbor_file_metadata
-        ), "Metadata in TX body doesn't match original metadata"
+        assert cbor_body_metadata.metadata == cbor_file_metadata, (
+            "Metadata in TX body doesn't match original metadata"
+        )
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_file_metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_file_metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -397,17 +397,17 @@ class TestMetadata:
         with open(self.CBOR_METADATA_FILE, "rb") as metadata_fp:
             cbor_file_metadata = cbor2.load(metadata_fp)
 
-        assert (
-            cbor_body_metadata.metadata == cbor_file_metadata
-        ), "Metadata in TX body doesn't match original metadata"
+        assert cbor_body_metadata.metadata == cbor_file_metadata, (
+            "Metadata in TX body doesn't match original metadata"
+        )
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_file_metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_file_metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -456,9 +456,9 @@ class TestMetadata:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -519,9 +519,9 @@ class TestMetadata:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -560,17 +560,17 @@ class TestMetadata:
         json_file_metadata = {**json_file_metadata2, **json_file_metadata1}
         json_file_metadata["5"] = "baz1"
 
-        assert (
-            json_body_metadata == json_file_metadata
-        ), "Metadata in TX body doesn't match the original metadata"
+        assert json_body_metadata == json_file_metadata, (
+            "Metadata in TX body doesn't match the original metadata"
+        )
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -614,14 +614,14 @@ class TestMetadata:
         with open(self.JSON_METADATA_FILE, encoding="utf-8") as metadata_fp:
             json_file_metadata = json.load(metadata_fp)
 
-        assert (
-            json_body_metadata == json_file_metadata
-        ), "Metadata in TX body doesn't match the original metadata"
+        assert json_body_metadata == json_file_metadata, (
+            "Metadata in TX body doesn't match the original metadata"
+        )
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )

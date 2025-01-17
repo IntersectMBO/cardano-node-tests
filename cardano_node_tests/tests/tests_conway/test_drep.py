@@ -417,9 +417,9 @@ class TestDReps:
         reqc.cli033.success()
 
         metadata_anchor = reg_drep_state[0][1]["anchor"]
-        assert (
-            metadata_anchor["dataHash"] == drep_metadata_hash == expected_hash
-        ), "Unexpected metadata hash"
+        assert metadata_anchor["dataHash"] == drep_metadata_hash == expected_hash, (
+            "Unexpected metadata hash"
+        )
         assert metadata_anchor["url"] == drep_metadata_url, "Unexpected metadata url"
 
         if configuration.HAS_DBSYNC:
@@ -1101,9 +1101,9 @@ class TestDelegDReps:
             deposit=deposit_amt,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Epoch changed and it would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
 
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
@@ -1120,9 +1120,9 @@ class TestDelegDReps:
         request.addfinalizer(_deregister)
 
         stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
-        assert (
-            stake_addr_info.address
-        ), f"Stake address is NOT registered: {pool_user_rewards.stake.address}"
+        assert stake_addr_info.address, (
+            f"Stake address is NOT registered: {pool_user_rewards.stake.address}"
+        )
         reqc.cli035.start(url=helpers.get_vcs_link())
         assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
             drep_id=drep_id
@@ -1167,12 +1167,12 @@ class TestDelegDReps:
                 stake_distrib_vkey = cluster.g_conway_governance.query.drep_stake_distribution(
                     drep_vkey_file=custom_drep_rewards.key_pair.vkey_file
                 )
-                assert (
-                    stake_distrib == stake_distrib_vkey
-                ), "DRep stake distribution output mismatch"
-                assert (
-                    len(stake_distrib_vkey) == 1
-                ), "Unexpected number of DRep stake distribution records"
+                assert stake_distrib == stake_distrib_vkey, (
+                    "DRep stake distribution output mismatch"
+                )
+                assert len(stake_distrib_vkey) == 1, (
+                    "Unexpected number of DRep stake distribution records"
+                )
 
                 assert stake_distrib_vkey[0][0] == f"drep-keyHash-{custom_drep_rewards.drep_id}", (
                     "The DRep distribution record doesn't match the DRep ID "
@@ -1212,12 +1212,12 @@ class TestDelegDReps:
                 dbsync_queries.query_drep_distr(drep_hash=drep_id_bech32, epoch_no=deleg_epoch)
             )
 
-            assert (
-                db_drep_distr
-            ), f"No DRep distribution found for DRep {drep_id_bech32} and epoch {deleg_epoch}"
-            assert (
-                db_drep_distr[0].amount >= deleg_amount
-            ), f"Unexpected delegated amount in dbsync: {db_drep_distr[0].amount} < {deleg_amount}"
+            assert db_drep_distr, (
+                f"No DRep distribution found for DRep {drep_id_bech32} and epoch {deleg_epoch}"
+            )
+            assert db_drep_distr[0].amount >= deleg_amount, (
+                f"Unexpected delegated amount in dbsync: {db_drep_distr[0].amount} < {deleg_amount}"
+            )
 
             reqc.db014.success()
 
@@ -1295,9 +1295,9 @@ class TestDelegDReps:
             deposit=deposit_amt,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Epoch changed and it would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
 
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
@@ -1531,9 +1531,9 @@ class TestDelegDReps:
         stake_addr_info_ret = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
 
         if conway_common.is_in_bootstrap(cluster):
-            assert (
-                not stake_addr_info_ret.vote_delegation
-            ), "Due to ledger issue 4772, vote delegation should be empty with PV9"
+            assert not stake_addr_info_ret.vote_delegation, (
+                "Due to ledger issue 4772, vote delegation should be empty with PV9"
+            )
         else:
             if not stake_addr_info_ret.vote_delegation:
                 issues.ledger_4772.finish_test()
@@ -1646,14 +1646,14 @@ class TestDRepActivity:
                 deposit=deposit_amt,
             )
 
-            assert (
-                cluster.g_query.get_epoch() == init_epoch
-            ), "Epoch changed and it would affect other checks"
+            assert cluster.g_query.get_epoch() == init_epoch, (
+                "Epoch changed and it would affect other checks"
+            )
 
             stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
-            assert (
-                stake_addr_info.address
-            ), f"Stake address is NOT registered: {pool_user.stake.address}"
+            assert stake_addr_info.address, (
+                f"Stake address is NOT registered: {pool_user.stake.address}"
+            )
             assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
                 drep_id=drep_reg.drep_id
             ), "Votes are NOT delegated to the correct DRep"
@@ -1774,9 +1774,9 @@ class TestDRepActivity:
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
                 gov_state=cluster.g_conway_governance.query.gov_state(),
             )
-            assert (
-                action_txid == prev_action_rec.txid
-            ), f"Unexpected action txid: {prev_action_rec.txid}"
+            assert action_txid == prev_action_rec.txid, (
+                f"Unexpected action txid: {prev_action_rec.txid}"
+            )
 
         def _save_drep_states(
             id: str,
@@ -1826,12 +1826,12 @@ class TestDRepActivity:
             assert drep2_state, "No DRep2 states"
 
             drep1_init_expiry = drep1_state["created_drep1"].drep_state[0][1]["expiry"]
-            assert (
-                drep1_init_expiry > drep1_state["created_drep1"].epoch_no + 5
-            ), "Unexpected DRep1 init expiry"
-            assert (
-                drep1_state["delegated_drep1"].drep_state[0][1]["expiry"] > drep1_init_expiry
-            ), "DRep1 expiry was not updated"
+            assert drep1_init_expiry > drep1_state["created_drep1"].epoch_no + 5, (
+                "Unexpected DRep1 init expiry"
+            )
+            assert drep1_state["delegated_drep1"].drep_state[0][1]["expiry"] > drep1_init_expiry, (
+                "DRep1 expiry was not updated"
+            )
 
             assert governance_utils.is_drep_active(
                 cluster_obj=cluster,
@@ -1855,12 +1855,12 @@ class TestDRepActivity:
             ), "DRep1 is still active"
 
             drep2_init_expiry = drep2_state["created_drep2"].drep_state[0][1]["expiry"]
-            assert (
-                drep2_init_expiry < drep2_state["created_drep2"].epoch_no + 3
-            ), "Unexpected DRep2 init expiry"
-            assert (
-                drep2_state["delegated_drep2"].drep_state[0][1]["expiry"] > drep2_init_expiry
-            ), "DRep2 expiry was not updated"
+            assert drep2_init_expiry < drep2_state["created_drep2"].epoch_no + 3, (
+                "Unexpected DRep2 init expiry"
+            )
+            assert drep2_state["delegated_drep2"].drep_state[0][1]["expiry"] > drep2_init_expiry, (
+                "DRep2 expiry was not updated"
+            )
 
             assert not governance_utils.is_drep_active(
                 cluster_obj=cluster,

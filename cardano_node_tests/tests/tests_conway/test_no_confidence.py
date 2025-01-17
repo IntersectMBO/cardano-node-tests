@@ -203,9 +203,9 @@ class TestNoConfidence:
 
         # Testnet will be in state of no confidence, respin is needed
         with cluster_manager.respin_on_failure():
-            assert (
-                cluster.g_query.get_epoch() == init_epoch
-            ), "Epoch changed and it would affect other checks"
+            assert cluster.g_query.get_epoch() == init_epoch, (
+                "Epoch changed and it would affect other checks"
+            )
 
             # Check that CC cannot vote on "no confidence" action
             with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -247,9 +247,9 @@ class TestNoConfidence:
             )
 
             reqc.cip038_03.start(url=helpers.get_vcs_link())
-            assert rat_gov_state["nextRatifyState"][
-                "ratificationDelayed"
-            ], "Ratification not delayed"
+            assert rat_gov_state["nextRatifyState"]["ratificationDelayed"], (
+                "Ratification not delayed"
+            )
             reqc.cip038_03.success()
 
             # Check enactment
@@ -260,9 +260,9 @@ class TestNoConfidence:
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
             )
-            assert not conway_common.get_committee_val(
-                data=enact_gov_state
-            ), "Committee is not empty"
+            assert not conway_common.get_committee_val(data=enact_gov_state), (
+                "Committee is not empty"
+            )
             [r.success() for r in (reqc.cip013, reqc.cip039, reqc.cip057)]
 
             enact_prev_action_rec = governance_utils.get_prev_action(
@@ -278,9 +278,9 @@ class TestNoConfidence:
                 pool_user_lg.stake.address
             ).reward_account_balance
 
-            assert (
-                enact_deposit_returned == init_return_account_balance + deposit_amt
-            ), "Incorrect return account balance"
+            assert enact_deposit_returned == init_return_account_balance + deposit_amt, (
+                "Incorrect return account balance"
+            )
             reqc.cip030en.success()
 
             # Try to vote on enacted action

@@ -167,9 +167,9 @@ def get_registered_pool_user(
         tx_files=tx_files_action,
     )
 
-    assert cluster_obj.g_query.get_stake_addr_info(
-        pool_user.stake.address
-    ).address, f"Stake address is not registered: {pool_user.stake.address}"
+    assert cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address).address, (
+        f"Stake address is not registered: {pool_user.stake.address}"
+    )
 
     return pool_user
 
@@ -409,9 +409,9 @@ def resign_ccs(
     for cc_member in ccs_to_resign:
         member_key = f"keyHash-{cc_member.cold_vkey_hash}"
         member_rec = res_committee_state["committee"].get(member_key)
-        assert (
-            not member_rec or member_rec["hotCredsAuthStatus"]["tag"] == "MemberResigned"
-        ), "CC Member not resigned"
+        assert not member_rec or member_rec["hotCredsAuthStatus"]["tag"] == "MemberResigned", (
+            "CC Member not resigned"
+        )
 
     return tx_output
 

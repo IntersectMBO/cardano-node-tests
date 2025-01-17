@@ -199,9 +199,9 @@ def check_missing_builtin(
         token_utxo_a = clusterlib.filter_utxos(
             utxos=out_utxos, address=issuer_addr.address, coin=token_a
         )
-        assert (
-            token_utxo_a and token_utxo_a[0].amount == token_amount
-        ), "The 'token a' was not minted"
+        assert token_utxo_a and token_utxo_a[0].amount == token_amount, (
+            "The 'token a' was not minted"
+        )
 
         common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 

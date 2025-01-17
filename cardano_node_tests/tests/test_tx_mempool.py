@@ -123,9 +123,9 @@ class TestMempool:
                     "The Tx was removed from mempool before running `query tx-mempool exists`"
                 )
                 return
-            assert (
-                txid_exists_in_mempool["txId"] == txid
-            ), f"The reported txId is '{txid_exists_in_mempool['txId']}', expected '{txid}'"
+            assert txid_exists_in_mempool["txId"] == txid, (
+                f"The reported txId is '{txid_exists_in_mempool['txId']}', expected '{txid}'"
+            )
 
             # Check that the slot reported by the tx-mempool commands is correct
             assert mempool_next_tx["slot"] == txid_exists_in_mempool["slot"], (

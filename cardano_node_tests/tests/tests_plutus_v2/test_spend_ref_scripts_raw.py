@@ -556,9 +556,9 @@ class TestReferenceScripts:
         )
 
         # Check that reference script UTxO was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), f"Reference script UTxO was NOT spent: '{reference_utxo}`"
+        assert not cluster.g_query.get_utxo(utxo=reference_utxo), (
+            f"Reference script UTxO was NOT spent: '{reference_utxo}`"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))

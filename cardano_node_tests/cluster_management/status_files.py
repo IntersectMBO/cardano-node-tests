@@ -125,8 +125,7 @@ def list_test_running_files(
 
     files = list(
         pytest_tmp_dir.glob(
-            f"{CLUSTER_DIR_TEMPLATE}{instance_num_str}/"
-            f"{TEST_RUNNING_GLOB}{mark_str}_{worker_id}"
+            f"{CLUSTER_DIR_TEMPLATE}{instance_num_str}/{TEST_RUNNING_GLOB}{mark_str}_{worker_id}"
         )
     )
 
@@ -287,8 +286,7 @@ def list_curr_mark_files(
     pytest_tmp_dir = temptools.get_pytest_root_tmp()
     files = list(
         pytest_tmp_dir.glob(
-            f"{CLUSTER_DIR_TEMPLATE}{instance_num_str}/"
-            f"{TEST_CURR_MARK_GLOB}_@@{mark}@@_{worker_id}"
+            f"{CLUSTER_DIR_TEMPLATE}{instance_num_str}/{TEST_CURR_MARK_GLOB}_@@{mark}@@_{worker_id}"
         )
     )
     return files

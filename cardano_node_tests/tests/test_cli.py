@@ -166,7 +166,7 @@ class TestCLI:
 
         cmd = (
             f"tmpKey=$(cat {plutus_common.SIGNING_KEY_GOLDEN});"
-            f'cardano-cli latest transaction sign --tx-file {DATA_DIR / "unwitnessed.tx"}'
+            f"cardano-cli latest transaction sign --tx-file {DATA_DIR / 'unwitnessed.tx'}"
             ' --signing-key-file <(echo "${tmpKey}")'
             f" --out-file {temp_template}.signed"
         )
@@ -366,9 +366,9 @@ class TestAddressInfo:
         address_info_with_outfile = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
 
         # Check if the information obtained by the two methods is the same
-        assert (
-            address_info_no_outfile == address_info_with_outfile
-        ), "Address information doesn't match"
+        assert address_info_no_outfile == address_info_with_outfile, (
+            "Address information doesn't match"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(address=st.text(alphabet=ADDR_ALPHABET, min_size=1))

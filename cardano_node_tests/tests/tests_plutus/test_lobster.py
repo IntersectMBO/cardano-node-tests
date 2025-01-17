@@ -90,9 +90,9 @@ def _fund_issuer(
     out_issuer_utxos = clusterlib.filter_utxos(
         utxos=out_utxos, address=issuer_addr.address, coin=clusterlib.DEFAULT_COIN
     )
-    assert (
-        clusterlib.calculate_utxos_balance(out_issuer_utxos) == amount + collateral_amount
-    ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+    assert clusterlib.calculate_utxos_balance(out_issuer_utxos) == amount + collateral_amount, (
+        f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+    )
 
     mint_utxos = [out_issuer_utxos[0]]
     collateral_utxos = [out_issuer_utxos[1]]
@@ -168,12 +168,12 @@ def _mint_lobster_nft(
     utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)
     utxos_without_change = lovelace_utxos[1:] if utxo_ix_offset else lovelace_utxos[:-1]
 
-    assert (
-        clusterlib.calculate_utxos_balance(utxos_without_change) == lovelace_amount
-    ), f"Incorrect Lovelace balance for token issuer address `{issuer_addr.address}`"
-    assert (
-        clusterlib.calculate_utxos_balance(token_utxos, coin=lobster_nft_token) == nft_amount
-    ), f"Incorrect token balance for token issuer address `{issuer_addr.address}`"
+    assert clusterlib.calculate_utxos_balance(utxos_without_change) == lovelace_amount, (
+        f"Incorrect Lovelace balance for token issuer address `{issuer_addr.address}`"
+    )
+    assert clusterlib.calculate_utxos_balance(token_utxos, coin=lobster_nft_token) == nft_amount, (
+        f"Incorrect token balance for token issuer address `{issuer_addr.address}`"
+    )
 
     return lobster_nft_token, token_utxos, tx_output
 
@@ -232,12 +232,12 @@ def _deploy_lobster_nft(
     )
 
     # Check expected balances
-    assert (
-        clusterlib.calculate_utxos_balance(lovelace_utxos) == lovelace_amount
-    ), f"Incorrect Lovelace balance for token issuer address `{script_address}`"
-    assert (
-        clusterlib.calculate_utxos_balance(token_utxos, coin=lobster_nft_token) == nft_amount
-    ), f"Incorrect token balance for token issuer address `{script_address}`"
+    assert clusterlib.calculate_utxos_balance(lovelace_utxos) == lovelace_amount, (
+        f"Incorrect Lovelace balance for token issuer address `{script_address}`"
+    )
+    assert clusterlib.calculate_utxos_balance(token_utxos, coin=lobster_nft_token) == nft_amount, (
+        f"Incorrect token balance for token issuer address `{script_address}`"
+    )
 
     return script_address, token_utxos, tx_output
 
@@ -458,27 +458,27 @@ class TestLobsterChallenge:
                 LOGGER.exception(f"Unexpected vote UTxOs in vote number {vote_num}: {vote_utxos}")
                 raise
 
-            assert (
-                utxos_lovelace.amount == lovelace_vote_amount
-            ), f"Incorrect Lovelace balance for script address `{script_address}`"
+            assert utxos_lovelace.amount == lovelace_vote_amount, (
+                f"Incorrect Lovelace balance for script address `{script_address}`"
+            )
 
-            assert (
-                utxo_votes_token.amount == vote_num
-            ), f"Incorrect LobsterVotes token balance for script address `{script_address}`"
+            assert utxo_votes_token.amount == vote_num, (
+                f"Incorrect LobsterVotes token balance for script address `{script_address}`"
+            )
 
-            assert (
-                utxo_counter_token is None or utxo_counter_token.amount == vote_counter
-            ), f"Incorrect LobsterCounter token balance for script address `{script_address}`"
+            assert utxo_counter_token is None or utxo_counter_token.amount == vote_counter, (
+                f"Incorrect LobsterCounter token balance for script address `{script_address}`"
+            )
 
         # Final counter value can be 0
         if expected_counter_val == 0:
-            assert (
-                not utxo_counter_tokens
-            ), "No LobsterCounter token expected when final counter value is 0"
+            assert not utxo_counter_tokens, (
+                "No LobsterCounter token expected when final counter value is 0"
+            )
         else:
-            assert (
-                utxo_counter_token and utxo_counter_token.amount == expected_counter_val
-            ), "Final balance of LobsterCounter token doesn't match the expected balance"
+            assert utxo_counter_token and utxo_counter_token.amount == expected_counter_val, (
+                "Final balance of LobsterCounter token doesn't match the expected balance"
+            )
 
         # Check transactions in db-sync
         for tx_out_rec in tx_outputs_all:

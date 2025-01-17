@@ -827,9 +827,9 @@ class TestPParamUpdate:
             protocol_params=tech_nodrep_prop_rec.future_pparams,
         )
 
-        assert tech_nodrep_prop_rec.proposal_names.isdisjoint(
-            SECURITY_PPARAMS
-        ), "There are security pparams being changed"
+        assert tech_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS), (
+            "There are security pparams being changed"
+        )
 
         # Check that SPOs cannot vote on change of constitution action if no security params
         # are being changed.
@@ -1206,9 +1206,9 @@ class TestPParamUpdate:
             if p["proposalProcedure"]["govAction"]["tag"]
             == governance_utils.ActionTags.PARAMETER_CHANGE.value
         ]
-        assert (
-            not enact_pparam_proposals
-        ), "All pparam proposals should have been removed after enactment"
+        assert not enact_pparam_proposals, (
+            "All pparam proposals should have been removed after enactment"
+        )
         _check_state(enact_gov_state)
         [
             r.success()

@@ -236,9 +236,9 @@ class TestInfo:
         reqc.cip053.success()
 
         reqc.cip038_05.start(url=helpers.get_vcs_link())
-        assert not approved_gov_state["nextRatifyState"][
-            "ratificationDelayed"
-        ], "Ratification is delayed unexpectedly"
+        assert not approved_gov_state["nextRatifyState"]["ratificationDelayed"], (
+            "Ratification is delayed unexpectedly"
+        )
         reqc.cip038_05.success()
 
         # Check deposit is returned
@@ -254,9 +254,9 @@ class TestInfo:
         expire_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_ug.stake.address
         ).reward_account_balance
-        assert (
-            expire_return_account_balance == init_return_account_balance
-        ), f"Incorrect return account balance {expire_return_account_balance}"
+        assert expire_return_account_balance == init_return_account_balance, (
+            f"Incorrect return account balance {expire_return_account_balance}"
+        )
 
         # Check that the proposals were removed and the actions deposits were returned
         rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
@@ -268,9 +268,9 @@ class TestInfo:
         deposit_returned = cluster.g_query.get_stake_addr_info(
             pool_user_ug.stake.address
         ).reward_account_balance
-        assert (
-            deposit_returned == init_return_account_balance + action_deposit_amt
-        ), "Incorrect return account balance"
+        assert deposit_returned == init_return_account_balance + action_deposit_amt, (
+            "Incorrect return account balance"
+        )
         reqc.cip034ex.success()
 
         assert not governance_utils.lookup_proposal(

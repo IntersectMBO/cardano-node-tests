@@ -291,9 +291,9 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=40)
@@ -401,9 +401,9 @@ class TestRewards:
             )
 
         # Make sure we managed to finish registration in the expected epoch
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         user_stake_addr_dec = helpers.decode_bech32(delegation_out.pool_user.stake.address)[2:]
 
@@ -559,9 +559,9 @@ class TestRewards:
             # Wait 4 epochs for first rewards
             if this_epoch >= init_epoch + 4:
                 assert owner_reward > prev_owner_reward, "New reward was NOT received by pool owner"
-                assert (
-                    user_reward > prev_user_reward
-                ), "New reward was NOT received by stake address"
+                assert user_reward > prev_user_reward, (
+                    "New reward was NOT received by stake address"
+                )
 
             _check_ledger_state(this_epoch=this_epoch)
 
@@ -837,9 +837,9 @@ class TestRewards:
 
         with cluster_manager.respin_on_failure():
             # Make sure we managed to finish delegation in the expected epoch
-            assert (
-                cluster.g_query.get_epoch() == init_epoch
-            ), "Delegation took longer than expected and would affect other checks"
+            assert cluster.g_query.get_epoch() == init_epoch, (
+                "Delegation took longer than expected and would affect other checks"
+            )
 
             reward_records.append(
                 RewardRecord(
@@ -958,9 +958,9 @@ class TestRewards:
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
         owner_payment_balance = cluster.g_query.get_address_balance(pool_owner.payment.address)
-        assert (
-            owner_payment_balance >= pool_data.pool_pledge
-        ), f"Pledge is not met for pool '{pool_name}'!"
+        assert owner_payment_balance >= pool_data.pool_pledge, (
+            f"Pledge is not met for pool '{pool_name}'!"
+        )
 
         # Check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_deleg)
@@ -994,9 +994,9 @@ class TestRewards:
 
         for repoch, rtypes in reward_types.items():
             rtypes_set = set(rtypes)
-            assert len(rtypes_set) == len(
-                rtypes
-            ), "Multiple rewards of the same type were received in single epoch"
+            assert len(rtypes_set) == len(rtypes), (
+                "Multiple rewards of the same type were received in single epoch"
+            )
 
             if repoch <= init_epoch + 1:
                 assert rtypes_set == {"leader"}
@@ -1056,9 +1056,9 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
@@ -1086,9 +1086,9 @@ class TestRewards:
             faucet_addr=cluster_manager.cache.addrs_data["user1"]["payment"].address,
             tx_name=temp_template,
         )
-        assert (
-            cluster.g_query.get_address_balance(delegation_out.pool_user.payment.address) == 0
-        ), f"Incorrect balance for source address `{delegation_out.pool_user.payment.address}`"
+        assert cluster.g_query.get_address_balance(delegation_out.pool_user.payment.address) == 0, (
+            f"Incorrect balance for source address `{delegation_out.pool_user.payment.address}`"
+        )
 
         rewards_rec = []
 
@@ -1232,9 +1232,9 @@ class TestRewards:
         # Pool configuration changed, respin needed
         cluster_manager.set_needs_respin()
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Pool setup took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Pool setup took longer than expected and would affect other checks"
+        )
         this_epoch = init_epoch
 
         # Rewards each epoch
@@ -1279,9 +1279,9 @@ class TestRewards:
             # (re-registration epoch + 4)
             if this_epoch >= init_epoch + 5:
                 # Check that the original reward address for pool2 is NOT receiving rewards
-                assert (
-                    reward_for_epoch_pool2 == 0
-                ), "Original reward address of 'pool2' received unexpected rewards"
+                assert reward_for_epoch_pool2 == 0, (
+                    "Original reward address of 'pool2' received unexpected rewards"
+                )
 
             # Rewards each epoch
             rewards_ledger_pool1.append(
@@ -1309,24 +1309,24 @@ class TestRewards:
                 ledger_state=ledger_state,
             )
 
-        assert (
-            len(rewards_ledger_pool1[-1].leader_pool_ids) == 2
-        ), "Reward address of 'pool1' is not used as reward address for both 'pool1' and 'pool2'"
-        assert (
-            rewards_ledger_pool1[-1].reward_per_epoch
-        ), f"Reward address didn't receive any reward in epoch {rewards_ledger_pool1[-1].epoch_no}"
-        assert (
-            rewards_ledger_pool2[-1].reward_per_epoch == 0
-        ), "Original reward address of 'pool2' received unexpected rewards"
+        assert len(rewards_ledger_pool1[-1].leader_pool_ids) == 2, (
+            "Reward address of 'pool1' is not used as reward address for both 'pool1' and 'pool2'"
+        )
+        assert rewards_ledger_pool1[-1].reward_per_epoch, (
+            f"Reward address didn't receive any reward in epoch {rewards_ledger_pool1[-1].epoch_no}"
+        )
+        assert rewards_ledger_pool2[-1].reward_per_epoch == 0, (
+            "Original reward address of 'pool2' received unexpected rewards"
+        )
 
         # Check that pledge is still met after the owner address was used to pay for Txs
         pool2_data = clusterlib_utils.load_registered_pool_data(
             cluster_obj=cluster, pool_name=pool2_name, pool_id=pool2_id
         )
         owner_payment_balance = cluster.g_query.get_address_balance(pool2_owner.payment.address)
-        assert (
-            owner_payment_balance >= pool2_data.pool_pledge
-        ), f"Pledge is not met for pool '{pool2_name}'!"
+        assert owner_payment_balance >= pool2_data.pool_pledge, (
+            f"Pledge is not met for pool '{pool2_name}'!"
+        )
 
         # Check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_update_pool)
@@ -1432,9 +1432,9 @@ class TestRewards:
         )
 
         # Make sure we managed to finish registration in the expected epoch
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         reward_records = [
             RewardRecord(
@@ -1574,9 +1574,9 @@ class TestRewards:
                 )
 
             if this_epoch == init_epoch + 4:
-                assert (
-                    reward_total > prev_reward_total
-                ), "New reward was NOT received by stake address"
+                assert reward_total > prev_reward_total, (
+                    "New reward was NOT received by stake address"
+                )
 
                 # Deregister stake address
                 clusterlib_utils.deregister_stake_address(
@@ -1616,13 +1616,13 @@ class TestRewards:
                 assert reward_total > 0, "Reward was NOT received by stake address"
 
             if this_epoch >= init_epoch + 6:
-                assert (
-                    reward_total > prev_reward_total
-                ), "New reward was NOT received by stake address"
+                assert reward_total > prev_reward_total, (
+                    "New reward was NOT received by stake address"
+                )
 
-            assert (
-                cluster.g_query.get_epoch() == this_epoch
-            ), "Failed to finish actions in single epoch, it would affect other checks"
+            assert cluster.g_query.get_epoch() == this_epoch, (
+                "Failed to finish actions in single epoch, it would affect other checks"
+            )
 
             # Sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(

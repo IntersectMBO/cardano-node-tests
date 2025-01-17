@@ -335,23 +335,23 @@ class TestRollback:
                 cluster_obj=cluster, node=LAST_POOL_NAME, tx_raw_output=tx_outputs[-1]
             )
 
-            assert (
-                utxo_tx2_cluster1 == utxo_tx2_cluster2
-            ), "UTxOs are not identical, consensus was not restored?"
-            assert (
-                utxo_tx3_cluster1 == utxo_tx3_cluster2
-            ), "UTxOs are not identical, consensus was not restored?"
+            assert utxo_tx2_cluster1 == utxo_tx2_cluster2, (
+                "UTxOs are not identical, consensus was not restored?"
+            )
+            assert utxo_tx3_cluster1 == utxo_tx3_cluster2, (
+                "UTxOs are not identical, consensus was not restored?"
+            )
 
-            assert (
-                utxo_tx2_cluster1 or utxo_tx3_cluster1
-            ), "Neither Tx number 2 nor Tx number 3 exists on chain"
+            assert utxo_tx2_cluster1 or utxo_tx3_cluster1, (
+                "Neither Tx number 2 nor Tx number 3 exists on chain"
+            )
 
             # At this point we know that the cluster is not split, so we don't need to respin
             # the cluster if the test fails.
 
-        assert not (
-            utxo_tx2_cluster1 and utxo_tx3_cluster1
-        ), "Neither Tx number 2 nor Tx number 3 was rolled back"
+        assert not (utxo_tx2_cluster1 and utxo_tx3_cluster1), (
+            "Neither Tx number 2 nor Tx number 3 was rolled back"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -467,18 +467,18 @@ class TestRollback:
 
         assert utxo_tx1_cluster1 == utxo_tx1_cluster2, "UTxOs from Tx 1 are not identical"
 
-        assert (
-            utxo_tx2_cluster1 != utxo_tx2_cluster2
-        ), "UTxOs are identical, consensus was restored?"
+        assert utxo_tx2_cluster1 != utxo_tx2_cluster2, (
+            "UTxOs are identical, consensus was restored?"
+        )
 
-        assert (
-            utxo_tx3_cluster1 != utxo_tx3_cluster2
-        ), "UTxOs are identical, consensus was restored?"
+        assert utxo_tx3_cluster1 != utxo_tx3_cluster2, (
+            "UTxOs are identical, consensus was restored?"
+        )
 
-        assert (
-            utxo_tx2_cluster1 and not utxo_tx2_cluster2
-        ), "Tx number 2 is supposed to exist only on the first cluster"
+        assert utxo_tx2_cluster1 and not utxo_tx2_cluster2, (
+            "Tx number 2 is supposed to exist only on the first cluster"
+        )
 
-        assert (
-            not utxo_tx3_cluster1 and utxo_tx3_cluster2
-        ), "Tx number 3 is supposed to exist only on the second cluster"
+        assert not utxo_tx3_cluster1 and utxo_tx3_cluster2, (
+            "Tx number 3 is supposed to exist only on the second cluster"
+        )

@@ -734,23 +734,23 @@ class TestBuildMinting:
         issuer_utxos_step2 = clusterlib.filter_utxos(
             utxos=out_utxos_step2, address=issuer_addr.address
         )
-        assert (
-            clusterlib.calculate_utxos_balance(utxos=issuer_utxos_step2) == lovelace_amount
-        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+        assert clusterlib.calculate_utxos_balance(utxos=issuer_utxos_step2) == lovelace_amount, (
+            f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+        )
 
         token_utxo1 = clusterlib.filter_utxos(
             utxos=out_utxos_step2, address=issuer_addr.address, coin=token1
         )
-        assert (
-            token_utxo1 and token_utxo1[0].amount == token_amount
-        ), "The 'anyone' token was not minted"
+        assert token_utxo1 and token_utxo1[0].amount == token_amount, (
+            "The 'anyone' token was not minted"
+        )
 
         token_utxo2 = clusterlib.filter_utxos(
             utxos=out_utxos_step2, address=issuer_addr.address, coin=token2
         )
-        assert (
-            token_utxo2 and token_utxo2[0].amount == token_amount
-        ), "The 'timerange' token was not minted"
+        assert token_utxo2 and token_utxo2[0].amount == token_amount, (
+            "The 'timerange' token was not minted"
+        )
 
         # Check expected fees
         expected_fee_step1 = 168_977
@@ -1243,9 +1243,9 @@ class TestBuildMinting:
             assert not expect_pass, f"Valid TTL (offset {ttl_offset} slots) was rejected"
             assert "TimeTranslationPastHorizon" in err, err
         else:
-            assert (
-                expect_pass
-            ), f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
+            assert expect_pass, (
+                f"TTL too far in the future (offset {ttl_offset} slots) was accepted"
+            )
 
 
 class TestCollateralOutput:
@@ -1386,6 +1386,6 @@ class TestCollateralOutput:
             return_collateral = tx_loaded["return collateral"]["amount"]["lovelace"]
             total_collateral = tx_loaded["total collateral"]
 
-            assert (
-                return_collateral + total_collateral == collateral_utxos[0].amount
-            ), "Return collateral amount is wrong"
+            assert return_collateral + total_collateral == collateral_utxos[0].amount, (
+                "Return collateral amount is wrong"
+            )

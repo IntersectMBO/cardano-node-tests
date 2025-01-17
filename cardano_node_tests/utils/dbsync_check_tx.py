@@ -132,9 +132,9 @@ def _compare_redeemers(
         assert db_redeemer_recs, f"No redeemer info in db-sync for script hash `{script_hash}`"
 
         len_tx_recs, len_db_redeemer_recs = len(tx_recs), len(db_redeemer_recs)
-        assert (
-            len_tx_recs == len_db_redeemer_recs
-        ), f"Number of TX redeemers doesn't match ({len_tx_recs} != {db_redeemer_recs})"
+        assert len_tx_recs == len_db_redeemer_recs, (
+            f"Number of TX redeemers doesn't match ({len_tx_recs} != {db_redeemer_recs})"
+        )
 
         for tx_rec in tx_recs:
             tx_unit_steps = tx_rec.execution_units[0] if tx_rec.execution_units else None
@@ -226,18 +226,18 @@ def check_tx_outs(
     # was used (change txout, fee in older node versions), so we'll skip some of the checks.
     if tx_raw_output.change_address:
         assert tx_txouts.issubset(db_txouts), f"TX outputs not subset: ({tx_txouts} vs {db_txouts})"
-        assert (
-            len_db_txouts >= len_out_txouts
-        ), f"Number of TX outputs doesn't match ({len_db_txouts} < {len_out_txouts})"
+        assert len_db_txouts >= len_out_txouts, (
+            f"Number of TX outputs doesn't match ({len_db_txouts} < {len_out_txouts})"
+        )
     else:
         txouts_amount = clusterlib.calculate_utxos_balance(utxos=tx_raw_output.txouts)
-        assert (
-            response.out_sum == txouts_amount
-        ), f"Sum of TX amounts doesn't match ({response.out_sum} != {txouts_amount})"
+        assert response.out_sum == txouts_amount, (
+            f"Sum of TX amounts doesn't match ({response.out_sum} != {txouts_amount})"
+        )
 
-        assert (
-            len_db_txouts == len_out_txouts
-        ), f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts})"
+        assert len_db_txouts == len_out_txouts, (
+            f"Number of TX outputs doesn't match ({len_db_txouts} != {len_out_txouts})"
+        )
 
         assert tx_txouts == db_txouts, f"TX outputs don't match ({tx_txouts} != {db_txouts})"
 
@@ -256,9 +256,9 @@ def check_tx_ins(
 
     db_utxos = {f"{r.utxo_hash}#{r.utxo_ix}" for r in response.txins}
 
-    assert (
-        txin_utxos == db_utxos
-    ), f"Not all TX inputs are present in the db ({txin_utxos} != {db_utxos})"
+    assert txin_utxos == db_utxos, (
+        f"Not all TX inputs are present in the db ({txin_utxos} != {db_utxos})"
+    )
 
 
 def check_tx_fee(
@@ -270,9 +270,9 @@ def check_tx_fee(
     if tx_raw_output.fee == -1:
         return
 
-    assert (
-        response.fee == tx_raw_output.fee
-    ), f"TX fee doesn't match ({response.fee} != {tx_raw_output.fee})"
+    assert response.fee == tx_raw_output.fee, (
+        f"TX fee doesn't match ({response.fee} != {tx_raw_output.fee})"
+    )
 
     redeemer_fees = functools.reduce(lambda x, y: x + y.fee, response.redeemers, 0)
     assert tx_raw_output.fee > redeemer_fees, "Combined redeemer fees are >= than total TX fee"
@@ -303,14 +303,14 @@ def check_tx_mint(
     tx_mint_by_token = sorted(_sum_mint_txouts(tx_mint_txouts))
 
     len_db_mint, len_out_mint = len(response.mint), len(tx_mint_by_token)
-    assert (
-        len_db_mint == len_out_mint
-    ), f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
+    assert len_db_mint == len_out_mint, (
+        f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
+    )
 
     db_mint_txouts = sorted(utxodata2txout(r) for r in response.mint)
-    assert (
-        tx_mint_by_token == db_mint_txouts
-    ), f"MA minting outputs don't match ({tx_mint_by_token} != {db_mint_txouts})"
+    assert tx_mint_by_token == db_mint_txouts, (
+        f"MA minting outputs don't match ({tx_mint_by_token} != {db_mint_txouts})"
+    )
 
 
 def check_tx_withdrawals(
@@ -325,13 +325,13 @@ def check_tx_withdrawals(
     len_tx_withdrawals = len(tx_withdrawals)
     len_db_withdrawals = len(db_withdrawals)
 
-    assert (
-        len_db_withdrawals == len_tx_withdrawals
-    ), f"Number of TX withdrawals doesn't match ({len_db_withdrawals} != {len_tx_withdrawals})"
+    assert len_db_withdrawals == len_tx_withdrawals, (
+        f"Number of TX withdrawals doesn't match ({len_db_withdrawals} != {len_tx_withdrawals})"
+    )
 
-    assert (
-        tx_withdrawals == db_withdrawals
-    ), f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
+    assert tx_withdrawals == db_withdrawals, (
+        f"TX withdrawals don't match ({tx_withdrawals} != {db_withdrawals})"
+    )
 
 
 def check_tx_collaterals(
@@ -354,9 +354,9 @@ def check_tx_collaterals(
     tx_collaterals = {r for r in tx_collaterals_flat if r.coin == clusterlib.DEFAULT_COIN}
     db_collaterals = {utxorecord2utxodata(utxorecord=r) for r in response.collaterals}
 
-    assert (
-        tx_collaterals == db_collaterals
-    ), f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
+    assert tx_collaterals == db_collaterals, (
+        f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
+    )
 
     # Test automatic return collateral only with `transaction build` command on node/dbsync versions
     # that support it.
@@ -399,9 +399,9 @@ def check_tx_scripts(
         r.reference_script_hash for r in response.txouts if r.reference_script_hash
     }
 
-    assert (
-        tx_out_script_hashes == db_out_script_hashes
-    ), f"Reference scripts don't match ({tx_out_script_hashes} != {db_out_script_hashes})"
+    assert tx_out_script_hashes == db_out_script_hashes, (
+        f"Reference scripts don't match ({tx_out_script_hashes} != {db_out_script_hashes})"
+    )
 
     # Check scripts hashes in db-sync
     tx_in_script_hashes = _get_scripts_hashes(
@@ -417,17 +417,17 @@ def check_tx_scripts(
     if response.scripts and tx_script_hashes:
         db_script_hashes = {s.hash for s in response.scripts}
 
-        assert db_script_hashes.issubset(
-            tx_script_hashes
-        ), f"Scripts hashes don't match: {db_script_hashes} is not subset of {tx_script_hashes}"
+        assert db_script_hashes.issubset(tx_script_hashes), (
+            f"Scripts hashes don't match: {db_script_hashes} is not subset of {tx_script_hashes}"
+        )
 
         # On plutus scripts we should also check the serialised_size
         db_plutus_scripts = {r for r in response.scripts if r.type.startswith("plutus")}
 
         if db_plutus_scripts:
-            assert all(
-                r.serialised_size > 0 for r in db_plutus_scripts
-            ), f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
+            assert all(r.serialised_size > 0 for r in db_plutus_scripts), (
+                f"The `serialised_size` <= 0 for some of the Plutus scripts:\n{db_plutus_scripts}"
+            )
 
     # Compare redeemers data
     db_redeemer_hashes = _db_redeemer_hashes(records=response.redeemers)
@@ -460,9 +460,9 @@ def check_tx_datum(
         if _txout_has_inline_datum(r)
     }
     db_txouts_inline_datums = {utxodata2txout(r) for r in response.txouts if r.inline_datum_hash}
-    assert (
-        tx_txouts_inline_datums == db_txouts_inline_datums
-    ), f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
+    assert tx_txouts_inline_datums == db_txouts_inline_datums, (
+        f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
+    )
 
 
 def check_tx_reference_inputs(

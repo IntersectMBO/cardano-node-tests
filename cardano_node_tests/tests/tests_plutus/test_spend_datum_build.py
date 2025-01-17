@@ -452,9 +452,9 @@ class TestNegativeDatum:
         collateral_utxos = clusterlib.filter_utxos(
             utxos=out_utxos, address=payment_addr.address, utxo_ix=datum_utxo.utxo_ix + 1
         )
-        assert (
-            datum_utxo.datum_hash == datum_hash
-        ), f"UTxO should have datum hash '{datum_hash}': {datum_utxo}"
+        assert datum_utxo.datum_hash == datum_hash, (
+            f"UTxO should have datum hash '{datum_hash}': {datum_utxo}"
+        )
 
         # Try to spend the "locked" UTxO
 

@@ -195,9 +195,9 @@ class TestHardfork:
         # Testnet will be using an unexpected protocol version, respin is needed
         cluster_manager.set_needs_respin()
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Epoch changed and it would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
@@ -226,9 +226,9 @@ class TestHardfork:
         assert rat_gov_state["nextRatifyState"]["ratificationDelayed"], "Ratification not delayed"
         reqc.cip038_07.success()
 
-        assert (
-            rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9
-        ), "Incorrect major version"
+        assert rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9, (
+            "Incorrect major version"
+        )
 
         # Check enactment
         expected_msgs = [("pool1.stdout", r"ProtVer \{pvMajor = Version 10")]
@@ -239,9 +239,9 @@ class TestHardfork:
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
-        assert (
-            enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10
-        ), "Incorrect major version"
+        assert enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10, (
+            "Incorrect major version"
+        )
 
         enact_prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.HARDFORK,
@@ -254,9 +254,9 @@ class TestHardfork:
             pool_user_lg.stake.address
         ).reward_account_balance
 
-        assert (
-            enact_deposit_returned == init_return_account_balance + deposit_amt
-        ), "Incorrect return account balance"
+        assert enact_deposit_returned == init_return_account_balance + deposit_amt, (
+            "Incorrect return account balance"
+        )
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:

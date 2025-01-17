@@ -333,19 +333,19 @@ class TestDelegateAddr:
             tx_files=tx_files,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         # Check that the stake addresses are delegated
         for deleg_rec in delegation_map:
             stake_addr_info = cluster.g_query.get_stake_addr_info(deleg_rec[0].stake.address)
-            assert (
-                stake_addr_info.delegation
-            ), f"Stake address was not delegated yet: {stake_addr_info}"
-            assert (
-                deleg_rec[1] == stake_addr_info.delegation
-            ), "Stake address delegated to wrong pool"
+            assert stake_addr_info.delegation, (
+                f"Stake address was not delegated yet: {stake_addr_info}"
+            )
+            assert deleg_rec[1] == stake_addr_info.delegation, (
+                "Stake address delegated to wrong pool"
+            )
 
         # Check that the balance for source address was correctly updated
         deposit = cluster.g_query.get_address_deposit()
@@ -354,9 +354,9 @@ class TestDelegateAddr:
             0
         ].amount == clusterlib.calculate_utxos_balance(
             tx_raw_output.txins
-        ) - tx_raw_output.fee - deposit * len(
-            stake_addr_deleg_cert_files
-        ), f"Incorrect balance for source address `{src_address}`"
+        ) - tx_raw_output.fee - deposit * len(stake_addr_deleg_cert_files), (
+            f"Incorrect balance for source address `{src_address}`"
+        )
 
         # Step: Check that the stake addresses received rewards
 
@@ -431,9 +431,9 @@ class TestDelegateAddr:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         tx_db_deleg = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
@@ -525,9 +525,9 @@ class TestDelegateAddr:
         stake_addr_info = cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         )
-        assert (
-            not stake_addr_info.delegation
-        ), f"Stake address is still delegated: {stake_addr_info}"
+        assert not stake_addr_info.delegation, (
+            f"Stake address is still delegated: {stake_addr_info}"
+        )
 
         tx_db_dereg = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
@@ -618,9 +618,9 @@ class TestDelegateAddr:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         src_address = delegation_out.pool_user.payment.address
 
@@ -696,9 +696,9 @@ class TestDelegateAddr:
         stake_addr_info = cluster.g_query.get_stake_addr_info(
             delegation_out.pool_user.stake.address
         )
-        assert (
-            not stake_addr_info.delegation
-        ), f"Stake address is still delegated: {stake_addr_info}"
+        assert not stake_addr_info.delegation, (
+            f"Stake address is still delegated: {stake_addr_info}"
+        )
 
         tx_db_dereg = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
@@ -751,9 +751,9 @@ class TestDelegateAddr:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         # Check records in db-sync
         tx_db_deleg = dbsync_utils.check_tx(
@@ -821,9 +821,9 @@ class TestDelegateAddr:
             delegation_out.pool_user.stake.address
         )
         assert stake_addr_info.address, f"Reward address is not registered: {stake_addr_info}"
-        assert (
-            not stake_addr_info.delegation
-        ), f"Stake address is still delegated: {stake_addr_info}"
+        assert not stake_addr_info.delegation, (
+            f"Stake address is still delegated: {stake_addr_info}"
+        )
 
         still_rewards_epoch = cluster.wait_for_epoch(epoch_no=undeleg_epoch + 1, padding_seconds=20)
 
@@ -917,9 +917,9 @@ class TestDelegateAddr:
         )
 
         # Check that the stake address is registered
-        assert cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is not registered: {user_registered.stake.address}"
+        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is not registered: {user_registered.stake.address}"
+        )
 
         tx_db_reg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_reg)
         if tx_db_reg:
@@ -1074,9 +1074,9 @@ class TestNegative:
         )
 
         # Check that the stake address is registered
-        assert cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is not registered: {user_registered.stake.address}"
+        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is not registered: {user_registered.stake.address}"
+        )
 
         # Create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
@@ -1201,9 +1201,9 @@ class TestNegative:
         )
 
         # Check that the stake address is registered
-        assert cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is not registered: {user_registered.stake.address}"
+        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is not registered: {user_registered.stake.address}"
+        )
 
         # Deregister stake address
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
@@ -1225,9 +1225,9 @@ class TestNegative:
         )
 
         # Check that the stake address is not registered
-        assert not cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is registered: {user_registered.stake.address}"
+        assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is registered: {user_registered.stake.address}"
+        )
 
         # Create stake address delegation cert
         stake_addr_deleg_cert_file = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
@@ -1304,9 +1304,9 @@ class TestNegative:
         )
 
         # Check that the stake address is registered
-        assert cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is not registered: {user_registered.stake.address}"
+        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is not registered: {user_registered.stake.address}"
+        )
 
         # Create pool cold keys and ceritifcate, but don't register the pool
         node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_pool")

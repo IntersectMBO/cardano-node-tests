@@ -532,9 +532,9 @@ class TestReferenceScripts:
 
         # Check that the script hash is included for all scripts
         for script in plutus_costs:
-            assert script.get(
-                "scriptHash"
-            ), "Missing script hash on calculate-plutus-script-cost result"
+            assert script.get("scriptHash"), (
+                "Missing script hash on calculate-plutus-script-cost result"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
@@ -602,9 +602,9 @@ class TestReferenceScripts:
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         # Check that reference script utxo was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), f"Reference script UTxO was NOT spent: '{reference_utxo}`"
+        assert not cluster.g_query.get_utxo(utxo=reference_utxo), (
+            f"Reference script UTxO was NOT spent: '{reference_utxo}`"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))

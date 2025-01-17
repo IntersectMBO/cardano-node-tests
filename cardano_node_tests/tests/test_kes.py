@@ -321,9 +321,9 @@ class TestKES:
             _save_all_period_info(temp_template=f"{temp_template}_{this_epoch}_before_refresh")
 
             # Check that the expired pool is not minting any blocks
-            assert (
-                not is_minting
-            ), f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
+            assert not is_minting, (
+                f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
+            )
 
             # Refresh opcerts one more time on pools that are not supposed to expire
             refreshed_nodes_kes_period = _refresh_opcerts()
@@ -432,9 +432,9 @@ class TestKES:
                     _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
                     # Check that the pool is not minting any blocks
-                    assert (
-                        not is_minting
-                    ), f"The pool '{pool_name}' has minted blocks in epoch {this_epoch}"
+                    assert not is_minting, (
+                        f"The pool '{pool_name}' has minted blocks in epoch {this_epoch}"
+                    )
 
                     if invalid_opcert_epoch == 1:
                         # Check kes-period-info with operational certificate with
