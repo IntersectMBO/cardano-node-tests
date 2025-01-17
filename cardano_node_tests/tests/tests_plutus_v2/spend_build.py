@@ -164,9 +164,9 @@ def _build_fund_script(
             else:
                 expected_datum = plutus_op.datum_value
 
-            assert (
-                script_utxos[0].inline_datum == expected_datum
-            ), "The inline datum returned by 'query utxo' is different than the expected"
+            assert script_utxos[0].inline_datum == expected_datum, (
+                "The inline datum returned by 'query utxo' is different than the expected"
+            )
 
     # Check "transaction view"
     tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)

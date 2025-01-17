@@ -134,9 +134,9 @@ class TestUpdateBuiltIns:
                 approve_cc=True,
             )
 
-            assert (
-                cluster.g_query.get_epoch() == prop_epoch
-            ), "Epoch changed and it would affect other checks"
+            assert cluster.g_query.get_epoch() == prop_epoch, (
+                "Epoch changed and it would affect other checks"
+            )
 
             # Wait for ratification
             rat_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 1, padding_seconds=5)

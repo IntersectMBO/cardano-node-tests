@@ -560,9 +560,9 @@ def check_tx_phase_2_failure(
 
     # In case of a phase 2 failure, the collateral output becomes the output of the tx.
 
-    assert (
-        not response.collateral_outputs
-    ), "Collateral outputs are present in dbsync when the tx have a phase 2 failure"
+    assert not response.collateral_outputs, (
+        "Collateral outputs are present in dbsync when the tx have a phase 2 failure"
+    )
 
     db_txouts = {dbsync_check_tx.utxodata2txout(r) for r in response.txouts}
     tx_out = {
@@ -597,13 +597,13 @@ def check_pool_deregistration(
     db_pool_data = get_pool_data(pool_id)
     assert db_pool_data, f"No data returned from db-sync for pool {pool_id}"
 
-    assert (
-        db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch
-    ), f"Stake pool `{pool_id}` not retired"
+    assert db_pool_data.retire_announced_tx_id and db_pool_data.retiring_epoch, (
+        f"Stake pool `{pool_id}` not retired"
+    )
 
-    assert (
-        retiring_epoch == db_pool_data.retiring_epoch
-    ), f"Mismatch in epoch values: {retiring_epoch} vs {db_pool_data.retiring_epoch}"
+    assert retiring_epoch == db_pool_data.retiring_epoch, (
+        f"Mismatch in epoch values: {retiring_epoch} vs {db_pool_data.retiring_epoch}"
+    )
 
     return db_pool_data
 
@@ -722,9 +722,9 @@ def check_pool_off_chain_fetch_error(
 ) -> dbsync_queries.PoolOffChainFetchErrorDBRow:
     """Check expected error on `PoolOffChainFetchError`."""
     db_pool_off_chain_fetch_error = list(dbsync_queries.query_off_chain_pool_fetch_error(pool_id))
-    assert (
-        db_pool_off_chain_fetch_error
-    ), f"{NO_RESPONSE_STR} no off chain fetch error for pool {pool_id}"
+    assert db_pool_off_chain_fetch_error, (
+        f"{NO_RESPONSE_STR} no off chain fetch error for pool {pool_id}"
+    )
 
     fetch_error_str = db_pool_off_chain_fetch_error[0].fetch_error or ""
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
@@ -747,16 +747,16 @@ def check_plutus_cost(
     errors = []
     if redeemer_record.unit_steps != cost_record["executionUnits"]["steps"]:
         errors.append(
-            f'time: {redeemer_record.unit_steps} vs {cost_record["executionUnits"]["steps"]}'
+            f"time: {redeemer_record.unit_steps} vs {cost_record['executionUnits']['steps']}"
         )
     if redeemer_record.unit_mem != cost_record["executionUnits"]["memory"]:
         errors.append(
-            f'space: {redeemer_record.unit_mem} vs {cost_record["executionUnits"]["memory"]}'
+            f"space: {redeemer_record.unit_mem} vs {cost_record['executionUnits']['memory']}"
         )
     if redeemer_record.fee != cost_record["lovelaceCost"]:
-        errors.append(f'fixed cost: {redeemer_record.fee} vs {cost_record["lovelaceCost"]}')
+        errors.append(f"fixed cost: {redeemer_record.fee} vs {cost_record['lovelaceCost']}")
     if redeemer_record.script_hash != cost_record["scriptHash"]:
-        errors.append(f'script hash: {redeemer_record.script_hash} vs {cost_record["scriptHash"]}')
+        errors.append(f"script hash: {redeemer_record.script_hash} vs {cost_record['scriptHash']}")
 
     if errors:
         raise AssertionError("\n".join(errors))
@@ -986,9 +986,9 @@ def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
 
     failures = []
     rewards_rest = list(dbsync_queries.query_address_reward_rest(stake_address))
-    assert refunds_num == len(
-        rewards_rest
-    ), f"Expected {refunds_num} refunds, got: {len(rewards_rest)}"
+    assert refunds_num == len(rewards_rest), (
+        f"Expected {refunds_num} refunds, got: {len(rewards_rest)}"
+    )
     for reward in rewards_rest:
         if reward.type != "proposal_refund":
             failures.append(f"Expected proposal refund, got: {reward.type}")
@@ -1015,7 +1015,7 @@ def check_conway_gov_action_proposal_description(
     db_gov_prop_desc = gov_action.description["contents"][1]
 
     if db_gov_prop_desc != update_proposal:
-        msg = f"Comparison {db_gov_prop_desc} failed in db-sync:\n" f"Expected {update_proposal}"
+        msg = f"Comparison {db_gov_prop_desc} failed in db-sync:\nExpected {update_proposal}"
         raise AssertionError(msg)
     return gov_action
 
@@ -1057,9 +1057,9 @@ def check_committee_member_registration(
     cc_member_data = get_committee_member(cold_key=cc_member_cold_key)
 
     assert cc_member_data, "No data returned from db-sync"
-    assert (
-        cc_member_data.cold_key == cc_member_cold_key
-    ), "CC Member not present in registration table in db-sync"
+    assert cc_member_data.cold_key == cc_member_cold_key, (
+        "CC Member not present in registration table in db-sync"
+    )
 
     return cc_member_data
 
@@ -1096,9 +1096,9 @@ def check_committee_member_deregistration(
     member_key = f"keyHash-{cc_member_cold_key}"
 
     assert cc_member_data, f"No data returned from db-sync for CC Member {member_key}"
-    assert (
-        cc_member_cold_key == cc_member_data.cold_key
-    ), "CC Member not present in deregistration table in db-sync"
+    assert cc_member_cold_key == cc_member_data.cold_key, (
+        "CC Member not present in deregistration table in db-sync"
+    )
 
     return cc_member_data
 
@@ -1135,12 +1135,12 @@ def check_drep_registration(
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=drep.deposit)
 
     assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} registration"
-    assert (
-        drep_state[0][0]["keyHash"] == drep_data.hash_hex
-    ), f"DRep {drep.drep_id} not present in registration table in db-sync"
-    assert (
-        drep_state[0][1]["deposit"] == drep_data.deposit
-    ), f"Wrong deposit value for registered DRep {drep.drep_id} in db-sync"
+    assert drep_state[0][0]["keyHash"] == drep_data.hash_hex, (
+        f"DRep {drep.drep_id} not present in registration table in db-sync"
+    )
+    assert drep_state[0][1]["deposit"] == drep_data.deposit, (
+        f"Wrong deposit value for registered DRep {drep.drep_id} in db-sync"
+    )
 
     return drep_data
 
@@ -1155,12 +1155,12 @@ def check_drep_deregistration(
     drep_data = get_drep(drep_hash=drep.drep_id, drep_deposit=-drep.deposit)
 
     assert drep_data, f"No data returned from db-sync for DRep {drep.drep_id} deregistration"
-    assert (
-        drep.drep_id == drep_data.hash_hex
-    ), f"Deregistered DRep {drep.drep_id} not present in registration table in db-sync"
-    assert (
-        drep.deposit == -drep_data.deposit
-    ), f"Wrong deposit value for deregistered DRep {drep.drep_id} in db-sync"
+    assert drep.drep_id == drep_data.hash_hex, (
+        f"Deregistered DRep {drep.drep_id} not present in registration table in db-sync"
+    )
+    assert drep.deposit == -drep_data.deposit, (
+        f"Wrong deposit value for deregistered DRep {drep.drep_id} in db-sync"
+    )
 
     return drep_data
 
@@ -1208,7 +1208,7 @@ def check_committee_info(gov_state: dict, txid: str, action_ix: int = 0) -> None
     if not isinstance(quorum, dict):
         dbsync_threshold_float = dbsync_cm_info.quorum_numerator / dbsync_cm_info.quorum_denominator
         assert float(quorum) == dbsync_threshold_float, (
-            "Incorrect committee threshold in dbsync: " f"{dbsync_threshold_float} vs {quorum}"
+            f"Incorrect committee threshold in dbsync: {dbsync_threshold_float} vs {quorum}"
         )
     else:
         assert dbsync_cm_info.quorum_denominator == quorum["denominator"], (
@@ -1259,9 +1259,9 @@ def check_treasury_withdrawal(stake_address: str, transfer_amts: list[int], txha
         assert row.enacted_epoch, "Action not marked as enacted in db-sync"
         assert not row.dropped_epoch, "Action marked as dropped in db-sync"
         assert not row.expired_epoch, "Action marked as expired in db-sync"
-        assert (
-            row.enacted_epoch == row.ratified_epoch + 1
-        ), "Wrong relation between enacted and ratified epochs in db-sync"
+        assert row.enacted_epoch == row.ratified_epoch + 1, (
+            "Wrong relation between enacted and ratified epochs in db-sync"
+        )
 
 
 def check_reward_rest(stake_address: str, transfer_amts: list[int], type: str = "") -> None:
@@ -1283,9 +1283,9 @@ def check_reward_rest(stake_address: str, transfer_amts: list[int], type: str = 
 
     rem_amts = transfer_amts[:]
     for row in db_rewards:
-        assert (
-            row.address == stake_address
-        ), f"Wrong stake address in db-sync: {row.address} vs {stake_address}"
+        assert row.address == stake_address, (
+            f"Wrong stake address in db-sync: {row.address} vs {stake_address}"
+        )
 
         r_amount = int(row.amount)
         if r_amount not in rem_amts:
@@ -1315,9 +1315,9 @@ def check_off_chain_drep_registration(  # noqa: C901
         dbsync_queries.query_off_chain_vote_drep_data(voting_anchor_id=drep_data.voting_anchor_id)
     )
 
-    assert (
-        drep_off_chain_metadata
-    ), f"{NO_RESPONSE_STR} no off chain drep metadata for drep {drep_data.id}"
+    assert drep_off_chain_metadata, (
+        f"{NO_RESPONSE_STR} no off chain drep metadata for drep {drep_data.id}"
+    )
 
     db_metadata = drep_off_chain_metadata[0]
     expected_metadata = metadata["body"]
@@ -1532,7 +1532,7 @@ def check_delegation_vote(txhash: str, stake_address: str, drep: str) -> None:
     )
 
     assert delegation_vote_data.stake_address_hash_view == stake_address, (
-        "Incorrect delegation DRep: " f"{delegation_vote_data.drep_hash_view} vs {drep}"
+        f"Incorrect delegation DRep: {delegation_vote_data.drep_hash_view} vs {drep}"
     )
 
 
@@ -1545,9 +1545,9 @@ def check_off_chain_vote_fetch_error(voting_anchor_id: int) -> None:
         dbsync_queries.query_off_chain_vote_fetch_error(voting_anchor_id)
     )
 
-    assert (
-        db_off_chain_vote_fetch_error
-    ), f"{NO_RESPONSE_STR} no off chain vote fetch error for voting anchor id {voting_anchor_id}"
+    assert db_off_chain_vote_fetch_error, (
+        f"{NO_RESPONSE_STR} no off chain vote fetch error for voting anchor id {voting_anchor_id}"
+    )
 
     fetch_error_str = db_off_chain_vote_fetch_error[-1].fetch_error or ""
     assert "Hash mismatch when fetching metadata" in fetch_error_str

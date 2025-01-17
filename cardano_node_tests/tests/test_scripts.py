@@ -124,9 +124,9 @@ def multisig_tx(
         clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
         == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
     ), f"Incorrect balance for source address `{src_address}`"
-    assert (
-        clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
-    ), f"Incorrect balance for script address `{dst_address}`"
+    assert clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount, (
+        f"Incorrect balance for script address `{dst_address}`"
+    )
 
     common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
@@ -378,9 +378,9 @@ class TestBasic:
             )
 
             # Check expected fees
-            assert helpers.is_in_interval(
-                tx_raw_outputs[-1].fee, expected_fee, frac=0.15
-            ), "TX fee doesn't fit the expected interval"
+            assert helpers.is_in_interval(tx_raw_outputs[-1].fee, expected_fee, frac=0.15), (
+                "TX fee doesn't fit the expected interval"
+            )
 
         # Send funds from script address using multiple witnesses
         for i in range(5):
@@ -527,9 +527,9 @@ class TestBasic:
             == src_init_balance - amount - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
-        assert (
-            cluster.g_query.get_address_balance(script_address) == dst_init_balance + amount
-        ), f"Incorrect balance for destination address `{script_address}`"
+        assert cluster.g_query.get_address_balance(script_address) == dst_init_balance + amount, (
+            f"Incorrect balance for destination address `{script_address}`"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -607,9 +607,9 @@ class TestBasic:
             == src_init_balance - amount - tx_out_from.fee
         ), f"Incorrect balance for script address `{script_address}`"
 
-        assert (
-            cluster.g_query.get_address_balance(dst_addr.address) == dst_init_balance + amount
-        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+        assert cluster.g_query.get_address_balance(dst_addr.address) == dst_init_balance + amount, (
+            f"Incorrect balance for destination address `{dst_addr.address}`"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -661,9 +661,9 @@ class TestBasic:
 
         # Check expected fees
         expected_fee = 176_809
-        assert helpers.is_in_interval(
-            tx_out_from.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -723,9 +723,9 @@ class TestBasic:
 
         # Check expected fees
         expected_fee = 176_765
-        assert helpers.is_in_interval(
-            tx_out_from.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -1146,9 +1146,9 @@ class TestTimeLocking:
 
         # Check expected fees
         expected_fee = 280_693 if use_build_cmd else 323_857
-        assert helpers.is_in_interval(
-            tx_out_from.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -1220,9 +1220,9 @@ class TestTimeLocking:
 
         # Check expected fees
         expected_fee = 279_241 if use_build_cmd else 323_989
-        assert helpers.is_in_interval(
-            tx_out_from.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -1690,9 +1690,9 @@ class TestAuxiliaryScripts:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -1748,9 +1748,9 @@ class TestAuxiliaryScripts:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             db_metadata = tx_db_record._convert_metadata()
-            assert (
-                db_metadata == cbor_body_metadata.metadata
-            ), "Metadata in db-sync doesn't match the original metadata"
+            assert db_metadata == cbor_body_metadata.metadata, (
+                "Metadata in db-sync doesn't match the original metadata"
+            )
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -2015,9 +2015,9 @@ class TestIncrementalSigning:
             == src_init_balance - amount - tx_out_from.fee
         ), f"Incorrect balance for script address `{script_address}`"
 
-        assert (
-            cluster.g_query.get_address_balance(dst_addr.address) == dst_init_balance + amount
-        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+        assert cluster.g_query.get_address_balance(dst_addr.address) == dst_init_balance + amount, (
+            f"Incorrect balance for destination address `{dst_addr.address}`"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
@@ -2378,9 +2378,9 @@ class TestReferenceUTxO:
         )
 
         # Check that the reference UTxO was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), f"Reference script UTxO was NOT spent: '{reference_utxo}`"
+        assert not cluster.g_query.get_utxo(utxo=reference_utxo), (
+            f"Reference script UTxO was NOT spent: '{reference_utxo}`"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         # TODO: check reference script in db-sync (the `tx_out_spend`)

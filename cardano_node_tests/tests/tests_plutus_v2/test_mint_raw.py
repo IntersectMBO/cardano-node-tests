@@ -205,16 +205,16 @@ class TestMinting:
         token_utxo_a = clusterlib.filter_utxos(
             utxos=out_utxos, address=issuer_addr.address, coin=token_a
         )
-        assert (
-            token_utxo_a and token_utxo_a[0].amount == token_amount
-        ), "The 'token a' was not minted"
+        assert token_utxo_a and token_utxo_a[0].amount == token_amount, (
+            "The 'token a' was not minted"
+        )
 
         token_utxo_b = clusterlib.filter_utxos(
             utxos=out_utxos, address=issuer_addr.address, coin=token_b
         )
-        assert (
-            token_utxo_b and token_utxo_b[0].amount == token_amount
-        ), "The 'token b' was not minted"
+        assert token_utxo_b and token_utxo_b[0].amount == token_amount, (
+            "The 'token b' was not minted"
+        )
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
@@ -373,9 +373,9 @@ class TestMinting:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference UTxO was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference UTxO was spent"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke

@@ -538,12 +538,12 @@ class TestLocking:
         assert script_utxos1 and script_utxos2, "No script UTxOs"
         assert collateral_utxos1 and collateral_utxos2, "No collateral UTxOs"
 
-        assert (
-            script_utxos1[0].amount == amount + redeem_cost1.fee
-        ), f"Incorrect balance for script address `{script_utxos1[0].address}`"
-        assert (
-            script_utxos2[0].amount == amount + redeem_cost2.fee + spend_raw.FEE_REDEEM_TXSIZE
-        ), f"Incorrect balance for script address `{script_utxos2[0].address}`"
+        assert script_utxos1[0].amount == amount + redeem_cost1.fee, (
+            f"Incorrect balance for script address `{script_utxos1[0].address}`"
+        )
+        assert script_utxos2[0].amount == amount + redeem_cost2.fee + spend_raw.FEE_REDEEM_TXSIZE, (
+            f"Incorrect balance for script address `{script_utxos2[0].address}`"
+        )
 
         # Step 2: spend the "locked" UTxOs
 
@@ -611,9 +611,9 @@ class TestLocking:
             u for u in [*script_utxos1, *script_utxos2] if u.coin == clusterlib.DEFAULT_COIN
         ]
         for u in script_utxos_lovelace:
-            assert not cluster.g_query.get_utxo(
-                utxo=u, coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were NOT spent for `{u.address}`"
+            assert not cluster.g_query.get_utxo(utxo=u, coins=[clusterlib.DEFAULT_COIN]), (
+                f"Inputs were NOT spent for `{u.address}`"
+            )
 
         # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)

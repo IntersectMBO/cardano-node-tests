@@ -654,9 +654,9 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
         return_txouts_amount = clusterlib.calculate_utxos_balance(
             utxos=list(tx_output.return_collateral_txouts)
         )
-        assert (
-            returned_amount == return_txouts_amount
-        ), f"Incorrect amount for return collateral: {returned_amount} != {return_txouts_amount}"
+        assert returned_amount == return_txouts_amount, (
+            f"Incorrect amount for return collateral: {returned_amount} != {return_txouts_amount}"
+        )
 
         tx_return_addresses = {r.address for r in tx_output.return_collateral_txouts}
         return_utxos_addresses = {r.address for r in return_collateral_utxos}
@@ -679,9 +679,9 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
             tx_output.fee * protocol_params["collateralPercentage"] / 100
         ), "The collateral amount charged is not the expected amount"
 
-        assert (
-            tx_output.change_address == return_collateral_utxos[0].address
-        ), "Return collateral address doesn't match change address"
+        assert tx_output.change_address == return_collateral_utxos[0].address, (
+            "Return collateral address doesn't match change address"
+        )
 
         # The returned amount is the total of all collaterals minus fee
         expected_return_amount = int(tx_collaterals_amount - collateral_charged)
@@ -694,9 +694,9 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
         for coin in tx_tokens:
             assert clusterlib.calculate_utxos_balance(
                 utxos=return_collateral_utxos, coin=coin
-            ) == clusterlib.calculate_utxos_balance(
-                utxos=tx_collaterals, coin=coin
-            ), f"Incorrect return collateral token balance for token '{coin}'"
+            ) == clusterlib.calculate_utxos_balance(utxos=tx_collaterals, coin=coin), (
+                f"Incorrect return collateral token balance for token '{coin}'"
+            )
 
     dbsync_utils.check_tx_phase_2_failure(
         cluster_obj=cluster_obj,
@@ -712,7 +712,7 @@ def xfail_on_secp_error(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_
     # The SECP256k1 functions should work from PV8.
     # Before PV8 the SECP256k1 is blocked or limited by high cost model
     is_forbidden = (
-        "Forbidden builtin function: (builtin " f"verify{algorithm.capitalize()}Secp256k1Signature)"
+        f"Forbidden builtin function: (builtin verify{algorithm.capitalize()}Secp256k1Signature)"
         in err_msg
         or f"Builtin function Verify{algorithm.capitalize()}Secp256k1Signature "
         "is not available in language PlutusV2 at and protocol version 7.0"

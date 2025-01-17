@@ -512,9 +512,9 @@ class TestDynamicBlockProd:
         tip = cluster.g_query.get_tip()
         curr_epoch = int(tip["epoch"])
 
-        assert (
-            reconf_epoch == curr_epoch
-        ), "Failed to finish reconfiguration in single epoch, it would affect other checks"
+        assert reconf_epoch == curr_epoch, (
+            "Failed to finish reconfiguration in single epoch, it would affect other checks"
+        )
 
         epoch_end = cluster.time_to_epoch_end(tip)
         curr_time = time.time()
@@ -530,12 +530,12 @@ class TestDynamicBlockProd:
                 blocks_db[curr_epoch] = _save_state(curr_epoch)
 
                 if curr_epoch == reconf_epoch:
-                    assert (
-                        backup_pool_id in blocks_db[curr_epoch]
-                    ), "The original pool should have forged blocks before it became backup node."
-                    assert (
-                        producing_pool_id in blocks_db[curr_epoch]
-                    ), "Producing pool should forge blocks."
+                    assert backup_pool_id in blocks_db[curr_epoch], (
+                        "The original pool should have forged blocks before it became backup node."
+                    )
+                    assert producing_pool_id in blocks_db[curr_epoch], (
+                        "Producing pool should forge blocks."
+                    )
 
                 curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
                 epoch_end_timestamp = cluster.time_to_epoch_end() + time.time()
@@ -574,7 +574,7 @@ class TestDynamicBlockProd:
         curr_epoch = cluster.g_query.get_epoch()
         blocks_db[curr_epoch] = _save_state(curr_epoch)
 
-        assert (
-            backup_pool_id not in blocks_db[curr_epoch]
-        ), "The original pool should NOT forge blocks after it became backup node."
+        assert backup_pool_id not in blocks_db[curr_epoch], (
+            "The original pool should NOT forge blocks after it became backup node."
+        )
         assert producing_pool_id in blocks_db[curr_epoch], "Producing pool should forge blocks."

@@ -454,9 +454,9 @@ class TestConstitution:
             use_build_cmd=False,  # cardano-cli issue #650
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Epoch changed and it would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
 
         def _assert_anchor(anchor: dict):
             assert (

@@ -224,9 +224,9 @@ class TestTreasuryWithdrawals:
             deposit=actions_deposit_combined + stake_deposit_amt,
         )
 
-        assert cluster.g_query.get_stake_addr_info(
-            recv_stake_addr_rec.address
-        ).address, f"Stake address is not registered: {recv_stake_addr_rec.address}"
+        assert cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).address, (
+            f"Stake address is not registered: {recv_stake_addr_rec.address}"
+        )
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
@@ -329,9 +329,9 @@ class TestTreasuryWithdrawals:
                 name_template=f"{temp_template}_vote_{vote_id}_{_cast_vote_epoch}",
             )
 
-            assert (
-                cluster.g_query.get_epoch() == _cast_vote_epoch
-            ), "Epoch changed and it would affect other checks"
+            assert cluster.g_query.get_epoch() == _cast_vote_epoch, (
+                "Epoch changed and it would affect other checks"
+            )
 
             for action_ix in range(actions_num):
                 prop_vote = governance_utils.lookup_proposal(
@@ -374,9 +374,9 @@ class TestTreasuryWithdrawals:
             assert rat_action, f"Action with ix {action_ix} not found in ratified actions"
 
         reqc.cip038_06.start(url=helpers.get_vcs_link())
-        assert not rat_gov_state["nextRatifyState"][
-            "ratificationDelayed"
-        ], "Ratification is delayed unexpectedly"
+        assert not rat_gov_state["nextRatifyState"]["ratificationDelayed"], (
+            "Ratification is delayed unexpectedly"
+        )
         reqc.cip038_06.success()
 
         # Disapprove ratified action, the voting shouldn't have any effect
@@ -529,9 +529,9 @@ class TestTreasuryWithdrawals:
         )
         reqc.cli025.success()
 
-        assert cluster.g_query.get_stake_addr_info(
-            recv_stake_addr_rec.address
-        ).address, f"Stake address is not registered: {recv_stake_addr_rec.address}"
+        assert cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).address, (
+            f"Stake address is not registered: {recv_stake_addr_rec.address}"
+        )
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
@@ -627,9 +627,9 @@ class TestTreasuryWithdrawals:
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{vote_epoch}"
         )
 
-        assert (
-            cluster.g_query.get_epoch() == vote_epoch
-        ), "Epoch changed and it would affect other checks"
+        assert cluster.g_query.get_epoch() == vote_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
 
         reqc.cip069ex.start(url=helpers.get_vcs_link())
 
@@ -679,9 +679,9 @@ class TestTreasuryWithdrawals:
         expire_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_ug.stake.address
         ).reward_account_balance
-        assert (
-            expire_return_account_balance == init_return_account_balance
-        ), f"Incorrect return account balance {expire_return_account_balance}"
+        assert expire_return_account_balance == init_return_account_balance, (
+            f"Incorrect return account balance {expire_return_account_balance}"
+        )
 
         # Check that the proposals were removed and the actions deposits were returned
         rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
@@ -693,9 +693,9 @@ class TestTreasuryWithdrawals:
             pool_user_ug.stake.address
         ).reward_account_balance
 
-        assert (
-            rem_deposit_returned == init_return_account_balance + actions_deposit_combined
-        ), "Incorrect return account balance"
+        assert rem_deposit_returned == init_return_account_balance + actions_deposit_combined, (
+            "Incorrect return account balance"
+        )
 
         reqc.cip030ex.success()
 

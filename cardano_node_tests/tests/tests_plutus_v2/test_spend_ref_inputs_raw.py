@@ -138,9 +138,9 @@ class TestReadonlyReferenceInputs:
         )
 
         # Check that the reference input was not spent
-        assert cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was spent `{reference_input[0]}`"
+        assert cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was spent `{reference_input[0]}`"
+        )
 
         # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -241,9 +241,9 @@ class TestReadonlyReferenceInputs:
             return
 
         # Check that the reference input was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was NOT spent `{reference_input[0]}`"
+        assert not cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was NOT spent `{reference_input[0]}`"
+        )
 
         # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -288,9 +288,9 @@ class TestReadonlyReferenceInputs:
         )
 
         # Check that the reference input was not spent
-        assert cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was spent `{reference_input[0]}`"
+        assert cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was spent `{reference_input[0]}`"
+        )
 
         # Check expected balances
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)

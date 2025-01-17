@@ -282,9 +282,9 @@ class TestSetup:
             approve_spo=True,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Epoch changed and it would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
@@ -297,9 +297,9 @@ class TestSetup:
         )
         assert rat_action, "Action not found in ratified actions"
 
-        assert (
-            rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9
-        ), "Incorrect major version"
+        assert rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9, (
+            "Incorrect major version"
+        )
 
         # Check enactment
         enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
@@ -307,9 +307,9 @@ class TestSetup:
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
-        assert (
-            enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10
-        ), "Incorrect major version"
+        assert enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10, (
+            "Incorrect major version"
+        )
 
 
 class TestUpgrade:

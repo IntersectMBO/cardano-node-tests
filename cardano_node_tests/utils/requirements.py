@@ -189,8 +189,7 @@ def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C901
 
     if errors:
         err_msgs = [
-            f"Mapping error in group '{g}': "
-            f"the following dependencies are also top level keys: {d}"
+            f"Mapping error in group '{g}': the following dependencies are also top level keys: {d}"
             for g, d in errors.items()
         ]
         err_str = "\n".join(err_msgs)

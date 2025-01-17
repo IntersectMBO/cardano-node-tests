@@ -115,8 +115,7 @@ def check_kes_period_info_result(  # noqa: C901
     for metric, value in expected_metrics.items():
         if value != command_metrics[metric]:
             errors.append(
-                f"The metric '{metric}' in check '{check_id}': "
-                f"{value} vs {command_metrics[metric]}"
+                f"The metric '{metric}' in check '{check_id}': {value} vs {command_metrics[metric]}"
             )
 
         if prometheus_metrics and value != int(prometheus_metrics[metric]):

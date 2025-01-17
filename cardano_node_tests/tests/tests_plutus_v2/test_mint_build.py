@@ -212,9 +212,9 @@ class TestBuildMinting:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference UTxO was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference UTxO was spent"
+        )
 
         # Check expected fees
         expected_fees: dict = {
@@ -346,9 +346,9 @@ class TestBuildMinting:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference UTxO was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference UTxO was spent"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -492,9 +492,9 @@ class TestBuildMinting:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference UTxO was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference UTxO was spent"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -621,9 +621,9 @@ class TestBuildMinting:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference UTxO was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference UTxO was spent"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -764,6 +764,6 @@ class TestBuildMinting:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference UTxO was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference UTxO was spent"
+        )

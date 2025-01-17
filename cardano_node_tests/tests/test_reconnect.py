@@ -173,9 +173,9 @@ class TestNodeReconnect:
 
             # If node1 knows about Tx number 2, and/or node2 knows about Tx number 1,
             # the connection must have been established.
-            assert (
-                tx2_node1 or tx1_node2
-            ), f"Connection failed?\ntx1_node2: {tx2_node1}\ntx2_node1: {tx2_node1}"
+            assert tx2_node1 or tx1_node2, (
+                f"Connection failed?\ntx1_node2: {tx2_node1}\ntx2_node1: {tx2_node1}"
+            )
 
         with cluster_manager.respin_on_failure():
             for restart_no in range(1, 11):

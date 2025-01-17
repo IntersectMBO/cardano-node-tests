@@ -142,14 +142,14 @@ class TestReadonlyReferenceInputs:
         )
 
         # Check that the reference input was not spent
-        assert cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was spent `{reference_input[0]}`"
+        assert cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was spent `{reference_input[0]}`"
+        )
 
         expected_redeem_fee = 172_578
-        assert helpers.is_in_interval(
-            tx_output_redeem.fee, expected_redeem_fee, frac=0.15
-        ), "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(tx_output_redeem.fee, expected_redeem_fee, frac=0.15), (
+            "Expected fee doesn't match the actual fee"
+        )
 
         # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -254,9 +254,9 @@ class TestReadonlyReferenceInputs:
             return
 
         # Check that the input used also as reference was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was NOT spent `{reference_input[0]}`"
+        assert not cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was NOT spent `{reference_input[0]}`"
+        )
 
         # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
@@ -334,9 +334,9 @@ class TestReadonlyReferenceInputs:
         clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=txins)
 
         # Check that the reference input was not spent
-        assert cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was spent `{reference_input[0]}`"
+        assert cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was spent `{reference_input[0]}`"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -384,9 +384,9 @@ class TestReadonlyReferenceInputs:
         cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
         # Check that the reference input was not spent
-        assert cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was spent `{reference_input[0]}`"
+        assert cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was spent `{reference_input[0]}`"
+        )
 
         # Check expected balances
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
@@ -471,9 +471,9 @@ class TestNegativeReadonlyReferenceInputs:
         )
 
         # Check that the input used also as reference was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=reference_input[0]
-        ), f"The reference input was NOT spent `{reference_input[0]}`"
+        assert not cluster.g_query.get_utxo(utxo=reference_input[0]), (
+            f"The reference input was NOT spent `{reference_input[0]}`"
+        )
 
         #  Spend the "locked" UTxO
 
@@ -510,8 +510,7 @@ class TestNegativeReadonlyReferenceInputs:
         err_str = str(excinfo.value)
         assert (
             # TODO: in 1.35.3 and older - cardano-node issue #4012
-            "following tx input(s) were not present in the UTxO: \n"
-            f"{reference_input[0].utxo_hash}"
+            f"following tx input(s) were not present in the UTxO: \n{reference_input[0].utxo_hash}"
             in err_str
             or re.search(
                 "TranslationLogicMissingInput .*unTxId = SafeHash "

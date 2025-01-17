@@ -931,9 +931,9 @@ class TestStakePool:
             # Check that the stake addresses are no longer delegated
             for owner_rec in pool_owners:
                 stake_addr_info = cluster.g_query.get_stake_addr_info(owner_rec.stake.address)
-                assert (
-                    not stake_addr_info.delegation
-                ), f"Stake address is still delegated: {stake_addr_info}"
+                assert not stake_addr_info.delegation, (
+                    f"Stake address is still delegated: {stake_addr_info}"
+                )
 
             # Check that the pool deposit was returned to reward account
             assert (
@@ -1050,9 +1050,9 @@ class TestStakePool:
         # Check that the stake addresses are no longer delegated
         for owner_rec in pool_owners:
             stake_addr_info = cluster.g_query.get_stake_addr_info(owner_rec.stake.address)
-            assert (
-                not stake_addr_info.delegation
-            ), f"Stake address is still delegated: {stake_addr_info}"
+            assert not stake_addr_info.delegation, (
+                f"Stake address is still delegated: {stake_addr_info}"
+            )
 
         src_address = pool_owners[0].payment.address
         src_init_balance = cluster.g_query.get_address_balance(src_address)

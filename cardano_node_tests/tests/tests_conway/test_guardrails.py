@@ -813,7 +813,7 @@ def get_subtests() -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
         invalid_negative_max_tx_execution_units_memory_proposal = [
             clusterlib_utils.UpdateProposal(
                 arg="--max-tx-execution-units",
-                value=f"({random.randint(-2**32-1, -1)}," f"{random.randint(-2**32-1, -1)})",
+                value=f"({random.randint(-(2**32) - 1, -1)},{random.randint(-(2**32) - 1, -1)})",
                 name="maxTxExecutionUnits",
             ),
         ]
@@ -826,8 +826,8 @@ def get_subtests() -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
         invalid_upper_bound_max_tx_execution_units_proposal = [
             clusterlib_utils.UpdateProposal(
                 arg="--max-tx-execution-units",
-                value=f"({random.randint(max_tx_ex_units_steps_upper_bound+1, 2**63 - 1)},"
-                f"{random.randint(max_tx_ex_units_mem_upper_bound+1, 2**63 - 1)})",
+                value=f"({random.randint(max_tx_ex_units_steps_upper_bound + 1, 2**63 - 1)},"
+                f"{random.randint(max_tx_ex_units_mem_upper_bound + 1, 2**63 - 1)})",
                 name="maxTxExecutionUnits",
             ),
         ]
@@ -878,7 +878,7 @@ def get_subtests() -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
         invalid_negative_max_block_execution_units_memory_proposal = [
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-execution-units",
-                value=f"({random.randint(-2**32-1, -1)}," f"{random.randint(-2**32-1, -1)})",
+                value=f"({random.randint(-(2**32) - 1, -1)},{random.randint(-(2**32) - 1, -1)})",
                 name="maxBlockExecutionUnits",
             ),
         ]
@@ -892,8 +892,8 @@ def get_subtests() -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
         invalid_upper_bound_max_block_execution_units_proposal = [
             clusterlib_utils.UpdateProposal(
                 arg="--max-block-execution-units",
-                value=f"({random.randint(max_block_ex_units_steps_upper_bound+1, 2**63 - 1)},"
-                f"{random.randint(max_block_ex_units_mem_upper_bound+1, 2**63 - 1)})",
+                value=f"({random.randint(max_block_ex_units_steps_upper_bound + 1, 2**63 - 1)},"
+                f"{random.randint(max_block_ex_units_mem_upper_bound + 1, 2**63 - 1)})",
                 name="maxBlockExecutionUnits",
             ),
         ]

@@ -315,9 +315,9 @@ class TestPoolSaturation:
                 )
             )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         LOGGER.info("Checking rewards for 10 epochs.")
         try:
@@ -398,9 +398,9 @@ class TestPoolSaturation:
 
                     # Check that pool owner received rewards
                     if this_epoch >= 5:
-                        assert (
-                            owner_reward_epoch
-                        ), f"New reward was not received by pool owner of pool '{pool_rec.id}'"
+                        assert owner_reward_epoch, (
+                            f"New reward was not received by pool owner of pool '{pool_rec.id}'"
+                        )
 
                 # Fund the delegated addresses - saturate all pools
                 if this_epoch == init_epoch + epoch_saturate:
@@ -419,9 +419,9 @@ class TestPoolSaturation:
                 # Fund the address delegated to "pool2" to oversaturate the pool.
                 # New stake amount will be current (saturated) stake * 2.
                 if this_epoch == init_epoch + epoch_oversaturate:
-                    assert (
-                        pool_records[2].saturation_amounts[this_epoch] > 0
-                    ), "Pool is already saturated"
+                    assert pool_records[2].saturation_amounts[this_epoch] > 0, (
+                        "Pool is already saturated"
+                    )
 
                     stake_snapshot = cluster.g_query.get_stake_snapshot(
                         stake_pool_ids=[pool_records[2].id]
@@ -488,9 +488,9 @@ class TestPoolSaturation:
                         deleg_payment_balance = cluster.g_query.get_address_balance(
                             return_addr.address
                         )
-                        assert (
-                            deleg_payment_balance <= initial_balance
-                        ), "Unexpected funds in payment address '{return_addr}'"
+                        assert deleg_payment_balance <= initial_balance, (
+                            "Unexpected funds in payment address '{return_addr}'"
+                        )
 
                 tip = cluster.g_query.get_tip()
                 if int(tip["epoch"]) != this_epoch:

@@ -117,9 +117,9 @@ class TestRegisterAddr:
                 tx_files=tx_files_reg,
             )
 
-        assert cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is NOT registered: {user_registered.stake.address}"
+        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is NOT registered: {user_registered.stake.address}"
+        )
 
         # Create stake address deregistration cert
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
@@ -164,9 +164,9 @@ class TestRegisterAddr:
                 tx_files=tx_files_dereg,
             )
 
-        assert not cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is registered: {user_registered.stake.address}"
+        assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is registered: {user_registered.stake.address}"
+        )
 
         # Check that the balance for source address was correctly updated
         assert (
@@ -264,9 +264,9 @@ class TestRegisterAddr:
             )
 
         # Check that the stake address is not registered
-        assert not cluster.g_query.get_stake_addr_info(
-            user_registered.stake.address
-        ).address, f"Stake address is registered: {user_registered.stake.address}"
+        assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
+            f"Stake address is registered: {user_registered.stake.address}"
+        )
 
         # Check that the balance for source address was correctly updated and that key deposit
         # was not needed

@@ -60,9 +60,9 @@ def _fund_issuer(
     )
 
     issuer_balance = cluster_obj.g_query.get_address_balance(issuer_addr.address)
-    assert (
-        issuer_balance == issuer_init_balance + amount + minting_cost.collateral
-    ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+    assert issuer_balance == issuer_init_balance + amount + minting_cost.collateral, (
+        f"Incorrect balance for token issuer address `{issuer_addr.address}`"
+    )
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=tx_output.txouts)

@@ -146,14 +146,14 @@ class TestLockingV2:
         ), f"Incorrect balance for destination address `{payment_addrs[1].address}`"
 
         # Check that script address UTxO was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=script_utxos[0]
-        ), f"Script address UTxO was NOT spent `{script_utxos[0]}`"
+        assert not cluster.g_query.get_utxo(utxo=script_utxos[0]), (
+            f"Script address UTxO was NOT spent `{script_utxos[0]}`"
+        )
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference input was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference input was spent"
+        )
 
         # Check expected fees
         expected_fee_redeem = 176_024 if use_reference_script else 179_764
@@ -236,9 +236,9 @@ class TestLockingV2:
         db_datum_hash = cluster.g_transaction.get_hash_script_data(
             script_data_cbor_file=db_cbor_file
         )
-        assert (
-            db_datum_hash == datum_hash
-        ), "Datum hash of bytes in db-sync doesn't correspond to the original datum hash"
+        assert db_datum_hash == datum_hash, (
+            "Datum hash of bytes in db-sync doesn't correspond to the original datum hash"
+        )
 
         # Check that datum bytes in db-sync corresponds to the original datum
         with open(plutus_common.DATUM_FINITE_TYPED_CBOR, "rb") as in_fp:

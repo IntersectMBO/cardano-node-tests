@@ -131,9 +131,9 @@ def _check_collateral_inputs(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
 
     collateral_strings = {f"{c.utxo_hash}#{c.utxo_ix}" for c in collateral_ins}
 
-    assert (
-        collateral_strings == view_collateral
-    ), f"Unexpected collateral inputs: {collateral_strings} vs {view_collateral}"
+    assert collateral_strings == view_collateral, (
+        f"Unexpected collateral inputs: {collateral_strings} vs {view_collateral}"
+    )
 
 
 def _check_reference_inputs(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> None:
@@ -157,9 +157,9 @@ def _check_reference_inputs(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: di
 
     reference_strings = {f"{r.utxo_hash}#{r.utxo_ix}" for r in reference_txins_combined}
 
-    assert (
-        reference_strings == view_reference_inputs
-    ), f"Unexpected reference inputs: {reference_strings} vs {view_reference_inputs}"
+    assert reference_strings == view_reference_inputs, (
+        f"Unexpected reference inputs: {reference_strings} vs {view_reference_inputs}"
+    )
 
 
 def _check_inline_datums(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> None:
@@ -190,9 +190,9 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
         return
 
     if tx_raw_output.total_collateral_amount:
-        assert tx_raw_output.total_collateral_amount == tx_loaded.get(
-            "total collateral"
-        ), "Return collateral total collateral mismatch"
+        assert tx_raw_output.total_collateral_amount == tx_loaded.get("total collateral"), (
+            "Return collateral total collateral mismatch"
+        )
 
     # Automatic return collateral works only with `transaction build`
     if not (tx_raw_output.return_collateral_txouts or tx_raw_output.change_address):
@@ -206,9 +206,9 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     return_collateral = tx_loaded.get("return collateral") or {}
     assert return_collateral, "No return collateral in tx view"
 
-    assert "lovelace" in return_collateral.get(
-        "amount", {}
-    ), "Return collateral doesn't have lovelace amount"
+    assert "lovelace" in return_collateral.get("amount", {}), (
+        "Return collateral doesn't have lovelace amount"
+    )
 
     if tx_raw_output.return_collateral_txouts:
         assert tx_raw_output.return_collateral_txouts[0].amount == return_collateral.get(
@@ -218,9 +218,9 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     else:
         return_collateral_address = tx_raw_output.change_address
 
-    assert return_collateral_address == return_collateral.get(
-        "address"
-    ), "Return collateral address mismatch"
+    assert return_collateral_address == return_collateral.get("address"), (
+        "Return collateral address mismatch"
+    )
 
 
 def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path) -> dict[str, tp.Any]:

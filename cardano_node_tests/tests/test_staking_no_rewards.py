@@ -84,9 +84,9 @@ class TestNoRewards:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
@@ -120,9 +120,9 @@ class TestNoRewards:
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
-        assert (
-            cluster.g_query.get_epoch() == update_epoch
-        ), "Update took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == update_epoch, (
+            "Update took longer than expected and would affect other checks"
+        )
 
         no_rewards_epoch = cluster.wait_for_epoch(epoch_no=update_epoch + 4, padding_seconds=30)
 
@@ -199,9 +199,9 @@ class TestNoRewards:
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
         owner_payment_balance = cluster.g_query.get_address_balance(pool_owner.payment.address)
-        assert (
-            owner_payment_balance >= pool_data.pool_pledge
-        ), f"Pledge is not met for pool '{pool_name}'!"
+        assert owner_payment_balance >= pool_data.pool_pledge, (
+            f"Pledge is not met for pool '{pool_name}'!"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
@@ -248,9 +248,9 @@ class TestNoRewards:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         withdrawal_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
@@ -413,9 +413,9 @@ class TestNoRewards:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         dereg_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
@@ -460,9 +460,9 @@ class TestNoRewards:
             ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
             # Check that the stake address is no longer delegated
-            assert not cluster.g_query.get_stake_addr_info(
-                pool_owner.stake.address
-            ), "Stake address still delegated"
+            assert not cluster.g_query.get_stake_addr_info(pool_owner.stake.address), (
+                "Stake address still delegated"
+            )
 
             no_rewards_epoch = cluster.wait_for_epoch(epoch_no=dereg_epoch + 4, padding_seconds=30)
 
@@ -532,9 +532,9 @@ class TestNoRewards:
 
             # Check that the stake address was delegated
             stake_addr_info = cluster.g_query.get_stake_addr_info(pool_owner.stake.address)
-            assert (
-                stake_addr_info.delegation
-            ), f"Stake address was not delegated yet: {stake_addr_info}"
+            assert stake_addr_info.delegation, (
+                f"Stake address was not delegated yet: {stake_addr_info}"
+            )
 
             assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
@@ -559,9 +559,9 @@ class TestNoRewards:
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
         owner_payment_balance = cluster.g_query.get_address_balance(pool_owner.payment.address)
-        assert (
-            owner_payment_balance >= pool_data.pool_pledge
-        ), f"Pledge is not met for pool '{pool_name}'!"
+        assert owner_payment_balance >= pool_data.pool_pledge, (
+            f"Pledge is not met for pool '{pool_name}'!"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
@@ -609,9 +609,9 @@ class TestNoRewards:
             pool_id=pool_id,
         )
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         LOGGER.info("Waiting 4 epochs for first reward.")
         dereg_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
@@ -664,9 +664,9 @@ class TestNoRewards:
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             # Check that the reward address is no longer delegated
-            assert not cluster.g_query.get_stake_addr_info(
-                pool_reward.stake.address
-            ), "Stake address still delegated"
+            assert not cluster.g_query.get_stake_addr_info(pool_reward.stake.address), (
+                "Stake address still delegated"
+            )
 
             orig_user_reward = cluster.g_query.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
@@ -746,9 +746,9 @@ class TestNoRewards:
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
         owner_payment_balance = cluster.g_query.get_address_balance(pool_reward.payment.address)
-        assert (
-            owner_payment_balance >= pool_data.pool_pledge
-        ), f"Pledge is not met for pool '{pool_name}'!"
+        assert owner_payment_balance >= pool_data.pool_pledge, (
+            f"Pledge is not met for pool '{pool_name}'!"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
@@ -842,9 +842,9 @@ class TestNoRewards:
             ), f"Incorrect balance for source address `{pool_reward.payment.address}`"
 
             # Check that the reward address is no longer delegated
-            assert not cluster.g_query.get_stake_addr_info(
-                pool_reward.stake.address
-            ), "Stake address still delegated"
+            assert not cluster.g_query.get_stake_addr_info(pool_reward.stake.address), (
+                "Stake address still delegated"
+            )
 
             dereg_pool_epoch = cluster.wait_for_epoch(
                 epoch_no=dereg_reward_epoch + 3, padding_seconds=5
@@ -893,9 +893,9 @@ class TestNoRewards:
             cluster.wait_for_epoch(epoch_no=dereg_pool_epoch + 1, padding_seconds=5)
 
             # Check that the pool was deregistered
-            assert not cluster.g_query.get_pool_state(
-                stake_pool_id=pool_id
-            ).pool_params, f"The pool {pool_id} was not deregistered"
+            assert not cluster.g_query.get_pool_state(stake_pool_id=pool_id).pool_params, (
+                f"The pool {pool_id} was not deregistered"
+            )
 
             # Check command kes-period-info case: de-register pool
             kes_period_info = cluster.g_query.get_kes_period_info(pool_opcert_file)
@@ -1001,9 +1001,9 @@ class TestNoRewards:
 
             # Check that the stake address was delegated
             stake_addr_info = cluster.g_query.get_stake_addr_info(pool_owner.stake.address)
-            assert (
-                stake_addr_info.delegation
-            ), f"Stake address was not delegated yet: {stake_addr_info}"
+            assert stake_addr_info.delegation, (
+                f"Stake address was not delegated yet: {stake_addr_info}"
+            )
 
             assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
 
@@ -1017,8 +1017,8 @@ class TestNoRewards:
             cluster_obj=cluster, pool_name=pool_name, pool_id=pool_id
         )
         owner_payment_balance = cluster.g_query.get_address_balance(pool_owner.payment.address)
-        assert (
-            owner_payment_balance >= pool_data.pool_pledge
-        ), f"Pledge is not met for pool '{pool_name}'!"
+        assert owner_payment_balance >= pool_data.pool_pledge, (
+            f"Pledge is not met for pool '{pool_name}'!"
+        )
 
         kes.finish_on_errors(errors=kes_period_info_errors_list)

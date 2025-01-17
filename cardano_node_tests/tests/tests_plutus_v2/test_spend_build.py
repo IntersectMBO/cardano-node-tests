@@ -169,14 +169,14 @@ class TestBuildLocking:
         )
 
         # Check that script address UTxO was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=script_utxos[0]
-        ), f"Script address UTxO was NOT spent `{script_utxos}`"
+        assert not cluster.g_query.get_utxo(utxo=script_utxos[0]), (
+            f"Script address UTxO was NOT spent `{script_utxos}`"
+        )
 
         # Check that reference UTxO was NOT spent
-        assert not reference_utxo or cluster.g_query.get_utxo(
-            utxo=reference_utxo
-        ), "Reference input was spent"
+        assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
+            "Reference input was spent"
+        )
 
         # Check expected fees
         if use_reference_script:

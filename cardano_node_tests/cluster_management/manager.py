@@ -145,8 +145,7 @@ class ClusterManager:
 
         if configuration.DEV_CLUSTER_RUNNING:
             LOGGER.warning(
-                "Ignoring request to save all clusters artifacts as "
-                "'DEV_CLUSTER_RUNNING' is set."
+                "Ignoring request to save all clusters artifacts as 'DEV_CLUSTER_RUNNING' is set."
             )
             return
 

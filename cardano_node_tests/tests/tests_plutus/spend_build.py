@@ -97,16 +97,16 @@ def _build_fund_script(
     script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
     assert script_utxos, "No script UTxO"
 
-    assert (
-        clusterlib.calculate_utxos_balance(utxos=script_utxos) == script_fund
-    ), f"Incorrect balance for script address `{script_address}`"
+    assert clusterlib.calculate_utxos_balance(utxos=script_utxos) == script_fund, (
+        f"Incorrect balance for script address `{script_address}`"
+    )
 
     collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
     assert collateral_utxos, "No collateral UTxO"
 
-    assert (
-        clusterlib.calculate_utxos_balance(utxos=collateral_utxos) == redeem_cost.collateral
-    ), f"Incorrect balance for collateral address `{dst_addr.address}`"
+    assert clusterlib.calculate_utxos_balance(utxos=collateral_utxos) == redeem_cost.collateral, (
+        f"Incorrect balance for collateral address `{dst_addr.address}`"
+    )
 
     for token in stokens:
         assert (
@@ -276,9 +276,9 @@ def _build_spend_locked_txin(  # noqa: C901
         ), f"Collateral was NOT spent from `{dst_addr.address}`"
 
         for u in script_utxos_lovelace:
-            assert cluster_obj.g_query.get_utxo(
-                utxo=u, coins=[clusterlib.DEFAULT_COIN]
-            ), f"Inputs were unexpectedly spent for `{u.address}`"
+            assert cluster_obj.g_query.get_utxo(utxo=u, coins=[clusterlib.DEFAULT_COIN]), (
+                f"Inputs were unexpectedly spent for `{u.address}`"
+            )
 
         return "", tx_output, []
 
@@ -300,21 +300,21 @@ def _build_spend_locked_txin(  # noqa: C901
         tx_file=tx_signed, txins=[t.txins[0] for t in tx_output.script_txins if t.txins]
     )
 
-    assert (
-        cluster_obj.g_query.get_address_balance(dst_addr.address) == dst_init_balance + amount
-    ), f"Incorrect balance for destination address `{dst_addr.address}`"
+    assert cluster_obj.g_query.get_address_balance(dst_addr.address) == dst_init_balance + amount, (
+        f"Incorrect balance for destination address `{dst_addr.address}`"
+    )
 
     for u in script_utxos_lovelace:
-        assert not cluster_obj.g_query.get_utxo(
-            utxo=u, coins=[clusterlib.DEFAULT_COIN]
-        ), f"Inputs were NOT spent for `{u.address}`"
+        assert not cluster_obj.g_query.get_utxo(utxo=u, coins=[clusterlib.DEFAULT_COIN]), (
+            f"Inputs were NOT spent for `{u.address}`"
+        )
 
     for token in spent_tokens:
         script_utxos_token = [u for u in script_utxos if u.coin == token.coin]
         for u in script_utxos_token:
-            assert not cluster_obj.g_query.get_utxo(
-                utxo=u, coins=[token.coin]
-            ), f"Token inputs were NOT spent for `{u.address}`"
+            assert not cluster_obj.g_query.get_utxo(utxo=u, coins=[token.coin]), (
+                f"Token inputs were NOT spent for `{u.address}`"
+            )
 
     # Check tx view
     tx_view.check_tx_view(cluster_obj=cluster_obj, tx_raw_output=tx_output)

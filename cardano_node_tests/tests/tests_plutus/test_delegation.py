@@ -804,9 +804,9 @@ class TestDelegateAddr:
                 issues.cli_650.finish_test()
             raise
 
-        assert (
-            cluster.g_query.get_epoch() == init_epoch
-        ), "Delegation took longer than expected and would affect other checks"
+        assert cluster.g_query.get_epoch() == init_epoch, (
+            "Delegation took longer than expected and would affect other checks"
+        )
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_delegation_out)
         delegation.db_check_delegation(
@@ -1020,9 +1020,9 @@ class TestDelegateAddr:
                 use_build_cmd=use_build_cmd,
             )
 
-            assert (
-                cluster.g_query.get_epoch() == init_epoch
-            ), "Delegation took longer than expected and would affect other checks"
+            assert cluster.g_query.get_epoch() == init_epoch, (
+                "Delegation took longer than expected and would affect other checks"
+            )
 
             delegated = True
         finally:

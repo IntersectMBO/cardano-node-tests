@@ -179,9 +179,9 @@ class TestFee:
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
-        ), f"Incorrect balance for destination address `{dst_address}`"
+        assert clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount, (
+            f"Incorrect balance for destination address `{dst_address}`"
+        )
 
 
 class TestExpectedFees:
@@ -294,9 +294,9 @@ class TestExpectedFees:
         tx_fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=tx_name, txins=txins, txouts=txouts, tx_files=tx_files
         )
-        assert helpers.is_in_interval(
-            tx_fee, expected_fee
-        ), "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(tx_fee, expected_fee), (
+            "Expected fee doesn't match the actual fee"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", [(1, 197_753), (3, 234_009), (5, 270_265), (10, 340_000)])
@@ -350,9 +350,9 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(
-            tx_fee, expected_fee
-        ), "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(tx_fee, expected_fee), (
+            "Expected fee doesn't match the actual fee"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", POOL_DEREG_PARAMS)
@@ -418,9 +418,9 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(
-            tx_fee, expected_fee
-        ), "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(tx_fee, expected_fee), (
+            "Expected fee doesn't match the actual fee"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 290_000)])
@@ -459,9 +459,9 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(
-            tx_fee, expected_fee
-        ), "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(tx_fee, expected_fee), (
+            "Expected fee doesn't match the actual fee"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("addr_fee", [(1, 178_965), (3, 206_949), (5, 234_933), (10, 290_000)])
@@ -500,9 +500,9 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(
-            tx_fee, expected_fee
-        ), "Expected fee doesn't match the actual fee"
+        assert helpers.is_in_interval(tx_fee, expected_fee), (
+            "Expected fee doesn't match the actual fee"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(

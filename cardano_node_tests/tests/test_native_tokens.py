@@ -230,9 +230,9 @@ class TestMinting:
         # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
@@ -329,9 +329,9 @@ class TestMinting:
         # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -423,9 +423,9 @@ class TestMinting:
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
         for t in tokens_mint:
             utxo_mint = clusterlib.filter_utxos(utxos=mint_utxos, coin=t.token)
-            assert (
-                utxo_mint and utxo_mint[0].amount == amount
-            ), f"The {t.token} token was not minted"
+            assert utxo_mint and utxo_mint[0].amount == amount, (
+                f"The {t.token} token was not minted"
+            )
 
         # Token burning
         tokens_burn = [dataclasses.replace(t, amount=-amount) for t in tokens_mint]
@@ -445,9 +445,9 @@ class TestMinting:
         # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
@@ -562,9 +562,9 @@ class TestMinting:
         assert not token2_burn_utxo, "The token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(
-            tx_out_mint_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_out_mint_burn.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint_burn)
@@ -685,9 +685,9 @@ class TestMinting:
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
 
         # Check expected fees
-        assert helpers.is_in_interval(
-            tx_output.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -829,9 +829,9 @@ class TestMinting:
 
         # Check expected fees
         mint_fee = tx_out_mint.fee
-        assert helpers.is_in_interval(
-            mint_fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(mint_fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_out_mint)
@@ -979,9 +979,9 @@ class TestMinting:
 
         # Check expected fees
         mint_fee = tx_out_mint.fee
-        assert helpers.is_in_interval(
-            mint_fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(mint_fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -1061,9 +1061,9 @@ class TestMinting:
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn1, coins=[token])
-        assert (
-            token_utxo and token_utxo[0].amount == amount - burn_amount
-        ), "The token was not burned"
+        assert token_utxo and token_utxo[0].amount == amount - burn_amount, (
+            "The token was not burned"
+        )
 
         # Burn the rest of tokens
         final_burn = dataclasses.replace(token_mint, amount=-10)
@@ -1077,9 +1077,9 @@ class TestMinting:
         )
 
         # Check expected fee
-        assert helpers.is_in_interval(
-            tx_out_mint.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_out_mint.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn1)
@@ -1145,9 +1145,9 @@ class TestMinting:
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
-        assert (
-            token_utxo and token_utxo[0].amount == amount
-        ), "The token was not minted or expected chars are not present in the asset name"
+        assert token_utxo and token_utxo[0].amount == amount, (
+            "The token was not minted or expected chars are not present in the asset name"
+        )
 
         # Token burning
         token_burn = dataclasses.replace(token_mint, amount=-amount)
@@ -1165,9 +1165,9 @@ class TestMinting:
         # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -1262,9 +1262,9 @@ class TestPolicies:
         # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -1356,9 +1356,9 @@ class TestPolicies:
         # Check expected fees
         assert helpers.is_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(
-            tx_out_burn.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_mint)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
@@ -2420,9 +2420,9 @@ class TestCLITxOutSyntax:
         assert token_utxo and token_utxo[0].amount == 1_000, "The token was not minted"
 
         # Check expected fees
-        assert helpers.is_in_interval(
-            tx_raw_output.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_raw_output.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -2584,17 +2584,17 @@ class TestReferenceUTxO:
         cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_raw_output.txins)
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output, coins=[token])
-        assert (
-            token_utxo and token_utxo[0].amount == amount - burn_amount
-        ), "The token was not minted / burned"
+        assert token_utxo and token_utxo[0].amount == amount - burn_amount, (
+            "The token was not minted / burned"
+        )
 
         # Check that reference UTxO was NOT spent
         assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"
 
         # Check expected fees
-        assert helpers.is_in_interval(
-            tx_raw_output.fee, expected_fee, frac=0.15
-        ), "TX fee doesn't fit the expected interval"
+        assert helpers.is_in_interval(tx_raw_output.fee, expected_fee, frac=0.15), (
+            "TX fee doesn't fit the expected interval"
+        )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         # TODO: check reference script in db-sync (the `tx_raw_output`)

@@ -260,9 +260,9 @@ class TestDBSync:
 
         # TODO: `PlutusScriptV1` was replaced with `PlutusV1` in node version 8.0.0
         pp_cost_model_v1 = pp_cost_models.get("PlutusV1") or pp_cost_models.get("PlutusScriptV1")
-        assert (
-            pp_cost_model_v1 == db_cost_models["PlutusV1"]
-        ), "PlutusV1 cost model is not the expected one"
+        assert pp_cost_model_v1 == db_cost_models["PlutusV1"], (
+            "PlutusV1 cost model is not the expected one"
+        )
 
         pp_cost_model_v2 = pp_cost_models.get("PlutusV2") or pp_cost_models.get("PlutusScriptV2")
         # Cost models in Conway can have variable length. If the cost model is shorter than the max
@@ -272,9 +272,9 @@ class TestDBSync:
             last_10_unique = set(pp_cost_model_v2[-10:])
             if len(last_10_unique) == 1 and next(iter(last_10_unique)) == 9223372036854775807:
                 pp_cost_model_v2 = pp_cost_model_v2[:-10]
-        assert (
-            pp_cost_model_v2 == db_cost_models["PlutusV2"]
-        ), "PlutusV2 cost model is not the expected one"
+        assert pp_cost_model_v2 == db_cost_models["PlutusV2"], (
+            "PlutusV2 cost model is not the expected one"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -373,10 +373,10 @@ class TestDBSync:
         if blocks_data_blk_count == epoch_data_blk_count + 1:
             issues.dbsync_1363.finish_test()
 
-        assert (
-            blocks_data_blk_count == epoch_data_blk_count
-        ), f"Blocks count don't match between tables for epoch {epoch}"
+        assert blocks_data_blk_count == epoch_data_blk_count, (
+            f"Blocks count don't match between tables for epoch {epoch}"
+        )
 
-        assert (
-            blocks_data_tx_count == epoch_data_tx_count
-        ), f"Transactions count don't match between tables for epoch {epoch}"
+        assert blocks_data_tx_count == epoch_data_tx_count, (
+            f"Transactions count don't match between tables for epoch {epoch}"
+        )

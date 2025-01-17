@@ -180,9 +180,9 @@ class TestCollateralOutput:
 
         # Check that the right amount of collateral was spent
         dst_balance = cluster.g_query.get_address_balance(dst_addr.address)
-        assert (
-            dst_balance == dst_init_balance - redeem_cost.collateral
-        ), "The collateral amount charged was wrong `{collateral_utxos[0].address}`"
+        assert dst_balance == dst_init_balance - redeem_cost.collateral, (
+            "The collateral amount charged was wrong `{collateral_utxos[0].address}`"
+        )
 
         if use_return_collateral:
             txid_redeem = cluster.g_transaction.get_txid(tx_body_file=tx_output_redeem.out_file)

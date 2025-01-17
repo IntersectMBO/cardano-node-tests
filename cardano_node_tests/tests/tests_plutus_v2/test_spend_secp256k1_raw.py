@@ -200,6 +200,6 @@ class TestSECP256k1:
             raise
 
         # Check that script address UTxO was spent
-        assert not cluster.g_query.get_utxo(
-            utxo=script_utxos[0]
-        ), f"Script address UTxO was NOT spent `{script_utxos}`"
+        assert not cluster.g_query.get_utxo(utxo=script_utxos[0]), (
+            f"Script address UTxO was NOT spent `{script_utxos}`"
+        )

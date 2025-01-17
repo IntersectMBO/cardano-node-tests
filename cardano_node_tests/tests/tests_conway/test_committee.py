@@ -247,9 +247,9 @@ class TestCommittee:
                 "numerator": 2,
             }, "Incorrect threshold"
         else:
-            assert (
-                str(prop["proposalProcedure"]["govAction"]["contents"][3]) == threshold
-            ), "Incorrect threshold"
+            assert str(prop["proposalProcedure"]["govAction"]["contents"][3]) == threshold, (
+                "Incorrect threshold"
+            )
 
         cc_key_hashes = {f"keyHash-{c.key_hash}" for c in cc_auth_records}
         prop_cc_key_hashes = set(prop["proposalProcedure"]["govAction"]["contents"][2].keys())
@@ -434,13 +434,13 @@ class TestCommittee:
             )
             for mk in (cc_member1_key, cc_member2_key, cc_member3_key):
                 auth_member_rec = auth_committee_state["committee"][mk]
-                assert (
-                    auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
-                ), "CC Member was NOT authorized"
+                assert auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized", (
+                    "CC Member was NOT authorized"
+                )
                 assert not auth_member_rec["expiration"], "CC Member should not be elected"
-                assert (
-                    auth_member_rec["status"] == "Unrecognized"
-                ), "CC Member should not be recognized"
+                assert auth_member_rec["status"] == "Unrecognized", (
+                    "CC Member should not be recognized"
+                )
             [r.success() for r in (reqc.cli032, reqc.cip002, reqc.cip004)]
 
         def _add_members() -> tuple[clusterlib.ActionUpdateCommittee, str, int]:
@@ -682,9 +682,9 @@ class TestCommittee:
             if curr_epoch <= cc_member1_expire:
                 assert member_rec["status"] != "Expired", "CC Member is already expired"
             if curr_epoch == cc_member1_expire:
-                assert (
-                    member_rec["nextEpochChange"]["tag"] == "ToBeExpired"
-                ), "CC Member not to expire"
+                assert member_rec["nextEpochChange"]["tag"] == "ToBeExpired", (
+                    "CC Member not to expire"
+                )
             elif curr_epoch > cc_member1_expire:
                 assert member_rec["status"] == "Expired", "CC Member should be expired"
 
@@ -719,9 +719,9 @@ class TestCommittee:
             rem_member=cc_members[1], prev_action_txid=action_add_txid, prev_action_ix=action_add_ix
         )
 
-        assert (
-            cluster.g_query.get_epoch() == actions_epoch
-        ), "Haven't managed to submit the proposals in one epoch"
+        assert cluster.g_query.get_epoch() == actions_epoch, (
+            "Haven't managed to submit the proposals in one epoch"
+        )
 
         reqc.cip067.start(url=helpers.get_vcs_link())
 
@@ -846,9 +846,9 @@ class TestCommittee:
         for _cc_member_key in (cc_member1_key, cc_member2_key, cc_member3_key):
             rat_add_member_rec = rat_add_committee_state["committee"].get(_cc_member_key) or {}
             if rat_add_member_rec:
-                assert (
-                    rat_add_member_rec["hotCredsAuthStatus"]["tag"] != "MemberAuthorized"
-                ), "CC Member is still authorized"
+                assert rat_add_member_rec["hotCredsAuthStatus"]["tag"] != "MemberAuthorized", (
+                    "CC Member is still authorized"
+                )
             else:
                 xfail_ledger_4001_msgs.add(
                     "Newly elected CC members are removed during ratification"
@@ -892,9 +892,9 @@ class TestCommittee:
                 or enact_add_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized"
             ), "CC Member was NOT authorized"
             assert enact_add_member_rec["status"] == "Active", "CC Member should be active"
-            assert (
-                enact_add_member_rec["expiration"] == cc_members[i].epoch
-            ), "Expiration epoch is incorrect"
+            assert enact_add_member_rec["expiration"] == cc_members[i].epoch, (
+                "Expiration epoch is incorrect"
+            )
         [r.success() for r in (reqc.cip009, reqc.cip010, reqc.cip058)]
 
         # Try to vote on enacted add action
@@ -943,9 +943,9 @@ class TestCommittee:
 
         # Check committee state after ratification
         rat_rem_member_rec = enact_add_committee_state["committee"][cc_member2_key]
-        assert (
-            rat_rem_member_rec["nextEpochChange"]["tag"] == "ToBeRemoved"
-        ), "CC Member is not marked for removal"
+        assert rat_rem_member_rec["nextEpochChange"]["tag"] == "ToBeRemoved", (
+            "CC Member is not marked for removal"
+        )
 
         # Check enactment of removal action
         rem_epoch = cluster.wait_for_epoch(epoch_no=enact_epoch + 1, padding_seconds=5)
@@ -1215,9 +1215,9 @@ class TestCommittee:
         # The cluster needs respin after this point
         cluster_manager.set_needs_respin()
 
-        assert not next_rat_zero_cc_state[
-            "ratificationDelayed"
-        ], "Ratification is delayed unexpectedly"
+        assert not next_rat_zero_cc_state["ratificationDelayed"], (
+            "Ratification is delayed unexpectedly"
+        )
 
         # Check enactment
         enact_zero_cc_epoch = cluster.wait_for_epoch(
@@ -1326,9 +1326,9 @@ class TestCommittee:
 
         def _check_const_state(state: dict):
             anchor = state["constitution"]["anchor"]
-            assert (
-                anchor["dataHash"] == const_action.constitution_hash
-            ), "Incorrect constitution data hash"
+            assert anchor["dataHash"] == const_action.constitution_hash, (
+                "Incorrect constitution data hash"
+            )
             assert anchor["url"] == const_action.constitution_url, "Incorrect constitution data URL"
 
         # Check ratification

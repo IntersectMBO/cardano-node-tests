@@ -629,9 +629,9 @@ class TestNegative:
             clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
         ), f"Incorrect balance for source address `{src_address}`"
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount
-        ), f"Incorrect balance for destination address `{dst_address}`"
+        assert clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount, (
+            f"Incorrect balance for destination address `{dst_address}`"
+        )
 
         # It should NOT be possible to submit a transaction twice
         with pytest.raises(clusterlib.CLIError) as excinfo:
