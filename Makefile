@@ -25,6 +25,11 @@ doc:
 	$(MAKE) -C src_docs html
 
 
+# generate and deploy sphinx documentation
+.PHONY: doc_deploy
+doc_deploy:
+	./deploy_doc.sh
+
 # run tests
 
 TESTS_DIR ?= cardano_node_tests/
