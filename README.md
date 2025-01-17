@@ -138,7 +138,7 @@ Install and configure poetry, follow [Poetry documentation](https://python-poetr
 Create a Python virtual environment and install this package together with development requirements:
 
 ```sh
-./setup_dev_venv.sh
+make install
 ```
 
 ### Running development cluster
@@ -228,10 +228,11 @@ Restaring the running development cluster is useful mainly when using the "conwa
 
 ### Checking the development environment
 
-To check that the development environment was correctly setup, run the `./check_dev_env.sh` script.
+To check that the development environment was correctly setup, run the `make check_dev_env` script.
 
 ```text
-$ ./check_dev_env.sh
+$ make ./check_dev_env
+./scripts/check_dev_env.sh
 'cardano-node' available: ✔
 'cardano-cli' available: ✔
 'python' available: ✔
@@ -301,7 +302,7 @@ To install cardano-clusterlib in development mode:
 1. update virtual env (answer 'y' to question "Install into the current virtual env? [y/N]")
 
     ```sh
-    ./setup_dev_venv.sh
+    make install
     ```
 
 1. uninstall `cardano-clusterlib` installed by poetry
@@ -334,7 +335,7 @@ To install cardano-clusterlib in development mode:
     python -c 'from cardano_clusterlib import clusterlib_klass; print(clusterlib_klass.__file__)'
     ```
 
-Note that after you run `poetry install` (eg through running `./setup_dev_venv.sh`), poetry will reinstall `cardano-clusterlib`. If you want to keep using cardano-clusterlib in development mode, you'll need to repeat the steps above.
+Note that after you run `poetry install` (eg through running `make install`), poetry will reinstall `cardano-clusterlib`. If you want to keep using cardano-clusterlib in development mode, you'll need to repeat the steps above.
 
 ### Updating dependencies using poetry
 
@@ -349,7 +350,7 @@ Edit `pyproject.toml` and run
 Build and deploy documentation:
 
 ```sh
-./deploy_doc.sh
+make deploy_doc
 ```
 
 ## Contributing
