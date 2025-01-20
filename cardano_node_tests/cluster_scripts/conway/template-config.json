@@ -11,6 +11,8 @@
     "ShelleyGenesisFile": "shelley/genesis.json",
     "AlonzoGenesisFile": "shelley/genesis.alonzo.json",
     "ConwayGenesisFile": "shelley/genesis.conway.json",
+    "TraceOptions": {},
+    "UseTraceDispatcher": false,
     "TraceBlockFetchClient": false,
     "TraceBlockFetchDecisions": false,
     "TraceBlockFetchProtocol": false,
