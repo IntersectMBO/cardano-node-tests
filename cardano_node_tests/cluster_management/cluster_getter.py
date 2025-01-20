@@ -227,7 +227,7 @@ class ClusterGetter:
         else:
             self.log(f"c{self.cluster_instance_num}: cluster dead")
             framework_log.framework_logger().error(
-                "Failed to start cluster instance 'c%s':\n%s\nports:\n{ports}\nnetstat:\n%s",
+                "Failed to start cluster instance 'c%s':\n%s\nports:\n%s\nnetstat:\n%s",
                 self.cluster_instance_num,
                 excp,
                 ports,
