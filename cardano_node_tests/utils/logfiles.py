@@ -23,6 +23,7 @@ ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 ERRORS_IGNORED = [
     r"cardano\.node\.[^:]+:Info:",
+    r"cardano\.node\.[^:]+:Debug:",
     "db-sync-node:Info:",
     "cardano-tx-submit:Info:",
     "Event: LedgerUpdate",
@@ -55,6 +56,8 @@ ERRORS_IGNORED = [
     "SubscriberWorkerCancelled, .*SubscriptionWorker exiting",
     # TODO: see node issue https://github.com/IntersectMBO/cardano-node/issues/5312
     "DiffusionError thread killed",
+    # TODO: connection to other node before the other node is started
+    r"AcquireConnectionError Network\.Socket\.connect",
 ]
 # Already removed from the list above:
 # * Workaround for node issue https://github.com/IntersectMBO/cardano-node/issues/4369
