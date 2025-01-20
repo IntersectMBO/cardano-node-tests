@@ -23,6 +23,7 @@ ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 ERRORS_IGNORED = [
     r"cardano\.node\.[^:]+:Info:",
+    r"cardano\.node\.[^:]+:Debug:",
     "db-sync-node:Info:",
     "cardano-tx-submit:Info:",
     "Event: LedgerUpdate",
