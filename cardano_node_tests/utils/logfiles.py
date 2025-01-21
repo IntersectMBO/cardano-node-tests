@@ -23,8 +23,8 @@ ERRORS_RE = re.compile("error|fail", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 ERRORS_IGNORED = [
-    r"cardano\.node\.[^:]+:Info:",
     r"cardano\.node\.[^:]+:Debug:",
+    r"cardano\.node\.[^:]+:Info:",
     "db-sync-node:Info:",
     "cardano-tx-submit:Info:",
     "Event: LedgerUpdate",
@@ -37,8 +37,8 @@ ERRORS_IGNORED = [
     "TraceDidntAdoptBlock",
     "failedScripts",
     "closed when reading data, waiting on next header",
-    "MuxIOException writev: resource vanished",
-    r"MuxIOException Network\.Socket\.recvBuf: resource vanished",
+    "IOException writev: resource vanished",
+    r"IOException Network\.Socket\.recvBuf: resource vanished",
     # Can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
     # Can happen on p2p when node is shutting down
