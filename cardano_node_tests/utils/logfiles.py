@@ -17,6 +17,7 @@ from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
+BUFFER_SIZE = 512 * 1024  # 512 KB buffer
 ROTATED_RE = re.compile(r".+\.[0-9]+")  # detect rotated log file
 ERRORS_RE = re.compile("error|fail", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
@@ -202,7 +203,6 @@ def _search_log_lines(
     last_line_pos = -1
 
     for logfile_rec in rotated_logs:
-        look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
         with open(logfile_rec.logfile, encoding="utf-8") as infile:
             # Avoid seeking past the end of file
             if 0 < logfile_rec.seek <= logfile_rec.logfile.stat().st_size:
@@ -214,20 +214,25 @@ def _search_log_lines(
                     # Skip the first line if the line is not complete
                     infile.readline()
 
-            for line in infile:
-                look_back_buf.append(line)
-                look_back_buf.pop(0)
-                if errors_re.search(line) and not (
-                    errors_ignored_re and errors_ignored_re.search(line)
-                ):
-                    # Skip if expected message is in the look back buffer
-                    if (
-                        errors_look_back_re
-                        and errors_look_back_re.search(line)
-                        and _look_back_found(look_back_buf)
+            look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
+
+            # Read the file in chunks
+            while chunk := infile.read(BUFFER_SIZE):
+                lines = chunk.splitlines(keepends=True)  # Preserve line endings
+                for line in lines:
+                    look_back_buf.append(line)
+                    look_back_buf.pop(0)
+                    if errors_re.search(line) and not (
+                        errors_ignored_re and errors_ignored_re.search(line)
                     ):
-                        continue
-                    errors.append((logfile, line))
+                        # Skip if expected message is in the look back buffer
+                        if (
+                            errors_look_back_re
+                            and errors_look_back_re.search(line)
+                            and _look_back_found(look_back_buf)
+                        ):
+                            continue
+                        errors.append((logfile, line))
 
             # Get offset for the "live" log file
             if logfile_rec.logfile == logfile:
