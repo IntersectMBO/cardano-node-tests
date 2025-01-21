@@ -2,7 +2,7 @@
   description = "Functional tests for cardano-node";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     cardano-node = {
       url = "github:IntersectMBO/cardano-node";
     };
