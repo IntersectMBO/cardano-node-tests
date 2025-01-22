@@ -294,31 +294,60 @@ def find_msgs_in_logs(
     timestamp: float,
     only_first: bool = False,
 ) -> list[str]:
-    """Find messages in log."""
+    """Find messages in log.
+
+    Args:
+        regex (str): The regular expression to search for.
+        logfile (Path): The path to the log file.
+        seek_offset (int): The seek offset in the log file.
+        timestamp (float): The timestamp to filter log entries.
+        only_first (bool): Whether to return only the first match.
+
+    Returns:
+        list[str]: A list of matching log lines.
+    """
     regex_comp = re.compile(regex)
     lines_found = []
-    for logfile_rec in _get_rotated_logs(
-        logfile=pl.Path(logfile), seek=seek_offset, timestamp=timestamp
-    ):
+    for logfile_rec in _get_rotated_logs(logfile=logfile, seek=seek_offset, timestamp=timestamp):
         with open(logfile_rec.logfile, encoding="utf-8") as infile:
             infile.seek(logfile_rec.seek)
-            for line in infile:
-                if regex_comp.search(line):
-                    lines_found.append(line)
-                    if only_first:
-                        break
-        if lines_found and only_first:
-            break
+
+            # Read the file in chunks
+            incomplete_line = ""
+            while chunk := infile.read(BUFFER_SIZE):
+                # Prepend any leftover from the last chunk
+                if incomplete_line:
+                    chunk = incomplete_line + chunk
+                lines = chunk.splitlines(keepends=True)  # Preserve line endings
+
+                # Check if the last line is incomplete
+                incomplete_line = lines.pop() if not lines[-1].endswith(("\n", "\r")) else ""
+
+                for line in lines:
+                    if regex_comp.search(line):
+                        lines_found.append(line)
+                        if only_first:
+                            return lines_found
     return lines_found
 
 
-def check_msgs_presence_in_logs(
+def check_msgs_presence_in_logs(  # noqa: C901
     regex_pairs: list[tuple[str, str]],
     seek_offsets: dict[str, int],
     state_dir: pl.Path,
     timestamp: float,
 ) -> list[str]:
-    """Check if the expected messages are present in logs."""
+    """Check if the expected messages are present in logs.
+
+    Args:
+        regex_pairs (list[tuple[str, str]]): List of tuples with file globs and regex patterns.
+        seek_offsets (dict[str, int]): Dictionary of file seek offsets.
+        state_dir (Path): Path to the state directory.
+        timestamp (float): Timestamp to filter log entries.
+
+    Returns:
+        list[str]: List of error messages for missing log entries.
+    """
     errors = []
     for files_glob, regex in regex_pairs:
         regex_comp = re.compile(regex)
@@ -337,9 +366,25 @@ def check_msgs_presence_in_logs(
             ):
                 with open(logfile_rec.logfile, encoding="utf-8") as infile:
                     infile.seek(logfile_rec.seek)
-                    for line in infile:
-                        if regex_comp.search(line):
-                            line_found = True
+
+                    # Read the file in chunks
+                    incomplete_line = ""
+                    while chunk := infile.read(BUFFER_SIZE):
+                        # Prepend any leftover from the last chunk
+                        if incomplete_line:
+                            chunk = incomplete_line + chunk
+                        lines = chunk.splitlines(keepends=True)  # Preserve line endings
+
+                        # Check if the last line is incomplete
+                        incomplete_line = (
+                            lines.pop() if not lines[-1].endswith(("\n", "\r")) else ""
+                        )
+
+                        for line in lines:
+                            if regex_comp.search(line):
+                                line_found = True
+                                break
+                        if line_found:
                             break
                 if line_found:
                     break
