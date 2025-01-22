@@ -191,7 +191,7 @@ def _get_ignore_regex(
     return "|".join(regex_set) or "nothing_to_ignore"
 
 
-def _search_log_lines(
+def _search_log_lines(  # noqa: C901
     logfile: pl.Path,
     rotated_logs: list[RotableLog],
     errors_re: re.Pattern,
@@ -210,15 +210,23 @@ def _search_log_lines(
                 infile.seek(logfile_rec.seek - 1)
                 # Check if the byte is a newline, which means that the offset starts at
                 # the beginning of a line.
-                if infile.read(1) != "\n":
-                    # Skip the first line if the line is not complete
+                if infile.read(1) not in ("\n", "\r"):
+                    # Skip the first line if the line is incomplete
                     infile.readline()
 
             look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
+            incomplete_line = ""
 
             # Read the file in chunks
             while chunk := infile.read(BUFFER_SIZE):
+                # Prepend any leftover from the last chunk
+                if incomplete_line:
+                    chunk = incomplete_line + chunk
                 lines = chunk.splitlines(keepends=True)  # Preserve line endings
+
+                # Check if the last line is incomplete
+                incomplete_line = lines.pop() if not lines[-1].endswith(("\n", "\r")) else ""
+
                 for line in lines:
                     look_back_buf.append(line)
                     look_back_buf.pop(0)
@@ -236,7 +244,11 @@ def _search_log_lines(
 
             # Get offset for the "live" log file
             if logfile_rec.logfile == logfile:
-                last_line_pos = infile.tell()
+                if incomplete_line:
+                    # Adjust the offset to point before the incomplete line
+                    last_line_pos = infile.tell() - len(incomplete_line.encode("utf-8"))
+                else:
+                    last_line_pos = infile.tell()
 
     # Record last search offset for the "live" log file
     if last_line_pos >= 0:
