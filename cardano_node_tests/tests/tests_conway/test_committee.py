@@ -2,12 +2,15 @@
 
 import logging
 import pathlib as pl
+import random
+import re
 import typing as tp
 
 import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+import pytest_subtests
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
@@ -84,6 +87,23 @@ def pool_user_lg(
     )
 
 
+@pytest.fixture
+def pool_user_ug(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_use_governance: governance_utils.GovClusterT,
+) -> clusterlib.PoolUser:
+    """Create a pool user for "use governance"."""
+    cluster, __ = cluster_use_governance
+    key = helpers.get_current_line_str()
+    name_template = common.get_test_id(cluster)
+    return conway_common.get_registered_pool_user(
+        cluster_manager=cluster_manager,
+        name_template=name_template,
+        cluster_obj=cluster,
+        caching_key=key,
+    )
+
+
 class TestCommittee:
     """Tests for Constitutional Committee."""
 
@@ -127,6 +147,256 @@ class TestCommittee:
             )
         err_str = str(excinfo.value)
         assert "ConwayCommitteeIsUnknown" in err_str, err_str
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    def test_invalid_cc_member_vote(  # noqa: C901
+        self,
+        cluster_use_governance: governance_utils.GovClusterT,
+        pool_user_ug: clusterlib.PoolUser,
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Try to vote with invalid CC member.
+
+        Expect failure.
+
+        * Create CC memeber hot and cold keys
+        * Create a pparam update proposal
+        * Try to vote on the pparam update proposal with the unauthorized hot key
+        * Expect `VotersDoNotExist` error on submit
+        * Submit a proposal to add the new CC member, do not vote on it
+        * Submit authorization certificate for the proposed CC member
+        * Try to vote on the pparam update proposal with the hot keys of the proposed CC member
+        * Expect `ConwayMempoolFailure "Unelected committee members are not allowed to cast votes`
+          error on submit
+        """
+        cluster, governance_data = cluster_use_governance
+        temp_template = common.get_test_id(cluster)
+
+        submit_methods = [submit_utils.SubmitMethods.CLI]
+        if submit_utils.is_submit_api_available():
+            submit_methods.append(submit_utils.SubmitMethods.API)
+
+        cc_auth_record = governance_utils.get_cc_member_auth_record(
+            cluster_obj=cluster,
+            name_template=temp_template,
+        )
+        cc_member = clusterlib.CCMember(
+            epoch=10_000,
+            cold_vkey_file=cc_auth_record.cold_key_pair.vkey_file,
+            cold_skey_file=cc_auth_record.cold_key_pair.skey_file,
+        )
+        cc_member_key = f"keyHash-{cc_auth_record.key_hash}"
+        cc_key_member = governance_utils.CCKeyMember(
+            cc_member=cc_member,
+            hot_keys=governance_utils.CCHotKeys(
+                hot_skey_file=cc_auth_record.hot_key_pair.skey_file,
+                hot_vkey_file=cc_auth_record.hot_key_pair.vkey_file,
+            ),
+        )
+
+        def _propose_pparam_change() -> conway_common.PParamPropRec:
+            anchor_data = governance_utils.get_default_anchor_data()
+            prev_action_rec = governance_utils.get_prev_action(
+                action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+                gov_state=cluster.g_conway_governance.query.gov_state(),
+            )
+
+            proposals = [
+                clusterlib_utils.UpdateProposal(
+                    arg="--drep-activity",
+                    value=random.randint(1, 255),
+                    name="dRepActivity",
+                ),
+            ]
+
+            prop_rec = conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_drep_activity",
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
+                pool_user=pool_user_ug,
+                proposals=proposals,
+                prev_action_rec=prev_action_rec,
+            )
+
+            return prop_rec
+
+        prop_rec = _propose_pparam_change()
+
+        vote_cc_all = [
+            cluster.g_conway_governance.vote.create_committee(
+                vote_name=f"{temp_template}_all_cc{i}",
+                action_txid=prop_rec.action_txid,
+                action_ix=prop_rec.action_ix,
+                vote=clusterlib.Votes.YES,
+                cc_hot_vkey_file=m.hot_keys.hot_vkey_file,
+            )
+            for i, m in enumerate((*governance_data.cc_key_members, cc_key_member), start=1)
+        ]
+        vote_keys_all = [
+            *[r.hot_keys.hot_skey_file for r in (*governance_data.cc_key_members, cc_key_member)],
+        ]
+
+        vote_cc_one = cluster.g_conway_governance.vote.create_committee(
+            vote_name=f"{temp_template}_one_cc",
+            action_txid=prop_rec.action_txid,
+            action_ix=prop_rec.action_ix,
+            vote=clusterlib.Votes.YES,
+            cc_hot_vkey_file=cc_key_member.hot_keys.hot_vkey_file,
+        )
+        vote_key_one = cc_key_member.hot_keys.hot_skey_file
+
+        def _submit_vote(scenario: str, build_method: str, submit_method: str) -> None:
+            conway_common.submit_vote(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_{scenario}_{build_method}_{submit_method}",
+                payment_addr=pool_user_ug.payment,
+                votes=vote_cc_all if "_all_" in scenario else [vote_cc_one],
+                keys=vote_keys_all if "_all_" in scenario else [vote_key_one],
+                submit_method=submit_method,
+                use_build_cmd=build_method == "build",
+            )
+
+        for smethod in submit_methods:
+            for build_method in ("build_raw", "build"):
+                for scenario in ("all_cc_one_nonexistent", "all_cc_all_nonexistent"):
+                    with subtests.test(id=f"{scenario}_{build_method}_{smethod}"):
+                        with pytest.raises(
+                            (clusterlib.CLIError, submit_api.SubmitApiError)
+                        ) as excinfo:
+                            _submit_vote(
+                                scenario=scenario,
+                                build_method=build_method,
+                                submit_method=smethod,
+                            )
+                        err_str = str(excinfo.value)
+                        assert "(VotersDoNotExist" in err_str, err_str
+
+        # Update committee action is not supported in bootstrap period
+        if conway_common.is_in_bootstrap(cluster_obj=cluster):
+            return
+
+        def _propose_new_member() -> None:
+            deposit_amt = cluster.conway_genesis["govActionDeposit"]
+            anchor_data = governance_utils.get_default_anchor_data()
+            prev_action_rec = governance_utils.get_prev_action(
+                action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+                gov_state=cluster.g_conway_governance.query.gov_state(),
+            )
+
+            update_action = cluster.g_conway_governance.action.update_committee(
+                action_name=temp_template,
+                deposit_amt=deposit_amt,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
+                threshold="2/3",
+                add_cc_members=[cc_member],
+                prev_action_txid=prev_action_rec.txid,
+                prev_action_ix=prev_action_rec.ix,
+                deposit_return_stake_vkey_file=pool_user_ug.stake.vkey_file,
+            )
+
+            tx_files = clusterlib.TxFiles(
+                proposal_files=[update_action.action_file],
+                signing_key_files=[
+                    pool_user_ug.payment.skey_file,
+                    cc_auth_record.cold_key_pair.skey_file,
+                ],
+            )
+
+            tx_output = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=temp_template,
+                src_address=pool_user_ug.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files,
+                deposit=deposit_amt,
+            )
+
+            out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+            assert (
+                clusterlib.filter_utxos(utxos=out_utxos, address=pool_user_ug.payment.address)[
+                    0
+                ].amount
+                == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+            ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
+
+            txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
+            gov_state = cluster.g_conway_governance.query.gov_state()
+            prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
+            assert prop, "Update committee action not found"
+            assert (
+                prop["proposalProcedure"]["govAction"]["tag"]
+                == governance_utils.ActionTags.UPDATE_COMMITTEE.value
+            ), "Incorrect action tag"
+
+        def _auth_hot_keys() -> None:
+            """Authorize the hot keys."""
+            tx_files_auth = clusterlib.TxFiles(
+                certificate_files=[cc_auth_record.auth_cert],
+                signing_key_files=[
+                    pool_user_ug.payment.skey_file,
+                    cc_auth_record.cold_key_pair.skey_file,
+                ],
+            )
+
+            tx_output_auth = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_auth",
+                src_address=pool_user_ug.payment.address,
+                use_build_cmd=True,
+                tx_files=tx_files_auth,
+            )
+
+            out_utxos_auth = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
+            assert (
+                clusterlib.filter_utxos(utxos=out_utxos_auth, address=pool_user_ug.payment.address)[
+                    0
+                ].amount
+                == clusterlib.calculate_utxos_balance(tx_output_auth.txins) - tx_output_auth.fee
+            ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
+
+            cluster.wait_for_new_block(new_blocks=2)
+            auth_committee_state = cluster.g_conway_governance.query.committee_state()
+            auth_epoch = cluster.g_query.get_epoch()
+            conway_common.save_committee_state(
+                committee_state=auth_committee_state,
+                name_template=f"{temp_template}_auth_{auth_epoch}",
+            )
+            auth_member_rec = auth_committee_state["committee"][cc_member_key]
+            assert auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized", (
+                "CC Member was NOT authorized"
+            )
+            assert not auth_member_rec["expiration"], "CC Member should not be elected"
+            assert auth_member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
+
+        # Make sure we have enough time to submit the proposals and vote in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+
+        _propose_new_member()
+        _auth_hot_keys()
+
+        for smethod in submit_methods:
+            for build_method in ("build_raw", "build"):
+                for scenario in ("all_cc_one_unelected", "all_cc_all_unelected"):
+                    with subtests.test(id=f"{scenario}_{build_method}_{smethod}"):
+                        with pytest.raises(
+                            (clusterlib.CLIError, submit_api.SubmitApiError)
+                        ) as excinfo:
+                            _submit_vote(
+                                scenario=scenario,
+                                build_method=build_method,
+                                submit_method=smethod,
+                            )
+                        err_str = str(excinfo.value)
+                        assert re.search(
+                            "ConwayMempoolFailure .*Unelected committee members are not allowed "
+                            "to cast votes:",
+                            err_str,
+                        ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD

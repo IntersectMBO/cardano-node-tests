@@ -178,7 +178,7 @@ def submit_vote(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     payment_addr: clusterlib.AddressRecord,
-    votes: list[governance_utils.VotesAllT],
+    votes: tp.Sequence[governance_utils.VotesAllT],
     keys: list[clusterlib.FileType],
     script_votes: clusterlib.OptionalScriptVotes = (),
     submit_method: str = "",
