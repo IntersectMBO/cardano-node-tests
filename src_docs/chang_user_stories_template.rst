@@ -1230,6 +1230,24 @@ Governance guardrails User Stories
       - As an ADA holder, when submitting an update protocol parameters proposal, the governance guardrail should prevent an unconstitutional value for `poolPledgeInfluence`.
 
 
+Internal Test Cases
+-------------------
+
+.. list-table::
+   :widths: 18 53
+   :header-rows: 1
+
+   -
+
+      - Status for Test Case
+      - Description
+   -
+
+      - |image-R10_1_4|
+      - Prevent a potential DoS attack. Prevent invalid CC member from voting.
+        `→ <https://github.com/IntersectMBO/cardano-node/releases/tag/10.1.4>`__
+
+
 DB Sync - Conway related tables
 -------------------------------
 
@@ -1720,6 +1738,9 @@ DB Sync - Conway related tables
    :target: https://github.com/GR028-404
 .. |image-GR029| image:: https://img.shields.io/badge/GR029-grey
    :target: https://github.com/GR029-404
+
+.. |image-R10_1_4| image:: https://img.shields.io/badge/R10_1_4-grey
+   :target: https://github.com/R10_1_4-404
 
 .. |image-drep_hash| image:: https://img.shields.io/badge/drep_hash-grey
    :target: https://github.com/drep_hash-404

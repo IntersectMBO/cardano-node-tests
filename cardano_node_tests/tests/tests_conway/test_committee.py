@@ -379,10 +379,14 @@ class TestCommittee:
         _propose_new_member()
         _auth_hot_keys()
 
+        reqc.int001.start(url=helpers.get_vcs_link())
+        subtest_errors = []
         for smethod in submit_methods:
             for build_method in ("build_raw", "build"):
                 for scenario in ("all_cc_one_unelected", "all_cc_all_unelected"):
-                    with subtests.test(id=f"{scenario}_{build_method}_{smethod}"):
+                    subtest_id = f"{scenario}_{build_method}_{smethod}"
+                    subtest_errors.append(subtest_id)
+                    with subtests.test(id=subtest_id):
                         with pytest.raises(
                             (clusterlib.CLIError, submit_api.SubmitApiError)
                         ) as excinfo:
@@ -397,6 +401,10 @@ class TestCommittee:
                             "to cast votes:",
                             err_str,
                         ), err_str
+                        subtest_errors.pop()
+
+        if not subtest_errors:
+            reqc.int001.success()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
