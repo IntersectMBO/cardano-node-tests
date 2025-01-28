@@ -236,6 +236,9 @@ gr027 = __r("GR027")
 gr028 = __r("GR028")
 gr029 = __r("GR029")
 
+# Internal Test Cases
+int001 = __r("R10_1_4")
+
 # DB Sync Conway related tables
 # https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md
 db001 = __dr("drep_hash")
