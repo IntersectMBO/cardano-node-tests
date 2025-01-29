@@ -1243,6 +1243,11 @@ Internal Test Cases
       - Description
    -
 
+      - |image-R10_1_3|
+      - Ensure that current DRep delegation is not affected by retirement of DRep to which the stake was previously delegated.
+        `→ <https://github.com/IntersectMBO/cardano-ledger/issues/4772>`__
+   -
+
       - |image-R10_1_4|
       - Prevent a potential DoS attack. Prevent invalid CC member from voting.
         `→ <https://github.com/IntersectMBO/cardano-node/releases/tag/10.1.4>`__
@@ -1739,6 +1744,8 @@ DB Sync - Conway related tables
 .. |image-GR029| image:: https://img.shields.io/badge/GR029-grey
    :target: https://github.com/GR029-404
 
+.. |image-R10_1_3| image:: https://img.shields.io/badge/R10_1_3-grey
+   :target: https://github.com/R10_1_3-404
 .. |image-R10_1_4| image:: https://img.shields.io/badge/R10_1_4-grey
    :target: https://github.com/R10_1_4-404
 
