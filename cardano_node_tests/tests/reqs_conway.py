@@ -238,6 +238,7 @@ gr029 = __r("GR029")
 
 # Internal Test Cases
 int001 = __r("R10_1_4")
+int002 = __r("R10_1_3")
 
 # DB Sync Conway related tables
 # https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md

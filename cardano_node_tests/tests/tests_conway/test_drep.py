@@ -1515,6 +1515,7 @@ class TestDelegDReps:
             signing_key_files=[payment_addr_rewards.skey_file, drep1.key_pair.skey_file],
         )
 
+        reqc.int002.start(url=helpers.get_vcs_link())
         clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_ret",
@@ -1540,6 +1541,7 @@ class TestDelegDReps:
             assert stake_addr_info_ret.vote_delegation == governance_utils.get_drep_cred_name(
                 drep_id=drep2.drep_id
             ), "Votes are no longer delegated to DRep 2!"
+        reqc.int002.success()
 
 
 class TestDRepActivity:
