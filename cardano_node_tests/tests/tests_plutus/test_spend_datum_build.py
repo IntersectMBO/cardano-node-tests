@@ -19,6 +19,7 @@ from cardano_node_tests.tests.tests_plutus import spend_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -196,7 +197,7 @@ class TestNegativeDatum:
     ):
         """Test using UTxO without datum hash in place of locked UTxO.
 
-        Expect failure.
+        Expect failure, unless in era >= Conway.
 
         * create a Tx output without a datum hash
         * try to spend the UTxO like it was locked Plutus UTxO
@@ -204,6 +205,7 @@ class TestNegativeDatum:
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
+        in_conway_plus = VERSIONS.transaction_era >= VERSIONS.CONWAY
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -268,15 +270,17 @@ class TestNegativeDatum:
         except clusterlib.CLIError as exc:
             err_str = str(exc)
         else:
-            issues.cli_800.finish_test()
+            if not in_conway_plus:
+                issues.cli_800.finish_test()
 
-        if address_type == "script_address":
-            assert "txin does not have a script datum" in err_str, err_str
-        else:
-            assert (
-                "not a Plutus script witnessed tx input" in err_str
-                or "points to a script hash that is not known" in err_str
-            ), err_str
+        if not in_conway_plus:
+            if address_type == "script_address":
+                assert "txin does not have a script datum" in err_str, err_str
+            else:
+                assert (
+                    "not a Plutus script witnessed tx input" in err_str
+                    or "points to a script hash that is not known" in err_str
+                ), err_str
 
         # Check expected fees
         expected_fee_fund = 199_087
@@ -335,7 +339,7 @@ class TestNegativeDatum:
     ):
         """Test locking a Tx output and try to spend it with a wrong datum.
 
-        Expect failure.
+        Expect failure, unless in era >= Conway.
         """
         temp_template = common.get_test_id(cluster)
 
@@ -378,6 +382,8 @@ class TestNegativeDatum:
         except clusterlib.CLIError as exc:
             err_str = str(exc)
         else:
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+                return
             issues.cli_800.finish_test()
 
         assert (
