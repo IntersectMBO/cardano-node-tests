@@ -525,22 +525,23 @@ class TestnetScripts(ScriptsTypes):
 
     def get_instance_ports(self, instance_num: int) -> InstancePorts:
         """Return ports mapping for given cluster instance."""
-        offset = (50 + instance_num) * 10
-        base = 30000 + offset
-        metrics_base = 30300 + offset
+        ports_per_instance = 10
+        offset = instance_num * ports_per_instance
+        base = configuration.PORTS_BASE + offset
+        last_port = base + ports_per_instance - 1
 
         relay1_ports = NodePorts(
             num=0,
-            node=base + 1,
-            ekg=metrics_base + 1,
-            prometheus=metrics_base + 2,
+            node=base,
+            ekg=base + 1,
+            prometheus=base + 2,
         )
 
         ports = InstancePorts(
             base=base,
-            webserver=0,
-            metrics_submit_api=metrics_base,
-            submit_api=base + 9,
+            webserver=last_port,
+            metrics_submit_api=last_port - 1,
+            submit_api=last_port - 2,
             supervisor=12001 + instance_num,
             relay1=relay1_ports.node,
             ekg_relay1=relay1_ports.ekg,
@@ -620,6 +621,8 @@ class TestnetScripts(ScriptsTypes):
             new_content = new_content.replace(
                 "%%PROMETHEUS_PORT_RELAY1%%", str(instance_ports.prometheus_relay1)
             )
+            # Reconfigure webserver port
+            new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
 
             with open(outfile, "w", encoding="utf-8") as out_fp:
                 out_fp.write(new_content)
