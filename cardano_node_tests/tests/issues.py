@@ -101,7 +101,7 @@ cli_953 = blockers.GH(
 cli_1023 = blockers.GH(
     issue=1023,
     repo="IntersectMBO/cardano-cli",
-    fixed_in="10.3.0.0",  # Unknown yet, will be fixed sometime in the future
+    fixed_in="10.3.0.1",  # Fixed in release following 10.3.0.0
     message="Plutus cost too low.",
 )
 
