@@ -41,10 +41,10 @@ export \
   FORBID_RESTART=1 \
   NO_ARTIFACTS=1
 
-_scripts_dest="$WORKDIR/${CLUSTER_ERA}_fast"
+_scripts_dest="$WORKDIR/${CLUSTER_ERA}"
 if [ ! -d "$_scripts_dest" ]; then
   PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py \
-    -s "cardano_node_tests/cluster_scripts/${CLUSTER_ERA}_fast" \
+    -s "cardano_node_tests/cluster_scripts/${CLUSTER_ERA}" \
     -d "$_scripts_dest"
 fi
 unset _scripts_dest
@@ -73,7 +73,7 @@ echo "|    Test Env Ready    |"
 echo "------------------------"
 echo
 echo "To start local testnet, run:"
-echo "$WORKDIR/${CLUSTER_ERA}_fast/start-cluster"
+echo "$WORKDIR/${CLUSTER_ERA}/start-cluster"
 echo
 echo "To reuse the test env in another shell, source the env with:"
 echo "source $WORKDIR/.source"
