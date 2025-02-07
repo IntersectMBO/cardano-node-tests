@@ -222,10 +222,10 @@ def _search_log_lines(  # noqa: C901
                 # Prepend any leftover from the last chunk
                 if incomplete_line:
                     chunk = incomplete_line + chunk
-                lines = chunk.splitlines(keepends=True)  # Preserve line endings
+                lines = chunk.splitlines(keepends=False)
 
-                # Check if the last line is incomplete
-                incomplete_line = lines.pop() if not lines[-1].endswith(("\n", "\r")) else ""
+                # Handle incomplete lines at the end of the chunk
+                incomplete_line = lines.pop() if chunk[-1] not in "\n\r" else ""
 
                 for line in lines:
                     look_back_buf.append(line)
@@ -318,10 +318,10 @@ def find_msgs_in_logs(
                 # Prepend any leftover from the last chunk
                 if incomplete_line:
                     chunk = incomplete_line + chunk
-                lines = chunk.splitlines(keepends=True)  # Preserve line endings
+                lines = chunk.splitlines(keepends=False)
 
-                # Check if the last line is incomplete
-                incomplete_line = lines.pop() if not lines[-1].endswith(("\n", "\r")) else ""
+                # Handle incomplete lines at the end of the chunk
+                incomplete_line = lines.pop() if chunk[-1] not in "\n\r" else ""
 
                 for line in lines:
                     if regex_comp.search(line):
@@ -373,12 +373,10 @@ def check_msgs_presence_in_logs(  # noqa: C901
                         # Prepend any leftover from the last chunk
                         if incomplete_line:
                             chunk = incomplete_line + chunk
-                        lines = chunk.splitlines(keepends=True)  # Preserve line endings
+                        lines = chunk.splitlines(keepends=False)
 
-                        # Check if the last line is incomplete
-                        incomplete_line = (
-                            lines.pop() if not lines[-1].endswith(("\n", "\r")) else ""
-                        )
+                        # Handle incomplete lines at the end of the chunk
+                        incomplete_line = lines.pop() if chunk[-1] not in "\n\r" else ""
 
                         for line in lines:
                             if regex_comp.search(line):
