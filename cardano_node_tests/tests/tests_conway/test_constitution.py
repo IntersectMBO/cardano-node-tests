@@ -208,7 +208,7 @@ def script_dreps_lg(
         stake_addr_dereg_certs = [
             cluster.g_stake_address.gen_stake_addr_deregistration_cert(
                 addr_name=f"{temp_template}_addr{i}",
-                deposit_amt=r[1].delegation_deposit,
+                deposit_amt=r[1].registration_deposit,
                 stake_vkey_file=r[0].stake.vkey_file,
             )
             for i, r in enumerate(pool_users_info)
@@ -242,7 +242,7 @@ def script_dreps_lg(
             use_build_cmd=False,  # Workaround for CLI issue 942
             tx_files=tx_files,
             withdrawals=withdrawals,
-            deposit=-sum(s.delegation_deposit for __, s in pool_users_info),
+            deposit=-sum(s.registration_deposit for __, s in pool_users_info),
         )
 
         dereg_stake_states = [
