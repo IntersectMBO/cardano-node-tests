@@ -217,9 +217,6 @@ nix develop --accept-flake-config .#venv --command bash -c '
 '
 retval="$?"
 
-# move reports to root dir
-mv .reports/testrun-report.* ./
-
 # grep testing artifacts for errors
 # shellcheck disable=SC1090,SC1091
 . .github/grep_errors.sh
@@ -237,6 +234,12 @@ _cleanup
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
+
+  # move reports to root dir
+  if [ -e .reports/testrun-report.html ]; then
+    mv .reports/testrun-report.* ./
+  fi
+
   # create results archive
   ./.github/results.sh
 
