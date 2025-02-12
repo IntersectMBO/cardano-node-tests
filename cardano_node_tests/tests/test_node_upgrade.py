@@ -99,6 +99,7 @@ class TestSetup:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.disabled(reason="The test is not needed when we are already in PV10 on mainnet")
     @pytest.mark.skipif(UPGRADE_TESTS_STEP != 2, reason="runs only on step 2 of upgrade testing")
     def test_update_cost_models(
         self,
@@ -196,6 +197,7 @@ class TestSetup:
         _check_models(enact_gov_state["currentPParams"]["costModels"])
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.disabled(reason="The test is not needed when we are already in PV10 on mainnet")
     @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
     def test_hardfork(
         self,
