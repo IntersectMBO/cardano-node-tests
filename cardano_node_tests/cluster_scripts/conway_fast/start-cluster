@@ -6,7 +6,7 @@
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
 # NO_CC - if set, will not create committee
-# PV10 - if set, will use protocol version 10
+# PV9 - if set, will use protocol version 9
 # DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
@@ -33,9 +33,9 @@ SUBMIT_DELAY=5
 POOL_PLEDGE=1000000000000
 DREP_DELEGATED=500000000000
 BYRON_INIT_SUPPLY=10020000000
-PROTOCOL_VERSION=9
-if [ -n "${PV10:-""}" ]; then
-  PROTOCOL_VERSION=10
+PROTOCOL_VERSION=10
+if [ -n "${PV9:-""}" ]; then
+  PROTOCOL_VERSION=9
 fi
 
 SECURITY_PARAM="$(jq '.securityParam' < "${SCRIPT_DIR}/genesis.spec.json")"
@@ -149,9 +149,9 @@ cp "${SCRIPT_DIR}/submit-api-config.json" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/*genesis*.spec.json "${STATE_CLUSTER}/create_staked/"
 
-if [ -n "${PV10:-""}" ]; then
+if [ -n "${PV9:-""}" ]; then
   cp -f \
-    "${SCRIPT_DIR}/genesis.conway.spec.pv10.json" \
+    "${SCRIPT_DIR}/genesis.conway.spec.pv9.json" \
     "${STATE_CLUSTER}/create_staked/genesis.conway.spec.json"
 fi
 
@@ -420,7 +420,19 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake.reg.cert"
 
-  if [ -n "${PV10:-""}" ]; then
+  if [ -n "${PV9:-""}" ]; then
+    # stake reward address registration cert
+    cardano_cli_log conway stake-address registration-certificate \
+      --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
+      --key-reg-deposit-amt "$KEY_DEPOSIT" \
+      --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.cert"
+
+    # owner stake address stake delegation cert
+    cardano_cli_log conway stake-address stake-delegation-certificate \
+      --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
+      --cold-verification-key-file  "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
+      --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.cert"
+  else
     # stake reward address registration and vote delegation cert
     cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
       --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
@@ -433,18 +445,6 @@ for i in $(seq 1 "$NUM_POOLS"); do
       --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
       --cold-verification-key-file  "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
       --always-abstain \
-      --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.cert"
-  else
-    # stake reward address registration cert
-    cardano_cli_log conway stake-address registration-certificate \
-      --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
-      --key-reg-deposit-amt "$KEY_DEPOSIT" \
-      --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.cert"
-
-    # owner stake address stake delegation cert
-    cardano_cli_log conway stake-address stake-delegation-certificate \
-      --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
-      --cold-verification-key-file  "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
       --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.cert"
   fi
 

@@ -1,8 +1,0 @@
-CLUSTER_ERA=conway
-COMMAND_ERA=conway
-PV10=true
-MARKEXPR=dbsync
-CLUSTERS_COUNT=4
-DBSYNC_REV=13.6.0.1
-DBSYNC_TAR_URL=https://github.com/IntersectMBO/cardano-db-sync/releases/download/13.6.0.1/cardano-db-sync-13.6.0.1-linux.tar.gz
-DBSYNC_SKIP_INDEXES=true

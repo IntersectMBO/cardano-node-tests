@@ -33,6 +33,7 @@ if [ "$1" = "step1" ]; then
 
   export UPGRADE_TESTS_STEP=1
   export ENABLE_LEGACY=1
+  export PV9=1
 
   if [ -n "${BASE_TAR_URL:-""}" ]; then
     # download and extract base revision binaries
@@ -106,6 +107,7 @@ elif [ "$1" = "step2" ]; then
 
   export UPGRADE_TESTS_STEP=2
   export MIXED_P2P=1
+  export PV9=1
   unset ENABLE_LEGACY
 
   # Setup `cardano-cli` binary
@@ -267,7 +269,7 @@ elif [ "$1" = "step3" ]; then
   printf "STEP3 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=3
-  unset ENABLE_LEGACY MIXED_P2P
+  unset ENABLE_LEGACY MIXED_P2P PV9
 
   # Setup `cardano-cli` binary
   if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
