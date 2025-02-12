@@ -1,4 +1,2 @@
 CLUSTER_ERA=conway
 COMMAND_ERA=conway
-MIXED_P2P=true
-NUM_POOLS=4
