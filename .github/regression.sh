@@ -54,10 +54,10 @@ fi
 
 CLUSTER_ERA="${CLUSTER_ERA:-"$DEFAULT_CLUSTER_ERA"}"
 if [ "$CLUSTER_ERA" = "conway 9" ]; then
-  unset PV10
+  export PV9=1
   CLUSTER_ERA="conway"
 elif [ "$CLUSTER_ERA" = "conway 10" ]; then
-  export PV10=1
+  unset PV9
   CLUSTER_ERA="conway"
 fi
 export CLUSTER_ERA

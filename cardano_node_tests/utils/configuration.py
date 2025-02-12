@@ -46,9 +46,6 @@ HAS_CC = (os.environ.get("NO_CC") or "") == ""
 # Number of new blocks before the Tx is considered confirmed. Use default value if set to 0.
 CONFIRM_BLOCKS_NUM = int(os.environ.get("CONFIRM_BLOCKS_NUM") or 0)
 
-# Used also in startup scripts as `if [ -n "$VAR" ]...`
-PV10 = (os.environ.get("PV10") or "") == ""
-
 # Used also in startup scripts
 UTXO_BACKEND = os.environ.get("UTXO_BACKEND") or ""
 if UTXO_BACKEND not in ("", "mem", "disk"):

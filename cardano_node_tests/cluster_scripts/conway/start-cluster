@@ -6,7 +6,7 @@
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
 # NO_CC - if set, will not create committee
-# PV10 - if set, will use protocol version 10
+# PV9 - if set, will use protocol version 9
 # DRY_RUN - if set, will not start the cluster
 
 set -euo pipefail
@@ -210,9 +210,9 @@ cp "${SCRIPT_DIR}/submit-api-config.json" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/*genesis*.spec.json "${STATE_CLUSTER}/shelley/"
 
-if [ -n "${PV10:-""}" ]; then
+if [ -n "${PV9:-""}" ]; then
   cp -f \
-    "${SCRIPT_DIR}/genesis.conway.spec.pv10.json" \
+    "${SCRIPT_DIR}/genesis.conway.spec.pv9.json" \
     "${STATE_CLUSTER}/shelley/genesis.conway.spec.json"
 fi
 
@@ -523,7 +523,11 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
     --always-abstain \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
-  if [ -n "${PV10:-""}" ]; then
+  if [ -n "${PV9:-""}" ]; then
+    ln \
+      "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.shelley_reg.cert" \
+      "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.cert"
+  else
     # stake reward address registration and vote delegation cert, to be used later in tests
     # when re-registering the reward address in Conway
     cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
@@ -531,10 +535,6 @@ for i in $(seq 1 "$NUM_POOLS"); do
       --always-abstain \
       --key-reg-deposit-amt "$KEY_DEPOSIT" \
       --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.cert"
-  else
-    ln \
-      "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.shelley_reg.cert" \
-      "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.cert"
   fi
 
   # pool keys
@@ -1292,7 +1292,7 @@ fi
 
 # Hard fork to Conway protocol version 10
 
-if [ -n "${PV10:-""}" ]; then
+if [ -z "${PV9:-""}" ]; then
   PV10_ACTION="${STATE_CLUSTER}/governance_data/hardfork_pv10_action"
 
   echo "Submitting hard fork proposal to update to Conway PV10"
