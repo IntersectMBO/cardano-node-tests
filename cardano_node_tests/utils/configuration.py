@@ -35,6 +35,10 @@ IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 # See `cat /proc/sys/net/ipv4/ip_local_port_range`.
 PORTS_BASE = int(os.environ.get("PORTS_BASE") or 23000)
 
+SMASH_BASE_PORT = int(os.environ.get("SMASH_BASE_PORT", "31000"))
+SMASH_ADMIN = os.environ.get("SMASH_ADMIN", "admin")
+SMASH_PASSWORD = os.environ.get("SMASH_PASSWORD", "password")
+
 # Used also in startup scripts as `if [ -n "$VAR" ]...`
 ENABLE_LEGACY = (os.environ.get("ENABLE_LEGACY") or "") != ""
 # Used also in startup scripts as `if [ -n "$VAR" ]...`
@@ -102,6 +106,14 @@ if HAS_DBSYNC:
     ).resolve()
 else:
     DBSYNC_BIN = pl.Path("/nonexistent")
+
+HAS_SMASH = HAS_DBSYNC and bool(os.environ.get("SMASH"))
+if HAS_SMASH:
+    SMASH_BIN = (
+        pl.Path(os.environ["DBSYNC_REPO"]).expanduser() / "smash-server" / "bin" / "cardano-smash-server"
+    ).resolve()
+else:
+    SMASH_BIN = pl.Path("/nonexistent")
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
