@@ -1751,7 +1751,7 @@ class TestCommittee:
             ],
         )
 
-        tx_output_action = clusterlib_utils.build_and_submit_tx(
+        tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_update_threshold",
             src_address=pool_user_lg.payment.address,
@@ -1759,9 +1759,13 @@ class TestCommittee:
             tx_files=tx_files,
         )
 
-        threshold_action_txid = cluster.g_transaction.get_txid(
-            tx_body_file=tx_output_action.out_file
-        )
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=pool_user_lg.payment.address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+
+        threshold_action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
         threshold_action_gov_state = cluster.g_conway_governance.query.gov_state()
         threshold_action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
@@ -1771,6 +1775,7 @@ class TestCommittee:
         prop_action = governance_utils.lookup_proposal(
             gov_state=threshold_action_gov_state, action_txid=threshold_action_txid
         )
+        assert prop_action, "Update committee action not found"
         action_ix = prop_action["actionId"]["govActionIx"]
 
         # Make sure the votes don't happen close to epoch boundary
