@@ -130,8 +130,9 @@ filterwarnings = [
     "ignore:.*You can change it to a module- or session-scoped fixture.*:FutureWarning",
 ]
 markers = [
-    "dbsync: test(s) for node + otionaly cardano-db-sync",
+    "dbsync: test(s) for node + optionaly cardano-db-sync",
     "needs_dbsync: test(s) for cardano-db-sync",
+    "smash: test(s) for node + optionaly cardano-smash",
     "testnets: test(s) can run on testnets, like Shelley_qa",
     "long: test(s) run for a long time on testnets",
     "smoke: fast test(s) under 1 minute",
