@@ -2,6 +2,7 @@
 
 # ruff: noqa: ARG002
 import dataclasses
+import functools
 import json
 import logging
 import os
@@ -291,7 +292,7 @@ class TestnetCluster(ClusterType):
         return addrs_data
 
 
-@helpers.callonce
+@functools.cache
 def get_cluster_type() -> ClusterType:
     """Return instance of the cluster type indicated by configuration."""
     if configuration.BOOTSTRAP_DIR:

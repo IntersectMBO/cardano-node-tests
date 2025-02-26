@@ -1,17 +1,17 @@
+import functools
 import logging
 import pathlib as pl
 import time
 
-from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import temptools
 
 
-@helpers.callonce
+@functools.cache
 def get_framework_log_path() -> pl.Path:
     return temptools.get_pytest_worker_tmp() / "framework.log"
 
 
-@helpers.callonce
+@functools.cache
 def framework_logger() -> logging.Logger:
     """Get logger for the `framework.log` file.
 
