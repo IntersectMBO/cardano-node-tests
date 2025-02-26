@@ -27,28 +27,6 @@ GITHUB_URL = "https://github.com/IntersectMBO/cardano-node-tests"
 TCallable = tp.TypeVar("TCallable", bound=tp.Callable)
 
 
-def callonce(func: TCallable) -> TCallable:
-    """Call a function and cache its return value.
-
-    .. warning::
-       The function arguments are not considered when caching the result.
-       Therefore, this decorator should be used only for functions without arguments
-       or for functions with constant arguments.
-    """
-    result: list = []
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):  # type: ignore
-        if result:
-            return result[0]
-
-        retval = func(*args, **kwargs)
-        result.append(retval)
-        return retval
-
-    return tp.cast(TCallable, wrapper)
-
-
 @contextlib.contextmanager
 def change_cwd(dir_path: ttypes.FileType) -> tp.Iterator[ttypes.FileType]:
     """Change and restore CWD - context manager."""
@@ -136,7 +114,7 @@ def run_in_bash(command: str, workdir: ttypes.FileType = "") -> bytes:
     return run_command(cmd, workdir=workdir)
 
 
-@callonce
+@functools.cache
 def get_current_commit() -> str:
     # TODO: make sure we are in correct repo
     return os.environ.get("GIT_REVISION") or run_command("git rev-parse HEAD").decode().strip()

@@ -1,11 +1,10 @@
+import functools
 import os
 import pathlib as pl
 import tempfile
 import typing as tp
 
 from _pytest.tmpdir import TempPathFactory
-
-from cardano_node_tests.utils import helpers
 
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
@@ -65,7 +64,7 @@ def get_pytest_shared_tmp() -> pl.Path:
     return PytestTempDirs.pytest_shared_tmp
 
 
-@helpers.callonce
+@functools.cache
 def get_basetemp() -> pl.Path:
     """Return base temporary directory for tests artifacts."""
     basetemp = pl.Path(tempfile.gettempdir()) / "cardano-node-tests"
