@@ -51,6 +51,7 @@ class InstancePorts:
     webserver: int
     metrics_submit_api: int
     submit_api: int
+    smash: int
     supervisor: int
     relay1: int
     ekg_relay1: int
@@ -189,6 +190,7 @@ class LocalScripts(ScriptsTypes):
             webserver=last_port,
             metrics_submit_api=last_port - 1,
             submit_api=last_port - 2,
+            smash=last_port - 3,
             supervisor=12001 + instance_num,
             # Relay1
             relay1=0,
@@ -266,6 +268,8 @@ class LocalScripts(ScriptsTypes):
         new_content = new_content.replace(
             "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
         )
+        # Reconfigure smash port
+        new_content = new_content.replace("%%SMASH_PORT%%", str(instance_ports.smash))
         # Reconfigure webserver port
         new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
         return new_content
@@ -542,6 +546,7 @@ class TestnetScripts(ScriptsTypes):
             webserver=last_port,
             metrics_submit_api=last_port - 1,
             submit_api=last_port - 2,
+            smash=last_port - 3,
             supervisor=12001 + instance_num,
             relay1=relay1_ports.node,
             ekg_relay1=relay1_ports.ekg,
@@ -615,6 +620,8 @@ class TestnetScripts(ScriptsTypes):
             new_content = new_content.replace(
                 "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
             )
+            # Reconfigure smash port
+            new_content = new_content.replace("%%SMASH_PORT%%", str(instance_ports.smash))
             # Reconfigure EKG metrics port
             new_content = new_content.replace("%%EKG_PORT_RELAY1%%", str(instance_ports.ekg_relay1))
             # Reconfigure prometheus metrics port

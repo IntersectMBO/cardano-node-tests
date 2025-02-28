@@ -28,6 +28,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import smash_utils
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils import web
@@ -696,6 +697,7 @@ class TestStakePool:
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
+    @pytest.mark.smash
     def test_stake_pool_not_avail_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -720,6 +722,7 @@ class TestStakePool:
             out_file=f"{pool_name}_registration_metadata.json", content=pool_metadata
         )
         pool_metadata_url = "https://www.where_metadata_file_is_located.com"
+        pool_metadata_hash = cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
 
         pool_data = clusterlib.PoolData(
             pool_name=pool_name,
@@ -727,7 +730,7 @@ class TestStakePool:
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
             pool_metadata_url=pool_metadata_url,
-            pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
+            pool_metadata_hash=pool_metadata_hash,
         )
 
         # Create pool owners
@@ -766,6 +769,7 @@ class TestStakePool:
                 )
 
             dbsync_utils.retry_query(query_func=_query_func, timeout=360)
+            smash_utils.check_smash_pool_errors(pool_creation_out.stake_pool_id, pool_metadata_hash)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
@@ -820,6 +824,7 @@ class TestStakePool:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.testnets
     @pytest.mark.dbsync
+    @pytest.mark.smash
     def test_deregister_stake_pool(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -944,6 +949,7 @@ class TestStakePool:
             dbsync_utils.check_pool_deregistration(
                 pool_id=pool_creation_out.stake_pool_id, retiring_epoch=depoch
             )
+            smash_utils.check_smash_pool_retired(pool_id=pool_creation_out.stake_pool_id)
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
