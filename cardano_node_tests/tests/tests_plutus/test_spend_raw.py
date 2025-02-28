@@ -785,7 +785,7 @@ class TestLocking:
             issuer_addr=payment_addrs[0],
             amount=token_amount,
         )
-        tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
+        tokens_rec = [clusterlib_utils.Token(coin=t.token, amount=t.amount) for t in tokens]
 
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
             temp_template=temp_template,
@@ -854,7 +854,7 @@ class TestLocking:
             issuer_addr=payment_addrs[0],
             amount=token_amount_fund,
         )
-        tokens_fund_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
+        tokens_fund_rec = [clusterlib_utils.Token(coin=t.token, amount=t.amount) for t in tokens]
 
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
             temp_template=temp_template,
@@ -868,7 +868,7 @@ class TestLocking:
         )
 
         tokens_spend_rec = [
-            plutus_common.Token(coin=t.token, amount=token_amount_spend) for t in tokens
+            clusterlib_utils.Token(coin=t.token, amount=token_amount_spend) for t in tokens
         ]
 
         __, tx_output_spend = spend_raw._spend_locked_txin(

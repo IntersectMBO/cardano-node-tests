@@ -31,12 +31,18 @@ class UpdateProposal:
 
 
 @dataclasses.dataclass(frozen=True, order=True)
-class TokenRecord:
+class NativeTokenRec:
     token: str
     amount: int
     issuers_addrs: list[clusterlib.AddressRecord]
     token_mint_addr: clusterlib.AddressRecord
     script: pl.Path
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class Token:
+    coin: str
+    amount: int
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -572,7 +578,7 @@ def update_params_build(
 
 def mint_or_burn_witness(
     cluster_obj: clusterlib.ClusterLib,
-    new_tokens: list[TokenRecord],
+    new_tokens: list[NativeTokenRec],
     temp_template: str,
     invalid_hereafter: int | None = None,
     invalid_before: int | None = None,
@@ -697,7 +703,7 @@ def mint_or_burn_witness(
 
 def mint_or_burn_sign(
     cluster_obj: clusterlib.ClusterLib,
-    new_tokens: list[TokenRecord],
+    new_tokens: list[NativeTokenRec],
     temp_template: str,
     submit_method: str = submit_utils.SubmitMethods.CLI,
     use_build_cmd: bool = False,
@@ -874,7 +880,7 @@ def new_tokens(
     token_mint_addr: clusterlib.AddressRecord,
     issuer_addr: clusterlib.AddressRecord,
     amount: int,
-) -> list[TokenRecord]:
+) -> list[NativeTokenRec]:
     """Mint new token, sign using skeys."""
     # Create simple script
     keyhash = cluster_obj.g_address.get_payment_vkey_hash(payment_vkey_file=issuer_addr.vkey_file)
@@ -894,7 +900,7 @@ def new_tokens(
             raise AssertionError(msg)
 
         tokens_to_mint.append(
-            TokenRecord(
+            NativeTokenRec(
                 token=token,
                 amount=amount,
                 issuers_addrs=[issuer_addr],

@@ -194,7 +194,7 @@ class TestMinting:
         policyid = cluster.g_transaction.get_policyid(multisig_script)
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
-        token_mint = clusterlib_utils.TokenRecord(
+        token_mint = clusterlib_utils.NativeTokenRec(
             token=token,
             amount=amount,
             issuers_addrs=token_issuers,
@@ -293,7 +293,7 @@ class TestMinting:
         policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}" if asset_name else policyid
 
-        token_mint = clusterlib_utils.TokenRecord(
+        token_mint = clusterlib_utils.NativeTokenRec(
             token=token,
             amount=amount,
             issuers_addrs=[issuer_addr],
@@ -394,14 +394,14 @@ class TestMinting:
             # identified by just policyid
             tokens_mint.extend(
                 [
-                    clusterlib_utils.TokenRecord(
+                    clusterlib_utils.NativeTokenRec(
                         token=aname_token,
                         amount=amount,
                         issuers_addrs=[i_addrs[i]],
                         token_mint_addr=token_mint_addr,
                         script=script,
                     ),
-                    clusterlib_utils.TokenRecord(
+                    clusterlib_utils.NativeTokenRec(
                         token=policyid,
                         amount=amount,
                         issuers_addrs=[i_addrs[i]],
@@ -503,7 +503,7 @@ class TestMinting:
         tokens = [f"{policyid}.{an}" for an in asset_names]
 
         tokens_mint = [
-            clusterlib_utils.TokenRecord(
+            clusterlib_utils.NativeTokenRec(
                 token=t,
                 amount=amount,
                 issuers_addrs=[issuer_addr],
@@ -736,7 +736,7 @@ class TestMinting:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
@@ -886,7 +886,7 @@ class TestMinting:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=[issuer_addr],
@@ -1026,7 +1026,7 @@ class TestMinting:
         policyid = cluster.g_transaction.get_policyid(multisig_script)
         token = f"{policyid}.{asset_name}"
 
-        token_mint = clusterlib_utils.TokenRecord(
+        token_mint = clusterlib_utils.NativeTokenRec(
             token=token,
             amount=amount,
             issuers_addrs=issuers_addrs,
@@ -1127,7 +1127,7 @@ class TestMinting:
         policyid = cluster.g_transaction.get_policyid(script)
         token = f"{policyid}.{asset_name}"
 
-        token_mint = clusterlib_utils.TokenRecord(
+        token_mint = clusterlib_utils.NativeTokenRec(
             token=token,
             amount=amount,
             issuers_addrs=[issuer_addr],
@@ -1215,7 +1215,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
@@ -1309,7 +1309,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
@@ -1396,7 +1396,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
@@ -1470,7 +1470,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
@@ -1533,7 +1533,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
@@ -1607,7 +1607,7 @@ class TestPolicies:
             token = f"{policyid}.{asset_name}"
 
             tokens_to_mint.append(
-                clusterlib_utils.TokenRecord(
+                clusterlib_utils.NativeTokenRec(
                     token=token,
                     amount=amount,
                     issuers_addrs=issuers_addrs,
@@ -1664,8 +1664,8 @@ class TestTransfer:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-    ) -> clusterlib_utils.TokenRecord:
-        fixture_cache: cluster_management.FixtureCache[clusterlib_utils.TokenRecord | None]
+    ) -> clusterlib_utils.NativeTokenRec:
+        fixture_cache: cluster_management.FixtureCache[clusterlib_utils.NativeTokenRec | None]
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value is not None:
                 return fixture_cache.value
@@ -1698,7 +1698,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        new_token: clusterlib_utils.TokenRecord,
+        new_token: clusterlib_utils.NativeTokenRec,
         amount: int,
         use_build_cmd: bool,
     ):
@@ -1831,7 +1831,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        new_token: clusterlib_utils.TokenRecord,
+        new_token: clusterlib_utils.NativeTokenRec,
         use_build_cmd: bool,
     ):
         """Test sending multiple different tokens to payment addresses.
@@ -2013,7 +2013,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        new_token: clusterlib_utils.TokenRecord,
+        new_token: clusterlib_utils.NativeTokenRec,
         use_build_cmd: bool,
     ):
         """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
@@ -2068,7 +2068,7 @@ class TestTransfer:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        new_token: clusterlib_utils.TokenRecord,
+        new_token: clusterlib_utils.NativeTokenRec,
         use_build_cmd: bool,
         token_amount: int,
     ):
@@ -2139,7 +2139,7 @@ class TestNegative:
     def _mint_tx(
         self,
         cluster_obj: clusterlib.ClusterLib,
-        new_tokens: list[clusterlib_utils.TokenRecord],
+        new_tokens: list[clusterlib_utils.NativeTokenRec],
         temp_template: str,
     ) -> pl.Path:
         """Return signed TX for minting new token. Sign using skeys."""
@@ -2220,7 +2220,7 @@ class TestNegative:
         issuer_addr = issuers_addrs[1]
         amount = 20_000_000
 
-        token_mint = clusterlib_utils.TokenRecord(
+        token_mint = clusterlib_utils.NativeTokenRec(
             token=token,
             amount=amount,
             issuers_addrs=[issuer_addr],
@@ -2264,7 +2264,7 @@ class TestNegative:
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
 
-        token_mint = clusterlib_utils.TokenRecord(
+        token_mint = clusterlib_utils.NativeTokenRec(
             token=token,
             amount=token_amount,
             issuers_addrs=[issuer_addr],

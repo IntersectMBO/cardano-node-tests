@@ -20,8 +20,8 @@ def _build_fund_script(
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
-    tokens: list[plutus_common.Token] | None = None,  # tokens must already be in `payment_addr`
-    tokens_collateral: list[plutus_common.Token]
+    tokens: list[clusterlib_utils.Token] | None = None,  # tokens must already be in `payment_addr`
+    tokens_collateral: list[clusterlib_utils.Token]
     | None = None,  # tokens must already be in `payment_addr`
     embed_datum: bool = False,
 ) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
@@ -139,7 +139,7 @@ def _build_spend_locked_txin(  # noqa: C901
     tx_files: clusterlib.TxFiles | None = None,
     invalid_hereafter: int | None = None,
     invalid_before: int | None = None,
-    tokens: list[plutus_common.Token] | None = None,
+    tokens: list[clusterlib_utils.Token] | None = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,

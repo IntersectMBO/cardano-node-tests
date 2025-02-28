@@ -4,6 +4,7 @@ import logging
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -46,7 +47,7 @@ def _fund_script(
     use_reference_script: bool = False,
     use_inline_datum: bool = False,
     collateral_amount: int | None = None,
-    tokens_collateral: list[plutus_common.Token]
+    tokens_collateral: list[clusterlib_utils.Token]
     | None = None,  # tokens must already be in `payment_addr`
 ) -> tuple[
     list[clusterlib.UTXOData],
