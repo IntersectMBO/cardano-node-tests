@@ -388,7 +388,7 @@ class TestRewards:
             pool_id=pool_id,
         )
 
-        native_tokens: list[clusterlib_utils.TokenRecord] = []
+        native_tokens: list[clusterlib_utils.NativeTokenRec] = []
         if VERSIONS.transaction_era >= VERSIONS.MARY:
             # Create native tokens UTxOs for pool user
             native_tokens = clusterlib_utils.new_tokens(

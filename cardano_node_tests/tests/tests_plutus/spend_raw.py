@@ -6,6 +6,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -26,8 +27,8 @@ def _fund_script(
     amount: int,
     fee_txsize: int = FEE_REDEEM_TXSIZE,
     deposit_amount: int = 0,
-    tokens: list[plutus_common.Token] | None = None,  # tokens must already be in `payment_addr`
-    tokens_collateral: list[plutus_common.Token]
+    tokens: list[clusterlib_utils.Token] | None = None,  # tokens must already be in `payment_addr`
+    tokens_collateral: list[clusterlib_utils.Token]
     | None = None,  # tokens must already be in `payment_addr`
     collateral_fraction_offset: float = 1.0,
     embed_datum: bool = False,
@@ -135,7 +136,7 @@ def _spend_locked_txin(  # noqa: C901
     tx_files: clusterlib.TxFiles | None = None,
     invalid_hereafter: int | None = None,
     invalid_before: int | None = None,
-    tokens: list[plutus_common.Token] | None = None,
+    tokens: list[clusterlib_utils.Token] | None = None,
     expect_failure: bool = False,
     script_valid: bool = True,
     submit_tx: bool = True,

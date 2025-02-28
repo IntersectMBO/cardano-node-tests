@@ -309,7 +309,7 @@ class TestNegative:
             issuer_addr=payment_addrs[0],
             amount=token_amount,
         )
-        tokens_rec = [plutus_common.Token(coin=t.token, amount=t.amount) for t in tokens]
+        tokens_rec = [clusterlib_utils.Token(coin=t.token, amount=t.amount) for t in tokens]
 
         script_utxos, collateral_utxos, __ = spend_raw._fund_script(
             temp_template=temp_template,

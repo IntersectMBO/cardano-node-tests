@@ -50,7 +50,7 @@ def _build_fund_script(
     use_reference_script: bool = False,
     use_inline_datum: bool = True,
     collateral_amount: int | None = None,
-    tokens_collateral: list[plutus_common.Token]
+    tokens_collateral: list[clusterlib_utils.Token]
     | None = None,  # tokens must already be in `payment_addr`
 ) -> tuple[
     list[clusterlib.UTXOData],

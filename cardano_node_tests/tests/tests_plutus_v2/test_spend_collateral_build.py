@@ -290,7 +290,7 @@ class TestCollateralOutput:
             issuer_addr=payment_addr,
             amount=token_amount,
         )
-        tokens_rec = [plutus_common.Token(coin=token[0].token, amount=token[0].amount)]
+        tokens_rec = [clusterlib_utils.Token(coin=token[0].token, amount=token[0].amount)]
 
         # Fund the script address and create a UTxO for collateral
 

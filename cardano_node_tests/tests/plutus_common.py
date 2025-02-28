@@ -478,12 +478,6 @@ class PlutusOp:
 
 
 @dataclasses.dataclass(frozen=True, order=True)
-class Token:
-    coin: str
-    amount: int
-
-
-@dataclasses.dataclass(frozen=True, order=True)
 class ScriptCost:
     fee: int
     collateral: int  # Lovelace amount > minimum UTxO value
