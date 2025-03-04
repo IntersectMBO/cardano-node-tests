@@ -11,6 +11,7 @@ fi
 # Build `cardano-cli`
 nix build \
   --accept-flake-config \
+  --no-write-lock-file \
   "github://github.com/IntersectMBO/cardano-cli?ref=${CARDANO_CLI_REV}#cardano-cli" \
   -o cardano-cli-build || exit 1
 [ -e cardano-cli-build/bin/cardano-cli ] || exit 1
