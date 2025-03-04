@@ -11,6 +11,7 @@ fi
 # Build `create-script-context`
 nix build \
   --accept-flake-config \
+  --no-write-lock-file \
   "github://github.com/IntersectMBO/plutus-apps?ref=${PLUTUS_APPS_REV}#create-script-context" \
   -o create-script-context-build || exit 1
 [ -e create-script-context-build/bin/create-script-context ] || exit 1
