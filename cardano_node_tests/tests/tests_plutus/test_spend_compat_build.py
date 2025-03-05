@@ -76,6 +76,7 @@ class TestCompatibility:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=100_000,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -87,7 +88,7 @@ class TestCompatibility:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=2_000_000,
+                amount=-1,
                 submit_tx=False,
             )
 

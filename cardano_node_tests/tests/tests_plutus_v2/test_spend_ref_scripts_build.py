@@ -79,7 +79,7 @@ class TestReferenceScripts:
 
         # Create a Tx output with an inline datum at the script address
 
-        script_fund = 100_000_000
+        script_fund = 1_000_000
 
         script_address_1 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
@@ -186,18 +186,27 @@ class TestReferenceScripts:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
+            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.g_transaction.sign_tx(
@@ -249,7 +258,7 @@ class TestReferenceScripts:
 
         # Create a Tx output with an inline datum at the script address
 
-        script_fund = 200_000_000
+        script_fund = 1_000_000
 
         script_address_1 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op.script_file
@@ -341,18 +350,27 @@ class TestReferenceScripts:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
+            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.g_transaction.sign_tx(
@@ -397,7 +415,7 @@ class TestReferenceScripts:
 
         # Create the necessary UTxOs
 
-        script_fund = 100_000_000
+        script_fund = 2_000_000
 
         script_address_1 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
@@ -493,18 +511,27 @@ class TestReferenceScripts:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
+            change_address=payment_addrs[0].address,
         )
 
         plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
@@ -733,6 +760,7 @@ class TestNegativeReferenceScripts:
                 payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 plutus_op=plutus_op,
+                amount=100_000,
                 use_reference_script=True,
             )
         err_str = str(excinfo.value)
@@ -761,7 +789,7 @@ class TestNegativeReferenceScripts:
 
         # Create a Tx output with an inline datum at the script address
 
-        script_fund = 100_000_000
+        script_fund = 1_000_000
 
         script_address_1 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
@@ -868,19 +896,28 @@ class TestNegativeReferenceScripts:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=f"{temp_template}_step2",
+                txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
+                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert (
@@ -901,6 +938,7 @@ class TestNegativeReferenceScripts:
         Expect failure.
         """
         temp_template = common.get_test_id(cluster)
+        script_fund = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS["v1"].script_file,
@@ -922,6 +960,7 @@ class TestNegativeReferenceScripts:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=script_fund,
             use_reference_script=True,
         )
         assert reference_utxo, "No reference script UTxO"
@@ -944,19 +983,28 @@ class TestNegativeReferenceScripts:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=f"{temp_template}_step2",
+                txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
+                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert (
@@ -996,7 +1044,7 @@ class TestNegativeReferenceScripts:
 
         # Create a Tx output with an inline datum at the script address
 
-        script_fund = 200_000_000
+        script_fund = 1_000_000
 
         script_address_1 = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_addr1", payment_script_file=plutus_op1.script_file
@@ -1090,19 +1138,28 @@ class TestNegativeReferenceScripts:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=f"{temp_template}_step2",
+                txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
+                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert (
@@ -1125,6 +1182,7 @@ class TestNegativeReferenceScripts:
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
 
+        script_fund = 1_000_000
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
         # For mypy
@@ -1140,6 +1198,7 @@ class TestNegativeReferenceScripts:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
             use_reference_script=False,
         )
 
@@ -1176,19 +1235,28 @@ class TestNegativeReferenceScripts:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=f"{temp_template}_step2",
+                txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
+                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert "ByronTxOutInContext" in err_str, err_str

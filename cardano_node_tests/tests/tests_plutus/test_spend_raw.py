@@ -140,7 +140,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -163,6 +163,7 @@ class TestLocking:
         spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
@@ -199,7 +200,7 @@ class TestLocking:
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
-        amount = 10_000_000
+        amount = 1_000_000
         deposit_amount = cluster.g_query.get_address_deposit()
 
         # Create stake address registration cert
@@ -233,7 +234,6 @@ class TestLocking:
             dst_addr=pool_users[1].payment,
             plutus_op=plutus_op_dummy,
             amount=amount,
-            deposit_amount=deposit_amount,
         )
 
         invalid_hereafter = cluster.g_query.get_slot_no() + 200
@@ -241,11 +241,13 @@ class TestLocking:
         __, tx_output_dummy = spend_raw._spend_locked_txin(
             temp_template=f"{temp_template}_dummy",
             cluster_obj=cluster,
+            payment_addr=pool_users[0].payment,
             dst_addr=pool_users[1].payment,
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op_dummy,
             amount=amount,
+            deposit_amount=deposit_amount,
             tx_files=tx_files,
             invalid_before=1,
             invalid_hereafter=invalid_hereafter,
@@ -269,6 +271,7 @@ class TestLocking:
         spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
+            payment_addr=pool_users[0].payment,
             dst_addr=pool_users[1].payment,
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
@@ -316,7 +319,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         datum_file: pl.Path | None = None
         datum_cbor_file: pl.Path | None = None
@@ -376,6 +379,7 @@ class TestLocking:
         spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
@@ -411,7 +415,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         protocol_params = cluster.g_query.get_protocol_params()
 
@@ -421,16 +425,14 @@ class TestLocking:
         # This is higher than `plutus_common.GUESSING_GAME_COST`, because the script
         # context has changed to include more stuff
         execution_cost2_v1 = plutus_common.ExecutionCost(
-            per_time=280_668_068, per_space=1_031_312, fixed_cost=79_743
+            per_time=325_969_144, per_space=1_194_986, fixed_cost=92_454
         )
 
         script_file1_v2 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
         execution_cost1_v2 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
         script_file2_v2 = plutus_common.GUESSING_GAME_PLUTUS_V2
         execution_cost2_v2 = plutus_common.ExecutionCost(
-            per_time=208_314_784,
-            per_space=662_274,
-            fixed_cost=53_233,
+            per_time=239_699_145, per_space=662_274, fixed_cost=53_233
         )
 
         if plutus_version == "plutus_v1":
@@ -641,7 +643,7 @@ class TestLocking:
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS[plutus_version].script_file,
@@ -670,6 +672,7 @@ class TestLocking:
         err, __ = spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
@@ -698,7 +701,7 @@ class TestLocking:
         * check that the amount was not transferred and collateral UTxO was spent
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_FAILS[plutus_version].script_file,
@@ -716,27 +719,16 @@ class TestLocking:
             amount=amount,
         )
 
-        # Include any payment txin
-        txins = [
-            r
-            for r in cluster.g_query.get_utxo(
-                address=payment_addrs[0].address, coins=[clusterlib.DEFAULT_COIN]
-            )
-            if not (r.datum_hash or r.inline_datum_hash)
-        ][:1]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-
         try:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
                 amount=amount,
-                txins=txins,
-                tx_files=tx_files,
                 script_valid=False,
             )
         except clusterlib.CLIError as exc:
@@ -799,6 +791,7 @@ class TestLocking:
         spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
@@ -863,7 +856,6 @@ class TestLocking:
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             amount=amount_fund,
-            fee_txsize=fee_redeem_txsize,
             tokens=tokens_fund_rec,
         )
 
@@ -874,6 +866,7 @@ class TestLocking:
         __, tx_output_spend = spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
@@ -926,7 +919,7 @@ class TestLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         max_collateral_ins = cluster.g_query.get_protocol_params()["maxCollateralInputs"]
         collateral_utxos = []
@@ -997,6 +990,7 @@ class TestLocking:
                 spend_raw._spend_locked_txin(
                     temp_template=temp_template,
                     cluster_obj=cluster,
+                    payment_addr=payment_addr,
                     dst_addr=dst_addr,
                     script_utxos=script_utxos,
                     collateral_utxos=collateral_utxos,
@@ -1009,6 +1003,7 @@ class TestLocking:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addr,
                 dst_addr=dst_addr,
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,

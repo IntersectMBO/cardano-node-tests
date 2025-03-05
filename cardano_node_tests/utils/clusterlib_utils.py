@@ -1467,3 +1467,10 @@ def build_stake_multisig_script(
         json.dump(script, fp_out, indent=4)
 
     return out_file
+
+
+def get_just_lovelace_utxos(address_utxos: list[clusterlib.UTXOData]) -> list[clusterlib.UTXOData]:
+    """Get UTxOs with just Lovelace."""
+    return cl_txtools._get_usable_utxos(
+        address_utxos=address_utxos, coins={clusterlib.DEFAULT_COIN}
+    )

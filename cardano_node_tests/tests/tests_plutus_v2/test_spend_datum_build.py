@@ -16,6 +16,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_build
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -212,6 +213,7 @@ class TestNegativeInlineDatum:
                 payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 plutus_op=plutus_op,
+                amount=1_000_000,
             )
         err_str = str(excinfo.value)
         assert "JSON object expected. Unexpected value" in err_str, err_str
@@ -230,6 +232,7 @@ class TestNegativeInlineDatum:
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
+        script_fund = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V1,
@@ -249,6 +252,7 @@ class TestNegativeInlineDatum:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=script_fund,
         )
 
         #  Spend the "locked" UTxO
@@ -268,19 +272,28 @@ class TestNegativeInlineDatum:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=f"{temp_template}_step2",
+                txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
+                change_address=payment_addrs[0].address,
             )
         err_str = str(excinfo.value)
         assert "InlineDatumsNotSupported" in err_str, err_str
@@ -351,6 +364,7 @@ class TestNegativeInlineDatum:
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
+        script_fund = 1_000_000
 
         plutus_op = spend_build.PLUTUS_OP_ALWAYS_SUCCEEDS
 
@@ -366,6 +380,7 @@ class TestNegativeInlineDatum:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=script_fund,
         )
 
         plutus_txins = [
@@ -383,18 +398,27 @@ class TestNegativeInlineDatum:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
+            change_address=payment_addrs[0].address,
         )
 
         tx_signed = cluster.g_transaction.sign_tx(

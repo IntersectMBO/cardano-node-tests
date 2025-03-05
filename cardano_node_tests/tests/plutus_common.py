@@ -90,14 +90,14 @@ class ExecutionCost:
 # Scripts execution cost for Txs with single UTxO input and single Plutus script
 ALWAYS_FAILS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
 ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=368_100, per_space=1_700, fixed_cost=125)
-GUESSING_GAME_COST = ExecutionCost(per_time=236_715_138, per_space=870_842, fixed_cost=67_315)
+GUESSING_GAME_COST = ExecutionCost(per_time=282_016_214, per_space=1_034_516, fixed_cost=80_025)
 GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1_016)
 # TODO: fix once context equivalence tests can run again
 CONTEXT_EQUIVALENCE_COST = ExecutionCost(per_time=100_000_000, per_space=1_000_00, fixed_cost=947)
 
 ALWAYS_FAILS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
-GUESSING_GAME_V2_COST = ExecutionCost(per_time=168_868_800, per_space=540_612, fixed_cost=43_369)
+GUESSING_GAME_V2_COST = ExecutionCost(per_time=200_253_161, per_space=637_676, fixed_cost=51_233)
 GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(
     per_time=4_985_806, per_space=11_368, fixed_cost=1_016
 )

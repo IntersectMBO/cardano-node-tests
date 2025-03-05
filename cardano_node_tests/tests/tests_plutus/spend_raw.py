@@ -25,8 +25,6 @@ def _fund_script(
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
     amount: int,
-    fee_txsize: int = FEE_REDEEM_TXSIZE,
-    deposit_amount: int = 0,
     tokens: list[clusterlib_utils.Token] | None = None,  # tokens must already be in `payment_addr`
     tokens_collateral: list[clusterlib_utils.Token]
     | None = None,  # tokens must already be in `payment_addr`
@@ -57,7 +55,7 @@ def _fund_script(
 
     script_txout = plutus_common.txout_factory(
         address=script_address,
-        amount=amount + redeem_cost.fee + fee_txsize + deposit_amount,
+        amount=amount,
         plutus_op=plutus_op,
         embed_datum=embed_datum,
     )
@@ -126,12 +124,14 @@ def _fund_script(
 def _spend_locked_txin(  # noqa: C901
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
+    payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
     script_utxos: list[clusterlib.UTXOData],
     collateral_utxos: list[clusterlib.UTXOData],
     plutus_op: plutus_common.PlutusOp,
     amount: int,
-    fee_txsize: int = FEE_REDEEM_TXSIZE,
+    fee_txsize: int | None = None,
+    deposit_amount: int = 0,
     txins: clusterlib.OptionalUTXOData = (),
     tx_files: clusterlib.TxFiles | None = None,
     invalid_hereafter: int | None = None,
@@ -144,20 +144,33 @@ def _spend_locked_txin(  # noqa: C901
     """Spend the locked UTxO."""
     assert plutus_op.execution_cost
 
+    if fee_txsize is None:
+        fee_txsize = FEE_REDEEM_TXSIZE
+
     tx_files = tx_files or clusterlib.TxFiles()
     spent_tokens = tokens or ()
+    spent_tokens_dict = {r.coin: r for r in spent_tokens}
+    available_tokens = [
+        clusterlib_utils.Token(coin=r.coin, amount=r.amount)
+        for r in script_utxos
+        if r.coin != clusterlib.DEFAULT_COIN
+    ]
 
-    # Change will be returned to address of the first script
-    change_rec = script_utxos[0]
+    script_amount = clusterlib.calculate_utxos_balance(utxos=script_utxos)
+
+    # Spend all locked funds
+    if amount == -1:
+        amount = script_amount
+
+    # Change that was calculated manually will be returned to address of the first script.
+    # The remaining change that is automatically handled by the `build` command will be returned
+    # to `payment_addr`, because it would be inaccessible on script address without proper
+    # datum hash (datum hash is not provided for change that is handled by `build` command).
+    script_change_rec = script_utxos[0]
 
     redeem_cost = plutus_common.compute_cost(
         execution_cost=plutus_op.execution_cost,
         protocol_params=cluster_obj.g_query.get_protocol_params(),
-    )
-
-    script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
-    script_lovelace_balance = clusterlib.calculate_utxos_balance(
-        utxos=[*script_utxos_lovelace, *txins]
     )
 
     # Spend the "locked" UTxO
@@ -184,33 +197,74 @@ def _spend_locked_txin(  # noqa: C901
     txouts = [
         clusterlib.TxOut(address=dst_addr.address, amount=amount),
     ]
-    # Append change
-    if script_lovelace_balance > amount + redeem_cost.fee + fee_txsize:
-        txouts.append(
-            clusterlib.TxOut(
-                address=change_rec.address,
-                amount=script_lovelace_balance - amount - redeem_cost.fee - fee_txsize,
-                datum_hash=change_rec.datum_hash,
-            )
-        )
 
-    for token in spent_tokens:
-        txouts.append(
-            clusterlib.TxOut(address=dst_addr.address, amount=token.amount, coin=token.coin)
-        )
-        # Append change
+    lovelace_change_needed = False
+    for token in available_tokens:
+        spent_amount = 0
         script_token_balance = clusterlib.calculate_utxos_balance(
             utxos=script_utxos, coin=token.coin
         )
-        if script_token_balance > token.amount:
+        if stoken := spent_tokens_dict.get(token.coin):
+            spent_amount = stoken.amount
+            txouts.append(
+                clusterlib.TxOut(address=dst_addr.address, amount=spent_amount, coin=stoken.coin)
+            )
+        # Append change
+        if script_token_balance > spent_amount:
+            lovelace_change_needed = True
             txouts.append(
                 clusterlib.TxOut(
-                    address=change_rec.address,
-                    amount=script_token_balance - token.amount,
+                    address=script_change_rec.address,
+                    amount=script_token_balance - spent_amount,
                     coin=token.coin,
-                    datum_hash=change_rec.datum_hash,
+                    datum_hash=script_change_rec.datum_hash,
                 )
             )
+
+    # Add minimum (+ some) required Lovelace to change Tx output
+    lovelace_token_change = 0
+    if lovelace_change_needed:
+        lovelace_token_change = 4_000_000
+        txouts.append(
+            clusterlib.TxOut(
+                address=script_change_rec.address,
+                amount=lovelace_token_change,
+                coin=clusterlib.DEFAULT_COIN,
+                datum_hash=script_change_rec.datum_hash,
+            )
+        )
+
+    input_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=[*txins]) + script_amount
+    funds_needed = amount + redeem_cost.fee + fee_txsize + deposit_amount + lovelace_token_change
+
+    if input_lovelace_balance < funds_needed:
+        # Add additional funds to cover fee and Lovelace change for token txouts
+        fee_txin = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster_obj.g_query.get_utxo(address=payment_addr.address)
+            )
+            if r.amount >= 100_000_000
+        )
+        txins = [
+            *txins,
+            fee_txin,
+        ]
+        tx_files = dataclasses.replace(
+            tx_files,
+            signing_key_files=list({*tx_files.signing_key_files, payment_addr.skey_file}),
+        )
+        input_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=[*txins]) + script_amount
+
+    # Append change
+    change_lovelace = input_lovelace_balance - funds_needed
+    if change_lovelace > 0:
+        txouts.append(
+            clusterlib.TxOut(
+                address=payment_addr.address,
+                amount=change_lovelace,
+            )
+        )
 
     tx_raw_output = cluster_obj.g_transaction.build_raw_tx_bare(
         out_file=f"{temp_template}_step2_tx.body",
@@ -233,6 +287,7 @@ def _spend_locked_txin(  # noqa: C901
         return "", tx_raw_output
 
     dst_init_balance = cluster_obj.g_query.get_address_balance(dst_addr.address)
+    script_utxos_lovelace = [u for u in script_utxos if u.coin == clusterlib.DEFAULT_COIN]
 
     if not script_valid:
         cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)

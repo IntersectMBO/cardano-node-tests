@@ -67,6 +67,7 @@ class TestBuildLocking:
         * check that the expected UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
+        script_fund = 10_000_000
 
         if use_reference_script and use_inline_datum:
             per_time = 171_623_997
@@ -112,6 +113,7 @@ class TestBuildLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=script_fund,
             use_inline_datum=use_inline_datum,
             use_reference_script=use_reference_script,
         )
@@ -137,23 +139,33 @@ class TestBuildLocking:
         ]
 
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=-1),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund),
         ]
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
+            change_address=payment_addrs[0].address,
         )
 
         plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,

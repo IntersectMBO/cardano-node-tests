@@ -62,6 +62,8 @@ class TestCollateralOutput:
         assert plutus_op.execution_cost
         assert plutus_op.redeemer_cbor_file
 
+        script_amount = clusterlib.calculate_utxos_balance(utxos=script_utxos)
+
         plutus_txins = [
             clusterlib.ScriptTxIn(
                 txins=script_utxos,
@@ -80,21 +82,21 @@ class TestCollateralOutput:
             signing_key_files=[payment_addr.skey_file, dst_addr.skey_file],
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=dst_addr.address, amount=2_000_000),
+            clusterlib.TxOut(address=dst_addr.address, amount=script_amount),
         ]
-        # Include any payment txin
-        txins = [
+        # Include a payment txin
+        txin = next(
             r
-            for r in cluster.g_query.get_utxo(
-                address=payment_addr.address, coins=[clusterlib.DEFAULT_COIN]
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addr.address)
             )
-            if not (r.datum_hash or r.inline_datum_hash)
-        ][:1]
+            if r.amount >= 100_000_000
+        )
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
             tx_name=f"{temp_template}_step2",
-            txins=txins,
+            txins=[txin],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
@@ -168,6 +170,7 @@ class TestCollateralOutput:
             payment_addr=payment_addr,
             dst_addr=dst_addr,
             plutus_op=plutus_op,
+            amount=1_000_000,
             collateral_amount=amount_for_collateral,
         )
 
@@ -300,6 +303,7 @@ class TestCollateralOutput:
             payment_addr=payment_addr,
             dst_addr=dst_addr,
             plutus_op=plutus_op,
+            amount=1_000_000,
             collateral_amount=amount_for_collateral,
             tokens_collateral=tokens_rec,
         )

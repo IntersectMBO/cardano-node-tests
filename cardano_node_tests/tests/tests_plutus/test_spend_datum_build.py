@@ -323,6 +323,7 @@ class TestNegativeDatum:
                 payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 plutus_op=plutus_op,
+                amount=100_000,
             )
 
         err_str = str(excinfo.value)
@@ -356,6 +357,7 @@ class TestNegativeDatum:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op_1,
+            amount=1_000_000,
         )
 
         # Use a wrong datum to try to unlock the funds
@@ -376,7 +378,7 @@ class TestNegativeDatum:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op_2,
-                amount=2_000_000,
+                amount=-1,
                 submit_tx=False,
             )
         except clusterlib.CLIError as exc:
@@ -405,8 +407,8 @@ class TestNegativeDatum:
         """
         temp_template = common.get_test_id(cluster)
 
-        amount_fund = 4_000_000
-        amount_redeem = 2_000_000
+        amount_fund = 3_000_000
+        amount_redeem = 1_500_000
         amount_collateral = 2_000_000
 
         payment_addr = payment_addrs[0]

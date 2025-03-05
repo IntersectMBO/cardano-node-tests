@@ -47,6 +47,7 @@ def _build_fund_script(
     payment_addr: clusterlib.AddressRecord,
     dst_addr: clusterlib.AddressRecord,
     plutus_op: plutus_common.PlutusOp,
+    amount: int,
     use_reference_script: bool = False,
     use_inline_datum: bool = True,
     collateral_amount: int | None = None,
@@ -64,8 +65,6 @@ def _build_fund_script(
     """
     # For mypy
     assert plutus_op.execution_cost
-
-    script_fund = 200_000_000
 
     script_address = cluster.g_address.gen_payment_addr(
         addr_name=temp_template, payment_script_file=plutus_op.script_file
@@ -85,7 +84,7 @@ def _build_fund_script(
     txouts = [
         clusterlib.TxOut(
             address=script_address,
-            amount=script_fund,
+            amount=amount,
             inline_datum_file=(
                 plutus_op.datum_file if plutus_op.datum_file and use_inline_datum else ""
             ),
@@ -109,7 +108,7 @@ def _build_fund_script(
         txouts.append(
             clusterlib.TxOut(
                 address=dst_addr.address,
-                amount=10_000_000,
+                amount=amount,
                 reference_script_file=plutus_op.script_file,
             )
         )
