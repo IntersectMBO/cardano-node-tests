@@ -76,6 +76,7 @@ class TestCompatibility:
                 payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 plutus_op=plutus_op,
+                amount=1_000_000,
             )
         except clusterlib.CLIError as exc:
             if "Inline datums cannot be used" not in str(exc):
@@ -121,6 +122,7 @@ class TestCompatibility:
                 payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 plutus_op=plutus_op,
+                amount=1_000_000,
                 use_reference_script=True,
                 use_inline_datum=False,
             )

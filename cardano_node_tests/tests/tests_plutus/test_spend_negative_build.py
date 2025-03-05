@@ -88,6 +88,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -99,7 +100,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op2,
-                amount=2_000_000,
+                amount=-1,
             )
         err_str = str(excinfo.value)
         assert "points to a Plutus script that does not exist" in err_str, err_str
@@ -141,6 +142,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -152,7 +154,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op2,
-                amount=2_000_000,
+                amount=-1,
             )
         err_str = str(excinfo.value)
         assert "(MissingScriptWitnessesUTXOW" in err_str, err_str
@@ -205,6 +207,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
             tokens_collateral=tokens_rec,
         )
 
@@ -218,7 +221,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=2_000_000,
+                amount=-1,
             )
         except clusterlib.CLIError as exc:
             exc_str = str(exc)
@@ -269,6 +272,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -280,7 +284,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=script_utxos,
                 plutus_op=plutus_op,
-                amount=2_000_000,
+                amount=-1,
                 submit_tx=False,
             )
 
@@ -357,6 +361,7 @@ class TestNegative:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -368,7 +373,7 @@ class TestNegative:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=2_000_000,
+                amount=-1,
                 submit_tx=False,
             )
 
@@ -396,9 +401,7 @@ class TestNegative:
         * check that the expected error was raised
         """
         temp_template = common.get_test_id(cluster)
-        amount = 50_000_000
-
-        script_fund = 200_000_000
+        script_fund = 1_000_000
 
         protocol_params = cluster.g_query.get_protocol_params()
 
@@ -511,16 +514,24 @@ class TestNegative:
             ),
         ]
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=amount * 2),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund * 2),
         ]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=f"{temp_template}_step2",
+                txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 txouts=txouts_redeem,
                 script_txins=plutus_txins,
@@ -538,7 +549,7 @@ class TestNegativeRedeemer:
     """Tests for Tx output locking using Plutus smart contracts with wrong redeemer."""
 
     MIN_INT_VAL = -common.MAX_UINT64
-    AMOUNT = 2_000_000
+    AMOUNT = 800_000
 
     @pytest.fixture
     def fund_script_guessing_game_v1(
@@ -564,6 +575,7 @@ class TestNegativeRedeemer:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         return script_utxos, collateral_utxos
@@ -592,6 +604,7 @@ class TestNegativeRedeemer:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         return script_utxos, collateral_utxos

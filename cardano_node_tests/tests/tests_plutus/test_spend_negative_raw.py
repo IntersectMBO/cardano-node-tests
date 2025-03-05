@@ -30,7 +30,10 @@ pytestmark = [
 
 
 FundTupleT = tuple[
-    list[clusterlib.UTXOData], list[clusterlib.UTXOData], list[clusterlib.AddressRecord]
+    list[clusterlib.UTXOData],
+    list[clusterlib.UTXOData],
+    list[clusterlib.AddressRecord],
+    clusterlib.UTXOData,
 ]
 
 
@@ -117,7 +120,7 @@ class TestNegative:
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         if variant == "42_43":
             datum_file = plutus_common.DATUM_42_TYPED
@@ -150,6 +153,7 @@ class TestNegative:
         err, __ = spend_raw._spend_locked_txin(
             temp_template=temp_template,
             cluster_obj=cluster,
+            payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
@@ -180,7 +184,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME[plutus_version].script_file,
@@ -205,6 +209,7 @@ class TestNegative:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
@@ -237,7 +242,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME[plutus_version].script_file,
@@ -260,6 +265,7 @@ class TestNegative:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
@@ -325,6 +331,7 @@ class TestNegative:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
@@ -356,7 +363,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
@@ -378,6 +385,7 @@ class TestNegative:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=script_utxos,
@@ -410,7 +418,7 @@ class TestNegative:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         # Increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
         execution_cost = plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost
@@ -436,6 +444,7 @@ class TestNegative:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
@@ -639,7 +648,7 @@ class TestNegative:
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
-        amount = 2_000_000
+        amount = 1_000_000
 
         script_utxos, collateral_utxos, plutus_op = fund_execution_units_above_limit
 
@@ -669,6 +678,7 @@ class TestNegative:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addrs[0],
                 dst_addr=payment_addrs[1],
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
@@ -717,7 +727,15 @@ class TestNegativeRedeemer:
             amount=self.AMOUNT,
         )
 
-        return script_utxos, collateral_utxos, payment_addrs
+        fee_txin = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster_obj.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
+        )
+
+        return script_utxos, collateral_utxos, payment_addrs, fee_txin
 
     @pytest.fixture
     def fund_script_guessing_game_v1(
@@ -732,15 +750,17 @@ class TestNegativeRedeemer:
 
             temp_template = common.get_test_id(cluster)
 
-            script_utxos, collateral_utxos, payment_addrs = self._fund_script_guessing_game(
-                cluster_manager=cluster_manager,
-                cluster_obj=cluster,
-                temp_template=temp_template,
-                plutus_version="v1",
+            script_utxos, collateral_utxos, payment_addrs, fee_txin = (
+                self._fund_script_guessing_game(
+                    cluster_manager=cluster_manager,
+                    cluster_obj=cluster,
+                    temp_template=temp_template,
+                    plutus_version="v1",
+                )
             )
-            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs
+            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs, fee_txin
 
-        return script_utxos, collateral_utxos, payment_addrs
+        return script_utxos, collateral_utxos, payment_addrs, fee_txin
 
     @pytest.fixture
     def fund_script_guessing_game_v2(
@@ -755,15 +775,17 @@ class TestNegativeRedeemer:
 
             temp_template = common.get_test_id(cluster)
 
-            script_utxos, collateral_utxos, payment_addrs = self._fund_script_guessing_game(
-                cluster_manager=cluster_manager,
-                cluster_obj=cluster,
-                temp_template=temp_template,
-                plutus_version="v2",
+            script_utxos, collateral_utxos, payment_addrs, fee_txin = (
+                self._fund_script_guessing_game(
+                    cluster_manager=cluster_manager,
+                    cluster_obj=cluster,
+                    temp_template=temp_template,
+                    plutus_version="v2",
+                )
             )
-            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs
+            fixture_cache.value = script_utxos, collateral_utxos, payment_addrs, fee_txin
 
-        return script_utxos, collateral_utxos, payment_addrs
+        return script_utxos, collateral_utxos, payment_addrs, fee_txin
 
     @pytest.fixture
     def cost_per_unit(
@@ -916,7 +938,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, fee_txin = fund_script_guessing_game
 
         redeemer_content = {}
         if redeemer_value % 2 == 0:
@@ -937,10 +959,18 @@ class TestNegativeRedeemer:
             + plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.fixed_cost
         )
 
-        dst_addr = payment_addrs[1]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file]
+        )
 
-        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
+        funds_needed = self.AMOUNT + fee_redeem + spend_raw.FEE_REDEEM_TXSIZE
+        funds_available = clusterlib.calculate_utxos_balance(utxos=[*script_utxos, fee_txin])
+        change_amount = funds_available - funds_needed
+
+        txouts = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=self.AMOUNT),
+            clusterlib.TxOut(address=payment_addrs[0].address, amount=change_amount),
+        ]
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -958,6 +988,7 @@ class TestNegativeRedeemer:
         ]
         tx_raw_output = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
+            txins=[fee_txin],
             txouts=txouts,
             tx_files=tx_files,
             fee=fee_redeem + spend_raw.FEE_REDEEM_TXSIZE,
@@ -1000,7 +1031,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         err_str = self._int_out_of_range(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1044,7 +1075,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         err_str = self._int_out_of_range(
             cluster_obj=cluster,
             temp_template=temp_template,
@@ -1087,7 +1118,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, fee_txin = fund_script_guessing_game
 
         redeemer_file = f"{temp_template}.redeemer"
         with open(redeemer_file, "w", encoding="utf-8") as outfile:
@@ -1103,10 +1134,18 @@ class TestNegativeRedeemer:
             + plutus_common.GUESSING_GAME_UNTYPED[plutus_version].execution_cost.fixed_cost
         )
 
-        dst_addr = payment_addrs[1]
+        tx_files = clusterlib.TxFiles(
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file]
+        )
 
-        tx_files = clusterlib.TxFiles(signing_key_files=[dst_addr.skey_file])
-        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=self.AMOUNT)]
+        funds_needed = self.AMOUNT + fee_redeem + spend_raw.FEE_REDEEM_TXSIZE
+        funds_available = clusterlib.calculate_utxos_balance(utxos=[*script_utxos, fee_txin])
+        change_amount = funds_available - funds_needed
+
+        txouts = [
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=self.AMOUNT),
+            clusterlib.TxOut(address=payment_addrs[0].address, amount=change_amount),
+        ]
 
         plutus_txins = [
             clusterlib.ScriptTxIn(
@@ -1124,6 +1163,7 @@ class TestNegativeRedeemer:
 
         tx_raw_output = cluster.g_transaction.build_raw_tx_bare(
             out_file=f"{temp_template}_step2_tx.body",
+            txins=[fee_txin],
             txouts=txouts,
             tx_files=tx_files,
             fee=fee_redeem + spend_raw.FEE_REDEEM_TXSIZE,
@@ -1165,7 +1205,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
 
         redeemer_content = json.dumps(
             {"constructor": 0, "fields": [{"bytes": redeemer_value.hex()}]}
@@ -1242,7 +1282,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
 
         redeemer_content = json.dumps({"constructor": 0, "fields": [{"int": redeemer_value.hex()}]})
 
@@ -1283,7 +1323,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         redeemer_content = json.dumps({"int": redeemer_value.hex()})
 
         # Try to build a Tx for spending the "locked" UTxO
@@ -1323,7 +1363,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         redeemer_content = json.dumps({"constructor": 0, "fields": [{"bytes": redeemer_value}]})
 
         # Try to build a Tx for spending the "locked" UTxO
@@ -1363,7 +1403,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         redeemer_content = json.dumps({"bytes": redeemer_value})
 
         # Try to build a Tx for spending the "locked" UTxO
@@ -1403,7 +1443,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         redeemer_content = f'{{"{redeemer_value}"}}'
 
         # Try to build a Tx for spending the "locked" UTxO
@@ -1443,7 +1483,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         redeemer_content = json.dumps({redeemer_type: 42})
 
         # Try to build a Tx for spending the "locked" UTxO
@@ -1489,7 +1529,7 @@ class TestNegativeRedeemer:
             fund_script_guessing_game_v1 if plutus_version == "v1" else fund_script_guessing_game_v2
         )
 
-        script_utxos, collateral_utxos, payment_addrs = fund_script_guessing_game
+        script_utxos, collateral_utxos, payment_addrs, __ = fund_script_guessing_game
         redeemer_content = json.dumps({redeemer_type: 42})
 
         # Try to build a Tx for spending the "locked" UTxO

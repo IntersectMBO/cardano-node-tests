@@ -78,6 +78,7 @@ class TestBuildLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         __, tx_output, plutus_costs = spend_build._build_spend_locked_txin(
@@ -88,7 +89,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=2_000_000,
+            amount=-1,
         )
 
         # Check expected fees

@@ -141,7 +141,7 @@ class TestNegativeDatum:
         * check that the expected error was raised
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -190,6 +190,7 @@ class TestNegativeDatum:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addr,
                 dst_addr=dst_addr,
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
@@ -264,7 +265,7 @@ class TestNegativeDatum:
         Expect failure.
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
+        amount = 1_000_000
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -298,6 +299,7 @@ class TestNegativeDatum:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addr,
                 dst_addr=dst_addr,
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
@@ -390,6 +392,7 @@ class TestNegativeDatum:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
+                payment_addr=payment_addr,
                 dst_addr=dst_addr,
                 script_utxos=[datum_utxo],
                 collateral_utxos=collateral_utxos,

@@ -106,6 +106,7 @@ class TestBuildLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         __, tx_output, plutus_costs = spend_build._build_spend_locked_txin(
@@ -116,7 +117,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=2_000_000,
+            amount=-1,
         )
 
         # Check expected fees
@@ -159,7 +160,6 @@ class TestBuildLocking:
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
-        amount = 10_000_000
         deposit_amount = cluster.g_query.get_address_deposit()
 
         # Create stake address registration cert
@@ -192,6 +192,7 @@ class TestBuildLocking:
             payment_addr=pool_users[0].payment,
             dst_addr=pool_users[1].payment,
             plutus_op=plutus_op_dummy,
+            amount=1_000_000,
         )
 
         invalid_hereafter = cluster.g_query.get_slot_no() + 200
@@ -204,7 +205,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op_dummy,
-            amount=amount,
+            amount=-1,
             deposit_amount=deposit_amount,
             tx_files=tx_files,
             invalid_before=1,
@@ -234,7 +235,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=amount,
+            amount=-1,
             deposit_amount=deposit_amount,
             tx_files=tx_files,
             invalid_before=1,
@@ -334,6 +335,7 @@ class TestBuildLocking:
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             embed_datum=embed_datum,
+            amount=1_000_000,
         )
 
         __, __, plutus_costs = spend_build._build_spend_locked_txin(
@@ -344,7 +346,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=2_000_000,
+            amount=-1,
         )
 
         # Check expected fees
@@ -388,8 +390,7 @@ class TestBuildLocking:
         * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
-        amount = 2_000_000
-        script_fund = 200_000_000
+        script_fund = 1_000_000
 
         protocol_params = cluster.g_query.get_protocol_params()
 
@@ -399,16 +400,14 @@ class TestBuildLocking:
         # This is higher than `plutus_common.GUESSING_GAME_COST`, because the script
         # context has changed to include more stuff
         execution_cost2_v1 = plutus_common.ExecutionCost(
-            per_time=280_668_068, per_space=1_031_312, fixed_cost=79_743
+            per_time=325_969_144, per_space=1_194_986, fixed_cost=92_454
         )
 
         script_file1_v2 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
         execution_cost1_v2 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
         script_file2_v2 = plutus_common.GUESSING_GAME_PLUTUS_V2
         execution_cost2_v2 = plutus_common.ExecutionCost(
-            per_time=208_314_784,
-            per_space=662_274,
-            fixed_cost=53_233,
+            per_time=239_699_145, per_space=662_274, fixed_cost=53_233
         )
 
         expected_fee_fund = 174_389
@@ -554,14 +553,22 @@ class TestBuildLocking:
             ),
         ]
         tx_files_redeem = clusterlib.TxFiles(
-            signing_key_files=[payment_addrs[1].skey_file],
+            signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file],
+        )
+        fee_txin_redeem = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addrs[0].address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts_redeem = [
-            clusterlib.TxOut(address=payment_addrs[1].address, amount=amount * 2),
+            clusterlib.TxOut(address=payment_addrs[1].address, amount=script_fund * 2),
         ]
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
@@ -572,6 +579,7 @@ class TestBuildLocking:
         plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
             src_address=payment_addrs[0].address,
             tx_name=f"{temp_template}_step2",
+            txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             txouts=txouts_redeem,
             script_txins=plutus_txins,
@@ -593,7 +601,7 @@ class TestBuildLocking:
 
         assert (
             cluster.g_query.get_address_balance(payment_addrs[1].address)
-            == dst_init_balance + amount * 2
+            == dst_init_balance + script_fund * 2
         ), f"Incorrect balance for destination address `{payment_addrs[1].address}`"
 
         script_utxos_lovelace = [
@@ -663,6 +671,7 @@ class TestBuildLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
 
         err, __, __ = spend_build._build_spend_locked_txin(
@@ -673,7 +682,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=2_000_000,
+            amount=-1,
             expect_failure=True,
         )
         assert (
@@ -723,17 +732,8 @@ class TestBuildLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=1_000_000,
         )
-
-        # Include any payment txin
-        txins = [
-            r
-            for r in cluster.g_query.get_utxo(
-                address=payment_addrs[0].address, coins=[clusterlib.DEFAULT_COIN]
-            )
-            if not (r.datum_hash or r.inline_datum_hash)
-        ][:1]
-        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         try:
             __, tx_output, __ = spend_build._build_spend_locked_txin(
@@ -744,9 +744,7 @@ class TestBuildLocking:
                 script_utxos=script_utxos,
                 collateral_utxos=collateral_utxos,
                 plutus_op=plutus_op,
-                amount=2_000_000,
-                txins=txins,
-                tx_files=tx_files,
+                amount=-1,
                 script_valid=False,
             )
         except clusterlib.CLIError as exc:
@@ -813,6 +811,7 @@ class TestBuildLocking:
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             tokens=tokens_rec,
+            amount=10_000_000,
         )
 
         __, tx_output_spend, plutus_costs = spend_build._build_spend_locked_txin(
@@ -823,7 +822,7 @@ class TestBuildLocking:
             script_utxos=script_utxos,
             collateral_utxos=collateral_utxos,
             plutus_op=plutus_op,
-            amount=2_000_000,
+            amount=-1,
             tokens=tokens_rec,
         )
 
@@ -868,7 +867,8 @@ class TestBuildLocking:
 
         token_rand = clusterlib.get_rand_str(5)
 
-        amount_spend = 10_000_000
+        amount = 5_000_000
+        amount_spend = 2_000_000
         token_amount_fund = 100
         token_amount_spend = 20
 
@@ -895,6 +895,7 @@ class TestBuildLocking:
             payment_addr=payment_addrs[0],
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
+            amount=amount,
             tokens=tokens_fund_rec,
         )
 
@@ -935,13 +936,16 @@ class TestBuildLocking:
 
         # Lovelace balance on original script UTxOs
         script_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=script_utxos)
+        # Lovelace balance on additional txins
+        fee_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=tx_output_spend.txins)
         # Lovelace balance on change UTxOs
         change_lovelace_balance = clusterlib.calculate_utxos_balance(
             utxos=[*change_utxos, build_change_utxo]
         )
 
         assert (
-            change_lovelace_balance == script_lovelace_balance - tx_output_spend.fee - amount_spend
+            change_lovelace_balance
+            == script_lovelace_balance + fee_lovelace_balance - tx_output_spend.fee - amount_spend
         )
 
         token_amount_exp = token_amount_fund - token_amount_spend
@@ -1010,6 +1014,7 @@ class TestBuildLocking:
             payment_addr=payment_addr,
             dst_addr=dst_addr,
             plutus_op=plutus_op,
+            amount=amount,
         )
 
         # Step 2: spend the "locked" UTxO
@@ -1032,7 +1037,14 @@ class TestBuildLocking:
             )
         ]
         tx_files = clusterlib.TxFiles(
-            signing_key_files=[dst_addr.skey_file],
+            signing_key_files=[payment_addr.skey_file, dst_addr.skey_file],
+        )
+        fee_txin = next(
+            r
+            for r in clusterlib_utils.get_just_lovelace_utxos(
+                address_utxos=cluster.g_query.get_utxo(address=payment_addr.address)
+            )
+            if r.amount >= 100_000_000
         )
         txouts = [
             clusterlib.TxOut(address=dst_addr.address, amount=amount),
@@ -1043,10 +1055,10 @@ class TestBuildLocking:
             tx_name=f"{temp_template}_step2",
             tx_files=tx_files,
             # `collateral_utxos` is used both as collateral and as normal Tx input
-            txins=collateral_utxos,
+            txins=[*collateral_utxos, fee_txin],
             txouts=txouts,
             script_txins=plutus_txins,
-            change_address=script_address,
+            change_address=payment_addr.address,
         )
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_step2.out_file,
