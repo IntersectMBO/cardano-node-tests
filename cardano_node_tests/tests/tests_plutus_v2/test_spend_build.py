@@ -65,6 +65,7 @@ class TestBuildLocking:
         * create the necessary Tx outputs
         * spend the locked UTxO
         * check that the expected UTxOs were correctly spent
+        * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         script_fund = 10_000_000
