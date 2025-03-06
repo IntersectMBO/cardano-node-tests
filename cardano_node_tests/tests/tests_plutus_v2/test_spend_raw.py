@@ -13,6 +13,7 @@ from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ class TestLockingV2:
         * check that the expected amount was locked at the script address
         * spend the locked UTxO
         * check that the expected UTxOs were correctly spent
+        * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -171,6 +173,8 @@ class TestLockingV2:
         )
 
         assert helpers.is_in_interval(fee, expected_fee_redeem, frac=0.15)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
