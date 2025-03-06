@@ -261,9 +261,9 @@ class TestBasicTransactions:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * try to build a Tx that sends all available funds, and extract fee amount
+        * try to build a Tx that transfers all available funds, and extract fee amount
           from the error message
-        * send all available funds minus fee from source address to destination address
+        * transfer all available funds minus fee from source address to destination address
         * check that no change UTxO was created
         * (optional) check transactions in db-sync
         """
@@ -279,32 +279,33 @@ class TestBasicTransactions:
         src_init_balance = cluster.g_query.get_address_balance(src_address)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
-        txouts_init = [clusterlib.TxOut(address=dst_address, amount=src_init_balance)]
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.build_tx(
-                src_address=src_address,
-                tx_name=temp_template,
-                tx_files=tx_files,
-                txouts=txouts_init,
-            )
-        str_exc = str(excinfo.value)
-        fee_match_old = re.search(r"negative: Lovelace \(-([0-9]*)\) lovelace", str_exc)
-        fee_match_new = re.search(r"negative: -([0-9]*) Lovelace", str_exc)  # cardano-node 8.10.0
-        fee_match = fee_match_new or fee_match_old
-        assert fee_match, f"The expected error message was not found: {str_exc}"
+        fee = 150_000  # Initial fee value
+        for i in range(5):
+            txouts = [clusterlib.TxOut(address=dst_address, amount=src_init_balance - fee)]
 
-        fee = int(fee_match.group(1))
-        amount = src_init_balance - fee
-        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
+            try:
+                tx_output = cluster.g_transaction.build_tx(
+                    src_address=src_address,
+                    tx_name=f"{temp_template}_{i}",
+                    tx_files=tx_files,
+                    txouts=txouts,
+                    change_address=src_address,
+                )
+            except clusterlib.CLIError as exc:
+                str_exc = str(exc)
+                if "negative" not in str_exc:
+                    raise
 
-        tx_output = cluster.g_transaction.build_tx(
-            src_address=src_address,
-            tx_name=temp_template,
-            tx_files=tx_files,
-            txouts=txouts,
-            change_address=src_address,
-        )
+                fee_match_old = re.search(r"negative: Lovelace \(-([0-9]*)\) lovelace", str_exc)
+                # cardano-node 8.10.0+
+                fee_match_new = re.search(r"negative: -([0-9]*) Lovelace", str_exc)
+                fee_match = fee_match_new or fee_match_old
+                assert fee_match, f"The expected error message was not found: {str_exc}"
+                fee = fee + int(fee_match.group(1))
+            else:
+                break
+
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
             signing_key_files=tx_files.signing_key_files,
@@ -322,11 +323,12 @@ class TestBasicTransactions:
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert not clusterlib.filter_utxos(utxos=out_utxos, address=src_address), (
-            f"Incorrect balance for source address `{src_address}`"
+            f"Unexpected change UTxO created on source address `{src_address}`"
         )
-        assert clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount, (
-            f"Incorrect balance for destination address `{dst_address}`"
-        )
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount
+            == src_init_balance - fee
+        ), f"Incorrect balance for destination address `{dst_address}`"
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
