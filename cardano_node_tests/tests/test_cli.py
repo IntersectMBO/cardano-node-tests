@@ -711,8 +711,8 @@ class TestKey:
 
         err_str = str(excinfo.value)
         assert (
-            "TextEnvelope type error:  Expected one of:" in err_str
-            or "key non-extended-key  Error: Invalid key." in err_str
+            "Error: Invalid key." in err_str
+            or "TextEnvelope type error:  Expected one of:" in err_str
         ), err_str
 
 
