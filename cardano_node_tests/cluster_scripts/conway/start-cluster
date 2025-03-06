@@ -939,12 +939,17 @@ for i in $(seq 1 "$NUM_POOLS"); do
   )
 done
 
-cardano_cli_log compatible shelley transaction signed-transaction \
+cardano_cli_log shelley transaction build-raw \
+  --ttl "$(get_slot 1000)" \
+  --out-file         "${ALLEGRA_TX_BASE}-tx.txbody" \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   "${POOL_ARGS[@]}" \
-  --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE" \
+  --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE"
+
+cardano_cli_log shelley transaction sign \
+  --tx-body-file     "${ALLEGRA_TX_BASE}-tx.txbody" \
   "${POOL_SIGNING[@]}" \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
