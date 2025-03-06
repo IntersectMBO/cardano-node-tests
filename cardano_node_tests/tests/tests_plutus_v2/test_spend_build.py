@@ -78,13 +78,13 @@ class TestBuildLocking:
             per_space = 558_180
             fixed_cost = 44_802
         elif not use_reference_script and use_inline_datum:
-            per_time = 140_633_161
-            per_space = 452_332
-            fixed_cost = 36_240
+            per_time = 197_202_699
+            per_space = 628_154
+            fixed_cost = 50_463
         else:
-            per_time = 143_683_623
-            per_space = 461_854
-            fixed_cost = 37_009
+            per_time = 200_253_161
+            per_space = 637_676
+            fixed_cost = 51_233
 
         plutus_op = plutus_common.PlutusOp(
             script_file=plutus_common.GUESSING_GAME["v2"].script_file,
