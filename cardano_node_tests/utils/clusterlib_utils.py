@@ -626,7 +626,7 @@ def mint_or_burn_witness(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
-            fee_buffer=2000_000,
+            fee_buffer=2_000_000,
             mint=mint,
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
