@@ -375,3 +375,6 @@ def cleanup(
     defragment_utxos.defragment(
         cluster_obj=cluster_obj, address=faucet_payment.address, skey_file=faucet_payment.skey_file
     )
+
+    faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_payment.address)
+    LOGGER.info(f"Final faucet balance: {faucet_balance}")

@@ -274,10 +274,12 @@ class TestnetCluster(ClusterType):
                 "payment": payment,
             }
 
+        faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_rec.address)
+        LOGGER.info(f"Initial faucet balance: {faucet_balance}")
+
         # Fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
         to_fund = [d["payment"] for d in new_addrs_data.values()]
-        faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_rec.address)
         amount_per_address = faucet_balance // len(self.test_addr_records)
         faucet.fund_from_faucet(
             *to_fund,
