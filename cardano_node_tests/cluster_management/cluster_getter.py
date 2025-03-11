@@ -195,7 +195,7 @@ class ClusterGetter:
             # Save artifacts only when produced during this test run
             if cluster_running_file.exists() or i > 0:
                 artifacts.save_start_script_coverage(
-                    log_file=state_dir / common.CLUSTER_START_CMDS_LOG,
+                    log_file=state_dir / common.START_CLUSTER_LOG,
                     pytest_config=self.pytest_config,
                 )
                 artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
