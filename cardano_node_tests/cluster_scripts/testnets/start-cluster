@@ -8,6 +8,7 @@ SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
+START_CLUSTER_LOG="${STATE_CLUSTER}/start-cluster.log"
 
 INSTANCE_NUM="%%INSTANCE_NUM%%"
 if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
@@ -239,6 +240,6 @@ fi
 get_address_balance \
   --testnet-magic "$NETWORK_MAGIC" \
   --address "$(<"$STATE_CLUSTER/shelley/faucet.addr")" \
-  > "${STATE_CLUSTER}/start-cluster.log"
+  > "$START_CLUSTER_LOG"
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
