@@ -25,6 +25,27 @@ if [ -e "$SCRIPT_DIR/shell_env" ]; then
   source "$SCRIPT_DIR/shell_env"
 fi
 
+get_address_balance() {
+  local txhash txix amount total_amount _
+
+  # Repeat in case `query utxo` fails
+  for _ in {1..3}; do
+    total_amount=0
+    while read -r txhash txix amount _; do
+      if [ -z "$txhash" ] || [ -z "$txix" ]; then
+        continue
+      fi
+      total_amount="$((total_amount + amount))"
+    done <<< "$(cardano-cli latest query utxo "$@" | grep " lovelace")"
+
+    if [ "$total_amount" -gt 0 ]; then
+      break
+    fi
+  done
+
+  echo "$total_amount"
+}
+
 rm -rf "$STATE_CLUSTER"
 mkdir -p "$STATE_CLUSTER"/{byron,shelley,webserver}
 cd "$STATE_CLUSTER/.."
@@ -36,6 +57,12 @@ fi
 
 # copy faucet address and keys
 cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
+[ -e "$STATE_CLUSTER/shelley/faucet.addr" ] || \
+  { echo "The \`$STATE_CLUSTER/shelley/faucet.addr\` not found, line $LINENO" >&2; exit 1; }  # assert
+[ -e "$STATE_CLUSTER/shelley/faucet.vkey" ] || \
+  { echo "The \`$STATE_CLUSTER/shelley/faucet.vkey\` not found, line $LINENO" >&2; exit 1; }  # assert
+[ -e "$STATE_CLUSTER/shelley/faucet.skey" ] || \
+  { echo "The \`$STATE_CLUSTER/shelley/faucet.skey\` not found, line $LINENO" >&2; exit 1; }  # assert
 
 # copy configuration files
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
@@ -47,6 +74,8 @@ ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
 ln -rs "$STATE_CLUSTER/genesis-alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 ln -rs "$STATE_CLUSTER/genesis-conway.json" "$STATE_CLUSTER/shelley/genesis.conway.json"
+
+NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
 
 # edit port numbers in configuration
 RELAY1_EKG="%%EKG_PORT_RELAY1%%"
@@ -174,7 +203,6 @@ done
 [ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the relay node, line $LINENO" >&2; exit 1; }  # assert
 
 echo "Waiting to make sure the chain is synced"
-NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
 for _ in {1..600}; do
   sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
   if [ "$sync_progress" = "100.00" ]; then
@@ -207,5 +235,10 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
     sleep 60
   done
 fi
+
+get_address_balance \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --address "$(<"$STATE_CLUSTER/shelley/faucet.addr")" \
+  > "${STATE_CLUSTER}/start-cluster.log"
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
