@@ -64,7 +64,7 @@ fi
 
 cardano_cli_log() {
   local out retval _
-  echo cardano-cli "$@" >> "${STATE_CLUSTER}/start_cluster_cmds.log"
+  echo cardano-cli "$@" >> "${STATE_CLUSTER}/start-cluster.log"
 
   for _ in {1..3}; do
     set +e

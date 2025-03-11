@@ -2,7 +2,7 @@ from cardano_node_tests.utils import temptools
 
 CLUSTER_LOCK = ".cluster.lock"
 LOG_LOCK = ".manager_log.lock"
-CLUSTER_START_CMDS_LOG = "start_cluster_cmds.log"
+START_CLUSTER_LOG = "start-cluster.log"
 ADDRS_DATA_DIRNAME = "addrs_data"
 
 

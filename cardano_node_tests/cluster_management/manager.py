@@ -157,7 +157,7 @@ class ClusterManager:
                 continue
 
             artifacts.save_start_script_coverage(
-                log_file=state_dir / common.CLUSTER_START_CMDS_LOG,
+                log_file=state_dir / common.START_CLUSTER_LOG,
                 pytest_config=self.pytest_config,
             )
             artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
