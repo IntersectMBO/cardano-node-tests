@@ -284,7 +284,7 @@ class TestNegativeDatum:
 
         # Check expected fees
         expected_fee_fund = 199_087
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())

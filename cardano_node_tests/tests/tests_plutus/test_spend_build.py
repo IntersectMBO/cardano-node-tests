@@ -122,10 +122,10 @@ class TestBuildLocking:
 
         # Check expected fees
         expected_fee_fund = 168_845
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         expected_fee = 170_782
-        assert tx_output and helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+        assert tx_output and common.is_fee_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
@@ -245,7 +245,7 @@ class TestBuildLocking:
         # Check expected fees
         if tx_output:
             expected_fee = 372_438
-            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+            assert common.is_fee_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("embed_datum", (True, False), ids=("embedded_datum", "datum"))
@@ -351,7 +351,7 @@ class TestBuildLocking:
 
         # Check expected fees
         expected_fee_fund = 168_845
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
@@ -613,8 +613,8 @@ class TestBuildLocking:
             )
 
         # Check expected fees
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
-        assert helpers.is_in_interval(tx_output_redeem.fee, expected_fee_redeem, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_redeem.fee, expected_fee_redeem, frac=0.15)
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
@@ -692,7 +692,7 @@ class TestBuildLocking:
 
         # Check expected fees
         expected_fee_fund = 168_845
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -754,11 +754,11 @@ class TestBuildLocking:
 
         # Check expected fees
         expected_fee_fund = 168_845
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         if tx_output:
             expected_fee = 171_309
-            assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15)
+            assert common.is_fee_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -828,10 +828,10 @@ class TestBuildLocking:
 
         # Check expected fees
         expected_fee_fund = 173_597
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         expected_fee = 175_710
-        assert tx_output_spend and helpers.is_in_interval(
+        assert tx_output_spend and common.is_fee_in_interval(
             tx_output_spend.fee, expected_fee, frac=0.15
         )
 
@@ -957,10 +957,10 @@ class TestBuildLocking:
 
         # Check expected fees
         expected_fee_fund = 173_597
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
         expected_fee = 183_366
-        assert tx_output_spend and helpers.is_in_interval(
+        assert tx_output_spend and common.is_fee_in_interval(
             tx_output_spend.fee, expected_fee, frac=0.15
         )
 
@@ -1082,10 +1082,10 @@ class TestBuildLocking:
 
         # Check expected fees
         expected_fee_step1 = 168_845
-        assert helpers.is_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
         expected_fee_step2 = 176_986
-        assert helpers.is_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)

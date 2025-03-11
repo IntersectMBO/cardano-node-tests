@@ -82,7 +82,7 @@ class TestInlineDatum:
         ).value
 
         expected_min_small_inline_datum = 892_170
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             min_utxo_small_inline_datum, expected_min_small_inline_datum, frac=0.15
         )
 
@@ -103,7 +103,7 @@ class TestInlineDatum:
         ).value
 
         expected_min_small_datum_hash = 1_017_160
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             min_utxo_small_datum_hash, expected_min_small_datum_hash, frac=0.15
         )
 
@@ -122,7 +122,7 @@ class TestInlineDatum:
         ).value
 
         expected_min_big_inline_datum = 1_193_870
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             min_utxo_big_inline_datum, expected_min_big_inline_datum, frac=0.15
         )
 
@@ -143,7 +143,7 @@ class TestInlineDatum:
         ).value
 
         expected_min_big_datum_hash = 1_017_160
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             min_utxo_big_datum_hash, expected_min_big_datum_hash, frac=0.15
         )
 

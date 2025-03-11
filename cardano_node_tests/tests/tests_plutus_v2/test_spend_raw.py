@@ -172,7 +172,7 @@ class TestLockingV2:
             + redeem_cost.fee
         )
 
-        assert helpers.is_in_interval(fee, expected_fee_redeem, frac=0.15)
+        assert common.is_fee_in_interval(fee, expected_fee_redeem, frac=0.15)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 

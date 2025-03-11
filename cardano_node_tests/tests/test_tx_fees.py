@@ -294,7 +294,7 @@ class TestExpectedFees:
         tx_fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=tx_name, txins=txins, txouts=txouts, tx_files=tx_files
         )
-        assert helpers.is_in_interval(tx_fee, expected_fee), (
+        assert common.is_fee_in_interval(tx_fee, expected_fee), (
             "Expected fee doesn't match the actual fee"
         )
 
@@ -350,7 +350,7 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(tx_fee, expected_fee), (
+        assert common.is_fee_in_interval(tx_fee, expected_fee), (
             "Expected fee doesn't match the actual fee"
         )
 
@@ -418,7 +418,7 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(tx_fee, expected_fee), (
+        assert common.is_fee_in_interval(tx_fee, expected_fee), (
             "Expected fee doesn't match the actual fee"
         )
 
@@ -459,7 +459,7 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(tx_fee, expected_fee), (
+        assert common.is_fee_in_interval(tx_fee, expected_fee), (
             "Expected fee doesn't match the actual fee"
         )
 
@@ -500,7 +500,7 @@ class TestExpectedFees:
         tx_fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address, tx_name=temp_template, tx_files=tx_files
         )
-        assert helpers.is_in_interval(tx_fee, expected_fee), (
+        assert common.is_fee_in_interval(tx_fee, expected_fee), (
             "Expected fee doesn't match the actual fee"
         )
 

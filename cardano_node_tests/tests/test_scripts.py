@@ -454,7 +454,7 @@ class TestBasic:
         expected_fee = 204_969
         for tx_out in from_single_tx_outputs:
             # Check expected fees
-            assert helpers.is_in_interval(tx_out.fee, expected_fee, frac=0.15), (
+            assert common.is_fee_in_interval(tx_out.fee, expected_fee, frac=0.15), (
                 "TX fee doesn't fit the expected interval"
             )
 
@@ -747,7 +747,7 @@ class TestBasic:
 
         # Check expected fees
         expected_fee = 176_809
-        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -814,7 +814,7 @@ class TestBasic:
 
         # Check expected fees
         expected_fee = 176_765
-        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -1257,7 +1257,7 @@ class TestTimeLocking:
 
         # Check expected fees
         expected_fee = 280_693 if use_build_cmd else 323_857
-        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -1334,7 +1334,7 @@ class TestTimeLocking:
 
         # Check expected fees
         expected_fee = 279_241 if use_build_cmd else 323_989
-        assert helpers.is_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 

@@ -233,7 +233,7 @@ class TestNegative:
 
         # Check expected fees
         expected_fee_fund = 173597
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -299,7 +299,7 @@ class TestNegative:
 
         # Check expected fees
         expected_fee_fund = 168_845
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(

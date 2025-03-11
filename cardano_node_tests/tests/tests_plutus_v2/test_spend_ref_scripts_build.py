@@ -230,7 +230,7 @@ class TestReferenceScripts:
         min_required_utxo = cluster.g_transaction.calculate_min_req_utxo(txouts=[txouts[2]]).value
 
         expected_min_required_utxo = 926_650
-        assert helpers.is_in_interval(min_required_utxo, expected_min_required_utxo, frac=0.15)
+        assert common.is_fee_in_interval(min_required_utxo, expected_min_required_utxo, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke

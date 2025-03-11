@@ -199,8 +199,8 @@ class TestBuildLocking:
             expected_fee_fund = 167_965
             expected_fee_redeem = 293_393
 
-        assert helpers.is_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
-        assert helpers.is_in_interval(tx_output_redeem.fee, expected_fee_redeem, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
+        assert common.is_fee_in_interval(tx_output_redeem.fee, expected_fee_redeem, frac=0.15)
 
         assert spend_build.PLUTUS_OP_GUESSING_GAME.execution_cost  # for mypy
         plutus_common.check_plutus_costs(
@@ -319,6 +319,6 @@ class TestBuildLocking:
             txouts=joined_txouts[0]
         ).value
 
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             min_required_utxo, expected_min_required_utxo[test_scenario], frac=0.15
         )
