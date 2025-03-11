@@ -134,23 +134,13 @@ def payment_addr(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
 ) -> clusterlib.AddressRecord:
-    if cluster.conway_genesis["dRepDeposit"] < MAINNET_DREP_DEPOSIT:
-        amount = 1_000_000_000
-        key = helpers.get_current_line_str()
-    else:
-        amount = MAINNET_DREP_DEPOSIT + 10_000_000
-        # Don't cache the fixture when DRep deposit is high. We don't know on how many
-        # different workers the tests will run, and we might end up creating many addresses
-        # with lot of funds if the fixture is cached.
-        key = ""
-
     test_id = common.get_test_id(cluster)
+    key = helpers.get_current_line_str()
     return common.get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         caching_key=key,
-        amount=amount,
     )
 
 
@@ -347,6 +337,7 @@ class TestDReps:
     )
     def test_register_and_retire_drep(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         use_build_cmd: bool,
@@ -362,6 +353,18 @@ class TestDReps:
         * Check that deposit was returned to source address
         """
         temp_template = common.get_test_id(cluster)
+        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+
+        # Make sure there's enought funds on the payment address on long running
+        # testnets where the DRep deposit is higher.
+        if deposit_drep_amt >= MAINNET_DREP_DEPOSIT:
+            clusterlib_utils.fund_from_faucet(
+                payment_addr,
+                cluster_obj=cluster,
+                all_faucets=cluster_manager.cache.addrs_data,
+                amount=deposit_drep_amt + 10_000_000,
+            )
+
         errors_final = []
 
         drep_metadata_file = drep_metadata["drep_metadata_file"]
@@ -608,6 +611,7 @@ class TestNegativeDReps:
     @pytest.mark.smoke
     def test_no_witness_register_and_retire(  # noqa: C901
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         use_build_cmd: bool,
@@ -625,6 +629,18 @@ class TestNegativeDReps:
         * Check that DRep was retired
         """
         temp_template = common.get_test_id(cluster)
+        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+
+        # Make sure there's enought funds on the payment address on long running
+        # testnets where the DRep deposit is higher.
+        if deposit_drep_amt >= MAINNET_DREP_DEPOSIT:
+            clusterlib_utils.fund_from_faucet(
+                payment_addr,
+                cluster_obj=cluster,
+                all_faucets=cluster_manager.cache.addrs_data,
+                amount=deposit_drep_amt + 10_000_000,
+            )
+
         errors_final = []
 
         # Register DRep
@@ -740,6 +756,7 @@ class TestNegativeDReps:
     @pytest.mark.smoke
     def test_no_multiple_delegation(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_rewards: clusterlib.ClusterLib,
         payment_addr_rewards: clusterlib.AddressRecord,
         pool_user_rewards: clusterlib.PoolUser,
@@ -755,7 +772,18 @@ class TestNegativeDReps:
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
-        deposit_amt = cluster.g_query.get_address_deposit()
+        deposit_address_amt = cluster.g_query.get_address_deposit()
+        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+
+        # Make sure there's enought funds on the payment address on long running
+        # testnets where the DRep deposit is higher.
+        if deposit_drep_amt >= MAINNET_DREP_DEPOSIT:
+            clusterlib_utils.fund_from_faucet(
+                payment_addr_rewards,
+                cluster_obj=cluster,
+                all_faucets=cluster_manager.cache.addrs_data,
+                amount=deposit_drep_amt * 2 + 10_000_000,
+            )
 
         drep1 = create_drep(
             name_template=f"custom_drep_1_{temp_template}",
@@ -771,7 +799,7 @@ class TestNegativeDReps:
         # Create stake address registration cert
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=deposit_amt,
+            deposit_amt=deposit_address_amt,
             stake_vkey_file=pool_user_rewards.stake.vkey_file,
         )
 
@@ -806,7 +834,7 @@ class TestNegativeDReps:
             src_address=payment_addr_rewards.address,
             use_build_cmd=True,
             tx_files=tx_files,
-            deposit=deposit_amt,
+            deposit=deposit_address_amt,
         )
 
         # Deregister stake address so it doesn't affect stake distribution
@@ -816,7 +844,7 @@ class TestNegativeDReps:
                     cluster_obj=cluster,
                     pool_user=pool_user_rewards,
                     name_template=temp_template,
-                    deposit_amt=deposit_amt,
+                    deposit_amt=deposit_address_amt,
                 )
 
         request.addfinalizer(_deregister)
@@ -848,7 +876,7 @@ class TestNegativeDReps:
         * Expect error StakeKeyNotRegisteredDELEG
         """
         temp_template = common.get_test_id(cluster)
-        deposit_amt = cluster.g_query.get_address_deposit()
+        deposit_address_amt = cluster.g_query.get_address_deposit()
 
         reqc.cip088.start(url=helpers.get_vcs_link())
         # Create vote delegation cert
@@ -873,7 +901,7 @@ class TestNegativeDReps:
                 src_address=payment_addr.address,
                 use_build_cmd=True,
                 tx_files=tx_files,
-                deposit=deposit_amt,
+                deposit=deposit_address_amt,
             )
 
         err_msg = str(excinfo.value)
@@ -899,15 +927,16 @@ class TestNegativeDReps:
         * Check that it is not possible to retire before registering the DRep
         """
         temp_template = common.get_test_id(cluster)
+        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+
         drep_keys = cluster.g_conway_governance.drep.gen_key_pair(
             key_name=temp_template, destination_dir="."
         )
-        deposit = cluster.conway_genesis["dRepDeposit"]
 
         reqc.cip089.start(url=helpers.get_vcs_link())
         ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
             cert_name=temp_template,
-            deposit_amt=deposit,
+            deposit_amt=deposit_drep_amt,
             drep_vkey_file=drep_keys.vkey_file,
         )
         tx_files_ret = clusterlib.TxFiles(
@@ -924,7 +953,7 @@ class TestNegativeDReps:
                 submit_method=submit_method,
                 use_build_cmd=use_build_cmd,
                 tx_files=tx_files_ret,
-                deposit=deposit,
+                deposit=deposit_drep_amt,
             )
 
         err_msg = str(excinfo.value)
@@ -940,6 +969,7 @@ class TestNegativeDReps:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
         use_build_cmd: bool,
         submit_method: str,
     ):
@@ -951,6 +981,18 @@ class TestNegativeDReps:
         * Expect ConwayDRepAlreadyRegistered on the second time
         """
         temp_template = common.get_test_id(cluster)
+        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+
+        # Make sure there's enought funds on the payment address on long running
+        # testnets where the DRep deposit is higher.
+        if deposit_drep_amt >= MAINNET_DREP_DEPOSIT:
+            clusterlib_utils.fund_from_faucet(
+                payment_addr,
+                cluster_obj=cluster,
+                all_faucets=cluster_manager.cache.addrs_data,
+                amount=deposit_drep_amt + 10_000_000,
+            )
+
         drep_metadata_file = pl.Path(f"{temp_template}_drep_metadata.json")
         drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
         helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
@@ -958,13 +1000,6 @@ class TestNegativeDReps:
             drep_metadata_file=drep_metadata_file
         )
         drep_metadata_url = web.publish(file_path=drep_metadata_file)
-
-        payment_addr = common.get_payment_addr(
-            name_template=temp_template,
-            cluster_manager=cluster_manager,
-            cluster_obj=cluster,
-            amount=cluster.conway_genesis["dRepDeposit"] * 2 + 10_000_000,
-        )
 
         reqc.cip090.start(url=helpers.get_vcs_link())
         reg_drep = governance_utils.get_drep_reg_record(
@@ -1044,7 +1079,7 @@ class TestDelegDReps:
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
-        deposit_amt = cluster.g_query.get_address_deposit()
+        deposit_address_amt = cluster.g_query.get_address_deposit()
         drep_id = custom_drep_rewards.drep_id if drep == "custom" else drep
 
         if drep == "custom":
@@ -1063,7 +1098,7 @@ class TestDelegDReps:
         reqc.cli027.start(url=helpers.get_vcs_link())
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=deposit_amt,
+            deposit_amt=deposit_address_amt,
             stake_vkey_file=pool_user_rewards.stake.vkey_file,
         )
         reqc.cli027.success()
@@ -1098,7 +1133,7 @@ class TestDelegDReps:
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files,
-            deposit=deposit_amt,
+            deposit=deposit_address_amt,
         )
 
         assert cluster.g_query.get_epoch() == init_epoch, (
@@ -1113,7 +1148,7 @@ class TestDelegDReps:
                     cluster_obj=cluster,
                     pool_user=pool_user_rewards,
                     name_template=temp_template,
-                    deposit_amt=deposit_amt,
+                    deposit_amt=deposit_address_amt,
                 )
                 reqc.cli028.success()
 
@@ -1132,7 +1167,9 @@ class TestDelegDReps:
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr_rewards.address)[0].amount
-            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+            == clusterlib.calculate_utxos_balance(tx_output.txins)
+            - tx_output.fee
+            - deposit_address_amt
         ), f"Incorrect balance for source address `{payment_addr_rewards.address}`"
 
         # Check that stake address is delegated to the correct DRep.
@@ -1252,13 +1289,13 @@ class TestDelegDReps:
         """
         cluster, pool_id = cluster_and_pool_and_rewards
         temp_template = common.get_test_id(cluster)
-        deposit_amt = cluster.g_query.get_address_deposit()
+        deposit_address_amt = cluster.g_query.get_address_deposit()
         drep_id = custom_drep_wpr.drep_id if drep == "custom" else drep
 
         # Create stake address registration cert
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=deposit_amt,
+            deposit_amt=deposit_address_amt,
             stake_vkey_file=pool_user_wpr.stake.vkey_file,
         )
 
@@ -1292,7 +1329,7 @@ class TestDelegDReps:
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
             tx_files=tx_files,
-            deposit=deposit_amt,
+            deposit=deposit_address_amt,
         )
 
         assert cluster.g_query.get_epoch() == init_epoch, (
@@ -1306,7 +1343,7 @@ class TestDelegDReps:
                     cluster_obj=cluster,
                     pool_user=pool_user_wpr,
                     name_template=temp_template,
-                    deposit_amt=deposit_amt,
+                    deposit_amt=deposit_address_amt,
                 )
 
         request.addfinalizer(_deregister)
@@ -1323,7 +1360,9 @@ class TestDelegDReps:
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (
             clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr_wpr.address)[0].amount
-            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+            == clusterlib.calculate_utxos_balance(tx_output.txins)
+            - tx_output.fee
+            - deposit_address_amt
         ), f"Incorrect balance for source address `{payment_addr_wpr.address}`"
 
         # Check that stake address is delegated to the correct DRep.
@@ -1386,6 +1425,7 @@ class TestDelegDReps:
     @pytest.mark.smoke
     def test_change_delegation(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_rewards: clusterlib.ClusterLib,
         payment_addr_rewards: clusterlib.AddressRecord,
         pool_user_rewards: clusterlib.PoolUser,
@@ -1405,7 +1445,18 @@ class TestDelegDReps:
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
-        deposit_amt = cluster.g_query.get_address_deposit()
+        deposit_address_amt = cluster.g_query.get_address_deposit()
+        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+
+        # Make sure there's enought funds on the payment address on long running
+        # testnets where the DRep deposit is higher.
+        if deposit_drep_amt >= MAINNET_DREP_DEPOSIT:
+            clusterlib_utils.fund_from_faucet(
+                payment_addr_rewards,
+                cluster_obj=cluster,
+                all_faucets=cluster_manager.cache.addrs_data,
+                amount=deposit_drep_amt * 2 + 10_000_000,
+            )
 
         # Get first DRep
         drep1 = create_drep(
@@ -1424,7 +1475,7 @@ class TestDelegDReps:
         # Create stake address registration cert
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=deposit_amt,
+            deposit_amt=deposit_address_amt,
             stake_vkey_file=pool_user_rewards.stake.vkey_file,
         )
 
@@ -1448,7 +1499,7 @@ class TestDelegDReps:
             src_address=payment_addr_rewards.address,
             use_build_cmd=True,
             tx_files=tx_files,
-            deposit=deposit_amt,
+            deposit=deposit_address_amt,
         )
 
         # Deregister stake address so it doesn't affect stake distribution
@@ -1458,7 +1509,7 @@ class TestDelegDReps:
                     cluster_obj=cluster,
                     pool_user=pool_user_rewards,
                     name_template=temp_template,
-                    deposit_amt=deposit_amt,
+                    deposit_amt=deposit_address_amt,
                 )
 
         request.addfinalizer(_deregister)
@@ -1492,7 +1543,7 @@ class TestDelegDReps:
             src_address=payment_addr_rewards.address,
             use_build_cmd=True,
             tx_files=tx_files,
-            deposit=deposit_amt,
+            deposit=deposit_address_amt,
         )
         stake_addr_info_deleg2 = cluster.g_query.get_stake_addr_info(
             pool_user_rewards.stake.address
@@ -1601,7 +1652,7 @@ class TestDRepActivity:
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Cannot run in bootstrap period.")
 
-        deposit_amt = cluster.g_query.get_address_deposit()
+        deposit_address_amt = cluster.g_query.get_address_deposit()
 
         # Saved DRep records
         drep1_state: dict[str, DRepStateRecord] = {}
@@ -1617,7 +1668,7 @@ class TestDRepActivity:
             # Create stake address registration cert
             reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=name_template,
-                deposit_amt=deposit_amt,
+                deposit_amt=deposit_address_amt,
                 stake_vkey_file=pool_user.stake.vkey_file,
             )
 
@@ -1645,7 +1696,7 @@ class TestDRepActivity:
                 src_address=pool_user.payment.address,
                 use_build_cmd=True,
                 tx_files=tx_files,
-                deposit=deposit_amt,
+                deposit=deposit_address_amt,
             )
 
             assert cluster.g_query.get_epoch() == init_epoch, (
@@ -1665,7 +1716,9 @@ class TestDRepActivity:
                 clusterlib.filter_utxos(utxos=out_utxos, address=pool_user.payment.address)[
                     0
                 ].amount
-                == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - deposit_amt
+                == clusterlib.calculate_utxos_balance(tx_output.txins)
+                - tx_output.fee
+                - deposit_address_amt
             ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
             # Check that stake address is delegated to the correct DRep.

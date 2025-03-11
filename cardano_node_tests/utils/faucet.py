@@ -24,7 +24,7 @@ def fund_from_faucet(
 ) -> clusterlib.TxRawOutput | None:
     """Transfer `amount` from faucet addr to all `dst_addrs`."""
     if amount is None:
-        amount = 1000_000_000
+        amount = 1_000_000_000
 
     if not (faucet_data or all_faucets):
         msg = "Either `faucet_data` or `all_faucets` must be provided."
