@@ -232,8 +232,12 @@ class TestBuildMinting:
 
         script_expected_fee = expected_fees[plutus_version]
 
-        assert helpers.is_in_interval(tx_output_step2.fee, script_expected_fee["fee_2"], frac=0.15)
-        assert helpers.is_in_interval(tx_output_step1.fee, script_expected_fee["fee_1"], frac=0.15)
+        assert common.is_fee_in_interval(
+            tx_output_step2.fee, script_expected_fee["fee_2"], frac=0.15
+        )
+        assert common.is_fee_in_interval(
+            tx_output_step1.fee, script_expected_fee["fee_1"], frac=0.15
+        )
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,

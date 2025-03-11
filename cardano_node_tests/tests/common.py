@@ -10,6 +10,7 @@ from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -450,3 +451,15 @@ def get_pool_user(
         caching_key=caching_key,
         amount=amount,
     )[0]
+
+
+def is_fee_in_interval(fee: float, expected_fee: float, frac: float = 0.1) -> bool:
+    """Check that the fee is within the expected range on local testnet.
+
+    The fee is considered to be within the expected range if it is within the expected_fee +/- frac
+    range.
+    """
+    # We have the fees calibrated only for local testnet
+    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+        return True
+    return helpers.is_in_interval(fee, expected_fee, frac=frac)

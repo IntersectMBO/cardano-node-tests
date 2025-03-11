@@ -228,9 +228,9 @@ class TestMinting:
         assert not token_utxo, "The token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+        ) and common.is_fee_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -327,9 +327,9 @@ class TestMinting:
         assert not token_utxo, "The token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+        ) and common.is_fee_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -443,9 +443,9 @@ class TestMinting:
             assert not utxo_burn, f"The {t.token} token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+        ) and common.is_fee_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -562,7 +562,7 @@ class TestMinting:
         assert not token2_burn_utxo, "The token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(tx_out_mint_burn.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_out_mint_burn.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -685,7 +685,7 @@ class TestMinting:
         assert token_utxo and token_utxo[0].amount == 1, "The token was not minted"
 
         # Check expected fees
-        assert helpers.is_in_interval(tx_output.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_output.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -829,7 +829,7 @@ class TestMinting:
 
         # Check expected fees
         mint_fee = tx_out_mint.fee
-        assert helpers.is_in_interval(mint_fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(mint_fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -979,7 +979,7 @@ class TestMinting:
 
         # Check expected fees
         mint_fee = tx_out_mint.fee
-        assert helpers.is_in_interval(mint_fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(mint_fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -1077,7 +1077,7 @@ class TestMinting:
         )
 
         # Check expected fee
-        assert helpers.is_in_interval(tx_out_mint.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_out_mint.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -1163,9 +1163,9 @@ class TestMinting:
         assert not token_utxo, "The token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+        ) and common.is_fee_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -1260,9 +1260,9 @@ class TestPolicies:
             assert not token_utxo, "The token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+        ) and common.is_fee_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -1354,9 +1354,9 @@ class TestPolicies:
             assert not token_utxo, "The token was not burnt"
 
         # Check expected fees
-        assert helpers.is_in_interval(
+        assert common.is_fee_in_interval(
             tx_out_mint.fee, expected_fee, frac=0.15
-        ) and helpers.is_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
+        ) and common.is_fee_in_interval(tx_out_burn.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -2420,7 +2420,7 @@ class TestCLITxOutSyntax:
         assert token_utxo and token_utxo[0].amount == 1_000, "The token was not minted"
 
         # Check expected fees
-        assert helpers.is_in_interval(tx_raw_output.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_raw_output.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 
@@ -2592,7 +2592,7 @@ class TestReferenceUTxO:
         assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"
 
         # Check expected fees
-        assert helpers.is_in_interval(tx_raw_output.fee, expected_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_raw_output.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
 

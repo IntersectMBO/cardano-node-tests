@@ -158,7 +158,7 @@ class TestReadonlyReferenceInputs:
         )
 
         expected_redeem_fee = 172_578
-        assert helpers.is_in_interval(tx_output_redeem.fee, expected_redeem_fee, frac=0.15), (
+        assert common.is_fee_in_interval(tx_output_redeem.fee, expected_redeem_fee, frac=0.15), (
             "Expected fee doesn't match the actual fee"
         )
 
