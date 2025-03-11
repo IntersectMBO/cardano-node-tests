@@ -237,9 +237,9 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
   done
 fi
 
-get_address_balance \
+faucet_init_balance="$(get_address_balance \
   --testnet-magic "$NETWORK_MAGIC" \
-  --address "$(<"$STATE_CLUSTER/shelley/faucet.addr")" \
-  > "$START_CLUSTER_LOG"
+  --address "$(<"$STATE_CLUSTER/shelley/faucet.addr")")"
+echo "Faucet initial balance: $faucet_init_balance" >> "$START_CLUSTER_LOG"
 
 echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
