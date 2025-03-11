@@ -47,7 +47,7 @@ def withdraw_reward(
     except clusterlib.CLIError:
         LOGGER.error(f"Failed to withdraw rewards for '{stake_addr_record.address}'")  # noqa: TRY400
     else:
-        LOGGER.info(f"Withdrawn rewards for '{stake_addr_record.address}'")
+        LOGGER.debug(f"Withdrawn rewards for '{stake_addr_record.address}'")
 
 
 def deregister_stake_addr(
@@ -78,7 +78,7 @@ def deregister_stake_addr(
     except clusterlib.CLIError:
         LOGGER.error(f"Failed to deregister stake address '{pool_user.stake.address}'")  # noqa: TRY400
     else:
-        LOGGER.info(f"Deregistered stake address '{pool_user.stake.address}'")
+        LOGGER.debug(f"Deregistered stake address '{pool_user.stake.address}'")
 
 
 def retire_drep(
@@ -109,7 +109,7 @@ def retire_drep(
     except clusterlib.CLIError:
         LOGGER.error(f"Failed to retire a DRep '{name_template}'")  # noqa: TRY400
     else:
-        LOGGER.info(f"Retired a DRep '{name_template}'")
+        LOGGER.debug(f"Retired a DRep '{name_template}'")
 
 
 def return_funds_to_faucet(
@@ -154,7 +154,7 @@ def return_funds_to_faucet(
     except clusterlib.CLIError:
         LOGGER.error(f"Failed to return funds from addresses for '{tx_name}'")  # noqa: TRY400
     else:
-        LOGGER.info(f"Returned funds from addresses '{tx_name}'")
+        LOGGER.debug(f"Returned funds from addresses '{tx_name}'")
 
 
 def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
