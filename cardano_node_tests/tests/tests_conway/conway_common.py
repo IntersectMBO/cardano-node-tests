@@ -427,7 +427,7 @@ def propose_change_constitution(
     constitution_script_hash: str = "",
 ) -> tuple[clusterlib.ActionConstitution, str, int]:
     """Propose a constitution change."""
-    deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
+    deposit_amt = cluster_obj.g_query.get_gov_action_deposit()
 
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
@@ -503,7 +503,7 @@ def propose_pparams_update(
     prev_action_rec: governance_utils.PrevActionRec | None = None,
 ) -> PParamPropRec:
     """Propose a pparams update."""
-    deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
+    deposit_amt = cluster_obj.g_query.get_gov_action_deposit()
 
     prev_action_rec = prev_action_rec or governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,

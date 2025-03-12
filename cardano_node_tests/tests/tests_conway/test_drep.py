@@ -353,7 +353,7 @@ class TestDReps:
         * Check that deposit was returned to source address
         """
         temp_template = common.get_test_id(cluster)
-        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+        deposit_drep_amt = cluster.g_query.get_drep_deposit()
 
         # Make sure there's enought funds on the payment address on long running
         # testnets where the DRep deposit is higher.
@@ -629,7 +629,7 @@ class TestNegativeDReps:
         * Check that DRep was retired
         """
         temp_template = common.get_test_id(cluster)
-        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+        deposit_drep_amt = cluster.g_query.get_drep_deposit()
 
         # Make sure there's enought funds on the payment address on long running
         # testnets where the DRep deposit is higher.
@@ -772,8 +772,9 @@ class TestNegativeDReps:
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
-        deposit_address_amt = cluster.g_query.get_address_deposit()
-        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+        pparams = cluster.g_query.get_protocol_params()
+        deposit_address_amt = cluster.g_query.get_address_deposit(pparams=pparams)
+        deposit_drep_amt = cluster.g_query.get_drep_deposit(pparams=pparams)
 
         # Make sure there's enought funds on the payment address on long running
         # testnets where the DRep deposit is higher.
@@ -927,7 +928,7 @@ class TestNegativeDReps:
         * Check that it is not possible to retire before registering the DRep
         """
         temp_template = common.get_test_id(cluster)
-        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+        deposit_drep_amt = cluster.g_query.get_drep_deposit()
 
         drep_keys = cluster.g_conway_governance.drep.gen_key_pair(
             key_name=temp_template, destination_dir="."
@@ -981,7 +982,7 @@ class TestNegativeDReps:
         * Expect ConwayDRepAlreadyRegistered on the second time
         """
         temp_template = common.get_test_id(cluster)
-        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+        deposit_drep_amt = cluster.g_query.get_drep_deposit()
 
         # Make sure there's enought funds on the payment address on long running
         # testnets where the DRep deposit is higher.
@@ -1445,8 +1446,9 @@ class TestDelegDReps:
         """
         cluster = cluster_rewards
         temp_template = common.get_test_id(cluster)
-        deposit_address_amt = cluster.g_query.get_address_deposit()
-        deposit_drep_amt = cluster.conway_genesis["dRepDeposit"]
+        pparams = cluster.g_query.get_protocol_params()
+        deposit_address_amt = cluster.g_query.get_address_deposit(pparams=pparams)
+        deposit_drep_amt = cluster.g_query.get_drep_deposit(pparams=pparams)
 
         # Make sure there's enought funds on the payment address on long running
         # testnets where the DRep deposit is higher.

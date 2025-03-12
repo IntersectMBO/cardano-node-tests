@@ -172,6 +172,7 @@ class TestCommittee:
         """
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
 
         submit_methods = [submit_utils.SubmitMethods.CLI]
         if submit_utils.is_submit_api_available():
@@ -278,7 +279,6 @@ class TestCommittee:
             return
 
         def _propose_new_member() -> None:
-            deposit_amt = cluster.conway_genesis["govActionDeposit"]
             anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
@@ -446,7 +446,7 @@ class TestCommittee:
             for r in cc_auth_records
         ]
 
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
@@ -598,7 +598,7 @@ class TestCommittee:
             pool_user_lg.stake.address
         ).reward_account_balance
 
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
 
         # Check if total delegated stake is below the threshold. This can be used to check that
         # undelegated stake is treated as Abstain. If undelegated stake was treated as No, it
@@ -1345,7 +1345,7 @@ class TestCommittee:
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Cannot run during bootstrap period.")
 
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
 
         def _set_zero_committee_pparam() -> conway_common.PParamPropRec:
             """Set the `committeeMinSize` pparam to 0."""
@@ -1725,7 +1725,7 @@ class TestCommittee:
 
             assert prev_action_rec.txid == action_txid, "Action not enacted"
 
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,

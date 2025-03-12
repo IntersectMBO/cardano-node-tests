@@ -1272,7 +1272,7 @@ class TestPParamUpdate:
         # Check that deposit is returned for the enacted pparam proposal right after enactment.
         # Check that deposit is returned also for pparam proposals that are no longer valid
         # (all the remaining pparam proposals in our case).
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
         total_deposit_return = cluster.g_query.get_stake_addr_info(
             pool_user_lgp.stake.address
         ).reward_account_balance

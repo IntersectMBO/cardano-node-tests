@@ -341,6 +341,7 @@ class TestConstitution:
         rand_str = clusterlib.get_rand_str(4)
         governance_data = governance_w_scripts_lg
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
 
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address
@@ -535,10 +536,9 @@ class TestConstitution:
             pool_user_lg.stake.address
         ).reward_account_balance
 
-        assert (
-            enact_deposit_returned
-            == init_return_account_balance + cluster.conway_genesis["govActionDeposit"]
-        ), "Incorrect return account balance"
+        assert enact_deposit_returned == init_return_account_balance + deposit_amt, (
+            "Incorrect return account balance"
+        )
 
         reqc.cip027.start(url=helpers.get_vcs_link())
         # Try to withdraw the deposit from stake address that is not delegated to a DRep
