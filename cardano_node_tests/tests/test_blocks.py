@@ -353,7 +353,7 @@ class TestCollectData:
 
         tip = cluster.g_query.get_tip()
         epoch_end = cluster.time_to_epoch_end(tip)
-        curr_epoch = int(tip["epoch"])
+        curr_epoch = cluster.g_query.get_epoch(tip=tip)
         curr_time = time.time()
         epoch_end_timestamp = curr_time + epoch_end
         test_end_timestamp = epoch_end_timestamp + (num_epochs * cluster.epoch_length_sec)
@@ -510,7 +510,7 @@ class TestDynamicBlockProd:
         cluster_nodes.restart_all_nodes()
 
         tip = cluster.g_query.get_tip()
-        curr_epoch = int(tip["epoch"])
+        curr_epoch = cluster.g_query.get_epoch(tip=tip)
 
         assert reconf_epoch == curr_epoch, (
             "Failed to finish reconfiguration in single epoch, it would affect other checks"

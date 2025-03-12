@@ -493,7 +493,7 @@ class TestPoolSaturation:
                         )
 
                 tip = cluster.g_query.get_tip()
-                if int(tip["epoch"]) != this_epoch:
+                if cluster.g_query.get_epoch(tip=tip) != this_epoch:
                     helpers.write_json(
                         out_file=f"{temp_template}_{this_epoch}_failed_tip.json", content=tip
                     )
