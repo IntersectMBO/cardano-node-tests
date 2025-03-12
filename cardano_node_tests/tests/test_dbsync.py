@@ -124,8 +124,8 @@ class TestDBSync:
         common.get_test_id(cluster)
 
         tip = cluster.g_query.get_tip()
-        block_no = int(tip["block"])
-        epoch = int(tip["epoch"])
+        block_no = cluster.g_query.get_block_no(tip=tip)
+        epoch = cluster.g_query.get_epoch(tip=tip)
 
         # Check records for last 50 epochs
         epoch_from = epoch - 50
