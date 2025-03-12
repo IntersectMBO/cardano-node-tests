@@ -280,7 +280,7 @@ def cleanup_certs(
 ) -> None:
     """Cleanup DRep certs."""
     files_found = find_cert_files(location)
-    drep_deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+    drep_deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
     # Fund the addresses that will pay for fees
     fund_addrs = [

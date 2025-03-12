@@ -115,9 +115,11 @@ class TestTreasuryWithdrawals:
         temp_template = common.get_test_id(cluster)
         actions_num = 3
 
-        # Create stake address and registration certificate
-        stake_deposit_amt = cluster.g_query.get_address_deposit()
+        pparams = cluster.g_query.get_protocol_params()
+        stake_deposit_amt = cluster.g_query.get_address_deposit(pparams=pparams)
+        action_deposit_amt = cluster.g_query.get_gov_action_deposit(pparams=pparams)
 
+        # Create stake address and registration certificate
         recv_stake_addr_rec = cluster.g_stake_address.gen_stake_addr_and_keys(
             name=f"{temp_template}_receive"
         )
@@ -128,8 +130,6 @@ class TestTreasuryWithdrawals:
         )
 
         # Create an action and register stake address
-
-        action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
         transfer_amts = list(range(10_000_000_000, 10_000_000_000 + actions_num))
 
         anchor_data = governance_utils.get_default_anchor_data()
@@ -455,9 +455,11 @@ class TestTreasuryWithdrawals:
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
         actions_num = 3
 
-        # Create stake address and registration certificate
-        stake_deposit_amt = cluster.g_query.get_address_deposit()
+        pparams = cluster.g_query.get_protocol_params()
+        stake_deposit_amt = cluster.g_query.get_address_deposit(pparams=pparams)
+        action_deposit_amt = cluster.g_query.get_gov_action_deposit(pparams=pparams)
 
+        # Create stake address and registration certificate
         recv_stake_addr_rec = cluster.g_stake_address.gen_stake_addr_and_keys(
             name=f"{temp_template}_receive"
         )
@@ -468,8 +470,6 @@ class TestTreasuryWithdrawals:
         )
 
         # Create an action and register stake address
-
-        action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
         transfer_amt = 5_000_000_000
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_ug.stake.address

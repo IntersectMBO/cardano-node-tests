@@ -74,7 +74,7 @@ class TestHardfork:
         ).reward_account_balance
 
         # Create an action
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.HARDFORK,

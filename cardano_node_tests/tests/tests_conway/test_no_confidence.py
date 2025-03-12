@@ -98,7 +98,7 @@ class TestNoConfidence:
         ).reward_account_balance
 
         # Create an action
-        deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        deposit_amt = cluster.g_query.get_gov_action_deposit()
         anchor_data = governance_utils.get_default_anchor_data()
 
         _url = helpers.get_vcs_link()

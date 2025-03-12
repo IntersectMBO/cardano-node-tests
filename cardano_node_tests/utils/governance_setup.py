@@ -157,7 +157,7 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.
 def load_dreps(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.DRepRegistration]:
     """Load DReps from the state directory."""
     data_dir = cluster_obj.state_dir / GOV_DATA_DIR
-    deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+    deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
     dreps = []
     for vkey_file in sorted(data_dir.glob("default_drep_*_drep.vkey")):
@@ -436,7 +436,7 @@ def reinstate_committee(
     """Reinstate the original CC members."""
     # Create an "update committee" action
 
-    deposit_amt = cluster_obj.conway_genesis["govActionDeposit"]
+    deposit_amt = cluster_obj.g_query.get_gov_action_deposit()
     anchor_data = governance_utils.get_default_anchor_data()
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.COMMITTEE,

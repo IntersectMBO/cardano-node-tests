@@ -225,7 +225,7 @@ def propose_param_changes(
 
     temp_template = common.get_test_id(cluster)
     anchor_data = governance_utils.get_default_anchor_data()
-    deposit_amt = cluster.conway_genesis["govActionDeposit"]
+    deposit_amt = cluster.g_query.get_gov_action_deposit()
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
         gov_state=cluster.g_conway_governance.query.gov_state(),

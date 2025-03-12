@@ -263,7 +263,7 @@ def get_drep_reg_record(
     destination_dir: clusterlib.FileType = ".",
 ) -> DRepRegistration:
     """Get DRep registration record."""
-    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
+    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.g_query.get_drep_deposit()
     drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(
         key_name=name_template, destination_dir=destination_dir
     )
@@ -298,7 +298,7 @@ def get_script_drep_reg_record(
     destination_dir: clusterlib.FileType = ".",
 ) -> DRepScriptRegRecord:
     """Get DRep script registration record."""
-    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.conway_genesis["dRepDeposit"]
+    deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.g_query.get_drep_deposit()
     reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
         cert_name=name_template,
         deposit_amt=deposit_amt,
@@ -661,7 +661,7 @@ def create_dreps(
 
     stake_deposit = cluster_obj.g_query.get_address_deposit()
     drep_users = pool_users[:num]
-    deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+    deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
     # Create DRep registration certs
     drep_reg_records = [
@@ -743,7 +743,7 @@ def create_script_dreps(
 
     stake_deposit = cluster_obj.g_query.get_address_deposit()
     drep_users = pool_users[:no_of_scripts]
-    deposit_amt = cluster_obj.conway_genesis["dRepDeposit"]
+    deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
     # Create DRep script registration certs
     drep_reg_records = [

@@ -68,7 +68,7 @@ class TestInfo:
         """
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
-        action_deposit_amt = cluster.conway_genesis["govActionDeposit"]
+        action_deposit_amt = cluster.g_query.get_gov_action_deposit()
 
         # Get initial return account balance
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
