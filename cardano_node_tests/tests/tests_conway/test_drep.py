@@ -990,7 +990,7 @@ class TestNegativeDReps:
                 payment_addr,
                 cluster_obj=cluster,
                 all_faucets=cluster_manager.cache.addrs_data,
-                amount=deposit_drep_amt + 10_000_000,
+                amount=deposit_drep_amt * 2 + 10_000_000,
             )
 
         drep_metadata_file = pl.Path(f"{temp_template}_drep_metadata.json")
