@@ -176,8 +176,8 @@ def get_coverage(coverage_files: list[pl.Path], available_commands: dict) -> dic
             coverage = get_log_coverage(in_coverage)
 
         if coverage.get("cardano-cli", {}).get("_count") is None:
-            msg = f"Data in '{in_coverage}' doesn't seem to be in proper coverage format."
-            raise AttributeError(msg)
+            LOGGER.warning(f"Data in '{in_coverage}' doesn't seem to be in proper coverage format")
+            continue
 
         coverage_dict = merge_coverage(coverage_dict, coverage)
 
