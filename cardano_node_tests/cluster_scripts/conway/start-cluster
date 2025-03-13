@@ -731,6 +731,10 @@ for _ in {1..5}; do
 done
 [ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the nodes, line $LINENO" >&2; exit 1; }  # assert
 
+#
+# In Byron era
+#
+
 echo "Sleeping for initial Tx submission delay of $TX_SUBMISSION_DELAY seconds"
 sleep "$TX_SUBMISSION_DELAY"
 
@@ -741,9 +745,98 @@ for i in $(seq 1 "$NUM_BFT_NODES"); do
     --tx "${STATE_CLUSTER}/byron/tx${i}.tx"
 done
 
+# We need to submit an update proposal close to the beginning of an epoch, therefore
+# we'll wait for the next epoch.
+echo "Waiting for next Byron epoch to start"
+# length of Byron era is 200 sec
+sleep "$((200 - TX_SUBMISSION_DELAY + 5))"
+
+# Create an update proposal and votes for Byron PV1 era
+BYRON_V1_HF_PROPOSAL_FILE="${STATE_CLUSTER}/byron/update-proposal-byron-v1.proposal"
+cardano_cli_log byron governance create-update-proposal \
+  --filepath "$BYRON_V1_HF_PROPOSAL_FILE" \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --signing-key "${STATE_CLUSTER}/nodes/node-bft1/byron-deleg.key" \
+  --protocol-version-major 1 \
+  --protocol-version-minor 0 \
+  --protocol-version-alt 0 \
+  --application-name "cardano-sl" \
+  --software-version-num 1 \
+  --system-tag "linux" \
+  --installer-hash 0
+
+cardano_cli_log byron governance submit-update-proposal \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --filepath "$BYRON_V1_HF_PROPOSAL_FILE"
+sleep 5
+
+for i in $(seq 1 "$NUM_BFT_NODES"); do
+  cardano_cli_log byron governance create-proposal-vote \
+    --proposal-filepath "$BYRON_V1_HF_PROPOSAL_FILE" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --signing-key "${STATE_CLUSTER}/nodes/node-bft${i}/byron-deleg.key" \
+    --vote-yes \
+    --output-filepath "${STATE_CLUSTER}/byron/update-proposal-byron-v1-${i}.vote"
+
+  cardano_cli_log byron governance submit-proposal-vote  \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --filepath "${STATE_CLUSTER}/byron/update-proposal-byron-v1-${i}.vote"
+done
+sleep 5
+
+echo "Waiting for Byron era with PV1 to start"
+sleep 200
+
+#
+# In Byron era with PV1
+#
+
+# Create an update proposal and votes for Shelley era
+SHELLEY_HF_PROPOSAL_FILE="${STATE_CLUSTER}/byron/update-proposal-shelley.proposal"
+cardano_cli_log byron governance create-update-proposal \
+  --filepath "$SHELLEY_HF_PROPOSAL_FILE" \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --signing-key "${STATE_CLUSTER}/nodes/node-bft1/byron-deleg.key" \
+  --protocol-version-major 2 \
+  --protocol-version-minor 0 \
+  --protocol-version-alt 0 \
+  --application-name "cardano-sl" \
+  --software-version-num 1 \
+  --system-tag "linux" \
+  --installer-hash 0
+
+cardano_cli_log byron governance submit-update-proposal \
+  --testnet-magic "$NETWORK_MAGIC" \
+  --filepath "$SHELLEY_HF_PROPOSAL_FILE"
+sleep 5
+
+for i in $(seq 1 "$NUM_BFT_NODES"); do
+  cardano_cli_log byron governance create-proposal-vote \
+    --proposal-filepath "$SHELLEY_HF_PROPOSAL_FILE" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --signing-key "${STATE_CLUSTER}/nodes/node-bft${i}/byron-deleg.key" \
+    --vote-yes \
+    --output-filepath "${STATE_CLUSTER}/byron/update-proposal-shelley-${i}.vote"
+
+  cardano_cli_log byron governance submit-proposal-vote  \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --filepath "${STATE_CLUSTER}/byron/update-proposal-shelley-${i}.vote"
+done
+sleep 5
+
+for conf in "$STATE_CLUSTER"/config-*.json; do
+  fname="${conf##*/}"
+  jq '
+    ."LastKnownBlockVersion-Major" = 2' \
+    "$conf" > "${STATE_CLUSTER}/${fname}_jq"
+  cat "${STATE_CLUSTER}/${fname}_jq" > "${STATE_CLUSTER}/${fname}"
+  rm -f "${STATE_CLUSTER}/${fname}_jq"
+done
+
+supervisorctl -s unix:///"$SUPERVISORD_SOCKET_PATH" restart nodes:
+
 echo "Waiting for Shelley era to start"
-# length of Byron era is hardcoded to 200 sec
-sleep "$((200 - TX_SUBMISSION_DELAY))"
+sleep 190
 
 
 #
