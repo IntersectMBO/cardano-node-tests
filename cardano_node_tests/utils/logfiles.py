@@ -69,9 +69,14 @@ if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":
     ERRORS_IGNORED.append("TraceBlockFromFuture")
 
 if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
-    # We can get these errors on testnets when some clients are old, or are using wrong
-    # network magic.
-    ERRORS_IGNORED.append("TrHandshakeClientError")
+    ERRORS_IGNORED.extend(
+        (
+            # We can get this error when some clients are old, or are using wrong
+            # network magic.
+            "TrHandshakeClientError",
+            "TracePromoteWarmBigLedgerPeerAborted",
+        )
+    )
 
 # Errors that are ignored if there are expected messages in the log file before the error
 ERRORS_LOOK_BACK_LINES = 10
