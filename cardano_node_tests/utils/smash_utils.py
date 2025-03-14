@@ -1,13 +1,10 @@
+import dataclasses
+import datetime
 import logging
 import os
 import typing as tp
-from dataclasses import dataclass
-from datetime import datetime
-from datetime import timedelta
-from zoneinfo import ZoneInfo
 
 import requests
-from requests.auth import HTTPBasicAuth
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
@@ -17,7 +14,7 @@ from cardano_node_tests.utils import http_client
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, order=True)
+@dataclasses.dataclass(frozen=True, order=True)
 class PoolMetadata:
     name: str
     description: str
@@ -25,17 +22,17 @@ class PoolMetadata:
     homepage: str
 
 
-@dataclass(frozen=True, order=True)
+@dataclasses.dataclass(frozen=True, order=True)
 class PoolData:
     pool_id: str
 
 
-@dataclass(frozen=True, order=True)
+@dataclasses.dataclass(frozen=True, order=True)
 class PoolTicker:
     name: str
 
 
-@dataclass(frozen=True, order=True)
+@dataclasses.dataclass(frozen=True, order=True)
 class PoolError:
     cause: str
     pool_hash: str
@@ -58,11 +55,11 @@ class SmashClient:
         self.base_url = f"http://localhost:{self.port}"
         self.auth = self._get_auth()
 
-    def _get_auth(self) -> None | HTTPBasicAuth:
+    def _get_auth(self) -> requests.auth.HTTPBasicAuth | None:
         """Get Basic Auth credentials if configured."""
         admin = os.environ.get("SMASH_ADMIN", "admin")
         password = os.environ.get("SMASH_PASSWORD", "password")
-        return HTTPBasicAuth(admin, password) if admin and password else None
+        return requests.auth.HTTPBasicAuth(admin, password) if admin and password else None
 
     def get_pool_metadata(self, pool_id: str, pool_meta_hash: str) -> PoolMetadata:
         """Fetch stake pool metadata from SMASH, returning a `PoolMetadata`."""
@@ -101,7 +98,7 @@ class SmashClient:
         data = response.json()
         return PoolTicker(name=data["name"])
 
-    def get_pool_errors(self, pool_id: str, from_date: None | str = None) -> list[PoolError]:
+    def get_pool_errors(self, pool_id: str, from_date: str | None = None) -> list[PoolError]:
         """Fetch errors for a specific stake pool."""
         url = f"{self.base_url}/api/v1/errors/{pool_id}"
         params = {"fromDate": from_date} if from_date else None
@@ -136,7 +133,7 @@ class SmashManager:
 
     @classmethod
     def get_smash_instance(cls) -> SmashClient:
-        """Return a singleton instance of `SmashClient` for the given cluster instance."""
+        """Get a singleton instance of `SmashClient` for the given cluster instance."""
         instance_num = cluster_nodes.get_instance_num()
         if instance_num not in cls.instances:
             cls.instances[instance_num] = SmashClient(instance_num)
@@ -151,21 +148,22 @@ def is_smash_running() -> bool:
     return cluster_nodes.services_status(service_names=["smash"])[0].status == "RUNNING"
 
 
-def get_client() -> None | SmashClient:
-    """Global access to the SMASH client singleton."""
+def get_client() -> SmashClient | None:
+    """Get and cache the SMASH client."""
     if not is_smash_running():
         return None
     return SmashManager.get_smash_instance()
 
 
-def check_smash_pool_errors(pool_id: str, pool_metadata_hash: str) -> None | list[PoolError]:
+def check_smash_pool_errors(pool_id: str, pool_metadata_hash: str) -> list[PoolError] | None:
+    """Check if pool errors are correctly reported in SMASH."""
     if not is_smash_running():
         return None
     smash = SmashManager.get_smash_instance()
 
     # Test pool errors endpoint for a date set in the future
-    utc_now = datetime.now(ZoneInfo("UTC"))
-    future_date = (utc_now + timedelta(days=365 * 5)).strftime("%d.%m.%Y")
+    utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
+    future_date = (utc_now + datetime.timedelta(days=365 * 5)).strftime("%d.%m.%Y")
     smash_pool_errors_future = smash.get_pool_errors(pool_id=pool_id, from_date=future_date)
     assert smash_pool_errors_future == []
 
@@ -189,11 +187,11 @@ def check_smash_pool_errors(pool_id: str, pool_metadata_hash: str) -> None | lis
 
     try:
         # Parse the time string and check if it has a valid format
-        error_time_utc = datetime.strptime(smash_pool_error.time, "%d.%m.%Y. %H:%M:%S").replace(
-            tzinfo=ZoneInfo("UTC")
-        )
+        error_time_utc = datetime.datetime.strptime(
+            smash_pool_error.time, "%d.%m.%Y. %H:%M:%S"
+        ).replace(tzinfo=datetime.timezone.utc)
 
-        time_diff = timedelta(minutes=20)
+        time_diff = datetime.timedelta(minutes=20)
         assert error_time_utc <= utc_now, "Error time must not be in the future."
         assert error_time_utc >= (utc_now - time_diff), (
             f"Error time must be within the last {time_diff}."
@@ -206,7 +204,8 @@ def check_smash_pool_errors(pool_id: str, pool_metadata_hash: str) -> None | lis
     return smash_pool_errors
 
 
-def check_smash_pool_retired(pool_id: str) -> None | list[PoolData]:
+def check_smash_pool_retired(pool_id: str) -> list[PoolData] | None:
+    """Check if pool is correctly reported as retired in SMASH."""
     if not is_smash_running():
         return None
     smash = SmashManager.get_smash_instance()

@@ -769,7 +769,9 @@ class TestStakePool:
                 )
 
             dbsync_utils.retry_query(query_func=_query_func, timeout=360)
-            smash_utils.check_smash_pool_errors(pool_creation_out.stake_pool_id, pool_metadata_hash)
+            smash_utils.check_smash_pool_errors(
+                pool_id=pool_creation_out.stake_pool_id, pool_metadata_hash=pool_metadata_hash
+            )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD

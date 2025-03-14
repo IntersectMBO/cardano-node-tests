@@ -65,10 +65,10 @@ class TestBasicSmash:
         assert locked_pool_data is not None, "Locked pool data not found!"
         return locked_pool_data
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture()
     def smash(
         self,
-    ) -> None | smash_utils.SmashClient:
+    ) -> smash_utils.SmashClient | None:
         """Create SMASH client."""
         smash = smash_utils.get_client()
         if smash is None:
@@ -78,6 +78,7 @@ class TestBasicSmash:
     def test_fetch_pool_metadata(
         self, locked_pool: dbsync_types.PoolDataRecord, smash: smash_utils.SmashClient
     ):
+        """Test fetching pool metadata from SMASH."""
         pool_id = locked_pool.hash
 
         # Offchain metadata is inserted into database few minutes after start of a cluster
@@ -96,7 +97,9 @@ class TestBasicSmash:
             ticker=metadata_dbsync.ticker_name,
             homepage=metadata_dbsync.json["homepage"],
         )
-        actual_metadata = smash.get_pool_metadata(pool_id, metadata_dbsync.hash.hex())
+        actual_metadata = smash.get_pool_metadata(
+            pool_id=pool_id, pool_meta_hash=metadata_dbsync.hash.hex()
+        )
         assert expected_metadata == actual_metadata
 
     def test_delist_pool(
@@ -106,22 +109,23 @@ class TestBasicSmash:
         request: pytest.FixtureRequest,
         worker_id: str,
     ):
+        """Test delisting a pool from SMASH."""
         pool_id = locked_pool.hash
 
         # Define and register function that ensures pool is re-enlisted after test completion
         def pool_cleanup():
-            smash.enlist_pool(pool_id)
+            smash.enlist_pool(pool_id=pool_id)
 
         request.addfinalizer(pool_cleanup)
 
         # Delist the pool
         expected_delisted_pool = smash_utils.PoolData(pool_id=pool_id)
-        actual_delisted_pool = smash.delist_pool(pool_id)
+        actual_delisted_pool = smash.delist_pool(pool_id=pool_id)
         assert expected_delisted_pool == actual_delisted_pool
 
         # Check if fetching metadata for a delisted pool returns an error
         try:
-            smash.get_pool_metadata(pool_id, locked_pool.metadata_hash)
+            smash.get_pool_metadata(pool_id=pool_id, pool_meta_hash=locked_pool.metadata_hash)
         except requests.exceptions.RequestException as err:
             check_request_error(err, HTTPStatus.FORBIDDEN, None, f"Pool {pool_id} is delisted")
 
@@ -144,10 +148,11 @@ class TestBasicSmash:
         locked_pool: dbsync_types.PoolDataRecord,
         smash: smash_utils.SmashClient,
     ):
+        """Test enlisting a pool in SMASH."""
         pool_id = locked_pool.hash
         # Ensure enlisting an already enlisted pool returns an error
         try:
-            smash.enlist_pool(pool_id)
+            smash.enlist_pool(pool_id=pool_id)
         except requests.exceptions.RequestException as err:
             check_request_error(
                 err,
@@ -157,14 +162,14 @@ class TestBasicSmash:
             )
 
         # Delist the pool
-        smash.delist_pool(pool_id)
+        smash.delist_pool(pool_id=pool_id)
         try:
-            smash.get_pool_metadata(pool_id, locked_pool.metadata_hash)
+            smash.get_pool_metadata(pool_id=pool_id, pool_meta_hash=locked_pool.metadata_hash)
         except requests.exceptions.RequestException as err:
             check_request_error(err, HTTPStatus.FORBIDDEN, None, f"Pool {pool_id} is delisted")
 
         # Enlist the pool
-        actual_res_enlist = smash.enlist_pool(pool_id)
+        actual_res_enlist = smash.enlist_pool(pool_id=pool_id)
         expected_res_enlist = smash_utils.PoolData(pool_id=pool_id)
         assert expected_res_enlist == actual_res_enlist
 
@@ -174,6 +179,7 @@ class TestBasicSmash:
         smash: smash_utils.SmashClient,
         request: pytest.FixtureRequest,
     ):
+        """Test reserving a ticker for a pool in SMASH."""
         pool_id = random.choice(cluster.g_query.get_stake_pools())
 
         # Register cleanup function that removes ticker from database after test completion
