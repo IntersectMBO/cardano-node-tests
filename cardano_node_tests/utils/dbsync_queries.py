@@ -1539,3 +1539,13 @@ def query_drep_distr(
     with execute(query=query, vars=(drep_hash, epoch_no)) as cur:
         while (result := cur.fetchone()) is not None:
             yield DrepDistributionDBRow(*result)
+
+
+def delete_reserved_pool_tickers() -> int:
+    """Delete all records from reserved_pool_ticker and return the number of affected rows."""
+    query = "DELETE FROM reserved_pool_ticker"
+
+    with execute(query=query) as cur:
+        affected_rows = cur.rowcount or 0
+        dbsync_conn.conn().commit()
+        return affected_rows

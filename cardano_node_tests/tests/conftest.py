@@ -119,6 +119,13 @@ def pytest_configure(config: tp.Any) -> None:
         config.stash[metadata_key]["db-sync ghc"] = VERSIONS.dbsync_ghc
         config.stash[metadata_key]["db-sync exe"] = str(configuration.DBSYNC_BIN)
 
+    config.stash[metadata_key]["HAS_SMASH"] = str(configuration.HAS_SMASH)
+    if configuration.HAS_SMASH:
+        config.stash[metadata_key]["smash"] = str(VERSIONS.smash)
+        config.stash[metadata_key]["smash rev"] = VERSIONS.smash_git_rev
+        config.stash[metadata_key]["smash ghc"] = VERSIONS.smash_ghc
+        config.stash[metadata_key]["smash exe"] = str(configuration.SMASH_BIN)
+
     if "nix/store" not in config.stash[metadata_key]["cardano-cli exe"]:
         LOGGER.warning(" WARNING: Using `cardano-cli` from custom path!")
     if "nix/store" not in config.stash[metadata_key]["cardano-node exe"]:

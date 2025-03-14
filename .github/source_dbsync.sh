@@ -103,11 +103,17 @@ if [ -n "$DBSYNC_TAR_URL" ]; then
   rm -f "$DBSYNC_TAR_FILE"
   rm -f db-sync-node
   ln -s "${WORKDIR}/dbsync_download" db-sync-node || exit 1
+  rm -f smash-server || rm -f smash-server/bin/cardano-smash-server
+  mkdir -p smash-server/bin
+  ln -s "${WORKDIR}/dbsync_download/bin/cardano-smash-server" smash-server/bin/cardano-smash-server || exit 1
 else
-  # build db-sync
+  # Build db-sync
   nix build --accept-flake-config .#cardano-db-sync -o db-sync-node \
     || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o db-sync-node \
     || exit 1
+  # The cardano-smash-server binary doesn't seem to be cached in nix binary cache, and we don't
+  # want to pull the whole development environment. Therefore we'll not build it here, we'll depend only on
+  # the binary from release archive.
 fi
 
 [ -e db-sync-node/bin/cardano-db-sync ] || exit 1

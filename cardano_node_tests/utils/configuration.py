@@ -100,6 +100,17 @@ if HAS_DBSYNC:
 else:
     DBSYNC_BIN = pl.Path("/nonexistent")
 
+HAS_SMASH = HAS_DBSYNC and bool(os.environ.get("SMASH"))
+if HAS_SMASH:
+    SMASH_BIN = (
+        pl.Path(os.environ["DBSYNC_REPO"]).expanduser()
+        / "smash-server"
+        / "bin"
+        / "cardano-smash-server"
+    ).resolve()
+else:
+    SMASH_BIN = pl.Path("/nonexistent")
+
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
 # Cluster instances are kept running after tests finish
