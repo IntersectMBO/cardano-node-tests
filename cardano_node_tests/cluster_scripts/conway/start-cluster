@@ -495,20 +495,25 @@ for i in $(seq 1 "$NUM_POOLS"); do
   cardano_cli_log latest stake-address key-gen \
     --signing-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.skey" \
     --verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey"
-  #   payment address
+  # payment address
   cardano_cli_log latest address build \
     --payment-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-utxo.vkey" \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner.addr"
-  #   stake address
+  # stake address
   cardano_cli_log latest stake-address build \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.addr"
-  #   stake address registration cert
+  # stake address registration cert for Shelley era
   cardano_cli_log shelley stake-address registration-certificate \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake.reg.shelley.cert"
+  # stake address registration cert for Conway era
+  cardano_cli_log conway stake-address registration-certificate \
+    --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake.reg.cert"
 
   # stake reward keys
@@ -518,15 +523,15 @@ for i in $(seq 1 "$NUM_POOLS"); do
   # stake reward address registration cert
   cardano_cli_log shelley stake-address registration-certificate \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
-    --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.shelley_reg.cert"
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.shelley.cert"
   # stake reward delegation to alwaysAbstain DRep cert
   cardano_cli_log conway stake-address vote-delegation-certificate \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
     --always-abstain \
-    --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward_vote_deleg.cert"
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.vote_deleg.cert"
   if [ -n "${PV9:-""}" ]; then
     ln \
-      "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.shelley_reg.cert" \
+      "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.shelley.cert" \
       "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.cert"
   else
     # stake reward address registration and vote delegation cert, to be used later in tests
@@ -550,8 +555,13 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/vrf.vkey" \
     --signing-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/vrf.skey"
 
-  # stake address delegation certs
+  # stake address delegation certs for Shelley era
   cardano_cli_log shelley stake-address stake-delegation-certificate \
+    --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
+    --cold-verification-key-file  "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.shelley.cert"
+  # stake address delegation certs for Conway era
+  cardano_cli_log conway stake-address stake-delegation-certificate \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
     --cold-verification-key-file  "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.cert"
@@ -598,7 +608,23 @@ EoF
   echo "$POOL_PORT" > "${STATE_CLUSTER}/nodes/node-pool${i}/port"
   echo "$POOL_PLEDGE" > "${STATE_CLUSTER}/nodes/node-pool${i}/pledge"
 
+  # pool registration cert for Shelley era
   cardano_cli_log shelley stake-pool registration-certificate \
+    --cold-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
+    --vrf-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/vrf.vkey" \
+    --pool-pledge "$POOL_PLEDGE" \
+    --pool-margin 0.35 \
+    --pool-cost "$POOL_COST" \
+    --pool-reward-account-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
+    --pool-owner-stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
+    --metadata-url "$METADATA_URL" \
+    --metadata-hash "$METADATA_HASH" \
+    --pool-relay-port "$POOL_PORT" \
+    --pool-relay-ipv4 "127.0.0.1" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/register.shelley.cert"
+  # pool registration cert for Conway era
+  cardano_cli_log conway stake-pool registration-certificate \
     --cold-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
     --vrf-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/vrf.vkey" \
     --pool-pledge "$POOL_PLEDGE" \
@@ -901,10 +927,10 @@ POOL_SIGNING=()
 for i in $(seq 1 "$NUM_POOLS"); do
   POOL_ARGS+=( \
     "--tx-out" "$(<"${STATE_CLUSTER}/nodes/node-pool${i}/owner.addr")+${POOL_PLEDGE}" \
-    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake.reg.cert" \
-    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.shelley_reg.cert" \
-    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/register.cert" \
-    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.cert" \
+    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake.reg.shelley.cert" \
+    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.shelley.cert" \
+    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/register.shelley.cert" \
+    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.shelley.cert" \
   )
   POOL_SIGNING+=( \
     "--signing-key-file" "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.skey" \
@@ -1342,7 +1368,7 @@ POOL_ARGS=()
 POOL_SIGNING=()
 for i in $(seq 1 "$NUM_POOLS"); do
   POOL_ARGS+=( \
-    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward_vote_deleg.cert" \
+    "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.vote_deleg.cert" \
   )
   POOL_SIGNING+=( \
     "--signing-key-file" "${STATE_CLUSTER}/nodes/node-pool${i}/reward.skey" \
