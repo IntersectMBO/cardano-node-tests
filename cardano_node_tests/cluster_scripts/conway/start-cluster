@@ -2,6 +2,7 @@
 
 # controlling environment variables:
 # DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
+# SMASH - if set, will start and configure smash
 # ENABLE_LEGACY - if set, local cluster will use legacy networking
 # MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
 # UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
@@ -262,6 +263,22 @@ if [ -n "${DBSYNC_REPO:-""}" ]; then
 command=${SCRIPT_DIR}/run-cardano-dbsync
 stderr_logfile=./${STATE_CLUSTER_NAME}/dbsync.stderr
 stdout_logfile=./${STATE_CLUSTER_NAME}/dbsync.stdout
+autostart=false
+autorestart=false
+startsecs=5
+EoF
+fi
+
+# enable smash service
+if [ -n "${DBSYNC_REPO:-""}" ] && [ -n "${SMASH:-""}" ]; then
+  [ -e "${DBSYNC_REPO}/smash-server/bin/cardano-smash-server" ] || \
+    { echo "The \`${DBSYNC_REPO}/smash-server/bin/cardano-smash-server\` not found, line $LINENO" >&2; exit 1; }  # assert
+
+  cat >> "${STATE_CLUSTER}/supervisor.conf" <<EoF
+[program:smash]
+command=${SCRIPT_DIR}/run-cardano-smash
+stderr_logfile=./${STATE_CLUSTER_NAME}/smash.stderr
+stdout_logfile=./${STATE_CLUSTER_NAME}/smash.stdout
 autostart=false
 autorestart=false
 startsecs=5
@@ -896,6 +913,12 @@ SHELLEY_EPOCH="$(get_epoch)"
 if [ -n "${DBSYNC_REPO:-""}" ]; then
   echo "Starting db-sync"
   supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start dbsync
+fi
+
+# start smash
+if [ -n "${DBSYNC_REPO:-""}" ] && [ -n "${SMASH:-""}" ]; then
+  echo "Starting smash"
+  supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start smash
 fi
 
 sleep "$PROPOSAL_DELAY"
