@@ -133,8 +133,6 @@ def multisig_tx(
         witness_files=witness_files,
         tx_name=temp_template,
     )
-    # if "from_single_0" in temp_template and submit_method == "api" and not use_build_cmd:
-    #     from IPython import embed; embed()
 
     # Submit signed TX
     submit_utils.submit_tx(
