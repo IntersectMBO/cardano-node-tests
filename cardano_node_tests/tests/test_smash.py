@@ -78,7 +78,7 @@ class TestBasicSmash:
         """Create SMASH client."""
         smash = smash_utils.get_client()
         if smash is None:
-            pytest.skip("SMASH client is not available. Skipping test.")
+            pytest.skip("SMASH client is not available.")
         return smash
 
     @allure.link(helpers.get_vcs_link())
