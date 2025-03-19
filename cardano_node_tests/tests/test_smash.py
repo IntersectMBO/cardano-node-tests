@@ -135,7 +135,12 @@ class TestBasicSmash:
         try:
             smash.get_pool_metadata(pool_id=pool_id, pool_meta_hash=locked_pool.metadata_hash)
         except requests.exceptions.RequestException as err:
-            check_request_error(err, http.HTTPStatus.FORBIDDEN, None, f"Pool {pool_id} is delisted")
+            check_request_error(
+                err=err,
+                expected_status=http.HTTPStatus.FORBIDDEN,
+                expected_code=None,
+                expected_description=f"Pool {pool_id} is delisted",
+            )
 
         # Ignore expected errors in logs that would fail test in teardown phase
         err_msg = "Delisted pool already exists!"
@@ -149,7 +154,12 @@ class TestBasicSmash:
         try:
             smash.delist_pool(pool_id)
         except requests.exceptions.RequestException as err:
-            check_request_error(err, http.HTTPStatus.BAD_REQUEST, "DbInsertError", err_msg)
+            check_request_error(
+                err=err,
+                expected_status=http.HTTPStatus.BAD_REQUEST,
+                expected_code="DbInsertError",
+                expected_description=err_msg,
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -165,10 +175,10 @@ class TestBasicSmash:
             smash.enlist_pool(pool_id=pool_id)
         except requests.exceptions.RequestException as err:
             check_request_error(
-                err,
-                http.HTTPStatus.NOT_FOUND,
-                "RecordDoesNotExist",
-                "The requested record does not exist.",
+                err=err,
+                expected_status=http.HTTPStatus.NOT_FOUND,
+                expected_code="RecordDoesNotExist",
+                expected_description="The requested record does not exist.",
             )
 
         # Delist the pool
@@ -176,7 +186,12 @@ class TestBasicSmash:
         try:
             smash.get_pool_metadata(pool_id=pool_id, pool_meta_hash=locked_pool.metadata_hash)
         except requests.exceptions.RequestException as err:
-            check_request_error(err, http.HTTPStatus.FORBIDDEN, None, f"Pool {pool_id} is delisted")
+            check_request_error(
+                err=err,
+                expected_status=http.HTTPStatus.FORBIDDEN,
+                expected_code=None,
+                expected_description=f"Pool {pool_id} is delisted",
+            )
 
         # Enlist the pool
         actual_res_enlist = smash.enlist_pool(pool_id=pool_id)
@@ -208,8 +223,8 @@ class TestBasicSmash:
             smash.reserve_ticker(ticker_name=ticker, pool_hash=pool_id)
         except requests.exceptions.RequestException as err:
             check_request_error(
-                err,
-                http.HTTPStatus.BAD_REQUEST,
-                "TickerAlreadyReserved",
-                f'Ticker name "{ticker}" is already reserved',
+                err=err,
+                expected_status=http.HTTPStatus.BAD_REQUEST,
+                expected_code="TickerAlreadyReserved",
+                expected_description=f'Ticker name "{ticker}" is already reserved',
             )
