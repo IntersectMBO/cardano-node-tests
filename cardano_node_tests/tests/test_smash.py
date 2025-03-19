@@ -46,9 +46,7 @@ def check_request_error(
         actual_code = None
         actual_description = response.text.strip()
 
-    if expected_code:
-        assert actual_code == expected_code
-
+    assert actual_code == expected_code
     assert actual_description == expected_description
 
 
