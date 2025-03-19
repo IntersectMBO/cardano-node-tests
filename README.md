@@ -20,7 +20,9 @@ The easiest way to run the tests is by using GitHub Actions.
 ## Running tests using Nix
 
 1. Install and configure Nix by following the [cardano-node documentation](https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
+
 1. Clone this repository.
+
 1. Run the tests:
 
     ```sh
