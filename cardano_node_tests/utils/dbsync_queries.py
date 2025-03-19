@@ -984,13 +984,16 @@ def query_utxo(address: str) -> tp.Generator[UTxODBRow, None, None]:
     """Query UTxOs for payment address in db-sync."""
     query = (
         "SELECT"
-        " tx.hash, utxo_view.index, utxo_view.address, stake_address.view,"
-        " utxo_view.address_has_script, utxo_view.value, utxo_view.data_hash "
-        "FROM utxo_view "
-        "INNER JOIN tx ON utxo_view.tx_id = tx.id "
-        "LEFT JOIN stake_address ON utxo_view.stake_address_id = stake_address.id "
-        "WHERE utxo_view.address = %s "
-        "ORDER BY utxo_view.id;"
+        " tx.hash, tx_out.index, tx_out.address, stake_address.view AS stake_address,"
+        " tx_out.address_has_script, tx_out.value, tx_out.data_hash "
+        "FROM tx_out "
+        "INNER JOIN tx ON tx_out.tx_id = tx.id "
+        "LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id "
+        "LEFT JOIN tx_in "
+        "ON tx_out.tx_id = tx_in.tx_out_id AND tx_out.index = tx_in.tx_out_index "
+        "WHERE tx_in.tx_out_id IS NULL "  # Only unspent UTXOs
+        "AND tx_out.address = %s "
+        "ORDER BY tx_out.id;"
     )
 
     with execute(query=query, vars=(address,)) as cur:
