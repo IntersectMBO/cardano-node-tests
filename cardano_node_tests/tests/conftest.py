@@ -65,7 +65,26 @@ def pytest_addoption(parser: tp.Any) -> None:
     )
 
 
+def _check_cardano_node_socket_path() -> None:
+    """Check that `CARDANO_NODE_SOCKET_PATH` value is valid for use by testing framework."""
+    socket_env = os.environ.get("CARDANO_NODE_SOCKET_PATH")
+    if not socket_env:
+        msg = "The `CARDANO_NODE_SOCKET_PATH` env variable is not set."
+        raise RuntimeError(msg)
+
+    socket_path = pl.Path(socket_env).expanduser().resolve()
+    parts = socket_path.parts
+    if not parts[-2].startswith("state-cluster") or parts[-1] not in (
+        "bft1.socket",
+        "relay1.socket",
+    ):
+        msg = "The `CARDANO_NODE_SOCKET_PATH` value is not valid for use by testing framework."
+        raise RuntimeError(msg)
+
+
 def pytest_configure(config: tp.Any) -> None:
+    _check_cardano_node_socket_path()
+
     # Don't bother collecting metadata if all tests are skipped
     if config.getvalue("skipall"):
         return
