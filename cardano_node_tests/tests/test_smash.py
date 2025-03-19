@@ -5,10 +5,12 @@ import random
 import re
 from http import HTTPStatus
 
+import allure
 import pytest
 import requests
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
@@ -17,6 +19,11 @@ from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import smash_utils
 
 LOGGER = logging.getLogger(__name__)
+
+pytestmark = [
+    pytest.mark.skipif(not configuration.HAS_SMASH, reason="SMASH is not available"),
+    pytest.mark.smash,
+]
 
 
 def check_request_error(
@@ -45,7 +52,6 @@ def check_request_error(
     assert actual_description == expected_description
 
 
-@pytest.mark.smash
 class TestBasicSmash:
     """Basic tests for SMASH service."""
 
@@ -75,6 +81,8 @@ class TestBasicSmash:
             pytest.skip("SMASH client is not available. Skipping test.")
         return smash
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_fetch_pool_metadata(
         self, locked_pool: dbsync_types.PoolDataRecord, smash: smash_utils.SmashClient
     ):
@@ -102,6 +110,8 @@ class TestBasicSmash:
         )
         assert expected_metadata == actual_metadata
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_delist_pool(
         self,
         locked_pool: dbsync_types.PoolDataRecord,
@@ -143,6 +153,8 @@ class TestBasicSmash:
         except requests.exceptions.RequestException as err:
             check_request_error(err, HTTPStatus.BAD_REQUEST, "DbInsertError", err_msg)
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_enlist_pool(
         self,
         locked_pool: dbsync_types.PoolDataRecord,
@@ -173,6 +185,8 @@ class TestBasicSmash:
         expected_res_enlist = smash_utils.PoolData(pool_id=pool_id)
         assert expected_res_enlist == actual_res_enlist
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
     def test_reserve_ticker(
         self,
         cluster: clusterlib.ClusterLib,
