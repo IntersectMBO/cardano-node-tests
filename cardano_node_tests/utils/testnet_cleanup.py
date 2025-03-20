@@ -381,6 +381,43 @@ def _get_faucet_payment_rec(
     return faucet_payment
 
 
+def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.Tuple[int, int]:
+    """Return the total balance and rewards of all addresses in the given location."""
+    balance = 0
+    rewards = 0
+    files_found = group_addr_files(find_addr_files(location))
+
+    for files in files_found:
+        for fpath in files:
+            f_name = fpath.name
+            if f_name == "faucet.addr":
+                continue
+
+            # Add sleep to prevent
+            # "Network.Socket.connect: <socket: 11>: resource exhausted"
+            time.sleep(0.1)
+
+            if f_name.endswith("_stake.addr"):
+                address = clusterlib.read_address_from_file(fpath)
+                stake_addr_info = cluster_obj.g_query.get_stake_addr_info(address)
+                if not stake_addr_info:
+                    continue
+                f_rewards = stake_addr_info.reward_account_balance
+                if f_rewards:
+                    rewards += f_rewards
+                    LOGGER.info(f"{f_rewards} on '{fpath}'")
+            else:
+                address = clusterlib.read_address_from_file(fpath)
+                f_balance = cluster_obj.g_query.get_address_balance(
+                    address=address, coin=clusterlib.DEFAULT_COIN
+                )
+                if f_balance:
+                    LOGGER.info(f"{f_balance} on '{fpath}'")
+                    balance += f_balance
+
+    return balance, rewards
+
+
 def cleanup(
     cluster_obj: clusterlib.ClusterLib,
     location: clusterlib.FileType,
