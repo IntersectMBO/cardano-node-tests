@@ -240,13 +240,14 @@ def cleanup_addresses(
         skeys = []
         txins = []
         for fpath in files:
-            # Add random sleep for < 1s to prevent
-            # "Network.Socket.connect: <socket: 11>: resource exhausted"
-            time.sleep(random.random())
-
             f_name = fpath.name
             if f_name == "faucet.addr":
                 continue
+
+            # Add random sleep for < 0.5s to prevent
+            # "Network.Socket.connect: <socket: 11>: resource exhausted"
+            time.sleep(random.random() / 2)
+
             if f_name.endswith("_stake.addr"):
                 payment_addr = fpath.parent / f_name.replace("_stake.addr", ".addr")
                 try:
@@ -319,9 +320,9 @@ def cleanup_certs(
         addrs_queue.put(a)
 
     def _run(cert_file: pl.Path, addrs_queue: queue.Queue[clusterlib.AddressRecord]) -> None:
-        # Add random sleep for < 1s to prevent
+        # Add random sleep for < 0.5s to prevent
         # "Network.Socket.connect: <socket: 11>: resource exhausted"
-        time.sleep(random.random())
+        time.sleep(random.random() / 2)
 
         fname = cert_file.name
         fdir = cert_file.parent
