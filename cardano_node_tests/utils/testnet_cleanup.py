@@ -24,39 +24,18 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-def withdraw_reward(
-    cluster_obj: clusterlib.ClusterLib,
-    stake_addr_record: clusterlib.AddressRecord,
-    dst_addr_record: clusterlib.AddressRecord,
-    name_template: str,
-) -> None:
-    """Withdraw rewards to payment address."""
-    dst_address = dst_addr_record.address
-
-    tx_files_withdrawal = clusterlib.TxFiles(
-        signing_key_files=[dst_addr_record.skey_file, stake_addr_record.skey_file],
-    )
-
-    try:
-        cluster_obj.g_transaction.send_tx(
-            src_address=dst_address,
-            tx_name=f"rf_{name_template}_reward_withdrawal",
-            tx_files=tx_files_withdrawal,
-            withdrawals=[clusterlib.TxOut(address=stake_addr_record.address, amount=-1)],
-        )
-    except clusterlib.CLIError:
-        LOGGER.error(f"Failed to withdraw rewards for '{stake_addr_record.address}'")  # noqa: TRY400
-    else:
-        LOGGER.debug(f"Withdrawn rewards for '{stake_addr_record.address}'")
-
-
 def deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     pool_user: clusterlib.PoolUser,
+    stake_addr_info: clusterlib.StakeAddrInfo,
     name_template: str,
     deposit_amt: int,
 ) -> None:
     """Deregister stake address."""
+    withdrawals = []
+    if stake_addr_info.reward_account_balance:
+        withdrawals = [clusterlib.TxOut(address=pool_user.stake.address, amount=-1)]
+
     # Files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"rf_{name_template}_addr0_dereg",
@@ -68,17 +47,37 @@ def deregister_stake_addr(
         signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
     )
 
+    dereg_failed = False
     try:
         cluster_obj.g_transaction.send_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{name_template}_dereg_stake_addr",
+            tx_name=f"{name_template}_dereg_withdraw_stake_addr",
             tx_files=tx_files_deregister,
+            withdrawals=withdrawals,
             deposit=-deposit_amt,
         )
     except clusterlib.CLIError:
+        dereg_failed = True
         LOGGER.error(f"Failed to deregister stake address '{pool_user.stake.address}'")  # noqa: TRY400
     else:
         LOGGER.debug(f"Deregistered stake address '{pool_user.stake.address}'")
+
+    # Try to at least withdraw rewards if deregistration was not successful
+    if dereg_failed and withdrawals:
+        tx_files_withdrawal = clusterlib.TxFiles(
+            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        )
+        try:
+            cluster_obj.g_transaction.send_tx(
+                src_address=pool_user.payment.address,
+                tx_name=f"rf_{name_template}_reward_withdrawal",
+                tx_files=tx_files_withdrawal,
+                withdrawals=withdrawals,
+            )
+        except clusterlib.CLIError:
+            LOGGER.error(f"Failed to withdraw rewards for '{pool_user.stake.address}'")  # noqa: TRY400
+        else:
+            LOGGER.debug(f"Withdrawn rewards for '{pool_user.stake.address}'")
 
 
 def retire_drep(
@@ -263,17 +262,10 @@ def cleanup_addresses(
                 if not stake_addr_info:
                     continue
 
-                if stake_addr_info.reward_account_balance:
-                    withdraw_reward(
-                        cluster_obj=cluster_obj,
-                        stake_addr_record=stake,
-                        dst_addr_record=payment,
-                        name_template=f_name,
-                    )
-
                 deregister_stake_addr(
                     cluster_obj=cluster_obj,
                     pool_user=pool_user,
+                    stake_addr_info=stake_addr_info,
                     name_template=f_name,
                     deposit_amt=stake_deposit_amt,
                 )
