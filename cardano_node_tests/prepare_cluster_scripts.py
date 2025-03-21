@@ -93,7 +93,7 @@ def main() -> int:
 
     destdir.mkdir(parents=True)
 
-    scriptsdir: ttypes.FileType = pl.Path(args.scripts_dir) if args.scripts_dir else ""
+    scriptsdir: ttypes.FileType = args.scripts_dir or ""
 
     try:
         prepare_scripts_files(
