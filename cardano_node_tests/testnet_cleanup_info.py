@@ -22,7 +22,7 @@ def get_args() -> argparse.Namespace:
         "-a",
         "--artifacts-base-dir",
         required=True,
-        type=helpers.check_dir_arg,
+        type=helpers.check_dir_arg_keep,
         help="Path to a directory with testing artifacts",
     )
     return parser.parse_args()
@@ -42,7 +42,7 @@ def main() -> int:
 
     state_dir = pl.Path(socket_env).parent
     cluster_obj = clusterlib.ClusterLib(state_dir=state_dir)
-    location = pl.Path(args.artifacts_base_dir).expanduser().resolve()
+    location = args.artifacts_base_dir
     balance, rewards = testnet_cleanup.addresses_info(cluster_obj=cluster_obj, location=location)
     LOGGER.info(f"Uncleaned balance: {balance} Lovelace ({balance / 1_000_000} ADA)")
     LOGGER.info(f"Uncleaned rewards: {rewards} Lovelace ({balance / 1_000_000} ADA)")
