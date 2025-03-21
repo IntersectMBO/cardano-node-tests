@@ -408,11 +408,13 @@ def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.
                     LOGGER.info(f"{f_rewards} on '{fpath}'")
             else:
                 address = clusterlib.read_address_from_file(fpath)
-                f_balance = cluster_obj.g_query.get_address_balance(
-                    address=address, coin=clusterlib.DEFAULT_COIN
-                )
+                utxos = cluster_obj.g_query.get_utxo(address=address)
+                lovelace_utxos = [u for u in utxos if u.coin == clusterlib.DEFAULT_COIN]
+                f_balance = functools.reduce(lambda x, y: x + y.amount, lovelace_utxos, 0)
                 if f_balance:
-                    LOGGER.info(f"{f_balance} on '{fpath}'")
+                    has_tokens = len(lovelace_utxos) != len(utxos)
+                    tokens_str = " + tokens" if has_tokens else ""
+                    LOGGER.info(f"{f_balance}{tokens_str} on '{fpath}'")
                     balance += f_balance
 
     return balance, rewards
