@@ -32,10 +32,11 @@ def defragment(cluster_obj: clusterlib.ClusterLib, address: str, skey_file: pl.P
             break
 
         batch_size = min(100, utxos_len)
-        for b in range(1, utxos_len + 1, batch_size):
-            LOGGER.info(f"Defragmenting UTxOs: Running loop {loop}, batch {b}")
+        batch_num = 1
+        for b in range(0, utxos_len, batch_size):
+            LOGGER.info(f"Defragmenting UTxOs: Running loop {loop}, batch {batch_num}")
             batch = utxos[b : b + batch_size]
-            tx_name = f"defrag_loop{loop}_batch{b}"
+            tx_name = f"defrag_loop{loop}_batch{batch_num}"
 
             tx_output = cluster_obj.g_transaction.build_tx(
                 src_address=address,
@@ -49,6 +50,7 @@ def defragment(cluster_obj: clusterlib.ClusterLib, address: str, skey_file: pl.P
                 signing_key_files=[skey_file],
             )
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed_file)
+            batch_num += 1
 
         loop += 1
 

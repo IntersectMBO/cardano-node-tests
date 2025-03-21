@@ -150,8 +150,10 @@ def return_funds_to_faucet(
 
     txins_len = len(txins)
     batch_size = min(100, txins_len)
-    for b in range(1, txins_len + 1, batch_size):
-        tx_name = f"{tx_name}_batch{b}"
+    batch_num = 1
+    for b in range(0, txins_len, batch_size):
+        tx_name = f"{tx_name}_batch{batch_num}"
+        batch_num += 1
         batch = txins[b : b + batch_size]
         batch_balance = functools.reduce(lambda x, y: x + y.amount, batch, 0)
 
