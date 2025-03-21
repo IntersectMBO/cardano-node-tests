@@ -1635,6 +1635,8 @@ class TestPolicies:
             assert not token_utxo, "The token was minted unexpectedly"
 
 
+# These tests should not run on long running testnets, because they leave large amounts of ADA
+# on UTxOs with tokens, and ADA on such UTxOs is not currently reclaimed.
 @common.SKIPIF_TOKENS_UNUSABLE
 class TestTransfer:
     """Tests for transferring tokens."""
@@ -1692,7 +1694,6 @@ class TestTransfer:
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("amount", (1, 10, 200, 2_000, 100_000))
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transfer_tokens(
         self,
@@ -1825,7 +1826,6 @@ class TestTransfer:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
-    @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
         self,
@@ -2008,7 +2008,6 @@ class TestTransfer:
         reason="runs only on local cluster",
     )
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_transfer_no_ada(
         self,
         cluster: clusterlib.ClusterLib,
@@ -2063,7 +2062,6 @@ class TestTransfer:
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
-    @pytest.mark.testnets
     def test_transfer_invalid_token_amount(
         self,
         cluster: clusterlib.ClusterLib,
