@@ -414,7 +414,7 @@ def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.
                 if f_balance:
                     has_tokens = len(lovelace_utxos) != len(utxos)
                     tokens_str = " + tokens" if has_tokens else ""
-                    LOGGER.info(f"{f_balance}{tokens_str} on '{fpath}'")
+                    LOGGER.info(f"{f_balance / 1_000_000} ADA{tokens_str} on '{fpath}'")
                     balance += f_balance
 
     return balance, rewards

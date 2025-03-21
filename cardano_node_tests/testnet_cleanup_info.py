@@ -44,8 +44,8 @@ def main() -> int:
     cluster_obj = clusterlib.ClusterLib(state_dir=state_dir)
     location = pl.Path(args.artifacts_base_dir).expanduser().resolve()
     balance, rewards = testnet_cleanup.addresses_info(cluster_obj=cluster_obj, location=location)
-    LOGGER.info(f"Uncleaned balance: {balance}")
-    LOGGER.info(f"Uncleaned rewards: {rewards}")
+    LOGGER.info(f"Uncleaned balance: {balance} Lovelace ({balance / 1_000_000} ADA)")
+    LOGGER.info(f"Uncleaned rewards: {rewards} Lovelace ({balance / 1_000_000} ADA)")
 
     return 0
 
