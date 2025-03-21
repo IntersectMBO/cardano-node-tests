@@ -150,8 +150,10 @@ def return_funds_to_faucet(
 
     txins_len = len(txins)
     batch_size = min(100, txins_len)
-    for b in range(1, txins_len + 1, batch_size):
-        tx_name = f"{tx_name}_batch{b}"
+    batch_num = 1
+    for b in range(0, txins_len, batch_size):
+        tx_name = f"{tx_name}_batch{batch_num}"
+        batch_num += 1
         batch = txins[b : b + batch_size]
         batch_balance = functools.reduce(lambda x, y: x + y.amount, batch, 0)
 
@@ -234,6 +236,8 @@ def cleanup_addresses(
 ) -> None:
     """Cleanup addresses."""
     files_found = group_addr_files(find_addr_files(location))
+    num_threads = min(10, len(files_found) // 200)
+
     stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
     def _run(files: list[pl.Path]) -> None:
@@ -288,7 +292,7 @@ def cleanup_addresses(
         )
 
     # Run cleanup in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(_run, f) for f in files_found]
         concurrent.futures.wait(futures)
 
@@ -299,12 +303,15 @@ def cleanup_certs(
     cluster_obj: clusterlib.ClusterLib, location: pl.Path, faucet_payment: clusterlib.AddressRecord
 ) -> None:
     """Cleanup DRep certs."""
-    files_found = find_cert_files(location)
+    files_found = list(find_cert_files(location))
+    num_threads = min(10, len(files_found) // 10)
+
     drep_deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
     # Fund the addresses that will pay for fees
     fund_addrs = [
-        cluster_obj.g_address.gen_payment_addr_and_keys(name=f"certs_cleanup{i}") for i in range(11)
+        cluster_obj.g_address.gen_payment_addr_and_keys(name=f"certs_cleanup{i}")
+        for i in range(num_threads + 1)
     ]
     fund_dst = [clusterlib.TxOut(address=f.address, amount=300_000_000) for f in fund_addrs]
     fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_payment.skey_file])
@@ -343,7 +350,7 @@ def cleanup_certs(
             addrs_queue.put(addr)
 
     # Run cleanup in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(_run, f, addrs_queue) for f in files_found]
         concurrent.futures.wait(futures)
 
