@@ -56,3 +56,6 @@ def defragment(cluster_obj: clusterlib.ClusterLib, address: str, skey_file: pl.P
             f"Defragmenting UTxOs: Waiting for {new_blocks} new blocks before starting loop {loop}"
         )
         cluster_obj.wait_for_new_block(new_blocks=new_blocks)
+
+    # Wait for the last defragmentation to be included in the chain
+    cluster_obj.wait_for_new_block(new_blocks=new_blocks)
