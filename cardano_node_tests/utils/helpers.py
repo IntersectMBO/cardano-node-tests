@@ -221,6 +221,23 @@ def check_dir_arg(dir_path: str) -> pl.Path | None:
     return abs_path
 
 
+def check_dir_arg_keep(dir_path: str) -> pl.Path | None:
+    """Check that the dir passed as argparse parameter is a valid existing dir.
+
+    Keep the original path instead resolving it to absolute.
+    """
+    if not dir_path:
+        return None
+    orig_path = pl.Path(dir_path)
+    abs_path = orig_path.expanduser().resolve()
+    if not (abs_path.exists() and abs_path.is_dir()):
+        msg = f"check_dir_arg: directory '{dir_path}' doesn't exist"
+        raise argparse.ArgumentTypeError(msg)
+    if dir_path.startswith("~"):
+        orig_path.expanduser()
+    return orig_path
+
+
 def check_file_arg(file_path: str) -> pl.Path | None:
     """Check that the file passed as argparse parameter is a valid existing file."""
     if not file_path:
