@@ -52,12 +52,6 @@ def defragment(cluster_obj: clusterlib.ClusterLib, address: str, skey_file: pl.P
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed_file)
             batch_num += 1
 
-        loop += 1
-
-        LOGGER.info(
-            f"Defragmenting UTxOs: Waiting for {new_blocks} new blocks before starting loop {loop}"
-        )
+        LOGGER.info(f"Defragmenting UTxOs: Waiting for {new_blocks} new blocks after loop {loop}")
         cluster_obj.wait_for_new_block(new_blocks=new_blocks)
-
-    # Wait for the last defragmentation to be included in the chain
-    cluster_obj.wait_for_new_block(new_blocks=new_blocks)
+        loop += 1
