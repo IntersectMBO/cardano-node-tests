@@ -24,6 +24,63 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
+def reregister_stake_addr(
+    cluster_obj: clusterlib.ClusterLib,
+    pool_user: clusterlib.PoolUser,
+    stake_addr_info: clusterlib.StakeAddrInfo,
+    name_template: str,
+    deposit_amt: int,
+) -> clusterlib.StakeAddrInfo:
+    """Re-register stake address.
+
+    The address needs to be registered and delegated to a DRep to be able to withdraw rewards.
+    """
+    rereg_certs = []
+    rereg_deposit = 0
+
+    is_not_registered = not stake_addr_info
+    has_no_vote_deleg = not stake_addr_info.vote_delegation
+    has_rewards = stake_addr_info and stake_addr_info.reward_account_balance
+
+    if is_not_registered:
+        reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"rf_{name_template}",
+            deposit_amt=deposit_amt,
+            stake_vkey_file=pool_user.stake.vkey_file,
+        )
+        rereg_certs.append(reg_cert)
+        rereg_deposit += deposit_amt
+
+    # We need to delegate votes only when there are rewards to withdraw
+    if is_not_registered or (has_rewards and has_no_vote_deleg):
+        deleg_cert = cluster_obj.g_stake_address.gen_vote_delegation_cert(
+            addr_name=f"rf_{name_template}",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            always_abstain=True,
+        )
+        rereg_certs.append(deleg_cert)
+
+    if rereg_certs:
+        tx_files_register = clusterlib.TxFiles(
+            certificate_files=rereg_certs,
+            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        )
+        try:
+            cluster_obj.g_transaction.send_tx(
+                src_address=pool_user.payment.address,
+                tx_name=f"rf_{name_template}_rereg_stake",
+                tx_files=tx_files_register,
+                deposit=rereg_deposit,
+            )
+        except clusterlib.CLIError:
+            LOGGER.error(f"Failed to re-register stake address '{pool_user.stake.address}'")  # noqa: TRY400
+        else:
+            LOGGER.debug(f"Re-registered stake address '{pool_user.stake.address}'")
+            stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
+
+    return stake_addr_info
+
+
 def deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
     pool_user: clusterlib.PoolUser,
@@ -34,11 +91,15 @@ def deregister_stake_addr(
     """Deregister stake address."""
     withdrawals = []
     if stake_addr_info.reward_account_balance:
-        withdrawals = [clusterlib.TxOut(address=pool_user.stake.address, amount=-1)]
+        withdrawals = [
+            clusterlib.TxOut(
+                address=pool_user.stake.address, amount=stake_addr_info.reward_account_balance
+            )
+        ]
 
     # Files for deregistering stake address
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
-        addr_name=f"rf_{name_template}_addr0_dereg",
+        addr_name=f"rf_{name_template}",
         deposit_amt=deposit_amt,
         stake_vkey_file=pool_user.stake.vkey_file,
     )
@@ -47,37 +108,18 @@ def deregister_stake_addr(
         signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
     )
 
-    dereg_failed = False
     try:
         cluster_obj.g_transaction.send_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{name_template}_dereg_withdraw_stake_addr",
+            tx_name=f"rf_{name_template}_dereg_withdraw_stake",
             tx_files=tx_files_deregister,
             withdrawals=withdrawals,
             deposit=-deposit_amt,
         )
     except clusterlib.CLIError:
-        dereg_failed = True
         LOGGER.error(f"Failed to deregister stake address '{pool_user.stake.address}'")  # noqa: TRY400
     else:
         LOGGER.debug(f"Deregistered stake address '{pool_user.stake.address}'")
-
-    # Try to at least withdraw rewards if deregistration was not successful
-    if dereg_failed and withdrawals:
-        tx_files_withdrawal = clusterlib.TxFiles(
-            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
-        )
-        try:
-            cluster_obj.g_transaction.send_tx(
-                src_address=pool_user.payment.address,
-                tx_name=f"rf_{name_template}_reward_withdrawal",
-                tx_files=tx_files_withdrawal,
-                withdrawals=withdrawals,
-            )
-        except clusterlib.CLIError:
-            LOGGER.error(f"Failed to withdraw rewards for '{pool_user.stake.address}'")  # noqa: TRY400
-        else:
-            LOGGER.debug(f"Withdrawn rewards for '{pool_user.stake.address}'")
 
 
 def retire_drep(
@@ -89,7 +131,7 @@ def retire_drep(
 ) -> None:
     """Retire a DRep."""
     ret_cert = cluster_obj.g_conway_governance.drep.gen_retirement_cert(
-        cert_name=f"{name_template}_cleanup",
+        cert_name=f"rf_{name_template}",
         deposit_amt=deposit_amt,
         drep_vkey_file=drep_keys.vkey_file,
     )
@@ -101,7 +143,7 @@ def retire_drep(
     try:
         cluster_obj.g_transaction.send_tx(
             src_address=payment_addr.address,
-            tx_name=f"{name_template}_retire_drep",
+            tx_name=f"rf_{name_template}_retire_drep",
             tx_files=tx_files,
             deposit=-deposit_amt,
         )
@@ -149,7 +191,7 @@ def return_funds_to_faucet(
     fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
 
     txins_len = len(txins)
-    batch_size = min(100, txins_len)
+    batch_size = min(100, txins_len or 1)
     batch_num = 1
     for b in range(0, txins_len, batch_size):
         tx_name = f"{tx_name}_batch{batch_num}"
@@ -236,7 +278,7 @@ def cleanup_addresses(
 ) -> None:
     """Cleanup addresses."""
     files_found = group_addr_files(find_addr_files(location))
-    num_threads = min(10, len(files_found) // 200)
+    num_threads = min(10, (len(files_found) // 200) + 1)
 
     stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
@@ -263,9 +305,15 @@ def cleanup_addresses(
 
                 pool_user = clusterlib.PoolUser(payment=payment, stake=stake)
 
-                stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
-                if not stake_addr_info:
-                    continue
+                stake_addr_info = reregister_stake_addr(
+                    cluster_obj=cluster_obj,
+                    pool_user=pool_user,
+                    stake_addr_info=cluster_obj.g_query.get_stake_addr_info(
+                        pool_user.stake.address
+                    ),
+                    name_template=f_name,
+                    deposit_amt=stake_deposit_amt,
+                )
 
                 deregister_stake_addr(
                     cluster_obj=cluster_obj,
@@ -304,7 +352,7 @@ def cleanup_certs(
 ) -> None:
     """Cleanup DRep certs."""
     files_found = list(find_cert_files(location))
-    num_threads = min(10, len(files_found) // 10)
+    num_threads = min(10, (len(files_found) // 10) + 1)
 
     drep_deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
