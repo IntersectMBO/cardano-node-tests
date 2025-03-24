@@ -25,10 +25,7 @@ TEST_RECONNECT = os.environ.get("TEST_RECONNECT") is not None
 TEST_METRICS_RECONNECT = os.environ.get("TEST_METRICS_RECONNECT") is not None
 
 
-@pytest.mark.skipif(
-    cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
-    reason="Runs only on local cluster",
-)
+@common.SKIPIF_ON_TESTNET
 @pytest.mark.skipif(
     VERSIONS.cluster_era != VERSIONS.transaction_era,
     reason="runs only with same cluster and Tx era",

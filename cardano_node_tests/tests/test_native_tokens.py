@@ -25,7 +25,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import blockers
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -2003,10 +2002,7 @@ class TestTransfer:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
-    @pytest.mark.skipif(
-        cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
-        reason="runs only on local cluster",
-    )
+    @common.SKIPIF_ON_TESTNET
     @pytest.mark.smoke
     def test_transfer_no_ada(
         self,
