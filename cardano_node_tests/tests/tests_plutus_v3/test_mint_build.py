@@ -72,7 +72,7 @@ class TestPlutusBatch5V3Builtins:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 20_000_000
+        script_fund = 10_000_000
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_v_record.execution_cost,

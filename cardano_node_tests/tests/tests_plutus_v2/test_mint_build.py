@@ -122,7 +122,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
@@ -268,7 +268,7 @@ class TestBuildMinting:
         issuer_addr = payment_addrs[1]
 
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
@@ -381,7 +381,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_V2_CHECK_REF_INPUTS_COST,
@@ -526,7 +526,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_V2_CHECK_REF_SCRIPTS_COST,
@@ -656,7 +656,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_V2_CHECK_INLINE_DATUM_COST,
