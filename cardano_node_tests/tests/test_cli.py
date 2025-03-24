@@ -1160,10 +1160,7 @@ class TestAdvancedQueries:
             "total_stake",
             pytest.param(
                 "all_pools",
-                marks=pytest.mark.skipif(
-                    cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
-                    reason="not supposed to run on testnet",
-                ),
+                marks=common.SKIPIF_ON_TESTNET,
             ),
         ),
     )

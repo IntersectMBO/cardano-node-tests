@@ -28,10 +28,7 @@ ROLLBACK_NODES_OFFSET = int(os.environ.get("ROLLBACK_NODES_OFFSET") or 1)
 LAST_POOL_NAME = f"pool{configuration.NUM_POOLS}"
 
 
-@pytest.mark.skipif(
-    cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
-    reason="runs only on local cluster",
-)
+@common.SKIPIF_ON_TESTNET
 @pytest.mark.skipif(
     VERSIONS.cluster_era != VERSIONS.transaction_era,
     reason="runs only with same cluster and Tx era",

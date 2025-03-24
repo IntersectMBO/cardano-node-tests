@@ -79,6 +79,16 @@ SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
     reason=_PLUTUSV3_SKIP_REASON,
 )
 
+SKIPIF_ON_TESTNET = pytest.mark.skipif(
+    cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
+    reason="not supposed to run on long-running testnet",
+)
+
+SKIPIF_ON_LOCAL = pytest.mark.skipif(
+    cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
+    reason="supposed to run on long-running testnet",
+)
+
 
 # Common parametrization
 PARAM_USE_BUILD_CMD = pytest.mark.parametrize(
