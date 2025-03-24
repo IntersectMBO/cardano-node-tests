@@ -213,7 +213,20 @@ class TestBuildLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("use_inline_datum", (True, False), ids=("inline_datum", "datum_file"))
-    @pytest.mark.parametrize("use_token", (True, False), ids=("with_token", "without_token"))
+    @pytest.mark.parametrize(
+        "use_token",
+        (
+            # This test param should not run on long running testnets, because it leavea
+            # large amounts of ADA on UTxOs with tokens, and ADA on such UTxOs is not currently
+            # reclaimed.
+            pytest.param(
+                True,
+                marks=common.SKIPIF_ON_TESTNET,
+            ),
+            False,
+        ),
+        ids=("with_token", "without_token"),
+    )
     @pytest.mark.parametrize(
         "use_reference_script",
         (True, False),
