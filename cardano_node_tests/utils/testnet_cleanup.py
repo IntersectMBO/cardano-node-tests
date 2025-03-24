@@ -412,7 +412,7 @@ def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.
                 f_rewards = stake_addr_info.reward_account_balance
                 if f_rewards:
                     rewards += f_rewards
-                    LOGGER.info(f"{f_rewards} on '{fpath}'")
+                    LOGGER.info(f"{f_rewards / 1_000_000} ADA on '{fpath}'")
             else:
                 address = clusterlib.read_address_from_file(fpath)
                 utxos = cluster_obj.g_query.get_utxo(address=address)
