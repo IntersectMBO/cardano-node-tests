@@ -72,7 +72,7 @@ class TestBuildMinting:
             payment_addr = payment_addrs[0]
             issuer_addr = payment_addrs[1]
 
-            script_fund = 200_000_000
+            script_fund = 50_000_000
 
             minting_cost = plutus_common.compute_cost(
                 execution_cost=plutus_common.MINTING_WITNESS_REDEEMER_COST,
@@ -124,7 +124,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
@@ -259,7 +259,7 @@ class TestBuildMinting:
         issuer_addr = payment_addrs[1]
 
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
@@ -381,7 +381,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         plutus_v_record = plutus_common.MINTING_TIME_RANGE[plutus_version]
 
@@ -543,7 +543,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 500_000_000
+        script_fund = 10_000_000
 
         script_file1_v1 = plutus_common.MINTING_PLUTUS_V1
         script_file1_v2 = plutus_common.MINTING_PLUTUS_V2
@@ -806,7 +806,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST,
@@ -1008,7 +1008,7 @@ class TestBuildMinting:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         plutus_v_record = plutus_common.MINTING_WITNESS_REDEEMER[plutus_version]
 
@@ -1282,7 +1282,7 @@ class TestCollateralOutput:
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        script_fund = 10_000_000
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
