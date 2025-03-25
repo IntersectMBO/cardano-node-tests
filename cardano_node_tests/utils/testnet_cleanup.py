@@ -8,9 +8,9 @@
 
 import concurrent.futures
 import functools
+import itertools
 import logging
 import pathlib as pl
-import queue
 import random
 import time
 import typing as tp
@@ -24,9 +24,13 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
+TxInputGroup = list[tuple[list[clusterlib.UTXOData], pl.Path]]
+
+
 def reregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
-    pool_user: clusterlib.PoolUser,
+    payment_addr: clusterlib.AddressRecord,
+    stake_addr: clusterlib.AddressRecord,
     stake_addr_info: clusterlib.StakeAddrInfo,
     name_template: str,
     deposit_amt: int,
@@ -46,7 +50,7 @@ def reregister_stake_addr(
         reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"rf_{name_template}",
             deposit_amt=deposit_amt,
-            stake_vkey_file=pool_user.stake.vkey_file,
+            stake_vkey_file=stake_addr.vkey_file,
         )
         rereg_certs.append(reg_cert)
         rereg_deposit += deposit_amt
@@ -55,7 +59,7 @@ def reregister_stake_addr(
     if is_not_registered or (has_rewards and has_no_vote_deleg):
         deleg_cert = cluster_obj.g_stake_address.gen_vote_delegation_cert(
             addr_name=f"rf_{name_template}",
-            stake_vkey_file=pool_user.stake.vkey_file,
+            stake_vkey_file=stake_addr.vkey_file,
             always_abstain=True,
         )
         rereg_certs.append(deleg_cert)
@@ -63,27 +67,28 @@ def reregister_stake_addr(
     if rereg_certs:
         tx_files_register = clusterlib.TxFiles(
             certificate_files=rereg_certs,
-            signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+            signing_key_files=[payment_addr.skey_file, stake_addr.skey_file],
         )
         try:
             cluster_obj.g_transaction.send_tx(
-                src_address=pool_user.payment.address,
+                src_address=payment_addr.address,
                 tx_name=f"rf_{name_template}_rereg_stake",
                 tx_files=tx_files_register,
                 deposit=rereg_deposit,
             )
         except clusterlib.CLIError:
-            LOGGER.error(f"Failed to re-register stake address '{pool_user.stake.address}'")  # noqa: TRY400
+            LOGGER.error(f"Failed to re-register stake address '{stake_addr.address}'")  # noqa: TRY400
         else:
-            LOGGER.debug(f"Re-registered stake address '{pool_user.stake.address}'")
-            stake_addr_info = cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address)
+            LOGGER.debug(f"Re-registered stake address '{stake_addr.address}'")
+            stake_addr_info = cluster_obj.g_query.get_stake_addr_info(stake_addr.address)
 
     return stake_addr_info
 
 
 def deregister_stake_addr(
     cluster_obj: clusterlib.ClusterLib,
-    pool_user: clusterlib.PoolUser,
+    payment_addr: clusterlib.AddressRecord,
+    stake_addr: clusterlib.AddressRecord,
     stake_addr_info: clusterlib.StakeAddrInfo,
     name_template: str,
     deposit_amt: int,
@@ -93,7 +98,7 @@ def deregister_stake_addr(
     if stake_addr_info.reward_account_balance:
         withdrawals = [
             clusterlib.TxOut(
-                address=pool_user.stake.address, amount=stake_addr_info.reward_account_balance
+                address=stake_addr.address, amount=stake_addr_info.reward_account_balance
             )
         ]
 
@@ -101,25 +106,25 @@ def deregister_stake_addr(
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"rf_{name_template}",
         deposit_amt=deposit_amt,
-        stake_vkey_file=pool_user.stake.vkey_file,
+        stake_vkey_file=stake_addr.vkey_file,
     )
     tx_files_deregister = clusterlib.TxFiles(
         certificate_files=[stake_addr_dereg_cert],
-        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+        signing_key_files=[payment_addr.skey_file, stake_addr.skey_file],
     )
 
     try:
         cluster_obj.g_transaction.send_tx(
-            src_address=pool_user.payment.address,
+            src_address=payment_addr.address,
             tx_name=f"rf_{name_template}_dereg_withdraw_stake",
             tx_files=tx_files_deregister,
             withdrawals=withdrawals,
             deposit=-deposit_amt,
         )
     except clusterlib.CLIError:
-        LOGGER.error(f"Failed to deregister stake address '{pool_user.stake.address}'")  # noqa: TRY400
+        LOGGER.error(f"Failed to deregister stake address '{stake_addr.address}'")  # noqa: TRY400
     else:
-        LOGGER.debug(f"Deregistered stake address '{pool_user.stake.address}'")
+        LOGGER.debug(f"Deregistered stake address '{stake_addr.address}'")
 
 
 def retire_drep(
@@ -154,12 +159,10 @@ def retire_drep(
 
 
 def get_tx_inputs(
-    cluster_obj: clusterlib.ClusterLib,
-    src_addrs: list[clusterlib.AddressRecord],
-) -> tp.Tuple[list[clusterlib.UTXOData], list[pl.Path]]:
+    cluster_obj: clusterlib.ClusterLib, src_addrs: list[clusterlib.AddressRecord]
+) -> TxInputGroup:
     """Return signing keys and transaction inputs for given addresses."""
-    skeys = []
-    txins = []
+    recs = []
     for a in src_addrs:
         utxos = cluster_obj.g_query.get_utxo(address=a.address)
         utxos_ids_excluded = {
@@ -169,46 +172,84 @@ def get_tx_inputs(
         }
         txins_ok = [u for u in utxos if f"{u.utxo_hash}#{u.utxo_ix}" not in utxos_ids_excluded]
         if txins_ok:
-            txins.extend(txins_ok)
-            skeys.append(a.skey_file)
+            recs.append((txins_ok, a.skey_file))
 
-    return txins, skeys
+    return recs
+
+
+def dedup_tx_inputs(tx_inputs: TxInputGroup) -> TxInputGroup:
+    """Deduplicate transaction inputs."""
+    seen_paths = set()
+    unique_inputs = []
+
+    for utxos, path in tx_inputs:
+        if path not in seen_paths:
+            seen_paths.add(path)
+            unique_inputs.append((utxos, path))
+
+    return unique_inputs
+
+
+def batch_tx_inputs(tx_inputs: TxInputGroup, batch_size: int = 100) -> tp.Iterator[TxInputGroup]:
+    """Batch transaction inputs."""
+    current_batch: TxInputGroup = []
+    current_utxo_count = 0
+    input_queue = [(list(utxos), path) for utxos, path in tx_inputs]
+
+    while input_queue:
+        utxos, path = input_queue.pop(0)
+        remaining_space = batch_size - current_utxo_count
+
+        if len(utxos) <= remaining_space:
+            current_batch.append((utxos, path))
+            current_utxo_count += len(utxos)
+        else:
+            fitting_utxos = utxos[:remaining_space]
+            leftover_utxos = utxos[remaining_space:]
+            current_batch.append((fitting_utxos, path))
+            current_utxo_count += len(fitting_utxos)
+            input_queue.insert(0, (leftover_utxos, path))
+
+        if current_utxo_count >= batch_size:
+            yield current_batch
+            current_batch = []
+            current_utxo_count = 0
+
+    if current_batch:
+        yield current_batch
+
+
+def flatten_tx_inputs(
+    tx_inputs: TxInputGroup,
+) -> tp.Tuple[list[clusterlib.UTXOData], list[pl.Path]]:
+    """Flatten transaction inputs."""
+    utxo_lists, skeys = zip(*tx_inputs) if tx_inputs else ([], [])
+    return list(itertools.chain.from_iterable(utxo_lists)), list(skeys)
 
 
 def return_funds_to_faucet(
     cluster_obj: clusterlib.ClusterLib,
-    txins: list[clusterlib.UTXOData],
-    skeys: list[pl.Path],
+    tx_inputs: TxInputGroup,
     faucet_address: str,
     tx_name: str = "",
 ) -> None:
-    """Send funds from `txins` to `faucet_address`."""
+    """Send funds from `tx_inputs` to `faucet_address`."""
     tx_name = tx_name or helpers.get_timestamped_rand_str()
     tx_name = f"rf_{tx_name}"
 
     # The amount of "-1" means all available funds.
     fund_dst = [clusterlib.TxOut(address=faucet_address, amount=-1)]
-    fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
 
-    txins_len = len(txins)
-    batch_size = min(100, txins_len or 1)
-    batch_num = 1
-    for b in range(0, txins_len, batch_size):
-        tx_name = f"{tx_name}_batch{batch_num}"
-        batch_num += 1
-        batch = txins[b : b + batch_size]
-        batch_balance = functools.reduce(lambda x, y: x + y.amount, batch, 0)
-
-        # Skip if there is too little Lovelace
-        if batch_balance < 1_000_000:
-            return
+    for batch in batch_tx_inputs(tx_inputs=dedup_tx_inputs(tx_inputs=tx_inputs)):
+        txins, skeys = flatten_tx_inputs(tx_inputs=batch)
+        fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
 
         # Try to return funds; don't mind if there's not enough funds for fees etc.
         try:
             cluster_obj.g_transaction.send_tx(
                 src_address=txins[0].address,
                 tx_name=tx_name,
-                txins=batch,
+                txins=txins,
                 txouts=fund_dst,
                 tx_files=fund_tx_files,
                 verify_tx=False,
@@ -217,6 +258,8 @@ def return_funds_to_faucet(
             LOGGER.error(f"Failed to return funds from addresses for '{tx_name}'")  # noqa: TRY400
         else:
             LOGGER.debug(f"Returned funds from addresses '{tx_name}'")
+
+    cluster_obj.wait_for_new_block(new_blocks=3)
 
 
 def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
@@ -227,7 +270,7 @@ def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
     skey_file = basedir / f"{f_name}.skey"
 
     if not (vkey_file.exists() and skey_file.exists()):
-        msg = f"Keys for '{addr_file}' not available."
+        msg = f"{addr_file}: keys not available"
         raise ValueError(msg)
 
     addr_record = clusterlib.AddressRecord(
@@ -248,103 +291,110 @@ def find_cert_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
     return location.glob("**/*_drep_reg.cert")
 
 
-def group_addr_files(file_paths: tp.Generator[pl.Path, None, None]) -> list[list[pl.Path]]:
-    """Group payment address files with corresponding stake address files.
+def filter_addr_files(
+    file_paths: tp.Generator[pl.Path, None, None],
+) -> tp.Generator[pl.Path, None, None]:
+    """Skip the '*_pycurrent' symlinks to pytest temp dirs and faucet address."""
+    return (
+        f
+        for f in file_paths
+        if "_pycurrent" not in (str_f := str(f)) and not str_f.endswith("faucet.addr")
+    )
 
-    These need to be processed together - funds are transferred from payment address after
-    the stake address was deregistered.
-    """
-    curr_group: list[pl.Path] = []
-    path_groups: list[list[pl.Path]] = [curr_group]
-    prev_basename = ""
 
-    # Reverse-sort the list so stake address files are processes before payment address files
-    for f in sorted(file_paths, reverse=True):
-        # Skip the '*_pycurrent' symlinks to pytest temp dirs
-        if "_pycurrent" in str(f):
+def dedup_addresses(
+    file_paths: tp.Generator[pl.Path, None, None],
+) -> tp.Generator[pl.Path, None, None]:
+    """Deduplicate addresses."""
+    seen_addrs = set()
+    for fpath in file_paths:
+        address = clusterlib.read_address_from_file(fpath)
+        if address in seen_addrs:
             continue
-        basename = f.name.replace("_stake.addr", "").replace(".addr", "")
-        if prev_basename == basename:
-            curr_group.append(f)
-            continue
-        prev_basename = basename
-        curr_group = [f]
-        path_groups.append(curr_group)
-    return path_groups
+        seen_addrs.add(address)
+        yield fpath
 
 
 def cleanup_addresses(
     cluster_obj: clusterlib.ClusterLib, location: pl.Path, faucet_payment: clusterlib.AddressRecord
 ) -> None:
     """Cleanup addresses."""
-    files_found = group_addr_files(find_addr_files(location))
+    files_found = list(dedup_addresses(filter_addr_files(find_addr_files(location))))
     num_threads = min(10, (len(files_found) // 200) + 1)
+    file_chunks = [files_found[i::num_threads] for i in range(num_threads)]
+
+    # Fund the addresses that will pay for fees
+    fund_addrs = [
+        cluster_obj.g_address.gen_payment_addr_and_keys(name=f"addrs_cleanup{i}")
+        for i in range(num_threads)
+    ]
+    fund_dst = [clusterlib.TxOut(address=f.address, amount=300_000_000) for f in fund_addrs]
+    fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_payment.skey_file])
+    cluster_obj.g_transaction.send_tx(
+        src_address=faucet_payment.address,
+        tx_name="fund_addrs_cleanup",
+        txouts=fund_dst,
+        tx_files=fund_tx_files,
+    )
 
     stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
-    def _run(files: list[pl.Path]) -> None:
-        skeys = []
-        txins = []
+    def _run(files: list[pl.Path], f_addr: clusterlib.AddressRecord) -> TxInputGroup:
+        tx_inputs = []
         for fpath in files:
             f_name = fpath.name
-            if f_name == "faucet.addr":
-                continue
 
             # Add random sleep for < 0.5s to prevent
             # "Network.Socket.connect: <socket: 11>: resource exhausted"
             time.sleep(random.random() / 2)
 
             if f_name.endswith("_stake.addr"):
-                payment_addr = fpath.parent / f_name.replace("_stake.addr", ".addr")
                 try:
-                    payment = create_addr_record(payment_addr)
-                    stake = create_addr_record(fpath)
+                    stake_addr = create_addr_record(fpath)
                 except ValueError as exc:
-                    LOGGER.warning(f"Skipping '{fpath}':\n'{exc}'")
+                    LOGGER.debug(f"Skipping: {exc}")
                     continue
-
-                pool_user = clusterlib.PoolUser(payment=payment, stake=stake)
 
                 stake_addr_info = reregister_stake_addr(
                     cluster_obj=cluster_obj,
-                    pool_user=pool_user,
-                    stake_addr_info=cluster_obj.g_query.get_stake_addr_info(
-                        pool_user.stake.address
-                    ),
+                    payment_addr=f_addr,
+                    stake_addr=stake_addr,
+                    stake_addr_info=cluster_obj.g_query.get_stake_addr_info(stake_addr.address),
                     name_template=f_name,
                     deposit_amt=stake_deposit_amt,
                 )
 
                 deregister_stake_addr(
                     cluster_obj=cluster_obj,
-                    pool_user=pool_user,
+                    payment_addr=f_addr,
+                    stake_addr=stake_addr,
                     stake_addr_info=stake_addr_info,
                     name_template=f_name,
                     deposit_amt=stake_deposit_amt,
                 )
             else:
                 try:
-                    payment = create_addr_record(fpath)
+                    payment_addr = create_addr_record(fpath)
                 except ValueError as exc:
-                    LOGGER.warning(f"Skipping '{fpath}':\n'{exc}'")
+                    LOGGER.debug(f"Skipping: {exc}")
                     continue
-                f_txins, f_skeys = get_tx_inputs(cluster_obj=cluster_obj, src_addrs=[payment])
-                skeys.extend(f_skeys)
-                txins.extend(f_txins)
+                tx_inputs.extend(get_tx_inputs(cluster_obj=cluster_obj, src_addrs=[payment_addr]))
 
-        return_funds_to_faucet(
-            cluster_obj=cluster_obj,
-            txins=txins,
-            skeys=skeys,
-            faucet_address=faucet_payment.address,
-        )
+        return tx_inputs
 
-    # Run cleanup in parallel
+    # Run cleanup / discovery in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(_run, f) for f in files_found]
-        concurrent.futures.wait(futures)
+        futures = [executor.submit(_run, ch, fund_addrs[i]) for i, ch in enumerate(file_chunks)]
+    results = [f.result() for f in futures]
 
-    cluster_obj.wait_for_new_block(new_blocks=3)
+    # Return funds from the collected UTxOs
+    tx_inputs = list(itertools.chain.from_iterable(results))
+    tx_inputs.extend(get_tx_inputs(cluster_obj=cluster_obj, src_addrs=fund_addrs))
+    return_funds_to_faucet(
+        cluster_obj=cluster_obj,
+        tx_inputs=tx_inputs,
+        faucet_address=faucet_payment.address,
+    )
 
 
 def cleanup_certs(
@@ -353,6 +403,7 @@ def cleanup_certs(
     """Cleanup DRep certs."""
     files_found = list(find_cert_files(location))
     num_threads = min(10, (len(files_found) // 10) + 1)
+    file_chunks = [files_found[i::num_threads] for i in range(num_threads)]
 
     drep_deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
@@ -370,44 +421,37 @@ def cleanup_certs(
         tx_files=fund_tx_files,
     )
 
-    addrs_queue: queue.Queue[clusterlib.AddressRecord] = queue.Queue()
-    for a in fund_addrs:
-        addrs_queue.put(a)
+    def _run(files: list[pl.Path], payment_addr: clusterlib.AddressRecord) -> None:
+        for cert_file in files:
+            # Add random sleep for < 0.5s to prevent
+            # "Network.Socket.connect: <socket: 11>: resource exhausted"
+            time.sleep(random.random() / 2)
 
-    def _run(cert_file: pl.Path, addrs_queue: queue.Queue[clusterlib.AddressRecord]) -> None:
-        # Add random sleep for < 0.5s to prevent
-        # "Network.Socket.connect: <socket: 11>: resource exhausted"
-        time.sleep(random.random() / 2)
+            f_name = cert_file.name
+            f_dir = cert_file.parent
+            vkey_file = f_dir / cert_file.name.replace("_reg.cert", ".vkey")
+            skey_file = vkey_file.with_suffix(".skey")
+            drep_keys = clusterlib.KeyPair(vkey_file=vkey_file, skey_file=skey_file)
 
-        fname = cert_file.name
-        fdir = cert_file.parent
-        vkey_file = fdir / cert_file.name.replace("_reg.cert", ".vkey")
-        skey_file = vkey_file.with_suffix(".skey")
-        drep_keys = clusterlib.KeyPair(vkey_file=vkey_file, skey_file=skey_file)
-
-        addr = addrs_queue.get()
-        try:
             retire_drep(
                 cluster_obj=cluster_obj,
-                payment_addr=addr,
+                payment_addr=payment_addr,
                 drep_keys=drep_keys,
-                name_template=fname,
+                name_template=f_name,
                 deposit_amt=drep_deposit_amt,
             )
-        finally:
-            addrs_queue.put(addr)
+            # We don't need to deregister pools, because all tests clean the pools they created
 
     # Run cleanup in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(_run, f, addrs_queue) for f in files_found]
+        futures = [executor.submit(_run, f, fund_addrs[i]) for i, f in enumerate(file_chunks)]
         concurrent.futures.wait(futures)
 
     # Return funds from the addresses that paid for fees
-    txins, skeys = get_tx_inputs(cluster_obj=cluster_obj, src_addrs=fund_addrs)
+    tx_inputs = get_tx_inputs(cluster_obj=cluster_obj, src_addrs=fund_addrs)
     return_funds_to_faucet(
         cluster_obj=cluster_obj,
-        txins=txins,
-        skeys=skeys,
+        tx_inputs=tx_inputs,
         faucet_address=faucet_payment.address,
         tx_name="certs_cleanup_return",
     )
@@ -440,37 +484,41 @@ def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.
     """Return the total balance and rewards of all addresses in the given location."""
     balance = 0
     rewards = 0
-    files_found = group_addr_files(find_addr_files(location))
+    files_found = list(filter_addr_files(find_addr_files(location)))
 
-    for files in files_found:
-        for fpath in files:
-            f_name = fpath.name
-            if f_name == "faucet.addr":
+    seen_addrs = set()
+    for fpath in files_found:
+        f_name = fpath.name
+        if f_name == "faucet.addr":
+            continue
+
+        address = clusterlib.read_address_from_file(fpath)
+        if address in seen_addrs:
+            continue
+        seen_addrs.add(address)
+
+        # Add sleep to prevent
+        # "Network.Socket.connect: <socket: 11>: resource exhausted"
+        time.sleep(0.1)
+
+        if f_name.endswith("_stake.addr"):
+            stake_addr_info = cluster_obj.g_query.get_stake_addr_info(address)
+            if not stake_addr_info:
                 continue
 
-            # Add sleep to prevent
-            # "Network.Socket.connect: <socket: 11>: resource exhausted"
-            time.sleep(0.1)
-
-            if f_name.endswith("_stake.addr"):
-                address = clusterlib.read_address_from_file(fpath)
-                stake_addr_info = cluster_obj.g_query.get_stake_addr_info(address)
-                if not stake_addr_info:
-                    continue
-                f_rewards = stake_addr_info.reward_account_balance
-                if f_rewards:
-                    rewards += f_rewards
-                    LOGGER.info(f"{f_rewards / 1_000_000} ADA on '{fpath}'")
-            else:
-                address = clusterlib.read_address_from_file(fpath)
-                utxos = cluster_obj.g_query.get_utxo(address=address)
-                lovelace_utxos = [u for u in utxos if u.coin == clusterlib.DEFAULT_COIN]
-                f_balance = functools.reduce(lambda x, y: x + y.amount, lovelace_utxos, 0)
-                if f_balance:
-                    has_tokens = len(lovelace_utxos) != len(utxos)
-                    tokens_str = " + tokens" if has_tokens else ""
-                    LOGGER.info(f"{f_balance / 1_000_000} ADA{tokens_str} on '{fpath}'")
-                    balance += f_balance
+            f_rewards = stake_addr_info.reward_account_balance
+            if f_rewards:
+                rewards += f_rewards
+                LOGGER.info(f"{f_rewards / 1_000_000} ADA on '{fpath}'")
+        else:
+            utxos = cluster_obj.g_query.get_utxo(address=address)
+            lovelace_utxos = [u for u in utxos if u.coin == clusterlib.DEFAULT_COIN]
+            f_balance = functools.reduce(lambda x, y: x + y.amount, lovelace_utxos, 0)
+            if f_balance:
+                has_tokens = len(lovelace_utxos) != len(utxos)
+                tokens_str = " + tokens" if has_tokens else ""
+                LOGGER.info(f"{f_balance / 1_000_000} ADA{tokens_str} on '{fpath}'")
+                balance += f_balance
 
     return balance, rewards
 
