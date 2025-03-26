@@ -268,7 +268,7 @@ class TestBuildMinting:
         issuer_addr = payment_addrs[1]
 
         token_amount = 5
-        script_fund = 10_000_000
+        script_fund = 5_000_000
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
