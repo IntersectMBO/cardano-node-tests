@@ -247,7 +247,6 @@ class TestExpectedFees:
 
         src_address = pool_owners[0].payment.address
 
-        # Register and delegate stake address, create and register pool
         tx_files = clusterlib.TxFiles(
             certificate_files=[
                 pool_reg_cert_file,
