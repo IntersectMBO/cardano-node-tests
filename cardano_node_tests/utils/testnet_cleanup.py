@@ -23,7 +23,6 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
-
 TxInputGroup = list[tuple[list[clusterlib.UTXOData], pl.Path]]
 
 
@@ -190,7 +189,9 @@ def dedup_tx_inputs(tx_inputs: TxInputGroup) -> TxInputGroup:
     return unique_inputs
 
 
-def batch_tx_inputs(tx_inputs: TxInputGroup, batch_size: int = 100) -> tp.Iterator[TxInputGroup]:
+def batch_tx_inputs(
+    tx_inputs: TxInputGroup, batch_size: int = 100
+) -> tp.Generator[TxInputGroup, None, None]:
     """Batch transaction inputs."""
     current_batch: TxInputGroup = []
     current_utxo_count = 0
@@ -240,6 +241,8 @@ def return_funds_to_faucet(
     # The amount of "-1" means all available funds.
     fund_dst = [clusterlib.TxOut(address=faucet_address, amount=-1)]
 
+    # Tx inputs deduplication is not strictly needed, as we are deduplicating the
+    # address files. Keeping it here for separation of concerns.
     for batch in batch_tx_inputs(tx_inputs=dedup_tx_inputs(tx_inputs=tx_inputs)):
         txins, skeys = flatten_tx_inputs(tx_inputs=batch)
         fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
@@ -400,7 +403,7 @@ def cleanup_addresses(
 def cleanup_certs(
     cluster_obj: clusterlib.ClusterLib, location: pl.Path, faucet_payment: clusterlib.AddressRecord
 ) -> None:
-    """Cleanup DRep certs."""
+    """Cleanup certificates."""
     files_found = list(find_cert_files(location))
     num_threads = min(10, (len(files_found) // 10) + 1)
     file_chunks = [files_found[i::num_threads] for i in range(num_threads)]
@@ -461,6 +464,11 @@ def _get_faucet_payment_rec(
     address: str = "",
     skey_file: clusterlib.FileType = "",
 ) -> clusterlib.AddressRecord:
+    """Get the faucet payment record.
+
+    If address or skey_file is provided, use them to create the record.
+    Otherwise, infer the faucet address and keys from the cluster environment.
+    """
     if address or skey_file:
         if not (address and skey_file):
             err = "Both 'address' and 'skey_file' need to be set."
