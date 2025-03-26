@@ -160,14 +160,17 @@ def retire_drep(
 def get_tx_inputs(
     cluster_obj: clusterlib.ClusterLib, src_addrs: list[clusterlib.AddressRecord]
 ) -> TxInputGroup:
-    """Return signing keys and transaction inputs for given addresses."""
+    """Return signing keys and transaction inputs for given addresses.
+
+    Exclude UTxOs that contain tokens.
+    Don't exclude UTxOs with datum. All the UTxOs here has 'skey', and so the UTxOs with datum
+    are spendable reference inputs.
+    """
     recs = []
     for a in src_addrs:
         utxos = cluster_obj.g_query.get_utxo(address=a.address)
         utxos_ids_excluded = {
-            f"{u.utxo_hash}#{u.utxo_ix}"
-            for u in utxos
-            if u.coin != clusterlib.DEFAULT_COIN or u.datum_hash
+            f"{u.utxo_hash}#{u.utxo_ix}" for u in utxos if u.coin != clusterlib.DEFAULT_COIN
         }
         txins_ok = [u for u in utxos if f"{u.utxo_hash}#{u.utxo_ix}" not in utxos_ids_excluded]
         if txins_ok:
@@ -258,7 +261,7 @@ def return_funds_to_faucet(
                 verify_tx=False,
             )
         except clusterlib.CLIError:
-            LOGGER.error(f"Failed to return funds from addresses for '{tx_name}'")  # noqa: TRY400
+            LOGGER.exception(f"Failed to return funds from addresses for '{tx_name}'")
         else:
             LOGGER.debug(f"Returned funds from addresses '{tx_name}'")
 
