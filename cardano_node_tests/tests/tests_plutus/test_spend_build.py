@@ -811,7 +811,7 @@ class TestBuildLocking:
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             tokens=tokens_rec,
-            amount=10_000_000,
+            amount=5_000_000,
         )
 
         __, tx_output_spend, plutus_costs = spend_build._build_spend_locked_txin(
