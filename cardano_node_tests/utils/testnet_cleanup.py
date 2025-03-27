@@ -246,24 +246,27 @@ def return_funds_to_faucet(
 
     # Tx inputs deduplication is not strictly needed, as we are deduplicating the
     # address files. Keeping it here for separation of concerns.
+    batch_num = 1
     for batch in batch_tx_inputs(tx_inputs=dedup_tx_inputs(tx_inputs=tx_inputs)):
         txins, skeys = flatten_tx_inputs(tx_inputs=batch)
         fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
+        batch_tx_name = f"{tx_name}_batch{batch_num}"
 
         # Try to return funds; don't mind if there's not enough funds for fees etc.
         try:
             cluster_obj.g_transaction.send_tx(
                 src_address=txins[0].address,
-                tx_name=tx_name,
+                tx_name=batch_tx_name,
                 txins=txins,
                 txouts=fund_dst,
                 tx_files=fund_tx_files,
                 verify_tx=False,
             )
         except clusterlib.CLIError:
-            LOGGER.exception(f"Failed to return funds from addresses for '{tx_name}'")
+            LOGGER.exception(f"Failed to return funds from addresses for '{batch_tx_name}'")
         else:
-            LOGGER.debug(f"Returned funds from addresses '{tx_name}'")
+            LOGGER.debug(f"Returned funds from addresses '{batch_tx_name}'")
+        batch_num += 1
 
     cluster_obj.wait_for_new_block(new_blocks=3)
 
