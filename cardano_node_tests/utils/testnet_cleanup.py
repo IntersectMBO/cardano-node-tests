@@ -548,6 +548,10 @@ def cleanup(
     """Cleanup a testnet with the help of testing artifacts."""
     location = pl.Path(location).expanduser().resolve()
     faucet_payment = _get_faucet_payment_rec(address=faucet_address, skey_file=faucet_skey_file)
+
+    cleanup_faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_payment.address)
+    LOGGER.info(f"Cleanup faucet balance: {cleanup_faucet_balance}")
+
     cleanup_addresses(cluster_obj=cluster_obj, location=location, faucet_payment=faucet_payment)
     cleanup_certs(cluster_obj=cluster_obj, location=location, faucet_payment=faucet_payment)
 
@@ -556,5 +560,5 @@ def cleanup(
         cluster_obj=cluster_obj, address=faucet_payment.address, skey_file=faucet_payment.skey_file
     )
 
-    faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_payment.address)
-    LOGGER.info(f"Final faucet balance: {faucet_balance}")
+    final_faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_payment.address)
+    LOGGER.info(f"Final faucet balance: {final_faucet_balance}")
