@@ -251,6 +251,7 @@ def return_funds_to_faucet(
         txins, skeys = flatten_tx_inputs(tx_inputs=batch)
         fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
         batch_tx_name = f"{tx_name}_batch{batch_num}"
+        witness_count_add = max(2, len(skeys) // 20)
 
         # Try to return funds; don't mind if there's not enough funds for fees etc.
         try:
@@ -260,6 +261,7 @@ def return_funds_to_faucet(
                 txins=txins,
                 txouts=fund_dst,
                 tx_files=fund_tx_files,
+                witness_count_add=witness_count_add,
                 verify_tx=False,
             )
         except clusterlib.CLIError:
