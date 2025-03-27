@@ -251,23 +251,34 @@ def return_funds_to_faucet(
         txins, skeys = flatten_tx_inputs(tx_inputs=batch)
         fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
         batch_tx_name = f"{tx_name}_batch{batch_num}"
-        witness_count_add = max(2, len(skeys) // 10)
+        witness_count_add = max(2, len(skeys) // 20)
 
-        # Try to return funds; don't mind if there's not enough funds for fees etc.
-        try:
-            cluster_obj.g_transaction.send_tx(
-                src_address=txins[0].address,
-                tx_name=batch_tx_name,
-                txins=txins,
-                txouts=fund_dst,
-                tx_files=fund_tx_files,
-                witness_count_add=witness_count_add,
-                verify_tx=False,
-            )
-        except clusterlib.CLIError:
-            LOGGER.exception(f"Failed to return funds from addresses for '{batch_tx_name}'")
+        # Try to return funds
+        last_excp = None
+        for attempt in range(1, 4):
+            try:
+                cluster_obj.g_transaction.send_tx(
+                    src_address=txins[0].address,
+                    tx_name=f"{batch_tx_name}_try{attempt}",
+                    txins=txins,
+                    txouts=fund_dst,
+                    tx_files=fund_tx_files,
+                    witness_count_add=witness_count_add,
+                    verify_tx=False,
+                )
+            except clusterlib.CLIError as excp:
+                last_excp = excp
+                if "FeeTooSmallUTxO" in str(excp):
+                    witness_count_add += 5
+                    continue
+                LOGGER.exception(f"Failed to return funds from addresses for '{batch_tx_name}'")
+            else:
+                LOGGER.debug(f"Returned funds from addresses '{batch_tx_name}'")
+            break
         else:
-            LOGGER.debug(f"Returned funds from addresses '{batch_tx_name}'")
+            LOGGER.error(
+                f"Failed to return funds from addresses for '{batch_tx_name}'", exc_info=last_excp
+            )
         batch_num += 1
 
     cluster_obj.wait_for_new_block(new_blocks=3)
