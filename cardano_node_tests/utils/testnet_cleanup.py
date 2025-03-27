@@ -76,7 +76,7 @@ def reregister_stake_addr(
                 deposit=rereg_deposit,
             )
         except clusterlib.CLIError:
-            LOGGER.error(f"Failed to re-register stake address '{stake_addr.address}'")  # noqa: TRY400
+            LOGGER.exception(f"Failed to re-register stake address '{stake_addr.address}'")
         else:
             LOGGER.debug(f"Re-registered stake address '{stake_addr.address}'")
             stake_addr_info = cluster_obj.g_query.get_stake_addr_info(stake_addr.address)
@@ -121,7 +121,7 @@ def deregister_stake_addr(
             deposit=-deposit_amt,
         )
     except clusterlib.CLIError:
-        LOGGER.error(f"Failed to deregister stake address '{stake_addr.address}'")  # noqa: TRY400
+        LOGGER.exception(f"Failed to deregister stake address '{stake_addr.address}'")
     else:
         LOGGER.debug(f"Deregistered stake address '{stake_addr.address}'")
 
@@ -152,7 +152,7 @@ def retire_drep(
             deposit=-deposit_amt,
         )
     except clusterlib.CLIError:
-        LOGGER.error(f"Failed to retire a DRep '{name_template}'")  # noqa: TRY400
+        LOGGER.exception(f"Failed to retire a DRep '{name_template}'")
     else:
         LOGGER.debug(f"Retired a DRep '{name_template}'")
 
