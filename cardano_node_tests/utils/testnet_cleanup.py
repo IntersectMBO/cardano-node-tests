@@ -516,8 +516,6 @@ def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.
     seen_addrs = set()
     for fpath in files_found:
         f_name = fpath.name
-        if f_name == "faucet.addr":
-            continue
 
         address = clusterlib.read_address_from_file(fpath)
         if address in seen_addrs:
