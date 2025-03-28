@@ -305,17 +305,17 @@ def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
 
 
 def find_addr_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
-    r"""Find all '\*.addr' files in given location and it's subdirectories."""
+    r"""Find all '\*.addr' files in given location and its subdirectories."""
     return location.glob("**/*.addr")
 
 
 def find_submitted_tx_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
-    r"""Find all '\*.submitted' files in given location and it's subdirectories."""
+    r"""Find all '\*.submitted' files in given location and its subdirectories."""
     return location.glob("**/*.submitted")
 
 
 def find_cert_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
-    r"""Find all '\*_drep_reg.cert' files in given location and it's subdirectories."""
+    r"""Find all '\*_drep_reg.cert' files in given location and its subdirectories."""
     return location.glob("**/*_drep_reg.cert")
 
 
