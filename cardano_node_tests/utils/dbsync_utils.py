@@ -3,21 +3,369 @@
 import functools
 import itertools
 import logging
+import os
+import pathlib as pl
 import time
 import typing as tp
+from dataclasses import dataclass
 
+import pytest
+import yaml
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_check_tx
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
 NO_RESPONSE_STR = "No response returned from db-sync:"
+
+
+@dataclass
+class TxOutConfig:
+    value: tp.Literal["enable", "disable", "consumed", "prune", "bootstrap"] = "enable"
+    force_tx_in: bool | None = None
+    use_address_table: bool | None = None
+
+
+@dataclass
+class ShelleyConfig:
+    enable: bool = True
+
+
+@dataclass
+class MultiAssetConfig:
+    enable: bool = True
+
+
+@dataclass
+class MetadataConfig:
+    enable: bool = True
+    keys: list[int] | None = None
+
+
+@dataclass
+class PlutusConfig:
+    enable: bool = True
+
+
+class DBSyncConfigBuilder:
+    def __init__(self) -> None:
+        """Construct configuration with default settings."""
+        self._config = {
+            "tx_cbor": "disable",
+            "tx_out": TxOutConfig(),
+            "ledger": "enable",
+            "shelley": ShelleyConfig(),
+            "multi_asset": MultiAssetConfig(),
+            "metadata": MetadataConfig(),
+            "plutus": PlutusConfig(),
+            "governance": "enable",
+            "offchain_pool_data": "enable",
+            "pool_stat": "enable",
+            "remove_jsonb_from_schema": "disable",
+        }
+        self._preset_applied = False
+
+    def with_preset(
+        self, preset: tp.Literal["full", "only_utxo", "only_governance", "disable_all"]
+    ) -> "DBSyncConfigBuilder":
+        """Apply a preset configuration that overrides other settings."""
+        self._preset_applied = True
+
+        if preset == "full":
+            self._config.update(
+                {
+                    "tx_cbor": "disable",
+                    "tx_out": TxOutConfig(value="enable"),
+                    "ledger": "enable",
+                    "shelley": ShelleyConfig(enable=True),
+                    "multi_asset": MultiAssetConfig(enable=True),
+                    "metadata": MetadataConfig(enable=True),
+                    "plutus": PlutusConfig(enable=True),
+                    "governance": "enable",
+                    "offchain_pool_data": "enable",
+                    "pool_stat": "enable",
+                }
+            )
+        elif preset == "only_utxo":
+            self._config.update(
+                {
+                    "tx_cbor": "disable",
+                    "tx_out": TxOutConfig(value="bootstrap"),
+                    "ledger": "ignore",
+                    "shelley": ShelleyConfig(enable=False),
+                    "metadata": MetadataConfig(enable=False),
+                    "multi_asset": MultiAssetConfig(enable=True),
+                    "plutus": PlutusConfig(enable=False),
+                    "governance": "disable",
+                    "offchain_pool_data": "disable",
+                    "pool_stat": "disable",
+                }
+            )
+        elif preset == "only_governance":
+            self._config.update(
+                {
+                    "tx_cbor": "disable",
+                    "tx_out": TxOutConfig(value="disable"),
+                    "ledger": "enable",
+                    "shelley": ShelleyConfig(enable=False),
+                    "multi_asset": MultiAssetConfig(enable=False),
+                    "plutus": PlutusConfig(enable=False),
+                    "governance": "enable",
+                    "offchain_pool_data": "disable",
+                    "pool_stat": "enable",
+                }
+            )
+        elif preset == "disable_all":
+            self._config.update(
+                {
+                    "tx_cbor": "disable",
+                    "tx_out": TxOutConfig(value="disable"),
+                    "ledger": "disable",
+                    "shelley": ShelleyConfig(enable=False),
+                    "multi_asset": MultiAssetConfig(enable=False),
+                    "plutus": PlutusConfig(enable=False),
+                    "governance": "disable",
+                    "offchain_pool_data": "disable",
+                    "pool_stat": "disable",
+                }
+            )
+
+        return self
+
+    def with_tx_cbor(self, value: tp.Literal["enable", "disable"]) -> "DBSyncConfigBuilder":
+        """Enable or disable transaction CBOR collection."""
+        if not self._preset_applied:
+            self._config["tx_cbor"] = value
+        return self
+
+    def with_tx_out(
+        self,
+        value: tp.Literal["enable", "disable", "consumed", "prune", "bootstrap"],
+        force_tx_in: bool | None = None,
+        use_address_table: bool | None = None,
+    ) -> "DBSyncConfigBuilder":
+        """Configure tx_out settings."""
+        if not self._preset_applied:
+            self._config["tx_out"] = TxOutConfig(
+                value=value, force_tx_in=force_tx_in, use_address_table=use_address_table
+            )
+        return self
+
+    def with_ledger(
+        self, value: tp.Literal["enable", "disable", "ignore"]
+    ) -> "DBSyncConfigBuilder":
+        """Configure ledger settings."""
+        if not self._preset_applied:
+            self._config["ledger"] = value
+        return self
+
+    def with_shelley(self, enable: bool) -> "DBSyncConfigBuilder":
+        """Enable or disable Shelley data."""
+        if not self._preset_applied:
+            self._config["shelley"] = ShelleyConfig(enable=enable)
+        return self
+
+    def with_multi_asset(self, enable: bool) -> "DBSyncConfigBuilder":
+        """Enable or disable multi-asset data."""
+        if not self._preset_applied:
+            self._config["multi_asset"] = MultiAssetConfig(enable=enable)
+        return self
+
+    def with_metadata(self, enable: bool, keys: list[int] | None = None) -> "DBSyncConfigBuilder":
+        """Configure metadata settings."""
+        if not self._preset_applied:
+            self._config["metadata"] = MetadataConfig(enable=enable, keys=keys)
+        return self
+
+    def with_plutus(self, enable: bool) -> "DBSyncConfigBuilder":
+        """Enable or disable Plutus data."""
+        if not self._preset_applied:
+            self._config["plutus"] = PlutusConfig(enable=enable)
+        return self
+
+    def with_governance(self, value: tp.Literal["enable", "disable"]) -> "DBSyncConfigBuilder":
+        """Configure governance settings."""
+        if not self._preset_applied:
+            self._config["governance"] = value
+        return self
+
+    def with_offchain_pool_data(
+        self, value: tp.Literal["enable", "disable"]
+    ) -> "DBSyncConfigBuilder":
+        """Configure offchain pool data settings."""
+        if not self._preset_applied:
+            self._config["offchain_pool_data"] = value
+        return self
+
+    def with_pool_stat(self, value: tp.Literal["enable", "disable"]) -> "DBSyncConfigBuilder":
+        """Configure pool stat settings."""
+        if not self._preset_applied:
+            self._config["pool_stat"] = value
+        return self
+
+    def with_remove_jsonb_from_schema(
+        self, value: tp.Literal["enable", "disable"]
+    ) -> "DBSyncConfigBuilder":
+        """Configure JSONB removal from schema."""
+        if not self._preset_applied:
+            self._config["remove_jsonb_from_schema"] = value
+        return self
+
+    def build(self) -> dict[str, tp.Any]:
+        """Build the final configuration dictionary with type-safe conversion."""
+        tx_out = tp.cast(TxOutConfig, self._config["tx_out"])
+        shelley = tp.cast(ShelleyConfig, self._config["shelley"])
+        multi_asset = tp.cast(MultiAssetConfig, self._config["multi_asset"])
+        metadata = tp.cast(MetadataConfig, self._config["metadata"])
+        plutus = tp.cast(PlutusConfig, self._config["plutus"])
+        config: dict[str, tp.Any] = {
+            "tx_cbor": self._config["tx_cbor"],
+            "tx_out": {
+                "value": tx_out.value,
+                **({"force_tx_in": tx_out.force_tx_in} if tx_out.force_tx_in is not None else {}),
+                **(
+                    {"use_address_table": tx_out.use_address_table}
+                    if tx_out.use_address_table is not None
+                    else {}
+                ),
+            },
+            "ledger": self._config["ledger"],
+            "shelley": {"enable": shelley.enable},
+            "multi_asset": {"enable": multi_asset.enable},
+            "metadata": {
+                "enable": metadata.enable,
+                **({"keys": metadata.keys} if metadata.keys is not None else {}),
+            },
+            "plutus": {"enable": plutus.enable},
+            "governance": self._config["governance"],
+            "offchain_pool_data": self._config["offchain_pool_data"],
+            "pool_stat": self._config["pool_stat"],
+            "remove_jsonb_from_schema": self._config["remove_jsonb_from_schema"],
+        }
+        return config
+
+
+class DBSyncManager:
+    def __init__(self, request: pytest.FixtureRequest | None = None) -> None:
+        """
+        Initialize the DB Sync manager with default config.
+
+        Args:
+            request: Optional pytest fixture request for parameterized test overrides.
+        """
+        self.shared_tmp = temptools.get_pytest_shared_tmp()
+        self.config_builder = DBSyncConfigBuilder()
+        self.config = self.config_builder.build()
+
+        if request and hasattr(request, "param"):
+            self.config.update(request.param)
+
+    def recreate_database(self) -> None:
+        """Reinitializes the PostgreSQL database by running the `postgres-setup.sh` script.
+
+        !!! WARNING !!!
+        This is a DESTRUCTIVE operation!
+        It will delete existing data and recreate the database from scratch.
+        """
+        db_script_path = configuration.SCRIPTS_DIR.joinpath("postgres-setup.sh").resolve()
+        db_script_path.chmod(0o755)
+        helpers.run_command("./postgres-setup.sh", workdir=configuration.SCRIPTS_DIR)
+
+    def get_config_builder(self) -> DBSyncConfigBuilder:
+        """Get a fresh `DBSyncConfigBuilder` config builder instance with default config."""
+        return DBSyncConfigBuilder()
+
+    def update_config(self, config: dict | DBSyncConfigBuilder) -> pl.Path:
+        """
+        Update the `dbsync-config.yaml` file with new settings.
+
+        Args:
+            config: Config dict or `DBSyncConfigBuilder` instance.
+
+        Returns:
+            Path to the modified config file.
+        """
+        cluster_dir = cluster_nodes.get_cluster_env().state_dir
+        config_file = cluster_dir / "dbsync-config.yaml"
+
+        if isinstance(config, DBSyncConfigBuilder):
+            config = config.build()
+
+        with open(config_file, encoding="utf-8") as fp_in:
+            current_dbsync_config = yaml.safe_load(fp_in) or {}
+
+        current_dbsync_config["insert_options"] = config
+        self.config = config
+
+        with open(config_file, "w", encoding="utf-8") as fp_out:
+            yaml.safe_dump(current_dbsync_config, fp_out)
+        return config_file
+
+    def is_db_sync_running(self) -> bool:
+        """Check if the `cardano-db-sync` service is actively running.
+
+        Returns:
+            bool: True if the service is running and executable, False otherwise.
+        """
+        dbsync_location = configuration.DBSYNC_BIN
+        if not dbsync_location.exists() or not os.access(dbsync_location, os.X_OK):
+            return False
+        return cluster_nodes.services_status(service_names=["dbsync"])[0].status == "RUNNING"
+
+    def stop_db_sync(self) -> None:
+        """Stop `cardano-db-sync` service."""
+        cluster_nodes.services_action(
+            service_names=["dbsync"], action="stop", instance_num=cluster_nodes.get_instance_num()
+        )
+
+    def start_db_sync(self) -> None:
+        """Start `cardano-db-sync` service."""
+        cluster_nodes.services_action(
+            service_names=["dbsync"], action="start", instance_num=cluster_nodes.get_instance_num()
+        )
+
+    def restart_with_config(
+        self, custom_config: dict | DBSyncConfigBuilder | None = None
+    ) -> pl.Path:
+        """
+        Restart `cardano-db-sync` with a new configuration, ensuring atomic updates.
+
+        Steps:
+            1. Stops the service.
+            2. Recreates the database.
+            3. Applies the new config.
+            4. Restarts the service and waits for sync completion.
+
+        Args:
+            custom_config: Either a config dict or `DBSyncConfigBuilder` instance.
+
+        Returns:
+            Path to the updated config file.
+        """
+        if isinstance(custom_config, DBSyncConfigBuilder):
+            effective_config = custom_config.build()
+        else:
+            # Merge with existing config if dict provided
+            effective_config = {**self.config, **(custom_config or {})}
+        LOGGER.info(f"Effective config: {effective_config}")
+
+        with locking.FileLockIfXdist(f"{self.shared_tmp}/db_sync_config.lock"):
+            self.stop_db_sync()
+            self.recreate_database()
+            config_file = self.update_config(effective_config)
+            self.start_db_sync()
+            assert self.is_db_sync_running(), "Error: db-sync service is not running!"
+            wait_for_db_sync_completion()
+            return config_file
 
 
 def get_address_reward(
@@ -1551,3 +1899,88 @@ def check_off_chain_vote_fetch_error(voting_anchor_id: int) -> None:
 
     fetch_error_str = db_off_chain_vote_fetch_error[-1].fetch_error or ""
     assert "Hash mismatch when fetching metadata" in fetch_error_str
+
+
+def wait_for_db_sync_completion(
+    expected_progress: float = 99.0, timeout: int = 360, polling_interval: int = 5
+) -> float:
+    """Wait for db-sync to reach at least 99% sync completion.
+
+    Args:
+        expected_progress: Expected completion as perctentage, 99% by default
+        timeout: Maximum time to wait in seconds
+        polling_interval: Loop polling time in seconds
+
+    Returns:
+        Final sync percentage achieved (>= 99)
+
+    Raises:
+        AssertionError: If no progress data is received
+        TimeoutError: If sync doesn't reach 99% within timeout
+    """
+    start_time = time.time()
+
+    def _query_func() -> float:
+        dbsync_progress = dbsync_queries.query_db_sync_progress()
+        assert dbsync_progress, f"{NO_RESPONSE_STR} no result for query_db_sync_progress"
+        return dbsync_progress
+
+    dbsync_progress: float = retry_query(query_func=_query_func, timeout=timeout)
+
+    # Poll until sync completes
+    while dbsync_progress < expected_progress:
+        if time.time() - start_time > timeout:
+            err_msg = f"db-sync only reached {dbsync_progress}% after {timeout} seconds"
+            raise TimeoutError(err_msg)
+        time.sleep(polling_interval)
+        dbsync_progress = dbsync_queries.query_db_sync_progress()
+        LOGGER.info(f"Progress of db-sync: {dbsync_queries.query_db_sync_progress():.2f}%")
+
+    return dbsync_progress
+
+
+def check_column_condition(
+    table: str,
+    column: str,
+    condition: str,
+    expected_count: int | None = None,
+    lock_timeout: str = "5s",
+) -> None:
+    """Validate that all/none rows meet a column condition atomically.
+
+    Args:
+        table: Table to check
+        column: Column to validate
+        condition: SQL condition (e.g., "= 0", "IS NOT NULL")
+        expected_count: Require exactly this many matches (default: all must match)
+        lock_timeout: Max wait for table lock
+    """
+    with dbsync_queries.db_transaction():
+        # Get count of rows meeting condition
+        matching_count = dbsync_queries.query_rows_count(
+            table, column, condition, lock=True, lock_timeout=lock_timeout
+        )
+
+        # Get total rows (locked in same transaction)
+        total_count = dbsync_queries.query_rows_count(table=table, lock=True)
+
+        # Determine expected matches if not specified
+        target_count = expected_count if expected_count is not None else total_count
+
+        assert matching_count == target_count, (
+            f"Condition failed: {table}.{column} {condition}\n"
+            f"Expected {target_count} matches, found {matching_count} "
+            f"(out of {total_count} total rows)"
+        )
+
+
+def table_empty(table: str) -> bool:
+    """Check if a database table is empty."""
+    rows_count = dbsync_queries.query_rows_count(table=table)
+    return rows_count == 0
+
+
+def table_exists(table: str) -> bool:
+    """Check if a table exists in the database."""
+    table_names = dbsync_queries.query_table_names()
+    return table in table_names

@@ -132,6 +132,7 @@ filterwarnings = [
 markers = [
     "dbsync: test(s) for node + optionaly cardano-db-sync",
     "needs_dbsync: test(s) for cardano-db-sync",
+    "dbsync_config: test(s) for cardano-db-sync config - run on a single cluster only",
     "smash: test(s) for node + optionaly cardano-smash",
     "testnets: test(s) can run on testnets, like Shelley_qa",
     "long: test(s) run for a long time on testnets",
