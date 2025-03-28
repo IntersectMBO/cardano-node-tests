@@ -15,6 +15,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import custom_clusterlib
 from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
 
@@ -118,7 +119,7 @@ class LocalCluster(ClusterType):
     def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
-        cluster_obj = clusterlib.ClusterLib(
+        cluster_obj = custom_clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
@@ -235,7 +236,7 @@ class TestnetCluster(ClusterType):
     def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
-        cluster_obj = clusterlib.ClusterLib(
+        cluster_obj = custom_clusterlib.ClusterLib(
             state_dir=cluster_env.state_dir,
             command_era=command_era or cluster_env.command_era or clusterlib.CommandEras.LATEST,
         )
