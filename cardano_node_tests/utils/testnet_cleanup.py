@@ -152,8 +152,9 @@ def retire_drep(
             tx_files=tx_files,
             deposit=-deposit_amt,
         )
-    except clusterlib.CLIError:
-        LOGGER.exception(f"Failed to retire a DRep '{name_template}'")
+    except clusterlib.CLIError as excp:
+        if "ConwayDRepNotRegistered" not in str(excp):
+            LOGGER.exception(f"Failed to retire a DRep '{name_template}'")
     else:
         LOGGER.debug(f"Retired a DRep '{name_template}'")
 
