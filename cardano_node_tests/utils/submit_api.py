@@ -4,6 +4,7 @@ import binascii
 import dataclasses
 import json
 import logging
+import os
 import pathlib as pl
 import random
 import shutil
@@ -155,5 +156,14 @@ def submit_tx(
 
         msg = f"Transaction '{txid}' didn't make it to the chain (from '{tx_file}')."
         raise SubmitApiError(msg)
+
+    # Create a `.submitted` status file when the Tx was successfully submitted
+    tx_path = pl.Path(tx_file)
+    submitted_symlink = tx_path.with_name(f"{tx_path.name}.submitted")
+    try:
+        relative_target = os.path.relpath(tx_path, start=submitted_symlink.parent)
+        submitted_symlink.symlink_to(relative_target)
+    except OSError as exc:
+        LOGGER.warning(f"Cannot create symlink '{submitted_symlink}' -> '{relative_target}': {exc}")
 
     return txid
