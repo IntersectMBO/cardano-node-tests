@@ -109,7 +109,7 @@ def submit_tx(
     tx_file: clusterlib.FileType,
     txins: list[clusterlib.UTXOData],
     wait_blocks: int = 2,
-) -> None:
+) -> str:
     """Submit a transaction, resubmit if the transaction didn't make it to the chain.
 
     Args:
@@ -155,3 +155,5 @@ def submit_tx(
 
         msg = f"Transaction '{txid}' didn't make it to the chain (from '{tx_file}')."
         raise SubmitApiError(msg)
+
+    return txid
