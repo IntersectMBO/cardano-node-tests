@@ -4,7 +4,6 @@ import binascii
 import dataclasses
 import json
 import logging
-import os
 import pathlib as pl
 import random
 import shutil
@@ -14,6 +13,7 @@ import requests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import custom_clusterlib
 from cardano_node_tests.utils import http_client
 
 LOGGER = logging.getLogger(__name__)
@@ -158,12 +158,6 @@ def submit_tx(
         raise SubmitApiError(msg)
 
     # Create a `.submitted` status file when the Tx was successfully submitted
-    tx_path = pl.Path(tx_file)
-    submitted_symlink = tx_path.with_name(f"{tx_path.name}.submitted")
-    try:
-        relative_target = os.path.relpath(tx_path, start=submitted_symlink.parent)
-        submitted_symlink.symlink_to(relative_target)
-    except OSError as exc:
-        LOGGER.warning(f"Cannot create symlink '{submitted_symlink}' -> '{relative_target}': {exc}")
+    custom_clusterlib.create_submitted_file(tx_file=tx_file)
 
     return txid
