@@ -620,6 +620,27 @@ def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensio
             cur.close()
 
 
+@contextlib.contextmanager
+def db_transaction():
+    """Transaction manager that works with connection pool."""
+    conn = None
+    try:
+        conn = dbsync_conn.conn()
+        # Only modify autocommit if not already in a transaction
+        if conn.get_transaction_status() == psycopg2.extensions.TRANSACTION_STATUS_IDLE:
+            conn.autocommit = False
+        yield
+        conn.commit()
+    except Exception:
+        if conn and not conn.closed:
+            conn.rollback()
+        raise
+    finally:
+        if conn and not conn.closed:
+            conn.autocommit = True  # Reset to default psycopg2 behavior
+            # Don't close the connection - let execute() manage it
+
+
 class SchemaVersion:
     """Query and cache db-sync schema version."""
 
@@ -1546,9 +1567,76 @@ def query_drep_distr(
 
 def delete_reserved_pool_tickers() -> int:
     """Delete all records from reserved_pool_ticker and return the number of affected rows."""
-    query = "DELETE FROM reserved_pool_ticker"
+    query = "DELETE FROM reserved_pool_ticker;"
 
     with execute(query=query) as cur:
         affected_rows = cur.rowcount or 0
         dbsync_conn.conn().commit()
         return affected_rows
+
+
+def query_db_sync_progress() -> float:
+    """Calculate blockchain sync percentage (0-100).
+    
+    Returns:
+        float: Sync percentage (0-100) if blocks exist
+        None: If no blocks in database
+    """
+    query = (
+        "SELECT"
+        " 100 * (EXTRACT(EPOCH FROM (MAX(time) AT TIME ZONE 'UTC')) -"
+        " EXTRACT(EPOCH FROM (MIN(time) AT TIME ZONE 'UTC')))"
+        " / (EXTRACT(EPOCH FROM (NOW() AT TIME ZONE 'UTC')) -"
+        " EXTRACT(EPOCH FROM (MIN(time) AT TIME ZONE 'UTC')))"
+        " AS sync_percent "
+        " FROM block;"
+    )
+    
+    with execute(query=query) as cur:
+        result = cur.fetchone()
+        return min(100.0, float(result[0])) if result else None
+
+
+def query_rows_count(
+    table: str,
+    column: str | None = None,
+    condition: str | None = None,
+    lock: bool = False,
+    lock_timeout: str = '5s'
+) -> int:
+    """Query row count with optional table locking for atomic snapshots.
+    
+    Args:
+        table: Table name
+        column: Column name (optional)
+        condition: SQL condition (required if column is provided)
+        lock: Whether to lock table during query
+        lock_timeout: PostgreSQL timeout string (e.g., '5s', '1min')
+    
+    Returns:
+        Count of matching rows (0 if none match or table is empty)
+    
+    Raises:
+        ValueError: For invalid inputs
+        RuntimeError: If lock times out
+    """
+    # Validation
+    if not table.isidentifier():
+        raise ValueError("Invalid table name")
+    if column is not None:
+        if not column.isidentifier():
+            raise ValueError("Invalid column name")
+        if condition is None:
+            raise ValueError("Condition required when column is specified")
+    
+    # Query construction
+    lock_clause = f"SET LOCAL lock_timeout = '{lock_timeout}'; LOCK TABLE {table} IN SHARE MODE;" if lock else ""
+    where_clause = f" WHERE {column} {condition}" if (column and condition) else ""
+    query = f"{lock_clause} SELECT COUNT(*) FROM {table}{where_clause}"
+    
+    # Execution
+    with execute(query=query) as cur:
+        try:
+            return cur.fetchone()[0] or 0
+        except psycopg2.errors.LockNotAvailable as e:
+            raise RuntimeError(f"Could not acquire lock on {table} within {lock_timeout}") from e
