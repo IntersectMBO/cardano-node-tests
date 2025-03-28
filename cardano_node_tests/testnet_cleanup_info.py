@@ -25,6 +25,13 @@ def get_args() -> argparse.Namespace:
         type=helpers.check_dir_arg_keep,
         help="Path to a directory with testing artifacts",
     )
+    parser.add_argument(
+        "-f",
+        "--fee",
+        action="store_true",
+        required=False,
+        help="Print total fees of signed transactions",
+    )
     return parser.parse_args()
 
 
@@ -40,9 +47,16 @@ def main() -> int:
     state_dir = pl.Path(socket_env).parent
     cluster_obj = clusterlib.ClusterLib(state_dir=state_dir)
     location = args.artifacts_base_dir
-    balance, rewards = testnet_cleanup.addresses_info(cluster_obj=cluster_obj, location=location)
-    LOGGER.info(f"Uncleaned balance: {balance} Lovelace ({balance / 1_000_000} ADA)")
-    LOGGER.info(f"Uncleaned rewards: {rewards} Lovelace ({rewards / 1_000_000} ADA)")
+
+    if args.fee:
+        fees = testnet_cleanup.fees_info(cluster_obj=cluster_obj, location=location)
+        LOGGER.info(f"Total fees: {fees} Lovelace ({fees / 1_000_000} ADA)")
+    else:
+        balance, rewards = testnet_cleanup.addresses_info(
+            cluster_obj=cluster_obj, location=location
+        )
+        LOGGER.info(f"Uncleaned balance: {balance} Lovelace ({balance / 1_000_000} ADA)")
+        LOGGER.info(f"Uncleaned rewards: {rewards} Lovelace ({rewards / 1_000_000} ADA)")
 
     return 0
 

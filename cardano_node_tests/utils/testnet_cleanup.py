@@ -20,6 +20,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import defragment_utxos
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 
@@ -304,12 +305,17 @@ def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
 
 
 def find_addr_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
-    r"""Find all '\*.addr' files in given location and it's subdirectories."""
+    r"""Find all '\*.addr' files in given location and its subdirectories."""
     return location.glob("**/*.addr")
 
 
+def find_submitted_tx_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
+    r"""Find all '\*.submitted' files in given location and its subdirectories."""
+    return location.glob("**/*.submitted")
+
+
 def find_cert_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
-    r"""Find all '\*_drep_reg.cert' files in given location and it's subdirectories."""
+    r"""Find all '\*_drep_reg.cert' files in given location and its subdirectories."""
     return location.glob("**/*_drep_reg.cert")
 
 
@@ -546,6 +552,17 @@ def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.
                 balance += f_balance
 
     return balance, rewards
+
+
+def fees_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> int:
+    """Return the total fees of all signed transactions in the given location."""
+    fees = 0
+    for fpath in find_submitted_tx_files(location):
+        tx_loaded = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=fpath)
+        tx_fee = int(tx_loaded.get("fee", "0 Lovelace").split()[0])
+        LOGGER.info(f"{tx_fee} Lovelace fee on '{fpath}'")
+        fees += tx_fee
+    return fees
 
 
 def cleanup(
