@@ -369,7 +369,6 @@ class TestRewards:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
-
         init_epoch = cluster.g_query.get_epoch()
 
         # Submit registration certificate and delegate to pool

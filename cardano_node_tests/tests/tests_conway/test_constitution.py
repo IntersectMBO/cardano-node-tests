@@ -409,6 +409,10 @@ class TestConstitution:
         )
         [r.success() for r in (reqc.cli013, reqc.cip031a_02, reqc.cip031c_01, reqc.cip054_03)]
 
+        # Make sure we have enough time to submit the votes in one epoch
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
         init_epoch = cluster.g_query.get_epoch()
 
         # Check that SPOs cannot vote on change of constitution action

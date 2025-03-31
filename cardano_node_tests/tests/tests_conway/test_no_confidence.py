@@ -157,9 +157,8 @@ class TestNoConfidence:
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_conway_governance.query.gov_state()
-        action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
-            gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
+            gov_state=action_gov_state, name_template=f"{temp_template}_action_{init_epoch}"
         )
         prop_action = governance_utils.lookup_proposal(
             gov_state=action_gov_state, action_txid=action_txid
@@ -394,6 +393,11 @@ class TestNoConfidence:
                 )
             err_str = str(excinfo.value)
             assert "(VotersDoNotExist" in err_str, err_str
+
+            # Make sure we have enough time to submit the votes in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            )
 
             conway_common.cast_vote(
                 cluster_obj=cluster,
