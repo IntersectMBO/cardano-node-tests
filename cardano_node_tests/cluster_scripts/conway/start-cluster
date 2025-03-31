@@ -525,7 +525,7 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --testnet-magic "$NETWORK_MAGIC" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.addr"
   # stake address registration cert for Shelley era
-  cardano_cli_log shelley stake-address registration-certificate \
+  cardano_cli_log compatible shelley stake-address registration-certificate \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake.reg.shelley.cert"
   # stake address registration cert for Conway era
@@ -539,7 +539,7 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --signing-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.skey" \
     --verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey"
   # stake reward address registration cert
-  cardano_cli_log shelley stake-address registration-certificate \
+  cardano_cli_log compatible shelley stake-address registration-certificate \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/reward.vkey" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.shelley.cert"
   # stake reward delegation to alwaysAbstain DRep cert
@@ -574,7 +574,7 @@ for i in $(seq 1 "$NUM_POOLS"); do
     --signing-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/vrf.skey"
 
   # stake address delegation certs for Shelley era
-  cardano_cli_log shelley stake-address stake-delegation-certificate \
+  cardano_cli_log compatible shelley stake-address stake-delegation-certificate \
     --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.vkey" \
     --cold-verification-key-file  "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.shelley.cert"
@@ -627,7 +627,7 @@ EoF
   echo "$POOL_PLEDGE" > "${STATE_CLUSTER}/nodes/node-pool${i}/pledge"
 
   # pool registration cert for Shelley era
-  cardano_cli_log shelley stake-pool registration-certificate \
+  cardano_cli_log compatible shelley stake-pool registration-certificate \
     --cold-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/cold.vkey" \
     --vrf-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${i}/vrf.vkey" \
     --pool-pledge "$POOL_PLEDGE" \
@@ -928,7 +928,7 @@ echo "Submitting update proposal to transfer to Allegra, transferring funds to p
 ALLEGRA_HF_PROPOSAL_FILE="${STATE_CLUSTER}/shelley/update-proposal-allegra.proposal"
 ALLEGRA_TX_BASE="${STATE_CLUSTER}/shelley/transfer-register-delegate"
 
-cardano_cli_log legacy governance create-update-proposal \
+cardano_cli_log compatible shelley governance action create-protocol-parameters-update \
   --out-file "$ALLEGRA_HF_PROPOSAL_FILE" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
@@ -944,7 +944,6 @@ STOP_TXIN_AMOUNT="$((NEEDED_AMOUNT + FEE))"
 get_txins "$FAUCET_ADDR" "$STOP_TXIN_AMOUNT"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - STOP_TXIN_AMOUNT))"
-TTL="$(get_slot 1000)"
 
 POOL_ARGS=()
 POOL_SIGNING=()
@@ -963,25 +962,20 @@ for i in $(seq 1 "$NUM_POOLS"); do
   )
 done
 
-cardano_cli_log shelley transaction build-raw \
-  --ttl    "$TTL" \
+cardano_cli_log compatible shelley transaction signed-transaction \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   "${POOL_ARGS[@]}" \
   --update-proposal-file "$ALLEGRA_HF_PROPOSAL_FILE" \
-  --out-file         "${ALLEGRA_TX_BASE}-tx.txbody"
-
-cardano_cli_log shelley transaction sign \
   "${POOL_SIGNING[@]}" \
   "${GENESIS_SIGNING[@]}" \
   "${DELEGATE_SIGNING[@]}" \
   --signing-key-file "$FAUCET_SKEY" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${ALLEGRA_TX_BASE}-tx.txbody" \
   --out-file         "${ALLEGRA_TX_BASE}-tx.tx"
 
-cardano_cli_log shelley transaction submit \
+cardano_cli_log latest transaction submit \
   --tx-file "${ALLEGRA_TX_BASE}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
@@ -1008,7 +1002,7 @@ echo "Submitting update proposal to transfer to Mary, set d = 0"
 
 MARY_HF_PROPOSAL="${STATE_CLUSTER}/shelley/update-proposal-mary"
 
-cardano_cli_log legacy governance create-update-proposal \
+cardano_cli_log compatible allegra governance action create-protocol-parameters-update \
   --out-file "${MARY_HF_PROPOSAL}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
@@ -1020,21 +1014,17 @@ get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
-cardano_cli_log allegra transaction build-raw \
+cardano_cli_log compatible allegra transaction signed-transaction \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   --update-proposal-file "${MARY_HF_PROPOSAL}.proposal" \
-  --out-file         "${MARY_HF_PROPOSAL}-tx.txbody"
-
-cardano_cli_log allegra transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${MARY_HF_PROPOSAL}-tx.txbody" \
   --out-file         "${MARY_HF_PROPOSAL}-tx.tx"
 
-cardano_cli_log allegra transaction submit \
+cardano_cli_log latest transaction submit \
   --tx-file "${MARY_HF_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
@@ -1061,7 +1051,7 @@ echo "Submitting update proposal to transfer to Alonzo"
 
 ALONZO_UPDATE_PROPOSAL="${STATE_CLUSTER}/shelley/update-proposal-alonzo"
 
-cardano_cli_log legacy governance create-update-proposal \
+cardano_cli_log compatible mary governance action create-protocol-parameters-update \
   --out-file "${ALONZO_UPDATE_PROPOSAL}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
@@ -1072,21 +1062,17 @@ get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
-cardano_cli_log mary transaction build-raw \
+cardano_cli_log compatible mary transaction signed-transaction \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   --update-proposal-file "${ALONZO_UPDATE_PROPOSAL}.proposal" \
-  --out-file "${ALONZO_UPDATE_PROPOSAL}-tx.txbody"
-
-cardano_cli_log mary transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${ALONZO_UPDATE_PROPOSAL}-tx.txbody" \
   --out-file         "${ALONZO_UPDATE_PROPOSAL}-tx.tx"
 
-cardano_cli_log mary transaction submit \
+cardano_cli_log latest transaction submit \
   --tx-file "${ALONZO_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
@@ -1114,7 +1100,7 @@ echo "Submitting update proposal to update to PV6"
 ALONZO_UPDATE_PROPOSAL_PV6="${STATE_CLUSTER}/shelley/update-proposal-alonzo-pv6"
 
 # protocol version + dapps parameters update
-cardano_cli_log legacy governance create-update-proposal \
+cardano_cli_log compatible alonzo governance action create-protocol-parameters-update \
   --out-file "${ALONZO_UPDATE_PROPOSAL_PV6}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
@@ -1125,21 +1111,17 @@ get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
-cardano_cli_log alonzo transaction build-raw \
+cardano_cli_log compatible alonzo transaction signed-transaction \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   --update-proposal-file "${ALONZO_UPDATE_PROPOSAL_PV6}.proposal" \
-  --out-file "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.txbody"
-
-cardano_cli_log alonzo transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.txbody" \
   --out-file         "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.tx"
 
-cardano_cli_log alonzo transaction submit \
+cardano_cli_log latest transaction submit \
   --tx-file "${ALONZO_UPDATE_PROPOSAL_PV6}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
@@ -1166,7 +1148,7 @@ if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
   supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start submit_api
 fi
 
-cardano_cli_log alonzo query protocol-parameters \
+cardano_cli_log latest query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "${STATE_CLUSTER}/pparams.json"
 
@@ -1180,7 +1162,7 @@ echo "Submitting update proposal to update to Babbage"
 BABBAGE_UPDATE_PROPOSAL="${STATE_CLUSTER}/shelley/update-proposal-babbage"
 
 # protocol version + dapps parameters update
-cardano_cli_log legacy governance create-update-proposal \
+cardano_cli_log compatible alonzo governance action create-protocol-parameters-update \
   --out-file "${BABBAGE_UPDATE_PROPOSAL}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
@@ -1191,21 +1173,17 @@ get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
-cardano_cli_log alonzo transaction build-raw \
+cardano_cli_log compatible alonzo transaction signed-transaction \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL}.proposal" \
-  --out-file "${BABBAGE_UPDATE_PROPOSAL}-tx.txbody"
-
-cardano_cli_log alonzo transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${BABBAGE_UPDATE_PROPOSAL}-tx.txbody" \
   --out-file         "${BABBAGE_UPDATE_PROPOSAL}-tx.tx"
 
-cardano_cli_log alonzo transaction submit \
+cardano_cli_log latest transaction submit \
   --tx-file "${BABBAGE_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
@@ -1233,7 +1211,7 @@ echo "Submitting update proposal to update to PV8"
 BABBAGE_UPDATE_PROPOSAL_PV8="${STATE_CLUSTER}/shelley/update-proposal-babbage-pv8"
 
 # protocol version 8
-cardano_cli_log legacy governance create-update-proposal \
+cardano_cli_log compatible babbage governance action create-protocol-parameters-update \
   --out-file "${BABBAGE_UPDATE_PROPOSAL_PV8}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
@@ -1244,21 +1222,17 @@ get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
-cardano_cli_log babbage transaction build-raw \
+cardano_cli_log compatible babbage transaction signed-transaction \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   --update-proposal-file "${BABBAGE_UPDATE_PROPOSAL_PV8}.proposal" \
-  --out-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.txbody"
-
-cardano_cli_log babbage transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.txbody" \
   --out-file         "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.tx"
 
-cardano_cli_log babbage transaction submit \
+cardano_cli_log latest transaction submit \
   --tx-file "${BABBAGE_UPDATE_PROPOSAL_PV8}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
@@ -1278,7 +1252,7 @@ wait_for_epoch "$((BABBAGE_EPOCH + 1))"
 
 BABBAGE_PV8_EPOCH="$(get_epoch)"
 
-cardano_cli_log babbage query protocol-parameters \
+cardano_cli_log latest query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "${STATE_CLUSTER}/pparams.json"
 
@@ -1293,7 +1267,7 @@ echo "Submitting update proposal to update to Conway"
 CONWAY_UPDATE_PROPOSAL="${STATE_CLUSTER}/shelley/update-proposal-conway"
 
 # protocol version 9
-cardano_cli_log legacy governance create-update-proposal \
+cardano_cli_log compatible babbage governance action create-protocol-parameters-update \
   --out-file "${CONWAY_UPDATE_PROPOSAL}.proposal" \
   --epoch "$(get_epoch)" \
   "${GENESIS_VERIFICATION[@]}" \
@@ -1304,21 +1278,17 @@ get_txins "$FAUCET_ADDR" "$FEE"
 
 TXOUT_AMOUNT="$((TXIN_AMOUNT - FEE))"
 
-cardano_cli_log babbage transaction build-raw \
+cardano_cli_log compatible babbage transaction signed-transaction \
   --fee    "$FEE" \
   "${TXINS[@]}" \
   --tx-out "${FAUCET_ADDR}+${TXOUT_AMOUNT}" \
   --update-proposal-file "${CONWAY_UPDATE_PROPOSAL}.proposal" \
-  --out-file "${CONWAY_UPDATE_PROPOSAL}-tx.txbody"
-
-cardano_cli_log babbage transaction sign \
   --signing-key-file "$FAUCET_SKEY" \
   "${DELEGATE_SIGNING[@]}" \
   --testnet-magic    "$NETWORK_MAGIC" \
-  --tx-body-file     "${CONWAY_UPDATE_PROPOSAL}-tx.txbody" \
   --out-file         "${CONWAY_UPDATE_PROPOSAL}-tx.tx"
 
-cardano_cli_log babbage transaction submit \
+cardano_cli_log latest transaction submit \
   --tx-file "${CONWAY_UPDATE_PROPOSAL}-tx.tx" \
   --testnet-magic "$NETWORK_MAGIC"
 
@@ -1340,7 +1310,7 @@ wait_for_era "Conway"
 
 CONWAY_PV9_EPOCH="$(get_epoch)"
 
-cardano_cli_log conway query protocol-parameters \
+cardano_cli_log latest query protocol-parameters \
   --testnet-magic "$NETWORK_MAGIC" \
   --out-file "${STATE_CLUSTER}/pparams.json"
 
