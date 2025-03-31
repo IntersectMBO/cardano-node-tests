@@ -153,6 +153,11 @@ def cluster_with_constitution(
                 constitution_script_hash=constitution_script_hash,
             )
 
+            # Make sure we have enough time to submit the votes in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            )
+
             conway_common.cast_vote(
                 cluster_obj=cluster,
                 governance_data=governance_data,
