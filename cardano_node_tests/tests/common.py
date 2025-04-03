@@ -463,6 +463,33 @@ def get_pool_user(
     )[0]
 
 
+def get_registered_pool_user(
+    name_template: str,
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_obj: clusterlib.ClusterLib,
+    caching_key: str = "",
+    amount: int | None = None,
+) -> clusterlib.PoolUser:
+    """Create new registered pool users."""
+    pool_user = get_pool_user(
+        name_template=name_template,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster_obj,
+        caching_key=caching_key,
+        amount=amount,
+    )
+
+    # Register the stake address
+    clusterlib_utils.register_stake_address(
+        cluster_obj=cluster_obj,
+        pool_user=pool_user,
+        name_template=f"{name_template}_pool_user",
+        deposit_amt=cluster_obj.g_query.get_address_deposit(),
+    )
+
+    return pool_user
+
+
 def is_fee_in_interval(fee: float, expected_fee: float, frac: float = 0.1) -> bool:
     """Check that the fee is within the expected range on local testnet.
 

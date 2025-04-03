@@ -35,12 +35,12 @@ def pool_user_lgp(
     cluster, __ = cluster_lock_governance_plutus
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return conway_common.get_registered_pool_user(
-        cluster_manager=cluster_manager,
+    return common.get_registered_pool_user(
         name_template=name_template,
+        cluster_manager=cluster_manager,
         cluster_obj=cluster,
         caching_key=key,
-        fund_amount=2000_000_000,
+        amount=2_000_000_000,
     )
 
 

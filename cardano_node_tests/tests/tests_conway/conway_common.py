@@ -9,7 +9,6 @@ import typing as tp
 
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
@@ -108,70 +107,6 @@ def save_drep_state(drep_state: governance_utils.DRepStateT, name_template: str)
     """Save DRep state to a file."""
     with open(f"{name_template}_drep_state.json", "w", encoding="utf-8") as out_fp:
         json.dump(drep_state, out_fp, indent=2)
-
-
-# TODO: move this and reuse in other tests that need a registered stake address.
-def get_registered_pool_user(
-    cluster_manager: cluster_management.ClusterManager,
-    name_template: str,
-    cluster_obj: clusterlib.ClusterLib,
-    caching_key: str = "",
-    fund_amount: int = 1000_000_000,
-) -> clusterlib.PoolUser:
-    """Create a registered pool user."""
-
-    def _create_user() -> clusterlib.PoolUser:
-        pool_user = clusterlib_utils.create_pool_users(
-            cluster_obj=cluster_obj,
-            name_template=f"{name_template}_pool_user",
-            no_of_addr=1,
-        )[0]
-        return pool_user
-
-    if caching_key:
-        fixture_cache: cluster_management.FixtureCache[clusterlib.PoolUser | None]
-        with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value is not None:
-                return fixture_cache.value
-
-            pool_user = _create_user()
-            fixture_cache.value = pool_user
-    else:
-        pool_user = _create_user()
-
-    # Fund the payment address with some ADA
-    clusterlib_utils.fund_from_faucet(
-        pool_user.payment,
-        cluster_obj=cluster_obj,
-        all_faucets=cluster_manager.cache.addrs_data,
-        amount=fund_amount,
-    )
-
-    # Register the stake address
-    stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
-    stake_addr_reg_cert = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-        addr_name=f"{name_template}_pool_user",
-        deposit_amt=stake_deposit_amt,
-        stake_vkey_file=pool_user.stake.vkey_file,
-    )
-    tx_files_action = clusterlib.TxFiles(
-        certificate_files=[stake_addr_reg_cert],
-        signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
-    )
-
-    clusterlib_utils.build_and_submit_tx(
-        cluster_obj=cluster_obj,
-        name_template=f"{name_template}_pool_user",
-        src_address=pool_user.payment.address,
-        use_build_cmd=True,
-        tx_files=tx_files_action,
-    )
-
-    assert cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address).address, (
-        f"Stake address is not registered: {pool_user.stake.address}"
-    )
-
-    return pool_user
 
 
 def submit_vote(
