@@ -1620,6 +1620,7 @@ class TestDRepActivity:
             name_template=name_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
+            amount=800_000_000,
         )
 
     @allure.link(helpers.get_vcs_link())

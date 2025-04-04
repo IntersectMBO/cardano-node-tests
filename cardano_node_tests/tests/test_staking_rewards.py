@@ -361,6 +361,7 @@ class TestRewards:
             *payment_addr_recs,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
+            amount=200_000_000,
         )
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
@@ -1072,6 +1073,7 @@ class TestRewards:
             dst_addr_record,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
+            amount=200_000_000,
         )
 
         # Transfer all funds from payment address back to faucet, so no funds are staked

@@ -17,15 +17,12 @@ def fund_from_faucet(
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: dict | None = None,
     all_faucets: dict[str, dict] | None = None,
-    amount: int | list[int] | None = None,
+    amount: int | list[int],
     tx_name: str | None = None,
     destination_dir: clusterlib.FileType = ".",
     force: bool = False,
 ) -> clusterlib.TxRawOutput | None:
     """Transfer `amount` from faucet addr to all `dst_addrs`."""
-    if amount is None:
-        amount = 1_000_000_000
-
     if not (faucet_data or all_faucets):
         msg = "Either `faucet_data` or `all_faucets` must be provided."
         raise AssertionError(msg)

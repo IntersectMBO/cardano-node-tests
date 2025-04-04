@@ -43,6 +43,7 @@ def pool_user_lg(
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         caching_key=key,
+        amount=400_000_000,
     )
 
 

@@ -283,6 +283,7 @@ class TestDelegateAddr:
             *pool_users,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
+            amount=200_000_000,
         )
 
         # Step: Delegate the stake addresses to 2 different pools
@@ -413,6 +414,7 @@ class TestDelegateAddr:
             *payment_addr_recs,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
+            amount=200_000_000,
         )
 
         pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
@@ -602,6 +604,7 @@ class TestDelegateAddr:
             pool_user.payment,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
+            amount=200_000_000,
         )
 
         clusterlib_utils.wait_for_epoch_interval(

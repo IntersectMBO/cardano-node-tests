@@ -77,6 +77,7 @@ class TestNegative:
             cluster_obj=cluster,
             num=3,
             caching_key=helpers.get_current_line_str(),
+            fund_just_once=True,
         )
         return created_users
 

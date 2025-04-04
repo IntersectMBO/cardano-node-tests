@@ -106,7 +106,6 @@ def payment_addrs(
         num=2,
         fund_idx=[0],
         caching_key=helpers.get_current_line_str(),
-        amount=1_000_000_000,
     )
     return addrs
 
