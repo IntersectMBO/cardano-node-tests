@@ -479,13 +479,14 @@ def get_registered_pool_user(
         amount=amount,
     )
 
-    # Register the stake address
-    clusterlib_utils.register_stake_address(
-        cluster_obj=cluster_obj,
-        pool_user=pool_user,
-        name_template=f"{name_template}_pool_user",
-        deposit_amt=cluster_obj.g_query.get_address_deposit(),
-    )
+    if not cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
+        # Register the stake address
+        clusterlib_utils.register_stake_address(
+            cluster_obj=cluster_obj,
+            pool_user=pool_user,
+            name_template=f"{name_template}_pool_user",
+            deposit_amt=cluster_obj.g_query.get_address_deposit(),
+        )
 
     return pool_user
 
