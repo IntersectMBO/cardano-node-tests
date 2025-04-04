@@ -1612,9 +1612,9 @@ class TestDRepActivity:
         """
         cluster, __ = cluster_lock_governance
         name_template = common.get_test_id(cluster)
-        return conway_common.get_registered_pool_user(
-            cluster_manager=cluster_manager,
+        return common.get_registered_pool_user(
             name_template=name_template,
+            cluster_manager=cluster_manager,
             cluster_obj=cluster,
         )
 

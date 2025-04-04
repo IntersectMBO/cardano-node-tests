@@ -75,9 +75,9 @@ class TestSetup:
     ) -> clusterlib.PoolUser:
         """Create a pool user for singleton."""
         name_template = common.get_test_id(cluster_singleton)
-        return conway_common.get_registered_pool_user(
-            cluster_manager=cluster_manager,
+        return common.get_registered_pool_user(
             name_template=name_template,
+            cluster_manager=cluster_manager,
             cluster_obj=cluster_singleton,
         )
 
