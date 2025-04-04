@@ -897,23 +897,15 @@ class TestDelegateAddr:
             stake_address=stake_address,
         )
 
-        # Create stake address deregistration cert
-        stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
-            addr_name=f"{temp_template}_addr0",
-            deposit_amt=address_deposit,
-            stake_vkey_file=stake_vkey_file,
-            stake_address=stake_address,
-        )
-
         # Register stake address
-        tx_files = clusterlib.TxFiles(
+        tx_files_reg = clusterlib.TxFiles(
             certificate_files=[stake_addr_reg_cert_file],
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
         tx_raw_output_reg = cluster.g_transaction.send_tx(
             src_address=user_payment.address,
             tx_name=f"{temp_template}_reg",
-            tx_files=tx_files,
+            tx_files=tx_files_reg,
         )
 
         # Check that the stake address is registered
@@ -940,6 +932,14 @@ class TestDelegateAddr:
             stake_address=stake_address,
             stake_pool_id=pool_id,
             always_abstain=True,
+        )
+
+        # Create stake address deregistration cert
+        stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_vkey_file=stake_vkey_file,
+            stake_address=stake_address,
         )
 
         clusterlib_utils.wait_for_epoch_interval(
@@ -1057,25 +1057,12 @@ class TestNegative:
         user_registered = pool_users_disposable_cluster_and_pool[0]
         user_payment = pool_users_cluster_and_pool[0].payment
 
-        # Create stake address registration cert
-        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
-            stake_vkey_file=user_registered.stake.vkey_file,
-        )
-
         # Register stake address
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
-        )
-        cluster.g_transaction.send_tx(
-            src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
-        )
-
-        # Check that the stake address is registered
-        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
-            f"Stake address is not registered: {user_registered.stake.address}"
+        clusterlib_utils.register_stake_address(
+            cluster_obj=cluster,
+            pool_user=clusterlib.PoolUser(payment=user_payment, stake=user_registered.stake),
+            name_template=temp_template,
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
         )
 
         # Create stake address delegation cert
@@ -1183,50 +1170,23 @@ class TestNegative:
         user_registered = pool_users_disposable_cluster_and_pool[0]
         user_payment = pool_users_cluster_and_pool[0].payment
 
-        # Create stake address registration cert
         address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
-        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0",
-            deposit_amt=address_deposit,
-            stake_vkey_file=user_registered.stake.vkey_file,
-        )
+        certs_pool_user = clusterlib.PoolUser(payment=user_payment, stake=user_registered.stake)
 
         # Register stake address
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
-        )
-        cluster.g_transaction.send_tx(
-            src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
-        )
-
-        # Check that the stake address is registered
-        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
-            f"Stake address is not registered: {user_registered.stake.address}"
+        clusterlib_utils.register_stake_address(
+            cluster_obj=cluster,
+            pool_user=certs_pool_user,
+            name_template=temp_template,
+            deposit_amt=address_deposit,
         )
 
         # Deregister stake address
-        stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
-            addr_name=f"{temp_template}_addr0",
+        clusterlib_utils.deregister_stake_address(
+            cluster_obj=cluster,
+            pool_user=certs_pool_user,
+            name_template=temp_template,
             deposit_amt=address_deposit,
-            stake_vkey_file=user_registered.stake.vkey_file,
-        )
-        tx_files_deregister = clusterlib.TxFiles(
-            certificate_files=[stake_addr_dereg_cert_file],
-            signing_key_files=[
-                user_payment.skey_file,
-                user_registered.stake.skey_file,
-            ],
-        )
-        cluster.g_transaction.send_tx(
-            src_address=user_payment.address,
-            tx_name=f"{temp_template}_dereg",
-            tx_files=tx_files_deregister,
-        )
-
-        # Check that the stake address is not registered
-        assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
-            f"Stake address is registered: {user_registered.stake.address}"
         )
 
         # Create stake address delegation cert
@@ -1287,25 +1247,12 @@ class TestNegative:
         user_registered = pool_users_disposable[0]
         user_payment = pool_users[0].payment
 
-        # Create stake address registration cert
-        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
-            stake_vkey_file=user_registered.stake.vkey_file,
-        )
-
         # Register stake address
-        tx_files = clusterlib.TxFiles(
-            certificate_files=[stake_addr_reg_cert_file],
-            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
-        )
-        cluster.g_transaction.send_tx(
-            src_address=user_payment.address, tx_name=f"{temp_template}_reg", tx_files=tx_files
-        )
-
-        # Check that the stake address is registered
-        assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
-            f"Stake address is not registered: {user_registered.stake.address}"
+        clusterlib_utils.register_stake_address(
+            cluster_obj=cluster,
+            pool_user=clusterlib.PoolUser(payment=user_payment, stake=user_registered.stake),
+            name_template=temp_template,
+            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
         )
 
         # Create pool cold keys and ceritifcate, but don't register the pool

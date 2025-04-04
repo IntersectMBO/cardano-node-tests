@@ -247,18 +247,19 @@ def register_stake_address(
         certificate_files=[addr_reg_cert],
         signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
     )
-
-    tx_raw_output = cluster_obj.g_transaction.send_tx(
+    tx_output = build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{name_template}_reg_stake_addr",
         src_address=pool_user.payment.address,
-        tx_name=f"{name_template}_reg_stake_addr",
         tx_files=tx_files,
+        deposit=None if deposit_amt == -1 else deposit_amt,
     )
 
     if not cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
-        msg = f"The address {pool_user.stake.address} was not registered."
+        msg = f"The address '{pool_user.stake.address}' was not registered."
         raise AssertionError(msg)
 
-    return tx_raw_output
+    return tx_output
 
 
 def deregister_stake_address(
@@ -277,7 +278,7 @@ def deregister_stake_address(
         deposit_amt=deposit_amt,
         stake_vkey_file=pool_user.stake.vkey_file,
     )
-    tx_files_dereg = clusterlib.TxFiles(
+    tx_files = clusterlib.TxFiles(
         certificate_files=[stake_addr_dereg_cert],
         signing_key_files=[
             pool_user.payment.skey_file,
@@ -296,12 +297,16 @@ def deregister_stake_address(
     )
     tx_output = build_and_submit_tx(
         cluster_obj=cluster_obj,
-        name_template=f"{name_template}_dereg",
+        name_template=f"{name_template}_dereg_stake_addr",
         src_address=pool_user.payment.address,
-        tx_files=tx_files_dereg,
+        tx_files=tx_files,
         withdrawals=withdrawals,
         deposit=None if deposit_amt == -1 else -deposit_amt,
     )
+
+    if cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
+        msg = f"The address '{pool_user.stake.address}' is still registered."
+        raise AssertionError(msg)
 
     return tx_output
 
