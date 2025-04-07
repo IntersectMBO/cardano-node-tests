@@ -28,6 +28,7 @@ def create_poll(
     cli_out = cluster_obj.cli(
         [
             "cardano-cli",
+            "compatible",
             "babbage",
             "governance",
             "create-poll",
@@ -60,6 +61,7 @@ def answer_poll(
     cli_out = cluster_obj.cli(
         [
             "cardano-cli",
+            "compatible",
             "babbage",
             "governance",
             "answer-poll",
@@ -89,6 +91,7 @@ def verify_poll(
     cli_out = cluster_obj.cli(
         [
             "cardano-cli",
+            "compatible",
             "babbage",
             "governance",
             "verify-poll",

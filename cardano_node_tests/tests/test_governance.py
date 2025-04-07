@@ -35,7 +35,7 @@ class TestPoll:
 
     @pytest.fixture(scope="class")
     def governance_poll_available(self) -> None:
-        if not clusterlib_utils.cli_has("babbage governance create-poll"):
+        if not clusterlib_utils.cli_has("compatible babbage governance create-poll"):
             pytest.fail(
                 "The `cardano-cli babbage governance` poll commands are no longer available."
             )
@@ -58,7 +58,6 @@ class TestPoll:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("required_signer_option", ("skey", "vkey_hash"))
-    @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_create_and_answer_poll(
         self,
@@ -189,7 +188,6 @@ class TestPoll:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("tx_file_type", ("body", "signed"))
-    @pytest.mark.smoke
     def test_answer_golden_poll(
         self,
         cluster: clusterlib.ClusterLib,
@@ -260,7 +258,6 @@ class TestPoll:
     @hypothesis.example(answer_index=-common.MAX_INT64)
     @hypothesis.example(answer_index=common.MAX_INT64)
     @common.hypothesis_settings(max_examples=1000)
-    @pytest.mark.smoke
     def test_create_invalid_answer(
         self,
         cluster: clusterlib.ClusterLib,
@@ -292,7 +289,6 @@ class TestPoll:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.smoke
     def test_create_answer_negative_index(
         self,
         cluster: clusterlib.ClusterLib,
@@ -326,7 +322,6 @@ class TestPoll:
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.parametrize("tx_file_type", ("body", "signed"))
-    @pytest.mark.smoke
     def test_verify_answer_without_required_signer(
         self,
         cluster: clusterlib.ClusterLib,
