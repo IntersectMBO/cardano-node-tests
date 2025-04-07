@@ -87,7 +87,7 @@ jobs:
           : > .github_ci_env
           echo "PY_COLORS=1" >> .github_ci_env
           echo "NODE_REV=${{ inputs.node_rev }}" >> .github_ci_env
-          echo "CLI_REV=${{ inputs.cli_rev }}" >> .github_ci_env
+          echo "CARDANO_CLI_REV=${{ inputs.cli_rev }}" >> .github_ci_env
           echo "DBSYNC_REV=${{ inputs.dbsync_rev }}" >> .github_ci_env
           echo "CLUSTER_ERA=${{ inputs.cluster_era }}" >> .github_ci_env
           echo "TX_ERA=${{ inputs.tx_era }}" >> .github_ci_env
