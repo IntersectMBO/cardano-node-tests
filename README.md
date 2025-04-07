@@ -37,6 +37,20 @@ When using `CI_BYRON_CLUSTER`, it takes approximately 30 minutes for the local c
 
 ---
 
+## Running individual tests on a local cluster using Nix and custom binaries
+
+In some cases, you may want to run individual tests with custom `cardano-cli` or `cardano-node` binaries.
+
+1. Place your custom binaries in the `.bin` directory.
+
+1. Run the desired test. For example:
+
+    ```sh
+    CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
+    ```
+
+1. After the test, make sure to remove the binaries from `.bin` to avoid conflicts with future tests.
+
 ## Running individual tests on a persistent local cluster using Nix
 
 Sometimes it is useful to run individual tests and keep the local cluster running between test runs.

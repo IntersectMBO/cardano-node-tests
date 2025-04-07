@@ -186,6 +186,13 @@ printf "start: %(%H:%M:%S)T\n" -1
 # shellcheck disable=SC1090,SC1091
 . .github/nix_override_cardano_node.sh
 
+if [ "$(echo "$PWD"/.bin/*)" != "${PWD}/.bin/*" ]; then
+  echo
+  echo "WARNING: using following binaries from ${PWD}/.bin:"
+  ls -1 "${PWD}/.bin"
+  echo
+fi
+
 # run tests and generate report
 set +e
 # shellcheck disable=SC2046,SC2119
