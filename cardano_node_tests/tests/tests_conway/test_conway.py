@@ -111,6 +111,7 @@ class TestConway:
         if use_build_cmd:
             assert (
                 "Stake credential specified in the proposal is not registered on-chain" in err_str
+                or "ProposalReturnAccountDoesNotExist" in err_str  # In node <= 10.1.4
             ), err_str
         else:
             assert "ProposalReturnAccountDoesNotExist" in err_str, err_str
