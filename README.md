@@ -46,8 +46,14 @@ In some cases, you may want to run individual tests with custom `cardano-cli` or
 1. Run the desired test. For example:
 
     ```sh
-    CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
+    TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
     ```
+
+  To view all executed `cardano-cli` commands during the test run, add `--log-level=debug` to the pytest arguments:
+
+  ```sh
+  TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]' --log-level=debug" ./.github/regression.sh
+  ```
 
 1. After the test, make sure to remove the binaries from `.bin` to avoid conflicts with future tests.
 
