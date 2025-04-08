@@ -754,7 +754,6 @@ class TestMIRCerts:
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_500_000
-        cluster_babbage = cluster_nodes.get_cluster_type().get_cluster_obj(command_era="babbage")
 
         reqc.cip070.start(url=helpers.get_vcs_link())
 
@@ -804,23 +803,28 @@ class TestMIRCerts:
         err_build = str(excinfo.value)
         assert "TextEnvelope type error:" in err_build, err_build
 
-        # The Tx can be build as Babbage Tx using `build-raw`, but cannot be submitted
-        tx_output = cluster_babbage.g_transaction.build_raw_tx(
-            tx_name=temp_template,
-            src_address=payment_addr.address,
-            fee=400_000,
-            tx_files=tx_files,
-        )
+        # The Tx can be build as Babbage Tx using `build-raw`, but cannot be submitted.
+        # TODO: convert to use `compatible babbage transaction signed-transaction`
+        if clusterlib_utils.cli_has("babbage transaction build-raw"):
+            cluster_babbage = cluster_nodes.get_cluster_type().get_cluster_obj(
+                command_era="babbage"
+            )
+            tx_output = cluster_babbage.g_transaction.build_raw_tx(
+                tx_name=temp_template,
+                src_address=payment_addr.address,
+                fee=400_000,
+                tx_files=tx_files,
+            )
 
-        out_file_signed = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template,
-        )
+            out_file_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
 
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_output.txins)
-        err_submit = str(excinfo.value)
-        assert "Error: The era of the node and the tx do not match." in err_submit, err_submit
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_output.txins)
+            err_submit = str(excinfo.value)
+            assert "Error: The era of the node and the tx do not match." in err_submit, err_submit
 
         reqc.cip070.success()
