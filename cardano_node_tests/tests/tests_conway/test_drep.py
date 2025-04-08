@@ -1083,6 +1083,17 @@ class TestDelegDReps:
         deposit_address_amt = cluster.g_query.get_address_deposit()
         drep_id = custom_drep_rewards.drep_id if drep == "custom" else drep
 
+        # Check that stake address is delegated to the correct DRep.
+        # This takes one epoch, so test this only for selected combinations of build command
+        # and submit method, only when we are running on local testnet, and only if we are not
+        # running smoke tests.
+        check_delegation = (
+            use_build_cmd
+            and submit_method == submit_utils.SubmitMethods.CLI
+            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+            and "smoke" not in request.config.getoption("-m")
+        )
+
         if drep == "custom":
             reqc_deleg = reqc.cip016
         elif drep == "always_abstain":
@@ -1121,10 +1132,12 @@ class TestDelegDReps:
             signing_key_files=[payment_addr_rewards.skey_file, pool_user_rewards.stake.skey_file],
         )
 
-        # Make sure we have enough time to finish the registration/delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
-        )
+        if check_delegation:
+            # Make sure we have enough time to finish the registration/delegation in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+            )
+
         init_epoch = cluster.g_query.get_epoch()
 
         tx_output = clusterlib_utils.build_and_submit_tx(
@@ -1136,10 +1149,7 @@ class TestDelegDReps:
             tx_files=tx_files,
             deposit=deposit_address_amt,
         )
-
-        assert cluster.g_query.get_epoch() == init_epoch, (
-            "Epoch changed and it would affect other checks"
-        )
+        submit_epoch = cluster.g_query.get_epoch()
 
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
@@ -1173,18 +1183,9 @@ class TestDelegDReps:
             - deposit_address_amt
         ), f"Incorrect balance for source address `{payment_addr_rewards.address}`"
 
-        # Check that stake address is delegated to the correct DRep.
-        # This takes one epoch, so test this only for selected combinations of build command
-        # and submit method, only when we are running on local testnet, and only if we are not
-        # running smoke tests.
-        check_delegation = (
-            use_build_cmd
-            and submit_method == submit_utils.SubmitMethods.CLI
-            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
-            and "smoke" not in request.config.getoption("-m")
-        )
-
         if check_delegation:
+            assert submit_epoch == init_epoch, "Epoch changed and it would affect other checks"
+
             deleg_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
@@ -1293,6 +1294,17 @@ class TestDelegDReps:
         deposit_address_amt = cluster.g_query.get_address_deposit()
         drep_id = custom_drep_wpr.drep_id if drep == "custom" else drep
 
+        # Check that stake address is delegated to the correct DRep.
+        # This takes one epoch, so test this only for selected combinations of build command
+        # and submit method, only when we are running on local testnet, and only if we are not
+        # running smoke tests.
+        check_delegation = (
+            use_build_cmd
+            and submit_method == submit_utils.SubmitMethods.CLI
+            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+            and "smoke" not in request.config.getoption("-m")
+        )
+
         # Create stake address registration cert
         reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -1317,10 +1329,12 @@ class TestDelegDReps:
             signing_key_files=[payment_addr_wpr.skey_file, pool_user_wpr.stake.skey_file],
         )
 
-        # Make sure we have enough time to finish the registration/delegation in one epoch
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
-        )
+        if check_delegation:
+            # Make sure we have enough time to finish the registration/delegation in one epoch
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_LEDGER_STATE
+            )
+
         init_epoch = cluster.g_query.get_epoch()
 
         tx_output = clusterlib_utils.build_and_submit_tx(
@@ -1332,10 +1346,7 @@ class TestDelegDReps:
             tx_files=tx_files,
             deposit=deposit_address_amt,
         )
-
-        assert cluster.g_query.get_epoch() == init_epoch, (
-            "Epoch changed and it would affect other checks"
-        )
+        submit_epoch = cluster.g_query.get_epoch()
 
         # Deregister stake address so it doesn't affect stake distribution
         def _deregister():
@@ -1366,16 +1377,9 @@ class TestDelegDReps:
             - deposit_address_amt
         ), f"Incorrect balance for source address `{payment_addr_wpr.address}`"
 
-        # Check that stake address is delegated to the correct DRep.
-        # This takes one epoch, so test this only for selected combinations of build command
-        # and submit method, only when we are running on local testnet, and only if we are not
-        # running smoke tests.
-        if (
-            use_build_cmd
-            and submit_method == submit_utils.SubmitMethods.CLI
-            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
-            and "smoke" not in request.config.getoption("-m")
-        ):
+        if check_delegation:
+            assert submit_epoch == init_epoch, "Epoch changed and it would affect other checks"
+
             cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
             deleg_state = clusterlib_utils.get_delegation_state(cluster_obj=cluster)
             stake_addr_hash = cluster.g_stake_address.get_stake_vkey_hash(
