@@ -323,7 +323,7 @@ def find_cert_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
 def filter_addr_files(
     file_paths: tp.Generator[pl.Path, None, None],
 ) -> tp.Generator[pl.Path, None, None]:
-    """Skip the '*_pycurrent' symlinks to pytest temp dirs and faucet address."""
+    r"""Skip the '\*_pycurrent' symlinks to pytest temp dirs and faucet address."""
     return (
         f
         for f in file_paths

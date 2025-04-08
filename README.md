@@ -19,7 +19,7 @@ The easiest way to run the tests is by using GitHub Actions.
 
 ## Running tests using Nix
 
-1. Install and configure Nix by following the [cardano-node documentation](https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
+1. Install and configure Nix by following the [cardano-node documentation](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix).
 
 1. Clone this repository.
 
@@ -145,7 +145,7 @@ For example:
 
 ## Local usage for test development (useful only for test developers)
 
-Install and configure Nix by following the [cardano-node documentation](https://github.com/IntersectMBO/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md).
+Install and configure Nix by following the [cardano-node documentation](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix).
 Install and configure Poetry by following the [Poetry documentation](https://python-poetry.org/docs/#installation).
 
 ### Preparing Python virtual environment
