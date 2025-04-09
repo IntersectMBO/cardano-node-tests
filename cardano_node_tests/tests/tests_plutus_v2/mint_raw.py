@@ -70,7 +70,7 @@ def _fund_issuer(
 
     tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_issuer",
         txouts=txouts,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
@@ -169,7 +169,7 @@ def check_missing_builtin(
         *mint_txouts,
     ]
     tx_raw_output_step2 = cluster_obj.g_transaction.build_raw_tx_bare(
-        out_file=f"{temp_template}_step2_tx.body",
+        out_file=f"{temp_template}_mint_tx.body",
         txins=mint_utxos,
         txouts=txouts_step2,
         mint=plutus_mint_data,
@@ -179,7 +179,7 @@ def check_missing_builtin(
     tx_signed_step2 = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output_step2.out_file,
         signing_key_files=tx_files_step2.signing_key_files,
-        tx_name=f"{temp_template}_step2",
+        tx_name=f"{temp_template}_mint",
     )
 
     err = ""

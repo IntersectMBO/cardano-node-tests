@@ -343,6 +343,7 @@ def _create_register_pool(
     Common functionality for tests.
     """
     temp_dir = temp_dir.expanduser().resolve()
+    temp_template_reg = f"{temp_template}_reg_pool"
 
     src_address = pool_owners[0].payment.address
     src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
@@ -353,11 +354,11 @@ def _create_register_pool(
             cluster_obj=cluster_obj,
             pool_data=pool_data,
             pool_owners=pool_owners,
-            tx_name=temp_template,
+            tx_name=temp_template_reg,
         )
     else:
         pool_creation_out = cluster_obj.g_stake_pool.create_stake_pool(
-            pool_data=pool_data, pool_owners=pool_owners, tx_name=temp_template
+            pool_data=pool_data, pool_owners=pool_owners, tx_name=temp_template_reg
         )
         dbsync_utils.check_tx(
             cluster_obj=cluster_obj, tx_raw_output=pool_creation_out.tx_raw_output
@@ -372,7 +373,7 @@ def _create_register_pool(
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 epoch=cluster_obj.g_query.get_epoch() + depoch,
                 pool_name=pool_data.pool_name,
-                tx_name=temp_template,
+                tx_name=f"{temp_template}_cleanup",
             )
 
     if request is not None:
@@ -410,6 +411,7 @@ def _create_register_pool_delegate_stake_tx(
     Common functionality for tests.
     """
     temp_dir = temp_dir.expanduser().resolve()
+    temp_template_reg_deleg = f"{temp_template}_reg_pool_deleg"
 
     # Create node VRF key pair
     node_vrf = cluster_obj.g_node.gen_vrf_key_pair(node_name=pool_data.pool_name)
@@ -419,7 +421,7 @@ def _create_register_pool_delegate_stake_tx(
     # Create stake address registration certs
     stake_addr_reg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr{i}",
+            addr_name=f"{temp_template_reg_deleg}_addr{i}",
             deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
             stake_vkey_file=p.stake.vkey_file,
         )
@@ -429,7 +431,7 @@ def _create_register_pool_delegate_stake_tx(
     # Create stake address delegation cert
     stake_addr_deleg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
-            addr_name=f"{temp_template}_addr{i}",
+            addr_name=f"{temp_template_reg_deleg}_addr{i}",
             stake_vkey_file=p.stake.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
         )
@@ -464,7 +466,7 @@ def _create_register_pool_delegate_stake_tx(
     if use_build_cmd:
         tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
-            tx_name=f"{temp_template}_reg_deleg",
+            tx_name=temp_template_reg_deleg,
             tx_files=tx_files,
             fee_buffer=2_000_000,
             witness_override=len(pool_owners) * 3,
@@ -472,12 +474,12 @@ def _create_register_pool_delegate_stake_tx(
         tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_reg_deleg",
+            tx_name=temp_template_reg_deleg,
         )
         cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
         tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
+            src_address=src_address, tx_name=temp_template_reg_deleg, tx_files=tx_files
         )
 
     # Deregister stake pool
@@ -489,7 +491,7 @@ def _create_register_pool_delegate_stake_tx(
                 cold_key_pair=node_cold,
                 epoch=cluster_obj.g_query.get_epoch() + depoch,
                 pool_name=pool_data.pool_name,
-                tx_name=f"{temp_template}_dereg",
+                tx_name=f"{temp_template}_cleanup",
             )
 
     if request is not None:
@@ -1075,7 +1077,7 @@ class TestStakePool:
             signing_key_files=pool_creation_out.tx_raw_output.tx_files.signing_key_files,
         )
         tx_raw_output = cluster.g_transaction.send_tx(
-            src_address=src_address, tx_name=temp_template, tx_files=tx_files
+            src_address=src_address, tx_name=f"{temp_template}_rereg", tx_files=tx_files
         )
 
         # Deregister stake pool
@@ -1087,7 +1089,7 @@ class TestStakePool:
                     cold_key_pair=pool_creation_out.cold_key_pair,
                     epoch=cluster.g_query.get_epoch() + depoch,
                     pool_name=pool_data.pool_name,
-                    tx_name=temp_template,
+                    tx_name=f"{temp_template}_cleanup",
                 )
 
         request.addfinalizer(_deregister)
@@ -1220,7 +1222,7 @@ class TestStakePool:
         )
         tx_raw_output = cluster.g_transaction.send_tx(
             src_address=src_address,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_rereg_pool",
             tx_files=tx_files,
             deposit=0,  # no additional deposit, the pool is already registered
         )
@@ -1234,7 +1236,7 @@ class TestStakePool:
                     cold_key_pair=pool_creation_out.cold_key_pair,
                     epoch=cluster.g_query.get_epoch() + depoch,
                     pool_name=pool_data.pool_name,
-                    tx_name=temp_template,
+                    tx_name=f"{temp_template}_cleanup",
                 )
 
         request.addfinalizer(_deregister)
@@ -1367,7 +1369,7 @@ class TestStakePool:
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
-                tx_name=temp_template,
+                tx_name=f"{temp_template}_rereg",
                 deposit=0,  # no additional deposit, the pool is already registered
             )
         else:
@@ -1376,7 +1378,7 @@ class TestStakePool:
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
-                tx_name=temp_template,
+                tx_name=f"{temp_template}_rereg",
                 deposit=0,  # no additional deposit, the pool is already registered
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -1484,7 +1486,7 @@ class TestStakePool:
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
-                tx_name=temp_template,
+                tx_name=f"{temp_template}_rereg",
                 deposit=0,  # no additional deposit, the pool is already registered
             )
         else:
@@ -1493,7 +1495,7 @@ class TestStakePool:
                 pool_owners=pool_owners,
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
-                tx_name=temp_template,
+                tx_name=f"{temp_template}_rereg",
                 deposit=0,  # no additional deposit, the pool is already registered
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -1626,7 +1628,7 @@ class TestStakePool:
                     cold_key_pair=node_cold,
                     epoch=cluster.g_query.get_epoch() + depoch,
                     pool_name=pool_data.pool_name,
-                    tx_name=temp_template,
+                    tx_name=f"{temp_template}_cleanup",
                 )
 
         request.addfinalizer(_deregister)

@@ -39,7 +39,7 @@ def _fund_issuer(
     ]
     tx_output = cluster_obj.g_transaction.build_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_issuer",
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
@@ -49,7 +49,7 @@ def _fund_issuer(
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_issuer",
     )
 
     submit_utils.submit_tx(

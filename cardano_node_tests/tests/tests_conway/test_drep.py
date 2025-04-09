@@ -568,7 +568,7 @@ class TestDReps:
 
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
-                    name_template=f"{temp_template}_ret",
+                    name_template=f"{temp_template}_ret_cleanup",
                     src_address=payment_addr.address,
                     tx_files=tx_files_ret,
                     deposit=-reg_drep.deposit,
@@ -844,7 +844,7 @@ class TestNegativeDReps:
                 clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
                     pool_user=pool_user_rewards,
-                    name_template=temp_template,
+                    name_template=f"{temp_template}_cleanup",
                     deposit_amt=deposit_address_amt,
                 )
 
@@ -1158,7 +1158,7 @@ class TestDelegDReps:
                 clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
                     pool_user=pool_user_rewards,
-                    name_template=temp_template,
+                    name_template=f"{temp_template}_cleanup",
                     deposit_amt=deposit_address_amt,
                 )
                 reqc.cli028.success()
@@ -1354,7 +1354,7 @@ class TestDelegDReps:
                 clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
                     pool_user=pool_user_wpr,
-                    name_template=temp_template,
+                    name_template=f"{temp_template}_cleanup",
                     deposit_amt=deposit_address_amt,
                 )
 
@@ -1501,7 +1501,7 @@ class TestDelegDReps:
 
         clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            name_template=temp_template,
+            name_template=f"{temp_template}_deleg_drep1",
             src_address=payment_addr_rewards.address,
             use_build_cmd=True,
             tx_files=tx_files,
@@ -1514,7 +1514,7 @@ class TestDelegDReps:
                 clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
                     pool_user=pool_user_rewards,
-                    name_template=temp_template,
+                    name_template=f"{temp_template}_cleanup",
                     deposit_amt=deposit_address_amt,
                 )
 
@@ -1545,7 +1545,7 @@ class TestDelegDReps:
 
         clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
-            name_template=temp_template,
+            name_template=f"{temp_template}_deleg_drep2",
             src_address=payment_addr_rewards.address,
             use_build_cmd=True,
             tx_files=tx_files,

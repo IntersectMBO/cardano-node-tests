@@ -607,7 +607,7 @@ class TestReferenceScripts:
 
         tx_output_step1 = cluster.g_transaction.send_tx(
             src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step1",
+            tx_name=f"{temp_template}_create_ref_utxo",
             txouts=txouts_step1,
             tx_files=tx_files,
         )
@@ -627,7 +627,7 @@ class TestReferenceScripts:
 
         tx_output_step2 = cluster.g_transaction.send_tx(
             src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step1",
+            tx_name=f"{temp_template}_spend_ref_utxo",
             txouts=txouts_step2,
             tx_files=tx_files,
         )

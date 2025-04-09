@@ -680,14 +680,14 @@ class TestReferenceScripts:
 
         tx_output_step1 = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step1",
+            tx_name=f"{temp_template}_create_ref_utxo",
             tx_files=tx_files,
             txouts=txouts_step1,
         )
         tx_signed_step1 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_step1.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_step1",
+            tx_name=f"{temp_template}_create_ref_utxo",
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
 
@@ -709,7 +709,7 @@ class TestReferenceScripts:
 
         tx_output_step2 = cluster.g_transaction.build_tx(
             src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend_ref_utxo",
             tx_files=tx_files,
             txouts=txouts_step2,
             readonly_reference_txins=reference_script,
@@ -717,7 +717,7 @@ class TestReferenceScripts:
         tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend_ref_utxo",
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=tx_output_step2.txins)
 

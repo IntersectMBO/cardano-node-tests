@@ -78,7 +78,7 @@ def _build_fund_script(
 
     tx_output = cluster_obj.g_transaction.build_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_script",
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
@@ -86,7 +86,7 @@ def _build_fund_script(
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_script",
     )
     cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
@@ -247,7 +247,7 @@ def _build_spend_locked_txin(  # noqa: C901
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.g_transaction.build_tx(
                 src_address=payment_addr.address,
-                tx_name=f"{temp_template}_step2",
+                tx_name=f"{temp_template}_spend",
                 tx_files=tx_files,
                 txins=txins,
                 txouts=txouts,
@@ -263,7 +263,7 @@ def _build_spend_locked_txin(  # noqa: C901
 
     tx_output = cluster_obj.g_transaction.build_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step2",
+        tx_name=f"{temp_template}_spend",
         tx_files=tx_files,
         txins=txins,
         txouts=txouts,
@@ -278,7 +278,7 @@ def _build_spend_locked_txin(  # noqa: C901
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step2",
+        tx_name=f"{temp_template}_spend",
     )
 
     if not submit_tx:
@@ -324,7 +324,7 @@ def _build_spend_locked_txin(  # noqa: C901
     # Calculate cost of Plutus script
     plutus_costs = cluster_obj.g_transaction.calculate_plutus_script_cost(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step2",
+        tx_name=f"{temp_template}_spend",
         tx_files=tx_files,
         txins=txins,
         txouts=txouts,
