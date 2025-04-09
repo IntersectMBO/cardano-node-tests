@@ -306,6 +306,7 @@ class TestReadonlyReferenceInputs:
             payment_addrs[1],
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
+            amount=10_000_000,
         )
 
         # Create the reference input

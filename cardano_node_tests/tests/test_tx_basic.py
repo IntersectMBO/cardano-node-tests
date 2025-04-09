@@ -55,23 +55,24 @@ class TestBasicTransactions:
         """Create 2 new Byron payment addresses."""
         fixture_cache: cluster_management.FixtureCache[list[clusterlib.AddressRecord] | None]
         with cluster_manager.cache_fixture() as fixture_cache:
-            if fixture_cache.value is not None:
-                return fixture_cache.value
-
-            new_byron_addrs = [
-                clusterlib_utils.gen_byron_addr(
-                    cluster_obj=cluster,
-                    name_template=f"addr_payment_ci{cluster_manager.cluster_instance_num}_{i}",
-                )
-                for i in range(2)
-            ]
-            fixture_cache.value = new_byron_addrs
+            if fixture_cache.value is None:
+                new_byron_addrs = [
+                    clusterlib_utils.gen_byron_addr(
+                        cluster_obj=cluster,
+                        name_template=f"addr_payment_ci{cluster_manager.cluster_instance_num}_{i}",
+                    )
+                    for i in range(2)
+                ]
+                fixture_cache.value = new_byron_addrs
+            else:
+                new_byron_addrs = fixture_cache.value
 
         # Fund source addresses
         clusterlib_utils.fund_from_faucet(
             *new_byron_addrs,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
+            amount=10_000_000,
         )
         return new_byron_addrs
 
@@ -129,7 +130,7 @@ class TestBasicTransactions:
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
-    @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
+    @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
     )
@@ -1172,6 +1173,7 @@ class TestMultiInOut:
             num=201,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
+            fund_just_once=True,
             amount=90_000_000_000,
         )
         return addrs

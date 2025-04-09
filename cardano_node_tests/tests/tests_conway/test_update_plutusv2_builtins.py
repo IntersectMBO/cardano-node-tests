@@ -40,7 +40,6 @@ def pool_user_lgp(
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         caching_key=key,
-        amount=2_000_000_000,
     )
 
 

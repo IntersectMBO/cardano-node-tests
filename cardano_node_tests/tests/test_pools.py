@@ -1895,6 +1895,7 @@ class TestNegative:
             num=2,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
+            fund_just_once=True,
             amount=600_000_000,
         )
         return created_users

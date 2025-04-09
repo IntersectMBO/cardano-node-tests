@@ -178,7 +178,6 @@ class TestBasic:
             num=20,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
-            amount=10_000_000_000,
         )
         return addrs
 
@@ -837,6 +836,7 @@ class TestNegative:
             num=10,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
+            fund_just_once=True,
         )
         return addrs
 
@@ -2291,7 +2291,6 @@ class TestReferenceUTxO:
             num=5,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
-            amount=100_000_000,
         )
         return addrs
 

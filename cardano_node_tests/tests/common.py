@@ -343,6 +343,7 @@ def get_payment_addrs(
     num: int,
     fund_idx: list[int] | None = None,
     caching_key: str = "",
+    fund_just_once: bool = False,
     amount: int | None = None,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
@@ -360,17 +361,21 @@ def get_payment_addrs(
     if caching_key:
         fixture_cache: cluster_management.FixtureCache[list[clusterlib.AddressRecord] | None]
         with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value is not None:
-                return fixture_cache.value
-
-            addrs = _create_addrs()
-            fixture_cache.value = addrs
+            if fixture_cache.value is None:
+                addrs = _create_addrs()
+                fixture_cache.value = addrs
+            else:
+                addrs = fixture_cache.value
+                if fund_just_once:
+                    return addrs
     else:
         addrs = _create_addrs()
 
     # Fund source addresses
     fund_addresses = addrs if fund_idx is None else [addrs[i] for i in fund_idx]
     if fund_addresses:
+        if amount is None:
+            amount = 200_000_000
         clusterlib_utils.fund_from_faucet(
             *fund_addresses,
             cluster_obj=cluster_obj,
@@ -386,6 +391,7 @@ def get_payment_addr(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str = "",
+    fund_just_once: bool = False,
     amount: int | None = None,
 ) -> clusterlib.AddressRecord:
     """Create a single new payment address."""
@@ -395,6 +401,7 @@ def get_payment_addr(
         cluster_obj=cluster_obj,
         num=1,
         caching_key=caching_key,
+        fund_just_once=fund_just_once,
         amount=amount,
     )[0]
 
@@ -406,6 +413,7 @@ def get_pool_users(
     num: int,
     fund_idx: list[int] | None = None,
     caching_key: str = "",
+    fund_just_once: bool = False,
     amount: int | None = None,
 ) -> list[clusterlib.PoolUser]:
     """Create new pool users."""
@@ -424,17 +432,22 @@ def get_pool_users(
     if caching_key:
         fixture_cache: cluster_management.FixtureCache[list[clusterlib.PoolUser] | None]
         with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
-            if fixture_cache.value is not None:
-                return fixture_cache.value
+            if fixture_cache.value is None:
+                users = _create_pool_users()
+                fixture_cache.value = users
+            else:
+                users = fixture_cache.value
+                if fund_just_once:
+                    return users
 
-            users = _create_pool_users()
-            fixture_cache.value = users
     else:
         users = _create_pool_users()
 
     # Fund source addresses
     fund_users = users if fund_idx is None else [users[i] for i in fund_idx]
     if fund_users:
+        if amount is None:
+            amount = 200_000_000
         clusterlib_utils.fund_from_faucet(
             *fund_users,
             cluster_obj=cluster_obj,
@@ -450,6 +463,7 @@ def get_pool_user(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str = "",
+    fund_just_once: bool = False,
     amount: int | None = None,
 ) -> clusterlib.PoolUser:
     """Create a single new pool user."""
@@ -459,6 +473,7 @@ def get_pool_user(
         cluster_obj=cluster_obj,
         num=1,
         caching_key=caching_key,
+        fund_just_once=fund_just_once,
         amount=amount,
     )[0]
 
@@ -468,6 +483,7 @@ def get_registered_pool_user(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str = "",
+    fund_just_once: bool = False,
     amount: int | None = None,
 ) -> clusterlib.PoolUser:
     """Create new registered pool users."""
@@ -476,6 +492,7 @@ def get_registered_pool_user(
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,
         caching_key=caching_key,
+        fund_just_once=fund_just_once,
         amount=amount,
     )
 

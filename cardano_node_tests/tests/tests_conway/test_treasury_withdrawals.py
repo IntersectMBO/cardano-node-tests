@@ -66,6 +66,7 @@ def pool_user_ug(
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         caching_key=key,
+        amount=500_000_000,
     )
 
 
@@ -83,6 +84,7 @@ def pool_user_ug_treasury(
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
         caching_key=key,
+        amount=500_000_000,
     )
 
 
