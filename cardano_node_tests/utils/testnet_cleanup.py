@@ -77,10 +77,19 @@ def reregister_stake_addr(
                 deposit=rereg_deposit,
             )
         except clusterlib.CLIError:
-            LOGGER.exception(f"Failed to re-register stake address '{stake_addr.address}'")
+            LOGGER.exception(
+                f"Failed to submit stake address re-registration '{stake_addr.address}'"
+            )
         else:
-            LOGGER.debug(f"Re-registered stake address '{stake_addr.address}'")
-            stake_addr_info = cluster_obj.g_query.get_stake_addr_info(stake_addr.address)
+            for ch in range(3):
+                if ch > 0:
+                    cluster_obj.wait_for_new_block()
+                stake_addr_info = cluster_obj.g_query.get_stake_addr_info(stake_addr.address)
+                if stake_addr_info:
+                    LOGGER.debug(f"Re-registered stake address '{stake_addr.address}'")
+                    break
+            else:
+                LOGGER.exception(f"Failed to re-register stake address '{stake_addr.address}'")
 
     return stake_addr_info
 
