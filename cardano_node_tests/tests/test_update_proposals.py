@@ -368,7 +368,6 @@ class TestNegativeCostModels:
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             caching_key=helpers.get_current_line_str(),
-            fund_just_once=True,
         )
         return addr
 

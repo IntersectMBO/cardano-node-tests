@@ -836,7 +836,6 @@ class TestNegative:
             num=10,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
-            fund_just_once=True,
         )
         return addrs
 
