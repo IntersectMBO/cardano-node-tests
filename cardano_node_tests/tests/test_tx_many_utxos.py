@@ -47,7 +47,6 @@ class TestManyUTXOs:
             cluster_obj=cluster,
             num=3,
             fund_idx=[0],
-            fund_just_once=True,
             amount=800_000_000_000,
         )
         return addrs

@@ -1173,7 +1173,6 @@ class TestMultiInOut:
             num=201,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
-            fund_just_once=True,
             amount=90_000_000_000,
         )
         return addrs
