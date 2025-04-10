@@ -819,7 +819,7 @@ class TestCommittee:
 
             tx_output_res = clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
-                name_template=f"{temp_template}_res",
+                name_template=f"{temp_template}_res_member",
                 src_address=pool_user_lg.payment.address,
                 tx_files=tx_files_res,
             )
@@ -951,7 +951,7 @@ class TestCommittee:
 
                 clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
-                    name_template=f"{temp_template}_res",
+                    name_template=f"{temp_template}_res_active",
                     src_address=pool_user_lg.payment.address,
                     use_build_cmd=True,
                     tx_files=tx_files_res,

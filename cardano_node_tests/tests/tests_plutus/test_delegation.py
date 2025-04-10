@@ -126,6 +126,8 @@ def register_delegate_stake_addr(
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Submit registration certificate and delegate to pool."""
+    temp_template = f"{temp_template}_reg_deleg"
+
     # Create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
         addr_name=f"{temp_template}_addr0",
@@ -177,7 +179,7 @@ def register_delegate_stake_addr(
     plutus_costs = (
         cluster_obj.g_transaction.calculate_plutus_script_cost(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_reg_deleg",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[reg_cert_script, deleg_cert_script],
@@ -190,7 +192,7 @@ def register_delegate_stake_addr(
 
     tx_output = clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster_obj,
-        name_template=f"{temp_template}_reg_deleg",
+        name_template=temp_template,
         src_address=pool_user.payment.address,
         txins=txins,
         use_build_cmd=use_build_cmd,
@@ -225,6 +227,8 @@ def register_stake_addr(
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Register a stake address."""
+    temp_template = f"{temp_template}_reg"
+
     # Create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
         addr_name=f"{temp_template}_addr0",
@@ -249,7 +253,7 @@ def register_stake_addr(
     if use_build_cmd:
         tx_raw_output_reg = cluster_obj.g_transaction.build_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_reg",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[reg_cert_script],
@@ -259,7 +263,7 @@ def register_stake_addr(
         # Calculate cost of Plutus script
         plutus_costs_reg = cluster_obj.g_transaction.calculate_plutus_script_cost(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_reg",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[reg_cert_script],
@@ -269,13 +273,13 @@ def register_stake_addr(
         tx_signed_reg = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_reg.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_reg",
+            tx_name=temp_template,
         )
         cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_reg, txins=tx_raw_output_reg.txins)
     else:
         tx_raw_output_reg = cluster_obj.g_transaction.send_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_reg",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[reg_cert_script],
@@ -308,6 +312,8 @@ def delegate_stake_addr(
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Delegate a stake address to a pool."""
+    temp_template = f"{temp_template}_deleg"
+
     # Create stake address delegation cert
     stake_addr_deleg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
         addr_name=f"{temp_template}_addr0",
@@ -332,7 +338,7 @@ def delegate_stake_addr(
     if use_build_cmd:
         tx_raw_output_deleg = cluster_obj.g_transaction.build_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_deleg",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[deleg_cert_script],
@@ -342,7 +348,7 @@ def delegate_stake_addr(
         # Calculate cost of Plutus script
         plutus_costs_deleg = cluster_obj.g_transaction.calculate_plutus_script_cost(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_deleg",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[deleg_cert_script],
@@ -352,7 +358,7 @@ def delegate_stake_addr(
         tx_signed_deleg = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_deleg.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_deleg",
+            tx_name=temp_template,
         )
         cluster_obj.g_transaction.submit_tx(
             tx_file=tx_signed_deleg, txins=tx_raw_output_deleg.txins
@@ -360,7 +366,7 @@ def delegate_stake_addr(
     else:
         tx_raw_output_deleg = cluster_obj.g_transaction.send_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_deleg",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[deleg_cert_script],
@@ -392,6 +398,8 @@ def deregister_stake_addr(
     use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Deregister stake address."""
+    temp_template = f"{temp_template}_dereg_withdraw"
+
     src_payment_balance = cluster_obj.g_query.get_address_balance(pool_user.payment.address)
     reward_balance = cluster_obj.g_query.get_stake_addr_info(
         pool_user.stake.address
@@ -429,7 +437,7 @@ def deregister_stake_addr(
     if use_build_cmd:
         tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_dereg_withdraw",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[dereg_cert_script],
@@ -440,7 +448,7 @@ def deregister_stake_addr(
         # Calculate cost of Plutus script
         plutus_costs = cluster_obj.g_transaction.calculate_plutus_script_cost(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_dereg_withdraw",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[dereg_cert_script],
@@ -451,14 +459,14 @@ def deregister_stake_addr(
         tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_reg_deleg",
+            tx_name=temp_template,
         )
 
         cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
         tx_raw_output = cluster_obj.g_transaction.send_tx(
             src_address=pool_user.payment.address,
-            tx_name=f"{temp_template}_dereg_withdraw",
+            tx_name=temp_template,
             txins=txins,
             tx_files=tx_files,
             complex_certs=[dereg_cert_script],

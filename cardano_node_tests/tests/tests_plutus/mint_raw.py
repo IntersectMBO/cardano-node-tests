@@ -41,7 +41,7 @@ def _fund_issuer(
 
     tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_issuer",
         txouts=txouts,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892

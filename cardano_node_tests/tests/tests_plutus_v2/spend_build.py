@@ -63,6 +63,8 @@ def _build_fund_script(
 
     Uses `cardano-cli transaction build` command for building the transactions.
     """
+    temp_template = f"{temp_template}_fund_script"
+
     # For mypy
     assert plutus_op.execution_cost
 
@@ -124,7 +126,7 @@ def _build_fund_script(
 
     tx_output = cluster.g_transaction.build_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=temp_template,
         tx_files=tx_files,
         txouts=txouts,
         fee_buffer=2_000_000,
@@ -133,7 +135,7 @@ def _build_fund_script(
     tx_signed = cluster.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,
         signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step1",
+        tx_name=temp_template,
     )
     cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_output.txins)
 
@@ -184,9 +186,9 @@ def _build_reference_txin(
 
     Uses `cardano-cli transaction build` command for building the transaction.
     """
-    dst_addr = dst_addr or cluster.g_address.gen_payment_addr_and_keys(
-        name=f"{temp_template}_readonly_input"
-    )
+    temp_template = f"{temp_template}_readonly_input"
+
+    dst_addr = dst_addr or cluster.g_address.gen_payment_addr_and_keys(name=temp_template)
 
     txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])

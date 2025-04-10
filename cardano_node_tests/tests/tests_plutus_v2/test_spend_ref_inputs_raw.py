@@ -128,7 +128,7 @@ class TestReadonlyReferenceInputs:
 
         tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addrs[0].address,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend",
             txouts=txouts_redeem,
             readonly_reference_txins=readonly_reference_txins,
             tx_files=tx_files_redeem,
@@ -224,7 +224,7 @@ class TestReadonlyReferenceInputs:
         try:
             tx_output_redeem = cluster.g_transaction.send_tx(
                 src_address=payment_addrs[0].address,
-                tx_name=f"{temp_template}_step2",
+                tx_name=f"{temp_template}_spend",
                 txins=reference_input,
                 txouts=txouts_redeem,
                 readonly_reference_txins=reference_input,
@@ -405,7 +405,7 @@ class TestNegativeReadonlyReferenceInputs:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.send_tx(
                 src_address=payment_addrs[0].address,
-                tx_name=f"{temp_template}_step2",
+                tx_name=f"{temp_template}_spend_fail",
                 txouts=txouts_redeem,
                 readonly_reference_txins=reference_input,
                 tx_files=tx_files_redeem,
@@ -497,7 +497,7 @@ class TestNegativeReadonlyReferenceInputs:
         try:
             cluster.g_transaction.send_tx(
                 src_address=payment_addrs[0].address,
-                tx_name=f"{temp_template}_step2",
+                tx_name=f"{temp_template}_spend",
                 txouts=txouts_redeem,
                 tx_files=tx_files_redeem,
                 fee=redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,

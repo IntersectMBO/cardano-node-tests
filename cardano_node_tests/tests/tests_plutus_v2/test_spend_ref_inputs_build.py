@@ -134,7 +134,7 @@ class TestReadonlyReferenceInputs:
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend",
             txins=[fee_txin_redeem],
             tx_files=tx_files_redeem,
             readonly_reference_txins=readonly_reference_txins,
@@ -146,7 +146,7 @@ class TestReadonlyReferenceInputs:
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend",
         )
         cluster.g_transaction.submit_tx(
             tx_file=tx_signed, txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins]
@@ -248,7 +248,7 @@ class TestReadonlyReferenceInputs:
 
         tx_output_redeem = cluster.g_transaction.build_tx(
             src_address=payment_addrs[0].address,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend",
             txins=[*reference_input, fee_txin_redeem],
             tx_files=tx_files_redeem,
             readonly_reference_txins=reference_input,
@@ -260,7 +260,7 @@ class TestReadonlyReferenceInputs:
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
             signing_key_files=tx_files_redeem.signing_key_files,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend",
         )
         try:
             cluster.g_transaction.submit_tx(
@@ -480,7 +480,7 @@ class TestNegativeReadonlyReferenceInputs:
 
         tx_output_spend_reference_input = cluster.g_transaction.build_tx(
             src_address=payment_addrs[1].address,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend",
             txins=reference_input,
             txouts=[clusterlib.TxOut(address=payment_addrs[0].address, amount=-1)],
         )
@@ -488,7 +488,7 @@ class TestNegativeReadonlyReferenceInputs:
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_spend_reference_input.out_file,
             signing_key_files=[payment_addrs[1].skey_file],
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_spend",
         )
         cluster.g_transaction.submit_tx(
             tx_file=tx_signed, txins=tx_output_spend_reference_input.txins
@@ -532,7 +532,7 @@ class TestNegativeReadonlyReferenceInputs:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
-                tx_name=f"{temp_template}_step2",
+                tx_name=f"{temp_template}_spend_fail",
                 txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 readonly_reference_txins=reference_input,
@@ -634,7 +634,7 @@ class TestNegativeReadonlyReferenceInputs:
         try:
             cluster.g_transaction.build_tx(
                 src_address=payment_addrs[0].address,
-                tx_name=f"{temp_template}_step2",
+                tx_name=f"{temp_template}_spend_fail",
                 txins=[fee_txin_redeem],
                 tx_files=tx_files_redeem,
                 readonly_reference_txins=reference_input,

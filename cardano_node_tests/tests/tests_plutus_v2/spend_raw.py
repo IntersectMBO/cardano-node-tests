@@ -118,7 +118,7 @@ def _fund_script(
 
     tx_raw_output = cluster.g_transaction.send_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_script",
         txouts=txouts,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
@@ -172,16 +172,16 @@ def _build_reference_txin(
 
     Uses `cardano-cli transaction build-raw` command for building the transaction.
     """
-    dst_addr = dst_addr or cluster.g_address.gen_payment_addr_and_keys(
-        name=f"{temp_template}_readonly_input"
-    )
+    temp_template = f"{temp_template}_readonly_input"
+
+    dst_addr = dst_addr or cluster.g_address.gen_payment_addr_and_keys(name=temp_template)
 
     txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])
 
     tx_raw_output = cluster.g_transaction.send_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=temp_template,
         txouts=txouts,
         tx_files=tx_files,
     )

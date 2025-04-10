@@ -18,7 +18,8 @@ def create_submitted_file(tx_file: clusterlib.FileType) -> None:
         relative_target = os.path.relpath(tx_path, start=submitted_symlink.parent)
         submitted_symlink.symlink_to(relative_target)
     except OSError as exc:
-        LOGGER.warning(f"Cannot create symlink '{submitted_symlink}' -> '{relative_target}': {exc}")
+        err = f"Cannot create symlink '{submitted_symlink}' -> '{relative_target}'"
+        raise RuntimeError(err) from exc
 
 
 class ClusterLib(clusterlib.ClusterLib):

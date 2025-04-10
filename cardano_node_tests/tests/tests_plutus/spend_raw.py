@@ -81,7 +81,7 @@ def _fund_script(
 
     tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=f"{temp_template}_fund_script",
         txouts=txouts,
         tx_files=tx_files,
         # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
@@ -267,7 +267,7 @@ def _spend_locked_txin(  # noqa: C901
         )
 
     tx_raw_output = cluster_obj.g_transaction.build_raw_tx_bare(
-        out_file=f"{temp_template}_step2_tx.body",
+        out_file=f"{temp_template}_spend_tx.body",
         txins=txins,
         txouts=txouts,
         tx_files=tx_files,
@@ -280,7 +280,7 @@ def _spend_locked_txin(  # noqa: C901
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
-        tx_name=f"{temp_template}_step2",
+        tx_name=f"{temp_template}_spend",
     )
 
     if not submit_tx:

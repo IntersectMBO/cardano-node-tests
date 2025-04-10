@@ -53,9 +53,9 @@ def _build_reference_txin(
 
     Uses `cardano-cli transaction build-raw` command for building the transaction.
     """
-    dst_addr = dst_addr or cluster_obj.g_address.gen_payment_addr_and_keys(
-        name=f"{temp_template}_readonly_input"
-    )
+    temp_template = f"{temp_template}_readonly_input"
+
+    dst_addr = dst_addr or cluster_obj.g_address.gen_payment_addr_and_keys(name=temp_template)
 
     txouts = [
         clusterlib.TxOut(
@@ -68,7 +68,7 @@ def _build_reference_txin(
 
     tx_raw_output = cluster_obj.g_transaction.send_tx(
         src_address=payment_addr.address,
-        tx_name=f"{temp_template}_step1",
+        tx_name=temp_template,
         txouts=txouts,
         tx_files=tx_files,
     )
@@ -179,7 +179,7 @@ class TestMinting:
             *mint_txouts,
         ]
         tx_raw_output_step2 = cluster.g_transaction.build_raw_tx_bare(
-            out_file=f"{temp_template}_step2_tx.body",
+            out_file=f"{temp_template}_mint_tx.body",
             txins=mint_utxos,
             txouts=txouts_step2,
             mint=plutus_mint_data,
@@ -191,7 +191,7 @@ class TestMinting:
         tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_mint",
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
 
@@ -334,7 +334,7 @@ class TestMinting:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 cluster.g_transaction.send_tx(
                     src_address=payment_addr.address,
-                    tx_name=f"{temp_template}_step2",
+                    tx_name=f"{temp_template}_mint_wrong_datum",
                     tx_files=tx_files_step2,
                     fee=minting_cost.fee + fee_txsize,
                     txins=mint_utxos,
@@ -354,7 +354,7 @@ class TestMinting:
 
         tx_raw_output = cluster.g_transaction.send_tx(
             src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
+            tx_name=f"{temp_template}_mint",
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
             txins=mint_utxos,
