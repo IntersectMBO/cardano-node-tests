@@ -344,11 +344,13 @@ def _get_funded_addresses(
     caching_key: str = "",
     amount: int | None = None,
 ) -> list:
-    """Create and fund addresses."""
-    # Initially fund the addresses with more funds, so the funds don't need to be
-    # added for each and every test.
-    init_amount = 250_000_000
-    # Refund the addresses if the amount is lower than this
+    """Create and fund addresses.
+
+    If `amount` is provided, fund once and never re-fund.
+    If `amount` is not provided, re-fund when balance drops below `min_amount`.
+    """
+    fund_amount = amount or 150_000_000
+    # Re-fund the addresses if the amount is lower than this
     min_amount = 50_000_000
 
     if caching_key:
@@ -356,27 +358,30 @@ def _get_funded_addresses(
         with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
             if fixture_cache.value is None:
                 addrs = create_func()
-                amount = amount or init_amount
                 fixture_cache.value = addrs
             else:
                 addrs = fixture_cache.value
-                # If amount was passed, fund the addresses only initially
+                # If amount is explicitly specified, skip re-funding
                 if amount:
                     return addrs
 
     else:
         addrs = create_func()
-        amount = amount or init_amount
 
     # Fund source addresses
-    fund_addrs = addrs if fund_idx is None else [addrs[i] for i in fund_idx]
+    selected_addrs = addrs if fund_idx is None else [addrs[i] for i in fund_idx]
+    # The `selected_addrs` can be both `AddressRecord`s or `PoolUser`s
+    payment_addrs = ((sa.payment if hasattr(sa, "payment") else sa) for sa in selected_addrs)
+    fund_addrs: list[clusterlib.AddressRecord] = [
+        a for a in payment_addrs if cluster_obj.g_query.get_address_balance(a.address) < min_amount
+    ]
     if fund_addrs:
-        amount = amount or min_amount
         clusterlib_utils.fund_from_faucet(
             *fund_addrs,
             cluster_obj=cluster_obj,
             all_faucets=cluster_manager.cache.addrs_data,
-            amount=amount,
+            amount=fund_amount,
+            force=True,
         )
 
     return addrs
