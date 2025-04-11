@@ -109,7 +109,7 @@ def create_vote_stake(
 
     # Fund the payment address with some ADA
     clusterlib_utils.fund_from_faucet(
-        *pool_users,
+        *[u.payment for u in pool_users],
         cluster_obj=cluster_obj,
         faucet_data=cluster_manager.cache.addrs_data["faucet"],
         amount=500_000_000_000,

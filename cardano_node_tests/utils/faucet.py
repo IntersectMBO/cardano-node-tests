@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def fund_from_faucet(
-    *dst_addrs: clusterlib.AddressRecord | clusterlib.PoolUser,
+    *dst_addrs: clusterlib.AddressRecord,
     cluster_obj: clusterlib.ClusterLib,
     faucet_data: dict | None = None,
     all_faucets: dict[str, dict] | None = None,
@@ -27,16 +27,12 @@ def fund_from_faucet(
         msg = "Either `faucet_data` or `all_faucets` must be provided."
         raise AssertionError(msg)
 
-    # Get payment AddressRecord out of PoolUser
-    dst_addr_records: list[clusterlib.AddressRecord] = [
-        (r.payment if hasattr(r, "payment") else r) for r in dst_addrs
-    ]
     if isinstance(amount, int):
-        amount = [amount] * len(dst_addr_records)
+        amount = [amount] * len(dst_addrs)
 
     fund_txouts = [
         clusterlib.TxOut(address=d.address, amount=a)
-        for d, a in zip(dst_addr_records, amount)
+        for d, a in zip(dst_addrs, amount)
         if force or cluster_obj.g_query.get_address_balance(d.address) < a
     ]
     if not fund_txouts:

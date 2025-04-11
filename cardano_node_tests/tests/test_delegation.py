@@ -280,7 +280,7 @@ class TestDelegateAddr:
 
         # Fund payment addresses
         clusterlib_utils.fund_from_faucet(
-            *pool_users,
+            *[u.payment for u in pool_users],
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
             amount=200_000_000,

@@ -663,7 +663,7 @@ class TestRewards:
         # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
         # are deducted
         clusterlib_utils.fund_from_faucet(
-            pool_owner,
+            pool_owner.payment,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
             amount=900_000_000,
@@ -1189,7 +1189,7 @@ class TestRewards:
         # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
         # are deducted
         clusterlib_utils.fund_from_faucet(
-            pool2_owner,
+            pool2_owner.payment,
             cluster_obj=cluster,
             all_faucets=cluster_manager.cache.addrs_data,
             amount=900_000_000,
