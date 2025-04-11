@@ -157,7 +157,7 @@ class TestNoRewards:
             # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
-                pool_owner,
+                pool_owner.payment,
                 cluster_obj=cluster,
                 all_faucets=cluster_manager.cache.addrs_data,
                 amount=900_000_000,
@@ -317,7 +317,7 @@ class TestNoRewards:
 
             # Fund user address so it has enough funds for fees etc.
             clusterlib_utils.fund_from_faucet(
-                delegation_out.pool_user,
+                delegation_out.pool_user.payment,
                 cluster_obj=cluster,
                 all_faucets=cluster_manager.cache.addrs_data,
                 amount=900_000_000,
@@ -499,7 +499,7 @@ class TestNoRewards:
             # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
-                pool_owner,
+                pool_owner.payment,
                 cluster_obj=cluster,
                 all_faucets=cluster_manager.cache.addrs_data,
                 amount=900_000_000,
@@ -695,7 +695,7 @@ class TestNoRewards:
             # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
-                pool_reward,
+                pool_reward.payment,
                 cluster_obj=cluster,
                 all_faucets=cluster_manager.cache.addrs_data,
                 amount=900_000_000,
@@ -861,7 +861,7 @@ class TestNoRewards:
             # Fund pool owner's addresses so balance keeps higher than pool pledge after fees etc.
             # are deducted
             clusterlib_utils.fund_from_faucet(
-                pool_owner,
+                pool_owner.payment,
                 cluster_obj=cluster,
                 all_faucets=cluster_manager.cache.addrs_data,
                 amount=900_000_000,
