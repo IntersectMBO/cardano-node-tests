@@ -349,9 +349,14 @@ def _get_funded_addresses(
     If `amount` is provided, fund once and never re-fund.
     If `amount` is not provided, re-fund when balance drops below `min_amount`.
     """
-    fund_amount = amount or 150_000_000
-    # Re-fund the addresses if the amount is lower than this
-    min_amount = 50_000_000
+    if amount is None:
+        fund_amount = 150_000_000
+        # Re-fund the addresses if the amount is lower than this
+        min_amount = 50_000_000
+    else:
+        # Use the exact specified amount
+        fund_amount = amount
+        min_amount = amount
 
     if caching_key:
         fixture_cache: cluster_management.FixtureCache[list | None]
