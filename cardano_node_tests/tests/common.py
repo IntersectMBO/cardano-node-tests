@@ -246,13 +246,14 @@ def detect_fork(
 
     # Create a UTxO
     payment_rec = cluster_obj.g_address.gen_payment_addr_and_keys(
-        name=temp_template,
+        name=f"{temp_template}_fork",
     )
     tx_raw_output = clusterlib_utils.fund_from_faucet(
         payment_rec,
         cluster_obj=cluster_obj,
         all_faucets=cluster_manager.cache.addrs_data,
         amount=2_000_000,
+        tx_name=f"{temp_template}_fork",
     )
     assert tx_raw_output
     utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_raw_output)
@@ -337,6 +338,7 @@ def get_conway_address_deposit(cluster_obj: clusterlib.ClusterLib) -> int:
 
 
 def _get_funded_addresses(
+    name_template: str,
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     create_func: tp.Callable[[], list],
@@ -386,6 +388,7 @@ def _get_funded_addresses(
             cluster_obj=cluster_obj,
             all_faucets=cluster_manager.cache.addrs_data,
             amount=fund_amount,
+            tx_name=f"{name_template}_addrs",
             force=True,
         )
 
@@ -414,6 +417,7 @@ def get_payment_addrs(
         return addrs
 
     return _get_funded_addresses(
+        name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,
         create_func=_create_addrs,
@@ -464,6 +468,7 @@ def get_pool_users(
         return users
 
     return _get_funded_addresses(
+        name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,
         create_func=_create_pool_users,
