@@ -12,9 +12,6 @@ export COMMAND_ERA="$CLUSTER_ERA"
 CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
 
-NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
-export NETWORK_MAGIC
-
 # init dir for step1 binaries
 STEP1_BIN="$WORKDIR/step1-bin"
 mkdir -p "$STEP1_BIN"
@@ -38,14 +35,18 @@ if [ "$1" = "step1" ]; then
     # download and extract base revision binaries
     BASE_TAR_FILE="$WORKDIR/base_rev.tar.gz"
     curl -sSL "$BASE_TAR_URL" > "$BASE_TAR_FILE" || exit 6
-    mkdir -p "${WORKDIR}/base_rev"
-    tar -C "${WORKDIR}/base_rev" -xzf "$BASE_TAR_FILE" || exit 6
+    mkdir -p "$WORKDIR/base_rev"
+    tar -C "$WORKDIR/base_rev" -xzf "$BASE_TAR_FILE" || exit 6
     rm -f "$BASE_TAR_FILE"
     # add base revision binaries to the PATH
-    BASE_REV_BIN="${WORKDIR}/base_rev/bin"
+    BASE_REV_BIN="$WORKDIR/base_rev/bin"
     mkdir -p "$BASE_REV_BIN"
-    ln -s "${WORKDIR}/base_rev/cardano-node" "$BASE_REV_BIN/cardano-node"
-    ln -s "${WORKDIR}/base_rev/cardano-cli" "$BASE_REV_BIN/cardano-cli"
+    # TODO: there seems to be a change of layout of the archive. Since 10.2.0, there is already a `bin`
+    # dir and the binaries are already placed there.
+    if [ ! -e "$BASE_REV_BIN/cardano-node" ]; then
+      ln -s "$WORKDIR/base_rev/cardano-node" "$BASE_REV_BIN/cardano-node"
+      ln -s "$WORKDIR/base_rev/cardano-cli" "$BASE_REV_BIN/cardano-cli"
+    fi
     export PATH="${BASE_REV_BIN}:${PATH}"
   fi
 
@@ -107,6 +108,9 @@ elif [ "$1" = "step2" ]; then
   export UPGRADE_TESTS_STEP=2
   export MIXED_P2P=1
   unset ENABLE_LEGACY
+
+  NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  export NETWORK_MAGIC
 
   # Setup `cardano-cli` binary
   if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
@@ -268,6 +272,9 @@ elif [ "$1" = "step3" ]; then
 
   export UPGRADE_TESTS_STEP=3
   unset ENABLE_LEGACY MIXED_P2P
+
+  NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  export NETWORK_MAGIC
 
   # Setup `cardano-cli` binary
   if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
