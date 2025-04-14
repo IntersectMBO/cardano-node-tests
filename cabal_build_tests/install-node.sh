@@ -9,9 +9,6 @@
 # Versions
 GHC_VERSION="9.6.3"
 CABAL_VERSION="3.10.2.0"
-LIBSODIUM_VERSION="dbb48cc"
-SECP256K1_VERSION="ac83be33"
-BLST_VERSION="v0.3.10"
 
 echo ""
 
@@ -35,6 +32,7 @@ echo "Using git object '$GIT_OBJECT' of type '$GIT_OBJECT_TYPE'"
 
 cd ~ || exit 1
 
+
 # Set up ~/.local/bin
 mkdir -p ~/.local/bin || exit 1
 
@@ -53,12 +51,22 @@ if [[ "$(</etc/os-release)" == *"fedora"* ]]; then
 elif [[ "$(</etc/os-release)" == *"ubuntu"* ]]; then
   echo "Running on Ubuntu"
   apt-get update -y
-  apt-get install curl automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf liblmdb-dev -y
+  apt-get install -y curl automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libncurses-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libtool autoconf liblmdb-dev
 else
   >&2 echo "/etc/os-relase does not contain 'fedora' or 'ubuntu'"
   >&2 cat /etc/os-release
   exit 1
 fi
+
+# Versions of libraries
+IOHKNIX_VERSION="$(curl "https://raw.githubusercontent.com/IntersectMBO/cardano-node/$GIT_OBJECT/flake.lock" | jq -r '.nodes.iohkNix.locked.rev')"
+echo "iohk-nix version: $IOHKNIX_VERSION"
+LIBSODIUM_VERSION="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock" | jq -r '.nodes.sodium.original.rev')"
+echo "Using sodium version: $LIBSODIUM_VERSION"
+SECP256K1_VERSION="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock" | jq -r '.nodes.secp256k1.original.ref')"
+echo "Using secp256k1 version: ${SECP256K1_VERSION}"
+BLST_VERSION="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock" | jq -r '.nodes.blst.original.ref')"
+echo "Using blst version: ${BLST_VERSION}"
 
 # Install GHCup - the main installer for Haskell
 echo "Install GHCup"
@@ -144,7 +152,7 @@ includedir=\${prefix}/include
 Name: libblst
 Description: Multilingual BLS12-381 signature library
 URL: https://github.com/supranational/blst
-Version: 0.3.10
+Version: ${BLST_VERSION}
 Cflags: -I\${includedir}
 Libs: -L\${libdir} -lblst
 EOF

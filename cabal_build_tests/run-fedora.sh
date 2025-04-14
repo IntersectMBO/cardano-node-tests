@@ -23,7 +23,7 @@ done
 
 $container_manager build . -f fedora/Dockerfile -t cardano-node-fedora || exit 1
 $container_manager run \
-  --security-opt label:disable \
+  --security-opt label=disable \
   -it \
   -e GIT_OBJECT_TYPE="$GIT_OBJECT_TYPE" \
   -e GIT_OBJECT="$GIT_OBJECT" \
