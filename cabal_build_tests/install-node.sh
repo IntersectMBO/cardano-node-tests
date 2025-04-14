@@ -51,7 +51,7 @@ if [[ "$(</etc/os-release)" == *"fedora"* ]]; then
 elif [[ "$(</etc/os-release)" == *"ubuntu"* ]]; then
   echo "Running on Ubuntu"
   apt-get update -y
-  apt-get install curl automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf liblmdb-dev -y
+  apt-get install -y curl automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libncurses-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libtool autoconf liblmdb-dev
 else
   >&2 echo "/etc/os-relase does not contain 'fedora' or 'ubuntu'"
   >&2 cat /etc/os-release
