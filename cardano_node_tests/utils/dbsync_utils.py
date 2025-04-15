@@ -3,6 +3,7 @@
 import functools
 import itertools
 import logging
+import pickle
 import time
 import typing as tp
 
@@ -986,6 +987,9 @@ def check_proposal_refunds(stake_address: str, refunds_num: int) -> None:
 
     failures = []
     rewards_rest = list(dbsync_queries.query_address_reward_rest(stake_address))
+    LOGGER.info(rewards_rest)
+    with open("rewards_rest_records.pickle", "wb") as out_data:
+        pickle.dump(rewards_rest, out_data)
     assert refunds_num == len(rewards_rest), (
         f"Expected {refunds_num} refunds, got: {len(rewards_rest)}"
     )
