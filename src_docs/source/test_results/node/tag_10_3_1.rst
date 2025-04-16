@@ -1,7 +1,7 @@
-10.3.0
+10.3.1
 ======
 
-* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.3.0>
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.3.1>
 
 
 Regression testing on a local cluster
@@ -18,7 +18,7 @@ Regression testing on a local cluster
    :widths: 64 7
    :header-rows: 0
 
-   * - Upgrade testing (10.2.1 to 10.3.0)
+   * - Upgrade testing (10.2.1 to 10.3.1)
      - |:heavy_check_mark:|
    * - Rollback testing
      - |:heavy_check_mark:|
@@ -39,7 +39,7 @@ Release testing checklist
    :widths: 64 7
    :header-rows: 0
 
-   * - `10.3.0` pushed to `preview`
+   * - `10.3.1` pushed to `preview`
      - |:heavy_check_mark:|
    * - Regression testing against `preview`
      - |:heavy_check_mark:|
