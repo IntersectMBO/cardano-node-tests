@@ -92,7 +92,7 @@ cardano_cli_log() {
 check_spend_success() {
   for _ in {1..10}; do
     if ! cardano_cli_log conway query utxo "$@" \
-      --testnet-magic "$NETWORK_MAGIC" | grep -q lovelace; then
+      --testnet-magic "$NETWORK_MAGIC" --output-text | grep -q lovelace; then
       return 0
     fi
     sleep 3
@@ -123,6 +123,7 @@ get_txins() {
       fi
     done <<< "$(cardano_cli_log conway query utxo \
                 --testnet-magic "$NETWORK_MAGIC" \
+                --output-text \
                 --address "$txin_addr" |
                 grep -E "lovelace$|[0-9]$|lovelace \+ TxOutDatumNone$")"
 
