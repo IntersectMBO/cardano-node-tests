@@ -37,7 +37,7 @@ get_address_balance() {
         continue
       fi
       total_amount="$((total_amount + amount))"
-    done <<< "$(cardano-cli latest query utxo "$@" | grep " lovelace")"
+    done <<< "$(cardano-cli latest query utxo "$@" --output-text | grep " lovelace")"
 
     if [ "$total_amount" -gt 0 ]; then
       break
