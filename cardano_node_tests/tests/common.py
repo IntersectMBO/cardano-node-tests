@@ -345,20 +345,30 @@ def _get_funded_addresses(
     fund_idx: list[int] | None = None,
     caching_key: str = "",
     amount: int | None = None,
+    min_amount: int | None = None,
 ) -> list:
     """Create and fund addresses.
 
-    If `amount` is provided, fund once and never re-fund.
-    If `amount` is not provided, re-fund when balance drops below `min_amount`.
+    If `amount` and no `min_amount` is provided, fund once and never re-fund.
+    If `amount` is not provided, re-fund 3 * `min_amount` when balance drops below `min_amount`.
+    If both `amount` and `min_amount` are provided, re-fund `amount` when balance
+    drops below `min_amount`.
     """
-    if amount is None:
-        fund_amount = 150_000_000
-        # Re-fund the addresses if the amount is lower than this
-        min_amount = 50_000_000
-    else:
+    no_refund = amount is not None and min_amount is None
+    # Set a default minimum amount if none is provided
+    drop_amount = min_amount or 50_000_000
+
+    if no_refund:
+        assert amount  # For mypy
         # Use the exact specified amount
         fund_amount = amount
-        min_amount = amount
+        drop_amount = amount
+    elif amount is not None:
+        # Amount given: use it
+        fund_amount = amount
+    else:
+        # No amount given: fund triple the minimum
+        fund_amount = drop_amount * 3
 
     if caching_key:
         fixture_cache: cluster_management.FixtureCache[list | None]
@@ -369,7 +379,7 @@ def _get_funded_addresses(
             else:
                 addrs = fixture_cache.value
                 # If amount is explicitly specified, skip re-funding
-                if amount:
+                if no_refund:
                     return addrs
 
     else:
@@ -380,7 +390,7 @@ def _get_funded_addresses(
     # The `selected_addrs` can be both `AddressRecord`s or `PoolUser`s
     payment_addrs = ((sa.payment if hasattr(sa, "payment") else sa) for sa in selected_addrs)
     fund_addrs: list[clusterlib.AddressRecord] = [
-        a for a in payment_addrs if cluster_obj.g_query.get_address_balance(a.address) < min_amount
+        a for a in payment_addrs if cluster_obj.g_query.get_address_balance(a.address) < drop_amount
     ]
     if fund_addrs:
         clusterlib_utils.fund_from_faucet(
@@ -403,6 +413,7 @@ def get_payment_addrs(
     fund_idx: list[int] | None = None,
     caching_key: str = "",
     amount: int | None = None,
+    min_amount: int | None = None,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     if num < 1:
@@ -424,6 +435,7 @@ def get_payment_addrs(
         fund_idx=fund_idx,
         caching_key=caching_key,
         amount=amount,
+        min_amount=min_amount,
     )
 
 
@@ -433,6 +445,7 @@ def get_payment_addr(
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str = "",
     amount: int | None = None,
+    min_amount: int | None = None,
 ) -> clusterlib.AddressRecord:
     """Create a single new payment address."""
     return get_payment_addrs(
@@ -442,6 +455,7 @@ def get_payment_addr(
         num=1,
         caching_key=caching_key,
         amount=amount,
+        min_amount=min_amount,
     )[0]
 
 
@@ -453,6 +467,7 @@ def get_pool_users(
     fund_idx: list[int] | None = None,
     caching_key: str = "",
     amount: int | None = None,
+    min_amount: int | None = None,
 ) -> list[clusterlib.PoolUser]:
     """Create new pool users."""
     if num < 1:
@@ -475,6 +490,7 @@ def get_pool_users(
         fund_idx=fund_idx,
         caching_key=caching_key,
         amount=amount,
+        min_amount=min_amount,
     )
 
 
@@ -484,6 +500,7 @@ def get_pool_user(
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str = "",
     amount: int | None = None,
+    min_amount: int | None = None,
 ) -> clusterlib.PoolUser:
     """Create a single new pool user."""
     return get_pool_users(
@@ -493,6 +510,7 @@ def get_pool_user(
         num=1,
         caching_key=caching_key,
         amount=amount,
+        min_amount=min_amount,
     )[0]
 
 
@@ -502,6 +520,7 @@ def get_registered_pool_user(
     cluster_obj: clusterlib.ClusterLib,
     caching_key: str = "",
     amount: int | None = None,
+    min_amount: int | None = None,
 ) -> clusterlib.PoolUser:
     """Create new registered pool users."""
     pool_user = get_pool_user(
@@ -510,6 +529,7 @@ def get_registered_pool_user(
         cluster_obj=cluster_obj,
         caching_key=caching_key,
         amount=amount,
+        min_amount=min_amount,
     )
 
     if not cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
