@@ -60,6 +60,7 @@ def _check_pretty_utxo(
                 "utxo",
                 "--tx-in",
                 f"{txid}#0",
+                "--output-text",
                 *cluster_obj.magic_args,
             ]
         )

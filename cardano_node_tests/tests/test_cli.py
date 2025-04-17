@@ -787,6 +787,7 @@ class TestQueryUTxO:
                     "utxo",
                     "--address",
                     dst_address,
+                    "--output-text",
                     *cluster.magic_args,
                 ]
             )
