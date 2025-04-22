@@ -112,14 +112,14 @@ dev = ["freezegun (>=1.0,<2.0)", "pytest (>=6.0)", "pytest-cov"]
 
 [[package]]
 name = "cardano-clusterlib"
-version = "0.7.5"
+version = "0.7.6"
 description = "Python wrapper for cardano-cli for working with cardano cluster"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "cardano_clusterlib-0.7.5-py3-none-any.whl", hash = "sha256:c1c24b5ab9dd5643f08e308f0fefa83e3fdbd965ca1eb0977d90aac4f8c19952"},
-    {file = "cardano_clusterlib-0.7.5.tar.gz", hash = "sha256:7ffca280ed2d660fd37c29be37f57a3079bde270a4f81cecd93e36f165cbf84d"},
+    {file = "cardano_clusterlib-0.7.6-py3-none-any.whl", hash = "sha256:78f38366d27d106cb44bfa24eb4c4d6bff1b787865f464384ebdb666802afe4a"},
+    {file = "cardano_clusterlib-0.7.6.tar.gz", hash = "sha256:a7b9eaa1f9386a236273db02e939f56c99412927c36c3bd5f2eb23498a628b50"},
 ]
 
 [package.dependencies]
@@ -2063,4 +2063,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "76bc52460551cbf9383093e34aff87764bf040c4906e4b17e178e5af99dfea5e"
+content-hash = "c0cf8f3002b9b779a81045d07ac3ee21c1ecf47cb93898a97b25ed643486e3de"
