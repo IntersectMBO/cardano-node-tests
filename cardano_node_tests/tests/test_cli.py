@@ -113,6 +113,7 @@ class TestCLI:
                     [
                         "transaction",
                         "calculate-min-fee",
+                        "--output-text",
                         "--protocol-params-file",
                         str(cluster.pparams_file),
                         "--tx-body-file",
