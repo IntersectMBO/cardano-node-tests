@@ -19,21 +19,40 @@ LOGGER = logging.getLogger(__name__)
 SKIPPED = (
     "build-script",
     "byron",
+    "compatible",
     "convert-byron-genesis-vkey",
     "convert-itn-bip32-key",
     "convert-itn-extended-key",
     "convert-itn-key",
+    "create-cardano",
+    "create-testnet-data",
     "help",
+    "legacy",
     "version",
     "--byron-era",
     "--byron-key",
     "--byron-mode",
+    "--cardano-mode",
     "--epoch-slots",
     "--help",
     "--icarus-payment-key",
     "--mainnet",
     "--shelley-mode",
     "--version",
+)
+
+DUPLICATE_GROUPS = (
+    "address",
+    "key",
+    "node",
+    "query",
+    "transaction",
+    "shelley",
+    "allegra",
+    "mary",
+    "alonzo",
+    "babbage",
+    "conway",
 )
 
 
@@ -184,6 +203,24 @@ def get_coverage(coverage_files: list[pl.Path], available_commands: dict) -> dic
     return coverage_dict
 
 
+def sanitize_coverage(coverage: dict) -> dict:
+    """Sanitize coverage data.
+
+    Merge coverage data into "latest" and remove duplicate command groups.
+    """
+    coverage_cli = coverage["cardano-cli"]
+    coverage_copy = copy.deepcopy(coverage)
+    latest = coverage_copy["cardano-cli"]["latest"]
+
+    for group_name in DUPLICATE_GROUPS:
+        if group := coverage_cli.get(group_name):
+            latest = merge_coverage(latest, group)
+            del coverage_copy["cardano-cli"][group_name]
+    coverage_copy["cardano-cli"]["latest"] = latest
+
+    return coverage_copy
+
+
 def get_report(
     arg_name: str, coverage: dict, uncovered_only: bool = False
 ) -> tuple[dict, int, int]:
@@ -257,6 +294,8 @@ def main() -> int:
     except AttributeError:
         LOGGER.exception("Error")
         return 1
+
+    coverage = sanitize_coverage(coverage)
 
     report, *__ = get_report(
         arg_name="cardano-cli", coverage=coverage, uncovered_only=args.uncovered_only
