@@ -2104,7 +2104,9 @@ class TestTransfer:
 
             exc_val = str(excinfo.value)
             assert (
-                "Non-Ada assets are unbalanced" in exc_val
+                "The transaction does not balance in its use of assets"
+                in exc_val  # In node 10.4.0+
+                or "Non-Ada assets are unbalanced" in exc_val
                 or "Illegal Value in TxOut" in exc_val  # In node 9.2.0+
                 or re.search(r"Negative quantity \(-[0-9]*\) in transaction output", exc_val)
             ), exc_val
