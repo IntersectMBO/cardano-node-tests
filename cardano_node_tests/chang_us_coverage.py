@@ -47,10 +47,7 @@ def _get_color(status: str) -> str:
 
 
 def main() -> int:
-    logging.basicConfig(
-        format="%(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
-    )
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
     args = get_args()
 
     with open(args.report_template, encoding="utf-8") as in_fp:
