@@ -76,10 +76,7 @@ def prepare_scripts_files(
 
 
 def main() -> int:
-    logging.basicConfig(
-        format="%(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
-    )
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
     args = get_args()
 
     destdir = pl.Path(args.dest_dir)

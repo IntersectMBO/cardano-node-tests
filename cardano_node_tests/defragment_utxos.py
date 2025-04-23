@@ -35,10 +35,7 @@ def get_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    logging.basicConfig(
-        format="%(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
-    )
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
     args = get_args()
 
     socket_env = os.environ.get("CARDANO_NODE_SOCKET_PATH")

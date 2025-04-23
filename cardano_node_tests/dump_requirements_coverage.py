@@ -44,10 +44,7 @@ def get_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    logging.basicConfig(
-        format="%(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
-    )
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
     args = get_args()
 
     if not (args.artifacts_base_dir or args.input_files):

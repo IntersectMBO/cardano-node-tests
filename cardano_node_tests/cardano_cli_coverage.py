@@ -274,10 +274,7 @@ def get_badge_icon(report: dict) -> str:
 
 
 def main() -> int:
-    logging.basicConfig(
-        format="%(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
-    )
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
     args = get_args()
 
     if not (args.output_file or args.print_coverage or args.badge_icon_url):
