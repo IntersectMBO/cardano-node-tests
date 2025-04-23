@@ -259,7 +259,7 @@ cardano_cli_log byron genesis genesis \
 
 mv "${STATE_CLUSTER}/byron-params.json" "${STATE_CLUSTER}/byron/params.json"
 
-cardano_cli_log legacy genesis create-staked \
+cardano_cli_log latest genesis create-staked \
   --genesis-dir "${STATE_CLUSTER}/create_staked" \
   --testnet-magic "$NETWORK_MAGIC" \
   --gen-pools "$NUM_POOLS" \
@@ -329,11 +329,11 @@ DREP_DEPOSIT="$(jq '.dRepDeposit' \
 
 BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
   "${STATE_CLUSTER}/byron/genesis.json")"
-SHELLEY_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
+SHELLEY_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
   "${STATE_CLUSTER}/shelley/genesis.json")"
-ALONZO_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
+ALONZO_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
   "${STATE_CLUSTER}/shelley/genesis.alonzo.json")"
-CONWAY_GENESIS_HASH="$(cardano_cli_log legacy genesis hash --genesis \
+CONWAY_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
   "${STATE_CLUSTER}/shelley/genesis.conway.json")"
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
