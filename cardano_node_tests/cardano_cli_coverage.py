@@ -10,8 +10,7 @@ import subprocess
 import sys
 import typing as tp
 
-from cardano_clusterlib import clusterlib
-
+from cardano_node_tests.utils import custom_clusterlib
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -179,7 +178,9 @@ def get_log_coverage(log_file: pl.Path) -> dict:
         for line in infile:
             if not line.startswith("cardano-cli"):
                 continue
-            clusterlib.record_cli_coverage(cli_args=line.split(), coverage_dict=coverage_dict)
+            custom_clusterlib.record_cli_coverage(
+                cli_args=line.split(), coverage_dict=coverage_dict
+            )
 
     return coverage_dict
 
