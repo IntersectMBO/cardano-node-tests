@@ -101,7 +101,7 @@ jobs:
           path: cli_coverage.json
       - name: ✉ Mail failure report
         uses: dawidd6/action-send-mail@v4
-        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS && github.event_name == 'schedule'
         with:
           server_address: smtp.gmail.com
           server_port: 465
