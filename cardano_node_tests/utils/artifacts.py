@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import pathlib as pl
 import shutil
 
@@ -21,7 +20,7 @@ CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
 def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> pl.Path | None:
     """Save CLI coverage info."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
-    if not (cli_coverage_dir and cluster_obj.cli_coverage):
+    if not (cli_coverage_dir and hasattr(cluster_obj, "cli_coverage") and cluster_obj.cli_coverage):
         return None
 
     json_file = (
@@ -77,7 +76,7 @@ def save_cluster_artifacts(save_dir: pl.Path, state_dir: pl.Path) -> None:
             continue
         shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
 
-    if not os.listdir(destdir):
+    if not destdir.iterdir():
         destdir.rmdir()
         return
 

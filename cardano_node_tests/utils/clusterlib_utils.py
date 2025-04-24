@@ -15,6 +15,7 @@ import cbor2
 from cardano_clusterlib import clusterlib
 from cardano_clusterlib import txtools as cl_txtools
 
+from cardano_node_tests.utils import custom_clusterlib
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.faucet import fund_from_faucet  # noqa: F401 # for compatibility
@@ -945,9 +946,10 @@ def _get_ledger_state_cmd(
     ledger_state_cmd = " ".join(cardano_cli_args)
 
     # Record cli coverage
-    clusterlib.record_cli_coverage(
-        cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
-    )
+    if hasattr(cluster_obj, "cli_coverage"):
+        custom_clusterlib.record_cli_coverage(
+            cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
+        )
 
     return ledger_state_cmd
 
