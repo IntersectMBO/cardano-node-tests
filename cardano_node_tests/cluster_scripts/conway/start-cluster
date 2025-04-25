@@ -322,7 +322,9 @@ cardano_cli_log byron genesis genesis \
 
 mv "${STATE_CLUSTER}/byron-params.json" "${STATE_CLUSTER}/byron/params.json"
 
-cardano_cli_log latest genesis create \
+# We need to use the "legacy" command here. With the "latest" command, Alonzo genesis
+# would have 185 entries for PlutusV2 cost model instead of the expected 175 entries.
+cardano_cli_log legacy genesis create \
   --genesis-dir "${STATE_CLUSTER}/shelley" \
   --testnet-magic "$NETWORK_MAGIC" \
   --gen-genesis-keys "$NUM_BFT_NODES" \
