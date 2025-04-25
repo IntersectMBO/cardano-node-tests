@@ -295,6 +295,9 @@ class TestBasicTransactions:
                 )
             except clusterlib.CLIError as exc:
                 str_exc = str(exc)
+
+                if "does not meet the minimum UTxO threshold" in str_exc:
+                    issues.api_829.finish_test()
                 if "negative" not in str_exc:
                     raise
 
