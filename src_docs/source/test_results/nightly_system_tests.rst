@@ -49,7 +49,7 @@ Nightly upgrade testing
    * network in Conway era
    * protocol version 10
    * Constitutional Commitee has 5 members
-   * default (legacy) network topology
+   * legacy network topology
    * smoke tests
    * governance info action test
 * `Step 2 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step2/>`__:  |nightly-upgrade-step2-badge|
