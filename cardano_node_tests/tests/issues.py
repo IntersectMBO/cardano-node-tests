@@ -5,12 +5,17 @@ api_269 = blockers.GH(
     repo="IntersectMBO/cardano-api",
     message="Broken `nextEpochEligibleLeadershipSlots`.",
 )
-
 api_484 = blockers.GH(
     issue=484,
     repo="IntersectMBO/cardano-api",
     fixed_in="8.11.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="Repeated certificates stripped from Conway transaction.",
+)
+api_829 = blockers.GH(
+    issue=829,
+    repo="IntersectMBO/cardano-api",
+    fixed_in="10.8.0.1",  # Unknown yet, will be fixed/changed sometime in the future
+    message="Wrong autobalancing when there's no change.",
 )
 
 cli_49 = blockers.GH(
