@@ -30,7 +30,7 @@ class GHIssue:
         try:
             # Max 60 req/hr without token
             cls._github_instance = (
-                github.Github(login_or_token=cls.TOKEN) if cls.TOKEN else github.Github()
+                github.Github(auth=github.Auth.Token(cls.TOKEN)) if cls.TOKEN else github.Github()
             )
         except Exception:
             LOGGER.exception("Failed to get GitHub instance")
