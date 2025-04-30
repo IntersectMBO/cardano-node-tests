@@ -168,6 +168,7 @@ else
   cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 fi
 
+LIVE_TABLES_BASE="${STATE_CLUSTER_NAME}/lmdb"
 case "${UTXO_BACKEND:=""}" in
   "" | mem | disk)
     ;;
@@ -337,6 +338,9 @@ CONWAY_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
   fname="${conf##*/}"
+  node_name="${fname##config-}"
+  node_name="${node_name%.json}"
+
   jq \
     --arg byron_hash "$BYRON_GENESIS_HASH" \
     --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
@@ -344,6 +348,7 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     --arg conway_hash "$CONWAY_GENESIS_HASH" \
     --argjson prot_ver "$PROTOCOL_VERSION" \
     --arg backend "$UTXO_BACKEND" \
+    --arg live_tables_path "${LIVE_TABLES_BASE}-${node_name}" \
     '.ByronGenesisHash = $byron_hash
     | .ShelleyGenesisHash = $shelley_hash
     | .AlonzoGenesisHash = $alonzo_hash
@@ -352,7 +357,8 @@ for conf in "$SCRIPT_DIR"/config-*.json; do
     | if $backend == "mem" then
         .LedgerDB.Backend = "V2InMemory"
       elif $backend == "disk" then
-        .LedgerDB.Backend = "V1LMDB"
+        (.LedgerDB.Backend = "V1LMDB"
+         | .LedgerDB.LiveTablesPath = $live_tables_path)
       elif has("LedgerDB") then
         .LedgerDB |= del(.Backend)
       else
