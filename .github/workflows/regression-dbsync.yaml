@@ -47,6 +47,7 @@ on:
         type: choice
         description: "UTxO backend"
         options:
+        - ""
         - mem
         - disk
         default: ""
