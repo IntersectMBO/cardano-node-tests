@@ -43,6 +43,13 @@ on:
         - legacy
         - mixed
         default: p2p
+      utxo_backend:
+        type: choice
+        description: "UTxO backend"
+        options:
+        - mem
+        - disk
+        default: ""
       byron_cluster:
         type: boolean
         default: false
@@ -68,6 +75,7 @@ jobs:
       cluster_era: ${{ inputs.cluster_era }}
       markexpr: ${{ inputs.markexpr }}
       topology: ${{ inputs.topology }}
+      utxo_backend: ${{ inputs.utxo_backend }}
       byron_cluster: ${{ inputs.byron_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}
