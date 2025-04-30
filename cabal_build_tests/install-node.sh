@@ -7,8 +7,8 @@
 # Please note: 'source ~/.bashrc' cmd is not used because Docker runs this script as subscript
 
 # Versions
-GHC_VERSION="9.6.3"
-CABAL_VERSION="3.10.2.0"
+GHC_VERSION="9.6.7"
+CABAL_VERSION="3.12.1.0"
 
 echo ""
 
