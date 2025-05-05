@@ -61,20 +61,24 @@ def post_cbor(cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     with open(cbor_file, "rb") as in_fp:
         cbor_binary = in_fp.read()
 
-    for i in range(5):
-        delay = False
-        if i > 0:
+    for i in range(1, 6):
+        if i > 1:
             LOGGER.warning("Resubmitting transaction to submit-api.")
+
         try:
             response = http_client.get_session().post(
-                url, headers=headers, data=cbor_binary, timeout=20
+                url, headers=headers, data=cbor_binary, timeout=60
             )
         except requests.exceptions.ReadTimeout:
-            delay = True
+            pass
         else:
             break
-        if delay:
-            time.sleep(random.random())
+
+        time.sleep(random.random())
+    else:
+        err = f"Failed to submit the tx after {i} attempts."
+        raise SubmitApiError(err)
+
     return response
 
 

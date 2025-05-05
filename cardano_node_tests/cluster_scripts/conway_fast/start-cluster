@@ -168,9 +168,9 @@ else
   cp "$SCRIPT_DIR"/topology-*.json "$STATE_CLUSTER"
 fi
 
+LIVE_TABLES_BASE="${STATE_CLUSTER_NAME}/lmdb"
 case "${UTXO_BACKEND:=""}" in
   "" | mem | disk)
-    echo "$UTXO_BACKEND" > "${STATE_CLUSTER}/utxo_backend"
     ;;
   *)
     echo "Unknown \`UTXO_BACKEND\`: '$UTXO_BACKEND', line $LINENO" >&2
@@ -338,18 +338,34 @@ CONWAY_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
 
 for conf in "$SCRIPT_DIR"/config-*.json; do
   fname="${conf##*/}"
+  node_name="${fname##config-}"
+  node_name="${node_name%.json}"
+
   jq \
     --arg byron_hash "$BYRON_GENESIS_HASH" \
     --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
     --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
     --arg conway_hash "$CONWAY_GENESIS_HASH" \
     --argjson prot_ver "$PROTOCOL_VERSION" \
+    --arg backend "$UTXO_BACKEND" \
+    --arg live_tables_path "${LIVE_TABLES_BASE}-${node_name}" \
     '.ByronGenesisHash = $byron_hash
     | .ShelleyGenesisHash = $shelley_hash
     | .AlonzoGenesisHash = $alonzo_hash
     | .ConwayGenesisHash = $conway_hash
-    | ."LastKnownBlockVersion-Major" = $prot_ver' \
-    "$conf" > "${STATE_CLUSTER}/${fname}"
+    | ."LastKnownBlockVersion-Major" = $prot_ver
+    | if $backend == "mem" then
+        .LedgerDB.Backend = "V2InMemory"
+      elif $backend == "disk" then
+        (.LedgerDB.Backend = "V1LMDB"
+         | .LedgerDB.LiveTablesPath = $live_tables_path)
+      elif has("LedgerDB") then
+        .LedgerDB |= del(.Backend)
+      else
+        .
+      end
+    | if (.LedgerDB? // {}) == {} then del(.LedgerDB) else . end
+    ' "$conf" > "${STATE_CLUSTER}/${fname}"
 
   # enable P2P
   if [ -z "${ENABLE_LEGACY:-""}" ]; then

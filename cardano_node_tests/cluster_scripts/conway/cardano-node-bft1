@@ -1,21 +1,5 @@
 #!/usr/bin/env bash
 
-if [ -e ./state-cluster%%INSTANCE_NUM%%/utxo_backend ]; then
-  UTXO_BACKEND="$(<./state-cluster%%INSTANCE_NUM%%/utxo_backend)"
-fi
-
-case "${UTXO_BACKEND:-""}" in
-  mem)
-    UTXO_BACKEND_ARGS=("--utxos-in-memory")
-    ;;
-  disk)
-    UTXO_BACKEND_ARGS=("--utxos-on-disk")
-    ;;
-  *)
-    UTXO_BACKEND_ARGS=()
-    ;;
-esac
-
 echo "Starting cardano-node run with PID $$: cardano-node run"
    echo "--config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json"
    echo "--database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1"
@@ -27,10 +11,10 @@ echo "Starting cardano-node run with PID $$: cardano-node run"
    echo "--delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json"
    echo "--shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey"
    echo "--shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey"
-   echo "--shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert ${UTXO_BACKEND_ARGS[*]} $*"
+   echo "--shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert $*"
 
 echo "..or, once again, in a single line:"
-echo "cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json --host-addr 127.0.0.1 --port %%NODE_PORT_BASE%% --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --signing-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.key --delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert ${UTXO_BACKEND_ARGS[*]} $*"
+echo "cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json --host-addr 127.0.0.1 --port %%NODE_PORT_BASE%% --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --signing-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.key --delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert $*"
 
 
-exec cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json --host-addr 127.0.0.1 --port %%NODE_PORT_BASE%% --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --signing-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.key --delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert "${UTXO_BACKEND_ARGS[@]}" "$@"
+exec cardano-node run --config ./state-cluster%%INSTANCE_NUM%%/config-bft1.json --database-path ./state-cluster%%INSTANCE_NUM%%/db-bft1 --topology ./state-cluster%%INSTANCE_NUM%%/topology-bft1.json --host-addr 127.0.0.1 --port %%NODE_PORT_BASE%% --socket-path ./state-cluster%%INSTANCE_NUM%%/bft1.socket --signing-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.key --delegation-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/byron-deleg.json --shelley-vrf-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/vrf.skey --shelley-kes-key ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/kes.skey --shelley-operational-certificate ./state-cluster%%INSTANCE_NUM%%/nodes/node-bft1/op.cert "$@"

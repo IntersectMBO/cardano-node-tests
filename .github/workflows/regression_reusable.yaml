@@ -35,6 +35,10 @@ on:
         required: false
         type: string
         default: ""
+      utxo_backend:
+        required: false
+        type: string
+        default: ""
       scripts_dirname:
         required: false
         type: string
@@ -94,6 +98,7 @@ jobs:
           echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
           echo "SCRIPTS_DIRNAME=${{ inputs.scripts_dirname }}" >> .github_ci_env
           echo "CI_TOPOLOGY=${{ inputs.topology }}" >> .github_ci_env
+          echo "UTXO_BACKEND=${{ inputs.utxo_backend }}" >> .github_ci_env
           echo "CI_BYRON_CLUSTER=${{ inputs.byron_cluster }}" >> .github_ci_env
           echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
           echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env
