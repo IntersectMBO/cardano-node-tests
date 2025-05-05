@@ -1989,7 +1989,8 @@ class TestNegative:
                 cold_vkey_file=node_cold.skey_file,  # skey instead of vkey
                 owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
             )
-        assert "Expected: StakePoolVerificationKey" in str(excinfo.value)
+        err_msg = str(excinfo.value)
+        assert ": StakePoolVerificationKey" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
