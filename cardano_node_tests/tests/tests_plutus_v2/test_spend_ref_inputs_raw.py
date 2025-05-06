@@ -521,7 +521,7 @@ class TestNegativeReadonlyReferenceInputs:
     ):
         """Test using a read-only reference input without spending any UTxO.
 
-        Expect failure
+        Expect failure.
         """
         temp_template = common.get_test_id(cluster)
         reference_input_amount = 2_000_000
@@ -551,4 +551,4 @@ class TestNegativeReadonlyReferenceInputs:
                 ]
             )
         err_str = str(excinfo.value)
-        assert "Missing: (--tx-in TX-IN)" in err_str, err_str
+        assert re.search(r"Missing: *\(--tx-in TX[_-]IN", err_str), err_str
