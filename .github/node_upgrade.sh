@@ -177,10 +177,6 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
 
   # compress scheduling log
   xz "$SCHEDULING_LOG"
-
-  echo
-  echo "Dir content:"
-  ls -1a
 fi
 
 exit "$retval"
