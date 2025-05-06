@@ -1486,7 +1486,8 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
+        err_str = str(excinfo.value)
+        assert re.search(r"Missing: *\(--tx-in TX[_-]IN", err_str), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -1571,7 +1572,8 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert re.search(r"Missing: *\(--tx-in TX-IN", str(excinfo.value))
+        err_str = str(excinfo.value)
+        assert re.search(r"Missing: *\(--tx-in TX[_-]IN", err_str), err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
