@@ -9,6 +9,7 @@ import shutil
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -19,6 +20,7 @@ from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -97,6 +99,18 @@ class TestSetup:
             ".* expected change in the serialization format",
             ignore_file_id=worker_id,
         )
+
+        # The error should be present only when upgrading pre UTxO-HD release.
+        # The UTxO-HD was added in 10.4.1, so when we are upgrading from 10.4.1+ release to
+        # 10.5.0+ release, the error should not be there.
+        # Here we are comparing the version of "upgraded" release, not the version we are upgrading
+        # from.
+        if VERSIONS.node < version.parse("10.5.0"):
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="ChainDB:Warning:.* Invalid snapshot DiskSnapshot .*MetadataFileDoesNotExist",
+                ignore_file_id=worker_id,
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.disabled(reason="The test is not needed when we are already in PV10 on mainnet")
