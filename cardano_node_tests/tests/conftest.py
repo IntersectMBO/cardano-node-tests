@@ -102,6 +102,11 @@ def pytest_configure(config: tp.Any) -> None:
     config.stash[metadata_key]["MIXED_P2P"] = str(configuration.MIXED_P2P)
     config.stash[metadata_key]["NUM_POOLS"] = str(configuration.NUM_POOLS)
     config.stash[metadata_key]["UTXO_BACKEND"] = configuration.UTXO_BACKEND
+    config.stash[metadata_key]["MAX_TESTS_PER_CLUSTER"] = configuration.MAX_TESTS_PER_CLUSTER
+    # If not explicitly specified, the `CLUSTERS_COUNT` is calculated based on number of xdist
+    # workers, which is not known yet by the time this fixture runs.
+    if os.environ.get("CLUSTERS_COUNT") is not None:
+        config.stash[metadata_key]["CLUSTERS_COUNT"] = configuration.CLUSTERS_COUNT
     if configuration.CONFIRM_BLOCKS_NUM:
         config.stash[metadata_key]["CONFIRM_BLOCKS_NUM"] = str(configuration.CONFIRM_BLOCKS_NUM)
     config.stash[metadata_key]["HAS_CC"] = str(configuration.HAS_CC)

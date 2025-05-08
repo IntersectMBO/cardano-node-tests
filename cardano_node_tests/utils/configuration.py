@@ -57,10 +57,11 @@ if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "c
     msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
     raise RuntimeError(msg)
 
-CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
-WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 1)
+XDIST_WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 0)
 MAX_TESTS_PER_CLUSTER = int(os.environ.get("MAX_TESTS_PER_CLUSTER") or 8)
-CLUSTERS_COUNT = int(CLUSTERS_COUNT or (min(WORKERS_COUNT, 9)))
+# If CLUSTERS_COUNT is not set, use the number of xdist workers or 1
+CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
+CLUSTERS_COUNT = int(CLUSTERS_COUNT or (min(XDIST_WORKERS_COUNT, 9)) or 1)
 
 DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
 FORBID_RESTART = bool(os.environ.get("FORBID_RESTART"))
