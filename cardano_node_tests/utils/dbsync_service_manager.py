@@ -1,11 +1,11 @@
 """Functionality for managing db-sync service."""
 
+import dataclasses
+import enum
 import logging
 import os
 import pathlib as pl
 import typing as tp
-from dataclasses import dataclass
-from enum import StrEnum
 
 import pytest
 import yaml
@@ -20,7 +20,7 @@ from cardano_node_tests.utils import temptools
 LOGGER = logging.getLogger(__name__)
 
 
-class Table(StrEnum):
+class Table(enum.StrEnum):
     """Enum representing all tables in the Cardano db-sync database."""
 
     ADA_POTS = "ada_pots"
@@ -106,19 +106,19 @@ class Table(StrEnum):
 
 
 class Column:
-    class Tx(StrEnum):
+    class Tx(enum.StrEnum):
         FEE = "tx.fee"
 
-    class Redeemer(StrEnum):
+    class Redeemer(enum.StrEnum):
         SCRIPT_HASH = "redeemer.script_hash"
 
 
-class SettingState(StrEnum):
+class SettingState(enum.StrEnum):
     ENABLE = "enable"
     DISABLE = "disable"
 
 
-class TxOutMode(StrEnum):
+class TxOutMode(enum.StrEnum):
     ENABLE = "enable"
     DISABLE = "disable"
     CONSUMED = "consumed"
@@ -126,43 +126,43 @@ class TxOutMode(StrEnum):
     BOOTSTRAP = "bootstrap"
 
 
-class LedgerMode(StrEnum):
+class LedgerMode(enum.StrEnum):
     ENABLE = "enable"
     DISABLE = "disable"
     IGNORE = "ignore"
 
 
-class Preset(StrEnum):
+class Preset(enum.StrEnum):
     FULL = "full"
     ONLY_UTXO = "only_utxo"
     ONLY_GOVERNANCE = "only_governance"
     DISABLE_ALL = "disable_all"
 
 
-@dataclass
+@dataclasses.dataclass
 class TxOutConfig:
     value: TxOutMode = TxOutMode.ENABLE
     force_tx_in: bool | None = None
     use_address_table: bool | None = None
 
 
-@dataclass
+@dataclasses.dataclass
 class ShelleyConfig:
     enable: bool = True
 
 
-@dataclass
+@dataclasses.dataclass
 class MultiAssetConfig:
     enable: bool = True
 
 
-@dataclass
+@dataclasses.dataclass
 class MetadataConfig:
     enable: bool = True
     keys: list[int] | None = None
 
 
-@dataclass
+@dataclasses.dataclass
 class PlutusConfig:
     enable: bool = True
 
