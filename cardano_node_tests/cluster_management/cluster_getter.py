@@ -541,7 +541,7 @@ class ClusterGetter:
         if cget_status.marked_running_my_anywhere:
             self.log(
                 f"c{cget_status.instance_num}: tests marked with my mark '{cget_status.mark}' "
-                "already running on other cluster instance, cannot run"
+                "already running on other cluster instance, cannot start"
             )
             return False
 
@@ -832,9 +832,7 @@ class ClusterGetter:
                     cget_status.instance_dir.mkdir(exist_ok=True)
 
                     # Cleanup cluster instance where attempt to start cluster failed repeatedly
-                    if status_files.get_cluster_dead_file(
-                        instance_num=cget_status.instance_num
-                    ).exists():
+                    if status_files.get_cluster_dead_file(instance_num=instance_num).exists():
                         self._cleanup_dead_clusters(cget_status)
                         continue
 
@@ -845,18 +843,29 @@ class ClusterGetter:
 
                     # Are there tests already running on this cluster instance?
                     cget_status.started_tests_sfiles = status_files.list_test_running_files(
-                        instance_num=cget_status.instance_num
+                        instance_num=instance_num
                     )
 
                     # "marked tests" = group of tests marked with my mark
                     cget_status.marked_ready_sfiles = status_files.list_curr_mark_files(
-                        instance_num=cget_status.instance_num, mark=mark
+                        instance_num=instance_num, mark=mark
                     )
 
                     # If marked tests are already running, update their status
                     self._update_marked_tests(
                         marked_tests_cache=marked_tests_cache, cget_status=cget_status
                     )
+
+                    # If there would be more tests running on this cluster instance than allowed,
+                    # we need to wait.
+                    if (
+                        self.num_of_instances > 1
+                        and (tnum := len(cget_status.started_tests_sfiles))
+                        >= configuration.MAX_TESTS_PER_CLUSTER
+                    ):
+                        cget_status.sleep_delay = 2
+                        self.log(f"c{instance_num}: {tnum} tests are already running, cannot start")
+                        continue
 
                     # Does the cluster instance needs respin to continue?
                     # Cache the result as the check itself can be expensive.

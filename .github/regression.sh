@@ -70,6 +70,12 @@ elif [ "$TX_ERA" = "default" ]; then
   export TX_ERA=""
 fi
 
+# Decrease the number of tests per cluster if we are using the "disk" (LMDB) UTxO backend to avoid
+# having too many concurrent readers.
+if [ -z "${MAX_TESTS_PER_CLUSTER:-""}" ] && [ "${UTXO_BACKEND:-""}" = "disk" ]; then
+  export MAX_TESTS_PER_CLUSTER=5
+fi
+
 if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   :  # don't touch `SCRIPTS_DIRNAME` when running on testnet
 elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then

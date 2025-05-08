@@ -108,6 +108,7 @@ Test execution can be configured using environment variables.
 * `PYTEST_ARGS` – specifies additional arguments for pytest (default: unset).
 * `MARKEXPR` – specifies marker expression for pytest (default: unset).
 * `TEST_THREADS` – specifies the number of pytest workers (default: 20).
+* `MAX_TESTS_PER_CLUSTER` - specifies the maximum number of tests that can be run on a single cluster instance (default: 8).
 * `CLUSTERS_COUNT` – number of cluster instances that will be started (default: 9).
 * `CLUSTER_ERA` – cluster era for Cardano node – used for selecting the correct cluster start script (default: conway).
 * `COMMAND_ERA` – era for cardano-cli commands – can be used for creating Shelley-era (Allegra-era, ...) transactions (default: unset).

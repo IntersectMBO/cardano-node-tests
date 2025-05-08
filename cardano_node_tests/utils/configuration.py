@@ -59,6 +59,7 @@ if COMMAND_ERA not in ("", "shelley", "allegra", "mary", "alonzo", "babbage", "c
 
 CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
 WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 1)
+MAX_TESTS_PER_CLUSTER = int(os.environ.get("MAX_TESTS_PER_CLUSTER") or 8)
 CLUSTERS_COUNT = int(CLUSTERS_COUNT or (min(WORKERS_COUNT, 9)))
 
 DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
