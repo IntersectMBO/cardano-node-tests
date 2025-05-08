@@ -1551,3 +1551,88 @@ def check_off_chain_vote_fetch_error(voting_anchor_id: int) -> None:
 
     fetch_error_str = db_off_chain_vote_fetch_error[-1].fetch_error or ""
     assert "Hash mismatch when fetching metadata" in fetch_error_str
+
+
+def wait_for_db_sync_completion(
+    expected_progress: float = 99.0, timeout: int = 360, polling_interval: int = 5
+) -> float:
+    """Wait for db-sync to reach at least 99% sync completion.
+
+    Args:
+        expected_progress: Expected completion as perctentage, 99% by default
+        timeout: Maximum time to wait in seconds
+        polling_interval: Loop polling time in seconds
+
+    Returns:
+        Final sync percentage achieved (>= 99)
+
+    Raises:
+        AssertionError: If no progress data is received
+        TimeoutError: If sync doesn't reach 99% within timeout
+    """
+    start_time = time.time()
+
+    def _query_func() -> float:
+        dbsync_progress = dbsync_queries.query_db_sync_progress()
+        assert dbsync_progress, f"{NO_RESPONSE_STR} no result for query_db_sync_progress"
+        return dbsync_progress
+
+    dbsync_progress: float = retry_query(query_func=_query_func, timeout=timeout)
+
+    # Poll until sync completes
+    while dbsync_progress < expected_progress:
+        if time.time() - start_time > timeout:
+            err_msg = f"db-sync only reached {dbsync_progress}% after {timeout} seconds"
+            raise TimeoutError(err_msg)
+        time.sleep(polling_interval)
+        dbsync_progress = dbsync_queries.query_db_sync_progress()
+        LOGGER.info(f"Progress of db-sync: {dbsync_queries.query_db_sync_progress():.2f}%")
+
+    return dbsync_progress
+
+
+def check_column_condition(
+    table: str,
+    column: str,
+    condition: str,
+    expected_count: int | None = None,
+    lock_timeout: str = "5s",
+) -> None:
+    """Validate that all/none rows meet a column condition atomically.
+
+    Args:
+        table: Table to check
+        column: Column to validate
+        condition: SQL condition (e.g., "= 0", "IS NOT NULL")
+        expected_count: Require exactly this many matches (default: all must match)
+        lock_timeout: Max wait for table lock
+    """
+    with dbsync_queries.db_transaction():
+        # Get count of rows meeting condition
+        matching_count = dbsync_queries.query_rows_count(
+            table, column, condition, lock=True, lock_timeout=lock_timeout
+        )
+
+        # Get total rows (locked in same transaction)
+        total_count = dbsync_queries.query_rows_count(table=table, lock=True)
+
+        # Determine expected matches if not specified
+        target_count = expected_count if expected_count is not None else total_count
+
+        assert matching_count == target_count, (
+            f"Condition failed: {table}.{column} {condition}\n"
+            f"Expected {target_count} matches, found {matching_count} "
+            f"(out of {total_count} total rows)"
+        )
+
+
+def table_empty(table: str) -> bool:
+    """Check if a database table is empty."""
+    rows_count = dbsync_queries.query_rows_count(table=table)
+    return rows_count == 0
+
+
+def table_exists(table: str) -> bool:
+    """Check if a table exists in the database."""
+    table_names = dbsync_queries.query_table_names()
+    return table in table_names
