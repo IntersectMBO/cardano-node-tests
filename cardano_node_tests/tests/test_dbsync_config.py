@@ -1,8 +1,8 @@
 """Tests for basic DB-Sync configuration options."""
 
+import enum
 import logging
 import typing as tp
-from enum import Enum
 
 import allure
 import pytest
@@ -17,14 +17,14 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skipif(
-        configuration.CLUSTERS_COUNT != 1 and not configuration.HAS_DBSYNC,
+        configuration.CLUSTERS_COUNT != 1 or not configuration.HAS_DBSYNC,
         reason="db-sync config tests can run on a single cluster only",
     ),
     pytest.mark.dbsync_config,
 ]
 
 
-class TableCondition(str, Enum):
+class TableCondition(str, enum.Enum):
     """Enum for table-level db-sync state conditions."""
 
     EMPTY = "empty"
@@ -33,7 +33,7 @@ class TableCondition(str, Enum):
     NOT_EXISTS = "not_exists"
 
 
-class ColumnCondition(str, Enum):
+class ColumnCondition(str, enum.Enum):
     """Enum for column-level db-sync condition checks."""
 
     ZERO = "column_condition:=0"

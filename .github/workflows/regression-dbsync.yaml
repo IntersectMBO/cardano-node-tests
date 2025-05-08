@@ -1,4 +1,4 @@
-name: db-sync config tests
+name: 02 Regression tests with db-sync
 
 on:
   workflow_dispatch:
@@ -19,6 +19,22 @@ on:
         - conway 10
         - conway 9
         default: conway 10
+      markexpr:
+        type: choice
+        description: "Selection of tests"
+        options:
+        - all
+        - dbsync
+        - smoke
+        - plutus
+        - plutus and smoke
+        - team_plutus
+        - not long
+        - conway only
+        - dbsync and smoke
+        - dbsync and plutus
+        - dbsync and not long
+        default: dbsync
       topology:
         type: choice
         description: "Network topology"
@@ -58,12 +74,13 @@ jobs:
       cli_rev: ${{ inputs.cli_rev }}
       dbsync_rev: ${{ inputs.dbsync_rev }}
       cluster_era: ${{ inputs.cluster_era }}
+      markexpr: ${{ inputs.markexpr }}
       topology: ${{ inputs.topology }}
       utxo_backend: ${{ inputs.utxo_backend }}
       byron_cluster: ${{ inputs.byron_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}
-      env-path: .github/env_dbsync_config
+      env-path: .github/env_regression_dbsync
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
