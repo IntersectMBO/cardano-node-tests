@@ -36,7 +36,7 @@ class TestPoll:
     @pytest.fixture(scope="class")
     def governance_poll_available(self) -> None:
         if not clusterlib_utils.cli_has("compatible babbage governance create-poll"):
-            pytest.fail(
+            pytest.xfail(
                 "The `cardano-cli compatible babbage governance` poll commands are not available."
             )
 
