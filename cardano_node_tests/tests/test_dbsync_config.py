@@ -21,6 +21,7 @@ pytestmark = [
         reason="db-sync config tests can run on a single cluster only",
     ),
     pytest.mark.dbsync_config,
+    pytest.mark.needs_dbsync,
 ]
 
 
@@ -109,7 +110,6 @@ class TestDBSyncConfig:
     """Basic tests for DB-Sync Config."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync_config
     def test_basic_tx_out(
         self,
         db_sync_manager: db_sync.DBSyncManager,
@@ -150,7 +150,6 @@ class TestDBSyncConfig:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync_config
     @pytest.mark.parametrize(
         ("tx_cbor_value", "expected_state"),
         [
@@ -171,7 +170,6 @@ class TestDBSyncConfig:
         check_dbsync_state({db_sync.Table.TX_CBOR: expected_state})
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.dbsync_config
     @pytest.mark.parametrize(
         ("multi_asset_enable", "expected_state"),
         [(True, TableCondition.NOT_EMPTY), (False, TableCondition.EMPTY)],
