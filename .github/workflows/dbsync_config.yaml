@@ -1,0 +1,70 @@
+name: db-sync config tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_rev:
+        description: "cardano-node revision"
+        default: master
+      cli_rev:
+        description: "cardano-cli revision (optional)"
+        default: ""
+      dbsync_rev:
+        description: "db-sync revision"
+        default: master
+      cluster_era:
+        type: choice
+        description: "Cluster era"
+        options:
+        - conway 10
+        - conway 9
+        default: conway 10
+      topology:
+        type: choice
+        description: "Network topology"
+        options:
+        - p2p
+        - legacy
+        - mixed
+        default: p2p
+      utxo_backend:
+        type: choice
+        description: "UTxO backend"
+        options:
+        - ""
+        - mem
+        - disk
+        default: ""
+      byron_cluster:
+        type: boolean
+        default: false
+        description: "Start cluster in Byron era"
+      testrun_name:
+        required: false
+        description: "Test run name (internal)"
+      skip_passed:
+        type: boolean
+        default: false
+        description: "Skip tests that already passed (internal)"
+
+run-name: ${{ inputs.testrun_name && 'Run:' || ''}} ${{ inputs.testrun_name }} ${{ (inputs.testrun_name && inputs.skip_passed) && ':repeat:' || '' }}
+
+jobs:
+  regression_tests:
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      node_rev: ${{ inputs.node_rev }}
+      cli_rev: ${{ inputs.cli_rev }}
+      dbsync_rev: ${{ inputs.dbsync_rev }}
+      cluster_era: ${{ inputs.cluster_era }}
+      topology: ${{ inputs.topology }}
+      utxo_backend: ${{ inputs.utxo_backend }}
+      byron_cluster: ${{ inputs.byron_cluster }}
+      testrun_name: ${{ inputs.testrun_name }}
+      skip_passed: ${{ inputs.skip_passed }}
+      env-path: .github/env_dbsync_config
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+      TCACHE_URL: ${{ secrets.TCACHE_URL }}
