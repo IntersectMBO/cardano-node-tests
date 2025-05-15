@@ -7,7 +7,6 @@ import os
 import pathlib as pl
 import typing as tp
 
-import pytest
 import yaml
 
 from cardano_node_tests.utils import cluster_nodes
@@ -184,7 +183,7 @@ class DBSyncConfigBuilder:
         }
         self._preset_applied = False
 
-    def with_preset(self, preset: Preset) -> "DBSyncConfigBuilder":
+    def with_preset(self, preset: Preset) -> tp.Self:
         self._preset_applied = True
 
         if preset == Preset.FULL:
@@ -248,7 +247,7 @@ class DBSyncConfigBuilder:
 
         return self
 
-    def with_tx_cbor(self, value: SettingState) -> "DBSyncConfigBuilder":
+    def with_tx_cbor(self, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["tx_cbor"] = value
         return self
@@ -258,54 +257,54 @@ class DBSyncConfigBuilder:
         value: TxOutMode,
         force_tx_in: bool | None = None,
         use_address_table: bool | None = None,
-    ) -> "DBSyncConfigBuilder":
+    ) -> tp.Self:
         if not self._preset_applied:
             self._config["tx_out"] = TxOutConfig(
                 value=value, force_tx_in=force_tx_in, use_address_table=use_address_table
             )
         return self
 
-    def with_ledger(self, value: LedgerMode) -> "DBSyncConfigBuilder":
+    def with_ledger(self, value: LedgerMode) -> tp.Self:
         if not self._preset_applied:
             self._config["ledger"] = value
         return self
 
-    def with_shelley(self, enable: bool) -> "DBSyncConfigBuilder":
+    def with_shelley(self, enable: bool) -> tp.Self:
         if not self._preset_applied:
             self._config["shelley"] = ShelleyConfig(enable=enable)
         return self
 
-    def with_multi_asset(self, enable: bool) -> "DBSyncConfigBuilder":
+    def with_multi_asset(self, enable: bool) -> tp.Self:
         if not self._preset_applied:
             self._config["multi_asset"] = MultiAssetConfig(enable=enable)
         return self
 
-    def with_metadata(self, enable: bool, keys: list[int] | None = None) -> "DBSyncConfigBuilder":
+    def with_metadata(self, enable: bool, keys: list[int] | None = None) -> tp.Self:
         if not self._preset_applied:
             self._config["metadata"] = MetadataConfig(enable=enable, keys=keys)
         return self
 
-    def with_plutus(self, enable: bool) -> "DBSyncConfigBuilder":
+    def with_plutus(self, enable: bool) -> tp.Self:
         if not self._preset_applied:
             self._config["plutus"] = PlutusConfig(enable=enable)
         return self
 
-    def with_governance(self, value: SettingState) -> "DBSyncConfigBuilder":
+    def with_governance(self, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["governance"] = value
         return self
 
-    def with_offchain_pool_data(self, value: SettingState) -> "DBSyncConfigBuilder":
+    def with_offchain_pool_data(self, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["offchain_pool_data"] = value
         return self
 
-    def with_pool_stat(self, value: SettingState) -> "DBSyncConfigBuilder":
+    def with_pool_stat(self, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["pool_stat"] = value
         return self
 
-    def with_remove_jsonb_from_schema(self, value: SettingState) -> "DBSyncConfigBuilder":
+    def with_remove_jsonb_from_schema(self, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["remove_jsonb_from_schema"] = value
         return self
@@ -352,19 +351,9 @@ class DBSyncConfigBuilder:
 
 
 class DBSyncManager:
-    def __init__(self, request: pytest.FixtureRequest | None = None) -> None:
-        """
-        Initialize the DB Sync manager with default config.
-
-        Args:
-            request: Optional pytest fixture request for parameterized test overrides.
-        """
+    def __init__(self) -> None:
+        """Initialize the DB Sync manager with default config."""
         self.shared_tmp = temptools.get_pytest_shared_tmp()
-        self.config_builder = DBSyncConfigBuilder()
-        self.config = self.config_builder.build()
-
-        if request and hasattr(request, "param"):
-            self.config.update(request.param)
 
     def recreate_database(self) -> None:
         """Reinitializes the PostgreSQL database by running the `postgres-setup.sh` script.
@@ -381,7 +370,7 @@ class DBSyncManager:
         """Get a fresh `DBSyncConfigBuilder` config builder instance with default config."""
         return DBSyncConfigBuilder()
 
-    def update_config(self, config: dict | DBSyncConfigBuilder) -> pl.Path:
+    def update_config(self, config: dict | DBSyncConfigBuilder | None) -> pl.Path:
         """
         Update the `dbsync-config.yaml` file with new settings.
 
@@ -394,17 +383,25 @@ class DBSyncManager:
         cluster_dir = cluster_nodes.get_cluster_env().state_dir
         config_file = cluster_dir / "dbsync-config.yaml"
 
+        if not config:
+            return config_file
+
         if isinstance(config, DBSyncConfigBuilder):
             config = config.build()
+        else:
+            default_config = DBSyncConfigBuilder().build()
+            config = {**default_config, **config}
+
+        LOGGER.debug(f"Effective config: {config}")
 
         with open(config_file, encoding="utf-8") as fp_in:
             current_dbsync_config = yaml.safe_load(fp_in) or {}
 
         current_dbsync_config["insert_options"] = config
-        self.config = config
 
         with open(config_file, "w", encoding="utf-8") as fp_out:
             yaml.safe_dump(current_dbsync_config, fp_out)
+
         return config_file
 
     def is_db_sync_running(self) -> bool:
@@ -448,17 +445,10 @@ class DBSyncManager:
         Returns:
             Path to the updated config file.
         """
-        if isinstance(custom_config, DBSyncConfigBuilder):
-            effective_config = custom_config.build()
-        else:
-            # Merge with existing config if dict provided
-            effective_config = {**self.config, **(custom_config or {})}
-        LOGGER.info(f"Effective config: {effective_config}")
-
         with locking.FileLockIfXdist(f"{self.shared_tmp}/db_sync_config.lock"):
             self.stop_db_sync()
             self.recreate_database()
-            config_file = self.update_config(effective_config)
+            config_file = self.update_config(config=custom_config)
             self.start_db_sync()
             assert self.is_db_sync_running(), "Error: db-sync service is not running!"
             dbsync_utils.wait_for_db_sync_completion()

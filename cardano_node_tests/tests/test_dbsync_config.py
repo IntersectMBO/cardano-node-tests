@@ -2,12 +2,16 @@
 
 import enum
 import logging
+import shutil
 import typing as tp
 
 import allure
 import pytest
+import pytest_subtests
+from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_service_manager as db_sync
 from cardano_node_tests.utils import dbsync_utils
@@ -17,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skipif(
-        configuration.CLUSTERS_COUNT != 1 or not configuration.HAS_DBSYNC,
+        configuration.CLUSTERS_COUNT != 1,
         reason="db-sync config tests can run on a single cluster only",
     ),
     pytest.mark.dbsync_config,
@@ -94,94 +98,144 @@ def check_dbsync_state(
 
 @pytest.fixture
 def db_sync_manager(
-    request: pytest.FixtureRequest, cluster_manager: cluster_management.ClusterManager
-) -> db_sync.DBSyncManager:
+    cluster_singleton: clusterlib.ClusterLib,  # noqa: ARG001
+) -> tp.Generator[db_sync.DBSyncManager, None, None]:
     """Provide db-sync manager on a singleton cluster.
 
     Creates and returns a DBSyncManager instance with locked cluster resources
     to ensure exclusive access during testing.
+
+    Returns db-sync configuration to its original state after testing is finished.
     """
-    cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
-    return db_sync.DBSyncManager(request)
+    cluster_dir = cluster_nodes.get_cluster_env().state_dir
+    config_file = cluster_dir / "dbsync-config.yaml"
+
+    # Backup the config file
+    orig_config_file = cluster_dir / "dbsync-config.yaml.original"
+    if not orig_config_file.exists():
+        shutil.copy(config_file, orig_config_file)
+
+    manager = db_sync.DBSyncManager()
+    yield manager
+
+    # Restore the original config file
+    shutil.copy(orig_config_file, config_file)
+    manager.restart_with_config()
 
 
 @pytest.mark.order(-1)
 class TestDBSyncConfig:
-    """Basic tests for DB-Sync Config."""
+    """Tests for DB-Sync Config."""
 
-    @allure.link(helpers.get_vcs_link())
-    def test_basic_tx_out(
-        self,
-        db_sync_manager: db_sync.DBSyncManager,
-    ):
-        """Test tx_out option."""
-        db_config = db_sync_manager.get_config_builder()
+    def get_subtests(self) -> tp.Generator[tp.Callable, None, None]:
+        """Get the DB-Sync Config scenarios.
 
-        # Test tx_out : enable
-        db_sync_manager.restart_with_config(
-            db_config.with_tx_out(
-                value=db_sync.TxOutMode.ENABLE, force_tx_in=False, use_address_table=False
+        The scenarios are executed as subtests in the `test_dbsync_config` test.
+        """
+
+        def basic_tx_out(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `tx_out` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            # Test tx_out : enable
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_out(
+                    value=db_sync.TxOutMode.ENABLE, force_tx_in=False, use_address_table=False
+                )
             )
-        )
-        check_dbsync_state(
-            {
-                db_sync.Table.ADDRESS: TableCondition.NOT_EXISTS,
-                db_sync.Table.TX_IN: TableCondition.NOT_EMPTY,
-                db_sync.Table.TX_OUT: TableCondition.NOT_EMPTY,
-                db_sync.Table.MA_TX_OUT: TableCondition.NOT_EMPTY,
-            }
-        )
-
-        # Test tx_out : disable
-        db_sync_manager.restart_with_config(
-            db_config.with_tx_out(
-                value=db_sync.TxOutMode.DISABLE, force_tx_in=True, use_address_table=True
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.ADDRESS: TableCondition.NOT_EXISTS,
+                    db_sync.Table.TX_IN: TableCondition.NOT_EMPTY,
+                    db_sync.Table.TX_OUT: TableCondition.NOT_EMPTY,
+                    db_sync.Table.MA_TX_OUT: TableCondition.NOT_EMPTY,
+                }
             )
-        )
-        check_dbsync_state(
-            {
-                db_sync.Table.ADDRESS: TableCondition.NOT_EXISTS,
-                db_sync.Table.TX_IN: TableCondition.EMPTY,
-                db_sync.Table.TX_OUT: TableCondition.EMPTY,
-                db_sync.Table.MA_TX_OUT: TableCondition.EMPTY,
-                db_sync.Column.Tx.FEE: ColumnCondition.ZERO,
-                db_sync.Column.Redeemer.SCRIPT_HASH: ColumnCondition.IS_NULL,
-            }
-        )
+
+            # Test tx_out : disable
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_out(
+                    value=db_sync.TxOutMode.DISABLE, force_tx_in=True, use_address_table=True
+                )
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.ADDRESS: TableCondition.NOT_EXISTS,
+                    db_sync.Table.TX_IN: TableCondition.EMPTY,
+                    db_sync.Table.TX_OUT: TableCondition.EMPTY,
+                    db_sync.Table.MA_TX_OUT: TableCondition.EMPTY,
+                    db_sync.Column.Tx.FEE: ColumnCondition.ZERO,
+                    db_sync.Column.Redeemer.SCRIPT_HASH: ColumnCondition.IS_NULL,
+                }
+            )
+
+        yield basic_tx_out
+
+        def tx_cbor_value_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `tx_cbor` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_cbor(value=db_sync.SettingState.ENABLE)
+            )
+            check_dbsync_state(expected_state={db_sync.Table.TX_CBOR: TableCondition.NOT_EMPTY})
+
+        yield tx_cbor_value_enable
+
+        def tx_cbor_value_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `tx_cbor` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_cbor(value=db_sync.SettingState.DISABLE)
+            )
+            check_dbsync_state(expected_state={db_sync.Table.TX_CBOR: TableCondition.EMPTY})
+
+        yield tx_cbor_value_disable
+
+        def multi_asset_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test elabled `multi_asset` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_multi_asset(enable=True)
+            )
+            check_dbsync_state({db_sync.Table.MULTI_ASSET: TableCondition.NOT_EMPTY})
+
+        yield multi_asset_enable
+
+        def multi_asset_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `multi_asset` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_multi_asset(enable=False)
+            )
+            check_dbsync_state({db_sync.Table.MULTI_ASSET: TableCondition.EMPTY})
+
+        yield multi_asset_disable
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        ("tx_cbor_value", "expected_state"),
-        [
-            (db_sync.SettingState.ENABLE, TableCondition.NOT_EMPTY),
-            (db_sync.SettingState.DISABLE, TableCondition.EMPTY),
-        ],
-    )
-    def test_cbor(
+    def test_dbsync_config(
         self,
+        cluster_singleton: clusterlib.ClusterLib,
         db_sync_manager: db_sync.DBSyncManager,
-        tx_cbor_value: db_sync.SettingState,
-        expected_state: TableCondition,
+        subtests: pytest_subtests.SubTests,
     ):
-        """Test tx_cbor option with parametrization."""
-        db_config = db_sync_manager.get_config_builder()
+        """Run db-sync config subtests."""
+        cluster = cluster_singleton
+        common.get_test_id(cluster)
 
-        db_sync_manager.restart_with_config(db_config.with_tx_cbor(tx_cbor_value))
-        check_dbsync_state({db_sync.Table.TX_CBOR: expected_state})
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        ("multi_asset_enable", "expected_state"),
-        [(True, TableCondition.NOT_EMPTY), (False, TableCondition.EMPTY)],
-    )
-    def test_multi_asset(
-        self,
-        db_sync_manager: db_sync.DBSyncManager,
-        multi_asset_enable: bool,
-        expected_state: TableCondition,
-    ):
-        """Test multi_asset option with parametrization."""
-        db_config = db_sync_manager.get_config_builder()
-
-        db_sync_manager.restart_with_config(db_config.with_multi_asset(enable=multi_asset_enable))
-        check_dbsync_state({db_sync.Table.MULTI_ASSET: expected_state})
+        for subt in self.get_subtests():
+            with subtests.test(scenario=subt.__name__):
+                subt(db_sync_manager)
