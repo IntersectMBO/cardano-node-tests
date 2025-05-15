@@ -46,6 +46,9 @@ if [ "$MARKEXPR" = "all" ]; then
 elif [ "$MARKEXPR" = "conway only" ]; then
   unset MARKEXPR
   export TESTS_DIR="cardano_node_tests/tests/tests_conway"
+elif [ "$MARKEXPR" = "dbsync config" ]; then
+  export CLUSTERS_COUNT=1
+  export MARKEXPR="(dbsync and smoke) or dbsync_config"
 fi
 
 if [ -n "${CLUSTERS_COUNT:-""}" ]; then

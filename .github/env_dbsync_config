@@ -1,3 +1,0 @@
-CLUSTERS_COUNT=1
-MARKEXPR=(dbsync and smoke) or dbsync_config
-DBSYNC_SKIP_INDEXES=true

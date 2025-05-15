@@ -25,6 +25,7 @@ on:
         options:
         - all
         - dbsync
+        - dbsync config
         - smoke
         - plutus
         - plutus and smoke
