@@ -761,7 +761,7 @@ class TestStakePool:
         # and will insert an error on the specific table
         # https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/pool-offchain-data.md
         if configuration.HAS_DBSYNC:
-            pool_params = cluster.g_query.get_pool_params(
+            pool_params = cluster.g_query.get_pool_state(
                 stake_pool_id=pool_creation_out.stake_pool_id
             ).pool_params
 
