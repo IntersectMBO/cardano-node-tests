@@ -6,7 +6,8 @@
 # BASE_REVISION - revision of cardano-node to upgrade from (alternative to BASE_TAR_URL)
 # UPGRADE_REVISION - revision of cardano-node to upgrade to
 
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "Error at line $LINENO"' ERR
 
 if [[ -z "${BASE_TAR_URL:-""}" && -z "${BASE_REVISION:-""}" ]]; then
   echo "BASE_TAR_URL or BASE_REVISION must be set"
@@ -15,6 +16,8 @@ fi
 
 nix --version
 df -h .
+
+retval=0
 
 REPODIR="$(readlink -m "${0%/*}/..")"
 export REPODIR
@@ -27,13 +30,15 @@ export WORKDIR="$REPODIR/run_workdir"
 
 _cleanup() {
   # stop all running cluster instances
-  stop_instances "$WORKDIR"
+  stop_instances "$WORKDIR" || :
 }
 
 _cleanup
 
 # cleanup on Ctrl+C
-trap 'set +e; _cleanup; exit 130' SIGINT
+trap '_cleanup; exit 130' SIGINT
+# cleanup on error
+trap 'echo "Error at line $LINENO"; _cleanup' ERR
 
 # create clean workdir
 rm -rf "${WORKDIR:?}"
@@ -78,11 +83,11 @@ else
   NODE_OVERRIDE=$(node_override)
 fi
 
-set +e
 # shellcheck disable=SC2086
 nix flake update --accept-flake-config $NODE_OVERRIDE
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
+  set -euo pipefail
   : > "$WORKDIR/.nix_step1"
   echo "::endgroup::"  # end group for "Nix env setup step1"
 
@@ -95,9 +100,10 @@ nix develop --accept-flake-config .#venv --command bash -c '
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
-  ./.github/node_upgrade_pytest.sh step1
-'
-retval="$?"
+  retval=0
+  ./.github/node_upgrade_pytest.sh step1 || retval="$?"
+  exit "$retval"
+' || retval="$?"
 
 if [ ! -e "$WORKDIR/.nix_step1" ]; then
   echo "Nix env setup failed, exiting"
@@ -123,6 +129,7 @@ fi
 nix flake update --accept-flake-config $NODE_OVERRIDE
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
+  set -euo pipefail
   : > "$WORKDIR/.nix_step2"
   echo "::endgroup::"  # end group for "Nix env setup steps 2 & 3"
 
@@ -135,8 +142,8 @@ nix develop --accept-flake-config .#venv --command bash -c '
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # update cluster nodes, run smoke tests
-  ./.github/node_upgrade_pytest.sh step2
-  retval="$?"
+  retval=0
+  ./.github/node_upgrade_pytest.sh step2 || retval="$?"
   # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we dont want to continue
   [ "$retval" -le 1 ] || exit "$retval"
   echo "::endgroup::"  # end group for "Testrun Step2"
@@ -145,18 +152,17 @@ nix develop --accept-flake-config .#venv --command bash -c '
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
   # update to Conway, run smoke tests
-  ./.github/node_upgrade_pytest.sh step3
-  retval="$?"
+  retval=0
+  ./.github/node_upgrade_pytest.sh step3 || retval="$?"
   df -h .
   echo "::endgroup::"  # end group for "Testrun Step3"
 
   echo "::group::Teardown cluster & collect artifacts"
   printf "start: %(%H:%M:%S)T\n" -1
   # teardown cluster
-  ./.github/node_upgrade_pytest.sh finish
+  ./.github/node_upgrade_pytest.sh finish || :
   exit $retval
-'
-retval="$?"
+' || retval="$?"
 
 if [ ! -e "$WORKDIR/.nix_step2" ]; then
   echo "Nix env setup failed, exiting"
@@ -164,16 +170,14 @@ if [ ! -e "$WORKDIR/.nix_step2" ]; then
 fi
 
 # grep testing artifacts for errors
-# shellcheck disable=SC1090,SC1091
-. .github/grep_errors.sh
+./.github/grep_errors.sh
 
 _cleanup
 
 # prepare artifacts for upload in Github Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # save testing artifacts
-  # shellcheck disable=SC1090,SC1091
-  . .github/save_artifacts.sh
+  ./.github/save_artifacts.sh
 
   # compress scheduling log
   xz "$SCHEDULING_LOG"

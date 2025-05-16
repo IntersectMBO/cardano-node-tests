@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-set -uo pipefail
+set -Eeuo pipefail
+trap 'echo "Error at line $LINENO"' ERR
 
-retval=1
+retval=0
 
 export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
 
@@ -77,6 +78,7 @@ if [ "$1" = "step1" ]; then
 
   # run smoke tests
   printf "STEP1 tests: %(%H:%M:%S)T\n" -1
+  retval=0
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
@@ -85,8 +87,8 @@ if [ "$1" = "step1" ]; then
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
     --html=testrun-report-step1.html \
-    --self-contained-html
-  retval="$?"
+    --self-contained-html \
+    || retval="$?"
 
   # stop local cluster if tests failed unexpectedly
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
@@ -232,14 +234,15 @@ elif [ "$1" = "step2" ]; then
   [ "$sync_progress" = "100.00" ] || { echo "Failed to sync node" >&2; exit 6; }  # assert
 
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
-  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
-  err_retval="$?"
+  err_retval=0
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors || err_retval="$?"
 
   # Update Plutus cost models.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 6
 
   # run smoke tests
   printf "STEP2 tests: %(%H:%M:%S)T\n" -1
+  retval=0
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
@@ -248,8 +251,8 @@ elif [ "$1" = "step2" ]; then
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
     --html=testrun-report-step2.html \
-    --self-contained-html
-  retval="$?"
+    --self-contained-html \
+    ||retval="$?"
 
   # stop local cluster if tests failed unexpectedly
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
@@ -350,14 +353,15 @@ elif [ "$1" = "step3" ]; then
   [ "$sync_progress" = "100.00" ] || { echo "Failed to sync node" >&2; exit 6; }  # assert
 
   # Test for ignoring expected errors in log files. Run separately to make sure it runs first.
-  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors
-  err_retval="$?"
+  err_retval=0
+  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors || err_retval="$?"
 
   # Hard fork to PV10.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 6
 
   # Run smoke tests
   printf "STEP3 tests: %(%H:%M:%S)T\n" -1
+  retval=0
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
@@ -366,8 +370,8 @@ elif [ "$1" = "step3" ]; then
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
     --html=testrun-report-step3.html \
-    --self-contained-html
-  retval="$?"
+    --self-contained-html \
+    ||retval="$?"
 
   # create results archive for step3
   ./.github/results.sh .

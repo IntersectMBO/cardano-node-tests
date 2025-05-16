@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 _VENV_DIR="${_VENV_DIR:-"$WORKDIR/.venv"}"
 
 if [ "${1:-""}" = "clean" ]; then

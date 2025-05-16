@@ -10,8 +10,8 @@
 # PV9 - if set, will use protocol version 9
 # DRY_RUN - if set, will not start the cluster
 
-set -euo pipefail
-sets="$-"
+set -Eeuo pipefail
+trap 'echo "Error at line $LINENO"' ERR
 
 SCRIPT_DIR="$(readlink -m "${0%/*}")"
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
@@ -69,10 +69,8 @@ cardano_cli_log() {
   echo cardano-cli "$@" >> "$START_CLUSTER_LOG"
 
   for _ in {1..3}; do
-    set +e
-    out="$(cardano-cli "$@" 2>&1)"
-    retval="$?"
-    set -"$sets"
+    retval=0
+    { out="$(cardano-cli "$@" 2>&1)"; } || retval="$?"
 
     case "$out" in
       *"resource vanished"*)

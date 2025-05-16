@@ -1,10 +1,13 @@
 #! /usr/bin/env -S nix develop --accept-flake-config .#base -c bash
 # shellcheck shell=bash disable=SC2317
 
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "Error at line $LINENO"' ERR
 
 nix --version
 df -h .
+
+retval=0
 
 DEFAULT_CLUSTER_ERA="conway"
 
@@ -177,14 +180,15 @@ _cleanup_testnet_on_interrupt() {
   echo "::endgroup::"
 }
 
-# cleanup on Ctrl+C
+# cleanup on Ctrl+C or error
 _interrupted() {
   # Do testnet cleanup only on interrupted testrun. When not interrupted,
   # cleanup is done as part of a testrun.
-  _cleanup_testnet_on_interrupt
+  _cleanup_testnet_on_interrupt || :
   _cleanup
 }
-trap 'set +e; _interrupted; exit 130' SIGINT
+trap '_interrupted; exit 130' SIGINT
+trap 'echo "Error at line $LINENO"; _interrupted' ERR
 
 echo "::endgroup::"  # end group for "Script setup"
 
@@ -202,12 +206,13 @@ if [ "$(echo "$PWD"/.bin/*)" != "${PWD}/.bin/*" ]; then
   echo
 fi
 
-# run tests and generate report
-set +e
+# Run tests and generate report
+
 # shellcheck disable=SC2046,SC2119
 nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
 nix develop --accept-flake-config .#venv --command bash -c '
+  set -euo pipefail
   echo "::endgroup::"  # end group for "Nix env setup"
 
   echo "::group::Python venv setup"
@@ -220,8 +225,8 @@ nix develop --accept-flake-config .#venv --command bash -c '
   df -h .
   export PATH="$PATH_APPEND":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
-  make "${MAKE_TARGET:-"tests"}"
-  retval="$?"
+  retval=0
+  make "${MAKE_TARGET:-"tests"}" || retval="$?"
   df -h .
   echo "::endgroup::"  # end group for "Testrun"
 
@@ -230,12 +235,10 @@ nix develop --accept-flake-config .#venv --command bash -c '
   ./.github/cli_coverage.sh
   ./.github/reqs_coverage.sh
   exit "$retval"
-'
-retval="$?"
+' || retval="$?"
 
 # grep testing artifacts for errors
-# shellcheck disable=SC1090,SC1091
-. .github/grep_errors.sh
+./.github/grep_errors.sh
 
 # Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
 # After any key is pressed, resume this script and stop all running cluster instances.
@@ -260,8 +263,7 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   ./.github/results.sh
 
   # save testing artifacts
-  # shellcheck disable=SC1090,SC1091
-  . .github/save_artifacts.sh
+  ./.github/save_artifacts.sh
 
   # compress scheduling log
   xz "$SCHEDULING_LOG"
