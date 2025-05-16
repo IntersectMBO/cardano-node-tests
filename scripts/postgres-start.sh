@@ -1,7 +1,8 @@
 #! /usr/bin/env -S nix develop --accept-flake-config .#postgres -i -k PGHOST -k PGPORT -k PGUSER -c bash
 # shellcheck shell=bash
 
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "Error at line $LINENO"' ERR
 
 POSTGRES_DIR="${1:?"Need path to postgres dir"}"
 POSTGRES_DIR="$(readlink -m "$POSTGRES_DIR")"

@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
-ERR_LOGFILE="$PWD/errors_all.log"
+ERR_LOGFILE="${PWD}/errors_all.log"
 
-# shellcheck disable=SC2012
-pushd "$ARTIFACTS_DIR" > /dev/null || { echo "Cannot switch to $ARTIFACTS_DIR"; ls -1a "$ARTIFACTS_DIR"; exit 1; } > "$ERR_LOGFILE"
-grep -r --include "*.stdout" --include "*.stderr" -Ei ":error:|failed|failure" . > "$ERR_LOGFILE"
-popd > /dev/null || exit 1
+cd "$ARTIFACTS_DIR" || { echo "Cannot switch to $ARTIFACTS_DIR" >&2; exit 1; }
+grep -r --include "*.stdout" --include "*.stderr" -Ei ":error:|failed|failure" . > "$ERR_LOGFILE" || :

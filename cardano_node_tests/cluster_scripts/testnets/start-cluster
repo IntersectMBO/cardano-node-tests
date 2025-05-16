@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "Error at line $LINENO"' ERR
 
 TESTNET_DIR="${1:?"Testnet dir needed"}"
 SCRIPT_DIR="$(readlink -m "${0%/*}")"
