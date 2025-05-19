@@ -1213,7 +1213,7 @@ class TestDelegDReps:
                     "Unexpected number of DRep stake distribution records"
                 )
 
-                assert stake_distrib_vkey[0][0] == f"drep-keyHash-{custom_drep_rewards.drep_id}", (
+                assert f"drep-keyHash-{custom_drep_rewards.drep_id}" in stake_distrib_vkey, (
                     "The DRep distribution record doesn't match the DRep ID "
                     f"'{custom_drep_rewards.drep_id}'"
                 )

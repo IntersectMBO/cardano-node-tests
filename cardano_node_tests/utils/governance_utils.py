@@ -185,20 +185,14 @@ def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str)
     assert stake_addr_val.get("drep") == expected_drep
 
 
-def check_drep_stake_distribution(distrib_state: list[list], drep_id: str, min_amount: int) -> None:
+def check_drep_stake_distribution(
+    distrib_state: dict[str, tp.Any], drep_id: str, min_amount: int
+) -> None:
     cred_name = get_drep_cred_name(drep_id=drep_id)
     expected_drep = f"drep-{cred_name}"
-
-    found_rec = []
-    for r in distrib_state:
-        if r[0] == expected_drep:
-            found_rec = r
-            break
-    else:
-        msg = f"Record for `{expected_drep}` not found"
-        raise AssertionError(msg)
-
-    assert found_rec[1] >= min_amount, f"The stake amount delegated to DRep < {min_amount}"
+    deleg_amount = distrib_state.get(expected_drep)
+    assert deleg_amount is not None, f"Record for `{expected_drep}` not found"
+    assert deleg_amount >= min_amount, f"The stake amount delegated to DRep < {min_amount}"
 
 
 def get_prev_action(
