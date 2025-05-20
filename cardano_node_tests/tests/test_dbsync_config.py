@@ -52,10 +52,14 @@ def check_dbsync_state(
 
     Args:
         expected_state: Dictionary specifying conditions to verify where:
+
             - Key format:
+
                 * "table" for table-level checks
                 * "table.column" for column-level checks
+
             - Value format:
+
                 * TableCondition enum values for table-level checks
                 * ColumnCondition enum values for column-level checks
 
