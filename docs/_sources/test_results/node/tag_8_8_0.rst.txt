@@ -1,0 +1,88 @@
+8.8.0
+=====
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.8.0-pre>
+* Tag commits - <https://github.com/IntersectMBO/cardano-node/compare/8.7.2...8.8.0-pre>
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - P2P ON - Babbage with default (Babbage) TX
+     - |:x:| \*
+   * - P2P OFF - Babbage with default (Babbage) TX
+     - |:x:| \*
+   * - Mix P2P and Legacy - Babbage with default (Babbage) TX
+     - |:x:| \*
+   * - P2P OFF - Babbage with Alonzo TX
+     - |:x:| \*
+   * - Plutus Functionality using `Antaeus <https://github.com/input-output-hk/antaeus/tree/cardano-node-8_8>`__ - `Multi-era (with V3 scripts) <https://cardano-tests-reports-3-74-115-22.nip.io/antaeus/8.8.0/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (8.7.2 to 8.8.0)
+     - |:x:| \*
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
+     - |:heavy_check_mark:|
+   * - Sanity checks of the submit-api REST service
+     - |:heavy_check_mark:|
+
+\* - Consensus issue, see `issue #947 <https://github.com/IntersectMBO/ouroboros-consensus/issues/947>`__
+
+
+Release testing checklist
+-------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `8.8.0` pushed to `shelley-qa`
+     - |:hourglass_flowing_sand:|
+   * - `8.8.0` pushed to `preview`
+     - |:hourglass_flowing_sand:|
+   * - Grafana metrics OK
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `shelley-qa`
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `preview`
+     - |:hourglass_flowing_sand:|
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
+     - |:heavy_check_mark:|
+   * - DB re-validation testing (ledger snapshots compatibility)
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:hourglass_flowing_sand:|
+   * - Sanity check release notes
+     - |:heavy_check_mark:|
+
+
+New functionalities in this tag
+-------------------------------
+
+
+Known issues
+------------
+
+`Up-to-date list of existing issues <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
+
+
+New issues
+----------
+
+[BUG] - Transaction submit fails with invalid Plutus script even when passing `--script-invalid`: `issue #947 <https://github.com/IntersectMBO/ouroboros-consensus/issues/947>`__
+
+
+Breaking changes
+----------------
