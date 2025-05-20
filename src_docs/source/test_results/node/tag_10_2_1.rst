@@ -41,7 +41,7 @@ Release testing checklist
      - |:heavy_check_mark:|
    * - Regression testing against `preview`
      - |:heavy_check_mark:|
-   * - `Sync testing ran against Mainnet (Linux) <https://docs.google.com/document/d/16TFXwt2HDFyDVHh-a7uXv1D2sQFl4zwaRZfYIzNBVlc/edit?tab=t.0#heading=h.1eyoor4zkkf9>`__
+   * - `Sync testing ran against Mainnet (Linux) <https://docs.google.com/document/d/e/2PACX-1vRLI7SaVkQlx4KR7iWzWEp246e1Mcu3q8GPMvyIMWkDjjAf2MxTeou-TYZe9_RMb9xwGgaq9bc7El0s/pub>`__
      - |:heavy_check_mark:|
    * - DB re-validation testing (ledger snapshots compatibility)
      - |:heavy_check_mark:|

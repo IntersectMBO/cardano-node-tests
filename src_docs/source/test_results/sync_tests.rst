@@ -1,24 +1,23 @@
+Sync Tests
+==========
+
+The sync tests evaluate the performance of syncing the Cardano mainnet from genesis. These tests focus on:
+
+- **Sync time** – how long it takes to fully sync a node
+- **Sync speed** – the rate at which blockchain data is processed in each epoch and each era
+- **Node resource usage** – including CPU and memory utilization
+
+The source code for these tests is available in the `cardano-sync-tests <https://github.com/IntersectMBO/cardano-sync-tests>`__ repository.
+
+Sync Test Results by Cardano Node Version
+-----------------------------------------
+
+Below are published results for recent `cardano-node` releases:
+
 .. raw:: html
 
-   <link rel="stylesheet" type="text/css" href="../_static/css/override-width.css">
-
-Sync tests
-=================
-
-All the visualizations are dynamic. Use the **left/right arrows** from the bottom of the page to navigate through the different visuals.
-
-For best results, we recommend using the full screen option (bottom right corner).
-
-.. raw:: html
-
-   <hr>
-   <p>
-   <a href="https://app.powerbi.com/groups/2cee28fa-a0cb-48de-aa67-2390c9da910c/reports/1dfe6daa-a1ec-4c8c-b862-a178e741e57d/ReportSection726d38ade1e978313209" target="_blank">Open Node dashboard in new window</a>
-   <br><br>
-   <iframe title="node_sync_tests_aws_db - summary" src="https://app.powerbi.com/reportEmbed?reportId=1dfe6daa-a1ec-4c8c-b862-a178e741e57d&autoAuth=true&ctid=93fcf5dd-377a-4776-bcbe-e2231a8cf46e" allowfullscreen="true" width="900" height="600" frameborder="0"></iframe>
-   </p>
-
-   <p>
-   <a href="https://app.powerbi.com/groups/2cee28fa-a0cb-48de-aa67-2390c9da910c/reports/4a0df689-604c-4b3e-8961-9244acd48679" target="_blank">Open DB-Sync dashboard in new window</a>
-   <iframe title="dbSync_sync_tests_aws_db - summary" src="https://app.powerbi.com/reportEmbed?reportId=4a0df689-604c-4b3e-8961-9244acd48679&autoAuth=true&ctid=93fcf5dd-377a-4776-bcbe-e2231a8cf46e" allowfullscreen="true" width="900" height="600" frameborder="0"></iframe>
-   </p>
+   <ul>
+     <li><a href="https://docs.google.com/document/d/e/2PACX-1vQJlMhOz7bJ74-nRIv8VAJgHT3pYFEy6-cwUivX0cMwD9Z696zVvK7W2DC9YChXffo72RXg6csGw2fW/pub" target="_blank">Cardano Node 10.4.0</a></li>
+     <li><a href="https://docs.google.com/document/d/e/2PACX-1vQlkcSoWM5563Y-pfip5lSbQkQcGKJZKT9_TMdsnrq4FVYVuYMYWKZ_aW7Sn57ZQ9IvRo1S1pgcc1oX/pub" target="_blank">Cardano Node 10.3.0</a></li>
+     <li><a href="https://docs.google.com/document/d/e/2PACX-1vRLI7SaVkQlx4KR7iWzWEp246e1Mcu3q8GPMvyIMWkDjjAf2MxTeou-TYZe9_RMb9xwGgaq9bc7El0s/pub" target="_blank">Cardano Node 10.2.1</a></li>
+   </ul>
