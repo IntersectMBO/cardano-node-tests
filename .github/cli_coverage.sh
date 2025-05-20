@@ -5,7 +5,7 @@ set -euo pipefail
 tests_repo="$(readlink -m "${0%/*}/..")"
 
 get_coverage() {
-  if [ ! -e "$tests_repo/.cli_coverage" ] || ! command -v cardano-cli >/dev/null 2>&1; then
+  if [ "$(echo "$tests_repo"/.cli_coverage/*)" = "$tests_repo/.cli_coverage/*" ] || ! command -v cardano-cli >/dev/null 2>&1; then
     return 1
   fi
   oldpwd="$PWD"
