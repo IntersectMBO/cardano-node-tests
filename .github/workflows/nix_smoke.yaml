@@ -25,4 +25,8 @@ jobs:
             substituters = https://cache.nixos.org https://cache.iog.io https://iohk.cachix.org
             allow-import-from-derivation = true
       - name: Run pytest in Nix
-        run: TEST_THREADS=0 PYTEST_ARGS="-k test_cli.py --skipall" ./.github/regression.sh
+        run: |
+          # env
+          echo "::group::Script setup"
+          TEST_THREADS=0 PYTEST_ARGS="-k test_cli.py --skipall" ./.github/regression.sh
+          echo "::endgroup::"
