@@ -232,8 +232,8 @@ nix develop --accept-flake-config .#venv --command bash -c '
 
   echo "::group::Collect artifacts & teardown cluster"
   printf "start: %(%H:%M:%S)T\n" -1
-  ./.github/cli_coverage.sh
-  ./.github/reqs_coverage.sh
+  ./.github/cli_coverage.sh || :
+  ./.github/reqs_coverage.sh || :
   exit "$retval"
 ' || retval="$?"
 
@@ -260,13 +260,15 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   fi
 
   # create results archive
-  ./.github/results.sh
+  ./.github/create_results.sh || :
 
   # save testing artifacts
-  ./.github/save_artifacts.sh
+  ./.github/save_artifacts.sh || :
 
   # compress scheduling log
-  xz "$SCHEDULING_LOG"
+  if [ -e "$SCHEDULING_LOG" ]; then
+    xz "$SCHEDULING_LOG"
+  fi
 fi
 
 exit "$retval"

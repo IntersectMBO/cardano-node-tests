@@ -94,7 +94,7 @@ if [ "$1" = "step1" ]; then
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step1
-  ./.github/results.sh .
+  ./.github/create_results.sh .
   mv allure-results.tar.xz allure-results-step1.tar.xz
 
   printf "STEP1 finish: %(%H:%M:%S)T\n" -1
@@ -258,7 +258,7 @@ elif [ "$1" = "step2" ]; then
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step2
-  ./.github/results.sh .
+  ./.github/create_results.sh .
   mv allure-results.tar.xz allure-results-step2.tar.xz
 
   [ "$err_retval" -gt "$retval" ] && retval=1
@@ -374,7 +374,7 @@ elif [ "$1" = "step3" ]; then
     ||retval="$?"
 
   # create results archive for step3
-  ./.github/results.sh .
+  ./.github/create_results.sh .
   mv allure-results.tar.xz allure-results-step3.tar.xz
 
   [ "$err_retval" -gt "$retval" ] && retval=1
