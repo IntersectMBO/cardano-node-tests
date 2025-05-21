@@ -152,9 +152,9 @@ elif [ "$1" = "step2" ]; then
   CONWAY_GENESIS_STEP1_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   ALONZO_GENESIS_STEP1_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   # hashes of genesis files that were potentially replaced
-  ALONZO_GENESIS_HASH="$(cardano-cli legacy genesis hash --genesis \
+  ALONZO_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
     "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
-  CONWAY_GENESIS_HASH="$(cardano-cli legacy genesis hash --genesis \
+  CONWAY_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
     "$STATE_CLUSTER/shelley/genesis.conway.json")"
 
   # copy newly generated config files to the cluster state dir
