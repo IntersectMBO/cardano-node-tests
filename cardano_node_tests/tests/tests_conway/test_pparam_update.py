@@ -195,26 +195,55 @@ def _check_drep_thresholds(
     )
 
 
+@pytest.fixture
+def payment_addr(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> clusterlib.AddressRecord:
+    """Create new payment address."""
+    addr = common.get_payment_addr(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        caching_key=helpers.get_current_line_str(),
+    )
+    return addr
+
+
+@pytest.fixture
+def pool_user_ug(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_use_governance: governance_utils.GovClusterT,
+) -> clusterlib.PoolUser:
+    """Create a registered pool user for "use governance"."""
+    cluster, __ = cluster_use_governance
+    return common.get_registered_pool_user(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        caching_key=helpers.get_current_line_str(),
+        amount=2_000_000_000,
+    )
+
+
+@pytest.fixture
+def pool_user_lgp(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_lock_governance_plutus: governance_utils.GovClusterT,
+) -> clusterlib.PoolUser:
+    """Create a registered pool user for "lock governance and plutus"."""
+    cluster, __ = cluster_lock_governance_plutus
+    return common.get_registered_pool_user(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        caching_key=helpers.get_current_line_str(),
+        amount=2_000_000_000,
+    )
+
+
 class TestPParamUpdate:
     """Tests for protocol parameters update."""
-
-    @pytest.fixture
-    def pool_user_lgp(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance_plutus: governance_utils.GovClusterT,
-    ) -> clusterlib.PoolUser:
-        """Create a pool user for "lock governance"."""
-        cluster, __ = cluster_lock_governance_plutus
-        key = helpers.get_current_line_str()
-        name_template = common.get_test_id(cluster)
-        return common.get_registered_pool_user(
-            name_template=name_template,
-            cluster_manager=cluster_manager,
-            cluster_obj=cluster,
-            caching_key=key,
-            amount=2_000_000_000,
-        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -1379,21 +1408,6 @@ class TestPParamData:
 class TestLegacyProposals:
     """Tests for legacy update proposals in Conway."""
 
-    @pytest.fixture
-    def payment_addr(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-    ) -> clusterlib.AddressRecord:
-        """Create new payment address."""
-        addr = common.get_payment_addr(
-            name_template=common.get_test_id(cluster),
-            cluster_manager=cluster_manager,
-            cluster_obj=cluster,
-            caching_key=helpers.get_current_line_str(),
-        )
-        return addr
-
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
@@ -1500,3 +1514,48 @@ class TestLegacyProposals:
             )
         err_str = str(excinfo.value)
         assert "Invalid argument `create-update-proposal'" in err_str, err_str
+
+
+class TestNegativeCostModels:
+    """Negative tests for cost models update."""
+
+    @allure.link(helpers.get_vcs_link())
+    def test_incompatible_cost_models(
+        self,
+        cluster_use_governance: governance_utils.GovClusterT,
+        pool_user_ug: clusterlib.PoolUser,
+    ):
+        """Test incompatible Plutus cost models."""
+        cluster, __ = cluster_use_governance
+        temp_template = common.get_test_id(cluster)
+        exp_error = ""
+
+        cm_file = "cost_models_dict.json"
+        exp_error = "blake2b-cpu-arguments-intercept"
+
+        update_proposal = [
+            clusterlib_utils.UpdateProposal(
+                arg="--cost-model-file",
+                value=str(DATA_DIR / cm_file),
+                name="",  # costModels
+            ),
+        ]
+
+        anchor_data = governance_utils.get_default_anchor_data()
+        prev_action_rec = governance_utils.get_prev_action(
+            action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
+            gov_state=cluster.g_conway_governance.query.gov_state(),
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            conway_common.propose_pparams_update(
+                cluster_obj=cluster,
+                name_template=temp_template,
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
+                pool_user=pool_user_ug,
+                proposals=update_proposal,
+                prev_action_rec=prev_action_rec,
+            )
+        err_str = str(excinfo.value)
+        assert exp_error in err_str, err_str
