@@ -796,51 +796,6 @@ def check_plutus_costs(
         raise AssertionError("\n".join(errors))
 
 
-def check_param_proposal(protocol_params: dict) -> dbsync_queries.ParamProposalDBRow | None:
-    """Check expected values in the `param_proposal` table in db-sync."""
-    if not configuration.HAS_DBSYNC:
-        return None
-
-    param_proposal_db = dbsync_queries.query_param_proposal()
-
-    params_mapping = {
-        "coins_per_utxo_size": protocol_params["utxoCostPerByte"],
-        "collateral_percent": protocol_params["collateralPercentage"],
-        "influence": protocol_params["poolPledgeInfluence"],
-        "key_deposit": protocol_params["stakeAddressDeposit"],
-        "max_bh_size": protocol_params["maxBlockHeaderSize"],
-        "max_block_ex_mem": protocol_params["maxBlockExecutionUnits"]["memory"],
-        "max_block_ex_steps": protocol_params["maxBlockExecutionUnits"]["steps"],
-        "max_block_size": protocol_params["maxBlockBodySize"],
-        "max_collateral_inputs": protocol_params["maxCollateralInputs"],
-        "max_epoch": protocol_params["poolRetireMaxEpoch"],
-        "max_tx_ex_mem": protocol_params["maxTxExecutionUnits"]["memory"],
-        "max_tx_ex_steps": protocol_params["maxTxExecutionUnits"]["steps"],
-        "max_tx_size": protocol_params["maxTxSize"],
-        "max_val_size": protocol_params["maxValueSize"],
-        "min_fee_a": protocol_params["txFeePerByte"],
-        "min_fee_b": protocol_params["txFeeFixed"],
-        "min_pool_cost": protocol_params["minPoolCost"],
-        "min_utxo_value": protocol_params.get("minUTxOValue"),  # removed in node 8.12.0
-        "optimal_pool_count": protocol_params["stakePoolTargetNum"],
-        "pool_deposit": protocol_params["stakePoolDeposit"],
-    }
-
-    failures = []
-
-    for param_db, protocol_value in params_mapping.items():
-        db_value = getattr(param_proposal_db, param_db)
-        if db_value and (db_value != protocol_value):
-            failures.append(f"Param value for {param_db}: {db_value}. Expected: {protocol_value}")
-
-    if failures:
-        failures_str = "\n".join(failures)
-        msg = f"Unexpected parameter proposal values in db-sync:\n{failures_str}"
-        raise AssertionError(msg)
-
-    return param_proposal_db
-
-
 def _get_float_pparam(pparam: tp.Any) -> float | None:
     if pparam is None:
         return None
