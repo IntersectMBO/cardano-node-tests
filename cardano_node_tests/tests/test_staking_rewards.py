@@ -651,9 +651,6 @@ class TestRewards:
         # Make sure there are rewards already available
         clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
 
-        # MIR rewards doesn't work on Conway+
-        mir_reward = 50_000_000_000 if VERSIONS.transaction_era < VERSIONS.CONWAY else 0
-
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -711,7 +708,7 @@ class TestRewards:
                 )
                 assert reward_per_epoch in (
                     prev_recorded_reward,
-                    prev_recorded_reward + mir_reward,
+                    prev_recorded_reward,
                 )
 
             pstake_mark = clusterlib_utils.get_snapshot_rec(
@@ -778,34 +775,6 @@ class TestRewards:
                 ]
             else:
                 assert _get_rew_type_for_cred_hash(reward_addr_dec, rs_record) == ["LeaderReward"]
-
-        def _mir_tx(fund_src: str) -> clusterlib.TxRawOutput:
-            mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
-                stake_addr=pool_reward.stake.address,
-                reward=mir_reward,
-                tx_name=temp_template,
-                use_treasury=fund_src == "treasury",
-            )
-            mir_tx_files = clusterlib.TxFiles(
-                certificate_files=[mir_cert],
-                signing_key_files=[
-                    pool_owner.payment.skey_file,
-                    *cluster.g_genesis.genesis_keys.delegate_skeys,
-                ],
-            )
-
-            LOGGER.info(
-                f"Submitting MIR cert for transferring funds from {fund_src} to "
-                f"'{pool_reward.stake.address}' in epoch {cluster.g_query.get_epoch()} "
-                f"on cluster instance {cluster_manager.cluster_instance_num}"
-            )
-            mir_tx_raw_output = cluster.g_transaction.send_tx(
-                src_address=pool_owner.payment.address,
-                tx_name=f"{temp_template}_{fund_src}",
-                tx_files=mir_tx_files,
-            )
-
-            return mir_tx_raw_output
 
         # Delegate pool rewards address to pool
         node_cold = pool_rec["cold_key_pair"]
@@ -882,18 +851,6 @@ class TestRewards:
                     )
                 )
 
-                mir_tx_raw_reserves: clusterlib.TxRawOutput | None = None
-                if mir_reward and this_epoch == init_epoch + 2:
-                    mir_tx_raw_reserves = _mir_tx("reserves")
-
-                mir_tx_raw_treasury: clusterlib.TxRawOutput | None = None
-                if mir_reward and this_epoch == init_epoch + 3:
-                    assert reward_per_epoch > mir_reward
-                    mir_tx_raw_treasury = _mir_tx("treasury")
-
-                if mir_reward and this_epoch == init_epoch + 4:
-                    assert reward_per_epoch > mir_reward
-
                 # Undelegate rewards address
                 if this_epoch == init_epoch + 5:
                     address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
@@ -961,12 +918,6 @@ class TestRewards:
         # Check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_deleg)
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)
-        assert not mir_tx_raw_reserves or dbsync_utils.check_tx(
-            cluster_obj=cluster, tx_raw_output=mir_tx_raw_reserves
-        )
-        assert not mir_tx_raw_treasury or dbsync_utils.check_tx(
-            cluster_obj=cluster, tx_raw_output=mir_tx_raw_treasury
-        )
 
         # Check pool records in db-sync
         pool_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
@@ -996,17 +947,7 @@ class TestRewards:
 
             if repoch <= init_epoch + 1:
                 assert rtypes_set == {"leader"}
-            elif repoch == init_epoch + 2:
-                expected_set = (
-                    {"reserves", "leader", "member"} if mir_reward else {"leader", "member"}
-                )
-                assert rtypes_set == expected_set
-            elif repoch == init_epoch + 3:
-                expected_set = (
-                    {"treasury", "leader", "member"} if mir_reward else {"leader", "member"}
-                )
-                assert rtypes_set == expected_set
-            elif init_epoch + 4 <= repoch <= 6:
+            elif init_epoch + 2 <= repoch <= 6:
                 assert rtypes_set == {"leader", "member"}
             elif repoch > init_epoch + 6:
                 assert rtypes_set == {"leader"}
