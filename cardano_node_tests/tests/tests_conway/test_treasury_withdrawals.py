@@ -760,24 +760,24 @@ class TestMIRCerts:
         reqc.cip070.start(url=helpers.get_vcs_link())
 
         if mir_cert == "to_treasury":
-            cert_file = cluster.g_governance.gen_mir_cert_to_treasury(
+            cert_file = cluster.g_legacy_governance.gen_mir_cert_to_treasury(
                 transfer=amount,
                 tx_name=temp_template,
             )
         elif mir_cert == "to_rewards":
-            cert_file = cluster.g_governance.gen_mir_cert_to_rewards(
+            cert_file = cluster.g_legacy_governance.gen_mir_cert_to_rewards(
                 transfer=amount,
                 tx_name=temp_template,
             )
         elif mir_cert == "treasury_to_addr":
-            cert_file = cluster.g_governance.gen_mir_cert_stake_addr(
+            cert_file = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
                 tx_name=temp_template,
                 stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
                 reward=amount,
                 use_treasury=True,
             )
         elif mir_cert == "reserves_to_addr":
-            cert_file = cluster.g_governance.gen_mir_cert_stake_addr(
+            cert_file = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
                 tx_name=temp_template,
                 stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
                 reward=amount,
