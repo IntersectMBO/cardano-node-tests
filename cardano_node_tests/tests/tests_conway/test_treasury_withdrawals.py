@@ -140,7 +140,7 @@ class TestTreasuryWithdrawals:
         [r.start(url=_url) for r in (reqc.cli015, reqc.cip031a_06, reqc.cip031f, reqc.cip054_05)]
 
         withdrawal_actions = [
-            cluster.g_conway_governance.action.create_treasury_withdrawal(
+            cluster.g_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_{a}",
                 transfer_amt=a,
                 deposit_amt=action_deposit_amt,
@@ -157,7 +157,7 @@ class TestTreasuryWithdrawals:
         # This one is the same as one that already exists in `withdrawal_actions`,
         # and will not be taken into account.
         withdrawal_actions.append(
-            cluster.g_conway_governance.action.create_treasury_withdrawal(
+            cluster.g_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_duplicated",
                 transfer_amt=transfer_amts[0],
                 deposit_amt=action_deposit_amt,
@@ -242,7 +242,7 @@ class TestTreasuryWithdrawals:
         ), f"Incorrect balance for source address `{pool_user_ug_treasury.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        action_gov_state = cluster.g_governance.query.gov_state()
         action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
@@ -267,7 +267,7 @@ class TestTreasuryWithdrawals:
             for action_ix in range(actions_num):
                 votes_cc.extend(
                     [
-                        cluster.g_conway_governance.vote.create_committee(
+                        cluster.g_governance.vote.create_committee(
                             vote_name=f"{temp_template}_{vote_id}_{action_ix}_cc{i}",
                             action_txid=action_txid,
                             action_ix=action_ix,
@@ -279,7 +279,7 @@ class TestTreasuryWithdrawals:
                 )
                 votes_drep.extend(
                     [
-                        cluster.g_conway_governance.vote.create_drep(
+                        cluster.g_governance.vote.create_drep(
                             vote_name=f"{temp_template}_{vote_id}_{action_ix}_drep{i}",
                             action_txid=action_txid,
                             action_ix=action_ix,
@@ -292,7 +292,7 @@ class TestTreasuryWithdrawals:
                 if add_spo_votes:
                     votes_spo.extend(
                         [
-                            cluster.g_conway_governance.vote.create_spo(
+                            cluster.g_governance.vote.create_spo(
                                 vote_name=f"{temp_template}_{vote_id}_{action_ix}_pool{i}",
                                 action_txid=action_txid,
                                 action_ix=action_ix,
@@ -325,7 +325,7 @@ class TestTreasuryWithdrawals:
                 keys=vote_keys,
             )
 
-            vote_gov_state = cluster.g_conway_governance.query.gov_state()
+            vote_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=vote_gov_state,
                 name_template=f"{temp_template}_vote_{vote_id}_{_cast_vote_epoch}",
@@ -365,7 +365,7 @@ class TestTreasuryWithdrawals:
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=approved_epoch + 1, padding_seconds=5)
-        rat_gov_state = cluster.g_conway_governance.query.gov_state()
+        rat_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
@@ -482,7 +482,7 @@ class TestTreasuryWithdrawals:
         if not is_in_bootstrap:
             reqc.cip030ex.start(url=helpers.get_vcs_link())
         withdrawal_actions = [
-            cluster.g_conway_governance.action.create_treasury_withdrawal(
+            cluster.g_governance.action.create_treasury_withdrawal(
                 action_name=f"{temp_template}_{a}",
                 transfer_amt=transfer_amt + a,
                 deposit_amt=action_deposit_amt,
@@ -547,7 +547,7 @@ class TestTreasuryWithdrawals:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        action_gov_state = cluster.g_governance.query.gov_state()
         action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
@@ -573,7 +573,7 @@ class TestTreasuryWithdrawals:
 
             votes.extend(
                 [
-                    cluster.g_conway_governance.vote.create_committee(
+                    cluster.g_governance.vote.create_committee(
                         vote_name=f"{temp_template}_{action_ix}_cc{i}",
                         action_txid=action_txid,
                         action_ix=action_ix,
@@ -587,7 +587,7 @@ class TestTreasuryWithdrawals:
             )
             votes.extend(
                 [
-                    cluster.g_conway_governance.vote.create_drep(
+                    cluster.g_governance.vote.create_drep(
                         vote_name=f"{temp_template}_{action_ix}_drep{i}",
                         action_txid=action_txid,
                         action_ix=action_ix,
@@ -624,7 +624,7 @@ class TestTreasuryWithdrawals:
         )
         reqc.cli026.success()
 
-        vote_gov_state = cluster.g_conway_governance.query.gov_state()
+        vote_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{vote_epoch}"
         )
@@ -645,7 +645,7 @@ class TestTreasuryWithdrawals:
 
         # Check that the actions are not ratified
         nonrat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
-        nonrat_gov_state = cluster.g_conway_governance.query.gov_state()
+        nonrat_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{nonrat_epoch}"
         )
@@ -656,7 +656,7 @@ class TestTreasuryWithdrawals:
 
         # Check that the actions are not enacted
         nonenacted_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 2, padding_seconds=5)
-        nonenacted_gov_state = cluster.g_conway_governance.query.gov_state()
+        nonenacted_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=nonenacted_gov_state,
             name_template=f"{temp_template}_nonenact_{nonenacted_epoch}",
@@ -670,7 +670,7 @@ class TestTreasuryWithdrawals:
         reqc.cip032ex.start(url=helpers.get_vcs_link())
         epochs_to_expiration = action_prop_epoch + cluster.conway_genesis["govActionLifetime"] + 1
         expire_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration, padding_seconds=5)
-        expire_gov_state = cluster.g_conway_governance.query.gov_state()
+        expire_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
         )
@@ -687,7 +687,7 @@ class TestTreasuryWithdrawals:
 
         # Check that the proposals were removed and the actions deposits were returned
         rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
-        rem_gov_state = cluster.g_conway_governance.query.gov_state()
+        rem_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{rem_epoch}"
         )

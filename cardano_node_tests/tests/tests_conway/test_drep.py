@@ -285,7 +285,7 @@ class TestDReps:
         drep_metadata_file = pl.Path(f"{temp_template}_drep_metadata.json")
         drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
         helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
-        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+        drep_metadata_hash = cluster.g_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
         drep_metadata_url = web.publish(file_path=drep_metadata_file)
@@ -373,7 +373,7 @@ class TestDReps:
 
         # Register DRep
         reqc.cli012.start(url=helpers.get_vcs_link())
-        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+        drep_metadata_hash = cluster.g_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
         with open(drep_metadata_file, encoding="utf-8") as anchor_fp:
@@ -413,7 +413,7 @@ class TestDReps:
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
         reqc.cli033.start(url=helpers.get_vcs_link())
-        reg_drep_state = cluster.g_conway_governance.query.drep_state(
+        reg_drep_state = cluster.g_governance.query.drep_state(
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
@@ -456,7 +456,7 @@ class TestDReps:
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli011, reqc.cip023)]
-        ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+        ret_cert = cluster.g_governance.drep.gen_retirement_cert(
             cert_name=temp_template,
             deposit_amt=reg_drep.deposit,
             drep_vkey_file=reg_drep.key_pair.vkey_file,
@@ -479,7 +479,7 @@ class TestDReps:
         )
 
         reqc.cip024.start(url=helpers.get_vcs_link())
-        ret_drep_state = cluster.g_conway_governance.query.drep_state(
+        ret_drep_state = cluster.g_governance.query.drep_state(
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert not ret_drep_state, "DRep was not retired"
@@ -523,7 +523,7 @@ class TestDReps:
 
         # Register DRep
         drep_metadata_url = "https://tinyurl.com/drep-url"
-        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+        drep_metadata_hash = cluster.g_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
 
@@ -547,7 +547,7 @@ class TestDReps:
             deposit=reg_drep.deposit,
         )
 
-        reg_drep_state = cluster.g_conway_governance.query.drep_state(
+        reg_drep_state = cluster.g_governance.query.drep_state(
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
@@ -555,7 +555,7 @@ class TestDReps:
         def _retire_drep() -> None:
             """Retire the new DRep so it doesn't affect voting."""
             with helpers.change_cwd(testfile_temp_dir):
-                ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+                ret_cert = cluster.g_governance.drep.gen_retirement_cert(
                     cert_name=temp_template,
                     deposit_amt=reg_drep.deposit,
                     drep_vkey_file=reg_drep.key_pair.vkey_file,
@@ -574,7 +574,7 @@ class TestDReps:
                     deposit=-reg_drep.deposit,
                 )
 
-                ret_drep_state = cluster.g_conway_governance.query.drep_state(
+                ret_drep_state = cluster.g_governance.query.drep_state(
                     drep_vkey_file=reg_drep.key_pair.vkey_file
                 )
                 assert not ret_drep_state, "DRep was not retired"
@@ -688,14 +688,14 @@ class TestNegativeDReps:
                 deposit=reg_drep.deposit,
             )
 
-        reg_drep_state = cluster.g_conway_governance.query.drep_state(
+        reg_drep_state = cluster.g_governance.query.drep_state(
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
 
         # Retire DRep
 
-        ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+        ret_cert = cluster.g_governance.drep.gen_retirement_cert(
             cert_name=temp_template,
             deposit_amt=reg_drep.deposit,
             drep_vkey_file=reg_drep.key_pair.vkey_file,
@@ -739,7 +739,7 @@ class TestNegativeDReps:
                 deposit=-reg_drep.deposit,
             )
 
-        ret_drep_state = cluster.g_conway_governance.query.drep_state(
+        ret_drep_state = cluster.g_governance.query.drep_state(
             drep_vkey_file=reg_drep.key_pair.vkey_file
         )
         assert not ret_drep_state, "DRep was not retired"
@@ -930,12 +930,12 @@ class TestNegativeDReps:
         temp_template = common.get_test_id(cluster)
         deposit_drep_amt = cluster.g_query.get_drep_deposit()
 
-        drep_keys = cluster.g_conway_governance.drep.gen_key_pair(
+        drep_keys = cluster.g_governance.drep.gen_key_pair(
             key_name=temp_template, destination_dir="."
         )
 
         reqc.cip089.start(url=helpers.get_vcs_link())
-        ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+        ret_cert = cluster.g_governance.drep.gen_retirement_cert(
             cert_name=temp_template,
             deposit_amt=deposit_drep_amt,
             drep_vkey_file=drep_keys.vkey_file,
@@ -997,7 +997,7 @@ class TestNegativeDReps:
         drep_metadata_file = pl.Path(f"{temp_template}_drep_metadata.json")
         drep_metadata_content = {"name": "The DRep", "ranking": "uno"}
         helpers.write_json(out_file=drep_metadata_file, content=drep_metadata_content)
-        drep_metadata_hash = cluster.g_conway_governance.drep.get_metadata_hash(
+        drep_metadata_hash = cluster.g_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )
         drep_metadata_url = web.publish(file_path=drep_metadata_file)
@@ -1200,10 +1200,10 @@ class TestDelegDReps:
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cli034, reqc.cip025)]
             if drep == "custom":
-                stake_distrib = cluster.g_conway_governance.query.drep_stake_distribution(
+                stake_distrib = cluster.g_governance.query.drep_stake_distribution(
                     drep_key_hash=custom_drep_rewards.drep_id
                 )
-                stake_distrib_vkey = cluster.g_conway_governance.query.drep_stake_distribution(
+                stake_distrib_vkey = cluster.g_governance.query.drep_stake_distribution(
                     drep_vkey_file=custom_drep_rewards.key_pair.vkey_file
                 )
                 assert stake_distrib == stake_distrib_vkey, (
@@ -1218,7 +1218,7 @@ class TestDelegDReps:
                     f"'{custom_drep_rewards.drep_id}'"
                 )
             else:
-                stake_distrib = cluster.g_conway_governance.query.drep_stake_distribution()
+                stake_distrib = cluster.g_governance.query.drep_stake_distribution()
 
             deleg_amount = cluster.g_query.get_address_balance(pool_user_rewards.payment.address)
             governance_utils.check_drep_stake_distribution(
@@ -1409,10 +1409,10 @@ class TestDelegDReps:
         ) -> dict[str, dict[str, tp.Any]]:
             return {drep[0]["keyHash"]: drep[1] for drep in drep_state}
 
-        drep_states_all = _get_drep_rec(drep_state=cluster.g_conway_governance.query.drep_state())
+        drep_states_all = _get_drep_rec(drep_state=cluster.g_governance.query.drep_state())
         drep_states_gov_data = _get_drep_rec(
             drep_state=[
-                cluster.g_conway_governance.query.drep_state(drep_key_hash=drep.drep_id)[0]
+                cluster.g_governance.query.drep_state(drep_key_hash=drep.drep_id)[0]
                 for drep in governance_data.dreps_reg
             ]
         )
@@ -1561,7 +1561,7 @@ class TestDelegDReps:
 
         # Retire the first DRep
 
-        ret_cert = cluster.g_conway_governance.drep.gen_retirement_cert(
+        ret_cert = cluster.g_governance.drep.gen_retirement_cert(
             cert_name=temp_template,
             deposit_amt=drep1.deposit,
             drep_vkey_file=drep1.key_pair.vkey_file,
@@ -1581,7 +1581,7 @@ class TestDelegDReps:
             deposit=-drep1.deposit,
         )
 
-        ret_drep_state = cluster.g_conway_governance.query.drep_state(
+        ret_drep_state = cluster.g_governance.query.drep_state(
             drep_vkey_file=drep1.key_pair.vkey_file
         )
         assert not ret_drep_state, "DRep 1 was not retired"
@@ -1747,7 +1747,7 @@ class TestDRepActivity:
             anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
+                gov_state=cluster.g_governance.query.gov_state(),
             )
 
             proposals = [
@@ -1769,7 +1769,7 @@ class TestDRepActivity:
             )
 
             votes_cc = [
-                cluster.g_conway_governance.vote.create_committee(
+                cluster.g_governance.vote.create_committee(
                     vote_name=f"{temp_template}_{action_id}_drep_activity_cc{i}",
                     action_txid=prop_rec.action_txid,
                     action_ix=prop_rec.action_ix,
@@ -1779,7 +1779,7 @@ class TestDRepActivity:
                 for i, m in enumerate(governance_data.cc_key_members, start=1)
             ]
             votes_drep = [
-                cluster.g_conway_governance.vote.create_drep(
+                cluster.g_governance.vote.create_drep(
                     vote_name=f"{temp_template}_{action_id}_drep_activity_drep{i}",
                     action_txid=prop_rec.action_txid,
                     action_ix=prop_rec.action_ix,
@@ -1811,7 +1811,7 @@ class TestDRepActivity:
             action_id: str,
         ):
             rat_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            rat_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state,
                 name_template=f"{temp_template}_{action_id}_drep_activity_rat_{rat_epoch}",
@@ -1827,14 +1827,14 @@ class TestDRepActivity:
             action_id: str,
         ):
             enact_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            enact_gov_state = cluster.g_conway_governance.query.gov_state()
+            enact_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state,
                 name_template=f"{temp_template}_{action_id}_drep_activity_enact_{enact_epoch}",
             )
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
+                gov_state=cluster.g_governance.query.gov_state(),
             )
             assert action_txid == prev_action_rec.txid, (
                 f"Unexpected action txid: {prev_action_rec.txid}"
@@ -1847,7 +1847,7 @@ class TestDRepActivity:
         ) -> None:
             curr_epoch = cluster.g_query.get_epoch()
             if drep1 is not None:
-                _drep_state = cluster.g_conway_governance.query.drep_state(
+                _drep_state = cluster.g_governance.query.drep_state(
                     drep_vkey_file=drep1.key_pair.vkey_file
                 )
                 assert id not in drep1_state
@@ -1861,7 +1861,7 @@ class TestDRepActivity:
                     name_template=f"{temp_template}_drep1_{id}_{curr_epoch}",
                 )
             if drep2 is not None:
-                _drep_state = cluster.g_conway_governance.query.drep_state(
+                _drep_state = cluster.g_governance.query.drep_state(
                     drep_vkey_file=drep2.key_pair.vkey_file
                 )
                 assert id not in drep2_state

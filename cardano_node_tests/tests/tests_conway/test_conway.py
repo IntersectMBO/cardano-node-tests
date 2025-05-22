@@ -81,11 +81,11 @@ class TestConway:
 
         # Create an action
         anchor_url = "https://tinyurl.com/cardano-qa-anchor"
-        anchor_data_hash = cluster.g_conway_governance.get_anchor_data_hash(
+        anchor_data_hash = cluster.g_governance.get_anchor_data_hash(
             file_text=DATA_DIR / "governance_action_anchor.json"
         )
 
-        info_action = cluster.g_conway_governance.action.create_info(
+        info_action = cluster.g_governance.action.create_info(
             action_name=temp_template,
             deposit_amt=action_deposit_amt,
             anchor_url=anchor_url,
