@@ -668,7 +668,7 @@ class TestPParamUpdate:
         # Intentionally use the same previous action for all proposals
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
+            gov_state=cluster.g_governance.query.gov_state(),
         )
 
         # For keeping track of how many proposals were submitted
@@ -1191,7 +1191,7 @@ class TestPParamUpdate:
         rat_epoch = cluster.wait_for_epoch(epoch_no=fin_approve_epoch + 1, padding_seconds=5)
 
         if rat_epoch == fin_approve_epoch + 1:
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            rat_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
             )
@@ -1223,7 +1223,7 @@ class TestPParamUpdate:
         enact_epoch = cluster.wait_for_epoch(
             epoch_no=fin_approve_epoch + 2, padding_seconds=5, future_is_ok=False
         )
-        enact_gov_state = cluster.g_conway_governance.query.gov_state()
+        enact_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
@@ -1344,7 +1344,7 @@ class TestPParamUpdate:
         update_args = clusterlib_utils.get_pparams_update_args(update_proposals=[proposal])
         anchor_data = governance_utils.get_default_anchor_data()
         try:
-            action_data = cluster.g_conway_governance.action.create_pparams_update(
+            action_data = cluster.g_governance.action.create_pparams_update(
                 action_name=temp_template,
                 deposit_amt=100000000,
                 anchor_url=anchor_data.url,
@@ -1356,9 +1356,7 @@ class TestPParamUpdate:
             # TODO: check expected error message once cli issue 860 is fixed
             return
 
-        action_view_out = cluster.g_conway_governance.action.view(
-            action_file=action_data.action_file
-        )
+        action_view_out = cluster.g_governance.action.view(action_file=action_data.action_file)
         action_contents = action_view_out["governance action"]["contents"]
         if action_contents[1]["maxBlockHeaderSize"] == 2160:
             issues.cli_860.finish_test()
@@ -1544,7 +1542,7 @@ class TestNegativeCostModels:
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
+            gov_state=cluster.g_governance.query.gov_state(),
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:

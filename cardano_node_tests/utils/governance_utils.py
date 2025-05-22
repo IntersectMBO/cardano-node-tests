@@ -258,10 +258,10 @@ def get_drep_reg_record(
 ) -> DRepRegistration:
     """Get DRep registration record."""
     deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.g_query.get_drep_deposit()
-    drep_keys = cluster_obj.g_conway_governance.drep.gen_key_pair(
+    drep_keys = cluster_obj.g_governance.drep.gen_key_pair(
         key_name=name_template, destination_dir=destination_dir
     )
-    reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
+    reg_cert = cluster_obj.g_governance.drep.gen_registration_cert(
         cert_name=name_template,
         deposit_amt=deposit_amt,
         drep_vkey_file=drep_keys.vkey_file,
@@ -269,7 +269,7 @@ def get_drep_reg_record(
         drep_metadata_hash=drep_metadata_hash,
         destination_dir=destination_dir,
     )
-    drep_id = cluster_obj.g_conway_governance.drep.get_id(
+    drep_id = cluster_obj.g_governance.drep.get_id(
         drep_vkey_file=drep_keys.vkey_file,
         out_format="hex",
     )
@@ -293,7 +293,7 @@ def get_script_drep_reg_record(
 ) -> DRepScriptRegRecord:
     """Get DRep script registration record."""
     deposit_amt = deposit_amt if deposit_amt != -1 else cluster_obj.g_query.get_drep_deposit()
-    reg_cert = cluster_obj.g_conway_governance.drep.gen_registration_cert(
+    reg_cert = cluster_obj.g_governance.drep.gen_registration_cert(
         cert_name=name_template,
         deposit_amt=deposit_amt,
         drep_script_hash=script_hash,
@@ -315,21 +315,21 @@ def get_cc_member_auth_record(
     destination_dir: clusterlib.FileType = ".",
 ) -> CCMemberAuth:
     """Get Constitutional Committee Members key authorization record."""
-    committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
+    committee_cold_keys = cluster_obj.g_governance.committee.gen_cold_key_pair(
         key_name=name_template,
         destination_dir=destination_dir,
     )
-    committee_hot_keys = cluster_obj.g_conway_governance.committee.gen_hot_key_pair(
+    committee_hot_keys = cluster_obj.g_governance.committee.gen_hot_key_pair(
         key_name=name_template,
         destination_dir=destination_dir,
     )
-    auth_cert = cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
+    auth_cert = cluster_obj.g_governance.committee.gen_hot_key_auth_cert(
         key_name=name_template,
         cold_vkey_file=committee_cold_keys.vkey_file,
         hot_key_file=committee_hot_keys.vkey_file,
         destination_dir=destination_dir,
     )
-    key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+    key_hash = cluster_obj.g_governance.committee.get_key_hash(
         vkey_file=committee_cold_keys.vkey_file,
     )
 
@@ -422,13 +422,11 @@ def check_action_view(  # noqa: C901
 
         def _get_cvkey_hash(member: clusterlib.CCMember) -> str:
             if member.cold_vkey_file:
-                cvkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+                cvkey_hash = cluster_obj.g_governance.committee.get_key_hash(
                     vkey_file=member.cold_vkey_file
                 )
             elif member.cold_vkey:
-                cvkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
-                    vkey=member.cold_vkey
-                )
+                cvkey_hash = cluster_obj.g_governance.committee.get_key_hash(vkey=member.cold_vkey)
             elif member.cold_vkey_hash:
                 cvkey_hash = member.cold_vkey_hash
             else:
@@ -492,9 +490,7 @@ def check_action_view(  # noqa: C901
         },
     }
 
-    action_view_out = cluster_obj.g_conway_governance.action.view(
-        action_file=action_data.action_file
-    )
+    action_view_out = cluster_obj.g_governance.action.view(action_file=action_data.action_file)
 
     assert action_view_out == expected_action_out, f"{action_view_out} != {expected_action_out}"
 
@@ -508,11 +504,11 @@ def check_vote_view(  # noqa: C901
 
     if isinstance(vote_data, clusterlib.VoteCC):
         if vote_data.cc_hot_vkey_file:
-            cc_key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+            cc_key_hash = cluster_obj.g_governance.committee.get_key_hash(
                 vkey_file=vote_data.cc_hot_vkey_file
             )
         elif vote_data.cc_hot_vkey:
-            cc_key_hash = cluster_obj.g_conway_governance.committee.get_key_hash(
+            cc_key_hash = cluster_obj.g_governance.committee.get_key_hash(
                 vkey=vote_data.cc_hot_vkey
             )
         elif vote_data.cc_hot_key_hash:
@@ -524,11 +520,11 @@ def check_vote_view(  # noqa: C901
         vote_key = f"committee-keyHash-{cc_key_hash}"
     elif isinstance(vote_data, clusterlib.VoteDrep):
         if vote_data.drep_vkey_file:
-            drep_id = cluster_obj.g_conway_governance.drep.get_id(
+            drep_id = cluster_obj.g_governance.drep.get_id(
                 drep_vkey_file=vote_data.drep_vkey_file, out_format="hex"
             )
         elif vote_data.drep_vkey:
-            drep_id = cluster_obj.g_conway_governance.drep.get_id(
+            drep_id = cluster_obj.g_governance.drep.get_id(
                 drep_vkey=vote_data.drep_vkey, out_format="hex"
             )
         elif vote_data.drep_key_hash:
@@ -580,7 +576,7 @@ def check_vote_view(  # noqa: C901
         }
     }
 
-    vote_view_out = cluster_obj.g_conway_governance.vote.view(vote_file=vote_data.vote_file)
+    vote_view_out = cluster_obj.g_governance.vote.view(vote_file=vote_data.vote_file)
 
     assert vote_view_out == expected_vote_out, f"{vote_view_out} != {expected_vote_out}"
 
@@ -590,7 +586,7 @@ def wait_delayed_ratification(
 ) -> None:
     """Wait until ratification is no longer delayed."""
     for __ in range(3):
-        next_rat_state = cluster_obj.g_conway_governance.query.gov_state()["nextRatifyState"]
+        next_rat_state = cluster_obj.g_governance.query.gov_state()["nextRatifyState"]
         if not next_rat_state["ratificationDelayed"]:
             break
         cluster_obj.wait_for_new_epoch(padding_seconds=5)
@@ -606,7 +602,7 @@ def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
     stake_snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
     total_spo_stake = stake_snapshot["total"]["stakeGo"]
 
-    drep_state = cluster_obj.g_conway_governance.query.drep_state()
+    drep_state = cluster_obj.g_governance.query.drep_state()
     total_drep_stake = functools.reduce(lambda x, y: x + (y[1].get("stake") or 0), drep_state, 0)
 
     return StakeDelegation(
@@ -744,7 +740,7 @@ def create_script_dreps(
         get_script_drep_reg_record(
             cluster_obj=cluster_obj,
             name_template=f"{name_template}_{i}",
-            script_hash=cluster_obj.g_conway_governance.get_script_hash(
+            script_hash=cluster_obj.g_governance.get_script_hash(
                 script_file=s.registration_cert.script_file
             ),
             deposit_amt=deposit_amt,
@@ -829,7 +825,7 @@ def get_anchor_data(
     anchor_file = pl.Path(f"{name_template}_anchor.txt")
     anchor_file.write_text(anchor_text, encoding="utf-8")
     url = web.publish(file_path=anchor_file)
-    data_hash = cluster_obj.g_conway_governance.get_anchor_data_hash(file_text=anchor_file)
+    data_hash = cluster_obj.g_governance.get_anchor_data_hash(file_text=anchor_file)
     return AnchorData(url=url, hash=data_hash, data_file=anchor_file)
 
 

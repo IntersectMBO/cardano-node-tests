@@ -144,7 +144,7 @@ def retire_drep(
     deposit_amt: int,
 ) -> None:
     """Retire a DRep."""
-    ret_cert = cluster_obj.g_conway_governance.drep.gen_retirement_cert(
+    ret_cert = cluster_obj.g_governance.drep.gen_retirement_cert(
         cert_name=f"rf_{name_template}",
         deposit_amt=deposit_amt,
         drep_vkey_file=drep_keys.vkey_file,

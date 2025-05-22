@@ -139,7 +139,7 @@ class TestUpdateBuiltIns:
 
             # Wait for ratification
             rat_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 1, padding_seconds=5)
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            rat_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{_name_template}_{rat_epoch}"
             )
@@ -152,7 +152,7 @@ class TestUpdateBuiltIns:
 
             # Wait for enactment
             enact_epoch = cluster.wait_for_epoch(epoch_no=prop_epoch + 2, padding_seconds=5)
-            enact_gov_state = cluster.g_conway_governance.query.gov_state()
+            enact_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
             )

@@ -206,7 +206,7 @@ class TestCommittee:
             anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
+                gov_state=cluster.g_governance.query.gov_state(),
             )
 
             proposals = [
@@ -232,7 +232,7 @@ class TestCommittee:
         prop_rec = _propose_pparam_change()
 
         vote_cc_all = [
-            cluster.g_conway_governance.vote.create_committee(
+            cluster.g_governance.vote.create_committee(
                 vote_name=f"{temp_template}_all_cc{i}",
                 action_txid=prop_rec.action_txid,
                 action_ix=prop_rec.action_ix,
@@ -245,7 +245,7 @@ class TestCommittee:
             *[r.hot_keys.hot_skey_file for r in (*governance_data.cc_key_members, cc_key_member)],
         ]
 
-        vote_cc_one = cluster.g_conway_governance.vote.create_committee(
+        vote_cc_one = cluster.g_governance.vote.create_committee(
             vote_name=f"{temp_template}_one_cc",
             action_txid=prop_rec.action_txid,
             action_ix=prop_rec.action_ix,
@@ -288,10 +288,10 @@ class TestCommittee:
             anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
+                gov_state=cluster.g_governance.query.gov_state(),
             )
 
-            update_action = cluster.g_conway_governance.action.update_committee(
+            update_action = cluster.g_governance.action.update_committee(
                 action_name=temp_template,
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_data.url,
@@ -329,7 +329,7 @@ class TestCommittee:
             ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
             txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-            gov_state = cluster.g_conway_governance.query.gov_state()
+            gov_state = cluster.g_governance.query.gov_state()
             prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
             assert prop, "Update committee action not found"
             assert (
@@ -364,7 +364,7 @@ class TestCommittee:
             ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
             cluster.wait_for_new_block(new_blocks=2)
-            auth_committee_state = cluster.g_conway_governance.query.committee_state()
+            auth_committee_state = cluster.g_governance.query.committee_state()
             auth_epoch = cluster.g_query.get_epoch()
             conway_common.save_committee_state(
                 committee_state=auth_committee_state,
@@ -456,11 +456,11 @@ class TestCommittee:
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
+            gov_state=cluster.g_governance.query.gov_state(),
         )
 
         reqc.cip031a_01.start(url=helpers.get_vcs_link())
-        update_action = cluster.g_conway_governance.action.update_committee(
+        update_action = cluster.g_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
             anchor_url=anchor_data.url,
@@ -517,7 +517,7 @@ class TestCommittee:
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-        gov_state = cluster.g_conway_governance.query.gov_state()
+        gov_state = cluster.g_governance.query.gov_state()
         prop = governance_utils.lookup_proposal(gov_state=gov_state, action_txid=txid)
         assert prop, "Update committee action not found"
         assert (
@@ -710,7 +710,7 @@ class TestCommittee:
 
             cluster.wait_for_new_block(new_blocks=2)
             [r.start(url=_url) for r in (reqc.cli032, reqc.cip002, reqc.cip004)]
-            auth_committee_state = cluster.g_conway_governance.query.committee_state()
+            auth_committee_state = cluster.g_governance.query.committee_state()
             auth_epoch = cluster.g_query.get_epoch()
             conway_common.save_committee_state(
                 committee_state=auth_committee_state,
@@ -732,12 +732,12 @@ class TestCommittee:
             anchor_data_add = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
+                gov_state=cluster.g_governance.query.gov_state(),
             )
 
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cli014, reqc.cip031b, reqc.cip054_02, reqc.cip058)]
-            add_cc_action = cluster.g_conway_governance.action.update_committee(
+            add_cc_action = cluster.g_governance.action.update_committee(
                 action_name=f"{temp_template}_add",
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_data_add.url,
@@ -776,7 +776,7 @@ class TestCommittee:
             ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
             action_add_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-            action_add_gov_state = cluster.g_conway_governance.query.gov_state()
+            action_add_gov_state = cluster.g_governance.query.gov_state()
             action_add_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=action_add_gov_state,
@@ -803,12 +803,12 @@ class TestCommittee:
             res_metadata_file = pl.Path(f"{temp_template}_res_metadata.json")
             res_metadata_content = {"name": "Resigned CC member"}
             helpers.write_json(out_file=res_metadata_file, content=res_metadata_content)
-            res_metadata_hash = cluster.g_conway_governance.get_anchor_data_hash(
+            res_metadata_hash = cluster.g_governance.get_anchor_data_hash(
                 file_text=res_metadata_file
             )
             res_metadata_url = web.publish(file_path=res_metadata_file)
 
-            res_cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
+            res_cert = cluster.g_governance.committee.gen_cold_key_resignation_cert(
                 key_name=temp_template,
                 cold_vkey_file=res_member.cold_vkey_file,
                 resignation_metadata_url=res_metadata_url,
@@ -829,7 +829,7 @@ class TestCommittee:
             )
 
             cluster.wait_for_new_block(new_blocks=2)
-            res_committee_state = cluster.g_conway_governance.query.committee_state()
+            res_committee_state = cluster.g_governance.query.committee_state()
             member_key = f"keyHash-{res_member.cold_vkey_hash}"
             res_member_rec = res_committee_state["committee"].get(member_key)
             assert (
@@ -853,7 +853,7 @@ class TestCommittee:
             anchor_data_rem = governance_utils.get_default_anchor_data()
 
             reqc.cip005.start(url=helpers.get_vcs_link())
-            rem_cc_action = cluster.g_conway_governance.action.update_committee(
+            rem_cc_action = cluster.g_governance.action.update_committee(
                 action_name=f"{temp_template}_rem",
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_data_rem.url,
@@ -892,7 +892,7 @@ class TestCommittee:
             ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
             action_rem_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-            action_rem_gov_state = cluster.g_conway_governance.query.gov_state()
+            action_rem_gov_state = cluster.g_governance.query.gov_state()
             action_rem_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=action_rem_gov_state,
@@ -923,11 +923,11 @@ class TestCommittee:
                     res_metadata_file = pl.Path(f"{temp_template}_{idx}_res_metadata.json")
                     res_metadata_content = {"name": "Resigned CC member", "idx": idx}
                     helpers.write_json(out_file=res_metadata_file, content=res_metadata_content)
-                    res_metadata_hash = cluster.g_conway_governance.get_anchor_data_hash(
+                    res_metadata_hash = cluster.g_governance.get_anchor_data_hash(
                         file_text=res_metadata_file
                     )
                     res_metadata_url = web.publish(file_path=res_metadata_file)
-                    cert = cluster.g_conway_governance.committee.gen_cold_key_resignation_cert(
+                    cert = cluster.g_governance.committee.gen_cold_key_resignation_cert(
                         key_name=f"{temp_template}_res{idx}",
                         cold_vkey_file=cc_auth.cold_key_pair.vkey_file,
                         resignation_metadata_url=res_metadata_url,
@@ -935,7 +935,7 @@ class TestCommittee:
                     )
                     return cert
 
-                auth_committee_state = cluster.g_conway_governance.query.committee_state()
+                auth_committee_state = cluster.g_governance.query.committee_state()
                 res_certs = [
                     _get_res_cert(idx=i, cc_auth=r)
                     for i, r in enumerate((cc_auth_record1, cc_auth_record2, cc_auth_record3))
@@ -1091,7 +1091,7 @@ class TestCommittee:
 
         # Check ratification of add action
         rat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
-        rat_add_gov_state = cluster.g_conway_governance.query.gov_state()
+        rat_add_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{rat_epoch}"
         )
@@ -1118,7 +1118,7 @@ class TestCommittee:
         assert next_rat_add_state["ratificationDelayed"], "Ratification not delayed"
 
         # Check committee state after add action ratification
-        rat_add_committee_state = cluster.g_conway_governance.query.committee_state()
+        rat_add_committee_state = cluster.g_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=rat_add_committee_state,
             name_template=f"{temp_template}_rat_add_{rat_epoch}",
@@ -1146,7 +1146,7 @@ class TestCommittee:
 
         # Check enactment of add action
         enact_epoch = cluster.wait_for_epoch(epoch_no=rat_epoch + 1, padding_seconds=5)
-        enact_add_gov_state = cluster.g_conway_governance.query.gov_state()
+        enact_add_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_add_gov_state, name_template=f"{temp_template}_enact_add_{enact_epoch}"
         )
@@ -1160,7 +1160,7 @@ class TestCommittee:
             reqc.cip064_02.success()
 
         # Check committee state after add action enactment
-        enact_add_committee_state = cluster.g_conway_governance.query.committee_state()
+        enact_add_committee_state = cluster.g_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_add_committee_state,
             name_template=f"{temp_template}_enact_add_{enact_epoch}",
@@ -1233,14 +1233,14 @@ class TestCommittee:
 
         # Check enactment of removal action
         rem_epoch = cluster.wait_for_epoch(epoch_no=enact_epoch + 1, padding_seconds=5)
-        enact_rem_gov_state = cluster.g_conway_governance.query.gov_state()
+        enact_rem_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_rem_gov_state, name_template=f"{temp_template}_enact_rem_{rem_epoch}"
         )
         _check_cc_member2_removed(gov_state=enact_rem_gov_state)
 
         # Check committee state after enactment of removal action
-        enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
+        enact_rem_committee_state = cluster.g_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_rem_committee_state,
             name_template=f"{temp_template}_enact_rem_{rem_epoch}",
@@ -1379,10 +1379,10 @@ class TestCommittee:
             anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
+                gov_state=cluster.g_governance.query.gov_state(),
             )
 
-            rem_cc_action = cluster.g_conway_governance.action.update_committee(
+            rem_cc_action = cluster.g_governance.action.update_committee(
                 action_name=f"{temp_template}_rem",
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_data.url,
@@ -1425,7 +1425,7 @@ class TestCommittee:
             ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
             action_rem_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-            action_rem_gov_state = cluster.g_conway_governance.query.gov_state()
+            action_rem_gov_state = cluster.g_governance.query.gov_state()
             action_rem_epoch = cluster.g_query.get_epoch()
             conway_common.save_gov_state(
                 gov_state=action_rem_gov_state,
@@ -1447,7 +1447,7 @@ class TestCommittee:
         def _check_rat_gov_state(
             name_template: str, action_txid: str, action_ix: int, epoch_no: int
         ) -> dict[str, tp.Any]:
-            gov_state = cluster.g_conway_governance.query.gov_state()
+            gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=gov_state, name_template=f"{name_template}_{epoch_no}"
             )
@@ -1507,7 +1507,7 @@ class TestCommittee:
         enact_zero_cc_epoch = cluster.wait_for_epoch(
             epoch_no=rat_zero_cc_epoch + 1, padding_seconds=5
         )
-        enact_zero_cc_gov_state = cluster.g_conway_governance.query.gov_state()
+        enact_zero_cc_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_zero_cc_gov_state,
             name_template=f"{temp_template}_enact_zero_cc_{enact_zero_cc_epoch}",
@@ -1551,7 +1551,7 @@ class TestCommittee:
 
         # Check enactment
         enact_rem_epoch = cluster.wait_for_epoch(epoch_no=rat_rem_epoch + 1, padding_seconds=5)
-        enact_rem_gov_state = cluster.g_conway_governance.query.gov_state()
+        enact_rem_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_rem_gov_state,
             name_template=f"{temp_template}_enact_rem_{enact_rem_epoch}",
@@ -1561,7 +1561,7 @@ class TestCommittee:
         ).isdisjoint(removed_members_hashes), "Removed committee members still present"
 
         # Check committee state after enactment
-        enact_rem_committee_state = cluster.g_conway_governance.query.committee_state()
+        enact_rem_committee_state = cluster.g_governance.query.committee_state()
         conway_common.save_committee_state(
             committee_state=enact_rem_committee_state,
             name_template=f"{temp_template}_enact_rem_{enact_rem_epoch}",
@@ -1578,9 +1578,7 @@ class TestCommittee:
         constitution_file = pl.Path(f"{temp_template}_constitution.txt")
         constitution_file.write_text(data="Constitution is here", encoding="utf-8")
         constitution_url = web.publish(file_path=constitution_file)
-        constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
-            file_text=constitution_file
-        )
+        constitution_hash = cluster.g_governance.get_anchor_data_hash(file_text=constitution_file)
 
         (
             const_action,
@@ -1634,7 +1632,7 @@ class TestCommittee:
 
         # Check enactment
         enact_const_epoch = cluster.wait_for_epoch(epoch_no=rat_const_epoch + 1, padding_seconds=5)
-        enact_const_gov_state = cluster.g_conway_governance.query.gov_state()
+        enact_const_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_const_gov_state,
             name_template=f"{temp_template}_enact_const_{enact_const_epoch}",
@@ -1659,11 +1657,11 @@ class TestCommittee:
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
+            gov_state=cluster.g_governance.query.gov_state(),
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.g_conway_governance.action.update_committee(
+            cluster.g_governance.action.update_committee(
                 action_name=temp_template,
                 deposit_amt=deposit_amt,
                 anchor_url=anchor_data.url,
@@ -1710,7 +1708,7 @@ class TestCommittee:
             # Check ratification
             epoch_rat = cluster.wait_for_epoch(epoch_no=approval_epoch + 1, padding_seconds=5)
 
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            rat_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{name_template}_rat_{epoch_rat}"
             )
@@ -1724,7 +1722,7 @@ class TestCommittee:
             epoch_enact = cluster.wait_for_epoch(epoch_no=epoch_rat + 1, padding_seconds=5)
 
             # Check enactment
-            enact_gov_state = cluster.g_conway_governance.query.gov_state()
+            enact_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{name_template}_enact_{epoch_enact}"
             )
@@ -1740,11 +1738,11 @@ class TestCommittee:
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
+            gov_state=cluster.g_governance.query.gov_state(),
         )
 
         # Set CC threshold to zero
-        update_threshold_action = cluster.g_conway_governance.action.update_committee(
+        update_threshold_action = cluster.g_governance.action.update_committee(
             action_name=temp_template,
             deposit_amt=deposit_amt,
             anchor_url=anchor_data.url,
@@ -1777,7 +1775,7 @@ class TestCommittee:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         threshold_action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-        threshold_action_gov_state = cluster.g_conway_governance.query.gov_state()
+        threshold_action_gov_state = cluster.g_governance.query.gov_state()
         threshold_action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=threshold_action_gov_state,
@@ -1818,9 +1816,7 @@ class TestCommittee:
         constitution_file = pl.Path(f"{temp_template}_constitution.txt")
         constitution_file.write_text(data="Constitution is here", encoding="utf-8")
         constitution_url = web.publish(file_path=constitution_file)
-        constitution_hash = cluster.g_conway_governance.get_anchor_data_hash(
-            file_text=constitution_file
-        )
+        constitution_hash = cluster.g_governance.get_anchor_data_hash(file_text=constitution_file)
         (
             const_action,
             const_action_txid,

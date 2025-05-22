@@ -36,7 +36,7 @@ def _cast_vote(
     Use `tests.conway_common.cast_vote` for tests.
     """
     votes_drep = [
-        cluster_obj.g_conway_governance.vote.create_drep(
+        cluster_obj.g_governance.vote.create_drep(
             vote_name=f"{name_template}_drep{i}",
             action_txid=action_txid,
             action_ix=action_ix,
@@ -46,7 +46,7 @@ def _cast_vote(
         for i, d in enumerate(governance_data.dreps_reg, start=1)
     ]
     votes_spo = [
-        cluster_obj.g_conway_governance.vote.create_spo(
+        cluster_obj.g_governance.vote.create_spo(
             vote_name=f"{name_template}_pool{i}",
             action_txid=action_txid,
             action_ix=action_ix,
@@ -85,7 +85,7 @@ def _cast_vote(
         == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
     ), f"Incorrect balance for source address `{payment_addr.address}`"
 
-    gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    gov_state = cluster_obj.g_governance.query.gov_state()
     prop_vote = governance_utils.lookup_proposal(
         gov_state=gov_state, action_txid=action_txid, action_ix=action_ix
     )
@@ -131,7 +131,7 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.
         fpath = vkey_file.parent
         fbase = vkey_file.name.replace("cold.vkey", "")
         hot_vkey_file = fpath / f"{fbase}hot.vkey"
-        cold_vkey_hash = cluster_obj.g_conway_governance.committee.get_key_hash(vkey_file=vkey_file)
+        cold_vkey_hash = cluster_obj.g_governance.committee.get_key_hash(vkey_file=vkey_file)
         genesis_epoch = genesis_cc_members[f"keyHash-{cold_vkey_hash}"]
         cc_members.append(
             governance_utils.CCKeyMember(
@@ -143,7 +143,7 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.
                 ),
                 hot_keys=governance_utils.CCHotKeys(
                     hot_vkey_file=hot_vkey_file,
-                    hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                    hot_vkey_hash=cluster_obj.g_governance.committee.get_key_hash(
                         vkey_file=hot_vkey_file
                     ),
                     hot_skey_file=fpath / f"{fbase}hot.skey",
@@ -164,7 +164,7 @@ def load_dreps(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.DRep
         skey_file = vkey_file.with_suffix(".skey")
         fpath = vkey_file.parent
         reg_cert = fpath / vkey_file.name.replace(".vkey", "_reg.cert")
-        drep_id = cluster_obj.g_conway_governance.drep.get_id(
+        drep_id = cluster_obj.g_governance.drep.get_id(
             drep_vkey_file=vkey_file,
             out_format="hex",
         )
@@ -238,7 +238,7 @@ def setup(
     ):
         cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
 
-        drep1_rec = cluster_obj.g_conway_governance.query.drep_stake_distribution(
+        drep1_rec = cluster_obj.g_governance.query.drep_stake_distribution(
             drep_vkey_file=drep_reg_records[0].key_pair.vkey_file
         )
         assert drep1_rec, "DRep stake distribution not found"
@@ -335,15 +335,15 @@ def refresh_cc_keys(
         key_name = pl.Path(c.hot_keys.hot_vkey_file).stem.replace("_committee_hot", "")
         # Until it is possible to revive resigned CC member, we need to create also
         # new cold keys and thus create a completely new CC member.
-        committee_cold_keys = cluster_obj.g_conway_governance.committee.gen_cold_key_pair(
+        committee_cold_keys = cluster_obj.g_governance.committee.gen_cold_key_pair(
             key_name=key_name,
             destination_dir=gov_data_dir,
         )
-        committee_hot_keys = cluster_obj.g_conway_governance.committee.gen_hot_key_pair(
+        committee_hot_keys = cluster_obj.g_governance.committee.gen_hot_key_pair(
             key_name=key_name,
             destination_dir=gov_data_dir,
         )
-        cluster_obj.g_conway_governance.committee.gen_hot_key_auth_cert(
+        cluster_obj.g_governance.committee.gen_hot_key_auth_cert(
             key_name=key_name,
             cold_vkey_file=c.cc_member.cold_vkey_file,
             hot_key_file=committee_hot_keys.vkey_file,
@@ -354,14 +354,14 @@ def refresh_cc_keys(
                 cc_member=clusterlib.CCMember(
                     epoch=c.cc_member.epoch,
                     cold_vkey_file=committee_cold_keys.vkey_file,
-                    cold_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                    cold_vkey_hash=cluster_obj.g_governance.committee.get_key_hash(
                         vkey_file=committee_cold_keys.vkey_file,
                     ),
                     cold_skey_file=committee_cold_keys.skey_file,
                 ),
                 hot_keys=governance_utils.CCHotKeys(
                     hot_vkey_file=committee_hot_keys.vkey_file,
-                    hot_vkey_hash=cluster_obj.g_conway_governance.committee.get_key_hash(
+                    hot_vkey_hash=cluster_obj.g_governance.committee.get_key_hash(
                         vkey_file=committee_hot_keys.vkey_file
                     ),
                     hot_skey_file=committee_hot_keys.skey_file,
@@ -419,7 +419,7 @@ def auth_cc_members(
     ), f"Incorrect balance for source address `{payment_addr.address}`"
 
     cluster_obj.wait_for_new_block(new_blocks=2)
-    reg_committee_state = cluster_obj.g_conway_governance.query.committee_state()
+    reg_committee_state = cluster_obj.g_governance.query.committee_state()
     member_key = f"keyHash-{cc_members[0].cc_member.cold_vkey_hash}"
     assert (
         _get_committee_val(data=reg_committee_state)[member_key]["hotCredsAuthStatus"]["tag"]
@@ -440,10 +440,10 @@ def reinstate_committee(
     anchor_data = governance_utils.get_default_anchor_data()
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-        gov_state=cluster_obj.g_conway_governance.query.gov_state(),
+        gov_state=cluster_obj.g_governance.query.gov_state(),
     )
 
-    update_action = cluster_obj.g_conway_governance.action.update_committee(
+    update_action = cluster_obj.g_governance.action.update_committee(
         action_name=name_template,
         deposit_amt=deposit_amt,
         anchor_url=anchor_data.url,
@@ -481,7 +481,7 @@ def reinstate_committee(
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-    action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    action_gov_state = cluster_obj.g_governance.query.gov_state()
     prop_action = governance_utils.lookup_proposal(
         gov_state=action_gov_state, action_txid=action_txid
     )
@@ -515,7 +515,7 @@ def reinstate_committee(
 
     # Check ratification
     cluster_obj.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
-    rat_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    rat_gov_state = cluster_obj.g_governance.query.gov_state()
     rat_action = governance_utils.lookup_ratified_actions(
         gov_state=rat_gov_state, action_txid=action_txid
     )
@@ -527,7 +527,7 @@ def reinstate_committee(
 
     # Check enactment
     cluster_obj.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
-    enact_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    enact_gov_state = cluster_obj.g_governance.query.gov_state()
     _check_state(enact_gov_state)
 
     auth_cc_members(

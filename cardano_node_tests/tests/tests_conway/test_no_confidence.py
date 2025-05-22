@@ -79,7 +79,7 @@ class TestNoConfidence:
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-            gov_state=cluster.g_conway_governance.query.gov_state(),
+            gov_state=cluster.g_governance.query.gov_state(),
         )
         if not prev_action_rec.txid:
             governance_setup.reinstate_committee(
@@ -90,7 +90,7 @@ class TestNoConfidence:
             )
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-                gov_state=cluster.g_conway_governance.query.gov_state(),
+                gov_state=cluster.g_governance.query.gov_state(),
             )
         assert prev_action_rec.txid, "No previous action found, it is needed for 'no confidence'"
 
@@ -114,7 +114,7 @@ class TestNoConfidence:
                 reqc.cip054_04,
             )
         ]
-        no_confidence_action = cluster.g_conway_governance.action.create_no_confidence(
+        no_confidence_action = cluster.g_governance.action.create_no_confidence(
             action_name=temp_template,
             deposit_amt=deposit_amt,
             anchor_url=anchor_data.url,
@@ -157,7 +157,7 @@ class TestNoConfidence:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_conway_governance.query.gov_state()
+        action_gov_state = cluster.g_governance.query.gov_state()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{init_epoch}"
         )
@@ -225,7 +225,7 @@ class TestNoConfidence:
 
             # Check ratification
             rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
-            rat_gov_state = cluster.g_conway_governance.query.gov_state()
+            rat_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
             )
@@ -256,7 +256,7 @@ class TestNoConfidence:
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cip032en, reqc.cip057)]
             enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
-            enact_gov_state = cluster.g_conway_governance.query.gov_state()
+            enact_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
             )
@@ -374,7 +374,7 @@ class TestNoConfidence:
                 anchor_url=anchor_data.url,
                 anchor_data_hash=anchor_data.hash,
                 constitution_url=constitution_url,
-                constitution_hash=cluster.g_conway_governance.get_anchor_data_hash(
+                constitution_hash=cluster.g_governance.get_anchor_data_hash(
                     file_text=constitution_file
                 ),
                 pool_user=pool_user_lg,
@@ -413,7 +413,7 @@ class TestNoConfidence:
             vote_epoch = cluster.g_query.get_epoch()
 
             approved_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
-            approved_gov_state = cluster.g_conway_governance.query.gov_state()
+            approved_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=approved_gov_state,
                 name_template=f"{temp_template}_approved_{approved_epoch}",
@@ -438,7 +438,7 @@ class TestNoConfidence:
             expire_epoch = cluster.wait_for_epoch(
                 epoch_no=prop_const_action["expiresAfter"] + 1, padding_seconds=5
             )
-            expire_gov_state = cluster.g_conway_governance.query.gov_state()
+            expire_gov_state = cluster.g_governance.query.gov_state()
             conway_common.save_gov_state(
                 gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
             )

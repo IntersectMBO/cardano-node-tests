@@ -177,7 +177,7 @@ def cast_vote(
         _votes_cc = [
             None  # This CC member doesn't vote, his votes count as "No"
             if cc_skip_votes and i % 3 == 0
-            else cluster_obj.g_conway_governance.vote.create_committee(
+            else cluster_obj.g_governance.vote.create_committee(
                 vote_name=f"{name_template}_cc{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
@@ -194,7 +194,7 @@ def cast_vote(
         _votes_drep_keys = [
             None  # This DRep doesn't vote, his votes count as "No"
             if drep_skip_votes and i % 3 == 0
-            else cluster_obj.g_conway_governance.vote.create_drep(
+            else cluster_obj.g_governance.vote.create_drep(
                 vote_name=f"{name_template}_drep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
@@ -208,7 +208,7 @@ def cast_vote(
         votes_drep_scripts = [
             None  # This DRep doesn't vote, his votes count as "No"
             if drep_skip_votes and i % 3 == 0
-            else cluster_obj.g_conway_governance.vote.create_drep(
+            else cluster_obj.g_governance.vote.create_drep(
                 vote_name=f"{name_template}_sdrep{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
@@ -227,7 +227,7 @@ def cast_vote(
         _votes_spo = [
             None  # This SPO doesn't vote, his votes count as "No"
             if spo_skip_votes and i % 3 == 0
-            else cluster_obj.g_conway_governance.vote.create_spo(
+            else cluster_obj.g_governance.vote.create_spo(
                 vote_name=f"{name_template}_pool{i}",
                 action_txid=action_txid,
                 action_ix=action_ix,
@@ -286,7 +286,7 @@ def cast_vote(
     )
 
     # Make sure the vote is included in the ledger
-    gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    gov_state = cluster_obj.g_governance.query.gov_state()
     vote_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=gov_state,
@@ -310,12 +310,10 @@ def resign_ccs(
     res_metadata_file = pl.Path(f"{name_template}_res_metadata.json")
     res_metadata_content = {"name": "Resigned CC member"}
     helpers.write_json(out_file=res_metadata_file, content=res_metadata_content)
-    res_metadata_hash = cluster_obj.g_conway_governance.get_anchor_data_hash(
-        file_text=res_metadata_file
-    )
+    res_metadata_hash = cluster_obj.g_governance.get_anchor_data_hash(file_text=res_metadata_file)
     res_metadata_url = web.publish(file_path=res_metadata_file)
     res_certs = [
-        cluster_obj.g_conway_governance.committee.gen_cold_key_resignation_cert(
+        cluster_obj.g_governance.committee.gen_cold_key_resignation_cert(
             key_name=f"{name_template}_{i}",
             cold_vkey_file=r.cold_vkey_file,
             resignation_metadata_url=res_metadata_url,
@@ -339,7 +337,7 @@ def resign_ccs(
     )
 
     cluster_obj.wait_for_new_block(new_blocks=2)
-    res_committee_state = cluster_obj.g_conway_governance.query.committee_state()
+    res_committee_state = cluster_obj.g_governance.query.committee_state()
     save_committee_state(committee_state=res_committee_state, name_template=f"{name_template}_res")
     for cc_member in ccs_to_resign:
         member_key = f"keyHash-{cc_member.cold_vkey_hash}"
@@ -366,10 +364,10 @@ def propose_change_constitution(
 
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
-        gov_state=cluster_obj.g_conway_governance.query.gov_state(),
+        gov_state=cluster_obj.g_governance.query.gov_state(),
     )
 
-    constitution_action = cluster_obj.g_conway_governance.action.create_constitution(
+    constitution_action = cluster_obj.g_governance.action.create_constitution(
         action_name=name_template,
         deposit_amt=deposit_amt,
         anchor_url=anchor_url,
@@ -408,7 +406,7 @@ def propose_change_constitution(
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-    action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    action_gov_state = cluster_obj.g_governance.query.gov_state()
     action_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=action_gov_state,
@@ -442,11 +440,11 @@ def propose_pparams_update(
 
     prev_action_rec = prev_action_rec or governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-        gov_state=cluster_obj.g_conway_governance.query.gov_state(),
+        gov_state=cluster_obj.g_governance.query.gov_state(),
     )
 
     update_args = clusterlib_utils.get_pparams_update_args(update_proposals=proposals)
-    pparams_action = cluster_obj.g_conway_governance.action.create_pparams_update(
+    pparams_action = cluster_obj.g_governance.action.create_pparams_update(
         action_name=name_template,
         deposit_amt=deposit_amt,
         anchor_url=anchor_url,
@@ -484,7 +482,7 @@ def propose_pparams_update(
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-    action_gov_state = cluster_obj.g_conway_governance.query.gov_state()
+    action_gov_state = cluster_obj.g_governance.query.gov_state()
     action_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=action_gov_state, name_template=f"{name_template}_action_{action_epoch}"

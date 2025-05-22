@@ -130,7 +130,7 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 10_000_000_000_000
 
-        mir_cert = cluster.g_governance.gen_mir_cert_to_treasury(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_to_treasury(
             transfer=amount, tx_name=temp_template
         )
         tx_files = clusterlib.TxFiles(
@@ -205,7 +205,7 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 10_000_000_000_000
 
-        mir_cert = cluster.g_governance.gen_mir_cert_to_treasury(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_to_treasury(
             transfer=amount, tx_name=temp_template
         )
         tx_files = clusterlib.TxFiles(
@@ -285,7 +285,7 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 1_000_000_000_000
 
-        mir_cert = cluster.g_governance.gen_mir_cert_to_rewards(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_to_rewards(
             transfer=amount, tx_name=temp_template
         )
         tx_files = clusterlib.TxFiles(
@@ -360,7 +360,7 @@ class TestMIRCerts:
         pool_user = pool_users[0]
         amount = 1_000_000_000_000
 
-        mir_cert = cluster.g_governance.gen_mir_cert_to_rewards(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_to_rewards(
             transfer=amount, tx_name=temp_template
         )
         tx_files = clusterlib.TxFiles(
@@ -449,7 +449,7 @@ class TestMIRCerts:
             registered_user.stake.address
         ).reward_account_balance
 
-        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
@@ -542,7 +542,7 @@ class TestMIRCerts:
             registered_user.stake.address
         ).reward_account_balance
 
-        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
@@ -639,7 +639,7 @@ class TestMIRCerts:
         ).reward_account_balance
         init_balance = cluster.g_query.get_address_balance(registered_user.payment.address)
 
-        mir_cert_treasury = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert_treasury = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=f"{temp_template}_treasury",
@@ -653,7 +653,7 @@ class TestMIRCerts:
             ],
         )
 
-        mir_cert_reserves = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert_reserves = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=f"{temp_template}_reserves",
@@ -772,24 +772,24 @@ class TestMIRCerts:
             registered_users[1].stake.address
         ).reward_account_balance
 
-        mir_cert_treasury_u0 = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert_treasury_u0 = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[0].stake.address,
             reward=amount_treasury,
             tx_name=f"{temp_template}_treasury_u0",
             use_treasury=True,
         )
-        mir_cert_reserves_u0 = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert_reserves_u0 = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[0].stake.address,
             reward=amount_reserves,
             tx_name=f"{temp_template}_reserves_u0",
         )
-        mir_cert_treasury_u1 = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert_treasury_u1 = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[1].stake.address,
             reward=amount_treasury,
             tx_name=f"{temp_template}_treasury_u1",
             use_treasury=True,
         )
-        mir_cert_reserves_u1 = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert_reserves_u1 = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_users[1].stake.address,
             reward=amount_reserves,
             tx_name=f"{temp_template}_reserves_u1",
@@ -926,7 +926,7 @@ class TestMIRCerts:
 
         init_balance = cluster.g_query.get_address_balance(pool_user.payment.address)
 
-        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=pool_user.stake.address,
             reward=amount,
             tx_name=temp_template,
@@ -1043,7 +1043,7 @@ class TestNegativeMIRCerts:
         amount = 50_000_000_000_000_000
         registered_user = registered_users[0]
 
-        mir_cert = cluster.g_governance.gen_mir_cert_stake_addr(
+        mir_cert = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
             stake_addr=registered_user.stake.address,
             reward=amount,
             tx_name=temp_template,
