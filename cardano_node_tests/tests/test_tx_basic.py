@@ -967,7 +967,7 @@ class TestBasicTransactions:
             txins=tx_raw_output.txins, txouts=tx_raw_output.txouts
         )
 
-        cluster.cli(
+        out = cluster.cli(
             [
                 "transaction",
                 "build",
@@ -984,6 +984,9 @@ class TestBasicTransactions:
             ]
         )
         assert tx_raw_output.out_file.exists()
+
+        stdout_dec = out.stdout.strip().decode("utf-8") if out.stdout else ""
+        assert " Lovelace" in stdout_dec, "Fee information not found in stdout"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
