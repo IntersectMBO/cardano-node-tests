@@ -1406,11 +1406,17 @@ class TestPParamData:
 class TestLegacyProposals:
     """Tests for legacy update proposals in Conway."""
 
+    @pytest.fixture(scope="class")
+    def skip_on_missing_legacy(self) -> None:
+        if not clusterlib_utils.cli_has("legacy governance"):
+            pytest.skip("`legacy governance` commands are not available")
+
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,
+        skip_on_missing_legacy: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         submit_method: str,
@@ -1419,6 +1425,8 @@ class TestLegacyProposals:
 
         Expect failure as the legacy update proposals are not supported in Conway.
         """
+        # TODO: convert to use
+        # `compatible babbage governance action create-protocol-parameters-update`
         temp_template = common.get_test_id(cluster)
 
         update_proposals = [

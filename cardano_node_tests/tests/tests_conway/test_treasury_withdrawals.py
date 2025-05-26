@@ -719,9 +719,15 @@ class TestTreasuryWithdrawals:
 class TestMIRCerts:
     """Tests for MIR certificates."""
 
+    @pytest.fixture(scope="class")
+    def skip_on_missing_legacy(self) -> None:
+        if not clusterlib_utils.cli_has("legacy governance"):
+            pytest.skip("`legacy governance` commands are not available")
+
     @pytest.fixture
     def payment_addr(
         self,
+        skip_on_missing_legacy: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
@@ -742,6 +748,7 @@ class TestMIRCerts:
     @pytest.mark.smoke
     def test_mir_certificates(
         self,
+        skip_on_missing_legacy: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         mir_cert: str,
@@ -754,6 +761,7 @@ class TestMIRCerts:
         * successfully build the Tx as Babbage Tx using `transaction build-raw`
         * try and fail to submit the Babbage Tx
         """
+        # TODO: convert to use `compatible babbage governance create-mir-certificate`
         temp_template = common.get_test_id(cluster)
         amount = 1_500_000
 
