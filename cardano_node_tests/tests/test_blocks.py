@@ -370,13 +370,13 @@ class TestCollectData:
 
             # Send tx
             src_addr, dst_addr = random.sample(payment_addrs, 2)
-            destinations = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
+            txouts = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
             tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
             cluster.g_transaction.send_tx(
                 src_address=src_addr.address,
                 tx_name=f"{temp_template}_{int(curr_time)}",
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
             )
 
@@ -557,13 +557,13 @@ class TestDynamicBlockProd:
 
             # Send tx
             src_addr, dst_addr = random.sample(payment_addrs, 2)
-            destinations = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
+            txouts = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
             tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
             cluster.g_transaction.send_tx(
                 src_address=src_addr.address,
                 tx_name=f"{temp_template}_{int(curr_time)}",
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
             )
 

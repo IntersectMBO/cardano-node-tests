@@ -171,7 +171,7 @@ class TestManyUTXOs:
         def _subtest(amount: int) -> None:
             name_template = f"{temp_template}_{amount}"
 
-            destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+            txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
             tx_files = clusterlib.TxFiles(signing_key_files=[many_utxos[0].skey_file])
 
             # Sort UTxOs by amount
@@ -190,7 +190,7 @@ class TestManyUTXOs:
                 src_address=src_address,
                 tx_name=name_template,
                 txins=txins,
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
                 ttl=ttl,
             )
@@ -213,7 +213,7 @@ class TestManyUTXOs:
                 clusterlib_obj=cluster,
                 src_address=src_address,
                 txins=txins_optimized,
-                txouts=destinations,
+                txouts=txouts,
                 fee=fee,
                 tx_files=tx_files,
             )

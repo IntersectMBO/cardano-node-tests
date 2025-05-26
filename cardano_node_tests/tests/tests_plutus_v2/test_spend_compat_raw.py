@@ -186,13 +186,13 @@ class TestCompatibility:
         )
 
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        destinations = [clusterlib.TxOut(address=payment_addrs[1].address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=payment_addrs[1].address, amount=amount)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.send_tx(
                 src_address=payment_addrs[0].address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 readonly_reference_txins=reference_input,
                 tx_files=tx_files,
             )

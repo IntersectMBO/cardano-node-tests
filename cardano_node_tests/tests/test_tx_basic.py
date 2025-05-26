@@ -162,7 +162,7 @@ class TestBasicTransactions:
         src_addr = byron_addrs[0] if src_addr_type == "byron" else payment_addrs[0]
         dst_addr = byron_addrs[1] if dst_addr_type == "byron" else payment_addrs[1]
 
-        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
         tx_output = clusterlib_utils.build_and_submit_tx(
@@ -171,7 +171,7 @@ class TestBasicTransactions:
             src_address=src_addr.address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             # TODO: cardano-node issue #4752
             witness_override=2 if src_addr_type == "byron" else None,
@@ -363,19 +363,19 @@ class TestBasicTransactions:
         dst_address = payment_addrs_disposable[0].address
 
         # Amount value -1 means all available funds
-        destinations = [clusterlib.TxOut(address=dst_address, amount=-1)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[1].skey_file])
 
         fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
         )
         tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             fee=fee,
         )
@@ -564,7 +564,7 @@ class TestBasicTransactions:
         src_address = payment_addrs[0].address
         dst_address = "addr_test1vpst87uzwafqkxumyf446zr2jsyn44cfpu9fe8yqanyuh6glj2hkl"
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         tx_raw_output = clusterlib_utils.build_and_submit_tx(
@@ -573,7 +573,7 @@ class TestBasicTransactions:
             src_address=src_address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
         )
 
@@ -589,7 +589,7 @@ class TestBasicTransactions:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check min UTxO value
-        min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=destinations)
+        min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=txouts)
         assert min_value.value in tx_common.MIN_UTXO_VALUE
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -624,7 +624,7 @@ class TestBasicTransactions:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
         tx_output = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -632,7 +632,7 @@ class TestBasicTransactions:
             src_address=src_address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
         )
 
@@ -677,15 +677,15 @@ class TestBasicTransactions:
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file, payment_addrs[1].skey_file]
         )
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         fee = cluster.g_transaction.calculate_tx_fee(
-            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
+            src_address=src_address, tx_name=temp_template, txouts=txouts, tx_files=tx_files
         )
         tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             fee=fee,
         )
@@ -741,15 +741,15 @@ class TestBasicTransactions:
         tx_files = clusterlib.TxFiles(
             signing_key_files=[payment_addrs[0].skey_file, payment_addrs[0].skey_file]
         )
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         fee = cluster.g_transaction.calculate_tx_fee(
-            src_address=src_address, tx_name=temp_template, txouts=destinations, tx_files=tx_files
+            src_address=src_address, tx_name=temp_template, txouts=txouts, tx_files=tx_files
         )
         tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             fee=fee,
         )
@@ -806,19 +806,19 @@ class TestBasicTransactions:
         dst_address = payment_addrs[1].address
 
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         # Build and sign a transaction
         fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
         )
         tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             fee=fee,
         )
@@ -1147,9 +1147,7 @@ class TestBasicTransactions:
             script_data_value="42",
         )
 
-        destinations_1 = [
-            clusterlib.TxOut(address=payment_addr_2, amount=amount, datum_hash=datum_hash)
-        ]
+        txouts_1 = [clusterlib.TxOut(address=payment_addr_2, amount=amount, datum_hash=datum_hash)]
         tx_files_1 = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         tx_raw_output_1 = clusterlib_utils.build_and_submit_tx(
@@ -1157,7 +1155,7 @@ class TestBasicTransactions:
             name_template=f"{temp_template}_step_1",
             src_address=payment_addr_1,
             submit_method=submit_method,
-            txouts=destinations_1,
+            txouts=txouts_1,
             tx_files=tx_files_1,
         )
 
@@ -1166,7 +1164,7 @@ class TestBasicTransactions:
         assert datum_hash_utxo[0].datum_hash, "No datum hash"
 
         # Step 2: spend the created utxo
-        destinations_2 = [clusterlib.TxOut(address=payment_addr_1, amount=-1)]
+        txouts_2 = [clusterlib.TxOut(address=payment_addr_1, amount=-1)]
         tx_files_2 = clusterlib.TxFiles(signing_key_files=[payment_addrs[1].skey_file])
 
         tx_raw_output_2 = clusterlib_utils.build_and_submit_tx(
@@ -1175,7 +1173,7 @@ class TestBasicTransactions:
             src_address=payment_addr_2,
             submit_method=submit_method,
             txins=datum_hash_utxo,
-            txouts=destinations_2,
+            txouts=txouts_2,
             tx_files=tx_files_2,
         )
 
@@ -1203,13 +1201,13 @@ class TestBasicTransactions:
         dst_addr = payment_addrs[1]
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
-        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=2_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=2_000_000)]
 
         ttl = cluster.g_query.get_slot_no() + 10_000_000
         fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_addr.address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             invalid_hereafter=ttl,
         )
@@ -1217,7 +1215,7 @@ class TestBasicTransactions:
         tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_addr.address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             fee=fee,
             invalid_hereafter=ttl,
@@ -1270,7 +1268,7 @@ class TestBasicTransactions:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
         tx_output = clusterlib_utils.build_and_submit_tx(
@@ -1279,7 +1277,7 @@ class TestBasicTransactions:
             src_address=src_address,
             submit_method=submit_method,
             use_build_cmd=use_build_cmd,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
         )
 
@@ -1421,7 +1419,7 @@ class TestMultiInOut:
         dst_init_balance = cluster.g_query.get_address_balance(dst_address)
 
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
-        destinations = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         tx_outputs = []
         for i in range(no_of_transactions):
@@ -1430,7 +1428,7 @@ class TestMultiInOut:
                 name_template=f"{temp_template}_{i}",
                 src_address=src_address,
                 submit_method=submit_method,
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
             )
             tx_outputs.append(tx_raw_output)
@@ -1637,7 +1635,7 @@ class TestIncrementalSigning:
 
         payment_skey_files = [p.skey_file for p in payment_addrs]
 
-        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
         tx_files = clusterlib.TxFiles(
             signing_key_files=payment_skey_files,
         )
@@ -1647,7 +1645,7 @@ class TestIncrementalSigning:
                 src_address=src_addr.address,
                 tx_name=temp_template,
                 tx_files=tx_files,
-                txouts=destinations,
+                txouts=txouts,
                 fee_buffer=1_000_000,
                 witness_override=len(payment_skey_files),
             )
@@ -1655,14 +1653,14 @@ class TestIncrementalSigning:
             fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=src_addr.address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
                 witness_count_add=len(payment_skey_files),
             )
             tx_output = cluster.g_transaction.build_raw_tx(
                 src_address=src_addr.address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
                 fee=fee,
             )

@@ -376,7 +376,7 @@ class TestUpgrade:
         src_address = payment_addrs_disposable[0].address
         dst_address = payment_addrs_disposable[1].address
 
-        destinations = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
+        txouts = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[0].skey_file])
 
         if use_build_cmd:
@@ -384,7 +384,7 @@ class TestUpgrade:
                 src_address=src_address,
                 tx_name=temp_template,
                 tx_files=tx_files,
-                txouts=destinations,
+                txouts=txouts,
                 fee_buffer=1_000_000,
             )
             out_file_signed = cluster.g_transaction.sign_tx(
@@ -396,13 +396,13 @@ class TestUpgrade:
             fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=src_address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
             )
             tx_raw_output = cluster.g_transaction.build_raw_tx(
                 src_address=src_address,
                 tx_name=temp_template,
-                txouts=destinations,
+                txouts=txouts,
                 tx_files=tx_files,
                 fee=fee,
             )
