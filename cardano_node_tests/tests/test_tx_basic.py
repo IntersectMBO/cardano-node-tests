@@ -494,12 +494,18 @@ class TestBasicTransactions:
         txouts = [clusterlib.TxOut(address=dst_address, amount=-1)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[1].skey_file])
 
-        tx_raw_output = cluster.g_transaction.build_estimate_tx(
-            src_address=src_address,
-            tx_name=temp_template,
-            txouts=txouts,
-            tx_files=tx_files,
-        )
+        try:
+            tx_raw_output = cluster.g_transaction.build_estimate_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=txouts,
+                tx_files=tx_files,
+            )
+        except clusterlib.CLIError as exc:
+            if "balance of the transaction is negative" not in str(exc):
+                raise
+            issues.cli_1199.finish_test()
+
         out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
