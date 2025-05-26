@@ -409,6 +409,125 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_transfer_some_build_estimate(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+    ):
+        """Transfer some funds from one payment address to another.
+
+        Use the `transaction build-estimate` command.
+
+        * transfer some available funds from 1 source address to 1 destination address
+        * check expected balance for source addresses
+        * check expected balance for destination addresses
+        * check output of the `transaction view` command
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        tx_raw_output = cluster.g_transaction.build_estimate_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+        )
+        out_file_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        cluster.g_transaction.submit_tx(
+            tx_file=out_file_signed,
+            txins=tx_raw_output.txins,
+        )
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
+        )
+        assert clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount, (
+            f"Incorrect balance for destination address `{dst_address}`"
+        )
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
+        # Check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_transfer_all_build_estimate(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs_disposable: list[clusterlib.AddressRecord],
+    ):
+        """Transfer all funds from one payment address to another.
+
+        Use the `transaction build-estimate` command.
+
+        * transfer all available funds from 1 source address to 1 destination address
+        * check expected balance for destination addresses
+        * check that balance for source address is 0 Lovelace
+        * check output of the `transaction view` command
+        * (optional) check transactions in db-sync
+        """
+        temp_template = common.get_test_id(cluster)
+
+        src_address = payment_addrs_disposable[1].address
+        dst_address = payment_addrs_disposable[0].address
+
+        txouts = [clusterlib.TxOut(address=dst_address, amount=-1)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[1].skey_file])
+
+        tx_raw_output = cluster.g_transaction.build_estimate_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+        )
+        out_file_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        cluster.g_transaction.submit_tx(
+            tx_file=out_file_signed,
+            txins=tx_raw_output.txins,
+        )
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
+        assert not clusterlib.filter_utxos(utxos=out_utxos, address=src_address), (
+            f"Incorrect balance for source address `{src_address}`"
+        )
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
+        ), f"Incorrect balance for destination address `{dst_address}`"
+
+        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+
+        # Check `transaction view` command
+        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
+    @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_USE_BUILD_CMD
     @pytest.mark.smoke
