@@ -60,18 +60,18 @@ class TestMempool:
         dst_addr = payment_addrs_locked[1]
 
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
-        destinations = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
+        txouts = [clusterlib.TxOut(address=dst_addr.address, amount=amount)]
 
         fee = cluster.g_transaction.calculate_tx_fee(
             src_address=src_addr.address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
         )
         tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_addr.address,
             tx_name=temp_template,
-            txouts=destinations,
+            txouts=txouts,
             tx_files=tx_files,
             fee=fee,
         )
