@@ -286,7 +286,7 @@ def cast_vote(
     )
 
     # Make sure the vote is included in the ledger
-    gov_state = cluster_obj.g_governance.query.gov_state()
+    gov_state = cluster_obj.g_query.gov_state()
     vote_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=gov_state,
@@ -337,7 +337,7 @@ def resign_ccs(
     )
 
     cluster_obj.wait_for_new_block(new_blocks=2)
-    res_committee_state = cluster_obj.g_governance.query.committee_state()
+    res_committee_state = cluster_obj.g_query.committee_state()
     save_committee_state(committee_state=res_committee_state, name_template=f"{name_template}_res")
     for cc_member in ccs_to_resign:
         member_key = f"keyHash-{cc_member.cold_vkey_hash}"
@@ -364,7 +364,7 @@ def propose_change_constitution(
 
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
-        gov_state=cluster_obj.g_governance.query.gov_state(),
+        gov_state=cluster_obj.g_query.gov_state(),
     )
 
     constitution_action = cluster_obj.g_governance.action.create_constitution(
@@ -406,7 +406,7 @@ def propose_change_constitution(
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output.out_file)
-    action_gov_state = cluster_obj.g_governance.query.gov_state()
+    action_gov_state = cluster_obj.g_query.gov_state()
     action_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=action_gov_state,
@@ -440,7 +440,7 @@ def propose_pparams_update(
 
     prev_action_rec = prev_action_rec or governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-        gov_state=cluster_obj.g_governance.query.gov_state(),
+        gov_state=cluster_obj.g_query.gov_state(),
     )
 
     update_args = clusterlib_utils.get_pparams_update_args(update_proposals=proposals)
@@ -482,7 +482,7 @@ def propose_pparams_update(
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-    action_gov_state = cluster_obj.g_governance.query.gov_state()
+    action_gov_state = cluster_obj.g_query.gov_state()
     action_epoch = cluster_obj.g_query.get_epoch()
     save_gov_state(
         gov_state=action_gov_state, name_template=f"{name_template}_action_{action_epoch}"

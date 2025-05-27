@@ -170,7 +170,7 @@ def cluster_with_constitution(
 
             # Wait for the action to be ratified
             cluster.wait_for_epoch(epoch_no=approve_epoch + 1, padding_seconds=5)
-            rat_gov_state = cluster.g_governance.query.gov_state()
+            rat_gov_state = cluster.g_query.gov_state()
             rat_action = governance_utils.lookup_ratified_actions(
                 gov_state=rat_gov_state, action_txid=action_txid
             )
@@ -178,10 +178,10 @@ def cluster_with_constitution(
 
             # Wait for the action to be enacted
             cluster.wait_for_epoch(epoch_no=approve_epoch + 2, padding_seconds=5)
-            new_constitution = cluster.g_governance.query.constitution()
+            new_constitution = cluster.g_query.constitution()
             assert new_constitution["script"] == constitution_script_hash
 
-        cur_constitution = cluster.g_governance.query.constitution()
+        cur_constitution = cluster.g_query.constitution()
 
         # Enact the new constitution if the current one is not the one we expect
         if cur_constitution.get("script") != constitution_script_hash:
@@ -231,7 +231,7 @@ def propose_param_changes(
     deposit_amt = cluster.g_query.get_gov_action_deposit()
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-        gov_state=cluster.g_governance.query.gov_state(),
+        gov_state=cluster.g_query.gov_state(),
     )
 
     # Update pparams action with specifying constitution script hash
@@ -328,7 +328,7 @@ def check_invalid_proposals(  # noqa: C901
         # In case of invalid value
         assert "Failed reading" in err_msg, err_msg
     elif err_msg == "":
-        action_gov_state = cluster_with_constitution.cluster.g_governance.query.gov_state()
+        action_gov_state = cluster_with_constitution.cluster.g_query.gov_state()
         prop_action = governance_utils.lookup_proposal(
             gov_state=action_gov_state, action_txid=action_txid
         )
@@ -346,7 +346,7 @@ def check_valid_proposals(
     action_txid = propose_param_changes(
         cluster_with_constitution=cluster_with_constitution, proposals=proposals
     )
-    action_gov_state = cluster_with_constitution.cluster.g_governance.query.gov_state()
+    action_gov_state = cluster_with_constitution.cluster.g_query.gov_state()
     prop_action = governance_utils.lookup_proposal(
         gov_state=action_gov_state, action_txid=action_txid
     )

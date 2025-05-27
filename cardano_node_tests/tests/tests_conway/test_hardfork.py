@@ -78,7 +78,7 @@ class TestHardfork:
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.HARDFORK,
-            gov_state=cluster.g_governance.query.gov_state(),
+            gov_state=cluster.g_query.gov_state(),
         )
 
         _url = helpers.get_vcs_link()
@@ -132,7 +132,7 @@ class TestHardfork:
         ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_governance.query.gov_state()
+        action_gov_state = cluster.g_query.gov_state()
         action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
@@ -201,7 +201,7 @@ class TestHardfork:
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
-        rat_gov_state = cluster.g_governance.query.gov_state()
+        rat_gov_state = cluster.g_query.gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
@@ -235,7 +235,7 @@ class TestHardfork:
         with logfiles.expect_messages(expected_msgs):
             enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=15)
 
-        enact_gov_state = cluster.g_governance.query.gov_state()
+        enact_gov_state = cluster.g_query.gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
