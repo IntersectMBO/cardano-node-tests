@@ -85,7 +85,7 @@ def _cast_vote(
         == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
     ), f"Incorrect balance for source address `{payment_addr.address}`"
 
-    gov_state = cluster_obj.g_query.gov_state()
+    gov_state = cluster_obj.g_query.get_gov_state()
     prop_vote = governance_utils.lookup_proposal(
         gov_state=gov_state, action_txid=action_txid, action_ix=action_ix
     )
@@ -238,7 +238,7 @@ def setup(
     ):
         cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
 
-        drep1_rec = cluster_obj.g_query.drep_stake_distribution(
+        drep1_rec = cluster_obj.g_query.get_drep_stake_distribution(
             drep_vkey_file=drep_reg_records[0].key_pair.vkey_file
         )
         assert drep1_rec, "DRep stake distribution not found"
@@ -419,7 +419,7 @@ def auth_cc_members(
     ), f"Incorrect balance for source address `{payment_addr.address}`"
 
     cluster_obj.wait_for_new_block(new_blocks=2)
-    reg_committee_state = cluster_obj.g_query.committee_state()
+    reg_committee_state = cluster_obj.g_query.get_committee_state()
     member_key = f"keyHash-{cc_members[0].cc_member.cold_vkey_hash}"
     assert (
         _get_committee_val(data=reg_committee_state)[member_key]["hotCredsAuthStatus"]["tag"]
@@ -440,7 +440,7 @@ def reinstate_committee(
     anchor_data = governance_utils.get_default_anchor_data()
     prev_action_rec = governance_utils.get_prev_action(
         action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-        gov_state=cluster_obj.g_query.gov_state(),
+        gov_state=cluster_obj.g_query.get_gov_state(),
     )
 
     update_action = cluster_obj.g_governance.action.update_committee(
@@ -481,7 +481,7 @@ def reinstate_committee(
     ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-    action_gov_state = cluster_obj.g_query.gov_state()
+    action_gov_state = cluster_obj.g_query.get_gov_state()
     prop_action = governance_utils.lookup_proposal(
         gov_state=action_gov_state, action_txid=action_txid
     )
@@ -515,7 +515,7 @@ def reinstate_committee(
 
     # Check ratification
     cluster_obj.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
-    rat_gov_state = cluster_obj.g_query.gov_state()
+    rat_gov_state = cluster_obj.g_query.get_gov_state()
     rat_action = governance_utils.lookup_ratified_actions(
         gov_state=rat_gov_state, action_txid=action_txid
     )
@@ -527,7 +527,7 @@ def reinstate_committee(
 
     # Check enactment
     cluster_obj.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
-    enact_gov_state = cluster_obj.g_query.gov_state()
+    enact_gov_state = cluster_obj.g_query.get_gov_state()
     _check_state(enact_gov_state)
 
     auth_cc_members(

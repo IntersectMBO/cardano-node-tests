@@ -413,7 +413,7 @@ class TestDReps:
         ), f"Incorrect balance for source address `{payment_addr.address}`"
 
         reqc.cli033.start(url=helpers.get_vcs_link())
-        reg_drep_state = cluster.g_query.drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
+        reg_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
         reqc.cli033.success()
 
@@ -477,7 +477,7 @@ class TestDReps:
         )
 
         reqc.cip024.start(url=helpers.get_vcs_link())
-        ret_drep_state = cluster.g_query.drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
+        ret_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
         assert not ret_drep_state, "DRep was not retired"
         reqc.cip024.success()
 
@@ -543,7 +543,7 @@ class TestDReps:
             deposit=reg_drep.deposit,
         )
 
-        reg_drep_state = cluster.g_query.drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
+        reg_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
 
         def _retire_drep() -> None:
@@ -568,7 +568,7 @@ class TestDReps:
                     deposit=-reg_drep.deposit,
                 )
 
-                ret_drep_state = cluster.g_query.drep_state(
+                ret_drep_state = cluster.g_query.get_drep_state(
                     drep_vkey_file=reg_drep.key_pair.vkey_file
                 )
                 assert not ret_drep_state, "DRep was not retired"
@@ -682,7 +682,7 @@ class TestNegativeDReps:
                 deposit=reg_drep.deposit,
             )
 
-        reg_drep_state = cluster.g_query.drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
+        reg_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
         assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
 
         # Retire DRep
@@ -731,7 +731,7 @@ class TestNegativeDReps:
                 deposit=-reg_drep.deposit,
             )
 
-        ret_drep_state = cluster.g_query.drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
+        ret_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
         assert not ret_drep_state, "DRep was not retired"
 
         # Known ledger issue: https://github.com/IntersectMBO/cardano-ledger/issues/3890
@@ -1190,10 +1190,10 @@ class TestDelegDReps:
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cli034, reqc.cip025)]
             if drep == "custom":
-                stake_distrib = cluster.g_query.drep_stake_distribution(
+                stake_distrib = cluster.g_query.get_drep_stake_distribution(
                     drep_key_hash=custom_drep_rewards.drep_id
                 )
-                stake_distrib_vkey = cluster.g_query.drep_stake_distribution(
+                stake_distrib_vkey = cluster.g_query.get_drep_stake_distribution(
                     drep_vkey_file=custom_drep_rewards.key_pair.vkey_file
                 )
                 assert stake_distrib == stake_distrib_vkey, (
@@ -1208,7 +1208,7 @@ class TestDelegDReps:
                     f"'{custom_drep_rewards.drep_id}'"
                 )
             else:
-                stake_distrib = cluster.g_query.drep_stake_distribution()
+                stake_distrib = cluster.g_query.get_drep_stake_distribution()
 
             deleg_amount = cluster.g_query.get_address_balance(pool_user_rewards.payment.address)
             governance_utils.check_drep_stake_distribution(
@@ -1399,10 +1399,10 @@ class TestDelegDReps:
         ) -> dict[str, dict[str, tp.Any]]:
             return {drep[0]["keyHash"]: drep[1] for drep in drep_state}
 
-        drep_states_all = _get_drep_rec(drep_state=cluster.g_query.drep_state())
+        drep_states_all = _get_drep_rec(drep_state=cluster.g_query.get_drep_state())
         drep_states_gov_data = _get_drep_rec(
             drep_state=[
-                cluster.g_query.drep_state(drep_key_hash=drep.drep_id)[0]
+                cluster.g_query.get_drep_state(drep_key_hash=drep.drep_id)[0]
                 for drep in governance_data.dreps_reg
             ]
         )
@@ -1571,7 +1571,7 @@ class TestDelegDReps:
             deposit=-drep1.deposit,
         )
 
-        ret_drep_state = cluster.g_query.drep_state(drep_vkey_file=drep1.key_pair.vkey_file)
+        ret_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=drep1.key_pair.vkey_file)
         assert not ret_drep_state, "DRep 1 was not retired"
 
         stake_addr_info_ret = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
@@ -1735,7 +1735,7 @@ class TestDRepActivity:
             anchor_data = governance_utils.get_default_anchor_data()
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-                gov_state=cluster.g_query.gov_state(),
+                gov_state=cluster.g_query.get_gov_state(),
             )
 
             proposals = [
@@ -1799,7 +1799,7 @@ class TestDRepActivity:
             action_id: str,
         ):
             rat_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            rat_gov_state = cluster.g_query.gov_state()
+            rat_gov_state = cluster.g_query.get_gov_state()
             conway_common.save_gov_state(
                 gov_state=rat_gov_state,
                 name_template=f"{temp_template}_{action_id}_drep_activity_rat_{rat_epoch}",
@@ -1815,14 +1815,14 @@ class TestDRepActivity:
             action_id: str,
         ):
             enact_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-            enact_gov_state = cluster.g_query.gov_state()
+            enact_gov_state = cluster.g_query.get_gov_state()
             conway_common.save_gov_state(
                 gov_state=enact_gov_state,
                 name_template=f"{temp_template}_{action_id}_drep_activity_enact_{enact_epoch}",
             )
             prev_action_rec = governance_utils.get_prev_action(
                 action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-                gov_state=cluster.g_query.gov_state(),
+                gov_state=cluster.g_query.get_gov_state(),
             )
             assert action_txid == prev_action_rec.txid, (
                 f"Unexpected action txid: {prev_action_rec.txid}"
@@ -1835,7 +1835,9 @@ class TestDRepActivity:
         ) -> None:
             curr_epoch = cluster.g_query.get_epoch()
             if drep1 is not None:
-                _drep_state = cluster.g_query.drep_state(drep_vkey_file=drep1.key_pair.vkey_file)
+                _drep_state = cluster.g_query.get_drep_state(
+                    drep_vkey_file=drep1.key_pair.vkey_file
+                )
                 assert id not in drep1_state
                 drep1_state[id] = DRepStateRecord(
                     epoch_no=curr_epoch,
@@ -1847,7 +1849,9 @@ class TestDRepActivity:
                     name_template=f"{temp_template}_drep1_{id}_{curr_epoch}",
                 )
             if drep2 is not None:
-                _drep_state = cluster.g_query.drep_state(drep_vkey_file=drep2.key_pair.vkey_file)
+                _drep_state = cluster.g_query.get_drep_state(
+                    drep_vkey_file=drep2.key_pair.vkey_file
+                )
                 assert id not in drep2_state
                 drep2_state[id] = DRepStateRecord(
                     epoch_no=curr_epoch,

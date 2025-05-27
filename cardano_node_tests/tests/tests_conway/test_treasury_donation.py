@@ -96,7 +96,7 @@ class TestTreasuryDonation:
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
-        treasury_val = cluster.g_query.treasury()
+        treasury_val = cluster.g_query.get_treasury()
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr_treasury.skey_file])
 
         tx_output = clusterlib_utils.build_and_submit_tx(
@@ -148,7 +148,7 @@ class TestTreasuryDonation:
         pot_bef_tx = next(dbsync_queries.query_ada_pots(epoch_from=cur_epoch, epoch_to=cur_epoch))
         assert pot_bef_tx.epoch_no == cur_epoch
 
-        treasury_val = cluster.g_query.treasury()
+        treasury_val = cluster.g_query.get_treasury()
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr_singleton.skey_file])
 
         tx_output = clusterlib_utils.build_and_submit_tx(

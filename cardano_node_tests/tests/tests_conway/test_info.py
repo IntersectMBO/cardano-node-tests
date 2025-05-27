@@ -131,7 +131,7 @@ class TestInfo:
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         reqc.cli031.start(url=helpers.get_vcs_link())
-        action_gov_state = cluster.g_query.gov_state()
+        action_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
         )
@@ -210,7 +210,7 @@ class TestInfo:
 
         vote_txid = cluster.g_transaction.get_txid(tx_body_file=vote_tx_output.out_file)
 
-        vote_gov_state = cluster.g_query.gov_state()
+        vote_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{vote_epoch}"
         )
@@ -223,7 +223,7 @@ class TestInfo:
 
         # Check that the Info action cannot be ratified
         approved_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
-        approved_gov_state = cluster.g_query.gov_state()
+        approved_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=approved_gov_state, name_template=f"{temp_template}_approved_{approved_epoch}"
         )
@@ -247,7 +247,7 @@ class TestInfo:
         # First wait for gov action to expire according to gov action lifetime
         epochs_to_expiration = action_epoch + cluster.conway_genesis["govActionLifetime"] + 1
         expire_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration, padding_seconds=5)
-        expire_gov_state = cluster.g_query.gov_state()
+        expire_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
         )
@@ -260,7 +260,7 @@ class TestInfo:
 
         # Check that the proposals were removed and the actions deposits were returned
         rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
-        rem_gov_state = cluster.g_query.gov_state()
+        rem_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{rem_epoch}"
         )

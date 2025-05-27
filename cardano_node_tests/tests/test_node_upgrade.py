@@ -137,7 +137,7 @@ class TestSetup:
 
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-            gov_state=cluster.g_query.gov_state(),
+            gov_state=cluster.g_query.get_gov_state(),
         )
 
         def _propose_pparams_update(
@@ -179,7 +179,7 @@ class TestSetup:
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
-        rat_gov_state = cluster.g_query.gov_state()
+        rat_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
@@ -197,7 +197,7 @@ class TestSetup:
         enact_epoch = cluster.wait_for_epoch(
             epoch_no=vote_epoch + 2, padding_seconds=5, future_is_ok=False
         )
-        enact_gov_state = cluster.g_query.gov_state()
+        enact_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
@@ -226,7 +226,7 @@ class TestSetup:
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
             action_type=governance_utils.PrevGovActionIds.HARDFORK,
-            gov_state=cluster.g_query.gov_state(),
+            gov_state=cluster.g_query.get_gov_state(),
         )
 
         hardfork_action = cluster.g_governance.action.create_hardfork(
@@ -263,7 +263,7 @@ class TestSetup:
         )
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_query.gov_state()
+        action_gov_state = cluster.g_query.get_gov_state()
         action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
@@ -297,7 +297,7 @@ class TestSetup:
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
-        rat_gov_state = cluster.g_query.gov_state()
+        rat_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
@@ -312,7 +312,7 @@ class TestSetup:
 
         # Check enactment
         enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
-        enact_gov_state = cluster.g_query.gov_state()
+        enact_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )

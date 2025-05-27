@@ -242,7 +242,7 @@ class TestTreasuryWithdrawals:
         ), f"Incorrect balance for source address `{pool_user_ug_treasury.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_query.gov_state()
+        action_gov_state = cluster.g_query.get_gov_state()
         action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
@@ -325,7 +325,7 @@ class TestTreasuryWithdrawals:
                 keys=vote_keys,
             )
 
-            vote_gov_state = cluster.g_query.gov_state()
+            vote_gov_state = cluster.g_query.get_gov_state()
             conway_common.save_gov_state(
                 gov_state=vote_gov_state,
                 name_template=f"{temp_template}_vote_{vote_id}_{_cast_vote_epoch}",
@@ -365,7 +365,7 @@ class TestTreasuryWithdrawals:
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=approved_epoch + 1, padding_seconds=5)
-        rat_gov_state = cluster.g_query.gov_state()
+        rat_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
@@ -547,7 +547,7 @@ class TestTreasuryWithdrawals:
         ), f"Incorrect balance for source address `{pool_user_ug.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
-        action_gov_state = cluster.g_query.gov_state()
+        action_gov_state = cluster.g_query.get_gov_state()
         action_epoch = cluster.g_query.get_epoch()
         conway_common.save_gov_state(
             gov_state=action_gov_state, name_template=f"{temp_template}_action_{action_epoch}"
@@ -624,7 +624,7 @@ class TestTreasuryWithdrawals:
         )
         reqc.cli026.success()
 
-        vote_gov_state = cluster.g_query.gov_state()
+        vote_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=vote_gov_state, name_template=f"{temp_template}_vote_{vote_epoch}"
         )
@@ -645,7 +645,7 @@ class TestTreasuryWithdrawals:
 
         # Check that the actions are not ratified
         nonrat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
-        nonrat_gov_state = cluster.g_query.gov_state()
+        nonrat_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=nonrat_gov_state, name_template=f"{temp_template}_nonrat_{nonrat_epoch}"
         )
@@ -656,7 +656,7 @@ class TestTreasuryWithdrawals:
 
         # Check that the actions are not enacted
         nonenacted_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 2, padding_seconds=5)
-        nonenacted_gov_state = cluster.g_query.gov_state()
+        nonenacted_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=nonenacted_gov_state,
             name_template=f"{temp_template}_nonenact_{nonenacted_epoch}",
@@ -670,7 +670,7 @@ class TestTreasuryWithdrawals:
         reqc.cip032ex.start(url=helpers.get_vcs_link())
         epochs_to_expiration = action_prop_epoch + cluster.conway_genesis["govActionLifetime"] + 1
         expire_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration, padding_seconds=5)
-        expire_gov_state = cluster.g_query.gov_state()
+        expire_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=expire_gov_state, name_template=f"{temp_template}_expire_{expire_epoch}"
         )
@@ -687,7 +687,7 @@ class TestTreasuryWithdrawals:
 
         # Check that the proposals were removed and the actions deposits were returned
         rem_epoch = cluster.wait_for_epoch(epoch_no=epochs_to_expiration + 1, padding_seconds=5)
-        rem_gov_state = cluster.g_query.gov_state()
+        rem_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=rem_gov_state, name_template=f"{temp_template}_rem_{rem_epoch}"
         )
