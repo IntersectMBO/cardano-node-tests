@@ -59,6 +59,7 @@ ERRORS_IGNORED = [
     "DiffusionError thread killed",
     # TODO: connection to other node before the other node is started
     r"AcquireConnectionError Network\.Socket\.connect",
+    "expected change in the serialization format",
 ]
 # Already removed from the list above:
 # * Workaround for node issue https://github.com/IntersectMBO/cardano-node/issues/4369
