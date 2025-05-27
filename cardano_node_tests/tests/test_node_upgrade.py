@@ -93,13 +93,6 @@ class TestSetup:
         """Ignore selected errors in log right after node upgrade."""
         common.get_test_id(cluster_singleton)
 
-        logfiles.add_ignore_rule(
-            files_glob="*.stdout",
-            regex="ChainDB:Error:.* Invalid snapshot DiskSnapshot .*DeserialiseFailure "
-            ".* expected change in the serialization format",
-            ignore_file_id=worker_id,
-        )
-
         # The error should be present only when upgrading pre UTxO-HD release.
         # The UTxO-HD was added in 10.4.1, so when we are upgrading from 10.4.1+ release to
         # 10.5.0+ release, the error should not be there.
