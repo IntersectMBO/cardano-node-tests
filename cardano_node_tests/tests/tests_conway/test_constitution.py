@@ -287,8 +287,7 @@ def script_dreps_lg(
         )
 
         ret_drep_states = [
-            cluster.g_governance.query.drep_state(drep_script_hash=d.script_hash)
-            for d in drep_script_data
+            cluster.g_query.get_drep_state(drep_script_hash=d.script_hash) for d in drep_script_data
         ]
         assert not any(ret_drep_states), "Some DRep were not retired"
 
@@ -474,12 +473,12 @@ class TestConstitution:
             _assert_anchor(anchor)
 
         def _check_cli_query():
-            anchor = cluster.g_governance.query.constitution()["anchor"]
+            anchor = cluster.g_query.get_constitution()["anchor"]
             _assert_anchor(anchor)
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
-        rat_gov_state = cluster.g_governance.query.gov_state()
+        rat_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
@@ -522,7 +521,7 @@ class TestConstitution:
 
         # Check enactment
         enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)
-        enact_gov_state = cluster.g_governance.query.gov_state()
+        enact_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )

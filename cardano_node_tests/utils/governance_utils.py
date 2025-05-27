@@ -586,7 +586,7 @@ def wait_delayed_ratification(
 ) -> None:
     """Wait until ratification is no longer delayed."""
     for __ in range(3):
-        next_rat_state = cluster_obj.g_governance.query.gov_state()["nextRatifyState"]
+        next_rat_state = cluster_obj.g_query.get_gov_state()["nextRatifyState"]
         if not next_rat_state["ratificationDelayed"]:
             break
         cluster_obj.wait_for_new_epoch(padding_seconds=5)
@@ -602,7 +602,7 @@ def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
     stake_snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
     total_spo_stake = stake_snapshot["total"]["stakeGo"]
 
-    drep_state = cluster_obj.g_governance.query.drep_state()
+    drep_state = cluster_obj.g_query.get_drep_state()
     total_drep_stake = functools.reduce(lambda x, y: x + (y[1].get("stake") or 0), drep_state, 0)
 
     return StakeDelegation(
