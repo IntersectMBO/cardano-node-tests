@@ -84,11 +84,14 @@ line-length = 100
 line-length = 100
 
 [tool.ruff.lint]
-select = ["ARG", "B", "C4", "C90", "D", "DTZ", "E", "EM", "F", "FURB", "I001", "ISC", "N", "PERF", "PIE", "PL", "PLE", "PLR", "PLW", "PT", "PTH", "Q", "RET", "RSE", "RUF", "SIM", "TRY", "UP", "W", "YTT"]
-ignore = ["B905", "D10", "D203", "D212", "D213", "D214", "D215", "D404", "D405", "D406", "D407", "D408", "D409", "D410", "D411", "D413", "ISC001", "PLR0912", "PLR0913", "PLR0915", "PLR2004", "PT001", "PT007", "PT012", "PT018", "PT023", "PTH123", "RET504", "TRY002", "TRY301", "UP006", "UP007", "UP035"]
+select = ["ANN", "ARG", "B", "C4", "C90", "D", "DTZ", "E", "EM", "F", "FURB", "I001", "ISC", "N", "PERF", "PIE", "PL", "PLE", "PLR", "PLW", "PT", "PTH", "Q", "RET", "RSE", "RUF", "SIM", "TRY", "UP", "W", "YTT"]
+ignore = ["ANN401", "B905", "D10", "D203", "D212", "D213", "D214", "D215", "D404", "D405", "D406", "D407", "D408", "D409", "D410", "D411", "D413", "ISC001", "PLR0912", "PLR0913", "PLR0915", "PLR2004", "PT001", "PT007", "PT012", "PT018", "PT023", "PTH123", "RET504", "TRY002", "TRY301", "UP006", "UP007", "UP035"]
 
 [tool.ruff.lint.per-file-ignores]
 "cardano_node_tests/utils/model_ekg.py" = ["N815"]
+"cardano_node_tests/tests/**.py" = ["ANN"]
+"framework_tests/**.py" = ["ANN"]
+"src_docs/**.py" = ["ANN"]
 
 [tool.ruff.lint.isort]
 force-single-line = true
@@ -105,21 +108,8 @@ ignore_missing_imports = true
 follow_imports = "normal"
 no_implicit_optional = true
 allow_untyped_globals = false
-allow_untyped_defs = false
 warn_unused_configs = true
 warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "cardano_node_tests.tests.*"
-allow_untyped_defs = true
-
-[[tool.mypy.overrides]]
-module = "cardano_node_tests.*.conftest"
-allow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "framework_tests.*"
-allow_untyped_defs = true
 
 [tool.pytest.ini_options]
 log_cli = true

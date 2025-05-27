@@ -7,7 +7,7 @@ import typing as tp
 class BaseFilter:
     """Base class for resource filters."""
 
-    def __init__(self, resources: tp.Iterable[str]):
+    def __init__(self, resources: tp.Iterable[str]) -> None:
         assert not isinstance(resources, str), "`resources` can't be single string"
         self.resources = resources
 

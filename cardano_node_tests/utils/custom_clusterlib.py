@@ -66,7 +66,7 @@ class ClusterLib(clusterlib.ClusterLib):
         slots_offset: int | None = None,
         socket_path: clusterlib.FileType = "",
         command_era: str = consts.CommandEras.LATEST,
-    ):
+    ) -> None:
         super().__init__(
             state_dir=state_dir,
             slots_offset=slots_offset,
