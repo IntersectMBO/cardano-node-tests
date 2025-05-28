@@ -51,6 +51,7 @@ def create_submitted_file(tx_file: clusterlib.FileType) -> None:
     """Create a `.submitted` status file when the Tx was successfully submitted."""
     tx_path = pl.Path(tx_file)
     submitted_symlink = tx_path.with_name(f"{tx_path.name}.submitted")
+    relative_target = "unknown"
     try:
         relative_target = os.path.relpath(tx_path, start=submitted_symlink.parent)
         submitted_symlink.symlink_to(relative_target)
