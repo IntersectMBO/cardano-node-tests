@@ -67,7 +67,11 @@ class ClusterType:
 
     def __init__(self) -> None:
         self.type = "unknown"
-        self.cluster_scripts = cluster_scripts.ScriptsTypes()
+        self.cluster_scripts: (
+            cluster_scripts.ScriptsTypes
+            | cluster_scripts.TestnetScripts
+            | cluster_scripts.LocalScripts
+        ) = cluster_scripts.ScriptsTypes()
 
     @property
     def testnet_type(self) -> str:
@@ -204,9 +208,7 @@ class TestnetCluster(ClusterType):
     def __init__(self) -> None:
         super().__init__()
         self.type = ClusterType.TESTNET
-        self.cluster_scripts: cluster_scripts.ScriptsTypes | cluster_scripts.TestnetScripts = (
-            cluster_scripts.TestnetScripts()
-        )
+        self.cluster_scripts = cluster_scripts.TestnetScripts()
 
         # Cached values
         self._testnet_type = ""

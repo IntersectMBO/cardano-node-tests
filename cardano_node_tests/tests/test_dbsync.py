@@ -197,8 +197,8 @@ class TestDBSync:
                     f"Expected: value > {prev_rec.epoch_slot_no} vs Returned: {rec.epoch_slot_no}"
                 )
 
-            if rec.block_no is None or (
-                prev_rec.block_no and rec.block_no != prev_rec.block_no + 1
+            if (rec.block_no is None and prev_rec.block_no is not None) or (
+                prev_rec.block_no is not None and rec.block_no != prev_rec.block_no + 1
             ):
                 errors.append(
                     "'block_no' value is different than expected; "
@@ -211,6 +211,7 @@ class TestDBSync:
                     f"Expected: {prev_rec.id} vs Returned: {rec.previous_id}"
                 )
 
+            # pyrefly: ignore  # unknown
             prev_rec = rec
 
         if errors:

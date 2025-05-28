@@ -128,9 +128,9 @@ class TestRollback:
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
             utxos = cluster_obj.g_query.get_utxo(address=address, tx_raw_output=tx_raw_output)
-            return utxos
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
+        return utxos
 
     def node_submit_tx(
         self,
@@ -157,9 +157,9 @@ class TestRollback:
                 txouts=txouts,
                 tx_files=tx_files,
             )
-            return tx_raw_output
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
+        return tx_raw_output
 
     def node_wait_for_block(
         self,
@@ -174,9 +174,10 @@ class TestRollback:
 
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
-            return cluster_obj.wait_for_block(block=block_no)
+            new_block = cluster_obj.wait_for_block(block=block_no)
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
+        return new_block
 
     @allure.link(helpers.get_vcs_link())
     # There's a submission delay of 60 sec. Therefore on testnet with low `securityParam`,

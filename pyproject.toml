@@ -53,6 +53,7 @@ types-PyYAML = "^6.0.12.20240917"
 types-requests = "^2.32.0.20241016"
 mypy = "^1.13.0"
 ipython = "^8.29.0"
+pyrefly = "^0.17.0"
 
 [tool.poetry.group.docs]
 optional = true
@@ -110,6 +111,14 @@ no_implicit_optional = true
 allow_untyped_globals = false
 warn_unused_configs = true
 warn_return_any = true
+
+[tool.pyrefly]
+python_version = "3.11.0"
+project_includes = ["cardano_node_tests", "framework_tests"]
+replace_imports_with_any = ["allure.*", "hypothesis.*", "pytest.*", "pytest_subtests.*", "psycopg2.*", "requests.*"]
+ignore_errors_in_generated_code = true
+use_untyped_imports = true
+ignore_missing_source = true
 
 [tool.pytest.ini_options]
 log_cli = true

@@ -367,12 +367,14 @@ def check_tx_collaterals(
         and not (tx_raw_output.total_collateral_amount or tx_raw_output.return_collateral_txouts)
     ):
         protocol_params = cluster_obj.g_query.get_protocol_params()
+        # pyrefly: ignore  # no-matching-overload, bad-argument-type
         tx_collaterals_amount = clusterlib.calculate_utxos_balance(utxos=list(tx_collaterals))
         tx_collateral_output_amount = int(
             tx_collaterals_amount
             - tx_raw_output.fee * protocol_params["collateralPercentage"] / 100
         )
         db_collateral_output_amount = clusterlib.calculate_utxos_balance(
+            # pyrefly: ignore  # no-matching-overload, bad-argument-type
             utxos=list(response.collateral_outputs)
         )
 

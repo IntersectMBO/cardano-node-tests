@@ -65,9 +65,9 @@ class TestNodeReconnect:
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
             utxos = cluster_obj.g_query.get_utxo(address=address, tx_raw_output=tx_raw_output)
-            return utxos
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
+        return utxos
 
     def node_get_tip(
         self,
@@ -82,9 +82,9 @@ class TestNodeReconnect:
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
             tip = cluster_obj.g_query.get_tip()
-            return tip
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
+        return tip
 
     def node_submit_tx(
         self,
@@ -112,9 +112,9 @@ class TestNodeReconnect:
                 tx_files=tx_files,
                 verify_tx=False,
             )
-            return tx_raw_output
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
+        return tx_raw_output
 
     def get_prometheus_metrics(self, port: int) -> requests.Response:
         response = http_client.get_session().get(f"http://localhost:{port}/metrics", timeout=10)

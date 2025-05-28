@@ -1701,6 +1701,7 @@ class TestIncrementalSigning:
                 )
 
         # It is not possible to submit Tx with missing required skey
+        assert tx_signed is not None  # for pyrefly
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             submit_utils.submit_tx(
                 submit_method=submit_method,

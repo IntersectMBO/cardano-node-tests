@@ -104,6 +104,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         scope, work_unit = None, None
 
         # Check if there are any long-running tests already pending
+        # pyrefly: ignore  # bad-argument-type
         long_pending = self._is_long_pending(assigned_to_node)
 
         if long_pending:

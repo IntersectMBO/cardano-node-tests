@@ -290,7 +290,9 @@ class TestKES:
             ignore_file_id=worker_id,
         )
         # Search for expected errors only in log file corresponding to pool with expired KES
-        expected_errors = [(f"{expire_node_name}.stdout", err) for err in expected_err_regexes]
+        expected_errors: list[tuple[str, str]] = [
+            (f"{expire_node_name}.stdout", err) for err in expected_err_regexes
+        ]
 
         with logfiles.expect_errors(expected_errors, worker_id=worker_id):
             LOGGER.info(

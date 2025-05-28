@@ -98,11 +98,6 @@ class Table(enum.StrEnum):
     VOTING_ANCHOR = "voting_anchor"
     VOTING_PROCEDURE = "voting_procedure"
 
-    @classmethod
-    def get_all_tables(cls) -> list[str]:
-        """Return all table names as a list of strings."""
-        return [table.value for table in cls]
-
 
 class Column:
     class Tx(enum.StrEnum):
@@ -395,7 +390,7 @@ class DBSyncManager:
         LOGGER.debug(f"Effective config: {config}")
 
         with open(config_file, encoding="utf-8") as fp_in:
-            current_dbsync_config = yaml.safe_load(fp_in) or {}
+            current_dbsync_config: dict = yaml.safe_load(fp_in) or {}
 
         current_dbsync_config["insert_options"] = config
 
