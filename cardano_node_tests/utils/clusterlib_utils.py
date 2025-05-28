@@ -52,12 +52,19 @@ class TxMetadata:
     aux_data: list
 
 
+class BuildMethods:
+    BUILD: tp.Final[str] = "build"
+    BUILD_RAW: tp.Final[str] = "build_raw"
+    BUILD_EST: tp.Final[str] = "build_estimate"
+
+
 def build_and_submit_tx(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     src_address: str,
     submit_method: str = "",
-    use_build_cmd: bool = False,
+    build_method: str = "",
+    use_build_cmd: bool = False,  # Deprecated
     txins: clusterlib.OptionalUTXOData = (),
     txouts: clusterlib.OptionalTxOuts = (),
     readonly_reference_txins: clusterlib.OptionalUTXOData = (),
@@ -83,6 +90,7 @@ def build_and_submit_tx(
     invalid_before: int | None = None,
     witness_override: int | None = None,
     witness_count_add: int = 0,
+    byron_witness_count: int = 0,
     script_valid: bool = True,
     calc_script_cost_file: cl_types.FileType | None = None,
     join_txouts: bool = True,
@@ -92,51 +100,20 @@ def build_and_submit_tx(
     """
     Build and submit a transaction.
 
-    Use `use_build_cmd` to switch between `transaction build` and `transaction build-raw`.
     Use `submit_method` to switch between `cardano-cli transaction submit` and submit-api.
+    Use `build_method` to select one of the `cardano-cli transaction build*` commands:
+
+        * build
+        * build_raw
+        * build_estimate
+
+    Use `use_build_cmd` to switch between `transaction build` and `transaction build-raw`
+    (deprecated).
     """
     tx_files = tx_files or clusterlib.TxFiles()
     submit_method = submit_method or submit_utils.SubmitMethods.CLI
 
-    if use_build_cmd:
-        skip_asset_balancing = True if cli_asset_balancing is None else cli_asset_balancing
-        witness_override = (
-            len(tx_files.signing_key_files) + witness_count_add
-            if witness_override is None
-            else witness_override
-        )
-        tx_output = cluster_obj.g_transaction.build_tx(
-            src_address=src_address,
-            tx_name=name_template,
-            txins=txins,
-            txouts=txouts,
-            readonly_reference_txins=readonly_reference_txins,
-            script_txins=script_txins,
-            return_collateral_txouts=return_collateral_txouts,
-            total_collateral_amount=total_collateral_amount,
-            mint=mint,
-            tx_files=tx_files,
-            complex_certs=complex_certs,
-            complex_proposals=complex_proposals,
-            change_address=change_address,
-            fee_buffer=fee_buffer,
-            required_signers=required_signers,
-            required_signer_hashes=required_signer_hashes,
-            withdrawals=withdrawals,
-            script_withdrawals=script_withdrawals,
-            script_votes=script_votes,
-            deposit=deposit,
-            treasury_donation=treasury_donation,
-            invalid_hereafter=invalid_hereafter,
-            invalid_before=invalid_before,
-            witness_override=witness_override,
-            script_valid=script_valid,
-            calc_script_cost_file=calc_script_cost_file,
-            join_txouts=join_txouts,
-            destination_dir=destination_dir,
-            skip_asset_balancing=skip_asset_balancing,
-        )
-    else:
+    if build_method in ("", BuildMethods.BUILD_RAW):
         # Resolve withdrawal amounts here (where -1 for total rewards amount is used) so the
         # resolved values can be passed around, and it is not needed to resolve them again
         # every time `_get_withdrawals` is called.
@@ -214,6 +191,81 @@ def build_and_submit_tx(
             join_txouts=join_txouts,
             destination_dir=destination_dir,
         )
+    elif BuildMethods.BUILD_EST:
+        skip_asset_balancing = True if cli_asset_balancing is None else cli_asset_balancing
+        tx_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=src_address,
+            tx_name=name_template,
+            txins=txins,
+            txouts=txouts,
+            readonly_reference_txins=readonly_reference_txins,
+            script_txins=script_txins,
+            return_collateral_txouts=return_collateral_txouts,
+            total_collateral_amount=total_collateral_amount,
+            mint=mint,
+            tx_files=tx_files,
+            complex_certs=complex_certs,
+            complex_proposals=complex_proposals,
+            change_address=change_address,
+            fee_buffer=fee_buffer,
+            required_signers=required_signers,
+            required_signer_hashes=required_signer_hashes,
+            withdrawals=withdrawals,
+            script_withdrawals=script_withdrawals,
+            script_votes=script_votes,
+            deposit=deposit,
+            current_treasury_value=current_treasury_value,
+            treasury_donation=treasury_donation,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            script_valid=script_valid,
+            witness_count_add=witness_count_add,
+            byron_witness_count=byron_witness_count,
+            join_txouts=join_txouts,
+            destination_dir=destination_dir,
+            skip_asset_balancing=skip_asset_balancing,
+        )
+    elif use_build_cmd or BuildMethods.BUILD:
+        skip_asset_balancing = True if cli_asset_balancing is None else cli_asset_balancing
+        witness_override = (
+            len(tx_files.signing_key_files) + witness_count_add
+            if witness_override is None
+            else witness_override
+        )
+        tx_output = cluster_obj.g_transaction.build_tx(
+            src_address=src_address,
+            tx_name=name_template,
+            txins=txins,
+            txouts=txouts,
+            readonly_reference_txins=readonly_reference_txins,
+            script_txins=script_txins,
+            return_collateral_txouts=return_collateral_txouts,
+            total_collateral_amount=total_collateral_amount,
+            mint=mint,
+            tx_files=tx_files,
+            complex_certs=complex_certs,
+            complex_proposals=complex_proposals,
+            change_address=change_address,
+            fee_buffer=fee_buffer,
+            required_signers=required_signers,
+            required_signer_hashes=required_signer_hashes,
+            withdrawals=withdrawals,
+            script_withdrawals=script_withdrawals,
+            script_votes=script_votes,
+            deposit=deposit,
+            treasury_donation=treasury_donation,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            witness_override=witness_override,
+            script_valid=script_valid,
+            calc_script_cost_file=calc_script_cost_file,
+            join_txouts=join_txouts,
+            destination_dir=destination_dir,
+            skip_asset_balancing=skip_asset_balancing,
+        )
+    else:
+        err = f"Unsupported build method '{build_method}'"
+        raise ValueError(err)
 
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_output.out_file,

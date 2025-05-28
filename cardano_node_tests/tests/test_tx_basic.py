@@ -129,7 +129,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
@@ -148,8 +148,8 @@ class TestBasicTransactions:
         src_addr_type: str,
         dst_addr_type: str,
         amount: int,
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Send funds to payment address.
 
@@ -170,7 +170,7 @@ class TestBasicTransactions:
             name_template=temp_template,
             src_address=src_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txouts=txouts,
             tx_files=tx_files,
             # TODO: cardano-node issue #4752

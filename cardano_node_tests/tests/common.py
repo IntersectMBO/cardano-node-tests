@@ -97,7 +97,24 @@ PARAM_USE_BUILD_CMD = pytest.mark.parametrize(
         False,
         pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE),
     ),
-    ids=("build_raw", "build"),
+    ids=(clusterlib_utils.BuildMethods.BUILD_RAW, clusterlib_utils.BuildMethods.BUILD),
+)
+
+PARAM_BUILD_METHOD = pytest.mark.parametrize(
+    "build_method",
+    (
+        clusterlib_utils.BuildMethods.BUILD_RAW,
+        pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=SKIPIF_BUILD_UNUSABLE),
+        clusterlib_utils.BuildMethods.BUILD_EST,
+    ),
+)
+
+PARAM_OFFLINE_BUILD_METHOD = pytest.mark.parametrize(
+    "offline_build_method",
+    (
+        clusterlib_utils.BuildMethods.BUILD_RAW,
+        clusterlib_utils.BuildMethods.BUILD_EST,
+    ),
 )
 
 PARAM_PLUTUS_VERSION = pytest.mark.parametrize(
