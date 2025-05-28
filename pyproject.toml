@@ -78,9 +78,6 @@ cardano-cli-coverage = "cardano_node_tests.cardano_cli_coverage:main"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.black]
-line-length = 100
-
 [tool.ruff]
 line-length = 100
 
