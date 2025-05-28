@@ -100,17 +100,15 @@ def collect_executed_req(base_dir: pl.Path) -> dict:
             req_rec = json.load(in_fp)
 
         group_name = req_rec["group"]
-        group_collected = collected.get(group_name)
+        group_collected: dict = collected.get(group_name) or {}
         if not group_collected:
-            group_collected = {}
             collected[group_name] = group_collected
 
         req_id = req_rec["id"]
-        id_collected = group_collected.get(req_id)
+        id_collected: dict = group_collected.get(req_id) or {}
         if id_collected and id_collected["status"] == Statuses.success.name:
             continue
         if not id_collected:
-            id_collected = {}
             group_collected[req_id] = id_collected
         id_collected["status"] = req_rec["status"]
         id_collected["url"] = req_rec.get("url") or ""
@@ -126,8 +124,12 @@ def merge_reqs(*reqs: dict[str, dict]) -> dict:
             merged_group = merged.get(gname) or {}
             for req_id, req_data in greqs.items():
                 merged_rec = merged_group.get(req_id) or {}
-                merged_status_val = Statuses[merged_rec.get("status") or "uncovered"].value
+                merged_status_key = merged_rec.get("status") or "uncovered"
+                # pyrefly: ignore  # bad-specialization, not-a-type
+                merged_status_val = Statuses[merged_status_key].value
+                # pyrefly: ignore  # bad-specialization
                 req_status_val = Statuses[req_data["status"]].value
+                # pyrefly: ignore  # missing-attribute
                 if not merged_rec or req_status_val < merged_status_val:
                     merged_group[req_id] = req_data
             merged[gname] = merged_group
@@ -160,6 +162,7 @@ def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C901
             dependencies_failures = []
 
             for p_req in dependencies:
+                # pyrefly: ignore  # no-matching-overload, bad-argument-type
                 p_status = executed_group.get(p_req, {}).get("status")
 
                 if not url:

@@ -100,11 +100,14 @@ def run_command(
     stdout, stderr = p.communicate()
 
     if not ignore_fail and p.returncode != 0:
+        # pyrefly: ignore  # missing-attribute
         err_dec = stderr.decode()
+        # pyrefly: ignore  # missing-attribute
         err_dec = err_dec or stdout.decode()
         msg = f"An error occurred while running `{cmd_str}`: {err_dec}"
         raise AssertionError(msg)
 
+    # pyrefly: ignore  # bad-return
     return stdout
 
 
@@ -293,7 +296,9 @@ def flatten(
             first = next(remainder)
         except StopIteration:
             break
+        # pyrefly: ignore  # invalid-argument
         if isinstance(first, ltypes) and not isinstance(first, (str, bytes)):
+            # pyrefly: ignore  # bad-argument-type
             remainder = itertools.chain(first, remainder)
         else:
             yield first

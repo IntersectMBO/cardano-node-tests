@@ -34,6 +34,13 @@ repos:
     additional_dependencies: [sphinx, toml]
 - repo: local
   hooks:
+  - id: pyrefly
+    name: pyrefly
+    entry: pyrefly
+    args: [ check, --remove-unused-ignores ]
+    pass_filenames: false
+    language: system
+    types: [python]
   - id: mypy
     name: mypy
     entry: mypy

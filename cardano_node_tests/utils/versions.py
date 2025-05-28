@@ -40,7 +40,7 @@ class Versions:
         self.command_era_name = configuration.COMMAND_ERA
 
         if self.command_era_name and self.command_era_name in self.MAP.values():
-            self.transaction_era_name = self.command_era_name
+            self.transaction_era_name: str = self.command_era_name
         else:
             self.transaction_era_name = self.MAP[self.DEFAULT_TX_ERA]
 

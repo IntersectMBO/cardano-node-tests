@@ -629,6 +629,7 @@ def mint_or_burn_witness(
         )
 
     # Submit signed TX
+    assert tx_witnessed_file is not None  # for pyrefly
     submit_utils.submit_tx(
         submit_method=submit_method,
         cluster_obj=cluster_obj,
@@ -729,6 +730,7 @@ def mint_or_burn_sign(
         )
 
     # Submit signed transaction
+    assert out_file_signed is not None  # for pyrefly
     submit_utils.submit_tx(
         submit_method=submit_method,
         cluster_obj=cluster_obj,
@@ -880,7 +882,9 @@ def _get_ledger_state_cmd(
     # Record cli coverage
     if hasattr(cluster_obj, "cli_coverage"):
         custom_clusterlib.record_cli_coverage(
-            cli_args=cardano_cli_args, coverage_dict=cluster_obj.cli_coverage
+            cli_args=cardano_cli_args,
+            # pyrefly: ignore  # missing-attribute
+            coverage_dict=cluster_obj.cli_coverage,
         )
 
     return ledger_state_cmd

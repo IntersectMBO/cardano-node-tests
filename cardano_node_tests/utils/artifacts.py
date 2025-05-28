@@ -20,6 +20,7 @@ CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
 def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> pl.Path | None:
     """Save CLI coverage info."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
+    # pyrefly: ignore  # missing-attribute
     if not (cli_coverage_dir and hasattr(cluster_obj, "cli_coverage") and cluster_obj.cli_coverage):
         return None
 

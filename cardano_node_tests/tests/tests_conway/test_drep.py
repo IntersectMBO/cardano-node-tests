@@ -438,6 +438,8 @@ class TestDReps:
                 if use_build_cmd and submit_method == "cli":
 
                     def _query_func():
+                        if not drep_data:
+                            return
                         dbsync_utils.check_off_chain_drep_registration(
                             drep_data=drep_data, metadata=drep_metadata_content
                         )
@@ -587,9 +589,10 @@ class TestDReps:
         assert drep_data and drep_data.voting_anchor_id
 
         def _query_func():
-            dbsync_utils.check_off_chain_vote_fetch_error(
-                voting_anchor_id=drep_data.voting_anchor_id
-            )
+            if drep_data and drep_data.voting_anchor_id is not None:
+                dbsync_utils.check_off_chain_vote_fetch_error(
+                    voting_anchor_id=drep_data.voting_anchor_id
+                )
 
         reqc.db021.start(url=helpers.get_vcs_link())
         dbsync_utils.retry_query(query_func=_query_func, timeout=360)
