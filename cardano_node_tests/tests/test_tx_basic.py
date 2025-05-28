@@ -175,7 +175,7 @@ class TestBasicTransactions:
             tx_files=tx_files,
             # TODO: cardano-node issue #4752
             witness_override=2 if src_addr_type == "byron" else None,
-            witness_count_add=2 if src_addr_type == "byron" else 0,
+            byron_witness_count=1 if src_addr_type == "byron" else 0,
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
