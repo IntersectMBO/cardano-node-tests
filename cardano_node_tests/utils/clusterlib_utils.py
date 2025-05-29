@@ -114,7 +114,10 @@ def build_and_submit_tx(
     tx_files = tx_files or clusterlib.TxFiles()
     submit_method = submit_method or submit_utils.SubmitMethods.CLI
 
-    if build_method in ("", BuildMethods.BUILD_RAW):
+    if not build_method:
+        build_method = BuildMethods.BUILD if use_build_cmd else BuildMethods.BUILD_RAW
+
+    if build_method == BuildMethods.BUILD_RAW:
         # Resolve withdrawal amounts here (where -1 for total rewards amount is used) so the
         # resolved values can be passed around, and it is not needed to resolve them again
         # every time `_get_withdrawals` is called.
@@ -194,7 +197,7 @@ def build_and_submit_tx(
             join_txouts=join_txouts,
             destination_dir=destination_dir,
         )
-    elif BuildMethods.BUILD_EST:
+    elif build_method == BuildMethods.BUILD_EST:
         skip_asset_balancing = True if cli_asset_balancing is None else cli_asset_balancing
         tx_output = cluster_obj.g_transaction.build_estimate_tx(
             src_address=src_address,
@@ -229,7 +232,7 @@ def build_and_submit_tx(
             destination_dir=destination_dir,
             skip_asset_balancing=skip_asset_balancing,
         )
-    elif use_build_cmd or BuildMethods.BUILD:
+    elif build_method == BuildMethods.BUILD:
         skip_asset_balancing = True if cli_asset_balancing is None else cli_asset_balancing
         witness_override = (
             len(tx_files.signing_key_files) + witness_count_add
