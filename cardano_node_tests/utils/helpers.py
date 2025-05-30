@@ -92,14 +92,13 @@ def run_command(
 
     LOGGER.debug("Running `%s`", cmd_str)
 
-    if workdir:
-        with change_cwd(workdir):
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
-    else:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
-    stdout, stderr = p.communicate()
+    with subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell, cwd=workdir or None
+    ) as p:
+        stdout, stderr = p.communicate()
+        retcode = p.returncode
 
-    if not ignore_fail and p.returncode != 0:
+    if not ignore_fail and retcode != 0:
         # pyrefly: ignore  # missing-attribute
         err_dec = stderr.decode()
         # pyrefly: ignore  # missing-attribute
