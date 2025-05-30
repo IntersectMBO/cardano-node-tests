@@ -159,8 +159,11 @@ set -uo pipefail
 
 SCRIPT_DIR="\$(readlink -m "\${0%/*}")"
 PID_FILE="\$SCRIPT_DIR/supervisord.pid"
+SUPERVISORD_SOCKET_PATH="${SUPERVISORD_SOCKET_PATH}"
 
-supervisorctl -s unix:///${SUPERVISORD_SOCKET_PATH} stop all
+if [ -e "\$SUPERVISORD_SOCKET_PATH" ]; then
+  supervisorctl -s unix:///\${SUPERVISORD_SOCKET_PATH} stop all
+fi
 
 if [ ! -f "\$PID_FILE" ]; then
   echo "Cluster is not running!"
