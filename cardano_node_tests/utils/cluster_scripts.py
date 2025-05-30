@@ -4,7 +4,6 @@
 * setup of scripts and their configuration for starting of multiple cluster instances
 """
 
-# ruff: noqa: ARG002
 import contextlib
 import dataclasses
 import itertools
@@ -221,15 +220,24 @@ class LocalScripts(ScriptsTypes):
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
+        common_dir = scripts_dir.parent / "common"
 
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
+        shutil.copytree(
+            common_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
 
         start_script = destdir / "start-cluster"
         config_glob = "config-*.json"
         genesis_spec_json = destdir / "genesis.spec.json"
-        assert start_script.exists() and genesis_spec_json.exists()
+        if not (start_script.exists() and genesis_spec_json.exists()):
+            err = (
+                f"Start script '{start_script}' or genesis spec file '{genesis_spec_json}' "
+                "not found in the copied cluster scripts directory."
+            )
+            raise FileNotFoundError(err)
 
         return StartupFiles(
             start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
@@ -380,8 +388,12 @@ class LocalScripts(ScriptsTypes):
         ports_per_node = instance_ports.pool1 - instance_ports.bft1
         addr = self._preselect_addr(instance_num=instance_num)
 
+        # The `common` dir is available only if cluster scripts are not taken from custom
+        # `indir`, so it needs to be optional.
+        common_dir = indir.parent / "common"
+
         # Reconfigure cluster instance files
-        for infile in indir.glob("*"):
+        for infile in itertools.chain(indir.glob("*"), common_dir.glob("*")):
             fname = infile.name
 
             # Skip template files
@@ -571,19 +583,27 @@ class TestnetScripts(ScriptsTypes):
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
+        common_dir = scripts_dir.parent / "common"
+
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
+        shutil.copytree(
+            common_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
 
         start_script = destdir / "start-cluster"
-        assert start_script.exists()
+        if not start_script.exists():
+            err = (
+                f"Start script '{start_script}' not found in the copied cluster scripts directory."
+            )
+            raise RuntimeError(err)
 
         bootstrap_conf_dir = self._get_bootstrap_conf_dir(bootstrap_dir=destdir)
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir()
-        _infiles = [list(bootstrap_conf_dir.glob(g)) for g in self.TESTNET_GLOBS]
-        infiles = list(itertools.chain.from_iterable(_infiles))
-        for infile in infiles:
+        infiles = [bootstrap_conf_dir.glob(g) for g in self.TESTNET_GLOBS]
+        for infile in itertools.chain(*infiles):
             shutil.copy(infile, destdir_bootstrap)
 
         config_glob = f"{self.BOOTSTRAP_CONF}/config-*.json"
@@ -599,9 +619,13 @@ class TestnetScripts(ScriptsTypes):
     ) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
-        _infiles = [list(indir.glob(g)) for g in globs]
-        infiles = list(itertools.chain.from_iterable(_infiles))
-        for infile in infiles:
+        infiles = [indir.glob(g) for g in globs]
+
+        # The `common` dir is available only if cluster scripts are not taken from custom
+        # `indir`, so it needs to be optional.
+        common_dir = indir.parent / "common"
+
+        for infile in itertools.chain(*infiles, common_dir.glob("*")):
             fname = infile.name
             outfile = destdir / fname
 
@@ -651,9 +675,8 @@ class TestnetScripts(ScriptsTypes):
 
     def _reconfigure_bootstrap(self, indir: pl.Path, destdir: pl.Path, globs: list[str]) -> None:
         """Copy and reconfigure config files from bootstrap dir."""
-        _infiles = [list(indir.glob(g)) for g in globs]
-        infiles = list(itertools.chain.from_iterable(_infiles))
-        for infile in infiles:
+        infiles = [indir.glob(g) for g in globs]
+        for infile in itertools.chain(*infiles):
             fname = infile.name
             outfile = destdir / fname
 

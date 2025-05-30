@@ -61,9 +61,8 @@ def prepare_scripts_files(
     if scriptsdir:
         scriptsdir = pl.Path(scriptsdir)
         start_script = next(scriptsdir.glob("start-cluster*"), "")
-        stop_script = next(scriptsdir.glob("stop-cluster*"), "")
-        if not (start_script and stop_script):
-            msg = f"Start/stop scripts not found in '{scriptsdir}'."
+        if not start_script:
+            msg = f"Start script not found in '{scriptsdir}'."
             raise RuntimeError(msg)
 
     startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(

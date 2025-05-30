@@ -22,31 +22,13 @@ if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
   exit 1
 fi
 
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/common.sh"
+
 if [ -e "$SCRIPT_DIR/shell_env" ]; then
-  # shellcheck disable=SC1090,SC1091
+  # shellcheck disable=SC1091
   source "$SCRIPT_DIR/shell_env"
 fi
-
-get_address_balance() {
-  local txhash txix amount total_amount _
-
-  # Repeat in case `query utxo` fails
-  for _ in {1..3}; do
-    total_amount=0
-    while read -r txhash txix amount _; do
-      if [ -z "$txhash" ] || [ -z "$txix" ]; then
-        continue
-      fi
-      total_amount="$((total_amount + amount))"
-    done <<< "$(cardano-cli latest query utxo "$@" --output-text | grep " lovelace")"
-
-    if [ "$total_amount" -gt 0 ]; then
-      break
-    fi
-  done
-
-  echo "$total_amount"
-}
 
 rm -rf "$STATE_CLUSTER"
 mkdir -p "$STATE_CLUSTER"/{byron,shelley,webserver}
