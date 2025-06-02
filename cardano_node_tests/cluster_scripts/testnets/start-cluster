@@ -18,7 +18,7 @@ if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
 fi
 
 if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
-  echo "Cluster already running. Please run \`$SCRIPT_DIR/stop-cluster\` first!" >&2
+  echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
   exit 1
 fi
 
@@ -134,7 +134,7 @@ cd "\$SCRIPT_DIR/.."
 supervisord --config "\$SCRIPT_DIR/supervisor.conf"
 EoF
 
-cat > "$STATE_CLUSTER/supervisord_stop" <<EoF
+cat > "$STATE_CLUSTER/stop-cluster" <<EoF
 #!/usr/bin/env bash
 
 set -uo pipefail
@@ -167,7 +167,7 @@ rm -f "\$PID_FILE"
 echo "Cluster terminated!"
 EoF
 
-chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*}
+chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*,stop-cluster}
 
 # copy db
 cp -r "$TESTNET_DIR/relay1-db" "$STATE_CLUSTER/db-relay1"
@@ -228,4 +228,4 @@ faucet_init_balance="$(get_address_balance \
   --address "$(<"$STATE_CLUSTER/shelley/faucet.addr")")"
 echo "Faucet initial balance: $faucet_init_balance" >> "$START_CLUSTER_LOG"
 
-echo "Cluster started. Run \`$SCRIPT_DIR/stop-cluster\` to stop"
+echo "Cluster started"

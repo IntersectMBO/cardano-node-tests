@@ -49,7 +49,7 @@ if [ "$POOL_COST" -eq 0 ]; then
 fi
 
 if [ -f "${STATE_CLUSTER}/supervisord.pid" ]; then
-  echo "Cluster already running. Please run \`${SCRIPT_DIR}/stop-cluster\` first!" >&2
+  echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
   exit 1
 fi
 
@@ -612,7 +612,7 @@ cd "\${SCRIPT_DIR}/.."
 supervisord --config "\${SCRIPT_DIR}/supervisor.conf"
 EoF
 
-cat > "${STATE_CLUSTER}/supervisord_stop" <<EoF
+cat > "${STATE_CLUSTER}/stop-cluster" <<EoF
 #!/usr/bin/env bash
 
 set -uo pipefail
@@ -645,7 +645,7 @@ rm -f "\$PID_FILE"
 echo "Cluster terminated!"
 EoF
 
-chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*}
+chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*,stop-cluster}
 
 if [ -n "${DRY_RUN:-""}" ]; then
   echo "Dry run, not starting cluster"

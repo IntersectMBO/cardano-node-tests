@@ -1,6 +1,6 @@
 """Functionality for cluster scripts (starting and stopping clusters).
 
-* copying scripts and their configuration, so it can be atered by tests
+* copying scripts and their configuration, so it can be altered by tests
 * setup of scripts and their configuration for starting of multiple cluster instances
 """
 
@@ -18,7 +18,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOCAL_HOSTNAME = "node.local.gd"
-STOP_SCRIPT = "supervisord_stop"
+STOP_SCRIPT = "stop-cluster"
 
 
 @dataclasses.dataclass(frozen=True, order=True)
