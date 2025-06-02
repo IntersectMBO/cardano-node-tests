@@ -11,13 +11,13 @@ if [ -z "${DEV_CLUSTER_RUNNING:-}" ]; then
   exit 1
 fi
 
-# check if "supervisord_stop" file exists in STATE_CLUSTER dir
-if [ ! -f "${STATE_CLUSTER}/supervisord_stop" ]; then
-  echo "Cannot find '${STATE_CLUSTER}/supervisord_stop', exiting."
+# check if "stop-cluster" file exists in STATE_CLUSTER dir
+if [ ! -f "${STATE_CLUSTER}/stop-cluster" ]; then
+  echo "Cannot find '${STATE_CLUSTER}/stop-cluster', exiting."
   exit 1
 fi
 
-"$STATE_CLUSTER/supervisord_stop"
+"$STATE_CLUSTER/stop-cluster"
 sleep 2
 
 "$STATE_CLUSTER/supervisord_start"

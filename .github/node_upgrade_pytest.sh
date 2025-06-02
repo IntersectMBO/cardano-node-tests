@@ -199,7 +199,7 @@ elif [ "$1" = "step2" ]; then
   # It is necessary to restart supervisord with new environment.
   "$STATE_CLUSTER/supervisorctl" stop all
   sleep 5
-  "$STATE_CLUSTER/supervisord_stop"
+  "$STATE_CLUSTER/stop-cluster"
   sleep 3
   "$STATE_CLUSTER/supervisord_start" || exit 6
   sleep 5
