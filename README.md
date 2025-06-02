@@ -124,7 +124,7 @@ Test execution can be configured using environment variables.
 
 When running tests using the `./.github/regression.sh` script, you can also use:
 
-* `CI_BYRON_CLUSTER` – start local cluster in Byron era, and progress to later eras by HFs (same effect as `SCRIPTS_DIRNAME=conway`).
+* `CI_BYRON_CLUSTER` – start local cluster in Byron era, and progress to later eras by HFs (same effect as `SCRIPTS_DIRNAME=conway_slow`).
 * `NODE_REV` – revision of `cardano-node` (default: 'master').
 * `DBSYNC_REV` – revision of `cardano-db-sync` (default: unset; db-sync is not used by default).
 * `CARDANO_CLI_REV` – revision of `cardano-cli` (default: unset; cardano-cli bundled in cardano-node repo is used by default).
@@ -138,16 +138,16 @@ For example:
     NUM_POOLS=6 MIXED_P2P=1 ./.github/regression.sh
     ```
 
-* Running tests on local cluster instances using 15 pytest workers, Conway cluster era, cluster scripts that start a cluster directly in Conway era, and selecting only tests without 'long' marker that also match the given `-k` pytest argument:
+* Running tests on local cluster instances using 15 pytest workers and selecting only tests without 'long' marker that also match the given `-k` pytest argument:
 
     ```sh
-    TEST_THREADS=15 CLUSTER_ERA=conway SCRIPTS_DIRNAME=conway_fast PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./.github/regression.sh
+    TEST_THREADS=15 PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./.github/regression.sh
     ```
 
-* Running tests on Shelley-qa testnet with '8.0.0' release of `cardano-node`:
+* Running tests on Preview testnet with '10.4.1' release of `cardano-node`:
 
     ```sh
-    NODE_REV=8.0.0 BOOTSTRAP_DIR=~/tmp/shelley_qa_config/ ./.github/regression.sh
+    NODE_REV=10.4.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
     ```
 
 ## Local usage for test development (useful only for test developers)
@@ -245,7 +245,7 @@ To restart the running cluster (e.g., after upgrading `cardano-node` and `cardan
 
 **NOTE** <!-- markdownlint-disable-line MD036 -->
 
-Restarting the running development cluster is useful mainly when using the "conway" start scripts (not the "conway_fast" version). It takes approximately 30 minutes for the local cluster instance to progress from Byron to Conway. Starting the local cluster using the "conway_fast" version takes less than 1 minute.
+Restarting the running development cluster is useful mainly when using the "conway_slow" start scripts (not the "conway_fast" version). It takes approximately 40 minutes for the local cluster instance to progress from Byron to Conway. Starting the local cluster using the "conway_fast" version takes about 1 minute.
 
 ---
 

@@ -85,7 +85,7 @@ fi
 if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   :  # don't touch `SCRIPTS_DIRNAME` when running on testnet
 elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
-  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"$CLUSTER_ERA"}"
+  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"$CLUSTER_ERA"}_slow"
 else
   export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"${CLUSTER_ERA}_fast"}"
 fi
