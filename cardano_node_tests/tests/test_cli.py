@@ -152,7 +152,7 @@ class TestCLI:
 
         try:
             helpers.run_in_bash(command=cmd)
-        except AssertionError as err:
+        except RuntimeError as err:
             if "cardano-cli: TODO" in str(err) or "Could not JSON decode TextEnvelopeCddl" in str(
                 err
             ):
@@ -1146,7 +1146,7 @@ class TestAdvancedQueries:
 
         try:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
-        except AssertionError as err:
+        except RuntimeError as err:
             if "Invalid numeric literal at line" in str(err):
                 issues.node_3859.finish_test()
             raise

@@ -104,7 +104,7 @@ def run_command(
         # pyrefly: ignore  # missing-attribute
         err_dec = err_dec or stdout.decode()
         msg = f"An error occurred while running `{cmd_str}`: {err_dec}"
-        raise AssertionError(msg)
+        raise RuntimeError(msg)
 
     # pyrefly: ignore  # bad-return
     return stdout
@@ -276,7 +276,7 @@ def tool_has(command: str) -> bool:
     err_str = ""
     try:
         run_command(command)
-    except AssertionError as err:
+    except RuntimeError as err:
         err_str = str(err)
     else:
         return True
