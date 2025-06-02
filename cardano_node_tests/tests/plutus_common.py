@@ -741,7 +741,7 @@ def create_script_context_w_blockers(
             redeemer_file=redeemer_file,
             tx_file=tx_file,
         )
-    except AssertionError as err:
+    except RuntimeError as err:
         str_err = str(err)
         if "Unwitnessed Tx ConwayEra" in str_err:
             pytest.xfail("create-script-context: unsupported 'Unwitnessed Tx ConwayEra'")

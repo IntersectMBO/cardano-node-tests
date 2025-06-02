@@ -51,7 +51,7 @@ class TestLedgerState:
 
         try:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
-        except AssertionError as err:
+        except RuntimeError as err:
             if "Invalid numeric literal at line" not in str(err):
                 raise
             issues.node_3859.finish_test()
