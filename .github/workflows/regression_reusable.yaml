@@ -39,10 +39,6 @@ on:
         required: false
         type: string
         default: ""
-      scripts_dirname:
-        required: false
-        type: string
-        default: ""
       byron_cluster:
         required: false
         type: boolean
@@ -96,7 +92,6 @@ jobs:
           echo "CLUSTER_ERA=${{ inputs.cluster_era }}" >> .github_ci_env
           echo "TX_ERA=${{ inputs.tx_era }}" >> .github_ci_env
           echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
-          echo "SCRIPTS_DIRNAME=${{ inputs.scripts_dirname }}" >> .github_ci_env
           echo "CI_TOPOLOGY=${{ inputs.topology }}" >> .github_ci_env
           echo "UTXO_BACKEND=${{ inputs.utxo_backend }}" >> .github_ci_env
           echo "CI_BYRON_CLUSTER=${{ inputs.byron_cluster }}" >> .github_ci_env
