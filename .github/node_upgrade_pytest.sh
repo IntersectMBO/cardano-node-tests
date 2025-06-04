@@ -52,7 +52,7 @@ if [ "$1" = "step1" ]; then
   fi
 
   if [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
-    : "${SCRIPTS_DIRNAME:="$CLUSTER_ERA"}_slow"
+    : "${SCRIPTS_DIRNAME:="${CLUSTER_ERA}_slow"}"
   else
     : "${SCRIPTS_DIRNAME:="${CLUSTER_ERA}_fast"}"
   fi
