@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
 
-# controlling environment variables:
-# DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
-# SMASH - if set, will start and configure smash
-# ENABLE_LEGACY - if set, local cluster will use legacy networking
-# MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
-# UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
-# NO_CC - if set, will not create committee
-# PV9 - if set, will use protocol version 9
-# DRY_RUN - if set, will not start the cluster
-
 set -Eeuo pipefail
 trap 'echo "Error at line $LINENO"' ERR
 
@@ -18,7 +8,9 @@ SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
+# shellcheck disable=SC2034
 START_CLUSTER_LOG="${STATE_CLUSTER}/start-cluster.log"
+START_CLUSTER_STATUS="${STATE_CLUSTER}/status_started"
 
 INSTANCE_NUM="%%INSTANCE_NUM%%"
 if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
@@ -41,14 +33,16 @@ FEE=5000000
 SECURITY_PARAM="$(jq '.securityParam' < "${SCRIPT_DIR}/genesis.spec.json")"
 NETWORK_MAGIC="$(jq '.networkMagic' < "${SCRIPT_DIR}/genesis.spec.json")"
 MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "${SCRIPT_DIR}/genesis.spec.json")"
+# shellcheck disable=SC2034
 SLOT_LENGTH="$(jq '.slotLength' < "${SCRIPT_DIR}/genesis.spec.json")"
+# shellcheck disable=SC2034
 EPOCH_SEC="$(jq '.epochLength * .slotLength | ceil' < "${SCRIPT_DIR}/genesis.spec.json")"
 POOL_COST="$(jq '.protocolParams.minPoolCost' < "${SCRIPT_DIR}/genesis.spec.json")"
 if [ "$POOL_COST" -eq 0 ]; then
   POOL_COST=600
 fi
 
-if [ -f "${STATE_CLUSTER}/supervisord.pid" ]; then
+if [ -e "$SUPERVISORD_SOCKET_PATH" ]; then
   echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
   exit 1
 fi
@@ -78,6 +72,7 @@ cp "${SCRIPT_DIR}/byron-params.json" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/submit-api-config.json" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/supervisor.conf" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/testnet.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/*genesis*.spec.json "${STATE_CLUSTER}/shelley/"
 
 if [ -n "${PV9:-""}" ]; then
@@ -1428,4 +1423,5 @@ if [ -z "${PV9:-""}" ]; then
   [ "$PROTOCOL_VERSION" = 10 ] || { echo "Unexpected protocol version '$PROTOCOL_VERSION' on line $LINENO" >&2; exit 1; }  # assert
 fi
 
-echo "Cluster started"
+: > "$START_CLUSTER_STATUS"
+echo "Cluster started 🚀"

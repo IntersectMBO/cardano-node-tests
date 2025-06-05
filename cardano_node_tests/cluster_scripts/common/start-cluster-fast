@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
 
-# controlling environment variables:
-# DBSYNC_REPO - will start and configure db-sync if the value is path to db-sync repository
-# SMASH - if set, will start and configure smash
-# ENABLE_LEGACY - if set, local cluster will use legacy networking
-# MIXED_P2P - if set, local cluster will use P2P for some nodes and legacy topology for others
-# UTXO_BACKEND - 'mem' or 'disk', default is 'mem' (or legacy) if unset
-# NO_CC - if set, will not create committee
-# PV9 - if set, will use protocol version 9
-# DRY_RUN - if set, will not start the cluster
-
 set -Eeuo pipefail
 trap 'echo "Error at line $LINENO"' ERR
 
@@ -19,6 +9,7 @@ STATE_CLUSTER="${SOCKET_PATH%/*}"
 STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
 START_CLUSTER_LOG="${STATE_CLUSTER}/start-cluster.log"
+START_CLUSTER_STATUS="${STATE_CLUSTER}/status_started"
 
 INSTANCE_NUM="%%INSTANCE_NUM%%"
 if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
@@ -54,7 +45,7 @@ DELEG_MAGIC_VALUE=3340000000000000
 DELEG_SUPPLY="$((POOL_PLEDGE * NUM_POOLS + DELEG_MAGIC_VALUE))"
 NONDELEG_SUPPLY="$(( (MAX_SUPPLY - DELEG_SUPPLY) * 8 / 10))"
 
-if [ -f "${STATE_CLUSTER}/supervisord.pid" ]; then
+if [ -e "$SUPERVISORD_SOCKET_PATH" ]; then
   echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
   exit 1
 fi
@@ -83,6 +74,7 @@ cp "${SCRIPT_DIR}/byron-params.json" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/dbsync-config.yaml" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/submit-api-config.json" "$STATE_CLUSTER"
 cp "${SCRIPT_DIR}/supervisor.conf" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/testnet.json" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR"/*genesis*.spec.json "${STATE_CLUSTER}/create_staked/"
 
 if [ -n "${PV9:-""}" ]; then
@@ -716,4 +708,5 @@ if ! check_spend_success "${TXINS[@]}"; then
   exit 1
 fi
 
-echo "Cluster started"
+: > "$START_CLUSTER_STATUS"
+echo "Cluster started 🚀"
