@@ -2,7 +2,7 @@
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-> 📡 **System and end-to-end (E2E) tests for `cardano-node`.**
+> 📡 **System and end-to-end (E2E) tests for cardano-node.**
 
 📘 Check the [documentation site](https://tests.cardano.intersectmbo.org) for full usage guides, setup instructions, and details.
 
@@ -13,14 +13,17 @@
 Run tests easily using GitHub Actions:
 
 1. **Fork** this repository.
+
 1. Enable GitHub Actions in your fork:
 
    * Go to `Settings` ➝ `Actions` ➝ `General` ➝ `Actions permissions`
    * Check ✅ `Allow all actions and reusable workflows`
+
 1. Navigate to the `Actions` tab, then choose:
 
    * `01 Regression tests`, or
    * `02 Regression tests with db-sync`
+
 1. Click `Run workflow` to start testing.
 
 ---
@@ -28,12 +31,14 @@ Run tests easily using GitHub Actions:
 ## 🛠️ Running Tests Locally with Nix
 
 1. Install and configure Nix using the [official guide](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix).
+
 1. Clone this repository.
+
 1. Run the test suite:
 
-```sh
-./.github/regression.sh
-```
+  ```sh
+  ./.github/regression.sh
+  ```
 
 > ℹ️ **NOTE:** Using `CI_BYRON_CLUSTER` will cause the local cluster to progress from Byron ➝ Conway, which takes approximately 40 minutes.
 
@@ -42,17 +47,18 @@ Run tests easily using GitHub Actions:
 ## 🧪 Running Individual Tests with Custom Binaries
 
 1. Add your custom `cardano-cli` / `cardano-node` binaries to the `.bin` directory.
+
 1. Run a specific test:
 
-```sh
-TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
-```
+  ```sh
+  TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
+  ```
 
 1. Enable full CLI command logging:
 
-```sh
-PYTEST_ARGS="... --log-level=debug" ./.github/regression.sh
-```
+  ```sh
+  PYTEST_ARGS="... --log-level=debug" ./.github/regression.sh
+  ```
 
 1. Clean up by removing binaries from `.bin` after tests complete.
 
@@ -64,35 +70,35 @@ For workflows requiring repeated test runs on a persistent cluster:
 
 1. Start a Nix shell:
 
-```sh
-nix flake update --accept-flake-config --override-input cardano-node github:IntersectMBO/cardano-node/master
-nix develop --accept-flake-config
-```
+  ```sh
+  nix flake update --accept-flake-config --override-input cardano-node github:IntersectMBO/cardano-node/master
+  nix develop --accept-flake-config
+  ```
 
 1. Prepare the test environment:
 
-```sh
-source ./prepare_test_env.sh conway
-```
+  ```sh
+  source ./prepare_test_env.sh conway
+  ```
 
 1. Launch the cluster:
 
-```sh
-./dev_workdir/conway_fast/start-cluster
-```
+  ```sh
+  ./dev_workdir/conway_fast/start-cluster
+  ```
 
 1. Run your tests:
 
-```sh
-pytest -s -k test_minting_one_token cardano_node_tests/tests/tests_plutus
-pytest -s --log-level=debug -k test_minting_one_token cardano_node_tests/tests/tests_plutus
-```
+  ```sh
+  pytest -s -k test_minting_one_token cardano_node_tests/tests/tests_plutus
+  pytest -s --log-level=debug -k test_minting_one_token cardano_node_tests/tests/tests_plutus
+  ```
 
 1. Stop the cluster:
 
-```sh
-./dev_workdir/conway_fast/stop-cluster
-```
+  ```sh
+  ./dev_workdir/conway_fast/stop-cluster
+  ```
 
 To reuse the same environment in another shell:
 
@@ -240,5 +246,3 @@ make doc
 * Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
 * Use [Ruff](https://github.com/astral-sh/ruff) (via `pre-commit`) for formatting.
 * See [CONTRIBUTING.md](https://github.com/IntersectMBO/cardano-node-tests/blob/master/CONTRIBUTING.md) for full guidelines.
-
----
