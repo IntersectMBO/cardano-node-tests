@@ -39,6 +39,7 @@ class TestCLI:
     """Tests for cardano-cli."""
 
     TX_BODY_FILE = DATA_DIR / "test_tx_metadata_both_tx.body"
+    TX_BODY_FILE_CONWAY = DATA_DIR / "test_tx_metadata_both_tx_conway.body"
     TX_FILE = DATA_DIR / "test_tx_metadata_both_tx.signed"
     TX_BODY_OUT_JSON = DATA_DIR / "test_tx_metadata_both_tx_body_json.out"
     TX_OUT_JSON = DATA_DIR / "test_tx_metadata_both_tx_json.out"
@@ -117,7 +118,7 @@ class TestCLI:
                         "--protocol-params-file",
                         str(cluster.pparams_file),
                         "--tx-body-file",
-                        str(self.TX_BODY_FILE),
+                        str(self.TX_BODY_FILE_CONWAY),
                         "--witness-count",
                         "1",
                         "--tx-in-count",
