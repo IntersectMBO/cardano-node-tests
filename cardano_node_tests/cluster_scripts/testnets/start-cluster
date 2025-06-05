@@ -10,6 +10,7 @@ STATE_CLUSTER="${SOCKET_PATH%/*}"
 STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
 START_CLUSTER_LOG="${STATE_CLUSTER}/start-cluster.log"
+START_CLUSTER_STATUS="${STATE_CLUSTER}/status_started"
 
 INSTANCE_NUM="%%INSTANCE_NUM%%"
 if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
@@ -17,7 +18,7 @@ if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
   exit 1
 fi
 
-if [ -f "$STATE_CLUSTER/supervisord.pid" ]; then
+if [ -e "$SUPERVISORD_SOCKET_PATH" ]; then
   echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
   exit 1
 fi
@@ -52,6 +53,7 @@ cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/run-cardano-submit-api" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
+cp "$SCRIPT_DIR/testnet.json" "$STATE_CLUSTER"
 cp "$TESTNET_CONF_DIR/topology-relay1.json" "$STATE_CLUSTER"
 cp "$TESTNET_CONF_DIR"/genesis-*.json "$STATE_CLUSTER"
 ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
@@ -228,4 +230,5 @@ faucet_init_balance="$(get_address_balance \
   --address "$(<"$STATE_CLUSTER/shelley/faucet.addr")")"
 echo "Faucet initial balance: $faucet_init_balance" >> "$START_CLUSTER_LOG"
 
-echo "Cluster started"
+: > "$START_CLUSTER_STATUS"
+echo "Cluster started 🚀"
