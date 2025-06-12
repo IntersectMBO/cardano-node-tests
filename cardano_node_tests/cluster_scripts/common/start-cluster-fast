@@ -65,7 +65,7 @@ if [ -e "${SCRIPT_DIR}/shell_env" ]; then
 fi
 
 rm -rf "$STATE_CLUSTER"
-mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync,create_staked}
+mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync,create_staked,governance_data}
 cd "${STATE_CLUSTER}/.."
 
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
@@ -193,8 +193,6 @@ cardano_cli_log latest genesis create-staked \
   --gen-stake-delegs "$NUM_POOLS" \
   --supply-delegated "$DELEG_SUPPLY" \
   --start-time "$START_TIME_SHELLEY"
-
-mkdir -p "${STATE_CLUSTER}/governance_data"
 
 # Create committee keys
 if [ -z "${NO_CC:-""}" ]; then
@@ -459,7 +457,7 @@ EoF
     --out-file "${STATE_CLUSTER}/nodes/node-pool${i}/register.cert"
 done
 
-rm -rf "${STATE_CLUSTER}/shelley/create_staked"
+rm -rf "${STATE_CLUSTER}/create_staked"
 
 for i in $(seq 1 "$NUM_DREPS"); do
   # DRep keys

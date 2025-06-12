@@ -63,7 +63,7 @@ if [ -e "${SCRIPT_DIR}/shell_env" ]; then
 fi
 
 rm -rf "$STATE_CLUSTER"
-mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync}
+mkdir -p "$STATE_CLUSTER"/{shelley,webserver,db-sync,governance_data}
 cd "${STATE_CLUSTER}/.."
 
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
@@ -198,8 +198,6 @@ jq -r '
   < "${STATE_CLUSTER}/shelley/genesis.json" > "${STATE_CLUSTER}/shelley/genesis.json_jq"
 cat "${STATE_CLUSTER}/shelley/genesis.json_jq" > "${STATE_CLUSTER}/shelley/genesis.json"
 rm -f "${STATE_CLUSTER}/shelley/genesis.json_jq"
-
-mkdir -p "${STATE_CLUSTER}/governance_data"
 
 # Create committee keys
 if [ -z "${NO_CC:-""}" ]; then
