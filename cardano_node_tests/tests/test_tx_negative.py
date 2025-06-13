@@ -1337,7 +1337,8 @@ class TestNegative:
             use_build_cmd=True,
         )
         assert (
-            "Incorrect transaction id format" in err
+            "Unable to deserialise TxId" in err  # With node 10.5.0+
+            or "Incorrect transaction id format" in err
             or "Failed reading" in err
             or "expecting transaction id (hexadecimal)" in err
         )
