@@ -408,7 +408,7 @@ class TestConstitution:
 
         # Make sure we have enough time to submit the votes in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER - 20
         )
         init_epoch = cluster.g_query.get_epoch()
 
