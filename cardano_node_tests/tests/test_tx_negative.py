@@ -1302,7 +1302,8 @@ class TestNegative:
             cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
         )
         assert (
-            "Incorrect transaction id format" in err
+            "Failed to deserialise" in err  # With node 10.5.0+
+            or "Incorrect transaction id format" in err
             or "Failed reading" in err
             or "expecting transaction id (hexadecimal)" in err
         )
@@ -1337,7 +1338,7 @@ class TestNegative:
             use_build_cmd=True,
         )
         assert (
-            "Unable to deserialise TxId" in err  # With node 10.5.0+
+            "Failed to deserialise" in err  # With node 10.5.0+
             or "Incorrect transaction id format" in err
             or "Failed reading" in err
             or "expecting transaction id (hexadecimal)" in err
