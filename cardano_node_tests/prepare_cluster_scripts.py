@@ -10,12 +10,14 @@ import pathlib as pl
 import shutil
 import sys
 
+import cardonnay_scripts
+
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
-from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
+SCRIPTS_DIR = pl.Path(__file__).parent / "cluster_scripts"
 
 
 def get_args() -> argparse.Namespace:
@@ -24,14 +26,12 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "-d",
         "--dest-dir",
-        required=True,
         help="Path to destination directory",
     )
     parser.add_argument(
-        "-s",
-        "--scripts-dir",
-        type=helpers.check_dir_arg,
-        help="Path to directory with scripts templates",
+        "-t",
+        "--testnet-variant",
+        help="Testnet variant to use.",
     )
     parser.add_argument(
         "-i",
@@ -39,6 +39,12 @@ def get_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="Instance number in the sequence of cluster instances (default: 0)",
+    )
+    parser.add_argument(
+        "-l",
+        "--ls",
+        action="store_true",
+        help="List available testnet variants and exit.",
     )
     parser.add_argument(
         "-c",
@@ -49,14 +55,41 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _variant_dirs(base: pl.Path) -> set[str]:
+    return {
+        d.name
+        for d in base.iterdir()
+        if d.is_dir() and "egg-info" not in d.name and d.name != "common"
+    }
+
+
+def get_testnet_variants() -> list[str]:
+    local = _variant_dirs(SCRIPTS_DIR)
+    external = _variant_dirs(pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT)))
+    return sorted(local | external)
+
+
+def get_testnet_variant_scriptdir(testnet_variant: str) -> pl.Path | None:
+    if testnet_variant in _variant_dirs(SCRIPTS_DIR):
+        return SCRIPTS_DIR / testnet_variant
+
+    cscripts_root = pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT))
+    if testnet_variant in _variant_dirs(cscripts_root):
+        return cscripts_root / testnet_variant
+
+    return None
+
+
 def prepare_scripts_files(
     destdir: ttypes.FileType,
-    scriptsdir: ttypes.FileType = "",
+    testnet_variant: str,
     instance_num: int = 0,
 ) -> cluster_scripts.InstanceFiles:
     """Prepare scripts files for starting and stopping cluster instance."""
     start_script: ttypes.FileType = ""
     stop_script: ttypes.FileType = ""
+
+    scriptsdir = get_testnet_variant_scriptdir(testnet_variant=testnet_variant)
 
     if scriptsdir:
         scriptsdir = pl.Path(scriptsdir)
@@ -78,7 +111,18 @@ def main() -> int:
     logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
     args = get_args()
 
+    if args.ls:
+        variants_str = "\n".join(get_testnet_variants())
+        LOGGER.info(f"Available testnet variants:\n{variants_str}")
+        return 0
+
+    if not args.dest_dir:
+        LOGGER.error("The 'destdir' must be set.")
     destdir = pl.Path(args.dest_dir)
+
+    testnet_variant = args.testnet_variant
+    if not testnet_variant:
+        LOGGER.error("The testnet variant must be set.")
 
     if args.clean:
         shutil.rmtree(destdir, ignore_errors=True)
@@ -89,11 +133,9 @@ def main() -> int:
 
     destdir.mkdir(parents=True)
 
-    scriptsdir: ttypes.FileType = args.scripts_dir or ""
-
     try:
         prepare_scripts_files(
-            destdir=destdir, scriptsdir=scriptsdir, instance_num=args.instance_num
+            destdir=destdir, testnet_variant=testnet_variant, instance_num=args.instance_num
         )
     except Exception:
         LOGGER.exception("Failure")

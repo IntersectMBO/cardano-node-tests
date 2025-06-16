@@ -13,12 +13,15 @@ import shutil
 import socket
 import typing as tp
 
+import cardonnay_scripts
+
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOCAL_HOSTNAME = "node.local.gd"
 STOP_SCRIPT = "stop-cluster"
+COMMON_DIR = pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT)) / "common"
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -220,13 +223,12 @@ class LocalScripts(ScriptsTypes):
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
-        common_dir = scripts_dir.parent / "common"
 
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
         shutil.copytree(
-            common_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
 
         start_script = destdir / "start-cluster"
@@ -388,9 +390,10 @@ class LocalScripts(ScriptsTypes):
         ports_per_node = instance_ports.pool1 - instance_ports.bft1
         addr = self._preselect_addr(instance_num=instance_num)
 
-        # The `common` dir is available only if cluster scripts are not taken from custom
-        # `indir`, so it needs to be optional.
-        common_dir = indir.parent / "common"
+        # The `common` dir should be copied only if it was not copied already.
+        common_dir = COMMON_DIR
+        if (indir / "common.sh").exists():
+            common_dir = pl.Path("/nonexistent")
 
         # Reconfigure cluster instance files
         for infile in itertools.chain(indir.glob("*"), common_dir.glob("*")):
@@ -583,13 +586,12 @@ class TestnetScripts(ScriptsTypes):
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = configuration.SCRIPTS_DIR
-        common_dir = scripts_dir.parent / "common"
 
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
         shutil.copytree(
-            common_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
 
         start_script = destdir / "start-cluster"
@@ -621,9 +623,10 @@ class TestnetScripts(ScriptsTypes):
         instance_ports = self.get_instance_ports(instance_num=instance_num)
         infiles = [indir.glob(g) for g in globs]
 
-        # The `common` dir is available only if cluster scripts are not taken from custom
-        # `indir`, so it needs to be optional.
-        common_dir = indir.parent / "common"
+        # The `common` dir should be copied only if it was not copied already.
+        common_dir = COMMON_DIR
+        if (indir / "common.sh").exists():
+            common_dir = pl.Path("/nonexistent")
 
         for infile in itertools.chain(*infiles, common_dir.glob("*")):
             fname = infile.name

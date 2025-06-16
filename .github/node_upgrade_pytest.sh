@@ -60,7 +60,7 @@ if [ "$1" = "step1" ]; then
 
   # generate local cluster scripts
   PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py \
-    -s "cardano_node_tests/cluster_scripts/$SCRIPTS_DIRNAME" \
+    -t "$SCRIPTS_DIRNAME" \
     -d "$CLUSTER_SCRIPTS_DIR"
 
   # try to stop local cluster
