@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-SCRIPT_DIR="$(readlink -m "${0%/*}")"
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/start-cluster-fast"
