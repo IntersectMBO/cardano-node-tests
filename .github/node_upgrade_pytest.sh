@@ -52,16 +52,16 @@ if [ "$1" = "step1" ]; then
   fi
 
   if [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
-    : "${SCRIPTS_DIRNAME:="${CLUSTER_ERA}_slow"}"
+    : "${TESTNET_VARIANT:="${CLUSTER_ERA}_slow"}"
   else
-    : "${SCRIPTS_DIRNAME:="${CLUSTER_ERA}_fast"}"
+    : "${TESTNET_VARIANT:="${CLUSTER_ERA}_fast"}"
   fi
-  export SCRIPTS_DIRNAME
+  export TESTNET_VARIANT
 
   # generate local cluster scripts
-  PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py \
-    -t "$SCRIPTS_DIRNAME" \
-    -d "$CLUSTER_SCRIPTS_DIR"
+  PYTHONPATH="$PYTHONPATH:$PWD" cardano_node_tests/prepare_cluster_scripts.py \
+    -d "$CLUSTER_SCRIPTS_DIR" \
+    -t "$TESTNET_VARIANT"
 
   # try to stop local cluster
   "$CLUSTER_SCRIPTS_DIR/stop-cluster"

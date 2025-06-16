@@ -10,14 +10,11 @@ import pathlib as pl
 import shutil
 import sys
 
-import cardonnay_scripts
-
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
 
 LOGGER = logging.getLogger(__name__)
-SCRIPTS_DIR = pl.Path(__file__).parent / "cluster_scripts"
 
 
 def get_args() -> argparse.Namespace:
@@ -55,31 +52,6 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _variant_dirs(base: pl.Path) -> set[str]:
-    return {
-        d.name
-        for d in base.iterdir()
-        if d.is_dir() and "egg-info" not in d.name and d.name != "common"
-    }
-
-
-def get_testnet_variants() -> list[str]:
-    local = _variant_dirs(SCRIPTS_DIR)
-    external = _variant_dirs(pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT)))
-    return sorted(local | external)
-
-
-def get_testnet_variant_scriptdir(testnet_variant: str) -> pl.Path | None:
-    if testnet_variant in _variant_dirs(SCRIPTS_DIR):
-        return SCRIPTS_DIR / testnet_variant
-
-    cscripts_root = pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT))
-    if testnet_variant in _variant_dirs(cscripts_root):
-        return cscripts_root / testnet_variant
-
-    return None
-
-
 def prepare_scripts_files(
     destdir: ttypes.FileType,
     testnet_variant: str,
@@ -89,14 +61,16 @@ def prepare_scripts_files(
     start_script: ttypes.FileType = ""
     stop_script: ttypes.FileType = ""
 
-    scriptsdir = get_testnet_variant_scriptdir(testnet_variant=testnet_variant)
+    scriptsdir = cluster_scripts.get_testnet_variant_scriptdir(testnet_variant=testnet_variant)
+    if not scriptsdir:
+        msg = f"Testnet variant '{testnet_variant}' is not supported."
+        raise RuntimeError(msg)
 
-    if scriptsdir:
-        scriptsdir = pl.Path(scriptsdir)
-        start_script = next(scriptsdir.glob("start-cluster*"), "")
-        if not start_script:
-            msg = f"Start script not found in '{scriptsdir}'."
-            raise RuntimeError(msg)
+    scriptsdir = pl.Path(scriptsdir)
+    start_script = next(scriptsdir.glob("start-cluster*"), "")
+    if not start_script:
+        msg = f"Start script not found in '{scriptsdir}'."
+        raise RuntimeError(msg)
 
     startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
         destdir=destdir,
@@ -112,7 +86,7 @@ def main() -> int:
     args = get_args()
 
     if args.ls:
-        variants_str = "\n".join(get_testnet_variants())
+        variants_str = "\n".join(cluster_scripts.get_testnet_variants())
         LOGGER.info(f"Available testnet variants:\n{variants_str}")
         return 0
 

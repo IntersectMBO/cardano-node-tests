@@ -130,7 +130,7 @@ class TestKES:
     # would need to get a cluster instance first. That would be too expensive in this test,
     # as we are using custom startup scripts.
     @pytest.mark.skipif(
-        "_fast" not in configuration.SCRIPTS_DIRNAME,
+        "_fast" not in configuration.TESTNET_VARIANT,
         reason="Runs only on local cluster with HF shortcut.",
     )
     @pytest.mark.order(5)

@@ -126,7 +126,7 @@ You can fine-tune test runs using these environment variables:
 | `ENABLE_LEGACY`         | Use legacy networking.                     |
 | `MIXED_P2P`             | Use a mix of P2P and legacy networking.    |
 | `UTXO_BACKEND`          | Backend type: `mem` or `disk`.             |
-| `SCRIPTS_DIRNAME`       | Name of the testnet variant to use.        |
+| `TESTNET_VARIANT`       | Name of the testnet variant to use.        |
 | `BOOTSTRAP_DIR`         | Bootstrap testnet directory.               |
 | `KEEP_CLUSTERS_RUNNING` | Don't shut down clusters after tests.      |
 | `PORTS_BASE`            | Starting port number for cluster services. |
@@ -185,7 +185,7 @@ source "$(poetry env info --path)"/bin/activate
 export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages):$PYTHONPATH"
 export CARDANO_NODE_SOCKET_PATH="$PWD/dev_workdir/state-cluster0/bft1.socket" DEV_CLUSTER_RUNNING=1
 mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
-prepare-cluster-scripts -c -d dev_workdir/conway_fast -s conway_fast
+prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 ./dev_workdir/conway_fast/start-cluster
 ```
 

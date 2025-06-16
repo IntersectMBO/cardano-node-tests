@@ -11,7 +11,7 @@ TOP_DIR="$(readlink -m "${0%/*}/..")"
 export \
   CLUSTERS_COUNT=1 \
   TEST_THREADS=0 \
-  SCRIPTS_DIRNAME="mainnet_fast" \
+  TESTNET_VARIANT="mainnet_fast" \
   PYTEST_ARGS="-s -k TestNodeReconnect"
 
 "$TOP_DIR/.github/regression.sh"

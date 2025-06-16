@@ -98,12 +98,10 @@ DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 KEEP_CLUSTERS_RUNNING = bool(os.environ.get("KEEP_CLUSTERS_RUNNING"))
 
 # Determine what scripts to use to start the cluster
-SCRIPTS_DIRNAME = os.environ.get("SCRIPTS_DIRNAME") or ""
-if SCRIPTS_DIRNAME:
+TESTNET_VARIANT = os.environ.get("TESTNET_VARIANT") or ""
+if TESTNET_VARIANT:
     pass
 elif BOOTSTRAP_DIR:
-    SCRIPTS_DIRNAME = "testnets"
+    TESTNET_VARIANT = "testnets"
 else:
-    SCRIPTS_DIRNAME = f"{CLUSTER_ERA or 'conway'}_fast"
-
-SCRIPTS_DIR = pl.Path(__file__).parent.parent / "cluster_scripts" / SCRIPTS_DIRNAME
+    TESTNET_VARIANT = f"{CLUSTER_ERA or 'conway'}_fast"

@@ -21,7 +21,9 @@ from cardano_node_tests.utils import helpers
 
 LOCAL_HOSTNAME = "node.local.gd"
 STOP_SCRIPT = "stop-cluster"
+
 COMMON_DIR = pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT)) / "common"
+LOCAL_SCRIPTS_DIR = pl.Path(__file__).parent.parent / "cluster_scripts"
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -71,6 +73,46 @@ class InstancePorts:
     ekg_pool3: int
     prometheus_pool3: int
     node_ports: tuple[NodePorts, ...]
+
+
+def get_testnet_dirs(base: pl.Path) -> set[str]:
+    return {
+        d.name
+        for d in base.iterdir()
+        if d.is_dir() and "egg-info" not in d.name and d.name != "common"
+    }
+
+
+def get_testnet_variants() -> list[str]:
+    """Get list of testnet variants."""
+    local = get_testnet_dirs(LOCAL_SCRIPTS_DIR)
+    external = get_testnet_dirs(pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT)))
+    return sorted(local | external)
+
+
+def get_testnet_variant_scriptdir(testnet_variant: str) -> pl.Path | None:
+    """Get path to testnet variant scripts directory."""
+    if testnet_variant in get_testnet_dirs(LOCAL_SCRIPTS_DIR):
+        return LOCAL_SCRIPTS_DIR / testnet_variant
+
+    cscripts_root = pl.Path(str(cardonnay_scripts.SCRIPTS_ROOT))
+    if testnet_variant in get_testnet_dirs(cscripts_root):
+        return cscripts_root / testnet_variant
+
+    return None
+
+
+def get_testnet_variant_scriptdir2(testnet_variant: str) -> pl.Path:
+    """Get path to testnet variant scripts directory.
+
+    Fails if the directory is not found.
+    """
+    scriptdir = get_testnet_variant_scriptdir(testnet_variant=testnet_variant)
+    if not scriptdir:
+        err = f"Testnet variant '{testnet_variant}' scripts directory not found."
+        raise RuntimeError(err)
+
+    return scriptdir
 
 
 class ScriptsTypes:
@@ -222,7 +264,7 @@ class LocalScripts(ScriptsTypes):
     def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
-        scripts_dir = configuration.SCRIPTS_DIR
+        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
 
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
@@ -454,9 +496,10 @@ class LocalScripts(ScriptsTypes):
     ) -> InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         destdir = pl.Path(destdir).expanduser().resolve()
+        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
 
-        _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster"
-        _stop_script = stop_script or configuration.SCRIPTS_DIR / "stop-cluster"
+        _start_script = start_script or scripts_dir / "start-cluster"
+        _stop_script = stop_script or scripts_dir / "stop-cluster"
 
         start_script = pl.Path(_start_script).expanduser().resolve()
         stop_script = pl.Path(_stop_script).expanduser().resolve()
@@ -585,7 +628,7 @@ class TestnetScripts(ScriptsTypes):
     def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
-        scripts_dir = configuration.SCRIPTS_DIR
+        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
 
         shutil.copytree(
             scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
@@ -720,8 +763,10 @@ class TestnetScripts(ScriptsTypes):
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir(exist_ok=True)
 
-        _start_script = start_script or configuration.SCRIPTS_DIR / "start-cluster"
-        _stop_script = stop_script or configuration.SCRIPTS_DIR / "stop-cluster"
+        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
+
+        _start_script = start_script or scripts_dir / "start-cluster"
+        _stop_script = stop_script or scripts_dir / "stop-cluster"
 
         start_script = pl.Path(_start_script).expanduser().resolve()
         stop_script = pl.Path(_stop_script).expanduser().resolve()

@@ -21,9 +21,9 @@ MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
 
 ORDER5_BYRON = (
-    pytest.mark.order(5) if "_fast" not in configuration.SCRIPTS_DIRNAME else pytest.mark.noop
+    pytest.mark.order(5) if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop
 )
-LONG_BYRON = pytest.mark.long if "_fast" not in configuration.SCRIPTS_DIRNAME else pytest.mark.noop
+LONG_BYRON = pytest.mark.long if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop
 
 
 _BLD_SKIP_REASON = ""
