@@ -270,9 +270,13 @@ class LocalScripts(ScriptsTypes):
         if num_pools == -1:
             self.num_pools = configuration.NUM_POOLS
 
-        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
+        self.scripts_dir = get_testnet_variant_scriptdir2(
+            testnet_variant=configuration.TESTNET_VARIANT
+        )
         self.custom_cardonnay_scripts = CustomCardonnayScripts(
-            num_pools=self.num_pools, scripts_dir=scripts_dir, ports_base=configuration.PORTS_BASE
+            num_pools=self.num_pools,
+            scripts_dir=self.scripts_dir,
+            ports_base=configuration.PORTS_BASE,
         )
 
     def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
@@ -282,10 +286,13 @@ class LocalScripts(ScriptsTypes):
     def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
-        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
 
         shutil.copytree(
-            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+            self.scripts_dir,
+            destdir,
+            symlinks=True,
+            ignore_dangling_symlinks=True,
+            dirs_exist_ok=True,
         )
         shutil.copytree(
             COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
@@ -389,6 +396,9 @@ class TestnetScripts(ScriptsTypes):
     def __init__(self) -> None:
         super().__init__()
         self.type = ScriptsTypes.TESTNET
+        self.scripts_dir = get_testnet_variant_scriptdir2(
+            testnet_variant=configuration.TESTNET_VARIANT
+        )
 
     def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
         """Return ports mapping for given cluster instance."""
@@ -433,10 +443,13 @@ class TestnetScripts(ScriptsTypes):
     def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
-        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
 
         shutil.copytree(
-            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+            self.scripts_dir,
+            destdir,
+            symlinks=True,
+            ignore_dangling_symlinks=True,
+            dirs_exist_ok=True,
         )
         shutil.copytree(
             COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
@@ -568,10 +581,8 @@ class TestnetScripts(ScriptsTypes):
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir(exist_ok=True)
 
-        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
-
-        _start_script = start_script or scripts_dir / "start-cluster"
-        _stop_script = stop_script or scripts_dir / "stop-cluster"
+        _start_script = start_script or self.scripts_dir / "start-cluster"
+        _stop_script = stop_script or self.scripts_dir / "stop-cluster"
 
         start_script = pl.Path(_start_script).expanduser().resolve()
         stop_script = pl.Path(_stop_script).expanduser().resolve()
