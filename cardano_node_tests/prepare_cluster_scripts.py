@@ -60,25 +60,22 @@ def prepare_scripts_files(
     instance_num: int = 0,
 ) -> cardonnay_local.InstanceFiles:
     """Prepare scripts files for starting and stopping cluster instance."""
-    start_script: ttypes.FileType = ""
-    stop_script: ttypes.FileType = ""
-
     scriptsdir = cluster_scripts.get_testnet_variant_scriptdir(testnet_variant=testnet_variant)
     if not scriptsdir:
         msg = f"Testnet variant '{testnet_variant}' is not supported."
         raise RuntimeError(msg)
 
     scriptsdir = pl.Path(scriptsdir)
-    start_script = next(scriptsdir.glob("start-cluster*"), "")
-    if not start_script:
-        msg = f"Start script not found in '{scriptsdir}'."
+
+    testnet_path = scriptsdir / "testnet.json"
+    if not testnet_path:
+        msg = f"Testnet file not found in '{scriptsdir}'."
         raise RuntimeError(msg)
 
     startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
         destdir=destdir,
         instance_num=instance_num,
-        start_script=start_script,
-        stop_script=stop_script,
+        scriptsdir=scriptsdir,
     )
     return startup_files
 

@@ -111,7 +111,7 @@ class ClusterGetter:
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
 
-    def _respin(self, start_cmd: str = "", stop_cmd: str = "") -> bool:  # noqa: C901
+    def _respin(self, start_cmd: str = "") -> bool:  # noqa: C901
         """Respin cluster.
 
         Not called under global lock!
@@ -134,10 +134,7 @@ class ClusterGetter:
             msg = "Cannot respin cluster when 'FORBID_RESTART' is set."
             raise RuntimeError(msg)
 
-        self.log(
-            f"c{self.cluster_instance_num}: called `_respin`, start_cmd='{start_cmd}', "
-            f"stop_cmd='{stop_cmd}'"
-        )
+        self.log(f"c{self.cluster_instance_num}: called `_respin`, start_cmd='{start_cmd}'")
 
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
@@ -155,8 +152,7 @@ class ClusterGetter:
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
             destdir=self._create_startup_files_dir(self.cluster_instance_num),
             instance_num=self.cluster_instance_num,
-            start_script=start_cmd,
-            stop_script=stop_cmd,
+            scriptsdir=pl.Path(start_cmd).parent if start_cmd else "",
         )
 
         self.log(

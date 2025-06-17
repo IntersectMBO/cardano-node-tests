@@ -127,14 +127,14 @@ packaging = "*"
 
 [[package]]
 name = "cardonnay"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cardano Local Testnet"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "cardonnay-0.1.0-py3-none-any.whl", hash = "sha256:4d55e055753d2a3efb002a0c9a63188c0424078ea3d20009ce3b9e640c7e0257"},
-    {file = "cardonnay-0.1.0.tar.gz", hash = "sha256:4d5c2a7f757442d5f6eb19baf4ef89a8622eabb4af9617feb6071683b631b6c1"},
+    {file = "cardonnay-0.1.1-py3-none-any.whl", hash = "sha256:2c9071af752a6689ba9e61eef7da7488b2b67d76c95684351ab79489bb9d21ea"},
+    {file = "cardonnay-0.1.1.tar.gz", hash = "sha256:28aaa8427c7d2e0851f7f6a497443841ad5a29cd26880e204c347a52ee870128"},
 ]
 
 [package.dependencies]
@@ -2116,4 +2116,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "6a2b57d9e4a572ee6de6374916d903161d9aa43142db3bcefb48498f47e73583"
+content-hash = "b88072bc45c3d33678d560f04996f3315fd237cfc666deafc9011fede576e2ff"

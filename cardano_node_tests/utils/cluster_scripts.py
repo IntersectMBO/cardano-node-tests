@@ -249,8 +249,7 @@ class ScriptsTypes:
         self,
         destdir: ttypes.FileType,
         instance_num: int,
-        start_script: ttypes.FileType = "",
-        stop_script: ttypes.FileType = "",
+        scriptsdir: ttypes.FileType = "",
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         msg = f"Not implemented for cluster instance type '{self.type}'."
@@ -320,15 +319,13 @@ class LocalScripts(ScriptsTypes):
         self,
         destdir: ttypes.FileType,
         instance_num: int,
-        start_script: ttypes.FileType = "",
-        stop_script: ttypes.FileType = "",
+        scriptsdir: ttypes.FileType = "",
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         return self.custom_cardonnay_scripts.prepare_scripts_files(
             destdir=pl.Path(destdir),
             instance_num=instance_num,
-            start_script=start_script,
-            stop_script=stop_script,
+            scriptsdir=scriptsdir,
         )
 
     def gen_split_topology_files(
@@ -572,8 +569,7 @@ class TestnetScripts(ScriptsTypes):
         self,
         destdir: ttypes.FileType,
         instance_num: int,
-        start_script: ttypes.FileType = "",
-        stop_script: ttypes.FileType = "",
+        scriptsdir: ttypes.FileType = "",
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance.
 
@@ -583,20 +579,12 @@ class TestnetScripts(ScriptsTypes):
         destdir = pl.Path(destdir).expanduser().resolve()
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
         destdir_bootstrap.mkdir(exist_ok=True)
-
-        _start_script = start_script or self.scripts_dir / "start-cluster"
-        _stop_script = stop_script or self.scripts_dir / "stop-cluster"
-
-        start_script = pl.Path(_start_script).expanduser().resolve()
-        stop_script = pl.Path(_stop_script).expanduser().resolve()
-
-        bootstrap_conf_dir = self._get_bootstrap_conf_dir(bootstrap_dir=start_script.parent)
+        scriptsdir_final = pl.Path(scriptsdir or self.scripts_dir)
+        bootstrap_conf_dir = self._get_bootstrap_conf_dir(bootstrap_dir=scriptsdir_final)
 
         self._reconfigure_testnet(
-            indir=start_script.parent, destdir=destdir, instance_num=instance_num, globs=["*"]
+            indir=scriptsdir_final, destdir=destdir, instance_num=instance_num, globs=["*"]
         )
-        new_start_script = destdir / start_script.name
-        new_stop_script = destdir / stop_script.name
 
         self._reconfigure_bootstrap(
             indir=bootstrap_conf_dir,
@@ -605,8 +593,8 @@ class TestnetScripts(ScriptsTypes):
         )
 
         return cardonnay_local.InstanceFiles(
-            start_script=new_start_script,
-            stop_script=new_stop_script,
+            start_script=destdir / "start-cluster",
+            stop_script=destdir / "stop-cluster",
             start_script_args=[configuration.BOOTSTRAP_DIR],
             dir=destdir,
         )
