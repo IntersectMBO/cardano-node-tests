@@ -82,9 +82,6 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
 
     _has_dns_rebinding_protection: tp.ClassVar[bool | None] = None
 
-    def __init__(self, num_pools: int, scripts_dir: pl.Path, ports_base: int) -> None:
-        super().__init__(num_pools=num_pools, scripts_dir=scripts_dir, ports_base=ports_base)
-
     @classmethod
     def _check_dns_rebinding_protection(cls) -> bool:
         """Check for DNS rebinding protection.
