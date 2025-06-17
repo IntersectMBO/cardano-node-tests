@@ -14,6 +14,7 @@ import socket
 import typing as tp
 
 import cardonnay_scripts
+from cardonnay import local_scripts as cardonnay_local
 
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import configuration
@@ -27,52 +28,10 @@ LOCAL_SCRIPTS_DIR = pl.Path(__file__).parent.parent / "cluster_scripts"
 
 
 @dataclasses.dataclass(frozen=True, order=True)
-class InstanceFiles:
-    start_script: pl.Path
-    stop_script: pl.Path
-    start_script_args: list[str]
-    dir: pl.Path
-
-
-@dataclasses.dataclass(frozen=True, order=True)
 class StartupFiles:
     start_script: pl.Path
     genesis_spec: pl.Path
     config_glob: str
-
-
-@dataclasses.dataclass(frozen=True, order=True)
-class NodePorts:
-    num: int
-    node: int
-    ekg: int
-    prometheus: int
-
-
-@dataclasses.dataclass(frozen=True, order=True)
-class InstancePorts:
-    base: int
-    webserver: int
-    metrics_submit_api: int
-    submit_api: int
-    smash: int
-    supervisor: int
-    relay1: int
-    ekg_relay1: int
-    prometheus_relay1: int
-    bft1: int
-    ekg_bft1: int
-    prometheus_bft1: int
-    pool1: int
-    ekg_pool1: int
-    prometheus_pool1: int
-    pool2: int
-    ekg_pool2: int
-    prometheus_pool2: int
-    pool3: int
-    ekg_pool3: int
-    prometheus_pool3: int
-    node_ports: tuple[NodePorts, ...]
 
 
 def get_testnet_dirs(base: pl.Path) -> set[str]:
@@ -115,55 +74,16 @@ def get_testnet_variant_scriptdir2(testnet_variant: str) -> pl.Path:
     return scriptdir
 
 
-class ScriptsTypes:
-    """Generic cluster scripts."""
+class CustomCardonnayScripts(cardonnay_local.LocalScripts):
+    """Scripts for starting local cluster.
 
-    LOCAL: tp.Final[str] = "local"
-    TESTNET: tp.Final[str] = "testnet"
-
-    def __init__(self) -> None:
-        self.type = "unknown"
-
-    def get_instance_ports(self, instance_num: int) -> InstancePorts:
-        """Return ports mapping for given cluster instance."""
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
-
-    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
-        """Make copy of cluster scripts files."""
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
-
-    def prepare_scripts_files(
-        self,
-        destdir: ttypes.FileType,
-        instance_num: int,
-        start_script: ttypes.FileType = "",
-        stop_script: ttypes.FileType = "",
-    ) -> InstanceFiles:
-        """Prepare scripts files for starting and stopping cluster instance."""
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
-
-    def gen_split_topology_files(
-        self, destdir: ttypes.FileType, instance_num: int, offset: int = 0
-    ) -> None:
-        """Generate topology files for split network."""
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
-
-
-class LocalScripts(ScriptsTypes):
-    """Scripts for starting local cluster."""
+    Re-definition of Cardonnay Local Scripts that allows randomly selected localhost addresses.
+    """
 
     _has_dns_rebinding_protection: tp.ClassVar[bool | None] = None
 
-    def __init__(self, num_pools: int = -1) -> None:
-        super().__init__()
-        self.type = ScriptsTypes.LOCAL
-        self.num_pools = num_pools
-        if num_pools == -1:
-            self.num_pools = configuration.NUM_POOLS
+    def __init__(self, num_pools: int, scripts_dir: pl.Path, ports_base: int) -> None:
+        super().__init__(num_pools=num_pools, scripts_dir=scripts_dir, ports_base=ports_base)
 
     @classmethod
     def _check_dns_rebinding_protection(cls) -> bool:
@@ -209,123 +129,6 @@ class LocalScripts(ScriptsTypes):
 
         return ""
 
-    def get_instance_ports(self, instance_num: int) -> InstancePorts:
-        """Return ports mapping for given cluster instance."""
-        # Allocate 100 ports per each 18 pools
-        ports_per_instance = ((self.num_pools - 1) // 18 + 1) * 100
-        offset = instance_num * ports_per_instance
-        base = configuration.PORTS_BASE + offset
-        last_port = base + ports_per_instance - 1
-        ports_per_node = 5
-
-        def _get_node_ports(num: int) -> NodePorts:
-            rec_base = base + (num * ports_per_node)
-            return NodePorts(
-                num=num,
-                node=rec_base,
-                ekg=rec_base + 1,
-                prometheus=rec_base + 2,
-            )
-
-        node_ports = tuple(_get_node_ports(i) for i in range(self.num_pools + 1))  # +1 for BFT node
-
-        ports = InstancePorts(
-            base=base,
-            webserver=last_port,
-            metrics_submit_api=last_port - 1,
-            submit_api=last_port - 2,
-            smash=last_port - 3,
-            supervisor=12001 + instance_num,
-            # Relay1
-            relay1=0,
-            ekg_relay1=0,
-            prometheus_relay1=0,
-            # Bft1
-            bft1=base,
-            ekg_bft1=base + 1,
-            prometheus_bft1=base + 2,
-            # Pool1
-            pool1=base + 5,
-            ekg_pool1=base + 6,
-            prometheus_pool1=base + 7,
-            # Pool2
-            pool2=base + 10,
-            ekg_pool2=base + 11,
-            prometheus_pool2=base + 12,
-            # Pool3
-            pool3=base + 15,
-            ekg_pool3=base + 16,
-            prometheus_pool3=base + 17,
-            # All nodes
-            node_ports=node_ports,
-        )
-        return ports
-
-    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
-        """Make copy of cluster scripts files located in this repository."""
-        destdir = pl.Path(destdir).expanduser().resolve()
-        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
-
-        shutil.copytree(
-            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
-        )
-        shutil.copytree(
-            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
-        )
-
-        start_script = destdir / "start-cluster"
-        config_glob = "config-*.json"
-        genesis_spec_json = destdir / "genesis.spec.json"
-        if not (start_script.exists() and genesis_spec_json.exists()):
-            err = (
-                f"Start script '{start_script}' or genesis spec file '{genesis_spec_json}' "
-                "not found in the copied cluster scripts directory."
-            )
-            raise FileNotFoundError(err)
-
-        return StartupFiles(
-            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
-        )
-
-    def _replace_node_template(
-        self, template_file: pl.Path, node_rec: NodePorts, instance_num: int
-    ) -> str:
-        """Replace template variables in given content."""
-        content = template_file.read_text()
-        new_content = content.replace("%%POOL_NUM%%", str(node_rec.num))
-        new_content = new_content.replace("%%INSTANCE_NUM%%", str(instance_num))
-        new_content = new_content.replace("%%NODE_PORT%%", str(node_rec.node))
-        new_content = new_content.replace("%%EKG_PORT%%", str(node_rec.ekg))
-        new_content = new_content.replace("%%PROMETHEUS_PORT%%", str(node_rec.prometheus))
-        return new_content
-
-    def _replace_instance_files(
-        self, infile: pl.Path, instance_ports: InstancePorts, instance_num: int, ports_per_node: int
-    ) -> str:
-        """Replace instance variables in given content."""
-        content = infile.read_text()
-        # Replace cluster instance number
-        new_content = content.replace("%%INSTANCE_NUM%%", str(instance_num))
-        # Replace number of pools
-        new_content = new_content.replace("%%NUM_POOLS%%", str(self.num_pools))
-        # Replace node port number strings
-        new_content = new_content.replace("%%NODE_PORT_BASE%%", str(instance_ports.base))
-        # Replace number of reserved ports per node
-        new_content = new_content.replace("%%PORTS_PER_NODE%%", str(ports_per_node))
-        # Reconfigure supervisord port
-        new_content = new_content.replace("%%SUPERVISOR_PORT%%", str(instance_ports.supervisor))
-        # Reconfigure submit-api port
-        new_content = new_content.replace("%%SUBMIT_API_PORT%%", str(instance_ports.submit_api))
-        # Reconfigure submit-api metrics port
-        new_content = new_content.replace(
-            "%%METRICS_SUBMIT_API_PORT%%", str(instance_ports.metrics_submit_api)
-        )
-        # Reconfigure smash port
-        new_content = new_content.replace("%%SMASH_PORT%%", str(instance_ports.smash))
-        # Reconfigure webserver port
-        new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
-        return new_content
-
     def _gen_legacy_topology(self, addr: str, ports: tp.Iterable[int]) -> dict:
         """Generate legacy topology for given ports."""
         producers = [
@@ -355,76 +158,6 @@ class LocalScripts(ScriptsTypes):
             "useLedgerAfterSlot": -1,
         }
         return topology
-
-    def _gen_supervisor_conf(self, instance_num: int, instance_ports: InstancePorts) -> str:
-        """Generate supervisor configuration for given instance."""
-        lines = [
-            "# [inet_http_server]",
-            f"# port=127.0.0.1:{instance_ports.supervisor}",
-        ]
-
-        programs = []
-        for node_rec in instance_ports.node_ports:
-            node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
-
-            programs.append(node_name)
-
-            lines.extend(
-                [
-                    f"\n[program:{node_name}]",
-                    f"command=./state-cluster{instance_num}/cardano-node-{node_name}",
-                    f"stderr_logfile=./state-cluster{instance_num}/{node_name}.stderr",
-                    f"stdout_logfile=./state-cluster{instance_num}/{node_name}.stdout",
-                    "startsecs=5",
-                ]
-            )
-
-        lines.extend(
-            [
-                "\n[group:nodes]",
-                f"programs={','.join(programs)}",
-                "\n[program:webserver]",
-                f"command=python -m http.server --bind 127.0.0.1 {instance_ports.webserver}",
-                f"directory=./state-cluster{instance_num}/webserver",
-                "\n[rpcinterface:supervisor]",
-                "supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface",
-                "\n[supervisorctl]",
-                "\n[supervisord]",
-                f"logfile=./state-cluster{instance_num}/supervisord.log",
-                f"pidfile=./state-cluster{instance_num}/supervisord.pid",
-            ]
-        )
-
-        return "\n".join(lines)
-
-    def _gen_topology_files(
-        self, destdir: pl.Path, addr: str, nodes: tp.Sequence[NodePorts]
-    ) -> None:
-        """Generate topology files for all nodes."""
-        all_nodes = [p.node for p in nodes]
-
-        for node_rec in nodes:
-            all_except = all_nodes[:]
-            all_except.remove(node_rec.node)
-            node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
-
-            # Legacy topology
-
-            topology = self._gen_legacy_topology(addr=addr, ports=all_except)
-            helpers.write_json(out_file=destdir / f"topology-{node_name}.json", content=topology)
-
-            # P2P topology
-
-            # Bft1 and first three pools
-            fixed_ports = all_except[:4]
-
-            p2p_topology = self._gen_p2p_topology(
-                addr=addr, ports=all_except, fixed_ports=fixed_ports
-            )
-
-            helpers.write_json(
-                out_file=destdir / f"p2p-topology-{node_name}.json", content=p2p_topology
-            )
 
     def _reconfigure_local(self, indir: pl.Path, destdir: pl.Path, instance_num: int) -> None:
         """Reconfigure cluster scripts and config files."""
@@ -487,34 +220,107 @@ class LocalScripts(ScriptsTypes):
         )
         supervisor_conf_file.write_text(f"{supervisor_conf_content}\n")
 
+
+class ScriptsTypes:
+    """Generic cluster scripts."""
+
+    LOCAL: tp.Final[str] = "local"
+    TESTNET: tp.Final[str] = "testnet"
+
+    def __init__(self) -> None:
+        self.type = "unknown"
+
+    def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
+        """Return ports mapping for given cluster instance."""
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
+
+    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
+        """Make copy of cluster scripts files.
+
+        Testnet files and scripts can be copied and modified by tests before using them.
+        E.g. we might want to change KES period, pool cost, etc.
+        """
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
+
     def prepare_scripts_files(
         self,
         destdir: ttypes.FileType,
         instance_num: int,
         start_script: ttypes.FileType = "",
         stop_script: ttypes.FileType = "",
-    ) -> InstanceFiles:
+    ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
+
+    def gen_split_topology_files(
+        self, destdir: ttypes.FileType, instance_num: int, offset: int = 0
+    ) -> None:
+        """Generate topology files for split network."""
+        msg = f"Not implemented for cluster instance type '{self.type}'."
+        raise NotImplementedError(msg)
+
+
+class LocalScripts(ScriptsTypes):
+    """Scripts for starting local cluster."""
+
+    def __init__(self, num_pools: int = -1) -> None:
+        super().__init__()
+        self.type = ScriptsTypes.LOCAL
+        self.num_pools = num_pools
+        if num_pools == -1:
+            self.num_pools = configuration.NUM_POOLS
+
+        scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
+        self.custom_cardonnay_scripts = CustomCardonnayScripts(
+            num_pools=self.num_pools, scripts_dir=scripts_dir, ports_base=configuration.PORTS_BASE
+        )
+
+    def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
+        """Return ports mapping for given cluster instance."""
+        return self.custom_cardonnay_scripts.get_instance_ports(instance_num=instance_num)
+
+    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
+        """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
         scripts_dir = get_testnet_variant_scriptdir2(testnet_variant=configuration.TESTNET_VARIANT)
 
-        _start_script = start_script or scripts_dir / "start-cluster"
-        _stop_script = stop_script or scripts_dir / "stop-cluster"
-
-        start_script = pl.Path(_start_script).expanduser().resolve()
-        stop_script = pl.Path(_stop_script).expanduser().resolve()
-
-        self._reconfigure_local(
-            indir=start_script.parent, destdir=destdir, instance_num=instance_num
+        shutil.copytree(
+            scripts_dir, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
-        new_start_script = destdir / start_script.name
-        new_stop_script = destdir / stop_script.name
+        shutil.copytree(
+            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
 
-        return InstanceFiles(
-            start_script=new_start_script,
-            stop_script=new_stop_script,
-            start_script_args=[],
-            dir=destdir,
+        start_script = destdir / "start-cluster"
+        config_glob = "config-*.json"
+        genesis_spec_json = destdir / "genesis.spec.json"
+        if not (start_script.exists() and genesis_spec_json.exists()):
+            err = (
+                f"Start script '{start_script}' or genesis spec file '{genesis_spec_json}' "
+                "not found in the copied cluster scripts directory."
+            )
+            raise FileNotFoundError(err)
+
+        return StartupFiles(
+            start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
+        )
+
+    def prepare_scripts_files(
+        self,
+        destdir: ttypes.FileType,
+        instance_num: int,
+        start_script: ttypes.FileType = "",
+        stop_script: ttypes.FileType = "",
+    ) -> cardonnay_local.InstanceFiles:
+        """Prepare scripts files for starting and stopping cluster instance."""
+        return self.custom_cardonnay_scripts.prepare_scripts_files(
+            destdir=pl.Path(destdir),
+            instance_num=instance_num,
+            start_script=start_script,
+            stop_script=stop_script,
         )
 
     def gen_split_topology_files(
@@ -530,7 +336,7 @@ class LocalScripts(ScriptsTypes):
 
         destdir = pl.Path(destdir).expanduser().resolve()
         instance_ports = self.get_instance_ports(instance_num=instance_num)
-        addr = self._preselect_addr(instance_num=instance_num)
+        addr = self.custom_cardonnay_scripts._preselect_addr(instance_num=instance_num)
         nodes = instance_ports.node_ports
 
         all_nodes = [p.node for p in nodes]
@@ -554,14 +360,16 @@ class LocalScripts(ScriptsTypes):
             node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
 
             # Legacy topology
-            topology = self._gen_legacy_topology(addr=addr, ports=all_except)
+            topology = self.custom_cardonnay_scripts._gen_legacy_topology(
+                addr=addr, ports=all_except
+            )
             helpers.write_json(
                 out_file=destdir / f"split-topology-{node_name}.json", content=topology
             )
 
             # P2P topology
             fixed_ports = all_except[:4]
-            p2p_topology = self._gen_p2p_topology(
+            p2p_topology = self.custom_cardonnay_scripts._gen_p2p_topology(
                 addr=addr, ports=all_except, fixed_ports=fixed_ports
             )
             helpers.write_json(
@@ -585,21 +393,21 @@ class TestnetScripts(ScriptsTypes):
         super().__init__()
         self.type = ScriptsTypes.TESTNET
 
-    def get_instance_ports(self, instance_num: int) -> InstancePorts:
+    def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
         """Return ports mapping for given cluster instance."""
         ports_per_instance = 10
         offset = instance_num * ports_per_instance
         base = configuration.PORTS_BASE + offset
         last_port = base + ports_per_instance - 1
 
-        relay1_ports = NodePorts(
+        relay1_ports = cardonnay_local.NodePorts(
             num=0,
             node=base,
             ekg=base + 1,
             prometheus=base + 2,
         )
 
-        ports = InstancePorts(
+        ports = cardonnay_local.InstancePorts(
             base=base,
             webserver=last_port,
             metrics_submit_api=last_port - 1,
@@ -753,7 +561,7 @@ class TestnetScripts(ScriptsTypes):
         instance_num: int,
         start_script: ttypes.FileType = "",
         stop_script: ttypes.FileType = "",
-    ) -> InstanceFiles:
+    ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance.
 
         There is just one cluster instance running for a given testnet. We keep the `instance_num`
@@ -785,7 +593,7 @@ class TestnetScripts(ScriptsTypes):
             globs=list(self.TESTNET_GLOBS),
         )
 
-        return InstanceFiles(
+        return cardonnay_local.InstanceFiles(
             start_script=new_start_script,
             stop_script=new_stop_script,
             start_script_args=[configuration.BOOTSTRAP_DIR],

@@ -11,6 +11,7 @@ import typing as tp
 
 import pytest
 from _pytest.config import Config
+from cardonnay import local_scripts as cardonnay_local
 
 from cardano_node_tests.cluster_management import common
 from cardano_node_tests.cluster_management import netstat_tools
@@ -19,7 +20,6 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.cluster_management import status_files
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import framework_log
 from cardano_node_tests.utils import helpers
@@ -98,7 +98,7 @@ class ClusterGetter:
         return status_files.get_instance_dir(instance_num=self.cluster_instance_num)
 
     @property
-    def ports(self) -> cluster_scripts.InstancePorts:
+    def ports(self) -> cardonnay_local.InstancePorts:
         """Return port mappings for current cluster instance."""
         return cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
             self.cluster_instance_num

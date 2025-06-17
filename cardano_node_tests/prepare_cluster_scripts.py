@@ -10,6 +10,8 @@ import pathlib as pl
 import shutil
 import sys
 
+from cardonnay import local_scripts as cardonnay_local
+
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import cluster_scripts
@@ -56,7 +58,7 @@ def prepare_scripts_files(
     destdir: ttypes.FileType,
     testnet_variant: str,
     instance_num: int = 0,
-) -> cluster_scripts.InstanceFiles:
+) -> cardonnay_local.InstanceFiles:
     """Prepare scripts files for starting and stopping cluster instance."""
     start_script: ttypes.FileType = ""
     stop_script: ttypes.FileType = ""
