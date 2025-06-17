@@ -168,7 +168,7 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
             common_dir = pl.Path("/nonexistent")
 
         # Reconfigure cluster instance files
-        for infile in itertools.chain(indir.glob("*"), common_dir.glob("*")):
+        for infile in itertools.chain(common_dir.glob("*"), indir.glob("*")):
             fname = infile.name
 
             # Skip template files
@@ -182,7 +182,8 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
                 instance_num=instance_num,
                 ports_per_node=ports_per_node,
             )
-            outfile.write_text(f"{dest_content}\n")
+            outfile.unlink(missing_ok=True)
+            outfile.write_text(f"{dest_content}\n", encoding="utf-8")
 
             # Make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
@@ -197,7 +198,8 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
                     node_rec=node_rec,
                     instance_num=instance_num,
                 )
-                supervisor_script.write_text(f"{supervisor_script_content}\n")
+                supervisor_script.unlink(missing_ok=True)
+                supervisor_script.write_text(f"{supervisor_script_content}\n", encoding="utf-8")
                 supervisor_script.chmod(0o755)
 
             node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
@@ -207,7 +209,8 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
                 node_rec=node_rec,
                 instance_num=instance_num,
             )
-            node_config.write_text(f"{node_config_content}\n")
+            node_config.unlink(missing_ok=True)
+            node_config.write_text(f"{node_config_content}\n", encoding="utf-8")
 
         self._gen_topology_files(destdir=destdir, addr=addr, nodes=instance_ports.node_ports)
 
@@ -215,7 +218,8 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
         supervisor_conf_content = self._gen_supervisor_conf(
             instance_num=instance_num, instance_ports=instance_ports
         )
-        supervisor_conf_file.write_text(f"{supervisor_conf_content}\n")
+        supervisor_conf_file.unlink(missing_ok=True)
+        supervisor_conf_file.write_text(f"{supervisor_conf_content}\n", encoding="utf-8")
 
 
 class ScriptsTypes:
@@ -288,14 +292,14 @@ class LocalScripts(ScriptsTypes):
         destdir = pl.Path(destdir).expanduser().resolve()
 
         shutil.copytree(
+            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
+        shutil.copytree(
             self.scripts_dir,
             destdir,
             symlinks=True,
             ignore_dangling_symlinks=True,
             dirs_exist_ok=True,
-        )
-        shutil.copytree(
-            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
 
         start_script = destdir / "start-cluster"
@@ -445,14 +449,14 @@ class TestnetScripts(ScriptsTypes):
         destdir = pl.Path(destdir).expanduser().resolve()
 
         shutil.copytree(
+            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
+        )
+        shutil.copytree(
             self.scripts_dir,
             destdir,
             symlinks=True,
             ignore_dangling_symlinks=True,
             dirs_exist_ok=True,
-        )
-        shutil.copytree(
-            COMMON_DIR, destdir, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True
         )
 
         start_script = destdir / "start-cluster"
@@ -489,13 +493,11 @@ class TestnetScripts(ScriptsTypes):
         if (indir / "common.sh").exists():
             common_dir = pl.Path("/nonexistent")
 
-        for infile in itertools.chain(*infiles, common_dir.glob("*")):
+        for infile in itertools.chain(common_dir.glob("*"), *infiles):
             fname = infile.name
             outfile = destdir / fname
 
-            with open(infile, encoding="utf-8") as in_fp:
-                content = in_fp.read()
-
+            content = infile.read_text(encoding="utf-8")
             # Replace cluster instance number
             new_content = content.replace("%%INSTANCE_NUM%%", str(instance_num))
             # Replace node port number strings
@@ -519,8 +521,8 @@ class TestnetScripts(ScriptsTypes):
             # Reconfigure webserver port
             new_content = new_content.replace("%%WEBSERVER_PORT%%", str(instance_ports.webserver))
 
-            with open(outfile, "w", encoding="utf-8") as out_fp:
-                out_fp.write(new_content)
+            outfile.unlink(missing_ok=True)
+            outfile.write_text(f"{new_content}\n", encoding="utf-8")
 
             # Make `*.sh` files and files without extension executable
             if "." not in fname or fname.endswith(".sh"):
@@ -548,6 +550,7 @@ class TestnetScripts(ScriptsTypes):
                 self._reconfigure_submit_api_config(infile=infile, outfile=outfile)
                 continue
 
+            outfile.unlink(missing_ok=True)
             shutil.copy(infile, outfile)
 
     def _is_bootstrap_conf_dir(self, bootstrap_dir: pl.Path) -> bool:
