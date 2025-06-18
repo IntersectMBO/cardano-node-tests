@@ -116,8 +116,19 @@ else
   # the binary from release archive.
 fi
 
-[ -e db-sync-node/bin/cardano-db-sync ] || exit 1
-export DBSYNC_REPO="$PWD"
+if [ ! -e db-sync-node/bin/cardano-db-sync ]; then
+  echo "The \`cardano-db-sync\` binary not found, line $LINENO in sourced db-sync setup" >&2  # assert
+  exit 1
+fi
+
+# Add `cardano-db-sync` and `cardano-smash-server` to PATH_APPEND
+PATH_APPEND="${PATH_APPEND:+"${PATH_APPEND}:"}$(readlink -m db-sync-node/bin)"
+if [ -e smash-server/bin/cardano-smash-server ]; then
+  PATH_APPEND="${PATH_APPEND:+"${PATH_APPEND}:"}$(readlink -m smash-server/bin)"
+fi
+export PATH_APPEND
+
+export DBSYNC_SCHEMA_DIR="$PWD/schema"
 
 cd "$REPODIR" || exit 1
 

@@ -1,8 +1,22 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash --pure --keep CARDANO_NODE_SOCKET_PATH --keep PGHOST --keep PGPORT --keep PGUSER --keep PGPASSFILE --keep DBSYNC_REPO -p postgresql
+#! nix-shell -i bash --pure --keep CARDANO_NODE_SOCKET_PATH --keep PGHOST --keep PGPORT --keep PGUSER --keep PGPASSFILE --keep DBSYNC_SCHEMA_DIR -p postgresql
 # shellcheck shell=bash
 
 set -uo pipefail
+
+retval=0
+
+if [ -z "${CARDANO_NODE_SOCKET_PATH:-}" ]; then
+  echo "CARDANO_NODE_SOCKET_PATH is not set" >&2
+  retval=1
+fi
+if [ -z "${DBSYNC_SCHEMA_DIR:-}" ]; then
+  echo "DBSYNC_SCHEMA_DIR is not set" >&2
+  retval=1
+fi
+if [ "$retval" -ne 0 ]; then
+  exit "$retval"
+fi
 
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
@@ -12,4 +26,4 @@ export PGHOST="${PGHOST:-localhost}"
 export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-postgres}"
 
-exec "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" --config "$STATE_CLUSTER/dbsync-config.yaml" --socket-path "$CARDANO_NODE_SOCKET_PATH" --state-dir "$STATE_CLUSTER/db-sync" --schema-dir "$DBSYNC_REPO/schema"
+exec cardano-db-sync --config "$STATE_CLUSTER/dbsync-config.yaml" --socket-path "$CARDANO_NODE_SOCKET_PATH" --state-dir "$STATE_CLUSTER/db-sync" --schema-dir "$DBSYNC_SCHEMA_DIR"
