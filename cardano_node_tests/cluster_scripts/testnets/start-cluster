@@ -81,9 +81,9 @@ serverurl = unix:///${SUPERVISORD_SOCKET_PATH}
 EoF
 
 # enable db-sync service
-if [ -n "${DBSYNC_REPO:-""}" ]; then
-  [ -e "$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync" ] || \
-    { echo "The \`$DBSYNC_REPO/db-sync-node/bin/cardano-db-sync\` not found, line $LINENO" >&2; exit 1; }  # assert
+if [ -n "${DBSYNC_SCHEMA_DIR:-""}" ]; then
+  command -v cardano-db-sync > /dev/null 2>&1 || \
+    { echo "The \`cardano-db-sync\` binary not found, line $LINENO" >&2; exit 1; }  # assert
 
   # copy db-sync config file
   cp "$TESTNET_CONF_DIR/dbsync-config.yaml" "$STATE_CLUSTER/dbsync-config.yaml"
@@ -208,7 +208,7 @@ if command -v cardano-submit-api >/dev/null 2>&1 && [ -e "$STATE_CLUSTER/submit-
 fi
 
 # start db-sync
-if [ -n "${DBSYNC_REPO:-""}" ]; then
+if [ -n "${DBSYNC_SCHEMA_DIR:-""}" ]; then
   echo "Starting db-sync"
   supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start dbsync
   sleep 10

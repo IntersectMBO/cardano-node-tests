@@ -3,7 +3,6 @@
 import dataclasses
 import enum
 import logging
-import os
 import pathlib as pl
 import shutil
 import typing as tp
@@ -424,8 +423,7 @@ class DBSyncManager:
         Returns:
             bool: True if the service is running and executable, False otherwise.
         """
-        dbsync_location = configuration.DBSYNC_BIN
-        if not dbsync_location.exists() or not os.access(dbsync_location, os.X_OK):
+        if not shutil.which("cardano-db-sync"):
             return False
         return cluster_nodes.services_status(service_names=["dbsync"])[0].status == "RUNNING"
 

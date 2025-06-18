@@ -94,12 +94,12 @@ class Versions:
 
     def get_dbsync_version(self) -> dict:
         """Return version info for db-sync."""
-        out = helpers.run_command(f"{configuration.DBSYNC_BIN} --version").decode().strip()
+        out = helpers.run_command("cardano-db-sync --version").decode().strip()
         return self._get_cardano_version(version_str=out)
 
     def get_smash_version(self) -> dict:
         """Return version info for smash."""
-        out = helpers.run_command(f"{configuration.SMASH_BIN} --version").decode().strip()
+        out = helpers.run_command("cardano-smash-server --version").decode().strip()
         return self._get_cardano_version(version_str=out)
 
     def __repr__(self) -> str:

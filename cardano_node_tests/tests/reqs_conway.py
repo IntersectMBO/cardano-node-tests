@@ -4,7 +4,7 @@ import os
 
 from cardano_node_tests.utils import requirements
 
-__HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
+__HAS_DBSYNC = bool(os.environ.get("DBSYNC_SCHEMA_DIR"))
 
 
 def __r(id: str) -> requirements.Req:

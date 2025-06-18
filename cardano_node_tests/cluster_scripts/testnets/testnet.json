@@ -2,6 +2,6 @@
     "name": "testnets",
     "description": "Setup for long-running testnets like Preview.",
     "control_env": {
-        "DBSYNC_REPO": "will start and configure db-sync if the value is path to db-sync repository"
+        "DBSYNC_SCHEMA_DIR": "will start and configure db-sync if the value is path to db-sync schema directory",
     }
 }

@@ -48,7 +48,7 @@ HAS_BECH32="$([ -n "$(command -v bech32)" ]; process_result)" || exit_code=1
 IN_ROOT_DIR="$([ -d "cardano_node_tests" ]; process_result)" || exit_code=1
 DEV_CLUSTER="$([ -n "${DEV_CLUSTER_RUNNING:-}" ]; process_result)" || exit_code=1
 SOCKET_PATH_SET="$([ -n "${CARDANO_NODE_SOCKET_PATH:-}" ]; process_result)" || exit_code=1
-USE_DBSYNC="$([ -n "${DBSYNC_REPO:-}" ]; process_result "optional")" || exit_code=1
+USE_DBSYNC="$([ -n "${DBSYNC_SCHEMA_DIR:-}" ]; process_result "optional")" || exit_code=1
 P2P_NET="$([ -z "${ENABLE_LEGACY:-}" ]; process_result "optional")" || exit_code=1
 
 
@@ -116,7 +116,7 @@ printf "command era: %s\n" "${COMMAND_ERA:-"latest"}"
 
 printf "using dbsync (optional): $USE_DBSYNC\n"
 if [ "$USE_DBSYNC" = "$true" ]; then
-  HAS_DBSYNC="$([ -e "${DBSYNC_REPO:-}/db-sync-node/bin/cardano-db-sync" ]; process_result)" || exit_code=1
+  HAS_DBSYNC="$(command -v cardano-db-sync >/dev/null 2>&1; process_result)" || exit_code=1
   printf "dbsync available: $HAS_DBSYNC\n"
   HAS_PSQL="$([ -n "$(command -v psql)" ]; process_result)" || exit_code=1
   printf "'psql' available: $HAS_PSQL\n"

@@ -73,24 +73,8 @@ if not BOOTSTRAP_DIR and NUM_POOLS < 3:
     msg = f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3"
     raise RuntimeError(msg)
 
-HAS_DBSYNC = bool(os.environ.get("DBSYNC_REPO"))
-if HAS_DBSYNC:
-    DBSYNC_BIN = (
-        pl.Path(os.environ["DBSYNC_REPO"]).expanduser() / "db-sync-node" / "bin" / "cardano-db-sync"
-    ).resolve()
-else:
-    DBSYNC_BIN = pl.Path("/nonexistent")
-
+HAS_DBSYNC = bool(os.environ.get("DBSYNC_SCHEMA_DIR"))
 HAS_SMASH = HAS_DBSYNC and bool(os.environ.get("SMASH"))
-if HAS_SMASH:
-    SMASH_BIN = (
-        pl.Path(os.environ["DBSYNC_REPO"]).expanduser()
-        / "smash-server"
-        / "bin"
-        / "cardano-smash-server"
-    ).resolve()
-else:
-    SMASH_BIN = pl.Path("/nonexistent")
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 

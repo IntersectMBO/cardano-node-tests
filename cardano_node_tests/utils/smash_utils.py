@@ -2,12 +2,12 @@ import dataclasses
 import datetime
 import logging
 import os
+import shutil
 import typing as tp
 
 import requests
 
 from cardano_node_tests.utils import cluster_nodes
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import http_client
 
@@ -142,8 +142,7 @@ class SmashManager:
 
 def is_smash_running() -> bool:
     """Check if `cardano-smash-server` service is running."""
-    smash_location = configuration.SMASH_BIN
-    if not smash_location.exists() or not os.access(smash_location, os.X_OK):
+    if not shutil.which("cardano-smash-server"):
         return False
     return cluster_nodes.services_status(service_names=["smash"])[0].status == "RUNNING"
 
