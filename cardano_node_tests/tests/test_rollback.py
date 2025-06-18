@@ -184,7 +184,7 @@ class TestRollback:
     # it is not possible to restart the nodes, submit transaction, and still be under
     # `securityParam` blocks.
     @pytest.mark.skipif(
-        "mainnet_fast" not in configuration.SCRIPTS_DIRNAME,
+        "mainnet_fast" not in configuration.TESTNET_VARIANT,
         reason="cannot run on testnet with low `securityParam`",
     )
     @pytest.mark.long
@@ -353,7 +353,7 @@ class TestRollback:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        "mainnet" in configuration.SCRIPTS_DIRNAME,
+        "mainnet" in configuration.TESTNET_VARIANT,
         reason="cannot run on testnet with high `securityParam`",
     )
     @pytest.mark.long

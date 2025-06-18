@@ -44,8 +44,8 @@ export \
 _scripts_dest="$WORKDIR/${CLUSTER_ERA}_fast"
 if [ ! -d "$_scripts_dest" ]; then
   PYTHONPATH=$PYTHONPATH:$PWD cardano_node_tests/prepare_cluster_scripts.py \
-    -s "cardano_node_tests/cluster_scripts/${CLUSTER_ERA}_fast" \
-    -d "$_scripts_dest"
+    -d "$_scripts_dest" \
+    -t "${CLUSTER_ERA}_fast"
 fi
 unset _scripts_dest
 

@@ -65,7 +65,7 @@ def short_kes_start_cluster() -> pl.Path:
         with open(startup_files.genesis_spec, "w", encoding="utf-8") as fp_out:
             json.dump(genesis_spec, fp_out)
 
-        return startup_files.start_script
+        return startup_files.start_script.parent
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ def cluster_kes(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
         cleanup=True,
-        start_cmd=str(short_kes_start_cluster),
+        scriptsdir=short_kes_start_cluster,
     )
 
 
@@ -130,7 +130,7 @@ class TestKES:
     # would need to get a cluster instance first. That would be too expensive in this test,
     # as we are using custom startup scripts.
     @pytest.mark.skipif(
-        "_fast" not in configuration.SCRIPTS_DIRNAME,
+        "_fast" not in configuration.TESTNET_VARIANT,
         reason="Runs only on local cluster with HF shortcut.",
     )
     @pytest.mark.order(5)

@@ -45,7 +45,7 @@ def epoch_length_start_cluster() -> pl.Path:
         with open(startup_files.genesis_spec, "w", encoding="utf-8") as fp_out:
             json.dump(genesis_spec, fp_out)
 
-        return startup_files.start_script
+        return startup_files.start_script.parent
 
 
 @pytest.fixture(scope="module")
@@ -74,7 +74,7 @@ def slot_length_start_cluster() -> pl.Path:
         with open(startup_files.genesis_spec, "w", encoding="utf-8") as fp_out:
             json.dump(genesis_spec, fp_out)
 
-        return startup_files.start_script
+        return startup_files.start_script.parent
 
 
 @pytest.fixture
@@ -85,7 +85,7 @@ def cluster_epoch_length(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
         cleanup=True,
-        start_cmd=str(epoch_length_start_cluster),
+        scriptsdir=epoch_length_start_cluster,
     )
 
 
@@ -97,7 +97,7 @@ def cluster_slot_length(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
         cleanup=True,
-        start_cmd=str(slot_length_start_cluster),
+        scriptsdir=slot_length_start_cluster,
     )
 
 

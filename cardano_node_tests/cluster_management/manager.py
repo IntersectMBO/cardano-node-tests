@@ -27,6 +27,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
+from cardano_node_tests.utils import types as ttypes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -350,7 +351,7 @@ class ClusterManager:
         use_resources: resources_management.ResourcesType = (),
         prio: bool = False,
         cleanup: bool = False,
-        start_cmd: str = "",
+        scriptsdir: ttypes.FileType = "",
     ) -> None:
         """Get an initialized cluster instance.
 
@@ -370,7 +371,7 @@ class ClusterManager:
             use_resources=use_resources,
             prio=prio,
             cleanup=cleanup,
-            start_cmd=start_cmd,
+            scriptsdir=scriptsdir,
         )
         self._cluster_instance_num = instance_num
 
@@ -394,7 +395,7 @@ class ClusterManager:
         use_resources: resources_management.ResourcesType = (),
         prio: bool = False,
         cleanup: bool = False,
-        start_cmd: str = "",
+        scriptsdir: ttypes.FileType = "",
         check_initialized: bool = True,
     ) -> clusterlib.ClusterLib:
         """Get `cardano_clusterlib.ClusterLib` object on an initialized cluster instance.
@@ -416,7 +417,7 @@ class ClusterManager:
             use_resources=use_resources,
             prio=prio,
             cleanup=cleanup,
-            start_cmd=start_cmd,
+            scriptsdir=scriptsdir,
         )
 
         cluster_obj = self.cache.cluster_obj

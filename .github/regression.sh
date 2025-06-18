@@ -83,11 +83,11 @@ if [ -z "${MAX_TESTS_PER_CLUSTER:-""}" ] && [ "${UTXO_BACKEND:-""}" = "disk" ]; 
 fi
 
 if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
-  :  # don't touch `SCRIPTS_DIRNAME` when running on testnet
+  :  # don't touch `TESTNET_VARIANT` when running on testnet
 elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
-  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"$CLUSTER_ERA"}_slow"
+  export TESTNET_VARIANT="${TESTNET_VARIANT:-"$CLUSTER_ERA"}_slow"
 else
-  export SCRIPTS_DIRNAME="${SCRIPTS_DIRNAME:-"${CLUSTER_ERA}_fast"}"
+  export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_fast"}"
 fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"

@@ -5,11 +5,13 @@ import enum
 import logging
 import os
 import pathlib as pl
+import shutil
 import typing as tp
 
 import yaml
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import cluster_scripts
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -357,9 +359,26 @@ class DBSyncManager:
         This is a DESTRUCTIVE operation!
         It will delete existing data and recreate the database from scratch.
         """
-        db_script_path = configuration.SCRIPTS_DIR.joinpath("postgres-setup.sh").resolve()
+        scripts_dir = cluster_scripts.get_testnet_variant_scriptdir(
+            testnet_variant=configuration.TESTNET_VARIANT
+        )
+        if not scripts_dir:
+            err = f"Testnet variant '{configuration.TESTNET_VARIANT}' scripts directory not found."
+            raise RuntimeError(err)
+
+        db_script_template = scripts_dir / "postgres-setup.sh"
+        if not db_script_template.exists() and configuration.BOOTSTRAP_DIR:
+            db_script_template = pl.Path(configuration.BOOTSTRAP_DIR) / "postgres-setup.sh"
+
+        if not db_script_template.exists():
+            err = f"Database setup script '{db_script_template}' not found."
+            raise RuntimeError(err)
+
+        cluster_dir = cluster_nodes.get_cluster_env().state_dir
+        db_script_path = cluster_dir / "postgres-setup.sh"
+        shutil.copy2(src=db_script_template, dst=db_script_path)
         db_script_path.chmod(0o755)
-        helpers.run_command("./postgres-setup.sh", workdir=configuration.SCRIPTS_DIR)
+        helpers.run_command("./postgres-setup.sh", workdir=cluster_dir)
 
     def get_config_builder(self) -> DBSyncConfigBuilder:
         """Get a fresh `DBSyncConfigBuilder` config builder instance with default config."""
