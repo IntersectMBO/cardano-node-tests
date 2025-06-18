@@ -25,7 +25,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "-d",
         "--dest-dir",
-        help="Path to destination directory",
+        help="Path to destination directory.",
     )
     parser.add_argument(
         "-t",
@@ -37,7 +37,7 @@ def get_args() -> argparse.Namespace:
         "--instance-num",
         type=int,
         default=0,
-        help="Instance number in the sequence of cluster instances (default: 0)",
+        help="Instance number in the sequence of cluster instances (default: 0).",
     )
     parser.add_argument(
         "-l",
@@ -49,7 +49,7 @@ def get_args() -> argparse.Namespace:
         "-c",
         "--clean",
         action="store_true",
-        help="Delete the destination directory if it already exists (default: false)",
+        help="Delete the destination directory if it already exists (default: false).",
     )
     return parser.parse_args()
 

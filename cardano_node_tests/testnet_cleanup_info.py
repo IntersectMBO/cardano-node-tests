@@ -23,14 +23,14 @@ def get_args() -> argparse.Namespace:
         "--artifacts-base-dir",
         required=True,
         type=helpers.check_dir_arg_keep,
-        help="Path to a directory with testing artifacts",
+        help="Path to a directory with testing artifacts.",
     )
     parser.add_argument(
         "-f",
         "--fee",
         action="store_true",
         required=False,
-        help="Print total fees of signed transactions",
+        help="Print total fees of signed transactions.",
     )
     return parser.parse_args()
 

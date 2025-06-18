@@ -64,35 +64,35 @@ def get_args() -> argparse.Namespace:
         required=True,
         nargs="+",
         type=helpers.check_file_arg,
-        help="Path to coverage files",
+        help="Path to coverage files.",
     )
     parser.add_argument(
         "-o",
         "--output-file",
-        help="File where to save coverage results",
+        help="File where to save coverage results.",
     )
     parser.add_argument(
         "-u",
         "--uncovered-only",
         action="store_true",
-        help="Report only uncovered arguments",
+        help="Report only uncovered arguments.",
     )
     parser.add_argument(
         "-p",
         "--print-coverage",
         action="store_true",
-        help="Print coverage percentage",
+        help="Print coverage percentage.",
     )
     parser.add_argument(
         "-b",
         "--badge-icon-url",
         action="store_true",
-        help="Print badge icon URL",
+        help="Print badge icon URL.",
     )
     parser.add_argument(
         "--ignore-skips",
         action="store_true",
-        help="Include all commands and arguments, ignore list of items to skip",
+        help="Include all commands and arguments, ignore list of items to skip.",
     )
     return parser.parse_args()
 

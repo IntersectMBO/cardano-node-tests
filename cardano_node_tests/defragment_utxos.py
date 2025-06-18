@@ -22,14 +22,14 @@ def get_args() -> argparse.Namespace:
         "-a",
         "--address",
         required=True,
-        help="Address",
+        help="Address to defragment.",
     )
     parser.add_argument(
         "-s",
         "--skey-file",
         required=True,
         type=helpers.check_file_arg,
-        help="Path to skey file",
+        help="Path to skey file.",
     )
     return parser.parse_args()
 
