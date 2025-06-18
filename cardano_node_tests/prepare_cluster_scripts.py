@@ -85,7 +85,7 @@ def main() -> int:
     args = get_args()
 
     if args.ls:
-        variants_str = "\n".join(cluster_scripts.get_testnet_variants())
+        variants_str = "\n".join(f" - {v}" for v in cluster_scripts.get_testnet_variants())
         LOGGER.info(f"Available testnet variants:\n{variants_str}")
         return 0
 
