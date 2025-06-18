@@ -167,7 +167,9 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
         if (indir / "common.sh").exists():
             common_dir = pl.Path("/nonexistent")
 
-        # Reconfigure cluster instance files
+        # Reconfigure cluster instance files.
+        # Make sure the files originating from "common" dir are overwritten if there are
+        # duplicate files in the `indir`.
         for infile in itertools.chain(common_dir.glob("*"), indir.glob("*")):
             fname = infile.name
 
