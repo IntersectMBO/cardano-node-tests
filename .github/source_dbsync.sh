@@ -121,12 +121,12 @@ if [ ! -e db-sync-node/bin/cardano-db-sync ]; then
   exit 1
 fi
 
-# Add `cardano-db-sync` and `cardano-smash-server` to PATH_APPEND
-PATH_APPEND="${PATH_APPEND:+"${PATH_APPEND}:"}$(readlink -m db-sync-node/bin)"
+# Add `cardano-db-sync` and `cardano-smash-server` to PATH_PREPEND
+PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m db-sync-node/bin)"
 if [ -e smash-server/bin/cardano-smash-server ]; then
-  PATH_APPEND="${PATH_APPEND:+"${PATH_APPEND}:"}$(readlink -m smash-server/bin)"
+  PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m smash-server/bin)"
 fi
-export PATH_APPEND
+export PATH_PREPEND
 
 export DBSYNC_SCHEMA_DIR="$PWD/schema"
 

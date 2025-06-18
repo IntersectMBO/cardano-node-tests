@@ -15,7 +15,7 @@ REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
 export WORKDIR="$REPODIR/run_workdir"
-export PATH_APPEND="${PWD}/.bin"
+export PATH_PREPEND="${PWD}/.bin"
 
 # shellcheck disable=SC1090,SC1091
 . .github/stop_cluster_instances.sh
@@ -169,7 +169,7 @@ _cleanup_testnet_on_interrupt() {
   # shellcheck disable=SC2016
   nix develop --accept-flake-config .#venv --command bash -c '
     . .github/setup_venv.sh
-    export PATH="$PATH_APPEND":"$PATH"
+    export PATH="$PATH_PREPEND":"$PATH"
     export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
     cleanup_dir="${_PYTEST_CURRENT}/../cleanup-${_PYTEST_CURRENT##*/}-script"
     mkdir "$cleanup_dir"
@@ -223,7 +223,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   echo "::group::🧪 Testrun"
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
-  export PATH="$PATH_APPEND":"$PATH"
+  export PATH="$PATH_PREPEND":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   retval=0
   make "${MAKE_TARGET:-"tests"}" || retval="$?"

@@ -16,9 +16,9 @@ nix build \
   -o cardano-cli-build || exit 1
 [ -e cardano-cli-build/bin/cardano-cli ] || exit 1
 
-# Add `cardano-cli` to PATH_APPEND
-PATH_APPEND="${PATH_APPEND:+"${PATH_APPEND}:"}$(readlink -m cardano-cli-build/bin)"
-export PATH_APPEND
+# Add `cardano-cli` to PATH_PREPEND
+PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m cardano-cli-build/bin)"
+export PATH_PREPEND
 
 cd "$_origpwd" || exit 1
 unset _origpwd
