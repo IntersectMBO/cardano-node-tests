@@ -25,6 +25,7 @@ from cardano_node_tests.utils import framework_log
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
+from cardano_node_tests.utils import types as ttypes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class _ClusterGetStatus:
     use_resources: resources_management.ResourcesType
     prio: bool
     cleanup: bool
-    start_cmd: str
+    scriptsdir: ttypes.FileType
     current_test: str
     selected_instance: int = -1
     instance_num: int = -1
@@ -111,7 +112,7 @@ class ClusterGetter:
         startup_files_dir.mkdir(exist_ok=True, parents=True)
         return startup_files_dir
 
-    def _respin(self, start_cmd: str = "") -> bool:  # noqa: C901
+    def _respin(self, scriptsdir: ttypes.FileType = "") -> bool:  # noqa: C901
         """Respin cluster.
 
         Not called under global lock!
@@ -134,7 +135,7 @@ class ClusterGetter:
             msg = "Cannot respin cluster when 'FORBID_RESTART' is set."
             raise RuntimeError(msg)
 
-        self.log(f"c{self.cluster_instance_num}: called `_respin`, start_cmd='{start_cmd}'")
+        self.log(f"c{self.cluster_instance_num}: called `_respin`, scriptsdir='{scriptsdir}'")
 
         state_dir = cluster_nodes.get_cluster_env().state_dir
 
@@ -152,13 +153,12 @@ class ClusterGetter:
         startup_files = cluster_nodes.get_cluster_type().cluster_scripts.prepare_scripts_files(
             destdir=self._create_startup_files_dir(self.cluster_instance_num),
             instance_num=self.cluster_instance_num,
-            scriptsdir=pl.Path(start_cmd).parent if start_cmd else "",
+            scriptsdir=scriptsdir,
         )
 
         self.log(
             f"c{self.cluster_instance_num}: in `_respin`, new files "
-            f"start_cmd='{startup_files.start_script}', "
-            f"stop_cmd='{startup_files.stop_script}'"
+            f"scriptsdir='{startup_files.start_script.parent}', "
         )
 
         def _netstat_log_func(msg: str) -> None:
@@ -332,8 +332,8 @@ class ClusterGetter:
         if noninitial_marked_test:
             return False
 
-        # Respin is needed when custom start command was specified
-        return bool(cget_status.start_cmd)
+        # Respin is needed when custom scripts were specified
+        return bool(cget_status.scriptsdir)
 
     def _on_marked_test_stop(self, instance_num: int, mark: str) -> None:
         """Perform actions after all marked tests are finished."""
@@ -579,7 +579,7 @@ class ClusterGetter:
 
         # Cluster respin will be performed by this worker.
         # By setting `respin_here`, we make sure this worker continue on this cluster instance
-        # after respin is finished. It is important because the `start_cmd` used for starting the
+        # after respin is finished. It is important because the `scriptsdir` used for starting the
         # cluster instance might be specific for the test.
         cget_status.respin_here = True
         cget_status.selected_instance = cget_status.instance_num
@@ -700,7 +700,7 @@ class ClusterGetter:
         use_resources: resources_management.ResourcesType = (),
         prio: bool = False,
         cleanup: bool = False,
-        start_cmd: str = "",
+        scriptsdir: ttypes.FileType = "",
     ) -> int:
         """Return a number of initialized cluster instance once we can start the test.
 
@@ -722,7 +722,7 @@ class ClusterGetter:
             cleanup: A boolean indicating if the cluster will be respun after the test (or marked
                 group of tests) is finished. Can be used only for tests that locked whole cluster
                 ("singleton" tests).
-            start_cmd: Custom command to start the cluster.
+            scriptsdir: Path to custom scripts for the cluster.
         """
         assert not isinstance(lock_resources, str), "`lock_resources` can't be single string"
         assert not isinstance(use_resources, str), "`use_resources` can't be single string"
@@ -737,9 +737,9 @@ class ClusterGetter:
         ]
 
         if configuration.DEV_CLUSTER_RUNNING:
-            if start_cmd:
+            if scriptsdir:
                 LOGGER.warning(
-                    f"Ignoring the '{start_cmd}' cluster start command as "
+                    f"Ignoring the '{scriptsdir}' custom cluster scripts as "
                     "'DEV_CLUSTER_RUNNING' is set."
                 )
 
@@ -753,13 +753,13 @@ class ClusterGetter:
         else:
             available_instances = list(range(self.num_of_instances))
 
-        if configuration.FORBID_RESTART and start_cmd:
-            msg = "Cannot use custom start command when 'FORBID_RESTART' is set."
+        if configuration.FORBID_RESTART and scriptsdir:
+            msg = "Cannot use custom cluster scripts when 'FORBID_RESTART' is set."
             raise RuntimeError(msg)
 
-        if start_cmd:
+        if scriptsdir:
             if resources.Resources.CLUSTER not in lock_resources:
-                msg = "Custom start command can be used only together with singleton."
+                msg = "Custom cluster scripts can be used only together with singleton."
                 raise RuntimeError(msg)
             # Always clean after test(s) that started cluster with custom configuration
             cleanup = True
@@ -774,7 +774,7 @@ class ClusterGetter:
             use_resources=use_resources,
             prio=prio,
             cleanup=cleanup,
-            start_cmd=start_cmd,
+            scriptsdir=scriptsdir,
             current_test=os.environ.get("PYTEST_CURRENT_TEST") or "",
         )
         marked_tests_cache: dict[int, dict[str, int]] = {}
@@ -784,7 +784,7 @@ class ClusterGetter:
         # Iterate until it is possible to start the test
         while True:
             if cget_status.respin_ready:
-                self._respin(start_cmd=start_cmd)
+                self._respin(scriptsdir=scriptsdir)
 
             # Sleep for a while to avoid too many checks in a short time
             _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
