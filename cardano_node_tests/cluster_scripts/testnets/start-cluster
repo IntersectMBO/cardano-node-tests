@@ -40,6 +40,10 @@ if [ -e "$SCRIPT_DIR/testnet_conf" ]; then
   TESTNET_CONF_DIR="$SCRIPT_DIR/testnet_conf"
 fi
 
+ENABLE_SUBMIT_API="$(command -v cardano-submit-api >/dev/null 2>&1 && \
+  [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ] && \
+  echo 1 || echo 0)"
+
 # copy faucet address and keys
 cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
 [ -e "$STATE_CLUSTER/shelley/faucet.addr" ] || \
@@ -51,7 +55,6 @@ cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
 
 # copy configuration files
 cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
-cp "$SCRIPT_DIR/run-cardano-submit-api" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
 cp "$SCRIPT_DIR/testnet.json" "$STATE_CLUSTER"
 cp "$TESTNET_CONF_DIR/topology-relay1.json" "$STATE_CLUSTER"
@@ -86,15 +89,16 @@ if [ -n "${DBSYNC_SCHEMA_DIR:-""}" ]; then
     { echo "The \`cardano-db-sync\` binary not found, line $LINENO" >&2; exit 1; }  # assert
 
   # copy db-sync config file
-  cp "$TESTNET_CONF_DIR/dbsync-config.yaml" "$STATE_CLUSTER/dbsync-config.yaml"
-
+  cp "$TESTNET_CONF_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
   # copy db-sync state
   cp -r "$TESTNET_DIR/db-sync" "$STATE_CLUSTER/db-sync"
+  # copy run script
+  cp "$SCRIPT_DIR/run-cardano-dbsync" "$STATE_CLUSTER"
 
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:dbsync]
-command=$SCRIPT_DIR/run-cardano-dbsync
+command=./$STATE_CLUSTER_NAME/run-cardano-dbsync
 stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
 autostart=false
@@ -104,14 +108,16 @@ EoF
 fi
 
 # enable cardano-submit-api service
-if command -v cardano-submit-api >/dev/null 2>&1 && [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ]; then
+if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
+  # copy run script
+  cp "$SCRIPT_DIR/run-cardano-submit-api" "$STATE_CLUSTER"
   # copy cardano-submit-api config file
-  cp "$TESTNET_CONF_DIR/submit-api-config.json" "$STATE_CLUSTER/submit-api-config.json"
+  cp "$TESTNET_CONF_DIR/submit-api-config.json" "$STATE_CLUSTER"
 
   cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
 
 [program:submit_api]
-command=$SCRIPT_DIR/run-cardano-submit-api
+command=./$STATE_CLUSTER_NAME/run-cardano-submit-api
 stderr_logfile=./$STATE_CLUSTER_NAME/submit_api.stderr
 stdout_logfile=./$STATE_CLUSTER_NAME/submit_api.stdout
 autostart=false
@@ -202,7 +208,7 @@ done
 [ "$sync_progress" = "100.00" ] || { echo "Failed to sync the realy node, line $LINENO" >&2; exit 1; }  # assert
 
 # start cardano-submit-api
-if command -v cardano-submit-api >/dev/null 2>&1 && [ -e "$STATE_CLUSTER/submit-api-config.json" ]; then
+if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
   echo "Starting cardano-submit-api"
   supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start submit_api
 fi
