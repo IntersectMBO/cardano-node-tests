@@ -51,7 +51,7 @@ Running the db-sync
     ./run-cardano-dbsync
     ```
 
-* Wait until the db-syn is synced
+* Wait until the db-sync is fully synced
 
 Running tests
 -------------
@@ -64,5 +64,5 @@ Note that the testing framework will start node and db-sync processes automatica
 * run the tests
 
     ```sh
-    NODE_REV=8.0.0 BOOTSTRAP_DIR=~/path/to/preview_bootstrap ./.github/regression.sh
+    NODE_REV=10.4.1 BOOTSTRAP_DIR=~/path/to/preview_bootstrap ./.github/regression.sh
     ```
