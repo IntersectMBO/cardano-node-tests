@@ -21,7 +21,7 @@ def get_args() -> argparse.Namespace:
         "-d",
         "--dest-dir",
         required=True,
-        help="Path to destination directory",
+        help="Path to destination directory.",
     )
     parser.add_argument(
         "-i",
@@ -29,7 +29,7 @@ def get_args() -> argparse.Namespace:
         required=False,
         type=int,
         default=0,
-        help="Instance number in the sequence of cluster instances (default: 0)",
+        help="Instance number in the sequence of cluster instances (default: 0).",
     )
     parser.add_argument(
         "-o",
@@ -37,7 +37,7 @@ def get_args() -> argparse.Namespace:
         required=False,
         type=int,
         default=0,
-        help="Difference in number of nodes in cluster 1 vs cluster 2 (default: 0)",
+        help="Difference in number of nodes in cluster 1 vs cluster 2 (default: 0).",
     )
     return parser.parse_args()
 

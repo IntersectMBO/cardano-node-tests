@@ -19,26 +19,26 @@ def get_args() -> argparse.Namespace:
         "-m",
         "--requirements-mapping",
         required=True,
-        help="JSON file with requirements mapping",
+        help="JSON file with requirements mapping.",
     )
     parser.add_argument(
         "-o",
         "--output-file",
         required=True,
-        help="File where to save coverage results",
+        help="File where to save coverage results.",
     )
     parser.add_argument(
         "-a",
         "--artifacts-base-dir",
         type=helpers.check_dir_arg,
-        help="Path to a directory with testing artifacts",
+        help="Path to a directory with testing artifacts.",
     )
     parser.add_argument(
         "-i",
         "--input-files",
         nargs="+",
         type=helpers.check_file_arg,
-        help="Path to coverage results to merge into a final result",
+        help="Path to coverage results to merge into a final result.",
     )
     return parser.parse_args()
 

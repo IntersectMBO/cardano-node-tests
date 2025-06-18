@@ -29,18 +29,18 @@ def get_args() -> argparse.Namespace:
         "--artifacts-base-dir",
         required=True,
         type=helpers.check_dir_arg,
-        help="Path to a directory with testing artifacts",
+        help="Path to a directory with testing artifacts.",
     )
     parser.add_argument(
         "-f",
         "--address",
-        help="Faucet address",
+        help="Faucet address.",
     )
     parser.add_argument(
         "-s",
         "--skey-file",
         type=helpers.check_file_arg,
-        help="Path to faucet skey file",
+        help="Path to faucet skey file.",
     )
     return parser.parse_args()
 

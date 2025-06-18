@@ -19,19 +19,19 @@ def get_args() -> argparse.Namespace:
         "-i",
         "--input-file",
         required=True,
-        help="File with coverage results",
+        help="File with coverage results.",
     )
     parser.add_argument(
         "-t",
         "--report-template",
         required=True,
-        help="File with report template",
+        help="File with report template.",
     )
     parser.add_argument(
         "-o",
         "--output-report",
         required=True,
-        help="Report file",
+        help="Report file.",
     )
     return parser.parse_args()
 
