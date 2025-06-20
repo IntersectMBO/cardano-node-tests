@@ -1,0 +1,110 @@
+8.0.0
+=====
+
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.0.0>
+* tag PR -
+* tag commits - <https://github.com/IntersectMBO/cardano-node/compare/1.35.7...8.0.0>
+
+
+Changelogs
+----------
+
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-node/ChangeLog.md>
+* submit-api: <https://github.com/IntersectMBO/cardano-node/blob/8.0.0/cardano-submit-api/CHANGELOG.md>
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: protocol version 8 and SECP256K1 cost model
+   :widths: 64 7
+   :header-rows: 0
+
+   * - P2P ON - `Babbage with Babbage TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.0.0rc1-babbage_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with default (Babbage) TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.0.0rc1-default_legacy_01/>`__
+     - |:heavy_check_mark:|
+   * - Mix P2P and Legacy - `Babbage with default (Babbage) TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.0.0rc1-default_mixed_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Alonzo TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.0.0rc1-alonzo_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - Mix P2P and Legacy - `Babbage with Mary TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.0.0rc1-mary_mixed_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Babbage with Shelley TX <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.0.0rc1-shelley_p2p_01/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: other testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - upgrade job (1.35.7 to 8.0.0-rc1)
+     - |:heavy_check_mark:|
+   * - block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
+     - |:heavy_check_mark:|
+   * - sanity check submit-api REST service
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+-------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `8.0.0-rc1` pushed to `shelley-qa`
+     - |:heavy_check_mark:|
+   * - Grafana metrics OK
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `shelley-qa` - `results <https://cardano-tests-reports-3-74-115-22.nip.io/shelley_qa/8.0.0-rc1/>`__
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `preview`
+     - |:heavy_check_mark:|
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
+     - |:heavy_check_mark:|
+   * - DB re-validation testing (ledger snapshots compatibility)
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
+   * - Benchmarking - Report
+     - |:heavy_check_mark:|
+   * - sanity check release notes
+     - |:heavy_check_mark:|
+
+
+New functionalities in this tag
+-------------------------------
+
+* Introduction of the Conway era (Voltaire) as a developmental hard fork.  |:heavy_check_mark:|
+* Governance action for SPO polls (`cardano-cli governance *-poll`) that the Cardano Foundation will use to conduct an SPO survey.  |:heavy_check_mark:|
+* Fairness improvement into the mempool logic.  |:hourglass_flowing_sand:|
+* Query commands for inspecting metrics and data in mempool.  |:heavy_check_mark:|
+* Possibility for the network to be defined via `CARDANO_NODE_NETWORK_ID` instead of needing to be passed in every CLI query.  |:heavy_check_mark:|
+* More detailed output in the `query tip` CLI command.  |:heavy_check_mark:|
+* Possibility for modification of connection limits via configuration file.  |:hourglass_flowing_sand:|
+* Versioned serialization formats for ledger.  |:arrow_right:| (nothing to test on node/CLI side)
+* A ledger API.  |:arrow_right:| (nothing to test on node/CLI side)
+* Changed deposit tracking.  |:hourglass_flowing_sand:|
+* Possibility for socket to be defined via '--socket-path' CLI option instead of 'CARDANO_NODE_SOCKET_PATH' env var.  |:x:| (`issue #5199 <https://github.com/IntersectMBO/cardano-node/issues/5199>`__)
+
+
+New issues
+----------
+
+`Up-to-date list <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+>`__
+
+* `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/IntersectMBO/cardano-node/issues/5109>`__
+* `[BUG] - Unclear / inconsistent error message from 'governance answer-poll' <Unclear / inconsistent error message from governance answer-poll>`__
+* `[BUG] - Unclear '--signed-tx-file' argument to 'governance verify-poll' <https://github.com/IntersectMBO/cardano-node/issues/5183>`__  (fixed in final 8.0.0)
+* `[BUG] - 'CARDANO_NODE_SOCKET_PATH' env var needed even when '--socket-path' is used with 'transaction build' <https://github.com/IntersectMBO/cardano-node/issues/5199>`__
+* `[FR] - Allow usage of delegate keys for '--required-signers' <https://github.com/IntersectMBO/cardano-node/issues/5203>`__  (fixed in final 8.0.0)
+
+
+Breaking changes
+----------------
+
+* `[BUG] - building Alonzo-era tx on Babbage fails due to missing 'protocolParamUTxOCostPerWord' <https://github.com/IntersectMBO/cardano-node/issues/5109>`__
