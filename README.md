@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD029 -->
 # cardano-node-tests
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -32,9 +33,9 @@ Run tests easily using GitHub Actions:
 
 1. Install and configure Nix using the [official guide](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix).
 
-1. Clone this repository.
+2. Clone this repository.
 
-1. Run the test suite:
+3. Run the test suite:
 
   ```sh
   ./.github/regression.sh
@@ -48,19 +49,19 @@ Run tests easily using GitHub Actions:
 
 1. Add your custom `cardano-cli` / `cardano-node` binaries to the `.bin` directory.
 
-1. Run a specific test:
+2. Run a specific test:
 
   ```sh
   TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
   ```
 
-1. Enable full CLI command logging:
+3. Enable full CLI command logging:
 
   ```sh
   PYTEST_ARGS="... --log-level=debug" ./.github/regression.sh
   ```
 
-1. Clean up by removing binaries from `.bin` after tests complete.
+4. Clean up by removing binaries from `.bin` after tests complete.
 
 ---
 
@@ -75,26 +76,26 @@ For workflows requiring repeated test runs on a persistent cluster:
   nix develop --accept-flake-config
   ```
 
-1. Prepare the test environment:
+2. Prepare the test environment:
 
   ```sh
   source ./prepare_test_env.sh conway
   ```
 
-1. Launch the cluster:
+3. Launch the cluster:
 
   ```sh
   ./dev_workdir/conway_fast/start-cluster
   ```
 
-1. Run your tests:
+4. Run your tests:
 
   ```sh
   pytest -s -k test_minting_one_token cardano_node_tests/tests/tests_plutus
   pytest -s --log-level=debug -k test_minting_one_token cardano_node_tests/tests/tests_plutus
   ```
 
-1. Stop the cluster:
+5. Stop the cluster:
 
   ```sh
   ./dev_workdir/conway_fast/stop-cluster
