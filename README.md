@@ -55,13 +55,13 @@ Run tests easily using GitHub Actions:
   TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
   ```
 
-3. Enable full CLI command logging:
+3. Clean up by removing binaries from `.bin` after tests complete.
+
+> ℹ️ **Pro Tip:** Enable full CLI command logging:
 
   ```sh
   PYTEST_ARGS="... --log-level=debug" ./.github/regression.sh
   ```
-
-4. Clean up by removing binaries from `.bin` after tests complete.
 
 ---
 
