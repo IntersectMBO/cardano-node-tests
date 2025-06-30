@@ -151,6 +151,11 @@ _cleanup() {
   if command -v stop_postgres >/dev/null 2>&1; then
     stop_postgres || :
   fi
+
+  # cleanup dbsync repo if modified
+  if command -v cleanup_dbsync_repo >/dev/null 2>&1; then
+    cleanup_dbsync_repo || :
+  fi
 }
 
 _cleanup_testnet_on_interrupt() {

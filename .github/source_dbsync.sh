@@ -76,10 +76,6 @@ git stash
 git checkout "$DBSYNC_REV"
 git rev-parse HEAD
 
-if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
-  rm -f schema/migration-4-000*
-fi
-
 DBSYNC_TAR_URL="${DBSYNC_TAR_URL:-""}"
 
 # Check if DBSYNC_TAR_URL is empty and DBSYNC_REV is a version number
@@ -111,9 +107,10 @@ else
   nix build --accept-flake-config .#cardano-db-sync -o db-sync-node \
     || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o db-sync-node \
     || exit 1
-  # The cardano-smash-server binary doesn't seem to be cached in nix binary cache, and we don't
-  # want to pull the whole development environment. Therefore we'll not build it here, we'll depend only on
-  # the binary from release archive.
+  # Build cardano-smash-server
+  if [ "${SMASH:-"false"}" != "false" ]; then
+    nix build --accept-flake-config .#cardano-smash-server -o smash-server || exit 1
+  fi
 fi
 
 if [ ! -e db-sync-node/bin/cardano-db-sync ]; then
@@ -129,6 +126,20 @@ fi
 export PATH_PREPEND
 
 export DBSYNC_SCHEMA_DIR="$PWD/schema"
+
+if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
+  # Delete the indexes only after the binaries are ready, so the binaries can be retrieved from
+  # the nix binary cache if available.
+  rm -f "$DBSYNC_SCHEMA_DIR"/migration-4-000*
+
+  cleanup_dbsync_repo() {
+    local _origpwd="$PWD"
+    cd "$DBSYNC_SCHEMA_DIR"/.. || exit 1
+    # shellcheck disable=SC2015
+    git stash && git stash drop || :
+    cd "$_origpwd" || exit 1
+  }
+fi
 
 cd "$REPODIR" || exit 1
 
