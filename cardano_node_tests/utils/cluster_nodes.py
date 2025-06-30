@@ -1,6 +1,5 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
 
-# ruff: noqa: ARG002
 import dataclasses
 import functools
 import json
