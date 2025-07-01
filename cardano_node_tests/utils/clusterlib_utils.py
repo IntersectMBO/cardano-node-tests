@@ -1094,7 +1094,7 @@ def wait_for_epoch_interval(
         to_sleep = start_abs - s_from_epoch_start
         if to_sleep > 0:
             # `to_sleep` is float, wait for at least 1 second
-            time.sleep(max(1, to_sleep))
+            time.sleep(max(1.0, to_sleep))
 
         # We can finish if slot number of last minted block doesn't need
         # to match the time interval

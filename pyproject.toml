@@ -53,7 +53,7 @@ types-PyYAML = "^6.0.12.20250516"
 types-requests = "^2.32.4.20250611"
 mypy = "^1.16.1"
 ipython = "^9.3.0"
-pyrefly = "^0.21.0"
+pyrefly = "^0.22.0"
 
 [tool.poetry.group.docs]
 optional = true
