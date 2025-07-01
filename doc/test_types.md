@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD059 -->
 # Types and levels of tests
 
 ## Node system tests

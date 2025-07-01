@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD059 -->
 # User acceptance test strategy
 
 User acceptance testing (UAT) takes place after all IOG testing is done and all the tests have passed. This includes unit, component, integration, feature, sync, system, regression testing, and benchmarking.

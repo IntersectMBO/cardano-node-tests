@@ -20,7 +20,7 @@ def framework_logger() -> logging.Logger:
     """
 
     class UTCFormatter(logging.Formatter):
-        converter = time.gmtime
+        converter = time.gmtime  # type: ignore[assignment]
 
     formatter = UTCFormatter("%(asctime)s %(levelname)s %(message)s")
     handler = logging.FileHandler(get_framework_log_path())

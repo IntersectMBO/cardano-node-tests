@@ -24,24 +24,24 @@ classifiers = [
 packages = [{include = "cardano_node_tests"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<4.0"
-allure-pytest = "^2.13.5"
+python = ">=3.11,<4.0"
+allure-pytest = "^2.14.3"
 cardano-clusterlib = "^0.9.1"
 cbor2 = "^5.6.5"
-filelock = "^3.16.1"
-hypothesis = "^6.118.8"
+filelock = "^3.18.0"
+hypothesis = "^6.135.17"
 psycopg2-binary = "^2.9.10"
-pydantic = "^2.9.2"
-pygithub = "^2.5.0"
-pytest = "^8.3.3"
+pydantic = "^2.11.7"
+pygithub = "^2.6.1"
+pytest = "^8.4.1"
 pytest-html = "^4.1.1"
 pytest-metadata = "^3.1.1"
 pytest-order = "^1.3.0"
 pytest-select = "^0.1.2"
-pytest-xdist = "^3.6.1"
+pytest-xdist = "^3.7.0"
 PyYAML = "^6.0.2"
-requests = "^2.32.3"
-pytest-subtests = "^0.13.1"
+requests = "^2.32.4"
+pytest-subtests = "^0.14.2"
 cardonnay = "^0.1.3"
 
 [tool.poetry.group.dev]
@@ -49,19 +49,19 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.0.1"
-types-PyYAML = "^6.0.12.20240917"
-types-requests = "^2.32.0.20241016"
-mypy = "^1.13.0"
-ipython = "^8.29.0"
-pyrefly = "^0.17.0"
+types-PyYAML = "^6.0.12.20250516"
+types-requests = "^2.32.4.20250611"
+mypy = "^1.16.1"
+ipython = "^9.3.0"
+pyrefly = "^0.22.0"
 
 [tool.poetry.group.docs]
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-Sphinx = "^8.1.3"
-m2r2 = "^0.3.3.post2"
-sphinx-rtd-theme = "^3.0.1"
+Sphinx = "^8.2.3"
+m2r2 = "^0.3.4"
+sphinx-rtd-theme = "^3.0.2"
 sphinxemoji = "^0.3.1"
 
 [tool.poetry.scripts]

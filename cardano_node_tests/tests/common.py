@@ -162,7 +162,7 @@ else:
 
 
 def hypothesis_settings(max_examples: int = 100) -> tp.Any:
-    import hypothesis
+    import hypothesis  # noqa: PLC0415
 
     return hypothesis.settings(
         max_examples=max_examples,
