@@ -2,7 +2,7 @@
 name = "cardano-node-tests"
 version = "0.1.0"
 description = "Functional tests for cardano-node"
-license = "Apache License 2.0"
+license = "Apache-2.0"
 authors = [
     "Martin Kourim <martin.kourim@iohk.io>",
     "Sara Tomaz <sara.tomaz@iohk.io>",
