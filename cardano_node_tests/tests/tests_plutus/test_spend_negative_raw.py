@@ -694,6 +694,8 @@ class TestNegativeRedeemer:
 
     MIN_INT_VAL = -common.MAX_UINT64
     AMOUNT = 2_000_000
+    KNOWN_FIELDS = ("int", "bytes", "string", "list", "map")
+    NONINT_FIELDS = ("bytes", "string", "list", "map")
 
     def _fund_script_guessing_game(
         self,
@@ -1460,7 +1462,12 @@ class TestNegativeRedeemer:
         assert "Invalid JSON format" in err, err
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_type=st.text())
+    @hypothesis.given(
+        redeemer_type=st.one_of(
+            st.sampled_from(NONINT_FIELDS),
+            st.text(),
+        )
+    )
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
@@ -1477,6 +1484,8 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
+        hypothesis.assume(redeemer_type != "int")
+
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
@@ -1503,10 +1512,19 @@ class TestNegativeRedeemer:
             'Expected a single field named "int", "bytes", "string", "list" or "map".' in err
             # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
             or 'Expected a single field named "int", "bytes", "list" or "map".' in err
+            or (
+                redeemer_type in self.KNOWN_FIELDS
+                and "JSON schema error within the script data" in err
+            )
         ), err
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(redeemer_type=st.text())
+    @hypothesis.given(
+        redeemer_type=st.one_of(
+            st.sampled_from(NONINT_FIELDS),
+            st.text(),
+        )
+    )
     @common.hypothesis_settings(max_examples=200)
     @common.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
@@ -1523,6 +1541,8 @@ class TestNegativeRedeemer:
 
         Expect failure.
         """
+        hypothesis.assume(redeemer_type != "int")
+
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         fund_script_guessing_game = (
@@ -1549,4 +1569,8 @@ class TestNegativeRedeemer:
             'Expected a single field named "int", "bytes", "string", "list" or "map".' in err
             # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
             or 'Expected a single field named "int", "bytes", "list" or "map".' in err
+            or (
+                redeemer_type in self.KNOWN_FIELDS
+                and "JSON schema error within the script data" in err
+            )
         ), err
