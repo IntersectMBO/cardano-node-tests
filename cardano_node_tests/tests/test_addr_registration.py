@@ -282,7 +282,7 @@ class TestRegisterAddr:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -291,8 +291,8 @@ class TestRegisterAddr:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         pool_users_disposable: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Submit (de)registration certificates in single TX and check that the order matter.
 
@@ -347,13 +347,18 @@ class TestRegisterAddr:
                 name_template=temp_template,
                 src_address=user_payment.address,
                 submit_method=submit_method,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files,
                 deposit=deposit,
             )
         except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
             if "(ValueNotConservedUTxO" in str(exc) and VERSIONS.transaction_era >= VERSIONS.CONWAY:
                 issues.api_484.finish_test()
+            if (
+                build_method == clusterlib_utils.BuildMethods.BUILD_EST
+                and "does not balance in its use of assets" in str(exc)
+            ):
+                issues.cli_1199.finish_test()
             raise
 
         # Check that the stake address is registered
