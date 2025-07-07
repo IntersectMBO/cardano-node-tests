@@ -8,9 +8,16 @@ from cardano_clusterlib import clusterlib
 LOGGER = logging.getLogger(__name__)
 
 
-def defragment(cluster_obj: clusterlib.ClusterLib, address: str, skey_file: pl.Path) -> None:
+def defragment(
+    cluster_obj: clusterlib.ClusterLib,
+    address: str,
+    skey_file: pl.Path,
+    max_len: int = 10,
+    name_template: str = "",
+) -> None:
     """Defragment address UTxOs."""
     new_blocks = 3
+    name_template = f"{name_template}_" if name_template else ""
 
     loop = 1
     utxos_len = -1
@@ -28,7 +35,7 @@ def defragment(cluster_obj: clusterlib.ClusterLib, address: str, skey_file: pl.P
         if prev_utxos_len <= utxos_len and loop >= 2:
             LOGGER.info("No more UTxOs to defragment.")
             break
-        if utxos_len <= 10:
+        if utxos_len <= max_len:
             break
 
         batch_size = min(100, utxos_len)
@@ -36,7 +43,7 @@ def defragment(cluster_obj: clusterlib.ClusterLib, address: str, skey_file: pl.P
         for b in range(0, utxos_len, batch_size):
             LOGGER.info(f"Defragmenting UTxOs: Running loop {loop}, batch {batch_num}")
             batch = utxos[b : b + batch_size]
-            tx_name = f"defrag_loop{loop}_batch{batch_num}"
+            tx_name = f"{name_template}defrag_loop{loop}_batch{batch_num}"
 
             tx_output = cluster_obj.g_transaction.build_tx(
                 src_address=address,

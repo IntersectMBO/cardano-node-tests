@@ -541,15 +541,15 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_normal_tx_to_script_addr(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Send funds to script address using TX signed with skeys (not using witness files)."""
         temp_template = common.get_test_id(cluster)
@@ -577,7 +577,7 @@ class TestBasic:
             name_template=temp_template,
             src_address=src_address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txouts=txouts,
             tx_files=tx_files,
         )
@@ -2196,7 +2196,7 @@ class TestDatum:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -2205,8 +2205,8 @@ class TestDatum:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
         script_version: str,
     ):
         """Test creating UTxO with datum on Simple Scripts V1 and V2 address."""
@@ -2256,7 +2256,7 @@ class TestDatum:
             name_template=temp_template,
             src_address=src_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txouts=txouts,
             tx_files=tx_files,
         )
@@ -2452,7 +2452,7 @@ class TestReferenceUTxO:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.parametrize("address_type", ("shelley", "byron"))
     @pytest.mark.smoke
@@ -2462,8 +2462,8 @@ class TestReferenceUTxO:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
         script_version: str,
         address_type: str,
     ):
@@ -2527,12 +2527,12 @@ class TestReferenceUTxO:
             name_template=f"{temp_template}_spend",
             src_address=reference_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txins=[reference_utxo],
             txouts=txouts,
             tx_files=tx_files,
             witness_override=2 if address_type == "byron" else None,
-            witness_count_add=0 if use_build_cmd else 2,
+            byron_witness_count=1 if address_type == "byron" else 0,
         )
 
         # Check that the reference UTxO was spent

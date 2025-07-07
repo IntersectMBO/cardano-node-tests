@@ -18,6 +18,7 @@ from cardano_node_tests.tests import tx_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import defragment_utxos
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
@@ -535,7 +536,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -543,8 +544,8 @@ class TestBasicTransactions:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Send funds to a valid payment address.
 
@@ -572,7 +573,7 @@ class TestBasicTransactions:
             name_template=temp_template,
             src_address=src_address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txouts=txouts,
             tx_files=tx_files,
         )
@@ -596,7 +597,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -604,8 +605,8 @@ class TestBasicTransactions:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Get transaction ID (txid) from transaction body.
 
@@ -631,7 +632,7 @@ class TestBasicTransactions:
             name_template=temp_template,
             src_address=src_address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txouts=txouts,
             tx_files=tx_files,
         )
@@ -1239,7 +1240,7 @@ class TestBasicTransactions:
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "cluster_default_tx_era",
         (True, False),
@@ -1253,8 +1254,8 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
         cluster_default_tx_era: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Test default Tx era.
 
@@ -1276,7 +1277,7 @@ class TestBasicTransactions:
             name_template=temp_template,
             src_address=src_address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txouts=txouts,
             tx_files=tx_files,
         )
@@ -1315,9 +1316,12 @@ class TestMultiInOut:
         to_num: int,
         amount: int,
         submit_method: str,
-        use_build_cmd=False,
+        build_method: str,
     ):
-        """Test 1 tx from `from_num` payment addresses to `to_num` payment addresses."""
+        """Test 1 tx from `from_num` payment addresses to `to_num` payment addresses.
+
+        Defragment UTxOs to avoid exceeding transaction size limit.
+        """
         src_address = payment_addrs[0].address
         # Addr1..addr<from_num+1>
         from_addr_recs = payment_addrs[1 : from_num + 1]
@@ -1325,6 +1329,14 @@ class TestMultiInOut:
         dst_addresses = [
             payment_addrs[i].address for i in range(from_num + 1, from_num + to_num + 1)
         ]
+
+        defragment_utxos.defragment(
+            cluster_obj=cluster_obj,
+            address=src_address,
+            skey_file=payment_addrs[0].skey_file,
+            max_len=100,
+            name_template=f"{tx_name}_add_funds",
+        )
 
         # Fund "from" addresses
         # Using `src_address` to fund the "from" addresses. In `build_and_submit_tx`, all remaining
@@ -1348,10 +1360,19 @@ class TestMultiInOut:
             name_template=f"{tx_name}_add_funds",
             src_address=src_address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txouts=fund_dst,
             tx_files=fund_tx_files,
         )
+
+        for i, r in enumerate(from_addr_recs):
+            defragment_utxos.defragment(
+                cluster_obj=cluster_obj,
+                address=r.address,
+                skey_file=r.skey_file,
+                max_len=5,
+                name_template=f"{tx_name}_{i}",
+            )
 
         # Create TX data
         _txins = [cluster_obj.g_query.get_utxo(address=r.address) for r in from_addr_recs]
@@ -1366,7 +1387,7 @@ class TestMultiInOut:
             name_template=tx_name,
             src_address=src_address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txins=txins,
             txouts=txouts,
             tx_files=tx_files,
@@ -1446,8 +1467,8 @@ class TestMultiInOut:
         ), f"Incorrect balance for destination address `{dst_address}`"
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1457,8 +1478,8 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Test 1 transaction from 1 payment address to 10 payment addresses.
 
@@ -1474,12 +1495,12 @@ class TestMultiInOut:
             to_num=10,
             amount=amount,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1489,8 +1510,8 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Test 1 transaction from 10 payment addresses to 1 payment address.
 
@@ -1506,12 +1527,12 @@ class TestMultiInOut:
             to_num=1,
             amount=amount,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1521,8 +1542,8 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Test 1 transaction from 10 payment addresses to 10 payment addresses.
 
@@ -1538,12 +1559,12 @@ class TestMultiInOut:
             to_num=10,
             amount=amount,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
     @submit_utils.PARAM_SUBMIT_METHOD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1553,8 +1574,8 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         amount: int,
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Test 1 transaction from 50 payment addresses to 100 payment addresses.
 
@@ -1570,7 +1591,7 @@ class TestMultiInOut:
             to_num=100,
             amount=amount,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
 
