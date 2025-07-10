@@ -51,8 +51,8 @@ def multisig_tx(
     script_utxos: list[clusterlib.UTXOData] | None = None,
     invalid_hereafter: int | None = None,
     invalid_before: int | None = None,
-    use_build_cmd: bool = False,
     submit_method: str = submit_utils.SubmitMethods.CLI,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD_RAW,
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
     if bool(multisig_script) ^ bool(script_utxos):
@@ -84,7 +84,7 @@ def multisig_tx(
     txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
     witness_count = len(payment_skey_files)
 
-    if use_build_cmd:
+    if build_method == clusterlib_utils.BuildMethods.BUILD:
         tx_output = cluster_obj.g_transaction.build_tx(
             src_address=payment_address,
             tx_name=temp_template,
@@ -95,7 +95,7 @@ def multisig_tx(
             invalid_before=invalid_before,
             witness_override=witness_count,
         )
-    else:
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
         fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=payment_address,
             tx_name=temp_template,
@@ -116,6 +116,20 @@ def multisig_tx(
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
         )
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+        tx_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=payment_address,
+            tx_name=temp_template,
+            txins=txins,
+            txouts=txouts,
+            script_txins=script_txins,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            witness_count_add=witness_count,
+        )
+    else:
+        err = f"Unsupported build method: {build_method}"
+        raise ValueError(err)
 
     # Create witness file for each key
     witness_files = [
@@ -212,7 +226,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -220,8 +234,8 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Send funds to and from script address using the *all* script."""
         temp_template = common.get_test_id(cluster)
@@ -250,8 +264,8 @@ class TestBasic:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -266,8 +280,8 @@ class TestBasic:
             payment_skey_files=payment_skey_files,
             multisig_script=multisig_script,
             script_utxos=script_utxos,
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
@@ -275,7 +289,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -283,8 +297,8 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Use stake keys to witness a Tx (instead of payment keys).
 
@@ -318,8 +332,8 @@ class TestBasic:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[payment_addrs[0].skey_file],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -337,8 +351,8 @@ class TestBasic:
             ],
             multisig_script=multisig_script,
             script_utxos=script_utxos,
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
@@ -346,7 +360,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -354,8 +368,8 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Send funds using the *any* script.
 
@@ -395,8 +409,8 @@ class TestBasic:
                 dst_address=script_address,
                 amount=amount,
                 payment_skey_files=[payment_skey_files[0]],
-                use_build_cmd=use_build_cmd,
                 submit_method=submit_method,
+                build_method=build_method,
             )
         )
 
@@ -417,8 +431,8 @@ class TestBasic:
                 ],
                 multisig_script=multisig_script,
                 script_utxos=script_utxos,
-                use_build_cmd=use_build_cmd,
                 submit_method=submit_method,
+                build_method=build_method,
             )
             tx_outputs.append(tx_output)
             from_single_tx_outputs.append(tx_output)
@@ -443,8 +457,8 @@ class TestBasic:
                     ],
                     multisig_script=multisig_script,
                     script_utxos=script_utxos,
-                    use_build_cmd=use_build_cmd,
                     submit_method=submit_method,
+                    build_method=build_method,
                 )
             )
 
@@ -460,7 +474,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -468,8 +482,8 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Send funds to and from script address using the *atLeast* script."""
         temp_template = common.get_test_id(cluster)
@@ -506,8 +520,8 @@ class TestBasic:
                 dst_address=script_address,
                 amount=amount,
                 payment_skey_files=[payment_skey_files[0]],
-                use_build_cmd=use_build_cmd,
                 submit_method=submit_method,
+                build_method=build_method,
             )
         )
 
@@ -531,8 +545,8 @@ class TestBasic:
                     ],
                     multisig_script=multisig_script,
                     script_utxos=script_utxos,
-                    use_build_cmd=use_build_cmd,
                     submit_method=submit_method,
+                    build_method=build_method,
                 )
             )
 
@@ -598,7 +612,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -606,8 +620,8 @@ class TestBasic:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Send funds from script address using TX signed with skeys (not using witness files)."""
         temp_template = common.get_test_id(cluster)
@@ -638,8 +652,8 @@ class TestBasic:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -663,7 +677,7 @@ class TestBasic:
             name_template=f"{temp_template}_from",
             src_address=src_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txins=[fee_txin],
             txouts=txouts,
             script_txins=script_txins,
@@ -1035,7 +1049,7 @@ class TestTimeLocking:
         payment_addrs: list[clusterlib.AddressRecord],
         slot: int,
         slot_type_arg: str,
-        use_build_cmd: bool,
+        build_method: str,
     ) -> tuple[pl.Path, str, list[clusterlib.UTXOData], clusterlib.TxRawOutput]:
         """Create and fund script address."""
         payment_vkey_files = [p.vkey_file for p in payment_addrs]
@@ -1063,7 +1077,7 @@ class TestTimeLocking:
             dst_address=script_address,
             amount=self.SCRIPT_AMOUNT,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
@@ -1097,7 +1111,7 @@ class TestTimeLocking:
     ) -> tuple[pl.Path, str, list[clusterlib.UTXOData], clusterlib.TxRawOutput, int]:
         """Create and fund script address with "before" slot in the past."""
         temp_template = common.get_test_id(cluster)
-        use_build_cmd = request.param
+        build_method = request.param
 
         last_slot_no = cluster.g_query.get_slot_no()
         before_slot = last_slot_no - 1
@@ -1108,7 +1122,7 @@ class TestTimeLocking:
             payment_addrs=payment_addrs,
             slot=before_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         return multisig_script, script_address, script_utxos, tx_output, before_slot
@@ -1122,7 +1136,7 @@ class TestTimeLocking:
     ) -> tuple[pl.Path, str, list[clusterlib.UTXOData], clusterlib.TxRawOutput, int]:
         """Create and fund script address with "before" slot in the future."""
         temp_template = common.get_test_id(cluster)
-        use_build_cmd = request.param
+        build_method = request.param
 
         last_slot_no = cluster.g_query.get_slot_no()
         before_slot = last_slot_no + 10_000
@@ -1133,7 +1147,7 @@ class TestTimeLocking:
             payment_addrs=payment_addrs,
             slot=before_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.BEFORE,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         return multisig_script, script_address, script_utxos, tx_output, before_slot
@@ -1147,7 +1161,7 @@ class TestTimeLocking:
     ) -> tuple[pl.Path, str, list[clusterlib.UTXOData], clusterlib.TxRawOutput, int]:
         """Create and fund script address with "after" slot in the future."""
         temp_template = common.get_test_id(cluster)
-        use_build_cmd = request.param
+        build_method = request.param
 
         last_slot_no = cluster.g_query.get_slot_no()
         after_slot = last_slot_no + 10_000
@@ -1158,7 +1172,7 @@ class TestTimeLocking:
             payment_addrs=payment_addrs,
             slot=after_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         return multisig_script, script_address, script_utxos, tx_output, after_slot
@@ -1172,7 +1186,7 @@ class TestTimeLocking:
     ) -> tuple[pl.Path, str, list[clusterlib.UTXOData], clusterlib.TxRawOutput, int]:
         """Create and fund script address with "after" slot in the past."""
         temp_template = common.get_test_id(cluster)
-        use_build_cmd = request.param
+        build_method = request.param
 
         last_slot_no = cluster.g_query.get_slot_no()
         after_slot = last_slot_no - 1
@@ -1183,13 +1197,13 @@ class TestTimeLocking:
             payment_addrs=payment_addrs,
             slot=after_slot,
             slot_type_arg=clusterlib.MultiSlotTypeArgs.AFTER,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         return multisig_script, script_address, script_utxos, tx_output, after_slot
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
     )
@@ -1200,8 +1214,8 @@ class TestTimeLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         use_tx_validity: bool,
+        build_method: str,
     ):
         """Check that it is possible to spend from script address after given slot."""
         temp_template = common.get_test_id(cluster)
@@ -1231,7 +1245,7 @@ class TestTimeLocking:
             dst_address=script_address,
             amount=self.SCRIPT_AMOUNT,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -1249,11 +1263,11 @@ class TestTimeLocking:
             script_utxos=script_utxos,
             invalid_before=100,
             invalid_hereafter=invalid_hereafter,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Check expected fees
-        expected_fee = 280_693 if use_build_cmd else 323_857
+        expected_fee = 280_693 if build_method == clusterlib_utils.BuildMethods.BUILD else 323_857
         assert common.is_fee_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
@@ -1265,7 +1279,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
     )
@@ -1276,8 +1290,8 @@ class TestTimeLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         use_tx_validity: bool,
+        build_method: str,
     ):
         """Check that it is possible to spend from script address before given slot."""
         temp_template = common.get_test_id(cluster)
@@ -1309,7 +1323,7 @@ class TestTimeLocking:
             dst_address=script_address,
             amount=self.SCRIPT_AMOUNT,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -1326,11 +1340,11 @@ class TestTimeLocking:
             script_utxos=script_utxos,
             invalid_before=100 if use_tx_validity else None,
             invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Check expected fees
-        expected_fee = 279_241 if use_build_cmd else 323_989
+        expected_fee = 279_241 if build_method == clusterlib_utils.BuildMethods.BUILD else 323_989
         assert common.is_fee_in_interval(tx_out_from.fee, expected_fee, frac=0.15), (
             "TX fee doesn't fit the expected interval"
         )
@@ -1339,14 +1353,14 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("slot_type", ("before", "after"))
     @pytest.mark.smoke
     def test_tx_missing_validity(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         slot_type: str,
     ):
         """Check that it is NOT possible to spend from script address.
@@ -1387,7 +1401,7 @@ class TestTimeLocking:
             dst_address=script_address,
             amount=self.SCRIPT_AMOUNT,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Send funds from script address - missing required validity interval
@@ -1405,19 +1419,19 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=None,  # missing required validity interval for "after"
                 invalid_hereafter=None,  # missing required validity interval for "before"
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     def test_tx_negative_validity(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Check that it is NOT possible to spend from script address when validity is negative."""
         temp_template = common.get_test_id(cluster)
@@ -1447,7 +1461,7 @@ class TestTimeLocking:
             dst_address=script_address,
             amount=self.SCRIPT_AMOUNT,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Send funds from script address - negative validity interval
@@ -1465,7 +1479,7 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=-2,
                 invalid_hereafter=-1,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
 
@@ -1489,8 +1503,11 @@ class TestTimeLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "fund_script_before_slot_in_past",
-        (False, pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE)),
-        ids=("build_raw", "build"),
+        (
+            clusterlib_utils.BuildMethods.BUILD_RAW,
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ),
         indirect=True,
     )
     @hypothesis.given(data=st.data())
@@ -1511,7 +1528,7 @@ class TestTimeLocking:
 
         The "before" slot is in the past.
         """
-        use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_past"]
+        build_method = request.node.callspec.params["fund_script_before_slot_in_past"]
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, script_utxos, tx_output, before_slot = (
@@ -1535,7 +1552,7 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=1,
                 invalid_hereafter=before_slot - slot_no,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert "OutsideValidityIntervalUTxO" in err_str, err_str
@@ -1553,7 +1570,7 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=1,
                 invalid_hereafter=before_slot + slot_no,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
@@ -1563,8 +1580,11 @@ class TestTimeLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "fund_script_before_slot_in_future",
-        (False, pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE)),
-        ids=("build_raw", "build"),
+        (
+            clusterlib_utils.BuildMethods.BUILD_RAW,
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ),
         indirect=True,
     )
     @hypothesis.given(slot_no=st.integers(min_value=1, max_value=10_000))
@@ -1585,7 +1605,7 @@ class TestTimeLocking:
 
         The "before" slot is in the future and the given range is invalid.
         """
-        use_build_cmd = request.node.callspec.params["fund_script_before_slot_in_future"]
+        build_method = request.node.callspec.params["fund_script_before_slot_in_future"]
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, script_utxos, tx_output, before_slot = (
@@ -1607,7 +1627,7 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=1,
                 invalid_hereafter=before_slot + slot_no,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
@@ -1617,8 +1637,11 @@ class TestTimeLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "fund_script_after_slot_in_future",
-        (False, pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE)),
-        ids=("build_raw", "build"),
+        (
+            clusterlib_utils.BuildMethods.BUILD_RAW,
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ),
         indirect=True,
     )
     @hypothesis.given(data=st.data())
@@ -1639,7 +1662,7 @@ class TestTimeLocking:
 
         The "after" slot is in the future and the given range is invalid.
         """
-        use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_future"]
+        build_method = request.node.callspec.params["fund_script_after_slot_in_future"]
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, script_utxos, tx_output, after_slot = (
@@ -1663,7 +1686,7 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=after_slot + slot_no,
                 invalid_hereafter=after_slot + slot_no + 100,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert "OutsideValidityIntervalUTxO" in err_str, err_str
@@ -1681,7 +1704,7 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=slot_no,
                 invalid_hereafter=after_slot,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
@@ -1691,8 +1714,11 @@ class TestTimeLocking:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "fund_script_after_slot_in_past",
-        (False, pytest.param(True, marks=common.SKIPIF_BUILD_UNUSABLE)),
-        ids=("build_raw", "build"),
+        (
+            clusterlib_utils.BuildMethods.BUILD_RAW,
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ),
         indirect=True,
     )
     @hypothesis.given(data=st.data())
@@ -1713,7 +1739,7 @@ class TestTimeLocking:
 
         The "after" slot is in the past.
         """
-        use_build_cmd = request.node.callspec.params["fund_script_after_slot_in_past"]
+        build_method = request.node.callspec.params["fund_script_after_slot_in_past"]
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         multisig_script, script_address, script_utxos, tx_output, after_slot = (
@@ -1738,7 +1764,7 @@ class TestTimeLocking:
                 script_utxos=script_utxos,
                 invalid_before=1,
                 invalid_hereafter=after_slot - slot_no,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
@@ -1998,7 +2024,7 @@ class TestIncrementalSigning:
         reason="runs only with Allegra+ TX",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -2007,7 +2033,7 @@ class TestIncrementalSigning:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
         tx_is: str,
     ):
@@ -2049,8 +2075,8 @@ class TestIncrementalSigning:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[payment_skey_files[0]],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -2072,7 +2098,7 @@ class TestIncrementalSigning:
         script_txins = [clusterlib.ScriptTxIn(txins=script_utxos, script_file=multisig_script)]
 
         invalid_hereafter = cluster.g_query.get_slot_no() + 1_000
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             tx_out_from = cluster.g_transaction.build_tx(
                 src_address=src_addr.address,
                 tx_name=f"{temp_template}_from",
@@ -2085,8 +2111,7 @@ class TestIncrementalSigning:
                 invalid_before=100,
                 witness_override=len(payment_skey_files),
             )
-        else:
-            ttl = cluster.g_transaction.calculate_tx_ttl()
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=src_addr.address,
                 tx_name=f"{temp_template}_from",
@@ -2094,7 +2119,7 @@ class TestIncrementalSigning:
                 txouts=txouts,
                 script_txins=script_txins,
                 tx_files=tx_files,
-                ttl=ttl,
+                invalid_hereafter=invalid_hereafter,
                 witness_count_add=len(payment_skey_files),
             )
             tx_out_from = cluster.g_transaction.build_raw_tx(
@@ -2105,10 +2130,25 @@ class TestIncrementalSigning:
                 script_txins=script_txins,
                 tx_files=tx_files,
                 fee=fee,
-                ttl=ttl,
                 invalid_hereafter=invalid_hereafter,
                 invalid_before=100,
             )
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            tx_out_from = cluster.g_transaction.build_estimate_tx(
+                src_address=src_addr.address,
+                tx_name=f"{temp_template}_from",
+                txins=[fee_txin],
+                txouts=txouts,
+                script_txins=script_txins,
+                fee_buffer=2_000_000,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=100,
+                witness_count_add=len(payment_skey_files),
+            )
+        else:
+            err = f"Unsupported build method: {build_method}"
+            raise ValueError(err)
 
         # Sign or witness Tx body with first 2 skey and thus create Tx file that will be used for
         # incremental signing
@@ -2296,7 +2336,7 @@ class TestReferenceUTxO:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -2305,8 +2345,8 @@ class TestReferenceUTxO:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
         script_version: str,
     ):
         """Send funds from script address where script is on reference UTxO."""
@@ -2372,8 +2412,8 @@ class TestReferenceUTxO:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[src_addr.skey_file],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -2403,7 +2443,7 @@ class TestReferenceUTxO:
             name_template=f"{temp_template}_from",
             src_address=src_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             txins=[fee_txin],
             txouts=txouts,
             script_txins=script_txins,
@@ -2570,7 +2610,7 @@ class TestNested:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("type_top", ("all", "any"))
     @pytest.mark.parametrize("type_nested", ("all", "any"))
     @pytest.mark.smoke
@@ -2582,8 +2622,8 @@ class TestNested:
         payment_addrs: list[clusterlib.AddressRecord],
         type_top: str,
         type_nested: str,
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Check that it is possible to spend using a script with nested rules."""
         temp_template = common.get_test_id(cluster)
@@ -2641,8 +2681,8 @@ class TestNested:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[src_addr.skey_file],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # We don't need to include any additional signatures for the nested "any" case,
@@ -2670,8 +2710,8 @@ class TestNested:
             script_utxos=script_utxos,
             invalid_before=100,
             invalid_hereafter=invalid_hereafter,
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
@@ -2679,7 +2719,7 @@ class TestNested:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -2687,8 +2727,8 @@ class TestNested:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Check that it is possible to not meet conditions in nested "all" rule."""
         temp_template = common.get_test_id(cluster)
@@ -2741,8 +2781,8 @@ class TestNested:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[src_addr.skey_file],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # Send funds from script address
@@ -2757,8 +2797,8 @@ class TestNested:
             payment_skey_files=[src_addr.skey_file, dst_addr1.skey_file],
             multisig_script=multisig_script,
             script_utxos=script_utxos,
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
@@ -2766,7 +2806,7 @@ class TestNested:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "scenario", ("all1", "all2", "all3", "all4", "all5", "all6", "any1", "any2", "any3", "any4")
     )
@@ -2777,8 +2817,8 @@ class TestNested:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         scenario: str,
-        use_build_cmd: bool,
         submit_method: str,
+        build_method: str,
     ):
         """Test scenarios where it's NOT possible to spend from a script address."""
         temp_template = common.get_test_id(cluster)
@@ -2898,8 +2938,8 @@ class TestNested:
             script_nested = []
             expected_err = "ScriptWitnessNotValidatingUTXOW"
         else:
-            msg = f"Unknown scenario: {scenario}"
-            raise AssertionError(msg)
+            err = f"Unknown scenario: {scenario}"
+            raise ValueError(err)
 
         # Create multisig script
         multisig_script = pl.Path(f"{temp_template}_multisig.script")
@@ -2949,8 +2989,8 @@ class TestNested:
             dst_address=script_address,
             amount=amount,
             payment_skey_files=[payment_addrs[0].skey_file],
-            use_build_cmd=use_build_cmd,
             submit_method=submit_method,
+            build_method=build_method,
         )
 
         # Try to send funds from script address
@@ -2968,8 +3008,8 @@ class TestNested:
                 script_utxos=script_utxos,
                 invalid_before=invalid_before,
                 invalid_hereafter=invalid_hereafter,
-                use_build_cmd=use_build_cmd,
                 submit_method=submit_method,
+                build_method=build_method,
             )
         err_str = str(excinfo.value)
         assert expected_err in err_str, err_str
