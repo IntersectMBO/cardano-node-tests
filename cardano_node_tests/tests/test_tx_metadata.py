@@ -128,7 +128,8 @@ class TestMetadata:
             )
         str_err = str(excinfo.value)
         assert (
-            "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
+            "expecting record key literal" in str_err  # cardano-cli >= 10.11.1.1
+            or "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
             or "JSON parse error:" in str_err
         ), str_err
 
@@ -162,7 +163,8 @@ class TestMetadata:
             )
         str_err = str(excinfo.value)
         assert (
-            "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
+            "expecting record key literal" in str_err  # cardano-cli >= 10.11.1.1
+            or "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
             or "JSON parse error:" in str_err
         ), str_err
 
