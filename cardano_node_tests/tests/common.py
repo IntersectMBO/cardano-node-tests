@@ -91,14 +91,6 @@ SKIPIF_ON_LOCAL = pytest.mark.skipif(
 
 
 # Common parametrization
-PARAM_USE_BUILD_CMD = pytest.mark.parametrize(
-    "use_build_cmd",
-    (
-        False,
-        pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE),
-    ),
-    ids=(clusterlib_utils.BuildMethods.BUILD_RAW, clusterlib_utils.BuildMethods.BUILD),
-)
 
 PARAM_BUILD_METHOD = pytest.mark.parametrize(
     "build_method",
@@ -115,6 +107,16 @@ PARAM_OFFLINE_BUILD_METHOD = pytest.mark.parametrize(
         clusterlib_utils.BuildMethods.BUILD_RAW,
         clusterlib_utils.BuildMethods.BUILD_EST,
     ),
+)
+
+# Deprecated. Use `PARAM_BUILD_METHOD` instead.
+PARAM_USE_BUILD_CMD = pytest.mark.parametrize(
+    "use_build_cmd",
+    (
+        False,
+        pytest.param(True, marks=SKIPIF_BUILD_UNUSABLE),
+    ),
+    ids=(clusterlib_utils.BuildMethods.BUILD_RAW, clusterlib_utils.BuildMethods.BUILD),
 )
 
 PARAM_PLUTUS_VERSION = pytest.mark.parametrize(
