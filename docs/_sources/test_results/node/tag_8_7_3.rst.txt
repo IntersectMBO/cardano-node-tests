@@ -1,0 +1,84 @@
+8.7.3
+=====
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.3>
+* Tag commits - <https://github.com/IntersectMBO/cardano-node/compare/8.7.2...8.7.3>
+
+The release has single bug fix, so testing performed on 8.7.2 is applicable also to 8.7.3.
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - P2P ON - `Babbage with default (Babbage) TX on 8.7.2 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.7.2pre-default_legacy_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with default (Babbage) TX on 8.7.2 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.7.2pre-babbage_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - Mix P2P and Legacy - `Babbage with default (Babbage) TX on 8.7.2 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.7.2pre-default_mixed_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P OFF - `Babbage with Alonzo TX on 8.7.2 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/8.7.2pre-alonzo_legacy_01/>`__
+     - |:heavy_check_mark:|
+   * - Plutus Functionality on 8.7.2 using `Antaeus <https://github.com/input-output-hk/antaeus/tree/cardano-node_8-7-2>`__ - `Multi-era (without V3 scripts) <https://cardano-tests-reports-3-74-115-22.nip.io/antaeus/8.7.2/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (8.1.2 to 8.7.2)
+     - |:heavy_check_mark:|
+   * - Rollback testing on 8.7.2
+     - |:heavy_check_mark:|
+   * - Block production testing on 8.7.2 on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
+     - |:heavy_check_mark:|
+   * - Sanity checks of the submit-api REST service
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+-------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `8.7.3` pushed to `shelley-qa`
+     - |:hourglass_flowing_sand:|
+   * - `8.7.3` pushed to `preview`
+     - |:hourglass_flowing_sand:|
+   * - Grafana metrics OK
+     - |:hourglass_flowing_sand:|
+   * - Regression testing against `shelley-qa` on 8.7.2
+     - |:heavy_check_mark:|
+   * - Regression testing against `preview`
+     - |:hourglass_flowing_sand:|
+   * - `Sync testing ran against shelley_qa & Preview & Preprod & Mainnet (Windows, Linux, macOS) on 8.7.2  <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
+     - |:heavy_check_mark:|
+   * - DB re-validation testing on 8.7.2 (ledger snapshots compatibility)
+     - |:heavy_check_mark:|
+   * - Benchmarking - `Report <https://updates.cardano.intersectmbo.org/reports/2023-12-performance-8.7.2/>`__
+     - |:heavy_check_mark:|
+   * - Sanity check release notes
+     - |:heavy_check_mark:|
+
+
+New functionalities in this tag
+-------------------------------
+
+
+Known issues
+------------
+
+`Up-to-date list of existing issues <https://github.com/IntersectMBO/cardano-node/issues?q=label%3A8.0.0+is%3Aopen>`__
+
+
+New issues
+----------
+
+
+Breaking changes
+----------------
