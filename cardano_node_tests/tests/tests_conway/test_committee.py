@@ -1317,10 +1317,12 @@ class TestCommittee:
         # Check epoch state in dbsync
         reqc.db025_01.start(url=helpers.get_vcs_link())
         dbsync_utils.check_epoch_state(
-            epoch_no=enact_epoch, txid=action_add_txid, change_type="committee"
+            epoch_no=enact_epoch,
+            txid=action_add_txid,
+            action_type=dbsync_utils.ActionTypes.COMMITTEE,
         )
         dbsync_utils.check_epoch_state(
-            epoch_no=rem_epoch, txid=action_rem_txid, change_type="committee"
+            epoch_no=rem_epoch, txid=action_rem_txid, action_type=dbsync_utils.ActionTypes.COMMITTEE
         )
         reqc.db025_01.success()
 

@@ -1,5 +1,6 @@
 """Functionality for interacting with db-sync."""
 
+import enum
 import functools
 import itertools
 import logging
@@ -18,6 +19,11 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 NO_RESPONSE_STR = "No response returned from db-sync:"
+
+
+class ActionTypes(enum.StrEnum):
+    COMMITTEE = "committee"
+    CONSTITUTION = "constitution"
 
 
 def get_address_reward(
@@ -1593,7 +1599,7 @@ def table_exists(table: str) -> bool:
     return table in table_names
 
 
-def check_epoch_state(epoch_no: int, txid: str, change_type: str = "") -> None:
+def check_epoch_state(epoch_no: int, txid: str, action_type: ActionTypes) -> None:
     """Check governance stats per epoch in dbsync."""
     if not configuration.HAS_DBSYNC:
         return
@@ -1604,7 +1610,7 @@ def check_epoch_state(epoch_no: int, txid: str, change_type: str = "") -> None:
         msg = f"No information about epoch state in dbsync for epoch: {epoch_no}"
         raise ValueError(msg)
 
-    if change_type == "committee":
+    if action_type == ActionTypes.COMMITTEE:
         dbsync_committee_info = list(dbsync_queries.query_new_committee_info(txhash=txid))[-1]
         es_committee_id = epoch_state_data[0].committee_id
         tx_committee_id = dbsync_committee_info.id
@@ -1612,8 +1618,7 @@ def check_epoch_state(epoch_no: int, txid: str, change_type: str = "") -> None:
             f"Committee id mismatch between epoch_state {es_committee_id} "
             f"and committee table {tx_committee_id}."
         )
-
-    if change_type == "constitution":
+    elif action_type == ActionTypes.CONSTITUTION:
         dbsync_constitution_info = list(dbsync_queries.query_new_constitution(txhash=txid))[-1]
         es_constitution_id = epoch_state_data[0].constitution_id
         tx_constitution_id = dbsync_constitution_info.id
@@ -1621,3 +1626,6 @@ def check_epoch_state(epoch_no: int, txid: str, change_type: str = "") -> None:
             f"Committee id mismatch between epoch_state {es_constitution_id} "
             f"and committee table {tx_constitution_id}."
         )
+    else:
+        msg = f"Unsupported action type for epoch state check: {action_type.value}"
+        raise ValueError(msg)
