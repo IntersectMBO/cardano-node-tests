@@ -589,9 +589,11 @@ class TestConstitution:
             assert constitution_db[0].gov_action_type == "NewConstitution"
             reqc.db012.success()
 
-        # Check epoch state in dbsync
-        reqc.db025_02.start(url=helpers.get_vcs_link())
-        dbsync_utils.check_epoch_state(
-            epoch_no=cluster.g_query.get_epoch(), txid=action_txid, change_type="constitution"
-        )
-        reqc.db025_02.success()
+            # Check epoch state in dbsync
+            reqc.db025_02.start(url=helpers.get_vcs_link())
+            dbsync_utils.check_epoch_state(
+                epoch_no=cluster.g_query.get_epoch(),
+                txid=action_txid,
+                action_type=dbsync_utils.ActionTypes.CONSTITUTION,
+            )
+            reqc.db025_02.success()
