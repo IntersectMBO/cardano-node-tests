@@ -1314,6 +1314,16 @@ class TestCommittee:
             _msg = f"db-sync error: {dbsync_resign_err}"
             raise AssertionError(_msg)
 
+        # Check epoch state in dbsync
+        reqc.db025_01.start(url=helpers.get_vcs_link())
+        dbsync_utils.check_epoch_state(
+            epoch_no=enact_epoch, txid=action_add_txid, change_type="committee"
+        )
+        dbsync_utils.check_epoch_state(
+            epoch_no=rem_epoch, txid=action_rem_txid, change_type="committee"
+        )
+        reqc.db025_01.success()
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
     @pytest.mark.long

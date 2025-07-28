@@ -598,6 +598,15 @@ class DrepDistributionDBRow:
     drep_hash_view: str
 
 
+@pydantic.dataclasses.dataclass(frozen=True)
+class EpochStateDBRow:
+    id: int
+    committee_id: int
+    no_confidence_id: tp.Optional[int]
+    constitution_id: int
+    epoch_no: int
+
+
 @contextlib.contextmanager
 def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensions.cursor]:
     cur = None
@@ -1638,3 +1647,17 @@ def query_rows_count(
         except psycopg2.errors.LockNotAvailable as e:
             error_msg = f"Could not acquire lock on {table} within {lock_timeout}"
             raise RuntimeError(error_msg) from e
+
+
+def query_epoch_state(epoch_no: int) -> tp.Generator[EpochStateDBRow, None, None]:
+    """Query epoch_state table in db-sync."""
+    query = (
+        "SELECT "
+        " id, committee_id, no_confidence_id, constitution_id, epoch_no "
+        "FROM epoch_state "
+        "WHERE epoch_no =  %s "
+    )
+
+    with execute(query=query, vars=(epoch_no,)) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield EpochStateDBRow(*result)

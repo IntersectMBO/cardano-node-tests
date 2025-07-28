@@ -1380,6 +1380,12 @@ DB Sync - Conway related tables
       - |image-epoch_param|
       - The accepted protocol parameters for an epoch.
         `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#epoch_param>`__
+   -
+
+      - |image-epoch_state|
+      - Table with governance stats per epoch.
+        `→ <https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/schema.md#epoch_state>`__
+
 
 .. |Success Badge| image:: https://img.shields.io/badge/success-green
 .. |Failure Badge| image:: https://img.shields.io/badge/failure-red
@@ -1795,3 +1801,5 @@ DB Sync - Conway related tables
    :target: https://github.com/param_proposal-404
 .. |image-epoch_param| image:: https://img.shields.io/badge/epoch_param-grey
    :target: https://github.com/epoch_param-404
+.. |image-epoch_state| image:: https://img.shields.io/badge/epoch_state-grey
+   :target: https://github.com/epoch_state-404

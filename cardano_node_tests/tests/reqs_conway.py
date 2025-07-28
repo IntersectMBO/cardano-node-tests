@@ -266,3 +266,5 @@ db021 = __dr("off_chain_vote_fetch_error")
 db022 = __dr("reward_rest")
 db023 = __dr("param_proposal")  # new/updated fields
 db024 = __dr("epoch_param")  # new/updated fields
+db025_01 = __dr("int-epoch_state-01")  # related to committee
+db025_02 = __dr("int-epoch_state-02")  # related to constitution
