@@ -317,7 +317,7 @@ def register_stake_address(
 
     if not cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
         msg = f"The address '{pool_user.stake.address}' was not registered."
-        raise AssertionError(msg)
+        raise RuntimeError(msg)
 
     return tx_output
 
@@ -366,7 +366,7 @@ def deregister_stake_address(
 
     if cluster_obj.g_query.get_stake_addr_info(pool_user.stake.address):
         msg = f"The address '{pool_user.stake.address}' is still registered."
-        raise AssertionError(msg)
+        raise RuntimeError(msg)
 
     return tx_output
 
@@ -856,7 +856,7 @@ def withdraw_reward_w_build(
         != 0
     ):
         msg = "Not all rewards were transferred."
-        raise AssertionError(msg)
+        raise RuntimeError(msg)
 
     # Check that rewards were transferred
     src_reward_balance = cluster_obj.g_query.get_address_balance(dst_address)
@@ -867,7 +867,7 @@ def withdraw_reward_w_build(
         + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
     ):
         msg = f"Incorrect balance for destination address `{dst_address}`."
-        raise AssertionError(msg)
+        raise RuntimeError(msg)
 
     return tx_raw_withdrawal_output
 
@@ -896,7 +896,7 @@ def new_tokens(
 
         if cluster_obj.g_query.get_utxo(address=token_mint_addr.address, coins=[token]):
             msg = "The token already exists."
-            raise AssertionError(msg)
+            raise ValueError(msg)
 
         tokens_to_mint.append(
             NativeTokenRec(
@@ -921,7 +921,7 @@ def new_tokens(
         )
         if not (token_utxo and token_utxo[0].amount == amount):
             msg = "The token was not minted."
-            raise AssertionError(msg)
+            raise ValueError(msg)
 
     return tokens_to_mint
 
@@ -1060,7 +1060,7 @@ def wait_for_epoch_interval(
 
     if start_abs > stop_abs:
         msg = f"The 'start' ({start_abs}) needs to be <= 'stop' ({stop_abs})."
-        raise AssertionError(msg)
+        raise ValueError(msg)
 
     start_epoch = cluster_obj.g_query.get_epoch()
 
@@ -1080,13 +1080,13 @@ def wait_for_epoch_interval(
                 msg = (
                     f"Cannot reach the given interval ({start_abs}s to {stop_abs}s) in this epoch."
                 )
-                raise AssertionError(msg)
+                raise RuntimeError(msg)
             if cluster_obj.g_query.get_epoch() >= start_epoch + 2:
                 msg = (
                     f"Was unable to reach the given interval ({start_abs}s to {stop_abs}s) "
                     "in past 3 epochs."
                 )
-                raise AssertionError(msg)
+                raise RuntimeError(msg)
             cluster_obj.wait_for_new_epoch()
             continue
 
@@ -1102,7 +1102,7 @@ def wait_for_epoch_interval(
             break
     else:
         msg = f"Failed to wait for given interval from {start_abs}s to {stop_abs}s."
-        raise AssertionError(msg)
+        raise RuntimeError(msg)
 
 
 def load_body_metadata(tx_body_file: pl.Path) -> tp.Any:
@@ -1194,7 +1194,7 @@ def create_script_context(
         version_arg = "--plutus-v2"
     else:
         msg = f"Unknown plutus version: {plutus_version}"
-        raise AssertionError(msg)
+        raise ValueError(msg)
 
     if tx_file:
         cmd_args = [
@@ -1210,7 +1210,9 @@ def create_script_context(
         cmd_args = ["create-script-context", version_arg, "--out-file", str(redeemer_file)]
 
     helpers.run_command(cmd_args)
-    assert redeemer_file.exists()
+    if not redeemer_file.exists():
+        err = f"Expected file not created: {redeemer_file}"
+        raise FileNotFoundError(err)
 
 
 def cli_has(command: str) -> bool:
@@ -1270,7 +1272,9 @@ def create_reference_utxo(
     txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
 
     reference_utxos = cluster_obj.g_query.get_utxo(txin=f"{txid}#0")
-    assert reference_utxos, "No reference script UTxO"
+    if not reference_utxos:
+        err = "No reference script UTxO."
+        raise RuntimeError(err)
     reference_utxo = reference_utxos[0]
 
     return reference_utxo, tx_raw_output
@@ -1317,7 +1321,9 @@ def gen_byron_addr(
         ],
         add_default_args=False,
     )
-    assert secret_file.exists()
+    if not secret_file.exists():
+        err = f"Expected file not created: {secret_file}"
+        raise FileNotFoundError(err)
 
     # Generate Shelley address and keys out of the Byron key
     cluster_obj.cli(
@@ -1331,7 +1337,9 @@ def gen_byron_addr(
             "--byron-payment-key-type",
         ]
     )
-    assert skey_file.exists()
+    if not skey_file.exists():
+        err = f"Expected file not created: {skey_file}"
+        raise FileNotFoundError(err)
 
     vkey_file = cluster_obj.g_key.gen_verification_key(
         key_name=f"{name_template}_byron", signing_key_file=skey_file

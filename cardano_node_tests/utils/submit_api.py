@@ -130,7 +130,9 @@ def submit_tx(
         if r == 0:
             txid = submit_tx_bare(tx_file).txid
         else:
-            assert txid
+            if not txid:
+                msg = "The TxId is not known."
+                raise SubmitApiError(msg)
             LOGGER.warning(f"Resubmitting transaction '{txid}' (from '{tx_file}').")
             try:
                 submit_tx_bare(tx_file)

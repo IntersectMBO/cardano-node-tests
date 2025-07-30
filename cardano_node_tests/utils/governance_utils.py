@@ -592,7 +592,7 @@ def wait_delayed_ratification(
         cluster_obj.wait_for_new_epoch(padding_seconds=5)
     else:
         msg = "Ratification is still delayed"
-        raise AssertionError(msg)
+        raise TimeoutError(msg)
 
 
 def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:

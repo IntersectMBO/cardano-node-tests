@@ -184,7 +184,7 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
             tx_id = query_row.tx_id
         if tx_id != query_row.tx_id:
             msg = "Transaction ID differs from the expected ID."
-            raise AssertionError(msg)
+            raise ValueError(msg)
 
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:

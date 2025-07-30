@@ -25,7 +25,7 @@ def fund_from_faucet(
     """Transfer `amount` from faucet addr to all `dst_addrs`."""
     if not (faucet_data or all_faucets):
         msg = "Either `faucet_data` or `all_faucets` must be provided."
-        raise AssertionError(msg)
+        raise ValueError(msg)
 
     if isinstance(amount, int):
         amount = [amount] * len(dst_addrs)
@@ -44,7 +44,10 @@ def fund_from_faucet(
         selected_user_key = random.choice(all_user_keys)
         faucet_data = all_faucets[selected_user_key]
 
-    assert faucet_data
+    if not faucet_data:
+        msg = "Faucet data are not available."
+        raise ValueError(msg)
+
     src_address = faucet_data["payment"].address
     with locking.FileLockIfXdist(f"{temptools.get_basetemp()}/{src_address}.lock"):
         tx_name = tx_name or helpers.get_timestamped_rand_str()
