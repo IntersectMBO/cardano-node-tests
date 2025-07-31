@@ -92,7 +92,9 @@ class TestBasicSmash:
             pool_metadata = next(
                 iter(dbsync_queries.query_off_chain_pool_data(locked_pool.view)), None
             )
-            assert pool_metadata is not None, dbsync_utils.NO_RESPONSE_STR
+            if pool_metadata is None:
+                msg = f"no off-chain pool data record found for pool {pool_id}"
+                raise dbsync_utils.DbSyncNoResponseError(msg)
             return pool_metadata
 
         metadata_dbsync = dbsync_utils.retry_query(query_func=_query_func, timeout=360)
