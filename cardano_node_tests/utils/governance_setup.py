@@ -81,9 +81,11 @@ def _cast_vote(
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     expected_balance = clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
-    actual_balance = clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr.address)[
-        0
-    ].amount
+    filtered_utxos = clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr.address)
+    if not filtered_utxos:
+        err = f"No UTxOs found for address `{payment_addr.address}`"
+        raise RuntimeError(err)
+    actual_balance = filtered_utxos[0].amount
     if actual_balance != expected_balance:
         err = f"Incorrect balance for source address `{payment_addr.address}`"
         raise RuntimeError(err)
@@ -427,8 +429,12 @@ def auth_cc_members(
     )
 
     reg_out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
+    filtered_utxos = clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)
+    if not filtered_utxos:
+        msg = f"No UTxOs found for address `{payment_addr.address}`."
+        raise RuntimeError(msg)
     if (
-        clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
+        filtered_utxos[0].amount
         != clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
     ):
         msg = f"Incorrect balance for source address `{payment_addr.address}`."
@@ -445,7 +451,7 @@ def auth_cc_members(
         raise RuntimeError(msg)
 
 
-def reinstate_committee(
+def reinstate_committee(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
     governance_data: governance_utils.GovernanceRecords,
     name_template: str,
@@ -491,8 +497,14 @@ def reinstate_committee(
     )
 
     out_utxos_action = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_action)
+    filtered_utxos = clusterlib.filter_utxos(
+        utxos=out_utxos_action, address=pool_user.payment.address
+    )
+    if not filtered_utxos:
+        msg = f"No UTxOs found for address `{pool_user.payment.address}`."
+        raise RuntimeError(msg)
     if (
-        clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[0].amount
+        filtered_utxos[0].amount
         != clusterlib.calculate_utxos_balance(tx_output_action.txins)
         - tx_output_action.fee
         - deposit_amt
