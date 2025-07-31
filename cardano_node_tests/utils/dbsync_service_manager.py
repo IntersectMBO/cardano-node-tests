@@ -462,6 +462,10 @@ class DBSyncManager:
             self.recreate_database()
             config_file = self.update_config(config=custom_config)
             self.start_db_sync()
-            assert self.is_db_sync_running(), "Error: db-sync service is not running!"
+
+            if not self.is_db_sync_running():
+                err = "Error: db-sync service is not running!"
+                raise RuntimeError(err)
+
             dbsync_utils.wait_for_db_sync_completion()
             return config_file

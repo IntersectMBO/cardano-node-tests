@@ -80,17 +80,28 @@ def _cast_vote(
     )
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
-    assert (
-        clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr.address)[0].amount
-        == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
-    ), f"Incorrect balance for source address `{payment_addr.address}`"
+    expected_balance = clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
+    filtered_utxos = clusterlib.filter_utxos(utxos=out_utxos, address=payment_addr.address)
+    if not filtered_utxos:
+        err = f"No UTxOs found for address `{payment_addr.address}`"
+        raise RuntimeError(err)
+    actual_balance = filtered_utxos[0].amount
+    if actual_balance != expected_balance:
+        err = f"Incorrect balance for source address `{payment_addr.address}`"
+        raise RuntimeError(err)
 
     gov_state = cluster_obj.g_query.get_gov_state()
     prop_vote = governance_utils.lookup_proposal(
         gov_state=gov_state, action_txid=action_txid, action_ix=action_ix
     )
-    assert prop_vote["dRepVotes"], "No DRep votes"
-    assert prop_vote["stakePoolVotes"], "No stake pool votes"
+
+    if not prop_vote["dRepVotes"]:
+        err = "No DRep votes."
+        raise RuntimeError(err)
+
+    if not prop_vote["stakePoolVotes"]:
+        err = "No stake pool votes."
+        raise RuntimeError(err)
 
 
 def create_vote_stake(
@@ -241,7 +252,9 @@ def setup(
         drep1_rec = cluster_obj.g_query.get_drep_stake_distribution(
             drep_vkey_file=drep_reg_records[0].key_pair.vkey_file
         )
-        assert drep1_rec, "DRep stake distribution not found"
+        if not drep1_rec:
+            msg = "DRep stake distribution not found."
+            raise RuntimeError(msg)
 
     return gov_data
 
@@ -388,7 +401,10 @@ def auth_cc_members(
     payment_addr: clusterlib.AddressRecord,
 ) -> None:
     """Authorize the original CC members."""
-    assert cc_members, "No CC members found"
+    if not cc_members:
+        msg = "No CC members found."
+        raise ValueError(msg)
+
     gov_data_dir = pl.Path(cc_members[0].hot_keys.hot_vkey_file).parent
 
     hot_auth_certs = []
@@ -413,21 +429,29 @@ def auth_cc_members(
     )
 
     reg_out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
-    assert (
-        clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)[0].amount
-        == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
-    ), f"Incorrect balance for source address `{payment_addr.address}`"
+    filtered_utxos = clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)
+    if not filtered_utxos:
+        msg = f"No UTxOs found for address `{payment_addr.address}`."
+        raise RuntimeError(msg)
+    if (
+        filtered_utxos[0].amount
+        != clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
+    ):
+        msg = f"Incorrect balance for source address `{payment_addr.address}`."
+        raise RuntimeError(msg)
 
     cluster_obj.wait_for_new_block(new_blocks=2)
     reg_committee_state = cluster_obj.g_query.get_committee_state()
     member_key = f"keyHash-{cc_members[0].cc_member.cold_vkey_hash}"
-    assert (
+    if (
         _get_committee_val(data=reg_committee_state)[member_key]["hotCredsAuthStatus"]["tag"]
-        == "MemberAuthorized"
-    ), "CC Member was not authorized"
+        != "MemberAuthorized"
+    ):
+        msg = "CC Member was not authorized."
+        raise RuntimeError(msg)
 
 
-def reinstate_committee(
+def reinstate_committee(  # noqa: C901
     cluster_obj: clusterlib.ClusterLib,
     governance_data: governance_utils.GovernanceRecords,
     name_template: str,
@@ -473,23 +497,36 @@ def reinstate_committee(
     )
 
     out_utxos_action = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_action)
-    assert (
-        clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[0].amount
-        == clusterlib.calculate_utxos_balance(tx_output_action.txins)
+    filtered_utxos = clusterlib.filter_utxos(
+        utxos=out_utxos_action, address=pool_user.payment.address
+    )
+    if not filtered_utxos:
+        msg = f"No UTxOs found for address `{pool_user.payment.address}`."
+        raise RuntimeError(msg)
+    if (
+        filtered_utxos[0].amount
+        != clusterlib.calculate_utxos_balance(tx_output_action.txins)
         - tx_output_action.fee
         - deposit_amt
-    ), f"Incorrect balance for source address `{pool_user.payment.address}`"
+    ):
+        msg = f"Incorrect balance for source address `{pool_user.payment.address}`."
+        raise RuntimeError(msg)
 
     action_txid = cluster_obj.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
     action_gov_state = cluster_obj.g_query.get_gov_state()
     prop_action = governance_utils.lookup_proposal(
         gov_state=action_gov_state, action_txid=action_txid
     )
-    assert prop_action, "Update committee action not found"
-    assert (
+    if not prop_action:
+        msg = "Update committee action not found."
+        raise RuntimeError(msg)
+
+    if (
         prop_action["proposalProcedure"]["govAction"]["tag"]
-        == governance_utils.ActionTags.UPDATE_COMMITTEE.value
-    ), "Incorrect action tag"
+        != governance_utils.ActionTags.UPDATE_COMMITTEE.value
+    ):
+        msg = "Incorrect action tag."
+        raise RuntimeError(msg)
 
     action_ix = prop_action["actionId"]["govActionIx"]
 
@@ -503,15 +540,21 @@ def reinstate_committee(
         action_ix=action_ix,
     )
 
-    assert cluster_obj.g_query.get_epoch() == init_epoch, "Epoch changed"
+    if cluster_obj.g_query.get_epoch() != init_epoch:
+        msg = "Epoch changed."
+        raise RuntimeError(msg)
 
     def _check_state(state: dict) -> None:
         cc_key_member = governance_data.cc_key_members[0]
         cc_member_val = _get_committee_val(data=state)["members"].get(
             f"keyHash-{cc_key_member.cc_member.cold_vkey_hash}"
         )
-        assert cc_member_val, "New committee member not found"
-        assert cc_member_val == cc_key_member.cc_member.epoch
+        if not cc_member_val:
+            msg = "New committee member not found."
+            raise RuntimeError(msg)
+        if cc_member_val != cc_key_member.cc_member.epoch:
+            msg = "Epoch of the new committee member does not match."
+            raise RuntimeError(msg)
 
     # Check ratification
     cluster_obj.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
@@ -519,11 +562,15 @@ def reinstate_committee(
     rat_action = governance_utils.lookup_ratified_actions(
         gov_state=rat_gov_state, action_txid=action_txid
     )
-    assert rat_action, "Action not found in ratified actions"
+    if not rat_action:
+        msg = "Action not found in ratified actions."
+        raise RuntimeError(msg)
 
     next_rat_state = rat_gov_state["nextRatifyState"]
     _check_state(next_rat_state["nextEnactState"])
-    assert next_rat_state["ratificationDelayed"], "Ratification not delayed"
+    if not next_rat_state["ratificationDelayed"]:
+        msg = "Ratification not delayed."
+        raise RuntimeError(msg)
 
     # Check enactment
     cluster_obj.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=5)

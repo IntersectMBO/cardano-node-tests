@@ -18,7 +18,14 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
-NO_RESPONSE_STR = "No response returned from db-sync:"
+
+class DbSyncNoResponseError(Exception):
+    """Raised when no response is returned from db-sync."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        msg = f"No response returned from db-sync: {detail}"
+        super().__init__(msg)
 
 
 class ActionTypes(enum.StrEnum):
@@ -184,7 +191,7 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
             tx_id = query_row.tx_id
         if tx_id != query_row.tx_id:
             msg = "Transaction ID differs from the expected ID."
-            raise AssertionError(msg)
+            raise ValueError(msg)
 
         # Lovelace outputs
         if query_row.tx_out_id and query_row.tx_out_id not in seen_tx_out_ids:
@@ -474,8 +481,8 @@ def get_tx_record(txhash: str) -> dbsync_types.TxRecord:  # noqa: C901
 def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
     """Wait a bit and retry a query until response is returned.
 
-    A generic function that can be used by any query/check that raises `AssertionError` with
-    `NO_RESPONSE_STR` until the expected data is returned.
+    A generic function that can be used by any query/check that raises `DbSyncNoResponseError`.
+    The query is repeated until the expected data is returned or timeout is reached.
     """
     end_time = time.time() + timeout
     repeat = 0
@@ -488,11 +495,11 @@ def retry_query(query_func: tp.Callable, timeout: int = 20) -> tp.Any:
         try:
             response = query_func()
             break
-        except AssertionError as exc:
-            if NO_RESPONSE_STR in str(exc) and time.time() < end_time:
+        except DbSyncNoResponseError as exc:
+            if time.time() < end_time:
                 repeat += 1
                 continue
-            raise
+            raise TimeoutError from exc
 
     return response
 
@@ -710,7 +717,9 @@ def check_pool_off_chain_data(
 ) -> dbsync_queries.PoolOffChainDataDBRow:
     """Check comparison for pool off chain data between ledger and db-sync."""
     db_pool_off_chain_data = list(dbsync_queries.query_off_chain_pool_data(pool_id))
-    assert db_pool_off_chain_data, f"{NO_RESPONSE_STR} no off chain data for pool {pool_id}"
+    if not db_pool_off_chain_data:
+        msg = f"no off chain data for pool {pool_id}"
+        raise DbSyncNoResponseError(msg)
 
     metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
     db_metadata_hash = db_pool_off_chain_data[0].hash.hex()
@@ -728,9 +737,9 @@ def check_pool_off_chain_fetch_error(
 ) -> dbsync_queries.PoolOffChainFetchErrorDBRow:
     """Check expected error on `PoolOffChainFetchError`."""
     db_pool_off_chain_fetch_error = list(dbsync_queries.query_off_chain_pool_fetch_error(pool_id))
-    assert db_pool_off_chain_fetch_error, (
-        f"{NO_RESPONSE_STR} no off chain fetch error for pool {pool_id}"
-    )
+    if not db_pool_off_chain_fetch_error:
+        msg = f"no off chain fetch error for pool {pool_id}"
+        raise DbSyncNoResponseError(msg)
 
     fetch_error_str = db_pool_off_chain_fetch_error[0].fetch_error or ""
     metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
@@ -1276,9 +1285,9 @@ def check_off_chain_drep_registration(  # noqa: C901
         dbsync_queries.query_off_chain_vote_drep_data(voting_anchor_id=drep_data.voting_anchor_id)
     )
 
-    assert drep_off_chain_metadata, (
-        f"{NO_RESPONSE_STR} no off chain drep metadata for drep {drep_data.id}"
-    )
+    if not drep_off_chain_metadata:
+        msg = f"no off chain drep metadata for drep {drep_data.id}"
+        raise DbSyncNoResponseError(msg)
 
     db_metadata = drep_off_chain_metadata[0]
     expected_metadata = metadata["body"]
@@ -1506,9 +1515,9 @@ def check_off_chain_vote_fetch_error(voting_anchor_id: int) -> None:
         dbsync_queries.query_off_chain_vote_fetch_error(voting_anchor_id)
     )
 
-    assert db_off_chain_vote_fetch_error, (
-        f"{NO_RESPONSE_STR} no off chain vote fetch error for voting anchor id {voting_anchor_id}"
-    )
+    if not db_off_chain_vote_fetch_error:
+        msg = f"no off chain vote fetch error for voting anchor id {voting_anchor_id}"
+        raise DbSyncNoResponseError(msg)
 
     fetch_error_str = db_off_chain_vote_fetch_error[-1].fetch_error or ""
     assert "Hash mismatch when fetching metadata" in fetch_error_str
@@ -1528,14 +1537,15 @@ def wait_for_db_sync_completion(
         Final sync percentage achieved (>= 99)
 
     Raises:
-        AssertionError: If no progress data is received
         TimeoutError: If sync doesn't reach 99% within timeout
     """
     start_time = time.time()
 
     def _query_func() -> float:
         dbsync_progress = dbsync_queries.query_db_sync_progress()
-        assert dbsync_progress, f"{NO_RESPONSE_STR} no result for query_db_sync_progress"
+        if not dbsync_progress:
+            msg = "no result for query_db_sync_progress"
+            raise DbSyncNoResponseError(msg)
         return dbsync_progress
 
     dbsync_progress: float = retry_query(query_func=_query_func, timeout=timeout)
