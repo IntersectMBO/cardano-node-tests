@@ -159,7 +159,7 @@ TEST_THREADS=15 PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'
 Run on preview testnet with specific node revision:
 
 ```sh
-NODE_REV=10.4.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
+NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
 ```
 
 ---
