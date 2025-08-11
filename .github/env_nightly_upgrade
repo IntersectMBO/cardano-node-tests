@@ -1,2 +1,2 @@
-BASE_TAR_URL=https://github.com/IntersectMBO/cardano-node/releases/download/10.4.1/cardano-node-10.4.1-linux.tar.gz
+BASE_TAR_URL=https://github.com/IntersectMBO/cardano-node/releases/download/10.5.1/cardano-node-10.5.1-linux.tar.gz
 CI_BYRON_CLUSTER=true
