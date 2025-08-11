@@ -159,7 +159,7 @@ TEST_THREADS=15 PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'
 Run on preview testnet with specific node revision:
 
 ```sh
-NODE_REV=10.4.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
+NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
 ```
 
 ---
@@ -201,9 +201,8 @@ make check_dev_env
 ### 🧪 Run Individual Tests
 
 ```sh
-pytest -k "test_name1 or test_name2" cardano_node_tests
-pytest -m "not long" cardano_node_tests
-pytest -m smoke cardano_node_tests/tests/test_governance.py
+pytest -k "test_missing_tx_out or test_multiple_same_txins" cardano_node_tests
+pytest -m smoke cardano_node_tests/tests/test_cli.py
 ```
 
 ### 🧹 Run Linters
