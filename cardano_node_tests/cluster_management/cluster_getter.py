@@ -724,8 +724,12 @@ class ClusterGetter:
                 ("singleton" tests).
             scriptsdir: Path to custom scripts for the cluster.
         """
-        assert not isinstance(lock_resources, str), "`lock_resources` can't be single string"
-        assert not isinstance(use_resources, str), "`use_resources` can't be single string"
+        if isinstance(lock_resources, str):
+            msg = "`lock_resources` cannot be a string"
+            raise TypeError(msg)
+        if isinstance(use_resources, str):
+            msg = "`use_resources` cannot be a string"
+            raise TypeError(msg)
 
         # Sanitize strings so they can be used in file names
         mark = resources.sanitize_res_name(mark)

@@ -8,7 +8,9 @@ class BaseFilter:
     """Base class for resource filters."""
 
     def __init__(self, resources: tp.Iterable[str]) -> None:
-        assert not isinstance(resources, str), "`resources` can't be single string"
+        if isinstance(resources, str):
+            msg = "`resources` cannot be a string"
+            raise TypeError(msg)
         self.resources = resources
 
     def filter(self, unavailable: tp.Iterable[str], **kwargs: tp.Any) -> list[str]:
@@ -27,7 +29,9 @@ class OneOf(BaseFilter):
         unavailable: tp.Iterable[str],
         **kwargs: tp.Any,  # noqa: ARG002
     ) -> list[str]:
-        assert not isinstance(unavailable, str), "`unavailable` can't be single string"
+        if isinstance(unavailable, str):
+            msg = "`unavailable` cannot be a string"
+            raise TypeError(msg)
 
         usable = [r for r in self.resources if r not in unavailable]
         if not usable:

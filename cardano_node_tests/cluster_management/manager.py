@@ -42,7 +42,9 @@ def _get_manager_fixture_line_str() -> str:
     """Get `filename#lineno` of current fixture, called from contextmanager."""
     # Get past `cache_fixture` and `contextmanager` to the fixture
     calling_frame = inspect.currentframe().f_back.f_back.f_back  # type: ignore
-    assert calling_frame
+    if not calling_frame:
+        msg = "Couldn't get the calling frame."
+        raise ValueError(msg)
     return helpers.get_line_str_from_frame(frame=calling_frame)
 
 
@@ -282,7 +284,7 @@ class ClusterManager:
     ) -> list[str]:
         if from_set is not None and isinstance(from_set, str):
             msg = "`from_set` cannot be a string"
-            raise AssertionError(msg)
+            raise TypeError(msg)
 
         resources = set(status_files.get_resources_from_path(paths=paths))
 
@@ -383,7 +385,7 @@ class ClusterManager:
         cluster_obj = self.cache.cluster_obj
         if not cluster_obj:
             msg = "`cluster_obj` not available, that cannot happen"
-            raise AssertionError(msg)
+            raise RuntimeError(msg)
         cluster_obj.cluster_id = self.cluster_instance_num
         cluster_obj._cluster_manager = self  # type: ignore
         self._initialized = True
@@ -408,8 +410,8 @@ class ClusterManager:
         # If you've ran into this issue, check that all the fixtures you use in the test are using
         # the same `cluster` fixture.
         if check_initialized and self._initialized:
-            msg = "manager is already initialized"
-            raise AssertionError(msg)
+            msg = "Manager is already initialized"
+            raise RuntimeError(msg)
 
         self.init(
             mark=mark,
@@ -421,5 +423,7 @@ class ClusterManager:
         )
 
         cluster_obj = self.cache.cluster_obj
-        assert cluster_obj
+        if not cluster_obj:
+            msg = "`cluster_obj` not available, that cannot happen"
+            raise RuntimeError(msg)
         return cluster_obj
