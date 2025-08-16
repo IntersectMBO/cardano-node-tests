@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout cardano-node-tests repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: cardano_node_tests
           ref: sync_tests
