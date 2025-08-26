@@ -55,7 +55,7 @@ class TestRegisterAddr:
     """Tests for stake address registration and deregistration."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -64,7 +64,7 @@ class TestRegisterAddr:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         pool_users_disposable: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Deregister a registered stake address.
 
@@ -75,6 +75,12 @@ class TestRegisterAddr:
         * check that the balance for source address was correctly updated
         * (optional) check records in db-sync
         """
+
+        # skip-known broken path
+        if build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            pytest.skip("Cannot use BUILD_EST for stake address cert txs (cardano-cli #1199)")
+
+
         temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
@@ -96,26 +102,14 @@ class TestRegisterAddr:
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
-        if use_build_cmd:
-            tx_raw_output_reg = cluster.g_transaction.build_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg",
-                tx_files=tx_files_reg,
-                fee_buffer=2_000_000,
-                witness_override=len(tx_files_reg.signing_key_files),
-            )
-            tx_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output_reg.out_file,
-                signing_key_files=tx_files_reg.signing_key_files,
-                tx_name=f"{temp_template}_reg",
-            )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_reg.txins)
-        else:
-            tx_raw_output_reg = cluster.g_transaction.send_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg",
-                tx_files=tx_files_reg,
-            )
+        tx_output_reg = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg",
+            src_address=user_payment.address,
+            tx_files=tx_files_reg,
+            build_method=build_method,
+            witness_override=len(tx_files_reg.signing_key_files),
+        )
 
         assert cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
             f"Stake address is NOT registered: {user_registered.stake.address}"
@@ -134,35 +128,14 @@ class TestRegisterAddr:
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
-        if use_build_cmd:
-
-            def _build_dereg() -> clusterlib.TxRawOutput:
-                return cluster.g_transaction.build_tx(
-                    src_address=user_payment.address,
-                    tx_name=f"{temp_template}_dereg",
-                    tx_files=tx_files_dereg,
-                    fee_buffer=2_000_000,
-                    witness_override=len(tx_files_dereg.signing_key_files),
-                )
-
-            tx_raw_output_dereg: clusterlib.TxRawOutput = common.match_blocker(func=_build_dereg)
-            tx_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output_dereg.out_file,
-                signing_key_files=tx_files_dereg.signing_key_files,
-                tx_name=f"{temp_template}_dereg",
-            )
-            try:
-                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_dereg.txins)
-            except clusterlib.CLIError as exc:
-                if "ValueNotConservedUTxO" in str(exc):
-                    issues.cli_942.finish_test()
-                raise
-        else:
-            tx_raw_output_dereg = cluster.g_transaction.send_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_dereg",
-                tx_files=tx_files_dereg,
-            )
+        tx_output_dereg = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_dereg",
+            src_address=user_payment.address,
+            tx_files=tx_files_dereg,
+            build_method=build_method,
+            witness_override=len(tx_files_dereg.signing_key_files),
+        )
 
         assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
             f"Stake address is registered: {user_registered.stake.address}"
@@ -171,24 +144,26 @@ class TestRegisterAddr:
         # Check that the balance for source address was correctly updated
         assert (
             cluster.g_query.get_address_balance(user_payment.address)
-            == src_init_balance - tx_raw_output_reg.fee - tx_raw_output_dereg.fee
+            == src_init_balance - tx_output_reg.fee - tx_output_dereg.fee
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
         # Check records in db-sync
         tx_db_record_reg = dbsync_utils.check_tx(
-            cluster_obj=cluster, tx_raw_output=tx_raw_output_reg
+            cluster_obj=cluster, tx_raw_output=tx_output_reg
         )
         if tx_db_record_reg:
             assert user_registered.stake.address in tx_db_record_reg.stake_registration
 
         tx_db_record_dereg = dbsync_utils.check_tx(
-            cluster_obj=cluster, tx_raw_output=tx_raw_output_dereg
+            cluster_obj=cluster, tx_raw_output=tx_output_dereg
         )
         if tx_db_record_dereg:
             assert user_registered.stake.address in tx_db_record_dereg.stake_deregistration
 
+
+
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -197,8 +172,14 @@ class TestRegisterAddr:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         pool_users_disposable: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
+
+        # skip known-broken build_estimate
+        if build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            pytest.skip("Cannot use BUILD_EST for stake address cert txs (cardano-cli #1199)")
+
+
         """Submit registration and deregistration certificates in single TX.
 
         * create stake address registration cert
@@ -240,28 +221,15 @@ class TestRegisterAddr:
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
-        if use_build_cmd:
-            tx_raw_output = cluster.g_transaction.build_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg_dereg",
-                tx_files=tx_files,
-                fee_buffer=2_000_000,
-                deposit=0,
-                witness_override=len(tx_files.signing_key_files),
-            )
-            tx_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=f"{temp_template}_reg_dereg",
-            )
-            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-        else:
-            tx_raw_output = cluster.g_transaction.send_tx(
-                src_address=user_payment.address,
-                tx_name=f"{temp_template}_reg_dereg",
-                tx_files=tx_files,
-                deposit=0,
-            )
+        tx_output = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_reg_dereg",
+            src_address=user_payment.address,
+            tx_files=tx_files,
+            build_method=build_method,
+            deposit=0,
+            witness_override=len(tx_files.signing_key_files),
+        )
 
         # Check that the stake address is not registered
         assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
@@ -272,10 +240,10 @@ class TestRegisterAddr:
         # was not needed
         assert (
             cluster.g_query.get_address_balance(user_payment.address)
-            == src_init_balance - tx_raw_output.fee
+            == src_init_balance - tx_output.fee
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
-        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
             assert user_registered.stake.address in tx_db_record.stake_registration
             assert user_registered.stake.address in tx_db_record.stake_deregistration
@@ -380,7 +348,7 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("key_type", ("stake", "payment"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -389,7 +357,7 @@ class TestRegisterAddr:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
         key_type: str,
     ):
         """Deregister a registered multisig stake address.
@@ -454,7 +422,7 @@ class TestRegisterAddr:
         def _submit_tx(
             name_template: str, complex_certs: list[clusterlib.ComplexCert]
         ) -> clusterlib.TxRawOutput:
-            if use_build_cmd:
+            if build_method == clusterlib_utils.BuildMethods.BUILD:
                 tx_output = cluster.g_transaction.build_tx(
                     src_address=payment_addr.address,
                     tx_name=name_template,
@@ -462,7 +430,8 @@ class TestRegisterAddr:
                     fee_buffer=2_000_000,
                     witness_override=witness_len,
                 )
-            else:
+
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 fee = cluster.g_transaction.calculate_tx_fee(
                     src_address=payment_addr.address,
                     tx_name=name_template,
@@ -475,6 +444,9 @@ class TestRegisterAddr:
                     complex_certs=complex_certs,
                     fee=fee,
                 )
+
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                pytest.skip("Cannot use BUILD_EST for multisig stake cert txs (cardano-cli #1199)")
 
             # Create witness file for each key
             witness_files = [
@@ -610,7 +582,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_deregister_not_registered_addr(
@@ -618,7 +590,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         pool_users_disposable: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Deregister not registered stake address."""
         temp_template = common.get_test_id(cluster)
@@ -638,8 +610,7 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
-
+            if build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 def _build_dereg() -> clusterlib.TxRawOutput:
                     return cluster.g_transaction.build_tx(
                         src_address=user_payment.address,
@@ -656,17 +627,20 @@ class TestNegative:
                     tx_name=f"{temp_template}_dereg_fail",
                 )
                 cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-            else:
+            elif build_method == clusterlib_utils.BuildMethods.BUILD:
                 cluster.g_transaction.send_tx(
                     src_address=user_payment.address,
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                pytest.skip("Cannot use BUILD_EST for stake address cert txs (cardano-cli #1199)")
+
         err_msg = str(excinfo.value)
         assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("issue", ("missing_script", "missing_skey"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -674,7 +648,7 @@ class TestNegative:
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
         issue: str,
     ):
         """Try to register a multisig stake address while missing either a script or an skey.
@@ -690,6 +664,10 @@ class TestNegative:
         * Incrementally sign the Tx and submit the registration certificate
         * Check the expected failure
         """
+
+        if build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            pytest.skip("Cannot use BUILD_EST for multisig stake cert txs (cardano-cli #1199)")
+
         temp_template = common.get_test_id(cluster)
         payment_addr = pool_users[0].payment
 
@@ -724,7 +702,7 @@ class TestNegative:
         ) -> clusterlib.TxRawOutput:
             witness_len = len(signing_key_files)
 
-            if use_build_cmd:
+            if build_method == clusterlib_utils.BuildMethods.BUILD:
                 tx_output = cluster.g_transaction.build_tx(
                     src_address=payment_addr.address,
                     tx_name=name_template,
@@ -733,7 +711,7 @@ class TestNegative:
                     fee_buffer=2_000_000,
                     witness_override=witness_len,
                 )
-            else:
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 fee = cluster.g_transaction.calculate_tx_fee(
                     src_address=payment_addr.address,
                     tx_name=name_template,
