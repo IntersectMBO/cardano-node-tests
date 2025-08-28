@@ -122,14 +122,19 @@ class TestRegisterAddr:
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
-        tx_output_dereg = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_dereg",
-            src_address=user_payment.address,
-            tx_files=tx_files_dereg,
-            build_method=build_method,
-            witness_override=len(tx_files_dereg.signing_key_files),
-        )
+        try:
+            tx_output_dereg = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_dereg",
+                src_address=user_payment.address,
+                tx_files=tx_files_dereg,
+                build_method=build_method,
+                witness_override=len(tx_files_dereg.signing_key_files),
+            )
+        except clusterlib.CLIError as exc:
+            if "ValueNotConservedUTxO" in str(exc):
+                issues.cli_942.finish_test()
+            raise
 
         assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address).address, (
             f"Stake address is registered: {user_registered.stake.address}"
@@ -722,9 +727,8 @@ class TestNegative:
                     tx_name=name_template,
                     tx_files=tx_files,
                     complex_certs=complex_certs,
-                    witness_count_add=witness_len
+                    witness_count_add=witness_len,
                 )
-
 
             # Create witness file for each key
             witness_files = [
