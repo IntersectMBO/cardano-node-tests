@@ -55,7 +55,7 @@ class TestRegisterAddr:
     """Tests for stake address registration and deregistration."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -75,12 +75,6 @@ class TestRegisterAddr:
         * check that the balance for source address was correctly updated
         * (optional) check records in db-sync
         """
-
-        # skip-known broken path
-        if build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-            pytest.skip("Cannot use BUILD_EST for stake address cert txs (cardano-cli #1199)")
-
-
         temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
@@ -148,9 +142,7 @@ class TestRegisterAddr:
         ), f"Incorrect balance for source address `{user_payment.address}`"
 
         # Check records in db-sync
-        tx_db_record_reg = dbsync_utils.check_tx(
-            cluster_obj=cluster, tx_raw_output=tx_output_reg
-        )
+        tx_db_record_reg = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_reg)
         if tx_db_record_reg:
             assert user_registered.stake.address in tx_db_record_reg.stake_registration
 
@@ -160,10 +152,8 @@ class TestRegisterAddr:
         if tx_db_record_dereg:
             assert user_registered.stake.address in tx_db_record_dereg.stake_deregistration
 
-
-
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -174,12 +164,6 @@ class TestRegisterAddr:
         pool_users_disposable: list[clusterlib.PoolUser],
         build_method: str,
     ):
-
-        # skip known-broken build_estimate
-        if build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-            pytest.skip("Cannot use BUILD_EST for stake address cert txs (cardano-cli #1199)")
-
-
         """Submit registration and deregistration certificates in single TX.
 
         * create stake address registration cert
@@ -348,7 +332,7 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("key_type", ("stake", "payment"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -444,9 +428,6 @@ class TestRegisterAddr:
                     complex_certs=complex_certs,
                     fee=fee,
                 )
-
-            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-                pytest.skip("Cannot use BUILD_EST for multisig stake cert txs (cardano-cli #1199)")
 
             # Create witness file for each key
             witness_files = [
@@ -582,7 +563,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_deregister_not_registered_addr(
@@ -611,6 +592,7 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
+
                 def _build_dereg() -> clusterlib.TxRawOutput:
                     return cluster.g_transaction.build_tx(
                         src_address=user_payment.address,
@@ -633,14 +615,12 @@ class TestNegative:
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
                 )
-            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-                pytest.skip("Cannot use BUILD_EST for stake address cert txs (cardano-cli #1199)")
 
         err_msg = str(excinfo.value)
         assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("issue", ("missing_script", "missing_skey"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -664,10 +644,6 @@ class TestNegative:
         * Incrementally sign the Tx and submit the registration certificate
         * Check the expected failure
         """
-
-        if build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-            pytest.skip("Cannot use BUILD_EST for multisig stake cert txs (cardano-cli #1199)")
-
         temp_template = common.get_test_id(cluster)
         payment_addr = pool_users[0].payment
 
