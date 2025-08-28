@@ -39,9 +39,9 @@ SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
     ),
 )
 
-SKIPIF_BUILD_EST = pytest.mark.skipif(
+SKIPIF_BUILD_EST_1199 = pytest.mark.skipif(
     issues.cli_1199.is_blocked(),
-    reason="BUILD_EST unusable due to cardano-cli bug #1199 (not yet fixed)",
+    reason="`build-estimate` fails to balance tx with no txouts",
 )
 
 SKIPIF_MISMATCHED_ERAS = pytest.mark.skipif(
@@ -116,7 +116,7 @@ PARAM_BUILD_METHOD_NO_EST = pytest.mark.parametrize(
         ),
         pytest.param(
             clusterlib_utils.BuildMethods.BUILD_EST,
-            marks=SKIPIF_BUILD_EST,
+            marks=SKIPIF_BUILD_EST_1199,
         ),
     ),
 )

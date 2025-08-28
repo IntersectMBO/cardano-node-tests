@@ -428,6 +428,13 @@ class TestRegisterAddr:
                     complex_certs=complex_certs,
                     fee=fee,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                tx_output = cluster.g_transaction.build_estimate_tx(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    complex_certs=complex_certs,
+                    witness_count_add=witness_len,
+                )
 
             # Create witness file for each key
             witness_files = [
@@ -615,6 +622,13 @@ class TestNegative:
                     tx_name=f"{temp_template}_dereg_fail",
                     tx_files=tx_files,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                cluster.g_transaction.build_estimate_tx(
+                    src_address=user_payment.address,
+                    tx_name=f"{temp_template}_dereg_fail",
+                    tx_files=tx_files,
+                    witness_count_add=len(tx_files.signing_key_files),
+                )
 
         err_msg = str(excinfo.value)
         assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
@@ -702,6 +716,15 @@ class TestNegative:
                     complex_certs=complex_certs,
                     fee=fee,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                tx_output = cluster.g_transaction.build_estimate_tx(
+                    src_address=payment_addr.address,
+                    tx_name=name_template,
+                    tx_files=tx_files,
+                    complex_certs=complex_certs,
+                    witness_count_add=witness_len
+                )
+
 
             # Create witness file for each key
             witness_files = [
