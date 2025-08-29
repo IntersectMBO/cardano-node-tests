@@ -39,6 +39,11 @@ SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
     ),
 )
 
+SKIPIF_BUILD_EST_1199 = pytest.mark.skipif(
+    issues.cli_1199.is_blocked(),
+    reason="`build-estimate` fails to balance tx with no txouts",
+)
+
 SKIPIF_MISMATCHED_ERAS = pytest.mark.skipif(
     VERSIONS.transaction_era != VERSIONS.cluster_era,
     reason="transaction era must be the same as node era",
@@ -98,6 +103,21 @@ PARAM_BUILD_METHOD = pytest.mark.parametrize(
         clusterlib_utils.BuildMethods.BUILD_RAW,
         pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=SKIPIF_BUILD_UNUSABLE),
         clusterlib_utils.BuildMethods.BUILD_EST,
+    ),
+)
+
+PARAM_BUILD_METHOD_NO_EST = pytest.mark.parametrize(
+    "build_method",
+    (
+        clusterlib_utils.BuildMethods.BUILD_RAW,
+        pytest.param(
+            clusterlib_utils.BuildMethods.BUILD,
+            marks=SKIPIF_BUILD_UNUSABLE,
+        ),
+        pytest.param(
+            clusterlib_utils.BuildMethods.BUILD_EST,
+            marks=SKIPIF_BUILD_EST_1199,
+        ),
     ),
 )
 
