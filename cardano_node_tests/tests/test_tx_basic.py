@@ -293,6 +293,7 @@ class TestBasicTransactions:
                     tx_files=tx_files,
                     txouts=txouts,
                     change_address=src_address,
+                    fee_buffer=0,
                 )
             except clusterlib.CLIError as exc:
                 str_exc = str(exc)
