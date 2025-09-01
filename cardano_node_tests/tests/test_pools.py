@@ -11,6 +11,7 @@ import dataclasses
 import json
 import logging
 import pathlib as pl
+import typing as tp
 
 import allure
 import hypothesis
@@ -32,6 +33,7 @@ from cardano_node_tests.utils import smash_utils
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils import web
+from cardano_node_tests.utils.versions import VERSIONS
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
@@ -201,6 +203,7 @@ def _create_stake_pool_w_build(
     pool_data: clusterlib.PoolData,
     pool_owners: list[clusterlib.PoolUser],
     tx_name: str,
+    reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     destination_dir: clusterlib.FileType = ".",
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool using a `transaction build` command.
@@ -210,6 +213,7 @@ def _create_stake_pool_w_build(
         pool_data: A `PoolData` tuple containing info about the stake pool.
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
         tx_name: A name of the transaction.
+        reward_account_key_pair: A data container containing reward account key pair (optional).
         destination_dir: A path to directory for storing artifacts (optional).
 
     Returns:
@@ -246,6 +250,9 @@ def _create_stake_pool_w_build(
         vrf_vkey_file=node_vrf.vkey_file,
         cold_key_pair=node_cold,
         tx_name=tx_name,
+        reward_account_vkey_file=reward_account_key_pair.vkey_file
+        if reward_account_key_pair
+        else None,
         destination_dir=destination_dir,
     )
 
@@ -258,6 +265,7 @@ def _create_stake_pool_w_build(
         pool_reg_cert_file=pool_reg_cert_file,
         pool_data=pool_data,
         pool_owners=pool_owners,
+        reward_account_key_pair=reward_account_key_pair or pool_owners[0].stake,
         tx_raw_output=tx_raw_output,
         kes_key_pair=node_kes,
     )
@@ -335,6 +343,7 @@ def _create_register_pool(
     temp_dir: pl.Path,
     pool_owners: list[clusterlib.PoolUser],
     pool_data: clusterlib.PoolData,
+    reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     request: FixtureRequest | None = None,
     use_build_cmd: bool = False,
 ) -> clusterlib.PoolCreationOutput:
@@ -355,10 +364,14 @@ def _create_register_pool(
             pool_data=pool_data,
             pool_owners=pool_owners,
             tx_name=temp_template_reg,
+            reward_account_key_pair=reward_account_key_pair,
         )
     else:
         pool_creation_out = cluster_obj.g_stake_pool.create_stake_pool(
-            pool_data=pool_data, pool_owners=pool_owners, tx_name=temp_template_reg
+            pool_data=pool_data,
+            pool_owners=pool_owners,
+            tx_name=temp_template_reg,
+            reward_account_key_pair=reward_account_key_pair,
         )
         dbsync_utils.check_tx(
             cluster_obj=cluster_obj, tx_raw_output=pool_creation_out.tx_raw_output
@@ -403,6 +416,7 @@ def _create_register_pool_delegate_stake_tx(
     temp_template: str,
     temp_dir: pl.Path,
     pool_data: clusterlib.PoolData,
+    reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     request: FixtureRequest | None = None,
     use_build_cmd: bool = False,
 ) -> clusterlib.PoolCreationOutput:
@@ -418,7 +432,7 @@ def _create_register_pool_delegate_stake_tx(
     # Create node cold key pair and counter
     node_cold = cluster_obj.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
 
-    # Create stake address registration certs
+    # Create stake address registration certs for pool owners
     stake_addr_reg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template_reg_deleg}_addr{i}",
@@ -428,7 +442,17 @@ def _create_register_pool_delegate_stake_tx(
         for i, p in enumerate(pool_owners)
     ]
 
-    # Create stake address delegation cert
+    # Create stake address registration cert for reward address
+    if reward_account_key_pair:
+        stake_addr_reg_cert_files.append(
+            cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
+                addr_name=f"{temp_template_reg_deleg}_reward_addr",
+                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+                stake_vkey_file=reward_account_key_pair.vkey_file,
+            )
+        )
+
+    # Create stake address delegation certs for pool owners
     stake_addr_deleg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template_reg_deleg}_addr{i}",
@@ -444,12 +468,16 @@ def _create_register_pool_delegate_stake_tx(
         vrf_vkey_file=node_vrf.vkey_file,
         cold_vkey_file=node_cold.vkey_file,
         owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
+        reward_account_vkey_file=reward_account_key_pair.vkey_file
+        if reward_account_key_pair
+        else None,
     )
 
     src_address = pool_owners[0].payment.address
     src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
     # Register and delegate stake address, create and register pool
+    reward_account_skey = [reward_account_key_pair.skey_file] if reward_account_key_pair else []
     tx_files = clusterlib.TxFiles(
         certificate_files=[
             pool_reg_cert_file,
@@ -459,6 +487,7 @@ def _create_register_pool_delegate_stake_tx(
         signing_key_files=[
             *[p.payment.skey_file for p in pool_owners],
             *[p.stake.skey_file for p in pool_owners],
+            *reward_account_skey,
             node_cold.skey_file,
         ],
     )
@@ -468,8 +497,8 @@ def _create_register_pool_delegate_stake_tx(
             src_address=src_address,
             tx_name=temp_template_reg_deleg,
             tx_files=tx_files,
-            fee_buffer=2_000_000,
-            witness_override=len(pool_owners) * 3,
+            fee_buffer=4_000_000,
+            witness_override=len(pool_owners) * 4,
         )
         tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
@@ -479,7 +508,10 @@ def _create_register_pool_delegate_stake_tx(
         cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
     else:
         tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address, tx_name=temp_template_reg_deleg, tx_files=tx_files
+            src_address=src_address,
+            tx_name=temp_template_reg_deleg,
+            tx_files=tx_files,
+            witness_count_add=len(pool_owners) * 4,
         )
 
     # Deregister stake pool
@@ -501,7 +533,7 @@ def _create_register_pool_delegate_stake_tx(
     assert (
         cluster_obj.g_query.get_address_balance(src_address)
         == src_init_balance
-        - len(pool_owners) * cluster_obj.g_query.get_address_deposit()
+        - len(stake_addr_reg_cert_files) * cluster_obj.g_query.get_address_deposit()
         - cluster_obj.g_query.get_pool_deposit()
         - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
@@ -524,6 +556,7 @@ def _create_register_pool_delegate_stake_tx(
         pool_reg_cert_file=pool_reg_cert_file,
         pool_data=pool_data,
         pool_owners=pool_owners,
+        reward_account_key_pair=reward_account_key_pair or pool_owners[0].stake,
         tx_raw_output=tx_raw_output,
     )
 
@@ -534,6 +567,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     temp_template: str,
     temp_dir: pl.Path,
     pool_data: clusterlib.PoolData,
+    reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     request: FixtureRequest | None = None,
     use_build_cmd: bool = False,
 ) -> clusterlib.PoolCreationOutput:
@@ -548,11 +582,12 @@ def _create_register_pool_tx_delegate_stake_tx(
         temp_dir=temp_dir,
         pool_owners=pool_owners,
         pool_data=pool_data,
+        reward_account_key_pair=reward_account_key_pair,
         request=request,
         use_build_cmd=use_build_cmd,
     )
 
-    # Create stake address registration certs
+    # Create stake address registration certs for pool owners
     stake_addr_reg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr{i}",
@@ -562,7 +597,17 @@ def _create_register_pool_tx_delegate_stake_tx(
         for i, p in enumerate(pool_owners)
     ]
 
-    # Create stake address delegation cert
+    # Create stake address registration cert for reward address
+    if reward_account_key_pair:
+        stake_addr_reg_cert_files.append(
+            cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
+                addr_name=f"{temp_template}_reward_addr",
+                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+                stake_vkey_file=reward_account_key_pair.vkey_file,
+            )
+        )
+
+    # Create stake address delegation certs for pool users
     stake_addr_deleg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_delegation_cert(
             addr_name=f"{temp_template}_addr{i}",
@@ -575,12 +620,14 @@ def _create_register_pool_tx_delegate_stake_tx(
     src_address = pool_owners[0].payment.address
     src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
-    # Register and delegate stake address
+    # Register and delegate stake addresses
+    reward_account_skey = [reward_account_key_pair.skey_file] if reward_account_key_pair else []
     tx_files = clusterlib.TxFiles(
         certificate_files=[*stake_addr_reg_cert_files, *stake_addr_deleg_cert_files],
         signing_key_files=[
             *[p.payment.skey_file for p in pool_owners],
             *[p.stake.skey_file for p in pool_owners],
+            *reward_account_skey,
             pool_creation_out.cold_key_pair.skey_file,
         ],
     )
@@ -608,7 +655,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     assert (
         cluster_obj.g_query.get_address_balance(src_address)
         == src_init_balance
-        - len(pool_owners) * cluster_obj.g_query.get_address_deposit()
+        - len(stake_addr_reg_cert_files) * cluster_obj.g_query.get_address_deposit()
         - tx_raw_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
@@ -1261,7 +1308,7 @@ class TestStakePool:
             cluster_obj=cluster, stake_pool_id=pool_creation_out.stake_pool_id, pool_data=pool_data
         )
 
-        # Check that the stake addresses is still delegated
+        # Check that the stake address is still delegated
         _check_staking(
             pool_owners=pool_owners,
             cluster_obj=cluster,
@@ -2433,3 +2480,188 @@ class TestNegative:
         assert "option --metadata-url: The provided string must have at most 64 characters" in str(
             excinfo.value
         )
+
+
+@pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.CONWAY, reason="runs only with Tx era >= Conway"
+)
+class TestPoolVoteDeleg:
+    """Tests for pool vote delegation to DRep."""
+
+    @pytest.fixture
+    def pools(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        request: FixtureRequest,
+    ) -> list[clusterlib.PoolCreationOutput]:
+        """Create pools for testing vote delegation scenarios."""
+        temp_template = common.get_test_id(cluster)
+        num_pools = 3
+
+        # Create pool owners
+        pool_owners = common.get_pool_users(
+            name_template=temp_template,
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=num_pools,
+            amount=2_000_000_000,
+        )
+
+        pools_out = []
+        reward_addresses = []
+        delegation_cert_files = []
+        for i in range(num_pools):
+            rand_str = clusterlib.get_rand_str(4)
+            name_template = f"{temp_template}_{rand_str}"
+
+            # Create reward addresses
+            reward_addr = cluster.g_stake_address.gen_stake_addr_and_keys(
+                name=f"{name_template}_reward_addr"
+            )
+            reward_addresses.append(reward_addr)
+
+            pool_data = clusterlib.PoolData(
+                pool_name=f"pool_{rand_str}",
+                pool_pledge=12_345,
+                pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
+                pool_margin=0.123,
+            )
+
+            # Register pool
+            pools_out.append(
+                _create_register_pool_delegate_stake_tx(
+                    cluster_obj=cluster,
+                    pool_owners=[pool_owners[i]],
+                    temp_template=name_template,
+                    temp_dir=pl.Path(),
+                    pool_data=pool_data,
+                    reward_account_key_pair=reward_addr,
+                    request=request,
+                )
+            )
+
+            # Delegate reward address to a DRep.
+            # Delegate stake to pools:
+            #  * first reward address is delegated to the first pool,
+            #  * second reward address is delegated to the first pool,
+            #  * third reward address is not delegated to any pool
+
+            vote_always_abstain = i % 2 == 0
+
+            if i == 2:
+                deleg_vote_cert = cluster.g_stake_address.gen_vote_delegation_cert(
+                    addr_name=name_template,
+                    stake_vkey_file=reward_addr.vkey_file,
+                    always_abstain=vote_always_abstain,
+                    always_no_confidence=not vote_always_abstain,
+                )
+            else:
+                deleg_vote_cert = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
+                    addr_name=name_template,
+                    stake_vkey_file=reward_addr.vkey_file,
+                    cold_vkey_file=pools_out[0].cold_key_pair.vkey_file,
+                    always_abstain=vote_always_abstain,
+                    always_no_confidence=not vote_always_abstain,
+                )
+            delegation_cert_files.append(deleg_vote_cert)
+
+        # Submit all the delegation certificates
+        tx_files = clusterlib.TxFiles(
+            certificate_files=delegation_cert_files,
+            signing_key_files=[
+                pool_owners[0].payment.skey_file,
+                *[r.skey_file for r in reward_addresses],
+            ],
+        )
+
+        pparams = cluster.g_query.get_protocol_params()
+        deposit_address_amt = cluster.g_query.get_address_deposit(pparams=pparams)
+
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        )
+        reg_epoch = cluster.g_query.get_epoch()
+
+        clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{temp_template}_delegate_reward_addrs",
+            src_address=pool_owners[0].payment.address,
+            use_build_cmd=True,
+            tx_files=tx_files,
+            deposit=deposit_address_amt,
+        )
+        cluster.wait_for_epoch(epoch_no=reg_epoch + 1, padding_seconds=5)
+
+        return pools_out
+
+    def get_subtests(self) -> tp.Generator[tp.Callable, None, None]:
+        """Get pool vote delegation scenarios.
+
+        The scenarios are executed as subtests in the `test_pool_delegation` test.
+        """
+
+        def reward_to_owner_pool(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            """Check vote delegation if reward address is delegated to the owner pool."""
+            assert (
+                cluster.g_query.get_spo_stake_distribution(
+                    spo_vkey_file=pools[0].cold_key_pair.vkey_file
+                )[0].vote_delegation
+                == "drep-alwaysAbstain"
+            )
+
+        yield reward_to_owner_pool
+
+        def reward_to_other_pool(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            """Check vote delegation if reward address is delegated to other pool."""
+            assert (
+                cluster.g_query.get_spo_stake_distribution(
+                    spo_vkey_file=pools[1].cold_key_pair.vkey_file
+                )[0].vote_delegation
+                == "drep-alwaysNoConfidence"
+            )
+
+        yield reward_to_other_pool
+
+        def reward_no_deleg(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            """Check vote delegation if reward address is not delegated to any pool."""
+            assert (
+                cluster.g_query.get_spo_stake_distribution(
+                    spo_vkey_file=pools[0].cold_key_pair.vkey_file
+                )[0].vote_delegation
+                == "drep-alwaysAbstain"
+            )
+
+        yield reward_no_deleg
+
+        def all_individual_same(
+            cluster: clusterlib.ClusterLib,
+            pools: list[clusterlib.PoolCreationOutput],  # noqa: ARG001
+        ):
+            """Check that data in "all pools" query matches data from indidual pool queries."""
+            all_records = cluster.g_query.get_spo_stake_distribution()
+            for r in all_records:
+                single_rec = cluster.g_query.get_spo_stake_distribution(spo_key_hash=r.spo_vkey_hex)
+                assert single_rec[0] == r
+
+        yield all_individual_same
+
+    @allure.link(helpers.get_vcs_link())
+    def test_pool_vote_delegation(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pools: list[clusterlib.PoolCreationOutput],
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Test pool vote delegation scenarios."""
+        common.get_test_id(cluster)
+
+        for subt in self.get_subtests():
+            with subtests.test(scenario=subt.__name__):
+                subt(cluster=cluster, pools=pools)
