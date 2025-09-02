@@ -115,14 +115,14 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_register_hot_key_no_cc_member(
         self,
         cluster: clusterlib.ClusterLib,
         pool_user: clusterlib.PoolUser,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Try to submit a Hot Credential Authorization certificate without being a CC member.
@@ -148,7 +148,7 @@ class TestCommittee:
                 name_template=f"{temp_template}_auth",
                 src_address=pool_user.payment.address,
                 submit_method=submit_method,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_auth,
             )
         err_str = str(excinfo.value)
@@ -414,7 +414,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("threshold_type", ("fraction", "decimal"))
     @pytest.mark.dbsync
     @pytest.mark.smoke
@@ -422,7 +422,7 @@ class TestCommittee:
         self,
         cluster: clusterlib.ClusterLib,
         pool_user: clusterlib.PoolUser,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
         threshold_type: str,
     ):
@@ -489,7 +489,7 @@ class TestCommittee:
                     name_template=f"{temp_template}_bootstrap",
                     src_address=pool_user.payment.address,
                     submit_method=submit_method,
-                    use_build_cmd=use_build_cmd,
+                    build_method=build_method,
                     tx_files=tx_files,
                     deposit=deposit_amt,
                 )
@@ -505,7 +505,7 @@ class TestCommittee:
             name_template=temp_template,
             src_address=pool_user.payment.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files,
             deposit=deposit_amt,
         )
