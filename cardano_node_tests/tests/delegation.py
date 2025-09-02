@@ -152,7 +152,7 @@ def delegate_stake_addr(
     pool_id: str = "",
     cold_vkey: pl.Path | None = None,
     amount: int = 100_000_000,
-    use_build_cmd: bool = False,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD_RAW,
 ) -> DelegationOut:
     """Submit registration certificate and delegate a stake address to a pool."""
     # Create key pairs and addresses
@@ -214,30 +214,20 @@ def delegate_stake_addr(
         signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
     )
 
-    if use_build_cmd:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
-            src_address=src_address,
-            tx_name=f"{temp_template}_reg_deleg",
-            tx_files=tx_files,
-            fee_buffer=2_000_000,
-            witness_override=len(tx_files.signing_key_files),
-        )
-        tx_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_reg_deleg",
-        )
-        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-    else:
-        tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
-        )
+    tx_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{temp_template}_reg_deleg",
+        src_address=src_address,
+        tx_files=tx_files,
+        build_method=build_method,
+        witness_override=len(tx_files.signing_key_files),
+    )
 
     # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit() if stake_addr_reg_cert_file else 0
     assert (
         cluster_obj.g_query.get_address_balance(src_address)
-        == src_init_balance - deposit - tx_raw_output.fee
+        == src_init_balance - deposit - tx_output.fee
     ), f"Incorrect balance for source address `{src_address}`"
 
     # Check that the stake address was delegated
@@ -246,7 +236,7 @@ def delegate_stake_addr(
     assert stake_addr_info.delegation == pool_id, "Stake address delegated to wrong pool"
     assert stake_addr_info.vote_delegation == "alwaysAbstain"
 
-    return DelegationOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_raw_output)
+    return DelegationOut(pool_user=pool_user, pool_id=pool_id, tx_raw_output=tx_output)
 
 
 def delegate_multisig_stake_addr(

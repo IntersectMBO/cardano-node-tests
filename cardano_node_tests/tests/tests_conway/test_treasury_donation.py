@@ -69,13 +69,13 @@ class TestTreasuryDonation:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     def test_transfer_treasury_donation(
         self,
         cluster_treasury: clusterlib.ClusterLib,
         payment_addr_treasury: clusterlib.AddressRecord,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Send funds from payment address to the treasury.
@@ -107,7 +107,7 @@ class TestTreasuryDonation:
             treasury_donation=amount,
             submit_method=submit_method,
             change_address=payment_addr_treasury.address,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files,
         )
 

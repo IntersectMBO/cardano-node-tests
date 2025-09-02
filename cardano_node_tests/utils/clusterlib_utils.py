@@ -580,7 +580,7 @@ def mint_or_burn_witness(
     invalid_hereafter: int | None = None,
     invalid_before: int | None = None,
     submit_method: str = submit_utils.SubmitMethods.CLI,
-    use_build_cmd: bool = False,
+    build_method: str = BuildMethods.BUILD_RAW,
     sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using witnesses.
@@ -618,7 +618,7 @@ def mint_or_burn_witness(
             *mint_txouts,
         ]
 
-    if use_build_cmd:
+    if build_method == BuildMethods.BUILD:
         tx_output = cluster_obj.g_transaction.build_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
@@ -629,12 +629,14 @@ def mint_or_burn_witness(
             invalid_before=invalid_before,
             witness_override=len(signing_key_files),
         )
-    else:
+    elif build_method == BuildMethods.BUILD_RAW:
         fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
             txouts=txouts,
             mint=mint,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
             # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
             witness_count_add=int(len(signing_key_files) * 1.5),
         )
@@ -647,6 +649,18 @@ def mint_or_burn_witness(
             invalid_hereafter=invalid_hereafter,
             invalid_before=invalid_before,
         )
+    elif build_method == BuildMethods.BUILD_EST:
+        tx_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=token_mint_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            mint=mint,
+            invalid_hereafter=invalid_hereafter,
+            invalid_before=invalid_before,
+            witness_count_add=len(signing_key_files),
+        )
+    else:
+        raise ValueError(f"Unsupported build method: {build_method}")
 
     # Sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
@@ -704,7 +718,7 @@ def mint_or_burn_sign(
     new_tokens: list[NativeTokenRec],
     temp_template: str,
     submit_method: str = submit_utils.SubmitMethods.CLI,
-    use_build_cmd: bool = False,
+    build_method: str = BuildMethods.BUILD_RAW,
     sign_incrementally: bool = False,
 ) -> clusterlib.TxRawOutput:
     """Mint or burn tokens, depending on the `amount` value. Sign using skeys.
@@ -741,7 +755,7 @@ def mint_or_burn_sign(
             *mint_txouts,
         ]
 
-    if use_build_cmd:
+    if build_method == BuildMethods.BUILD:
         tx_output = cluster_obj.g_transaction.build_tx(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
@@ -750,7 +764,7 @@ def mint_or_burn_sign(
             mint=mint,
             witness_override=len(signing_key_files),
         )
-    else:
+    elif build_method == BuildMethods.BUILD_RAW:
         fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=token_mint_addr.address,
             tx_name=temp_template,
@@ -766,6 +780,16 @@ def mint_or_burn_sign(
             mint=mint,
             fee=fee,
         )
+    elif build_method == BuildMethods.BUILD_EST:
+        tx_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=token_mint_addr.address,
+            tx_name=temp_template,
+            txouts=txouts,
+            mint=mint,
+            witness_count_add=len(signing_key_files),
+        )
+    else:
+        raise ValueError(f"Unsupported build method: {build_method}")
 
     # Sign incrementally (just to check that it works)
     if sign_incrementally and len(signing_key_files) >= 1:
