@@ -366,7 +366,6 @@ def _register_stake_pool_w_build_est(
             signing_key_files=signing_key_files,
         ),
         deposit=deposit,
-        # witness_count_add instead of override (estimate needs this hint)
         witness_count_add=len(signing_key_files),
         destination_dir=destination_dir,
     )
@@ -420,7 +419,6 @@ def _create_stake_pool_w_build_est(
         f"{node_cold.vkey_file}; {node_cold.skey_file}; {node_cold.counter_file}"
     )
 
-    # Register pool using build-estimate
     pool_reg_cert_file, tx_raw_output = _register_stake_pool_w_build_est(
         cluster_obj=cluster_obj,
         pool_data=pool_data,

@@ -329,14 +329,14 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_negative_overflow(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with negative `invalid_before` and check for int overflow.
 
@@ -356,7 +356,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # In node versions >= 1.36.0 we are checking error from
@@ -381,14 +381,14 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_positive_overflow(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
 
@@ -409,7 +409,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=over_before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method
         )
 
         # In node versions >= 1.36.0 we are checking error from
@@ -434,14 +434,14 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_too_high(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_INT64`.
 
@@ -458,7 +458,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         assert "(OutsideValidityIntervalUTxO" in err_str, err_str
@@ -472,7 +472,7 @@ class TestNegative:
     @hypothesis.example(before_value=1)
     @hypothesis.example(before_value=common.MAX_INT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_negative_overflow(
@@ -480,7 +480,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         before_value: int,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with negative `invalid_before` and check for int overflow.
 
@@ -493,7 +493,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=-before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method
         )
 
         # In node versions >= 1.36.0 we are checking error from
