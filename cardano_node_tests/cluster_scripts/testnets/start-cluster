@@ -152,7 +152,7 @@ PID_FILE="\$SCRIPT_DIR/supervisord.pid"
 SUPERVISORD_SOCKET_PATH="${SUPERVISORD_SOCKET_PATH}"
 
 if [ -e "\$SUPERVISORD_SOCKET_PATH" ]; then
-  supervisorctl -s unix:///\${SUPERVISORD_SOCKET_PATH} stop all
+  supervisorctl -s unix:///\${SUPERVISORD_SOCKET_PATH} stop all || rm -f "\$SUPERVISORD_SOCKET_PATH"
 fi
 
 if [ ! -f "\$PID_FILE" ]; then
