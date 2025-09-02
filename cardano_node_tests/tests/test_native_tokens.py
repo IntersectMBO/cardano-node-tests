@@ -136,7 +136,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -146,7 +146,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
         aname_type: str,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses.
@@ -207,7 +207,7 @@ class TestMinting:
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -220,7 +220,7 @@ class TestMinting:
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
@@ -242,7 +242,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -252,7 +252,7 @@ class TestMinting:
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
         aname_type: str,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting and burning of tokens, sign the transaction using skeys.
@@ -306,7 +306,7 @@ class TestMinting:
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -319,7 +319,7 @@ class TestMinting:
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -337,7 +337,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -345,7 +345,7 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting of tokens using several different scripts in single transaction.
@@ -363,7 +363,11 @@ class TestMinting:
         """
         temp_template = common.get_test_id(cluster)
 
-        expected_fee = MINT_MULTIPLE_FEE[1] if use_build_cmd else MINT_MULTIPLE_FEE[0]
+        expected_fee = (
+            MINT_MULTIPLE_FEE[1]
+            if build_method == clusterlib_utils.BuildMethods.BUILD
+            else MINT_MULTIPLE_FEE[0]
+        )
         num_of_scripts = 5
 
         amount = 5
@@ -416,7 +420,7 @@ class TestMinting:
             new_tokens=tokens_mint,
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
@@ -433,7 +437,7 @@ class TestMinting:
             new_tokens=tokens_burn,
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -457,7 +461,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -465,7 +469,7 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting one token and burning other token in single transaction.
@@ -518,7 +522,7 @@ class TestMinting:
             new_tokens=[tokens_mint[0]],
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             sign_incrementally=True,
         )
 
@@ -532,7 +536,7 @@ class TestMinting:
             new_tokens=[token_burn1, tokens_mint[1]],
             temp_template=f"{temp_template}_mint_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             sign_incrementally=True,
         )
 
@@ -553,7 +557,7 @@ class TestMinting:
             new_tokens=[token_burn2],
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             sign_incrementally=True,
         )
 
@@ -571,7 +575,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -579,7 +583,7 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting one token and burning the same token in single transaction.
@@ -635,7 +639,7 @@ class TestMinting:
             ),
         ]
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             tx_output = cluster.g_transaction.build_tx(
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
@@ -646,7 +650,7 @@ class TestMinting:
                 mint=mint,
                 witness_override=len(tx_files.signing_key_files),
             )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
@@ -660,11 +664,21 @@ class TestMinting:
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
                 txouts=txouts,
-                # Token minting and burning in the same TX
                 mint=mint,
                 tx_files=tx_files,
                 fee=fee,
             )
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            tx_output = cluster.g_transaction.build_estimate_tx(
+                src_address=token_mint_addr.address,
+                tx_name=f"{temp_template}_mint_burn",
+                txouts=txouts,
+                mint=mint,
+                tx_files=tx_files,
+                witness_count_add=len(tx_files.signing_key_files),
+            )
+        else:
+            pytest.skip(f"Unsupported build method: {build_method}")
 
         out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -692,7 +706,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("tokens_db", MINT_BURN_WITNESS_PARAMS)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -705,7 +719,7 @@ class TestMinting:
         issuers_addrs: list[clusterlib.AddressRecord],
         multisig_script_policyid: tuple[pl.Path, str],
         tokens_db: tuple[int, int, int],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
@@ -723,7 +737,11 @@ class TestMinting:
         amount = 5
 
         tokens_num, expected_fee_raw, expected_fee_build = tokens_db
-        expected_fee = expected_fee_build if use_build_cmd else expected_fee_raw
+        expected_fee = (
+            expected_fee_build
+            if build_method == clusterlib_utils.BuildMethods.BUILD
+            else expected_fee_raw
+        )
 
         token_mint_addr = issuers_addrs[0]
         script, policyid = multisig_script_policyid
@@ -750,7 +768,7 @@ class TestMinting:
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
                 submit_method=submit_method,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
 
         if tokens_num >= 500:
@@ -816,7 +834,7 @@ class TestMinting:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -841,7 +859,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("tokens_db", MINT_BURN_SIGN_PARAMS)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -854,7 +872,7 @@ class TestMinting:
         issuers_addrs: list[clusterlib.AddressRecord],
         simple_script_policyid: tuple[pl.Path, str],
         tokens_db: tuple[int, int, int],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting and burning multiple different tokens that are in single bundle.
@@ -872,7 +890,11 @@ class TestMinting:
         amount = 5
 
         tokens_num, expected_fee_raw, expected_fee_build = tokens_db
-        expected_fee = expected_fee_build if use_build_cmd else expected_fee_raw
+        expected_fee = (
+            expected_fee_build
+            if build_method == clusterlib_utils.BuildMethods.BUILD
+            else expected_fee_raw
+        )
 
         token_mint_addr = issuers_addrs[0]
         issuer_addr = issuers_addrs[1]
@@ -900,7 +922,7 @@ class TestMinting:
                 new_tokens=tokens_to_mint,
                 temp_template=f"{temp_template}_mint",
                 submit_method=submit_method,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
             )
 
         if tokens_num >= 500:
@@ -966,7 +988,7 @@ class TestMinting:
             new_tokens=tokens_to_burn,
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -987,7 +1009,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -995,7 +1017,7 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting and partial burning of tokens.
@@ -1039,7 +1061,7 @@ class TestMinting:
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             sign_incrementally=True,
         )
 
@@ -1071,7 +1093,7 @@ class TestMinting:
             new_tokens=[final_burn],
             temp_template=f"{temp_template}_burn2",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             sign_incrementally=True,
         )
 
@@ -1086,7 +1108,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1094,7 +1116,7 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test minting and burning of token with unicode non-ascii chars in its asset name.
@@ -1140,7 +1162,7 @@ class TestMinting:
             new_tokens=[token_mint],
             temp_template=f"{temp_template}_mint",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint, coins=[token])
@@ -1155,7 +1177,7 @@ class TestMinting:
             new_tokens=[token_burn],
             temp_template=f"{temp_template}_burn",
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         token_utxo = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn, coins=[token])
@@ -1177,7 +1199,7 @@ class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1185,7 +1207,7 @@ class TestPolicies:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
         expected_fee = 228_113
@@ -1230,7 +1252,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
             invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
@@ -1248,7 +1270,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
             invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -1269,7 +1291,7 @@ class TestPolicies:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1277,7 +1299,7 @@ class TestPolicies:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
         expected_fee = 228_113
@@ -1324,7 +1346,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_mint",
             invalid_before=100,
             invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         mint_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_mint)
@@ -1342,7 +1364,7 @@ class TestPolicies:
             temp_template=f"{temp_template}_burn",
             invalid_before=100,
             invalid_hereafter=cluster.g_query.get_slot_no() + 1_000,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         burn_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_out_burn)
@@ -1690,7 +1712,7 @@ class TestTransfer:
         return new_token
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("amount", (1, 10, 200, 2_000, 100_000))
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -1700,7 +1722,7 @@ class TestTransfer:
         payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.NativeTokenRec,
         amount: int,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Test sending tokens to payment address.
 
@@ -1738,7 +1760,7 @@ class TestTransfer:
 
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             # TODO: add ADA txout for change address - see node issue #3057
             txouts.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
 
@@ -1782,13 +1804,32 @@ class TestTransfer:
                 tx_name=temp_template,
             )
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-        else:
+
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             tx_raw_output = cluster.g_transaction.send_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=txouts,
                 tx_files=tx_files,
             )
+
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            tx_raw_output = cluster.g_transaction.build_estimate_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=txouts,
+                tx_files=tx_files,
+                witness_count_add=len(tx_files.signing_key_files),
+            )
+            tx_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+
+        else:
+            pytest.skip(f"Unsupported build method: {build_method}")
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
 
@@ -1823,7 +1864,7 @@ class TestTransfer:
             blockers.finish_test(issues=xfail_issues)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
@@ -1831,7 +1872,7 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.NativeTokenRec,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Test sending multiple different tokens to payment addresses.
 
@@ -1904,7 +1945,7 @@ class TestTransfer:
             signing_key_files=list({t.token_mint_addr.skey_file for t in new_tokens})
         )
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             # TODO: add ADA txout for change address
             txouts.append(clusterlib.TxOut(address=src_address, amount=4_000_000))
 
@@ -1951,13 +1992,32 @@ class TestTransfer:
                 tx_name=temp_template,
             )
             cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-        else:
+
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             tx_raw_output = cluster.g_transaction.send_tx(
                 src_address=src_address,
                 tx_name=temp_template,
                 txouts=txouts,
                 tx_files=tx_files,
             )
+
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            tx_raw_output = cluster.g_transaction.build_estimate_tx(
+                src_address=src_address,
+                tx_name=temp_template,
+                txouts=txouts,
+                tx_files=tx_files,
+                witness_count_add=len(tx_files.signing_key_files),
+            )
+            tx_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_raw_output.out_file,
+                signing_key_files=tx_files.signing_key_files,
+                tx_name=temp_template,
+            )
+            cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+
+        else:
+            pytest.skip(f"Unsupported build method: {build_method}")
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
 
@@ -2001,7 +2061,7 @@ class TestTransfer:
             blockers.finish_test(issues=xfail_issues)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @common.SKIPIF_ON_TESTNET
     @pytest.mark.smoke
     def test_transfer_no_ada(
@@ -2009,7 +2069,7 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.NativeTokenRec,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to create an UTxO with just native tokens, no ADA. Expect failure."""
         temp_template = common.get_test_id(cluster)
@@ -2021,7 +2081,7 @@ class TestTransfer:
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount, coin=new_token.token)]
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             expected_error = "Minimum required UTxO:"
             # TODO: add ADA txout for change address
             txouts.append(clusterlib.TxOut(address=src_address, amount=3500_000))
@@ -2035,7 +2095,7 @@ class TestTransfer:
                     tx_files=tx_files,
                 )
             assert expected_error in str(excinfo.value)
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             expected_error = "OutputTooSmallUTxO"
 
             try:
@@ -2048,6 +2108,17 @@ class TestTransfer:
             except clusterlib.CLIError as err:
                 if expected_error not in str(err):
                     raise
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            expected_error = "Minimum required UTxO:"
+
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.g_transaction.build_estimate_tx(
+                    src_address=src_address,
+                    tx_name=temp_template,
+                    txouts=txouts,
+                    tx_files=tx_files,
+                )
+            assert expected_error in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -2056,14 +2127,14 @@ class TestTransfer:
     @hypothesis.example(token_amount=NEW_TOKENS_NUM + 1)
     @hypothesis.example(token_amount=MAX_TOKEN_AMOUNT)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     def test_transfer_invalid_token_amount(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         new_token: clusterlib_utils.NativeTokenRec,
-        use_build_cmd: bool,
+        build_method: str,
         token_amount: int,
     ):
         """Test sending an invalid amount of tokens to payment address."""
@@ -2085,7 +2156,7 @@ class TestTransfer:
 
         tx_files = clusterlib.TxFiles(signing_key_files=[new_token.token_mint_addr.skey_file])
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 # Add ADA txout for change address - see node issue #3057
                 txouts.append(clusterlib.TxOut(address=src_address, amount=min_amount_lovelace))
@@ -2110,7 +2181,7 @@ class TestTransfer:
                 or "Illegal Value in TxOut" in exc_val  # In node 9.2.0+
                 or re.search(r"Negative quantity \(-[0-9]*\) in transaction output", exc_val)
             ), exc_val
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 try:
                     logging.disable(logging.ERROR)
@@ -2126,6 +2197,26 @@ class TestTransfer:
 
             exc_val = str(excinfo.value)
             assert "ValueNotConservedUTxO" in exc_val, exc_val
+
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                try:
+                    logging.disable(logging.ERROR)
+                    cluster.g_transaction.build_estimate_tx(
+                        src_address=src_address,
+                        tx_name=temp_template,
+                        txouts=txouts,
+                        tx_files=tx_files,
+                    )
+                finally:
+                    logging.disable(logging.NOTSET)
+
+            exc_val = str(excinfo.value)
+            # build-estimate tends to throw balancing errors
+            assert (
+                "The transaction does not balance in its use of assets" in exc_val
+                or "ValueNotConservedUTxO" in exc_val
+            ), exc_val
 
 
 @common.SKIPIF_TOKENS_UNUSABLE
@@ -2431,7 +2522,7 @@ class TestReferenceUTxO:
     """Tests for Simple Scripts V1 and V2 on reference UTxOs."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -2440,7 +2531,7 @@ class TestReferenceUTxO:
         self,
         cluster: clusterlib.ClusterLib,
         issuers_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         script_version: str,
     ):
         """Test minting and burning a token using reference script.
@@ -2534,7 +2625,7 @@ class TestReferenceUTxO:
             ),
         ]
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=token_mint_addr.address,
                 tx_name=temp_template,
@@ -2546,7 +2637,7 @@ class TestReferenceUTxO:
                 invalid_before=invalid_before,
                 witness_override=2,
             )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
@@ -2556,7 +2647,7 @@ class TestReferenceUTxO:
                 invalid_hereafter=invalid_hereafter,
                 invalid_before=invalid_before,
                 # TODO: workaround for https://github.com/IntersectMBO/cardano-node/issues/1892
-                witness_count_add=2,
+                witness_count_add=len(tx_files.signing_key_files),
             )
             tx_raw_output = cluster.g_transaction.build_raw_tx(
                 src_address=token_mint_addr.address,
@@ -2568,6 +2659,17 @@ class TestReferenceUTxO:
                 fee=fee,
                 invalid_hereafter=invalid_hereafter,
                 invalid_before=invalid_before,
+            )
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            cluster.g_transaction.build_estimate_tx(
+                src_address=token_mint_addr.address,
+                tx_name=f"{temp_template}_mint_burn",
+                txouts=txouts,
+                mint=mint,
+                tx_files=tx_files,
+                invalid_hereafter=invalid_hereafter,
+                invalid_before=invalid_before,
+                witness_count_add=len(tx_files.signing_key_files),
             )
 
         out_file_signed = cluster.g_transaction.sign_tx(
