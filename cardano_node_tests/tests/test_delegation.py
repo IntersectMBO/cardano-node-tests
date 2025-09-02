@@ -132,7 +132,7 @@ class TestDelegateAddr:
     """Tests for stake address delegation."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -140,7 +140,7 @@ class TestDelegateAddr:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_and_pool: tuple[clusterlib.ClusterLib, str],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Submit registration certificate and delegate to pool using pool id.
 
@@ -162,7 +162,7 @@ class TestDelegateAddr:
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             pool_id=pool_id,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         tx_db_record = dbsync_utils.check_tx(
@@ -176,14 +176,14 @@ class TestDelegateAddr:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_delegate_using_vkey(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool: tuple[clusterlib.ClusterLib, str],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Submit registration certificate and delegate to pool using cold vkey.
 
@@ -206,7 +206,7 @@ class TestDelegateAddr:
             addrs_data=cluster_manager.cache.addrs_data,
             temp_template=temp_template,
             cold_vkey=node_cold.vkey_file,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         tx_db_record = dbsync_utils.check_tx(
@@ -852,7 +852,7 @@ class TestDelegateAddr:
             assert still_rewards_epoch in db_reward_epochs
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.parametrize(
         "stake_cert",
@@ -866,7 +866,7 @@ class TestDelegateAddr:
         pool_users_cluster_and_pool: list[clusterlib.PoolUser],
         pool_users_disposable_cluster_and_pool: list[clusterlib.PoolUser],
         stake_cert: str,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Submit delegation and deregistration certificates in single TX.
 
@@ -956,37 +956,19 @@ class TestDelegateAddr:
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
-        if use_build_cmd:
-
-            def _build_deleg_dereg() -> clusterlib.TxRawOutput:
-                return cluster.g_transaction.build_tx(
-                    src_address=user_payment.address,
-                    tx_name=f"{temp_template}_deleg_dereg",
-                    tx_files=tx_files,
-                    fee_buffer=2_000_000,
-                    witness_override=len(tx_files.signing_key_files),
-                )
-
-            tx_raw_output_deleg: clusterlib.TxRawOutput = common.match_blocker(
-                func=_build_deleg_dereg
-            )
-            tx_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output_deleg.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=f"{temp_template}_deleg_dereg",
-            )
-            try:
-                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output_deleg.txins)
-            except clusterlib.CLIError as exc:
-                if "ValueNotConservedUTxO" in str(exc):
-                    issues.cli_942.finish_test()
-                raise
-        else:
-            tx_raw_output_deleg = cluster.g_transaction.send_tx(
+        try:
+            tx_raw_output_deleg = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_deleg_dereg",
                 src_address=user_payment.address,
-                tx_name=f"{temp_template}_deleg_dereg",
                 tx_files=tx_files,
+                build_method=build_method,
+                witness_override=len(tx_files.signing_key_files),
             )
+        except clusterlib.CLIError as exc:
+            if "ValueNotConservedUTxO" in str(exc):
+                issues.cli_942.finish_test()
+            raise
 
         # Check that the balance for source address was correctly updated and that the key
         # deposit was returned
@@ -1092,7 +1074,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_unknown_addr(
@@ -1100,7 +1082,7 @@ class TestNegative:
         cluster_and_pool: tuple[clusterlib.ClusterLib, str],
         pool_users_cluster_and_pool: list[clusterlib.PoolUser],
         pool_users_disposable_cluster_and_pool: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to delegate unknown stake address.
 
@@ -1127,33 +1109,22 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
-                tx_raw_output = cluster.g_transaction.build_tx(
-                    src_address=user_payment.address,
-                    tx_name=f"{temp_template}_deleg_unknown",
-                    tx_files=tx_files,
-                    fee_buffer=2_000_000,
-                    witness_override=len(tx_files.signing_key_files),
-                )
-                tx_signed = cluster.g_transaction.sign_tx(
-                    tx_body_file=tx_raw_output.out_file,
-                    signing_key_files=tx_files.signing_key_files,
-                    tx_name=f"{temp_template}_deleg_unknown",
-                )
-                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-            else:
-                cluster.g_transaction.send_tx(
-                    src_address=user_payment.address,
-                    tx_name=f"{temp_template}_deleg_unknown",
-                    tx_files=tx_files,
-                )
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_deleg_unknown",
+                src_address=user_payment.address,
+                tx_files=tx_files,
+                build_method=build_method,
+                witness_override=len(tx_files.signing_key_files),
+            )
+
         err_msg = str(excinfo.value)
         assert (
             "StakeDelegationImpossibleDELEG" in err_msg or "StakeKeyNotRegisteredDELEG" in err_msg
         ), err_msg
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_deregistered_addr(
@@ -1161,7 +1132,7 @@ class TestNegative:
         cluster_and_pool: tuple[clusterlib.ClusterLib, str],
         pool_users_cluster_and_pool: list[clusterlib.PoolUser],
         pool_users_disposable_cluster_and_pool: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to delegate deregistered stake address.
 
@@ -1207,26 +1178,15 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
-                tx_raw_output = cluster.g_transaction.build_tx(
-                    src_address=user_payment.address,
-                    tx_name=f"{temp_template}_deleg_dereg",
-                    tx_files=tx_files,
-                    fee_buffer=2_000_000,
-                    witness_override=len(tx_files.signing_key_files),
-                )
-                tx_signed = cluster.g_transaction.sign_tx(
-                    tx_body_file=tx_raw_output.out_file,
-                    signing_key_files=tx_files.signing_key_files,
-                    tx_name=f"{temp_template}_deleg_dereg",
-                )
-                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-            else:
-                cluster.g_transaction.send_tx(
-                    src_address=user_payment.address,
-                    tx_name=f"{temp_template}_deleg_dereg",
-                    tx_files=tx_files,
-                )
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_deleg_dereg",
+                src_address=user_payment.address,
+                tx_files=tx_files,
+                build_method=build_method,
+                witness_override=len(tx_files.signing_key_files),
+            )
+
         err_msg = str(excinfo.value)
         assert (
             "StakeDelegationImpossibleDELEG" in err_msg or "StakeKeyNotRegisteredDELEG" in err_msg
