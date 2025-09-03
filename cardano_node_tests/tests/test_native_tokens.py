@@ -2671,7 +2671,7 @@ class TestReferenceUTxO:
                 invalid_before=invalid_before,
             )
         elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-            cluster.g_transaction.build_estimate_tx(
+            tx_raw_output = cluster.g_transaction.build_estimate_tx(
                 src_address=token_mint_addr.address,
                 tx_name=f"{temp_template}_mint_burn",
                 txouts=txouts,
