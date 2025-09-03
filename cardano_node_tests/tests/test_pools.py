@@ -496,7 +496,8 @@ def _create_register_pool(
             reward_account_key_pair=reward_account_key_pair,
         )
     else:
-        err = f"Unsupported build method '{build_method}'"
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
 
     # Deregister stake pool
     def _deregister():
@@ -646,7 +647,8 @@ def _create_register_pool_delegate_stake_tx(
         )
 
     else:
-        raise ValueError(f"Unsupported build method: {build_method}")
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
 
     # Deregister stake pool
     def _deregister():
@@ -797,7 +799,8 @@ def _create_register_pool_tx_delegate_stake_tx(
         )
 
     else:
-        raise ValueError(f"Unsupported build method: {build_method}")
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
 
     # Check that the balance for source address was correctly updated
     assert (
@@ -1578,7 +1581,7 @@ class TestStakePool:
                 tx_name=f"{temp_template}_rereg",
                 deposit=0,
             )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             __, tx_raw_output = cluster.g_stake_pool.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
@@ -1588,6 +1591,9 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
 
         # Check that pool is going to be updated with correct data
         future_params = cluster.g_query.get_pool_state(
@@ -1705,7 +1711,7 @@ class TestStakePool:
                 tx_name=f"{temp_template}_rereg",
                 deposit=0,
             )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             __, tx_raw_output = cluster.g_stake_pool.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
@@ -1715,6 +1721,9 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
 
         # Check that pool is going to be updated with correct data
         future_params = cluster.g_query.get_pool_state(
@@ -2347,18 +2356,29 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             if build_method == clusterlib_utils.BuildMethods.BUILD:
-                tx_raw_output = cluster.g_transaction.build_tx(
-                    src_address=pool_users[0].payment.address,
-                    tx_name="deregister_unregistered",
-                    tx_files=tx_files,
-                    fee_buffer=2_000_000,
-                )
+
+                def _build_dereg() -> clusterlib.TxRawOutput:
+                    return cluster.g_transaction.build_tx(
+                        src_address=pool_users[0].payment.address,
+                        tx_name="deregister_unregistered",
+                        tx_files=tx_files,
+                        fee_buffer=2_000_000,
+                    )
+
+                tx_raw_output = common.match_blocker(func=_build_dereg)
                 tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,
                     tx_name="deregister_unregistered",
                 )
                 cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
+                cluster.g_transaction.send_tx(
+                    src_address=pool_users[0].payment.address,
+                    tx_name="deregister_unregistered",
+                    tx_files=tx_files,
+                )
 
             elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
                 cluster.g_transaction.build_estimate_tx(
@@ -2370,12 +2390,11 @@ class TestNegative:
                 )
 
             else:
-                cluster.g_transaction.send_tx(
-                    src_address=pool_users[0].payment.address,
-                    tx_name="deregister_unregistered",
-                    tx_files=tx_files,
-                )
-        assert "StakePoolNotRegisteredOnKeyPOOL" in str(excinfo.value)
+                msg = f"Unsupported build method: {build_method}"
+                raise ValueError(msg)
+
+        err_msg = str(excinfo.value)
+        assert "StakePoolNotRegisteredOnKeyPOOL" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
