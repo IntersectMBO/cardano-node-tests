@@ -54,6 +54,7 @@ types-requests = "^2.32.4.20250611"
 mypy = "^1.16.1"
 ipython = "^9.3.0"
 pyrefly = "^0.22.0"
+pyright = "^1.1.404"
 
 [tool.poetry.group.docs]
 optional = true
@@ -116,6 +117,10 @@ replace_imports_with_any = ["allure.*", "hypothesis.*", "pytest.*", "pytest_subt
 ignore_errors_in_generated_code = true
 use_untyped_imports = true
 ignore_missing_source = true
+
+[tool.pyright]
+pythonVersion = "3.11"
+reportPrivateImportUsage = false
 
 [tool.pytest.ini_options]
 log_cli = true
