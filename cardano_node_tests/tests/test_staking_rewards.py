@@ -330,6 +330,7 @@ class TestRewards:
         """
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_use_pool_and_rewards
+        this_epoch = 0
 
         # Make sure there are rewards already available
         clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
@@ -819,6 +820,7 @@ class TestRewards:
 
             LOGGER.info("Checking rewards for 8 epochs.")
             withdrawal_past_epoch = False
+            tx_raw_undeleg = None
             for __ in range(8):
                 # Reward balance in previous epoch
                 prev_reward_rec = reward_records[-1]
@@ -917,7 +919,9 @@ class TestRewards:
 
         # Check TX records in db-sync
         assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_deleg)
-        assert dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)
+        assert tx_raw_undeleg and dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=tx_raw_undeleg
+        )
 
         # Check pool records in db-sync
         pool_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
@@ -1452,6 +1456,9 @@ class TestRewards:
 
         LOGGER.info("Checking rewards for 8 epochs.")
         withdrawal_past_epoch = False
+        delegation_out_ep2 = None
+        delegation_out_ep3 = None
+        delegation_out_ep4 = None
         for __ in range(8):
             # Reward balance in previous epoch
             prev_reward_rec = reward_records[-1]
@@ -1584,6 +1591,10 @@ class TestRewards:
             )
 
             _check_ledger_state(this_epoch=this_epoch)
+
+        assert delegation_out_ep2
+        assert delegation_out_ep3
+        assert delegation_out_ep4
 
         # Check records in db-sync
         tx_db_record_init = dbsync_utils.check_tx(

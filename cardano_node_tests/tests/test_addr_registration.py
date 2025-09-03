@@ -440,6 +440,9 @@ class TestRegisterAddr:
                     complex_certs=complex_certs,
                     witness_count_add=witness_len,
                 )
+            else:
+                err = f"Invalid build_method: {build_method}"
+                raise ValueError(err)
 
             # Create witness file for each key
             witness_files = [
@@ -729,6 +732,9 @@ class TestNegative:
                     complex_certs=complex_certs,
                     witness_count_add=witness_len,
                 )
+            else:
+                err = f"Invalid build_method: {build_method}"
+                raise ValueError(err)
 
             # Create witness file for each key
             witness_files = [

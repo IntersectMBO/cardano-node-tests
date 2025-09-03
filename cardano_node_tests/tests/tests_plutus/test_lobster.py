@@ -340,6 +340,7 @@ class TestLobsterChallenge:
         vote_utxos = token_utxos_step3
         vote_counter = 0
         utxo_counter_token: clusterlib.UTXOData | None = None
+        utxo_counter_tokens = []
         for vote_num, vote_val in enumerate(votes, start=1):
             # Normal votes
             if vote_num <= votes_num:

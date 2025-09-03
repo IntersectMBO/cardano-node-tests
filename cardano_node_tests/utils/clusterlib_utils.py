@@ -943,7 +943,7 @@ def _get_ledger_state_cmd(
         custom_clusterlib.record_cli_coverage(
             cli_args=cardano_cli_args,
             # pyrefly: ignore  # missing-attribute
-            coverage_dict=cluster_obj.cli_coverage,
+            coverage_dict=cluster_obj.cli_coverage,  # pyright: ignore [reportAttributeAccessIssue]
         )
 
     return ledger_state_cmd

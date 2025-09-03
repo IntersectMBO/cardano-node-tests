@@ -303,6 +303,9 @@ def get_default_governance(
                 governance_data = pickle.load(in_data)
 
         fixture_cache.value = governance_data
+        if fixture_cache.value is None:
+            err = "Governance data not found"
+            raise RuntimeError(err)
         return fixture_cache.value
 
 

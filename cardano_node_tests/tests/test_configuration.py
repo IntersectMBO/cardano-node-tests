@@ -105,6 +105,7 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     end_sec = 30
     end_sec_padded = end_sec + 30  # padded to make sure tip got updated
 
+    epoch = 0
     sleep_time = 0
 
     tip = cluster_obj.g_query.get_tip()

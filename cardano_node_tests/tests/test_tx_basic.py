@@ -283,6 +283,7 @@ class TestBasicTransactions:
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
         fee = 150_000  # Initial fee value
+        tx_output = None
         for i in range(5):
             txouts = [clusterlib.TxOut(address=dst_address, amount=src_init_balance - fee)]
 
@@ -293,6 +294,7 @@ class TestBasicTransactions:
                     tx_files=tx_files,
                     txouts=txouts,
                     change_address=src_address,
+                    fee_buffer=0,
                 )
             except clusterlib.CLIError as exc:
                 str_exc = str(exc)
@@ -310,6 +312,8 @@ class TestBasicTransactions:
                 fee = fee + int(fee_match.group(1))
             else:
                 break
+
+        assert tx_output
 
         tx_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output.out_file,
@@ -503,9 +507,9 @@ class TestBasicTransactions:
                 tx_files=tx_files,
             )
         except clusterlib.CLIError as exc:
-            if "balance of the transaction is negative" not in str(exc):
-                raise
-            issues.cli_1199.finish_test()
+            if "balance of the transaction is negative" in str(exc):
+                issues.cli_1199.finish_test()
+            raise
 
         out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,

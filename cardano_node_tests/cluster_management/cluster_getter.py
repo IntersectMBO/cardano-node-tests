@@ -33,9 +33,7 @@ if configuration.IS_XDIST:
     _xdist_sleep = time.sleep
 else:
 
-    def _xdist_sleep(
-        secs: float,
-    ) -> None:
+    def _xdist_sleep(seconds: float, /) -> None:
         """No need to sleep if tests are running on a single worker."""
 
 
@@ -167,6 +165,7 @@ class ClusterGetter:
         excp: Exception | None = None
         netstat_out = ""
         ports = self.ports
+        cluster_obj = None
         for i in range(2):
             if i > 0:
                 self.log(
@@ -232,6 +231,11 @@ class ClusterGetter:
             if not configuration.IS_XDIST:
                 pytest.exit(reason="Failed to start cluster", returncode=1)
             status_files.create_cluster_dead_file(instance_num=self.cluster_instance_num)
+            return False
+
+        if cluster_obj is None:
+            # Should never reach this
+            self.log(f"c{self.cluster_instance_num}: failed to start cluster")
             return False
 
         # Generate ID for the new cluster instance so it is possible to match log entries with
