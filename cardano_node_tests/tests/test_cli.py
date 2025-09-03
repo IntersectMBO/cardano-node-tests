@@ -423,6 +423,7 @@ class TestAddressBuild:
 
         script_file = DATA_DIR / "golden_sig.script"
 
+        payment_vkey = None
         if payment == "vkey":
             with open(payment_vkey_file, encoding="utf-8") as infile:
                 # Ignore the first 4 chars, just an informative keyword
@@ -430,6 +431,7 @@ class TestAddressBuild:
                     prefix="addr_vk", data=json.loads(infile.read().strip()).get("cborHex", "")[4:]
                 )
 
+        stake_vkey = None
         if stake == "vkey":
             with open(stake_vkey_file, encoding="utf-8") as infile:
                 # Ignore the first 4 chars, just an informative keyword
@@ -439,11 +441,11 @@ class TestAddressBuild:
 
         address = cluster.g_address.gen_payment_addr(
             addr_name=temp_template,
-            payment_vkey=payment_vkey if payment == "vkey" else None,
+            payment_vkey=payment_vkey,
             payment_vkey_file=payment_vkey_file if payment == "vkey_file" else None,
             payment_script_file=script_file if payment == "script_file" else None,
             stake_vkey=stake_vkey if stake == "vkey" else None,
-            stake_vkey_file=stake_vkey_file if stake == "vkey_file" else None,
+            stake_vkey_file=stake_vkey_file,
             stake_script_file=script_file if stake == "script_file" else None,
             stake_address=stake_address if stake == "address" else None,
         )
@@ -484,6 +486,7 @@ class TestAddressBuild:
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
+        vkey_file = None
         if option == "vkey_file":
             vkey_file = f"{temp_template}.vkey"
             vkey_file_content = {
@@ -495,6 +498,7 @@ class TestAddressBuild:
             with open(vkey_file, "w", encoding="utf-8") as outfile:
                 json.dump(vkey_file_content, outfile)
 
+        script_file = None
         if option == "script_file":
             script_file = f"{temp_template}.script"
             script_file_content = {
@@ -509,8 +513,8 @@ class TestAddressBuild:
             cluster.g_address.gen_payment_addr(
                 addr_name=temp_template,
                 payment_vkey=key if option == "vkey" else None,
-                payment_vkey_file=vkey_file if option == "vkey_file" else None,
-                payment_script_file=script_file if option == "script_file" else None,
+                payment_vkey_file=vkey_file,
+                payment_script_file=script_file,
             )
 
         err_str = str(excinfo.value)
@@ -542,6 +546,7 @@ class TestAddressBuild:
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
+        vkey_file = None
         if option == "vkey_file":
             vkey_file = f"{temp_template}.vkey"
             vkey_file_content = {
@@ -553,6 +558,7 @@ class TestAddressBuild:
             with open(vkey_file, "w", encoding="utf-8") as outfile:
                 json.dump(vkey_file_content, outfile)
 
+        script_file = None
         if option == "script_file":
             script_file = f"{temp_template}.script"
             script_file_content = {
@@ -568,8 +574,8 @@ class TestAddressBuild:
                 addr_name=temp_template,
                 payment_vkey="addr_vk1rauy20dp8fu7zgnw9asmehg55n38l9n4pj7xv9clx8vduyylwgtsyl0n9m",
                 stake_vkey=key if option == "vkey" else None,
-                stake_vkey_file=vkey_file if option == "vkey_file" else None,
-                stake_script_file=script_file if option == "script_file" else None,
+                stake_vkey_file=vkey_file,
+                stake_script_file=script_file,
                 stake_address=key if option == "address" else None,
             )
 
@@ -596,6 +602,7 @@ class TestAddressKeyHash:
 
         expected_hash = "0dc8e171258165131d45451bf9e2a1be44a97d684ce2f775b7734263"
 
+        vkey = None
         if option == "vkey":
             with open(vkey_file, encoding="utf-8") as infile:
                 # Ignore the first 4 chars, just an informative keyword
@@ -604,7 +611,7 @@ class TestAddressKeyHash:
                 )
 
         vkey_hash = cluster.g_address.get_payment_vkey_hash(
-            payment_vkey=vkey if option == "vkey" else None,
+            payment_vkey=vkey,
             payment_vkey_file=vkey_file if option == "vkey_file" else None,
         )
 
@@ -622,6 +629,7 @@ class TestAddressKeyHash:
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
+        vkey_file = None
         if option == "vkey_file":
             vkey_file = f"{temp_template}.redeemer"
             vkey_file_content = {
@@ -636,7 +644,7 @@ class TestAddressKeyHash:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_address.get_payment_vkey_hash(
                 payment_vkey=vkey if option == "vkey" else None,
-                payment_vkey_file=vkey_file if option == "vkey_file" else None,
+                payment_vkey_file=vkey_file,
             )
 
         err_str = str(excinfo.value)
@@ -897,6 +905,7 @@ class TestStakeAddressKeyHash:
 
         expected_hash = "a8b8c13cc0b863bc077e0bc6eafdc6f32f43a4513b70378b30ceb7b9"
 
+        vkey = None
         if option == "vkey":
             with open(vkey_file, encoding="utf-8") as infile:
                 # Ignore the first 4 chars, just an informative keyword
@@ -905,7 +914,7 @@ class TestStakeAddressKeyHash:
                 )
 
         vkey_hash = cluster.g_stake_address.get_stake_vkey_hash(
-            stake_vkey=vkey if option == "vkey" else None,
+            stake_vkey=vkey,
             stake_vkey_file=vkey_file if option == "vkey_file" else None,
         )
 
@@ -923,6 +932,7 @@ class TestStakeAddressKeyHash:
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
+        vkey_file = None
         if option == "vkey_file":
             vkey_file = f"{temp_template}.redeemer"
             vkey_file_content = {
@@ -937,7 +947,7 @@ class TestStakeAddressKeyHash:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_address.get_stake_vkey_hash(
                 stake_vkey=vkey if option == "vkey" else None,
-                stake_vkey_file=vkey_file if option == "vkey_file" else None,
+                stake_vkey_file=vkey_file,
             )
 
         err_str = str(excinfo.value)
@@ -964,6 +974,8 @@ class TestAdvancedQueries:
         if not pool_ids:
             pytest.skip("No stake pools are available.")
 
+        expected_pool_ids = []
+        stake_snapshot = {}
         try:
             if option == "single_pool":
                 # Make sure the queries can be finished in single epoch
@@ -998,7 +1010,6 @@ class TestAdvancedQueries:
                 ]
                 stake_snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
             elif option == "total_stake":
-                expected_pool_ids = []
                 stake_snapshot = cluster_obj.g_query.get_stake_snapshot()
             else:
                 msg = f"Unknown option: {option}"
@@ -1199,6 +1210,7 @@ class TestAdvancedQueries:
             pool_params = cluster.g_query.get_pool_params(stake_pool_id=pool_ids[0])
         except json.decoder.JSONDecodeError:
             issues.node_3859.finish_test()
+            raise
 
         assert hasattr(pool_params, "retiring")
 
@@ -1222,6 +1234,8 @@ class TestAdvancedQueries:
         """
         common.get_test_id(cluster)
 
+        last_ledger_slot = 0
+        tx_mempool = {}
         for __ in range(5):
             if with_out_file:
                 out_file = "/dev/stdout"

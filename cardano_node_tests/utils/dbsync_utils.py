@@ -96,6 +96,7 @@ def check_address_reward(
 def get_utxo(address: str) -> dbsync_types.PaymentAddrRecord:
     """Return UTxO info for payment address from db-sync."""
     utxos = []
+    db_row = None
     for db_row in dbsync_queries.query_utxo(address=address):
         utxos.append(
             dbsync_types.GetUTxORecord(
@@ -113,6 +114,10 @@ def get_utxo(address: str) -> dbsync_types.PaymentAddrRecord:
             amount_sum=0,
             utxos=[],
         )
+
+    if db_row is None:
+        msg = "db_row is not expected to be None here"
+        raise RuntimeError(msg)
 
     amount_sum = functools.reduce(lambda x, y: x + y.amount, utxos, 0)
     return dbsync_types.PaymentAddrRecord(
@@ -136,6 +141,7 @@ def get_pool_data(pool_id_bech32: str) -> dbsync_types.PoolDataRecord | None:
     latest_registered_tx_id = pools[-1].registered_tx_id
     latest_pools = [pool for pool in pools if pool.registered_tx_id == latest_registered_tx_id]
 
+    pool = None
     for pool in latest_pools:
         if pool.owner:
             owner = pool.owner.hex()[2:]
@@ -150,6 +156,10 @@ def get_pool_data(pool_id_bech32: str) -> dbsync_types.PoolDataRecord | None:
             }
             if host_address not in single_host_addresses:
                 single_host_addresses.append(host_address)
+
+    if pool is None:
+        msg = "pool is not expected to be None here"
+        raise RuntimeError(msg)
 
     pool_data = dbsync_types.PoolDataRecord(
         id=pool.id,
@@ -186,6 +196,7 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
     seen_ma_tx_mint_ids = set()
     tx_id = -1
 
+    query_row = None
     for query_row in dbsync_queries.query_tx(txhash=txhash):
         if tx_id == -1:
             tx_id = query_row.tx_id
@@ -248,6 +259,10 @@ def get_prelim_tx_record(txhash: str) -> dbsync_types.TxPrelimRecord:
 
     if tx_id == -1:
         msg = "No results were returned by the TX SQL query."
+        raise RuntimeError(msg)
+
+    if query_row is None:
+        msg = "query_row is not expected to be None here"
         raise RuntimeError(msg)
 
     txdata = dbsync_types.TxPrelimRecord(
@@ -1359,6 +1374,9 @@ def get_action_data(data_hash: str) -> dbsync_types.OffChainVoteDataRecord | Non
     latest_vot_anchor_id = votes[-1].data_vot_anchor_id
     latest_votes = [vote for vote in votes if vote.data_vot_anchor_id == latest_vot_anchor_id]
 
+    vote = None
+    gov_action = None
+    voting_anchor = None
     for vote in latest_votes:
         if vote.auth_name:
             author = {
@@ -1400,6 +1418,16 @@ def get_action_data(data_hash: str) -> dbsync_types.OffChainVoteDataRecord | Non
                 "type": vote.vot_anchor_type,
                 "block_id": vote.vot_anchor_block_id,
             }
+
+    if vote is None:
+        msg = "vote is not expected to be None here"
+        raise RuntimeError(msg)
+    if gov_action is None:
+        msg = "gov_action is not expected to be None here"
+        raise RuntimeError(msg)
+    if voting_anchor is None:
+        msg = "voting_anchor is not expected to be None here"
+        raise RuntimeError(msg)
 
     vote_data = dbsync_types.OffChainVoteDataRecord(
         id=vote.data_id,

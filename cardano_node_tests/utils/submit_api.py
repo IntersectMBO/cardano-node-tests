@@ -61,6 +61,7 @@ def post_cbor(cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     with open(cbor_file, "rb") as in_fp:
         cbor_binary = in_fp.read()
 
+    i = 0
     for i in range(1, 6):
         if i > 1:
             LOGGER.warning("Resubmitting transaction to submit-api.")
@@ -124,6 +125,7 @@ def submit_tx(
         wait_blocks: A number of new blocks to wait for (default = 2).
     """
     txid = ""
+    err = None
     for r in range(20):
         err = None
 
