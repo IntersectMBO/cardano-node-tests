@@ -84,6 +84,7 @@ class TestProtocol:
             protocol_state: dict = json.loads(protocol_state_raw)
         except json.decoder.JSONDecodeError:
             issues.node_3859.finish_test()
+            raise
 
         assert set(protocol_state) == PROTOCOL_STATE_KEYS
 

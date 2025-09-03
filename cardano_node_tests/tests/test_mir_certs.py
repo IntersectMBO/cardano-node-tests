@@ -940,6 +940,9 @@ class TestMIRCerts:
             ],
         )
 
+        tx_raw_out_reg = None
+        tx_raw_out_dereg = None
+
         # Register the stake address, if it is supposed to be known on blockchain
         if addr_history == "addr_known":
             tx_raw_out_reg = clusterlib_utils.register_stake_address(
@@ -977,6 +980,7 @@ class TestMIRCerts:
 
         reg_dereg_fees = 0
         if addr_history == "addr_known":
+            assert tx_raw_out_reg
             assert tx_raw_out_dereg
             reg_dereg_fees = tx_raw_out_reg.fee + tx_raw_out_dereg.fee
 

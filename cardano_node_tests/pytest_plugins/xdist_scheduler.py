@@ -67,7 +67,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
 
         return comps[1]  # nodeid has a group name
 
-    def _is_long_pending(self, assigned_to_node: collections.OrderedDict) -> bool:
+    def _is_long_pending(self, assigned_to_node: dict) -> bool:
         """Return True if there is a long-running test pending."""
         for nodeids_dict in assigned_to_node.values():
             for nodeid, is_completed in nodeids_dict.items():
@@ -104,7 +104,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         scope, work_unit = None, None
 
         # Check if there are any long-running tests already pending
-        # pyrefly: ignore  # bad-argument-type
+
         long_pending = self._is_long_pending(assigned_to_node)
 
         if long_pending:

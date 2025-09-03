@@ -55,6 +55,7 @@ class TestLedgerState:
             if "Invalid numeric literal at line" not in str(err):
                 raise
             issues.node_3859.finish_test()
+            raise
 
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
@@ -127,6 +128,7 @@ class TestLedgerState:
         seen_hashes_set: set[str] = set()
         seen_hashes_go: set[str] = set()
         delegation_pool_ids = {*delegations_mark, *delegations_set, *delegations_go}
+        stake_snapshot = {}
         for pool_id_dec in delegation_pool_ids:
             pool_id = helpers.encode_bech32(prefix="pool", data=pool_id_dec)
 

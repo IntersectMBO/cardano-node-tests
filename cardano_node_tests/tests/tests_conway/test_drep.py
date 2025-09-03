@@ -1176,6 +1176,8 @@ class TestDelegDReps:
             - deposit_address_amt
         ), f"Incorrect balance for source address `{payment_addr_rewards.address}`"
 
+        deleg_epoch = 0
+        deleg_amount = 0
         if check_delegation:
             assert submit_epoch == init_epoch, "Epoch changed and it would affect other checks"
 

@@ -21,14 +21,14 @@ def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config)
     """Save CLI coverage info."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     # pyrefly: ignore  # missing-attribute
-    if not (cli_coverage_dir and hasattr(cluster_obj, "cli_coverage") and cluster_obj.cli_coverage):
+    if not (cli_coverage_dir and hasattr(cluster_obj, "cli_coverage") and cluster_obj.cli_coverage):  # pyright: ignore [reportAttributeAccessIssue]
         return None
 
     json_file = (
         pl.Path(cli_coverage_dir) / f"cli_coverage_{helpers.get_timestamped_rand_str()}.json"
     )
     with open(json_file, "w", encoding="utf-8") as out_json:
-        json.dump(cluster_obj.cli_coverage, out_json, indent=4)
+        json.dump(cluster_obj.cli_coverage, out_json, indent=4)  # pyright: ignore [reportAttributeAccessIssue]
     LOGGER.info(f"Coverage file saved to '{cli_coverage_dir}'.")
     return json_file
 
