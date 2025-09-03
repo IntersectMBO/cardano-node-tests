@@ -956,8 +956,8 @@ class TestDelegateAddr:
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
-        try:
-            tx_raw_output_deleg = clusterlib_utils.build_and_submit_tx(
+        def _build_and_submit() -> clusterlib.TxRawOutput:
+            return clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_deleg_dereg",
                 src_address=user_payment.address,
@@ -965,6 +965,9 @@ class TestDelegateAddr:
                 build_method=build_method,
                 witness_override=len(tx_files.signing_key_files),
             )
+
+        try:
+            tx_raw_output_deleg = common.match_blocker(func=_build_and_submit)
         except clusterlib.CLIError as exc:
             if "ValueNotConservedUTxO" in str(exc):
                 issues.cli_942.finish_test()
