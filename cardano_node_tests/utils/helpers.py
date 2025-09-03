@@ -290,7 +290,8 @@ def tool_has(command: str) -> bool:
 
 
 def flatten(
-    iterable: tp.Iterable, ltypes: type[tp.Iterable[tp.Any]] = collections.abc.Iterable
+    iterable: tp.Iterable,
+    ltypes: type[tp.Iterable[tp.Any]] = collections.abc.Iterable,  # pyright: ignore [reportAttributeAccessIssue]
 ) -> tp.Generator:
     """Flatten an irregular (arbitrarily nested) iterable of iterables."""
     remainder = iter(iterable)

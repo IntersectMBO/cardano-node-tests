@@ -193,9 +193,9 @@ class TestCollateralOutput:
                 return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
             )
         except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" not in str(exc):
-                raise
-            issues.consensus_947.finish_test()
+            if "(ValidationTagMismatch" in str(exc):
+                issues.consensus_947.finish_test()
+            raise
 
         cluster.wait_for_new_block(new_blocks=2)
         try:
@@ -337,9 +337,9 @@ class TestCollateralOutput:
                 return_collateral_txouts=txouts_return_collateral,
             )
         except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" not in str(exc):
-                raise
-            issues.consensus_947.finish_test()
+            if "(ValidationTagMismatch" in str(exc):
+                issues.consensus_947.finish_test()
+            raise
 
         cluster.wait_for_new_block(new_blocks=2)
         try:

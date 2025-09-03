@@ -623,6 +623,10 @@ def execute(query: str, vars: tp.Sequence = ()) -> tp.Iterator[psycopg2.extensio
             cur = dbsync_conn.reconn().cursor()
             cur.execute(query, vars)
 
+        if cur is None:
+            err = "Failed to acquire database cursor."
+            raise RuntimeError(err)
+
         yield cur
     finally:
         if cur is not None:
@@ -665,7 +669,11 @@ class SchemaVersion:
         )
 
         with execute(query=query) as cur:
-            cls._stages = SchemaVersionStages(*cur.fetchone())
+            result = cur.fetchone()
+            if not result:
+                err = "Failed to query schema version from db-sync."
+                raise RuntimeError(err)
+            cls._stages = SchemaVersionStages(*result)
 
         return cls._stages
 
@@ -1144,6 +1152,9 @@ def query_epoch_param(epoch_no: int = 0) -> EpochParamDBRow:
 
     with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()
+        if not results:
+            err = "Failed to query epoch param from db-sync."
+            raise RuntimeError(err)
         return EpochParamDBRow(*results)
 
 
@@ -1266,6 +1277,9 @@ def query_param_proposal(txhash: str = "") -> ParamProposalDBRow:
 
     with execute(query=query, vars=(query_var,)) as cur:
         results = cur.fetchone()
+        if not results:
+            err = "Failed to query param proposal from db-sync."
+            raise RuntimeError(err)
         return ParamProposalDBRow(*results)
 
 
@@ -1519,6 +1533,9 @@ def query_db_size() -> int:
 
     with execute(query=query) as cur:
         result = cur.fetchone()
+        if not result:
+            err = "Failed to query database size from db-sync."
+            raise RuntimeError(err)
         return int(result[0])
 
 
@@ -1643,10 +1660,15 @@ def query_rows_count(
 
     with execute(query=query) as cur:
         try:
-            return cur.fetchone()[0] or 0
+            result = cur.fetchone()
         except psycopg2.errors.LockNotAvailable as e:
             error_msg = f"Could not acquire lock on {table} within {lock_timeout}"
             raise RuntimeError(error_msg) from e
+
+        if not result:
+            error_msg = "Failed to query row count from db-sync."
+            raise RuntimeError(error_msg)
+        return result[0] or 0
 
 
 def query_epoch_state(epoch_no: int) -> tp.Generator[EpochStateDBRow, None, None]:

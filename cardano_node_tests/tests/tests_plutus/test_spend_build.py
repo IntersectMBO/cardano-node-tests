@@ -748,9 +748,9 @@ class TestBuildLocking:
                 script_valid=False,
             )
         except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" not in str(exc):
-                raise
-            issues.consensus_947.finish_test()
+            if "(ValidationTagMismatch" in str(exc):
+                issues.consensus_947.finish_test()
+            raise
 
         # Check expected fees
         expected_fee_fund = 168_845
