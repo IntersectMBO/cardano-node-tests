@@ -209,7 +209,7 @@ class TestNegative:
         temp_template: str,
         invalid_before: int | None = None,
         invalid_hereafter: int | None = None,
-        use_build_cmd=False,
+        build_method: str = clusterlib_utils.BuildMethods.BUILD_RAW,
     ) -> tuple[int | None, str, clusterlib.TxRawOutput | None]:
         """Try to build and submit a transaction with wrong validity interval."""
         src_address = pool_users[0].payment.address
@@ -222,7 +222,7 @@ class TestNegative:
         slot_no = tx_output = None
 
         try:
-            if use_build_cmd:
+            if build_method == clusterlib_utils.BuildMethods.BUILD:
                 tx_output = cluster_obj.g_transaction.build_tx(
                     src_address=src_address,
                     tx_name=temp_template,
@@ -232,7 +232,7 @@ class TestNegative:
                     invalid_hereafter=invalid_hereafter,
                     fee_buffer=1_000_000,
                 )
-            else:
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 tx_output = cluster_obj.g_transaction.build_raw_tx(
                     src_address=src_address,
                     tx_name=temp_template,
@@ -242,6 +242,20 @@ class TestNegative:
                     invalid_before=invalid_before,
                     invalid_hereafter=invalid_hereafter,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                tx_output = cluster_obj.g_transaction.build_estimate_tx(
+                    src_address=src_address,
+                    tx_name=temp_template,
+                    txouts=txouts,
+                    tx_files=tx_files,
+                    fee_buffer=1_000_000,
+                    invalid_before=invalid_before,
+                    invalid_hereafter=invalid_hereafter,
+                    witness_count_add=len(tx_files.signing_key_files),
+                )
+                return None, "build_estimate_tx does not enforce validity interval", None
+            else:
+                raise ValueError(f"Unsupported build method: {build_method}")
         except clusterlib.CLIError as exc:
             exc_val = str(exc)
             if "SLOT must not" not in exc_val:
@@ -288,14 +302,14 @@ class TestNegative:
         return loaded_invalid_before, loaded_invalid_hereafter
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_past_ttl(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with ttl in the past.
 
@@ -307,7 +321,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_hereafter=cluster.g_query.get_slot_no() - 1,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
