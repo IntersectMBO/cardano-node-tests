@@ -2220,10 +2220,8 @@ class TestTransfer:
             exc_val = str(excinfo.value)
             # TODO: refine once CLI issue #1199 is fixed
             # At this point we don't know the exact error string from build-estimate.
-            # Let this fail if it's anything unexpected so we can revisit later.
-            assert (
-                "balance" in exc_val or "ValueNotConservedUTxO" in exc_val or "UTxO" in exc_val
-            ), f"Unexpected error for build-estimate: {exc_val}"
+            # Fail explicitly so we can capture and refine later.
+            pytest.fail(f"Unexpected error for build-estimate (CLI issue #1199): {exc_val}")
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
