@@ -6,6 +6,7 @@ import shutil
 import typing as tp
 
 import requests
+from requests import auth as rauth
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import dbsync_queries
@@ -55,11 +56,11 @@ class SmashClient:
         self.base_url = f"http://localhost:{self.port}"
         self.auth = self._get_auth()
 
-    def _get_auth(self) -> requests.auth.HTTPBasicAuth | None:  # pyright: ignore [reportAttributeAccessIssue]
+    def _get_auth(self) -> rauth.HTTPBasicAuth | None:
         """Get Basic Auth credentials if configured."""
         admin = os.environ.get("SMASH_ADMIN", "admin")
         password = os.environ.get("SMASH_PASSWORD", "password")
-        return requests.auth.HTTPBasicAuth(admin, password) if admin and password else None  # pyright: ignore [reportAttributeAccessIssue]
+        return rauth.HTTPBasicAuth(admin, password) if admin and password else None
 
     def get_pool_metadata(self, pool_id: str, pool_meta_hash: str) -> PoolMetadata:
         """Fetch stake pool metadata from SMASH, returning a `PoolMetadata`."""

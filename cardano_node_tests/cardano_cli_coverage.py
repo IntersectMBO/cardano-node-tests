@@ -16,18 +16,6 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 SKIPPED = (
-    "build-script",
-    "byron",
-    "compatible",
-    "convert-byron-genesis-vkey",
-    "convert-itn-bip32-key",
-    "convert-itn-extended-key",
-    "convert-itn-key",
-    "create-cardano",
-    "create-testnet-data",
-    "help",
-    "legacy",
-    "version",
     "--byron-era",
     "--byron-key",
     "--byron-mode",
@@ -38,6 +26,14 @@ SKIPPED = (
     "--mainnet",
     "--shelley-mode",
     "--version",
+    "build-script",
+    "byron",
+    "convert-byron-genesis-vkey",
+    "convert-itn-bip32-key",
+    "convert-itn-extended-key",
+    "convert-itn-key",
+    "help",
+    "version",
 )
 
 DUPLICATE_GROUPS = (
