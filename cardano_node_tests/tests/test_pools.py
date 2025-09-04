@@ -137,6 +137,15 @@ def _register_stake_pool_w_build_common(
 
     Args:
         build_method: One of `BuildMethods.BUILD` or `BuildMethods.BUILD_EST`.
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        pool_data: A `PoolData` tuple containing info about the stake pool.
+        pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
+        vrf_vkey_file: A path to node VRF vkey file.
+        cold_key_pair: A `ColdKeyPair` tuple containing the key pair and the counter.
+        tx_name: A name of the transaction.
+        reward_account_vkey_file: A path to reward account vkey file (optional).
+        deposit: A deposit amount needed by the transaction (optional).
+        destination_dir: A path to directory for storing artifacts (optional).
     """
     tx_name = f"{tx_name}_reg_pool"
     pool_reg_cert_file = cluster_obj.g_stake_pool.gen_pool_registration_cert(
@@ -213,6 +222,7 @@ def _create_stake_pool_w_build_common(
     """Create and register a stake pool using a `transaction build` command.
 
     Args:
+        build_method: One of `BuildMethods.BUILD` or `BuildMethods.BUILD_EST`.
         cluster_obj: An instance of `clusterlib.ClusterLib`.
         pool_data: A `PoolData` tuple containing info about the stake pool.
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
@@ -341,6 +351,7 @@ def _deregister_stake_pool_w_build(
 
     return pool_dereg_cert_file, tx_raw_output
 
+
 def _create_register_pool(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
@@ -363,8 +374,8 @@ def _create_register_pool(
 
     # Create and register pool
     if build_method in (
-            clusterlib_utils.BuildMethods.BUILD,
-            clusterlib_utils.BuildMethods.BUILD_EST,
+        clusterlib_utils.BuildMethods.BUILD,
+        clusterlib_utils.BuildMethods.BUILD_EST,
     ):
         pool_creation_out = _create_stake_pool_w_build_common(
             cluster_obj=cluster_obj,
@@ -1450,8 +1461,10 @@ class TestStakePool:
         update_epoch = cluster.g_query.get_epoch()
 
         # Update the pool metadata by resubmitting the pool registration certificate
-        if build_method in (clusterlib_utils.BuildMethods.BUILD,
-                            clusterlib_utils.BuildMethods.BUILD_EST):
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             _register_stake_pool_w_build_common(
                 cluster_obj=cluster,
                 pool_data=pool_data_updated,
@@ -1572,8 +1585,10 @@ class TestStakePool:
         update_epoch = cluster.g_query.get_epoch()
 
         # Update the pool parameters by resubmitting the pool registration certificate
-        if build_method in (clusterlib_utils.BuildMethods.BUILD,
-                            clusterlib_utils.BuildMethods.BUILD_EST):
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             _register_stake_pool_w_build_common(
                 cluster_obj=cluster,
                 pool_data=pool_data_updated,
