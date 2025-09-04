@@ -1,5 +1,4 @@
 import argparse
-import collections
 import contextlib
 import datetime
 import functools
@@ -17,6 +16,7 @@ import string
 import subprocess
 import types as tt
 import typing as tp
+from collections import abc
 
 import cardano_node_tests.utils.types as ttypes
 
@@ -291,9 +291,10 @@ def tool_has(command: str) -> bool:
 
 def flatten(
     iterable: tp.Iterable,
-    ltypes: type[tp.Iterable[tp.Any]] = collections.abc.Iterable,  # pyright: ignore [reportAttributeAccessIssue]
+    ltypes: type[tp.Iterable] | None = None,
 ) -> tp.Generator:
     """Flatten an irregular (arbitrarily nested) iterable of iterables."""
+    ltypes = ltypes if ltypes is not None else abc.Iterable
     remainder = iter(iterable)
     while True:
         try:
