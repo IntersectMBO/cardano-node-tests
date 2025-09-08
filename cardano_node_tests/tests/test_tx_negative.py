@@ -86,7 +86,7 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         addr: str,
         temp_template: str,
-        use_build_cmd=False,
+        build_method: str,
     ):
         """Send funds from payment address to invalid address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
@@ -94,7 +94,7 @@ class TestNegative:
 
         # It should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
+            if build_method == clusterlib_utils.BuildMethods.BUILD:
                 cluster_obj.g_transaction.build_tx(
                     src_address=pool_users[0].payment.address,
                     tx_name=f"{temp_template}_to_invalid",
@@ -102,7 +102,7 @@ class TestNegative:
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
                 )
-            else:
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 cluster_obj.g_transaction.build_raw_tx(
                     src_address=pool_users[0].payment.address,
                     tx_name=f"{temp_template}_to_invalid",
@@ -110,6 +110,18 @@ class TestNegative:
                     tx_files=tx_files,
                     fee=0,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                cluster_obj.g_transaction.build_estimate_tx(
+                    src_address=pool_users[0].payment.address,
+                    tx_name=f"{temp_template}_to_invalid",
+                    txouts=txouts,
+                    tx_files=tx_files,
+                    fee_buffer=1_000_000,
+                    witness_count_add=len(tx_files.signing_key_files),
+                )
+            else:
+                msg = f"Unsupported build method: {build_method}"
+                raise ValueError(msg)
         exc_val = str(excinfo.value)
         # TODO: better match
         assert "invalid address" in exc_val or "An error occurred" in exc_val, exc_val
@@ -120,7 +132,7 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         addr: str,
         temp_template: str,
-        use_build_cmd=False,
+        build_method: str,
     ):
         """Send funds from invalid payment address."""
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
@@ -128,7 +140,7 @@ class TestNegative:
 
         # It should NOT be possible to build a transaction using an invalid address
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
+            if build_method == clusterlib_utils.BuildMethods.BUILD:
                 cluster_obj.g_transaction.build_tx(
                     src_address=addr,
                     tx_name=f"{temp_template}_from_invalid",
@@ -136,7 +148,7 @@ class TestNegative:
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
                 )
-            else:
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 cluster_obj.g_transaction.build_raw_tx(
                     src_address=addr,
                     tx_name=f"{temp_template}_from_invalid",
@@ -144,6 +156,18 @@ class TestNegative:
                     tx_files=tx_files,
                     fee=0,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                cluster_obj.g_transaction.build_estimate_tx(
+                    src_address=addr,
+                    tx_name=f"{temp_template}_from_invalid",
+                    txouts=txouts,
+                    tx_files=tx_files,
+                    fee_buffer=1_000_000,
+                    witness_count_add=len(tx_files.signing_key_files),
+                )
+            else:
+                msg = f"Unsupported build method: {build_method}"
+                raise ValueError(msg)
         assert "invalid address" in str(excinfo.value)
 
     def _send_funds_invalid_change_address(
@@ -175,7 +199,7 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         utxo: clusterlib.UTXOData,
         temp_template: str,
-        use_build_cmd=False,
+        build_method: str,
     ) -> str:
         """Send funds with invalid UTxO."""
         src_addr = pool_users[0].payment
@@ -183,7 +207,7 @@ class TestNegative:
         txouts = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_000_000)]
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
+            if build_method == clusterlib_utils.BuildMethods.BUILD:
                 cluster_obj.g_transaction.build_tx(
                     src_address=src_addr.address,
                     tx_name=temp_template,
@@ -192,7 +216,7 @@ class TestNegative:
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
                 )
-            else:
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 cluster_obj.g_transaction.send_tx(
                     src_address=src_addr.address,
                     tx_name=temp_template,
@@ -200,6 +224,19 @@ class TestNegative:
                     txouts=txouts,
                     tx_files=tx_files,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                cluster_obj.g_transaction.build_estimate_tx(
+                    src_address=src_addr.address,
+                    tx_name=temp_template,
+                    txins=[utxo],
+                    txouts=txouts,
+                    tx_files=tx_files,
+                    fee_buffer=1_000_000,
+                    witness_count_add=len(tx_files.signing_key_files),
+                )
+            else:
+                msg = f"Unsupported build method: {build_method}"
+                raise ValueError(msg)
         return str(excinfo.value)
 
     def _submit_wrong_validity(
@@ -253,9 +290,9 @@ class TestNegative:
                     invalid_hereafter=invalid_hereafter,
                     witness_count_add=len(tx_files.signing_key_files),
                 )
-                return None, "build_estimate_tx does not enforce validity interval", None
             else:
-                raise ValueError(f"Unsupported build method: {build_method}")
+                msg = f"Unsupported build method: {build_method}"
+                raise ValueError(msg)
         except clusterlib.CLIError as exc:
             exc_val = str(exc)
             if "SLOT must not" not in exc_val:
@@ -329,14 +366,14 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_negative_overflow(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with negative `invalid_before` and check for int overflow.
 
@@ -356,7 +393,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # In node versions >= 1.36.0 we are checking error from
@@ -381,14 +418,14 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_positive_overflow(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
 
@@ -409,7 +446,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=over_before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # In node versions >= 1.36.0 we are checking error from
@@ -434,14 +471,14 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_too_high(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_INT64`.
 
@@ -458,7 +495,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         assert "(OutsideValidityIntervalUTxO" in err_str, err_str
@@ -472,7 +509,7 @@ class TestNegative:
     @hypothesis.example(before_value=1)
     @hypothesis.example(before_value=common.MAX_INT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_negative_overflow(
@@ -480,7 +517,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         before_value: int,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with negative `invalid_before` and check for int overflow.
 
@@ -493,7 +530,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=-before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # In node versions >= 1.36.0 we are checking error from
@@ -519,7 +556,7 @@ class TestNegative:
     @hypothesis.example(before_value=common.MAX_INT64 + 1)
     @hypothesis.example(before_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_positive_overflow(
@@ -527,7 +564,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         before_value: int,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
 
@@ -541,7 +578,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=over_before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # In node versions >= 1.36.0 we are checking error from
@@ -567,7 +604,7 @@ class TestNegative:
     @hypothesis.example(before_value=common.MAX_INT64 + 1)
     @hypothesis.example(before_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_too_high(
@@ -575,7 +612,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         before_value: int,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send a transaction with `invalid_before` > `MAX_INT64`.
 
@@ -588,7 +625,7 @@ class TestNegative:
             pool_users=pool_users,
             temp_template=temp_template,
             invalid_before=before_value,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         assert "(OutsideValidityIntervalUTxO" in err_str, err_str
@@ -783,14 +820,14 @@ class TestNegative:
         ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_reward_address(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send funds from payment address to stake address.
 
@@ -804,18 +841,18 @@ class TestNegative:
             pool_users=pool_users,
             addr=addr,
             temp_template=temp_template,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_utxo_address(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to send funds from payment address to UTxO address.
 
@@ -830,10 +867,11 @@ class TestNegative:
             pool_users=pool_users,
             addr=utxo_addr,
             temp_template=temp_template,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_BUILD_METHOD
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
@@ -843,6 +881,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         addr: str,
+        build_method: str,
     ):
         """Try to send funds from payment address to non-existent address (property-based test).
 
@@ -852,7 +891,11 @@ class TestNegative:
 
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -881,12 +924,13 @@ class TestNegative:
             pool_users=pool_users,
             addr=addr,
             temp_template=temp_template,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_invalid_length_address(
@@ -894,6 +938,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         addr: str,
+        build_method: str,
     ):
         """Try to send funds from payment address to address with invalid length.
 
@@ -903,7 +948,11 @@ class TestNegative:
 
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -932,7 +981,7 @@ class TestNegative:
             pool_users=pool_users,
             addr=addr,
             temp_template=temp_template,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -940,6 +989,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_invalid_chars_address(
@@ -947,6 +997,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         addr: str,
+        build_method: str,
     ):
         """Try to send funds from payment address to address with invalid characters.
 
@@ -956,7 +1007,11 @@ class TestNegative:
 
         addr = f"addr_test1{addr}"
         self._send_funds_to_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -987,12 +1042,13 @@ class TestNegative:
             pool_users=pool_users,
             addr=addr,
             temp_template=temp_template,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_address(
@@ -1000,6 +1056,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         addr: str,
+        build_method: str,
     ):
         """Try to send funds from invalid address (property-based test).
 
@@ -1009,7 +1066,11 @@ class TestNegative:
 
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1038,12 +1099,13 @@ class TestNegative:
             pool_users=pool_users,
             addr=addr,
             temp_template=temp_template,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_length_address(
@@ -1051,6 +1113,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         addr: str,
+        build_method: str,
     ):
         """Try to send funds from address with invalid length (property-based test).
 
@@ -1060,7 +1123,11 @@ class TestNegative:
 
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1089,7 +1156,7 @@ class TestNegative:
             pool_users=pool_users,
             addr=addr,
             temp_template=temp_template,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1097,6 +1164,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_chars_address(
@@ -1104,6 +1172,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         addr: str,
+        build_method: str,
     ):
         """Try to send funds from address with invalid characters (property-based test).
 
@@ -1113,7 +1182,11 @@ class TestNegative:
 
         addr = f"addr_test1{addr}"
         self._send_funds_from_invalid_address(
-            cluster_obj=cluster, pool_users=pool_users, addr=addr, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            addr=addr,
+            temp_template=temp_template,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1144,7 +1217,7 @@ class TestNegative:
             pool_users=pool_users,
             addr=addr,
             temp_template=temp_template,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1225,14 +1298,14 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_nonexistent_utxo_ix(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to use nonexistent UTxO TxIx as an input.
 
@@ -1247,26 +1320,31 @@ class TestNegative:
             pool_users=pool_users,
             utxo=utxo_copy,
             temp_template=temp_template,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
-        if use_build_cmd:
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             assert (
                 "The UTxO is empty" in err
-                # In 1.35.3 and older
                 or "The following tx input(s) were not present in the UTxO" in err
             ), err
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             assert "BadInputsUTxO" in err, err
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_nonexistent_utxo_hash(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to use nonexistent UTxO hash as an input.
 
@@ -1282,20 +1360,26 @@ class TestNegative:
             pool_users=pool_users,
             utxo=utxo_copy,
             temp_template=temp_template,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
-        if use_build_cmd:
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             assert (
                 "The UTxO is empty" in err
-                # In 1.35.3 and older
                 or "The following tx input(s) were not present in the UTxO" in err
             ), err
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             assert "BadInputsUTxO" in err, err
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
+    @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_invalid_length_utxo_hash(
@@ -1303,6 +1387,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         utxo_hash: str,
+        build_method: str,
     ):
         """Try to use invalid UTxO hash as an input (property-based test).
 
@@ -1313,7 +1398,11 @@ class TestNegative:
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = dataclasses.replace(utxo, utxo_hash=utxo_hash)
         err = self._send_funds_with_invalid_utxo(
-            cluster_obj=cluster, pool_users=pool_users, utxo=utxo_copy, temp_template=temp_template
+            cluster_obj=cluster,
+            pool_users=pool_users,
+            utxo=utxo_copy,
+            temp_template=temp_template,
+            build_method=build_method,
         )
         assert (
             "Failed to deserialise" in err  # With node 10.5.0+
@@ -1349,7 +1438,7 @@ class TestNegative:
             pool_users=pool_users,
             utxo=utxo_copy,
             temp_template=temp_template,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
         assert (
             "Failed to deserialise" in err  # With node 10.5.0+
