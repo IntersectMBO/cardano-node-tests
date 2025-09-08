@@ -121,7 +121,7 @@ def _check_staking(
         ), "'owner' value is different than expected"
 
 
-def _register_stake_pool_w_build_common(
+def _register_stake_pool_w_build(
     cluster_obj: clusterlib.ClusterLib,
     pool_data: clusterlib.PoolData,
     pool_owners: list[clusterlib.PoolUser],
@@ -210,7 +210,7 @@ def _register_stake_pool_w_build_common(
     return pool_reg_cert_file, tx_raw_output
 
 
-def _create_stake_pool_w_build_common(
+def _create_stake_pool(
     cluster_obj: clusterlib.ClusterLib,
     pool_data: clusterlib.PoolData,
     pool_owners: list[clusterlib.PoolUser],
@@ -257,7 +257,7 @@ def _create_stake_pool_w_build_common(
         f"{node_cold.vkey_file}; {node_cold.skey_file}; {node_cold.counter_file}"
     )
 
-    pool_reg_cert_file, tx_raw_output = _register_stake_pool_w_build_common(
+    pool_reg_cert_file, tx_raw_output = _register_stake_pool_w_build(
         cluster_obj=cluster_obj,
         pool_data=pool_data,
         pool_owners=pool_owners,
@@ -293,6 +293,7 @@ def _deregister_stake_pool_w_build(
     epoch: int,
     pool_name: str,
     tx_name: str,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD,
     destination_dir: clusterlib.FileType = ".",
 ) -> tuple[pl.Path, clusterlib.TxRawOutput]:
     """Deregister a stake pool.
@@ -302,6 +303,7 @@ def _deregister_stake_pool_w_build(
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
         cold_key_pair: A `ColdKeyPair` tuple containing the key pair and the counter.
         epoch: An epoch where the update proposal will take effect (optional).
+        build_method: One of `BuildMethods.BUILD` or `BuildMethods.BUILD_EST`.
         pool_name: A name of the stake pool.
         tx_name: A name of the transaction.
         destination_dir: A path to directory for storing artifacts (optional).
@@ -332,14 +334,27 @@ def _deregister_stake_pool_w_build(
         ],
     )
 
-    tx_raw_output = cluster_obj.g_transaction.build_tx(
-        src_address=pool_owners[0].payment.address,
-        tx_name=tx_name,
-        tx_files=tx_files,
-        fee_buffer=2_000_000,
-        witness_override=len(pool_owners) * 3,
-        destination_dir=destination_dir,
-    )
+    if build_method == clusterlib_utils.BuildMethods.BUILD:
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
+            src_address=pool_owners[0].payment.address,
+            tx_name=tx_name,
+            tx_files=tx_files,
+            fee_buffer=2_000_000,
+            witness_override=len(tx_files.signing_key_files),
+            destination_dir=destination_dir,
+        )
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+        tx_raw_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=pool_owners[0].payment.address,
+            tx_name=tx_name,
+            tx_files=tx_files,
+            fee_buffer=2_000_000,
+            witness_count_add=len(tx_files.signing_key_files),
+            destination_dir=destination_dir,
+        )
+    else:
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
@@ -377,7 +392,7 @@ def _create_register_pool(
         clusterlib_utils.BuildMethods.BUILD,
         clusterlib_utils.BuildMethods.BUILD_EST,
     ):
-        pool_creation_out = _create_stake_pool_w_build_common(
+        pool_creation_out = _create_stake_pool(
             cluster_obj=cluster_obj,
             pool_data=pool_data,
             pool_owners=pool_owners,
@@ -514,41 +529,15 @@ def _create_register_pool_delegate_stake_tx(
         ],
     )
 
-    if build_method == clusterlib_utils.BuildMethods.BUILD:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
-            src_address=src_address,
-            tx_name=temp_template_reg_deleg,
-            tx_files=tx_files,
-            fee_buffer=4_000_000,
-            witness_override=len(pool_owners) * 4,
-        )
-        tx_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template_reg_deleg,
-        )
-        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-
-    elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-        tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address,
-            tx_name=temp_template_reg_deleg,
-            tx_files=tx_files,
-            witness_count_add=len(pool_owners) * 4,
-        )
-
-    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-        tx_raw_output = cluster_obj.g_transaction.build_estimate_tx(
-            src_address=src_address,
-            tx_name=temp_template_reg_deleg,
-            tx_files=tx_files,
-            fee_buffer=2_000_000,
-            witness_count_add=len(pool_owners) * 4,
-        )
-
-    else:
-        msg = f"Unsupported build method: {build_method}"
-        raise ValueError(msg)
+    tx_raw_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=temp_template_reg_deleg,
+        src_address=src_address,
+        tx_files=tx_files,
+        fee_buffer=4_000_000,
+        witness_override=len(pool_owners) * 4,
+        build_method=build_method,
+    )
 
     # Deregister stake pool
     def _deregister():
@@ -668,34 +657,42 @@ def _create_register_pool_tx_delegate_stake_tx(
         ],
     )
 
-    if build_method == clusterlib_utils.BuildMethods.BUILD:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
-            src_address=src_address,
-            tx_name=f"{temp_template}_reg_deleg",
-            tx_files=tx_files,
-            fee_buffer=2_000_000,
-            witness_override=len(tx_files.signing_key_files),
-        )
+    if build_method in (
+        clusterlib_utils.BuildMethods.BUILD,
+        clusterlib_utils.BuildMethods.BUILD_EST,
+    ):
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
+            tx_raw_output = cluster_obj.g_transaction.build_tx(
+                src_address=src_address,
+                tx_name=f"{temp_template}_reg_deleg",
+                tx_files=tx_files,
+                fee_buffer=2_000_000,
+                witness_override=len(tx_files.signing_key_files),
+            )
+        else:  # BUILD_EST
+            tx_raw_output = cluster_obj.g_transaction.build_estimate_tx(
+                src_address=src_address,
+                tx_name=f"{temp_template}_reg_deleg",
+                tx_files=tx_files,
+                witness_count_add=len(tx_files.signing_key_files),
+            )
+
+        # Shared signing + submission
         tx_signed = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=f"{temp_template}_reg_deleg",
         )
-        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
+        cluster_obj.g_transaction.submit_tx(
+            tx_file=tx_signed,
+            txins=tx_raw_output.txins,
+        )
 
     elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
         tx_raw_output = cluster_obj.g_transaction.send_tx(
             src_address=src_address,
             tx_name=f"{temp_template}_reg_deleg",
             tx_files=tx_files,
-        )
-
-    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-        tx_raw_output = cluster_obj.g_transaction.build_estimate_tx(
-            src_address=src_address,
-            tx_name=f"{temp_template}_reg_deleg",
-            tx_files=tx_files,
-            witness_count_add=len(tx_files.signing_key_files),
         )
 
     else:
@@ -997,7 +994,10 @@ class TestStakePool:
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         depoch = cluster.g_query.get_epoch() + 1
-        if build_method == clusterlib_utils.BuildMethods.BUILD:
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             __, tx_raw_output = _deregister_stake_pool_w_build(
                 cluster_obj=cluster,
                 pool_owners=pool_owners,
@@ -1005,6 +1005,7 @@ class TestStakePool:
                 epoch=depoch,
                 pool_name=pool_data.pool_name,
                 tx_name=temp_template,
+                build_method=build_method,  # pass through the method
             )
         else:
             __, tx_raw_output = cluster.g_stake_pool.deregister_stake_pool(
@@ -1465,7 +1466,7 @@ class TestStakePool:
             clusterlib_utils.BuildMethods.BUILD,
             clusterlib_utils.BuildMethods.BUILD_EST,
         ):
-            _register_stake_pool_w_build_common(
+            _register_stake_pool_w_build(
                 cluster_obj=cluster,
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
@@ -1589,7 +1590,7 @@ class TestStakePool:
             clusterlib_utils.BuildMethods.BUILD,
             clusterlib_utils.BuildMethods.BUILD_EST,
         ):
-            _register_stake_pool_w_build_common(
+            _register_stake_pool_w_build(
                 cluster_obj=cluster,
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
@@ -2243,17 +2244,27 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if build_method == clusterlib_utils.BuildMethods.BUILD:
-
-                def _build_dereg() -> clusterlib.TxRawOutput:
-                    return cluster.g_transaction.build_tx(
+            if build_method in (
+                clusterlib_utils.BuildMethods.BUILD,
+                clusterlib_utils.BuildMethods.BUILD_EST,
+            ):
+                if build_method == clusterlib_utils.BuildMethods.BUILD:
+                    tx_raw_output = cluster.g_transaction.build_tx(
                         src_address=pool_users[0].payment.address,
                         tx_name="deregister_unregistered",
                         tx_files=tx_files,
                         fee_buffer=2_000_000,
                     )
+                else:
+                    tx_raw_output = cluster.g_transaction.build_estimate_tx(
+                        src_address=pool_users[0].payment.address,
+                        tx_name="deregister_unregistered",
+                        tx_files=tx_files,
+                        fee_buffer=2_000_000,
+                        witness_count_add=len(tx_files.signing_key_files),
+                    )
 
-                tx_raw_output = common.match_blocker(func=_build_dereg)
+                # Shared signing + submission
                 tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,
@@ -2266,15 +2277,6 @@ class TestNegative:
                     src_address=pool_users[0].payment.address,
                     tx_name="deregister_unregistered",
                     tx_files=tx_files,
-                )
-
-            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
-                cluster.g_transaction.build_estimate_tx(
-                    src_address=pool_users[0].payment.address,
-                    tx_name="deregister_unregistered",
-                    tx_files=tx_files,
-                    fee_buffer=2_000_000,
-                    witness_count_add=len(tx_files.signing_key_files),
                 )
 
             else:
