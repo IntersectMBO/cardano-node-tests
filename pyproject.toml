@@ -26,7 +26,7 @@ packages = [{include = "cardano_node_tests"}]
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
 allure-pytest = "^2.14.3"
-cardano-clusterlib = "^0.9.3"
+cardano-clusterlib = "^0.9.4"
 cbor2 = "^5.6.5"
 filelock = "^3.18.0"
 hypothesis = "^6.135.17"
