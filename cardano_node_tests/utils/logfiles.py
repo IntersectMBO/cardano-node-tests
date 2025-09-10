@@ -50,6 +50,8 @@ ERRORS_IGNORED = [
     "OffChainPoolFetchError",
     # DB-Sync table name
     "OffChainVoteFetchError",
+    # DB-Sync table name (lowercase)
+    "off_chain_vote_fetch_error",
     # TODO: p2p failures on testnet
     "PeerStatusChangeFailure",
     # TODO: p2p failures on testnet - PeerMonitoringError
