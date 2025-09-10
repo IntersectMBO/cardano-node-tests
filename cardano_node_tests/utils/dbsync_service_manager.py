@@ -359,14 +359,12 @@ class DBSyncManager:
         This is a DESTRUCTIVE operation!
         It will delete existing data and recreate the database from scratch.
         """
-        scripts_dir = cluster_scripts.get_testnet_variant_scriptdir(
-            testnet_variant=configuration.TESTNET_VARIANT
-        )
-        if not scripts_dir:
-            err = f"Testnet variant '{configuration.TESTNET_VARIANT}' scripts directory not found."
+        common_scripts_dir = cluster_scripts.COMMON_DIR
+        if not common_scripts_dir:
+            err = f"Common scripts directory '{common_scripts_dir}' not found."
             raise RuntimeError(err)
 
-        db_script_template = scripts_dir / "postgres-setup.sh"
+        db_script_template = common_scripts_dir / "postgres-setup.sh"
         if not db_script_template.exists() and configuration.BOOTSTRAP_DIR:
             db_script_template = pl.Path(configuration.BOOTSTRAP_DIR) / "postgres-setup.sh"
 
