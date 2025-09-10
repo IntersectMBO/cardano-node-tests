@@ -26,10 +26,13 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
-pytestmark = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.CONWAY,
-    reason="runs only with Tx era >= Conway",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.CONWAY,
+        reason="runs only with Tx era >= Conway",
+    ),
+    pytest.mark.dbsync_config
+]
 
 
 NETWORK_GROUP_PPARAMS = {
