@@ -1,4 +1,4 @@
-exclude: ^sync_tests/
+exclude: ^(sync_tests/|cardano_node_tests/tests/data/)
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0

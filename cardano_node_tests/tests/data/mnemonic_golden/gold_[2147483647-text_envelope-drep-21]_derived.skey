@@ -1,0 +1,5 @@
+{
+    "type": "DRepExtendedSigningKey_ed25519_bip32",
+    "description": "",
+    "cborHex": "5880002699a86d5c95fcb66f0991184e2a6f10eca8d2905c476e81bc3ff6c80ae05b5d8229d43c449f05b389f65b05f2025d5e44521ba6949e36c91d242a331e9bc6a33dec53a31574d26c114ce71dbb837f895ff0f61ba503e3af774f1164de7b6daf18e3beae5efebc3b8ac8f5e3cf5a4d6ed0d20be6585d9c5da8d557b5a67f8c"
+}
