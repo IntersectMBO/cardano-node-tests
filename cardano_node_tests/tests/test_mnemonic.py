@@ -24,7 +24,7 @@ KEY_TYPES = tuple(clusterlib.KeyType)
 KEY_TYPE_IDS = tuple(k.value.replace("-", "_") for k in KEY_TYPES)
 # pyrefly: ignore  # no-matching-overload
 OUT_FORMATS = tuple(clusterlib.OutputFormat)
-OUT_FORMAT_IDS = (k.value.replace("-", "_") for k in OUT_FORMATS)
+OUT_FORMAT_IDS = tuple(k.value.replace("-", "_") for k in OUT_FORMATS)
 
 # A small embedded list of *valid* BIP39 words (subset).
 # Enough to build syntactically plausible phrases without importing anything.
@@ -98,7 +98,7 @@ weird_sep = st.sampled_from([" \u00a0 ", ",", ", ", ";"])
 bad_token = st.one_of(
     ascii_word,  # Unknown word
     st.text(min_size=1, max_size=8).filter(
-        lambda s: any(c for c in s if not c.isalpha())
+        lambda s: any(not c.isalpha() for c in s)
     ),  # Punctuation/digits
     st.sampled_from(["Über", "naïve", "résumé", "café"]),  # Diacritics / non-ASCII
     st.sampled_from(["🚀", "🔥", "🙂"]),  # Emoji
@@ -381,6 +381,41 @@ class TestMnemonic:
 
         assert helpers.checksum(filename=key_file) == helpers.checksum(filename=golden_key_file)
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("key_type", KEY_TYPES, ids=KEY_TYPE_IDS)
+    @common.hypothesis_settings(max_examples=300)
+    @hypothesis.given(account_number=st.integers(min_value=0, max_value=2**31 - 1))
+    @hypothesis.example(account_number=0)
+    @hypothesis.example(account_number=2**31 - 1)
+    def test_derive_account_key_number_property(
+        self,
+        cluster: clusterlib.ClusterLib,
+        key_type: clusterlib.KeyType,
+        account_number: int,
+    ) -> None:
+        """Test that `derive-from-mnemonic` accepts any valid account_number in [0, 2^31-1].
+
+        For payment/stake keys, pass the same value as key_number, otherwise omit key_number.
+        """
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+        mnemonic_file = DATA_DIR / "gold_[0-bech32-payment-24]_mnemonic"
+
+        key_number = (
+            account_number
+            if key_type in (clusterlib.KeyType.PAYMENT, clusterlib.KeyType.STAKE)
+            else None
+        )
+
+        key_file = cluster.g_key.derive_from_mnemonic(
+            key_name=f"{temp_template}_derived",
+            key_type=key_type,
+            mnemonic_file=mnemonic_file,
+            account_number=account_number,
+            key_number=key_number,
+            out_format=clusterlib.OutputFormat.BECH32,
+        )
+        assert key_file.exists()
+
 
 @common.SKIPIF_WRONG_ERA
 class TestNegativeMnemonic:
@@ -435,3 +470,46 @@ class TestNegativeMnemonic:
             "Error reading mnemonic file" in err_value
             or "Error converting the mnemonic into a key" in err_value
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("key_type", KEY_TYPES, ids=KEY_TYPE_IDS)
+    @common.hypothesis_settings(max_examples=300)
+    @hypothesis.given(
+        bad_value=st.one_of(
+            # Integers outside the valid range
+            st.integers(max_value=-1),
+            st.integers(min_value=2**31),
+            # Non-integer types
+            st.floats(allow_nan=True, allow_infinity=True),
+            st.text(
+                alphabet=st.characters(blacklist_categories=["C", "Nd"]), min_size=1, max_size=5
+            ),
+            st.sampled_from([3.14, object(), [], {}]),
+        )
+    )
+    @hypothesis.example(bad_value=-1)
+    @hypothesis.example(bad_value=2**31)
+    def test_reject_invalid_account_or_key_number(
+        self,
+        cluster: clusterlib.ClusterLib,
+        key_type: clusterlib.KeyType,
+        bad_value: object,
+    ) -> None:
+        """Property: derive_from_mnemonic rejects out-of-range or non-int account/key numbers."""
+        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
+        mnemonic_file = DATA_DIR / "gold_[0-bech32-payment-24]_mnemonic"
+
+        kwargs: dict[str, tp.Any] = {
+            "key_name": f"{temp_template}_derived",
+            "key_type": key_type,
+            "mnemonic_file": mnemonic_file,
+            "account_number": bad_value,
+        }
+
+        if key_type in (clusterlib.KeyType.PAYMENT, clusterlib.KeyType.STAKE):
+            kwargs["key_number"] = bad_value
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_key.derive_from_mnemonic(**kwargs)
+        err_value = str(excinfo.value)
+        assert "unexpected" in err_value or "Error converting the mnemonic into a key" in err_value
