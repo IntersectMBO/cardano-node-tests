@@ -160,8 +160,8 @@ def maybe_reencode(text: str) -> st.SearchStrategy[bytes]:
 @st.composite
 def wrong_count_files(draw: st.DrawFn) -> BadMnemonicCase:
     """Wrong number of words (not in {12, 15, 18, 21, 24})."""
-    count = draw(st.integers(min_value=0, max_value=48).filter(lambda n: n not in _ALLOWED_COUNTS))
-    hypothesis.assume(count != 0)  # Zero handled by empty_file elsewhere
+    # Zero handled by empty_file elsewhere
+    count = draw(st.integers(min_value=1, max_value=48).filter(lambda n: n not in _ALLOWED_COUNTS))
     tokens = draw(word_sequence(count=count, ensure_invalid=False))
     line = draw(join_with_weirdness(tokens=tokens))
     content = draw(maybe_reencode(line))
@@ -429,7 +429,7 @@ class TestNegativeMnemonic:
         shutil.rmtree(d)
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(size=st.integers())
+    @hypothesis.given(size=st.integers().filter(lambda n: n not in _ALLOWED_COUNTS))
     @common.hypothesis_settings(max_examples=1_000)
     @pytest.mark.smoke
     def test_gen_invalid_size(
@@ -438,8 +438,6 @@ class TestNegativeMnemonic:
         size: int,
     ):
         """Test generating a mnemonic with an invalid size."""
-        hypothesis.assume(size not in _ALLOWED_COUNTS)
-
         common.get_test_id(cluster)
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_key.gen_mnemonic(size=size)  # type: ignore
