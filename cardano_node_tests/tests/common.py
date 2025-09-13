@@ -192,6 +192,7 @@ def hypothesis_settings(max_examples: int = 100) -> tp.Any:
         suppress_health_check=(
             hypothesis.HealthCheck.too_slow,
             hypothesis.HealthCheck.function_scoped_fixture,
+            hypothesis.HealthCheck.filter_too_much,
         ),
     )
 
