@@ -117,7 +117,6 @@ class TestNegative:
                     txouts=txouts,
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
-                    witness_count_add=len(tx_files.signing_key_files),
                 )
             else:
                 msg = f"Unsupported build method: {build_method}"
@@ -163,7 +162,6 @@ class TestNegative:
                     txouts=txouts,
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
-                    witness_count_add=len(tx_files.signing_key_files),
                 )
             else:
                 msg = f"Unsupported build method: {build_method}"
@@ -232,7 +230,6 @@ class TestNegative:
                     txouts=txouts,
                     tx_files=tx_files,
                     fee_buffer=1_000_000,
-                    witness_count_add=len(tx_files.signing_key_files),
                 )
             else:
                 msg = f"Unsupported build method: {build_method}"
@@ -288,7 +285,6 @@ class TestNegative:
                     fee_buffer=1_000_000,
                     invalid_before=invalid_before,
                     invalid_hereafter=invalid_hereafter,
-                    witness_count_add=len(tx_files.signing_key_files),
                 )
             else:
                 msg = f"Unsupported build method: {build_method}"
@@ -899,35 +895,6 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @common.hypothesis_settings(300)
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    def test_build_send_funds_to_invalid_address(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-        addr: str,
-    ):
-        """Try to send funds from payment address to non-existent address (property-based test).
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        Expect failure.
-        """
-        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
-
-        addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(
-            cluster_obj=cluster,
-            pool_users=pool_users,
-            addr=addr,
-            temp_template=temp_template,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
-        )
-
-    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
     @common.PARAM_BUILD_METHOD
@@ -953,35 +920,6 @@ class TestNegative:
             addr=addr,
             temp_template=temp_template,
             build_method=build_method,
-        )
-
-    @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @common.hypothesis_settings(300)
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    def test_build_send_funds_to_invalid_length_address(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-        addr: str,
-    ):
-        """Try to send funds from payment address to address with invalid length.
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        Expect failure. Property-based test.
-        """
-        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
-
-        addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(
-            cluster_obj=cluster,
-            pool_users=pool_users,
-            addr=addr,
-            temp_template=temp_template,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1015,37 +953,6 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(
-        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
-    )
-    @common.hypothesis_settings(300)
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    def test_build_send_funds_to_invalid_chars_address(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-        addr: str,
-    ):
-        """Try to send funds from payment address to address with invalid characters.
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        Expect failure. Property-based test.
-        """
-        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
-
-        addr = f"addr_test1{addr}"
-        self._send_funds_to_invalid_address(
-            cluster_obj=cluster,
-            pool_users=pool_users,
-            addr=addr,
-            temp_template=temp_template,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
-        )
-
-    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
     @common.PARAM_BUILD_METHOD
@@ -1071,35 +978,6 @@ class TestNegative:
             addr=addr,
             temp_template=temp_template,
             build_method=build_method,
-        )
-
-    @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
-    @common.hypothesis_settings(300)
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    def test_build_send_funds_from_invalid_address(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-        addr: str,
-    ):
-        """Try to send funds from non-existent address (property-based test).
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        Expect failure.
-        """
-        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
-
-        addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(
-            cluster_obj=cluster,
-            pool_users=pool_users,
-            addr=addr,
-            temp_template=temp_template,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -1131,35 +1009,6 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
-    @common.hypothesis_settings(300)
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    def test_build_send_funds_from_invalid_length_address(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-        addr: str,
-    ):
-        """Try to send funds from address with invalid length (property-based test).
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        Expect failure.
-        """
-        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
-
-        addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(
-            cluster_obj=cluster,
-            pool_users=pool_users,
-            addr=addr,
-            temp_template=temp_template,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
-        )
-
-    @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -1187,37 +1036,6 @@ class TestNegative:
             addr=addr,
             temp_template=temp_template,
             build_method=build_method,
-        )
-
-    @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(
-        addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
-    )
-    @common.hypothesis_settings(300)
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    def test_build_send_funds_from_invalid_chars_address(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-        addr: str,
-    ):
-        """Try to send funds from address with invalid characters (property-based test).
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        Expect failure.
-        """
-        temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
-
-        addr = f"addr_test1{addr}"
-        self._send_funds_from_invalid_address(
-            cluster_obj=cluster,
-            pool_users=pool_users,
-            addr=addr,
-            temp_template=temp_template,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
 
     @allure.link(helpers.get_vcs_link())
