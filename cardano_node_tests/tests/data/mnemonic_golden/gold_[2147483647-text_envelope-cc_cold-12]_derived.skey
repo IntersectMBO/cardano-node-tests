@@ -1,0 +1,5 @@
+{
+    "type": "ConstitutionalCommitteeColdExtendedSigningKey_ed25519_bip32",
+    "description": "",
+    "cborHex": "5880986daa4a6ec7bd189881fb38e7445da07d69adab2c82810adefbb6bacd09d947b142b7bcef79cc5d484024e0f9969fac7f970ce2247480c4e1d0993908a66e8f9a7ace473d1fdd98d3c9b9c38d3c545e1fcf6b47b311431711868616ce25a47d1f64c3267f82b861d301fdaa2afe4d288990418d235714df5b158c5f8ef612e2"
+}
