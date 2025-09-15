@@ -146,6 +146,9 @@ def _register_stake_pool_w_build(
         reward_account_vkey_file: A path to reward account vkey file (optional).
         deposit: A deposit amount needed by the transaction (optional).
         destination_dir: A path to directory for storing artifacts (optional).
+     Returns:
+        Tuple[Path, TxRawOutput]: A tuple with pool registration cert file and transaction
+            output details.
     """
     tx_name = f"{tx_name}_reg_pool"
     pool_reg_cert_file = cluster_obj.g_stake_pool.gen_pool_registration_cert(
@@ -536,6 +539,7 @@ def _create_register_pool_delegate_stake_tx(
         tx_files=tx_files,
         fee_buffer=4_000_000,
         witness_override=len(pool_owners) * 4,
+        witness_count_add=len(tx_files.signing_key_files),
         build_method=build_method,
     )
 
@@ -657,47 +661,15 @@ def _create_register_pool_tx_delegate_stake_tx(
         ],
     )
 
-    if build_method in (
-        clusterlib_utils.BuildMethods.BUILD,
-        clusterlib_utils.BuildMethods.BUILD_EST,
-    ):
-        if build_method == clusterlib_utils.BuildMethods.BUILD:
-            tx_raw_output = cluster_obj.g_transaction.build_tx(
-                src_address=src_address,
-                tx_name=f"{temp_template}_reg_deleg",
-                tx_files=tx_files,
-                fee_buffer=2_000_000,
-                witness_override=len(tx_files.signing_key_files),
-            )
-        else:  # BUILD_EST
-            tx_raw_output = cluster_obj.g_transaction.build_estimate_tx(
-                src_address=src_address,
-                tx_name=f"{temp_template}_reg_deleg",
-                tx_files=tx_files,
-                witness_count_add=len(tx_files.signing_key_files),
-            )
-
-        # Shared signing + submission
-        tx_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_reg_deleg",
-        )
-        cluster_obj.g_transaction.submit_tx(
-            tx_file=tx_signed,
-            txins=tx_raw_output.txins,
-        )
-
-    elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-        tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address,
-            tx_name=f"{temp_template}_reg_deleg",
-            tx_files=tx_files,
-        )
-
-    else:
-        msg = f"Unsupported build method: {build_method}"
-        raise ValueError(msg)
+    tx_raw_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{temp_template}_reg_deleg",
+        src_address=src_address,
+        tx_files=tx_files,
+        fee_buffer=2_000_000,
+        witness_count_add=len(tx_files.signing_key_files),
+        build_method=build_method,
+    )
 
     # Check that the balance for source address was correctly updated
     assert (
@@ -2244,44 +2216,14 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if build_method in (
-                clusterlib_utils.BuildMethods.BUILD,
-                clusterlib_utils.BuildMethods.BUILD_EST,
-            ):
-                if build_method == clusterlib_utils.BuildMethods.BUILD:
-                    tx_raw_output = cluster.g_transaction.build_tx(
-                        src_address=pool_users[0].payment.address,
-                        tx_name="deregister_unregistered",
-                        tx_files=tx_files,
-                        fee_buffer=2_000_000,
-                    )
-                else:
-                    tx_raw_output = cluster.g_transaction.build_estimate_tx(
-                        src_address=pool_users[0].payment.address,
-                        tx_name="deregister_unregistered",
-                        tx_files=tx_files,
-                        fee_buffer=2_000_000,
-                        witness_count_add=len(tx_files.signing_key_files),
-                    )
-
-                # Shared signing + submission
-                tx_signed = cluster.g_transaction.sign_tx(
-                    tx_body_file=tx_raw_output.out_file,
-                    signing_key_files=tx_files.signing_key_files,
-                    tx_name="deregister_unregistered",
-                )
-                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-
-            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-                cluster.g_transaction.send_tx(
-                    src_address=pool_users[0].payment.address,
-                    tx_name="deregister_unregistered",
-                    tx_files=tx_files,
-                )
-
-            else:
-                msg = f"Unsupported build method: {build_method}"
-                raise ValueError(msg)
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template="deregister_unregistered",
+                src_address=pool_users[0].payment.address,
+                tx_files=tx_files,
+                fee_buffer=2_000_000,
+                build_method=build_method,
+            )
 
         err_msg = str(excinfo.value)
         assert "StakePoolNotRegisteredOnKeyPOOL" in err_msg, err_msg
