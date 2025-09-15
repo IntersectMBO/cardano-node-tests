@@ -539,7 +539,7 @@ def _create_register_pool_delegate_stake_tx(
         tx_files=tx_files,
         fee_buffer=4_000_000,
         witness_override=len(pool_owners) * 4,
-        witness_count_add=len(tx_files.signing_key_files),
+        witness_count_add=len(pool_owners) * 4,
         build_method=build_method,
     )
 
