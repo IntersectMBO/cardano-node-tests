@@ -7,6 +7,11 @@ TESTNET_DIR="${1:?"Testnet dir needed"}"
 SCRIPT_DIR="$(readlink -m "${0%/*}")"
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
+# Fail if PWD is STATE_CLUSTER, as STATE_CLUSTER will be deleted
+if [ "$PWD" = "$STATE_CLUSTER" ]; then
+  echo "Please run this script from outside of '$STATE_CLUSTER'" >&2
+  exit 1
+fi
 STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
 SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
 START_CLUSTER_LOG="${STATE_CLUSTER}/start-cluster.log"
@@ -31,7 +36,10 @@ if [ -e "$SCRIPT_DIR/shell_env" ]; then
   source "$SCRIPT_DIR/shell_env"
 fi
 
-rm -rf "$STATE_CLUSTER"
+if ! ( rm -rf "$STATE_CLUSTER" || rm -rf "$STATE_CLUSTER"; ); then
+  echo "Could not remove existing '$STATE_CLUSTER'" >&2
+  exit 1
+fi
 mkdir -p "$STATE_CLUSTER"/{byron,shelley,webserver}
 cd "$STATE_CLUSTER/.."
 

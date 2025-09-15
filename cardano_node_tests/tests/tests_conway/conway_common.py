@@ -118,6 +118,7 @@ def submit_vote(
     script_votes: clusterlib.OptionalScriptVotes = (),
     submit_method: str = "",
     use_build_cmd: bool = True,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD,
     witness_count_add: int = 0,
 ) -> clusterlib.TxRawOutput:
     """Submit a Tx with votes."""
@@ -135,6 +136,7 @@ def submit_vote(
         src_address=payment_addr.address,
         submit_method=submit_method,
         use_build_cmd=use_build_cmd,
+        build_method=build_method,
         tx_files=tx_files,
         script_votes=script_votes,
         witness_count_add=witness_count_add,

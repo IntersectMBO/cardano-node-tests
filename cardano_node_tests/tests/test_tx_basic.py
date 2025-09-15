@@ -89,6 +89,7 @@ class TestBasicTransactions:
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             num=2,
+            key_gen_method=clusterlib_utils.KeyGenMethods.MNEMONIC,
         )
         return addrs
 
