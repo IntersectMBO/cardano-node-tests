@@ -146,7 +146,8 @@ def _register_stake_pool_w_build(
         reward_account_vkey_file: A path to reward account vkey file (optional).
         deposit: A deposit amount needed by the transaction (optional).
         destination_dir: A path to directory for storing artifacts (optional).
-     Returns:
+
+    Returns:
         Tuple[Path, TxRawOutput]: A tuple with pool registration cert file and transaction
             output details.
     """
