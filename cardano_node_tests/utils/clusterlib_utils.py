@@ -2,11 +2,13 @@
 
 import base64
 import dataclasses
+import enum
 import itertools
 import json
 import logging
 import math
 import pathlib as pl
+import random
 import time
 import typing as tp
 
@@ -56,6 +58,11 @@ class BuildMethods:
     BUILD: tp.Final[str] = "build"
     BUILD_RAW: tp.Final[str] = "build_raw"
     BUILD_EST: tp.Final[str] = "build_estimate"
+
+
+class KeyGenMethods(enum.StrEnum):
+    DIRECT = "direct"
+    MNEMONIC = "mnemonic"
 
 
 def build_and_submit_tx(
@@ -371,21 +378,86 @@ def deregister_stake_address(
     return tx_output
 
 
+def gen_payment_addr_and_keys_from_mnemonic(
+    name: str,
+    cluster_obj: clusterlib.ClusterLib,
+    size: tp.Literal[12, 15, 18, 21, 24] = 24,
+    stake_vkey_file: cl_types.FileType | None = None,
+    stake_script_file: cl_types.FileType | None = None,
+    destination_dir: cl_types.FileType = ".",
+) -> clusterlib.AddressRecord:
+    """Generate payment address and key pair.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        size: Number of words in the mnemonic (12, 15, 18, 21, or 24).
+        name: A name of the address and key pair.
+        stake_vkey_file: A path to corresponding stake vkey file (optional).
+        stake_script_file: A path to corresponding payment script file (optional).
+        destination_dir: A path to directory for storing artifacts (optional).
+
+    Returns:
+        clusterlib.AddressRecord: A data container containing the address and
+            key pair / script file.
+    """
+    mnemonic_file = pl.Path(destination_dir) / f"{name}_mnemonic"
+    cluster_obj.g_key.gen_mnemonic(size=size, out_file=mnemonic_file)
+    skey_file = cluster_obj.g_key.derive_from_mnemonic(
+        key_name=name,
+        key_type=clusterlib.KeyType.PAYMENT,
+        mnemonic_file=mnemonic_file,
+        key_number=0,
+        destination_dir=destination_dir,
+    )
+    vkey_file = cluster_obj.g_key.gen_verification_key(
+        key_name=name, signing_key_file=skey_file, destination_dir=destination_dir
+    )
+    key_pair = clusterlib.KeyPair(vkey_file=vkey_file, skey_file=skey_file)
+    addr = cluster_obj.g_address.gen_payment_addr(
+        addr_name=name,
+        payment_vkey_file=key_pair.vkey_file,
+        stake_vkey_file=stake_vkey_file,
+        stake_script_file=stake_script_file,
+        destination_dir=destination_dir,
+    )
+
+    return clusterlib.AddressRecord(
+        address=addr, vkey_file=key_pair.vkey_file, skey_file=key_pair.skey_file
+    )
+
+
 def create_payment_addr_records(
     *names: str,
     cluster_obj: clusterlib.ClusterLib,
     stake_vkey_file: cl_types.FileType | None = None,
+    key_gen_method: KeyGenMethods = KeyGenMethods.DIRECT,
     destination_dir: cl_types.FileType = ".",
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address(es)."""
-    addrs = [
-        cluster_obj.g_address.gen_payment_addr_and_keys(
-            name=name,
-            stake_vkey_file=stake_vkey_file,
-            destination_dir=destination_dir,
-        )
-        for name in names
-    ]
+    if key_gen_method == KeyGenMethods.DIRECT:
+        addrs = [
+            cluster_obj.g_address.gen_payment_addr_and_keys(
+                name=name,
+                stake_vkey_file=stake_vkey_file,
+                destination_dir=destination_dir,
+            )
+            for name in names
+        ]
+    elif key_gen_method == KeyGenMethods.MNEMONIC:
+        size = random.choice((12, 15, 18, 21, 24))
+        addrs = [
+            gen_payment_addr_and_keys_from_mnemonic(
+                name=f"{name}_size{size}",
+                cluster_obj=cluster_obj,
+                size=size,  # type: ignore
+                stake_vkey_file=stake_vkey_file,
+                destination_dir=destination_dir,
+            )
+            for name in names
+        ]
+    else:
+        err = f"Unsupported key generation method '{key_gen_method}'"
+        raise ValueError(err)
 
     LOGGER.debug(f"Created {len(addrs)} payment address(es)")
     return addrs
@@ -412,6 +484,7 @@ def create_pool_users(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     no_of_addr: int = 1,
+    payment_key_gen_method: KeyGenMethods = KeyGenMethods.DIRECT,
     destination_dir: cl_types.FileType = ".",
 ) -> list[clusterlib.PoolUser]:
     """Create PoolUsers."""
@@ -425,6 +498,7 @@ def create_pool_users(
             f"{name_template}_addr_{i}",
             cluster_obj=cluster_obj,
             stake_vkey_file=stake_addr_rec.vkey_file,
+            key_gen_method=payment_key_gen_method,
             destination_dir=destination_dir,
         )[0]
         # Create pool user struct

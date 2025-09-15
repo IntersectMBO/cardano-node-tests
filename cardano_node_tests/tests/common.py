@@ -454,6 +454,7 @@ def get_payment_addrs(
     caching_key: str = "",
     amount: int | None = None,
     min_amount: int | None = None,
+    key_gen_method: clusterlib_utils.KeyGenMethods = clusterlib_utils.KeyGenMethods.DIRECT,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
     if num < 1:
@@ -464,6 +465,7 @@ def get_payment_addrs(
         addrs = clusterlib_utils.create_payment_addr_records(
             *[f"{name_template}_fund_addr_{i}" for i in range(1, num + 1)],
             cluster_obj=cluster_obj,
+            key_gen_method=key_gen_method,
         )
         return addrs
 
@@ -486,6 +488,7 @@ def get_payment_addr(
     caching_key: str = "",
     amount: int | None = None,
     min_amount: int | None = None,
+    key_gen_method: clusterlib_utils.KeyGenMethods = clusterlib_utils.KeyGenMethods.DIRECT,
 ) -> clusterlib.AddressRecord:
     """Create a single new payment address."""
     return get_payment_addrs(
@@ -496,6 +499,7 @@ def get_payment_addr(
         caching_key=caching_key,
         amount=amount,
         min_amount=min_amount,
+        key_gen_method=key_gen_method,
     )[0]
 
 
@@ -508,6 +512,7 @@ def get_pool_users(
     caching_key: str = "",
     amount: int | None = None,
     min_amount: int | None = None,
+    payment_key_gen_method: clusterlib_utils.KeyGenMethods = clusterlib_utils.KeyGenMethods.DIRECT,
 ) -> list[clusterlib.PoolUser]:
     """Create new pool users."""
     if num < 1:
@@ -519,6 +524,7 @@ def get_pool_users(
             cluster_obj=cluster_obj,
             name_template=f"{name_template}_pool_user",
             no_of_addr=num,
+            payment_key_gen_method=payment_key_gen_method,
         )
         return users
 
@@ -541,6 +547,7 @@ def get_pool_user(
     caching_key: str = "",
     amount: int | None = None,
     min_amount: int | None = None,
+    payment_key_gen_method: clusterlib_utils.KeyGenMethods = clusterlib_utils.KeyGenMethods.DIRECT,
 ) -> clusterlib.PoolUser:
     """Create a single new pool user."""
     return get_pool_users(
@@ -551,6 +558,7 @@ def get_pool_user(
         caching_key=caching_key,
         amount=amount,
         min_amount=min_amount,
+        payment_key_gen_method=payment_key_gen_method,
     )[0]
 
 
