@@ -128,13 +128,15 @@ def _register_stake_pool_w_build(
     vrf_vkey_file: clusterlib.FileType,
     cold_key_pair: clusterlib.ColdKeyPair,
     tx_name: str,
+    build_method: str,
     reward_account_vkey_file: clusterlib.FileType | None = None,
     deposit: int | None = None,
     destination_dir: clusterlib.FileType = ".",
 ) -> tuple[pl.Path, clusterlib.TxRawOutput]:
-    """Register a stake pool using a `transaction build` command.
+    """Register a stake pool using `transaction build` or `transaction build-estimate`.
 
     Args:
+        build_method: One of `BuildMethods.BUILD` or `BuildMethods.BUILD_EST`.
         cluster_obj: An instance of `clusterlib.ClusterLib`.
         pool_data: A `PoolData` tuple containing info about the stake pool.
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
@@ -165,22 +167,36 @@ def _register_stake_pool_w_build(
         cold_key_pair.skey_file,
     ]
 
-    # Submit the pool registration certificate through a tx
     tx_files = clusterlib.TxFiles(
         certificate_files=[pool_reg_cert_file],
         signing_key_files=signing_key_files,
     )
 
-    tx_raw_output = cluster_obj.g_transaction.build_tx(
-        src_address=pool_owners[0].payment.address,
-        tx_name=tx_name,
-        tx_files=tx_files,
-        deposit=deposit,
-        fee_buffer=2_000_000,
-        witness_override=len(pool_owners) * 3,
-        destination_dir=destination_dir,
-    )
-    # Sign incrementally (just to check that it works)
+    if build_method == clusterlib_utils.BuildMethods.BUILD:
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
+            src_address=pool_owners[0].payment.address,
+            tx_name=tx_name,
+            tx_files=tx_files,
+            deposit=deposit,
+            fee_buffer=2_000_000,
+            witness_override=len(pool_owners) * 3,
+            destination_dir=destination_dir,
+        )
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+        tx_raw_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=pool_owners[0].payment.address,
+            tx_name=tx_name,
+            tx_files=tx_files,
+            deposit=deposit,
+            fee_buffer=2_000_000,
+            witness_count_add=len(signing_key_files),
+            destination_dir=destination_dir,
+        )
+    else:
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
+
+    # Sign incrementally (both flows allow this check)
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=signing_key_files[:1],
@@ -191,24 +207,26 @@ def _register_stake_pool_w_build(
         signing_key_files=signing_key_files[1:],
         tx_name=f"{tx_name}_sign1",
     )
-    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_output.txins)
 
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_signed_inc, txins=tx_raw_output.txins)
     dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     return pool_reg_cert_file, tx_raw_output
 
 
-def _create_stake_pool_w_build(
+def _create_stake_pool(
     cluster_obj: clusterlib.ClusterLib,
     pool_data: clusterlib.PoolData,
     pool_owners: list[clusterlib.PoolUser],
     tx_name: str,
+    build_method: str,
     reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     destination_dir: clusterlib.FileType = ".",
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool using a `transaction build` command.
 
     Args:
+        build_method: One of `BuildMethods.BUILD` or `BuildMethods.BUILD_EST`.
         cluster_obj: An instance of `clusterlib.ClusterLib`.
         pool_data: A `PoolData` tuple containing info about the stake pool.
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
@@ -250,6 +268,7 @@ def _create_stake_pool_w_build(
         vrf_vkey_file=node_vrf.vkey_file,
         cold_key_pair=node_cold,
         tx_name=tx_name,
+        build_method=build_method,
         reward_account_vkey_file=reward_account_key_pair.vkey_file
         if reward_account_key_pair
         else None,
@@ -278,6 +297,7 @@ def _deregister_stake_pool_w_build(
     epoch: int,
     pool_name: str,
     tx_name: str,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD,
     destination_dir: clusterlib.FileType = ".",
 ) -> tuple[pl.Path, clusterlib.TxRawOutput]:
     """Deregister a stake pool.
@@ -287,6 +307,7 @@ def _deregister_stake_pool_w_build(
         pool_owners: A list of `PoolUser` structures containing pool user addresses and keys.
         cold_key_pair: A `ColdKeyPair` tuple containing the key pair and the counter.
         epoch: An epoch where the update proposal will take effect (optional).
+        build_method: One of `BuildMethods.BUILD` or `BuildMethods.BUILD_EST`.
         pool_name: A name of the stake pool.
         tx_name: A name of the transaction.
         destination_dir: A path to directory for storing artifacts (optional).
@@ -317,14 +338,27 @@ def _deregister_stake_pool_w_build(
         ],
     )
 
-    tx_raw_output = cluster_obj.g_transaction.build_tx(
-        src_address=pool_owners[0].payment.address,
-        tx_name=tx_name,
-        tx_files=tx_files,
-        fee_buffer=2_000_000,
-        witness_override=len(pool_owners) * 3,
-        destination_dir=destination_dir,
-    )
+    if build_method == clusterlib_utils.BuildMethods.BUILD:
+        tx_raw_output = cluster_obj.g_transaction.build_tx(
+            src_address=pool_owners[0].payment.address,
+            tx_name=tx_name,
+            tx_files=tx_files,
+            fee_buffer=2_000_000,
+            witness_override=len(tx_files.signing_key_files),
+            destination_dir=destination_dir,
+        )
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+        tx_raw_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=pool_owners[0].payment.address,
+            tx_name=tx_name,
+            tx_files=tx_files,
+            fee_buffer=2_000_000,
+            witness_count_add=len(tx_files.signing_key_files),
+            destination_dir=destination_dir,
+        )
+    else:
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
     tx_signed = cluster_obj.g_transaction.sign_tx(
         tx_body_file=tx_raw_output.out_file,
         signing_key_files=tx_files.signing_key_files,
@@ -345,7 +379,7 @@ def _create_register_pool(
     pool_data: clusterlib.PoolData,
     reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     request: FixtureRequest | None = None,
-    use_build_cmd: bool = False,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD_RAW,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool.
 
@@ -358,15 +392,19 @@ def _create_register_pool(
     src_init_balance = cluster_obj.g_query.get_address_balance(src_address)
 
     # Create and register pool
-    if use_build_cmd:
-        pool_creation_out = _create_stake_pool_w_build(
+    if build_method in (
+        clusterlib_utils.BuildMethods.BUILD,
+        clusterlib_utils.BuildMethods.BUILD_EST,
+    ):
+        pool_creation_out = _create_stake_pool(
             cluster_obj=cluster_obj,
             pool_data=pool_data,
             pool_owners=pool_owners,
             tx_name=temp_template_reg,
+            build_method=build_method,
             reward_account_key_pair=reward_account_key_pair,
         )
-    else:
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
         pool_creation_out = cluster_obj.g_stake_pool.create_stake_pool(
             pool_data=pool_data,
             pool_owners=pool_owners,
@@ -376,6 +414,9 @@ def _create_register_pool(
         dbsync_utils.check_tx(
             cluster_obj=cluster_obj, tx_raw_output=pool_creation_out.tx_raw_output
         )
+    else:
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
 
     # Deregister stake pool
     def _deregister():
@@ -418,7 +459,7 @@ def _create_register_pool_delegate_stake_tx(
     pool_data: clusterlib.PoolData,
     reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     request: FixtureRequest | None = None,
-    use_build_cmd: bool = False,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD_RAW,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool, delegate stake address - all in single TX.
 
@@ -492,27 +533,16 @@ def _create_register_pool_delegate_stake_tx(
         ],
     )
 
-    if use_build_cmd:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
-            src_address=src_address,
-            tx_name=temp_template_reg_deleg,
-            tx_files=tx_files,
-            fee_buffer=4_000_000,
-            witness_override=len(pool_owners) * 4,
-        )
-        tx_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template_reg_deleg,
-        )
-        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-    else:
-        tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address,
-            tx_name=temp_template_reg_deleg,
-            tx_files=tx_files,
-            witness_count_add=len(pool_owners) * 4,
-        )
+    tx_raw_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=temp_template_reg_deleg,
+        src_address=src_address,
+        tx_files=tx_files,
+        fee_buffer=4_000_000,
+        witness_override=len(pool_owners) * 4,
+        witness_count_add=len(pool_owners) * 4,
+        build_method=build_method,
+    )
 
     # Deregister stake pool
     def _deregister():
@@ -569,7 +599,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     pool_data: clusterlib.PoolData,
     reward_account_key_pair: clusterlib.KeyPair | clusterlib.AddressRecord | None = None,
     request: FixtureRequest | None = None,
-    use_build_cmd: bool = False,
+    build_method: str = clusterlib_utils.BuildMethods.BUILD_RAW,
 ) -> clusterlib.PoolCreationOutput:
     """Create and register a stake pool - first TX; delegate stake address - second TX.
 
@@ -584,7 +614,7 @@ def _create_register_pool_tx_delegate_stake_tx(
         pool_data=pool_data,
         reward_account_key_pair=reward_account_key_pair,
         request=request,
-        use_build_cmd=use_build_cmd,
+        build_method=build_method,
     )
 
     # Create stake address registration certs for pool owners
@@ -632,24 +662,16 @@ def _create_register_pool_tx_delegate_stake_tx(
         ],
     )
 
-    if use_build_cmd:
-        tx_raw_output = cluster_obj.g_transaction.build_tx(
-            src_address=src_address,
-            tx_name=f"{temp_template}_reg_deleg",
-            tx_files=tx_files,
-            fee_buffer=2_000_000,
-            witness_override=len(pool_owners) * 3,
-        )
-        tx_signed = cluster_obj.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=f"{temp_template}_reg_deleg",
-        )
-        cluster_obj.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-    else:
-        tx_raw_output = cluster_obj.g_transaction.send_tx(
-            src_address=src_address, tx_name=f"{temp_template}_reg_deleg", tx_files=tx_files
-        )
+    tx_raw_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{temp_template}_reg_deleg",
+        src_address=src_address,
+        tx_files=tx_files,
+        fee_buffer=2_000_000,
+        witness_count_add=len(tx_files.signing_key_files),
+        witness_override=len(pool_owners) * 3,
+        build_method=build_method,
+    )
 
     # Check that the balance for source address was correctly updated
     assert (
@@ -675,7 +697,7 @@ class TestStakePool:
     """General tests for stake pools."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -684,7 +706,7 @@ class TestStakePool:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         request: FixtureRequest,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Create and register a stake pool with metadata.
 
@@ -723,7 +745,7 @@ class TestStakePool:
             temp_dir=pl.Path(),
             pool_data=pool_data,
             request=request,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Check `transaction view` command
@@ -800,7 +822,7 @@ class TestStakePool:
             temp_dir=pl.Path(),
             pool_data=pool_data,
             request=request,
-            use_build_cmd=False,
+            build_method=clusterlib_utils.BuildMethods.BUILD_RAW,
         )
 
         # Check dbsync `PoolOffChainFetchError` table
@@ -823,7 +845,7 @@ class TestStakePool:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("no_of_addr", (1, 3))
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -834,7 +856,7 @@ class TestStakePool:
         cluster: clusterlib.ClusterLib,
         no_of_addr: int,
         request: FixtureRequest,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Create and register a stake pool (without metadata).
 
@@ -868,11 +890,11 @@ class TestStakePool:
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     @pytest.mark.smash
@@ -880,7 +902,7 @@ class TestStakePool:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Deregister stake pool.
 
@@ -931,7 +953,7 @@ class TestStakePool:
             temp_template=temp_template,
             temp_dir=pl.Path(),
             pool_data=pool_data,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         pool_owner = pool_owners[0]
@@ -946,7 +968,10 @@ class TestStakePool:
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         depoch = cluster.g_query.get_epoch() + 1
-        if use_build_cmd:
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             __, tx_raw_output = _deregister_stake_pool_w_build(
                 cluster_obj=cluster,
                 pool_owners=pool_owners,
@@ -954,6 +979,7 @@ class TestStakePool:
                 epoch=depoch,
                 pool_name=pool_data.pool_name,
                 tx_name=temp_template,
+                build_method=build_method,  # pass through the method
             )
         else:
             __, tx_raw_output = cluster.g_stake_pool.deregister_stake_pool(
@@ -964,6 +990,7 @@ class TestStakePool:
                 tx_name=temp_template,
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+
         assert (
             cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id).retiring
             == depoch
@@ -1318,14 +1345,14 @@ class TestStakePool:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_update_stake_pool_metadata(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        use_build_cmd: bool,
+        build_method: str,
         request: FixtureRequest,
     ):
         """Update stake pool metadata.
@@ -1399,7 +1426,7 @@ class TestStakePool:
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Make sure the update doesn't happen close to epoch boundary
@@ -1409,7 +1436,10 @@ class TestStakePool:
         update_epoch = cluster.g_query.get_epoch()
 
         # Update the pool metadata by resubmitting the pool registration certificate
-        if use_build_cmd:
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             _register_stake_pool_w_build(
                 cluster_obj=cluster,
                 pool_data=pool_data_updated,
@@ -1417,9 +1447,10 @@ class TestStakePool:
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 tx_name=f"{temp_template}_rereg",
-                deposit=0,  # no additional deposit, the pool is already registered
+                deposit=0,
+                build_method=build_method,
             )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             __, tx_raw_output = cluster.g_stake_pool.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
@@ -1429,6 +1460,9 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
 
         # Check that pool is going to be updated with correct data
         future_params = cluster.g_query.get_pool_state(
@@ -1449,14 +1483,14 @@ class TestStakePool:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_update_stake_pool_parameters(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        use_build_cmd: bool,
+        build_method: str,
         request: FixtureRequest,
     ):
         """Update stake pool parameters.
@@ -1516,7 +1550,7 @@ class TestStakePool:
             pool_owners=pool_owners,
             pool_data=pool_data,
             request=request,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
         )
 
         # Make sure the update doesn't happen close to epoch boundary
@@ -1526,7 +1560,10 @@ class TestStakePool:
         update_epoch = cluster.g_query.get_epoch()
 
         # Update the pool parameters by resubmitting the pool registration certificate
-        if use_build_cmd:
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             _register_stake_pool_w_build(
                 cluster_obj=cluster,
                 pool_data=pool_data_updated,
@@ -1534,9 +1571,10 @@ class TestStakePool:
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 tx_name=f"{temp_template}_rereg",
-                deposit=0,  # no additional deposit, the pool is already registered
+                deposit=0,
+                build_method=build_method,
             )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             __, tx_raw_output = cluster.g_stake_pool.register_stake_pool(
                 pool_data=pool_data_updated,
                 pool_owners=pool_owners,
@@ -1546,6 +1584,9 @@ class TestStakePool:
                 deposit=0,  # no additional deposit, the pool is already registered
             )
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
 
         # Check that pool is going to be updated with correct data
         future_params = cluster.g_query.get_pool_state(
@@ -2147,7 +2188,7 @@ class TestNegative:
         assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pool_deregistration_not_registered(
@@ -2155,7 +2196,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Try to deregister pool that is not registered.
 
@@ -2177,26 +2218,17 @@ class TestNegative:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
-                tx_raw_output = cluster.g_transaction.build_tx(
-                    src_address=pool_users[0].payment.address,
-                    tx_name="deregister_unregistered",
-                    tx_files=tx_files,
-                    fee_buffer=2_000_000,
-                )
-                tx_signed = cluster.g_transaction.sign_tx(
-                    tx_body_file=tx_raw_output.out_file,
-                    signing_key_files=tx_files.signing_key_files,
-                    tx_name="deregister_unregistered",
-                )
-                cluster.g_transaction.submit_tx(tx_file=tx_signed, txins=tx_raw_output.txins)
-            else:
-                cluster.g_transaction.send_tx(
-                    src_address=pool_users[0].payment.address,
-                    tx_name="deregister_unregistered",
-                    tx_files=tx_files,
-                )
-        assert "StakePoolNotRegisteredOnKeyPOOL" in str(excinfo.value)
+            clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template="deregister_unregistered",
+                src_address=pool_users[0].payment.address,
+                tx_files=tx_files,
+                fee_buffer=2_000_000,
+                build_method=build_method,
+            )
+
+        err_msg = str(excinfo.value)
+        assert "StakePoolNotRegisteredOnKeyPOOL" in err_msg, err_msg
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
