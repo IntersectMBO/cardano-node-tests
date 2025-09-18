@@ -1,6 +1,7 @@
 import contextlib
 import dataclasses
 import fnmatch
+import io
 import itertools
 import logging
 import os
@@ -8,6 +9,7 @@ import pathlib as pl
 import re
 import time
 import typing as tp
+from collections import deque
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import framework_log
@@ -84,9 +86,6 @@ ERRORS_LOOK_BACK_LINES = 10
 ERRORS_LOOK_BACK_MAP = {
     "TraceNoLedgerState": "Switched to a fork",  # can happen when chain switched to a fork
 }
-ERRORS_LOOK_BACK_RE = (
-    re.compile("|".join(ERRORS_LOOK_BACK_MAP.keys())) if ERRORS_LOOK_BACK_MAP else None
-)
 
 # Relevant errors from supervisord.log
 SUPERVISORD_ERRORS_RE = re.compile("not expected|FATAL", re.IGNORECASE)
@@ -99,27 +98,9 @@ class RotableLog:
     timestamp: float
 
 
-def _look_back_found(buffer: list[str]) -> bool:
-    """Look back to the buffer to see if there is an expected message.
-
-    If the expected message is found, the error can be ignored.
-    """
-    # Find the look back regex that corresponds to the error message
-    err_line = buffer[-1]
-    look_back_re = ""
-    for err_re, look_re in ERRORS_LOOK_BACK_MAP.items():
-        if re.search(err_re, err_line):
-            look_back_re = look_re
-            break
-    else:
-        msg = f"Look back regex not found for error line: {err_line}"
-        raise KeyError(msg)
-
-    # Check if the look back regex matches any of the previous log messages
-    return any(re.search(look_back_re, line) for line in buffer[:-1])
-
-
-def _get_rotated_logs(logfile: pl.Path, seek: int = 0, timestamp: float = 0.0) -> list[RotableLog]:
+def _get_rotated_logs(
+    logfile: pl.Path, *, seek: int = 0, timestamp: float = 0.0
+) -> list[RotableLog]:
     """Return list of versions of the log file (list of `RotableLog`).
 
     When the seek offset was recorded for a log file and the log file was rotated,
@@ -180,9 +161,11 @@ def _get_offset_file(logfile: pl.Path) -> pl.Path:
 
 
 def _read_seek(offset_file: pl.Path) -> int:
-    """Read seek offset from the given file."""
-    with open(offset_file, encoding="utf-8") as infile:
-        return int(infile.readline().strip())
+    try:
+        with open(offset_file, encoding="utf-8") as infile:
+            return int(infile.readline().strip())
+    except Exception:
+        return 0
 
 
 def _get_ignore_regex(
@@ -197,76 +180,202 @@ def _get_ignore_regex(
     return "|".join(regex_set) or "nothing_to_ignore"
 
 
-def _search_log_lines(  # noqa: C901
+def _resume_at_line_boundary(fb: tp.BinaryIO, pos: int, size: int) -> None:
+    if pos <= 0:
+        fb.seek(0, io.SEEK_SET)
+        return
+    if pos >= size:
+        fb.seek(size, io.SEEK_SET)
+        return
+
+    fb.seek(pos - 1, io.SEEK_SET)
+    prev = fb.read(1)
+    if prev in (b"\n", b"\r"):
+        # If we're exactly between CRLF, consume the '\n' so we start at the next line.
+        fb.seek(pos, io.SEEK_SET)
+        nxt = fb.read(1)
+        if prev == b"\r" and nxt == b"\n":
+            # We were at CR|LF — already consumed the '\n', good.
+            return
+        # Otherwise we moved forward; rewind one byte to pos
+        fb.seek(pos, io.SEEK_SET)
+        return
+
+    # In the middle of a line: skip to next newline
+    fb.readline()
+
+
+def _split_complete_lines(buf: bytes) -> tuple[list[bytes], bytes]:
+    """Return (complete_lines_without_newline, leftover_tail). Handles LF/CRLF/CR."""
+    parts = buf.splitlines(keepends=True)
+    if not parts:
+        return [], b""
+    # Determine if the last piece ends with a newline
+    last = parts[-1]
+    complete = parts if last.endswith((b"\n", b"\r")) else parts[:-1]
+    leftover = b"" if complete is parts else last
+
+    # Strip line endings
+    out: list[bytes] = []
+    for ln in complete:
+        stripped_ln = ln
+        if stripped_ln.endswith(b"\n"):
+            stripped_ln = stripped_ln[:-1]
+        if stripped_ln.endswith(b"\r"):
+            stripped_ln = stripped_ln[:-1]
+        out.append(stripped_ln)
+    return out, leftover
+
+
+def _bytes_flags(flags: int) -> int:
+    """Remove flags that are invalid for bytes patterns."""
+    return flags & ~(re.UNICODE | re.LOCALE)
+
+
+def _compile_bytes_from_pattern(
+    pat: re.Pattern[str] | None,
+    *,
+    encoding: str = "utf-8",
+) -> re.Pattern[bytes] | None:
+    """Compile a *string* regex as a *bytes* regex, sanitizing flags.
+
+    Note: IGNORECASE on bytes is ASCII-only.
+    """
+    if pat is None:
+        return None
+    bpat = pat.pattern.encode(encoding)
+    bflags = _bytes_flags(pat.flags)
+    return re.compile(bpat, bflags)
+
+
+def _compile_bytes_from_str(
+    pat: str,
+    *,
+    flags: int = 0,
+    encoding: str = "utf-8",
+) -> re.Pattern[bytes]:
+    """Compile a *string* regex as a *bytes* regex, sanitizing flags.
+
+    Note: IGNORECASE on bytes is ASCII-only.
+    """
+    return re.compile(pat.encode(encoding), _bytes_flags(flags))
+
+
+def _compile_look_back_map_bytes(
+    m: dict[str, str] | None, *, flags: int = 0, encoding: str = "utf-8"
+) -> list[tuple[re.Pattern[bytes], re.Pattern[bytes]]]:
+    """Compile {error_regex: preceding_regex} to bytes regex pairs (flags sanitized)."""
+    if not m:
+        return []
+    bflags = _bytes_flags(flags)
+    return [
+        (re.compile(err.encode(encoding), bflags), re.compile(prev.encode(encoding), bflags))
+        for err, prev in m.items()
+    ]
+
+
+def _should_ignore_error(
+    line_b: bytes, lookback: deque[bytes], pairs: list[tuple[re.Pattern[bytes], re.Pattern[bytes]]]
+) -> bool:
+    """Return True if line matches an 'error' key and a preceding regex is in the look-back."""
+    for err_pat_b, prev_pat_b in pairs:
+        if err_pat_b.search(line_b):
+            # Found a mapped error; require a preceding match in the buffer
+            return any(prev_pat_b.search(prev_b) for prev_b in lookback)
+    return False
+
+
+def _validated_start(seek: int | None, size: int) -> int:
+    """Return a safe starting byte offset.
+
+    - If seek is None, negative, or beyond EOF -> start at 0
+    - Otherwise -> start at seek
+    """
+    if seek is None or seek < 0 or seek > size:
+        return 0
+    return seek
+
+
+def _search_log_lines(
     logfile: pl.Path,
     rotated_logs: list[RotableLog],
-    errors_re: re.Pattern,
-    errors_ignored_re: re.Pattern | None = None,
-    errors_look_back_re: re.Pattern | None = None,
+    errors_re: re.Pattern[str],
+    *,
+    errors_ignored_re: re.Pattern[str] | None = None,
+    look_back_map: dict[str, str] | None = None,
+    look_back_lines: int = 10,
+    encoding: str = "utf-8",
 ) -> list[tuple[pl.Path, str]]:
-    """Search for errors in the log file and, if needed, in the corresponding rotated logs."""
-    errors = []
-    last_line_pos = -1
+    """Search for error lines, ignoring mapped errors when a preceding message appears.
 
-    for logfile_rec in rotated_logs:
-        with open(logfile_rec.logfile, encoding="utf-8") as infile:
-            # Avoid seeking past the end of file
-            if 0 < logfile_rec.seek <= logfile_rec.logfile.stat().st_size:
-                # Seek to the byte that comes right before the recorded offset
-                infile.seek(logfile_rec.seek - 1)
-                # Check if the byte is a newline, which means that the offset starts at
-                # the beginning of a line.
-                if infile.read(1) not in ("\n", "\r"):
-                    # Skip the first line if the line is incomplete
-                    infile.readline()
+    - Uses binary I/O + byte offsets for correctness and speed.
+    - Decodes only matched lines for output.
+    - Persists a byte offset at a line boundary for the live logfile.
+    """
+    errs_b = _compile_bytes_from_pattern(pat=errors_re, encoding=encoding)
+    ign_b = _compile_bytes_from_pattern(pat=errors_ignored_re, encoding=encoding)
+    lb_pairs = _compile_look_back_map_bytes(
+        m=look_back_map, flags=errors_re.flags, encoding=encoding
+    )
 
-            look_back_buf = [""] * ERRORS_LOOK_BACK_LINES
-            incomplete_line = ""
+    results: list[tuple[pl.Path, str]] = []
+    last_offset_bytes = -1
 
-            # Read the file in chunks
-            while chunk := infile.read(BUFFER_SIZE):
-                # Prepend any leftover from the last chunk
-                if incomplete_line:
-                    chunk = incomplete_line + chunk
-                lines = chunk.splitlines(keepends=False)
+    for rec in rotated_logs:
+        path = rec.logfile
+        size = path.stat().st_size
+        start = _validated_start(seek=rec.seek, size=size)
 
-                # Handle incomplete lines at the end of the chunk
-                incomplete_line = lines.pop() if chunk[-1] not in "\n\r" else ""
+        with path.open("rb", buffering=BUFFER_SIZE) as fb:
+            _resume_at_line_boundary(fb=fb, pos=start, size=size)
 
-                for line in lines:
-                    look_back_buf.append(line)
-                    look_back_buf.pop(0)
-                    if errors_re.search(line) and not (
-                        errors_ignored_re and errors_ignored_re.search(line)
+            look_back: deque[bytes] = deque(maxlen=look_back_lines)
+            leftover = b""
+
+            while True:
+                chunk = fb.read(BUFFER_SIZE)
+                if not chunk:
+                    break
+
+                buf = leftover + chunk
+                lines_b, leftover = _split_complete_lines(buf=buf)
+
+                for line_b in lines_b:
+                    # Fast ignore
+                    if ign_b and ign_b.search(line_b):
+                        look_back.append(line_b)
+                        continue
+                    # Not an error -> just update context
+                    if not (errs_b and errs_b.search(line_b)):
+                        look_back.append(line_b)
+                        continue
+                    # Error: maybe ignore based on mapping
+                    if lb_pairs and _should_ignore_error(
+                        line_b=line_b, lookback=look_back, pairs=lb_pairs
                     ):
-                        # Skip if expected message is in the look back buffer
-                        if (
-                            errors_look_back_re
-                            and errors_look_back_re.search(line)
-                            and _look_back_found(look_back_buf)
-                        ):
-                            continue
-                        errors.append((logfile, line))
+                        look_back.append(line_b)
+                        continue
 
-            # Get offset for the "live" log file
-            if logfile_rec.logfile == logfile:
-                if incomplete_line:
-                    # Adjust the offset to point before the incomplete line
-                    last_line_pos = infile.tell() - len(incomplete_line.encode("utf-8"))
-                else:
-                    last_line_pos = infile.tell()
+                    look_back.append(line_b)
 
-    # Record last search offset for the "live" log file
-    if last_line_pos >= 0:
+                    # Report: decode only now
+                    line = line_b.decode(encoding, errors="surrogateescape")
+                    results.append((path, line))
+
+            # Persist next offset for the "live" logfile at a line boundary
+            if path == logfile:
+                cur = fb.tell()
+                last_offset_bytes = cur - len(leftover)
+
+    if last_offset_bytes >= 0:
         offset_file = _get_offset_file(logfile=logfile)
-        with open(offset_file, "w", encoding="utf-8") as outfile:
-            outfile.write(str(last_line_pos))
+        offset_file.write_text(str(last_offset_bytes), encoding="utf-8")
 
-    return errors
+    return results
 
 
 def add_ignore_rule(
-    files_glob: str, regex: str, ignore_file_id: str, skip_after: float = 0.0
+    files_glob: str, regex: str, ignore_file_id: str, *, skip_after: float = 0.0
 ) -> None:
     """Add ignore rule for expected errors.
 
@@ -298,42 +407,59 @@ def find_msgs_in_logs(
     logfile: pl.Path,
     seek_offset: int,
     timestamp: float,
+    *,
     only_first: bool = False,
+    encoding: str = "utf-8",
 ) -> list[str]:
-    """Find messages in log.
+    """Find messages in log using a *byte* seek offset (binary mode).
+
+    Reads in binary for speed, resumes at a line boundary near `seek_offset`,
+    matches with a bytes regex, and decodes only matching lines.
 
     Args:
-        regex (str): The regular expression to search for.
-        logfile (Path): The path to the log file.
-        seek_offset (int): The seek offset in the log file.
-        timestamp (float): The timestamp to filter log entries.
-        only_first (bool): Whether to return only the first match.
+        regex: Regular expression (interpreted as UTF-8 when compiled to bytes).
+        logfile: Path to the primary log file.
+        seek_offset: Byte offset to resume from (start of a line or 0).
+        timestamp: Timestamp used by `_get_rotated_logs(...)`.
+        only_first: If True, return immediately after the first match.
+        encoding: Text encoding used to decode matched lines (default: "utf-8").
 
     Returns:
-        list[str]: A list of matching log lines.
+        Matching log lines (decoded to str, without trailing newlines).
     """
-    regex_comp = re.compile(regex)
-    lines_found = []
-    for logfile_rec in _get_rotated_logs(logfile=logfile, seek=seek_offset, timestamp=timestamp):
-        with open(logfile_rec.logfile, encoding="utf-8") as infile:
-            infile.seek(logfile_rec.seek)
+    # Compile as BYTES regex for speed; note: \w/\b are ASCII-only in bytes mode.
+    regex_b = _compile_bytes_from_str(pat=regex)
 
-            # Read the file in chunks
-            incomplete_line = ""
-            while chunk := infile.read(BUFFER_SIZE):
-                # Prepend any leftover from the last chunk
-                if incomplete_line:
-                    chunk = incomplete_line + chunk
-                lines = chunk.splitlines(keepends=False)
+    lines_found: list[str] = []
 
-                # Handle incomplete lines at the end of the chunk
-                incomplete_line = lines.pop() if chunk[-1] not in "\n\r" else ""
+    for logfile_rec in _get_rotated_logs(
+        logfile=logfile,
+        seek=seek_offset,
+        timestamp=timestamp,
+    ):
+        path = logfile_rec.logfile
+        size = path.stat().st_size
+        start = _validated_start(seek=logfile_rec.seek, size=size)
 
-                for line in lines:
-                    if regex_comp.search(line):
+        with path.open("rb", buffering=BUFFER_SIZE) as fb:
+            _resume_at_line_boundary(fb=fb, pos=start, size=size)
+
+            leftover = b""
+            while True:
+                chunk = fb.read(BUFFER_SIZE)
+                if not chunk:
+                    break
+
+                buf = leftover + chunk
+                lines_b, leftover = _split_complete_lines(buf=buf)
+
+                for line_b in lines_b:
+                    if regex_b.search(line_b):
+                        line = line_b.decode(encoding, errors="surrogateescape")
                         lines_found.append(line)
                         if only_first:
                             return lines_found
+
     return lines_found
 
 
@@ -343,56 +469,67 @@ def check_msgs_presence_in_logs(  # noqa: C901
     state_dir: pl.Path,
     timestamp: float,
 ) -> list[str]:
-    """Check if the expected messages are present in logs.
+    """Check if the expected messages are present in logs (byte offsets, binary I/O).
 
     Args:
-        regex_pairs (list[tuple[str, str]]): List of tuples with file globs and regex patterns.
-        seek_offsets (dict[str, int]): Dictionary of file seek offsets.
-        state_dir (Path): Path to the state directory.
-        timestamp (float): Timestamp to filter log entries.
+        regex_pairs: (glob, regex) pairs.
+        seek_offsets: Mapping of absolute log path (str) -> byte offset.
+        state_dir: Root directory for globs.
+        timestamp: Passed to `_get_rotated_logs`.
 
     Returns:
-        list[str]: List of error messages for missing log entries.
+        Error messages for missing entries.
     """
-    errors = []
+    errors: list[str] = []
+
     for files_glob, regex in regex_pairs:
-        regex_comp = re.compile(regex)
-        # Get list of records (file names and offsets) for given glob
-        matching_files = fnmatch.filter(seek_offsets, f"{state_dir}/{files_glob}")
+        # Compile to BYTES regex for speed; note: \w/\b are ASCII-only in bytes mode.
+        regex_b = _compile_bytes_from_str(pat=regex)
+
+        # Get list of candidate files by globbing keys of seek_offsets
+        pattern = f"{state_dir}/{files_glob}"
+        matching_files = fnmatch.filter(seek_offsets, pattern)
+
         for logfile in matching_files:
-            # Skip if the log file is rotated log, it will be handled by `_get_rotated_logs`
+            # Skip rotated file names here; `_get_rotated_logs` will include them appropriately.
             if ROTATED_RE.match(logfile):
                 continue
 
-            # Search for the expected string
-            seek = seek_offsets.get(logfile) or 0
+            start_seek = seek_offsets.get(logfile) or 0
             line_found = False
-            for logfile_rec in _get_rotated_logs(
-                logfile=pl.Path(logfile), seek=seek, timestamp=timestamp
+
+            for rec in _get_rotated_logs(
+                logfile=pl.Path(logfile),
+                seek=start_seek,
+                timestamp=timestamp,
             ):
-                with open(logfile_rec.logfile, encoding="utf-8") as infile:
-                    infile.seek(logfile_rec.seek)
+                path = rec.logfile
+                size = path.stat().st_size
+                pos = _validated_start(seek=rec.seek, size=size)
 
-                    # Read the file in chunks
-                    incomplete_line = ""
-                    while chunk := infile.read(BUFFER_SIZE):
-                        # Prepend any leftover from the last chunk
-                        if incomplete_line:
-                            chunk = incomplete_line + chunk
-                        lines = chunk.splitlines(keepends=False)
+                with path.open("rb", buffering=BUFFER_SIZE) as fb:
+                    _resume_at_line_boundary(fb=fb, pos=pos, size=size)
 
-                        # Handle incomplete lines at the end of the chunk
-                        incomplete_line = lines.pop() if chunk[-1] not in "\n\r" else ""
+                    leftover = b""
+                    while True:
+                        chunk = fb.read(BUFFER_SIZE)
+                        if not chunk:
+                            break
 
-                        for line in lines:
-                            if regex_comp.search(line):
+                        buf = leftover + chunk
+                        lines_b, leftover = _split_complete_lines(buf=buf)
+
+                        for line_b in lines_b:
+                            if regex_b.search(line_b):
                                 line_found = True
                                 break
                         if line_found:
                             break
+
                 if line_found:
                     break
-            else:
+
+            if not line_found:
                 errors.append(f"No line matching `{regex}` found in '{logfile}'.")
 
     return errors
@@ -503,7 +640,7 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
                     rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
                     errors_re=ERRORS_RE,
                     errors_ignored_re=re.compile(errors_ignored),
-                    errors_look_back_re=ERRORS_LOOK_BACK_RE,
+                    look_back_map=ERRORS_LOOK_BACK_MAP,
                 )
             )
 
