@@ -20,7 +20,8 @@ from cardano_node_tests.utils import temptools
 LOGGER = logging.getLogger(__name__)
 
 BUFFER_SIZE = 512 * 1024  # 512 KB buffer
-ROTATED_RE = re.compile(r".+\.[0-9]+")  # detect rotated log file
+ROTATED_RE = re.compile(r".+\.[0-9]+")  # Detect rotated log file
+# NOTE: The regex needs to be unanchored.
 ERRORS_RE = re.compile("error|fail", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
@@ -88,6 +89,7 @@ ERRORS_LOOK_BACK_MAP = {
 }
 
 # Relevant errors from supervisord.log
+# NOTE: The regex needs to be unanchored.
 SUPERVISORD_ERRORS_RE = re.compile("not expected|FATAL", re.IGNORECASE)
 
 
@@ -296,10 +298,10 @@ def _validated_start(seek: int | None, size: int) -> int:
     return seek
 
 
-def _search_log_lines(
+def _search_log_lines(  # noqa: C901
     logfile: pl.Path,
     rotated_logs: list[RotableLog],
-    errors_re: re.Pattern[str],
+    errors_re: re.Pattern[str],  # The the error regex needs to be unanchored
     *,
     errors_ignored_re: re.Pattern[str] | None = None,
     look_back_map: dict[str, str] | None = None,
@@ -313,6 +315,8 @@ def _search_log_lines(
     - Persists a byte offset at a line boundary for the live logfile.
     """
     errs_b = _compile_bytes_from_pattern(pat=errors_re, encoding=encoding)
+    if not errs_b:
+        return []
     ign_b = _compile_bytes_from_pattern(pat=errors_ignored_re, encoding=encoding)
     lb_pairs = _compile_look_back_map_bytes(
         m=look_back_map, flags=errors_re.flags, encoding=encoding
@@ -338,7 +342,19 @@ def _search_log_lines(
                     break
 
                 buf = leftover + chunk
+
+                # Fast prefilter: is there *any* error token in this chunk?
+                # Safe only when the error regex is unanchored.
+                has_error_in_chunk = bool(errs_b.search(buf))
+
                 lines_b, leftover = _split_complete_lines(buf=buf)
+
+                if not has_error_in_chunk:
+                    # No error candidates: just update look-back (cheap) and continue.
+                    # (Deque will keep only the last look_back_lines lines.)
+                    for ln in lines_b:
+                        look_back.append(ln)
+                    continue
 
                 for line_b in lines_b:
                     # Fast ignore
@@ -346,7 +362,7 @@ def _search_log_lines(
                         look_back.append(line_b)
                         continue
                     # Not an error -> just update context
-                    if not (errs_b and errs_b.search(line_b)):
+                    if not errs_b.search(line_b):
                         look_back.append(line_b)
                         continue
                     # Error: maybe ignore based on mapping
