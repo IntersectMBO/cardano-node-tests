@@ -73,7 +73,7 @@ class TestConway:
         cluster: clusterlib.ClusterLib,
         temp_template: str,
         pool_user: clusterlib.PoolUser,
-        build_method: str,
+        use_build_cmd: bool,
         submit_method: str = submit_utils.SubmitMethods.CLI,
     ):
         """Run the actual scenario of the 'test_action_unreg_deposit_addr*' tests."""
@@ -104,50 +104,62 @@ class TestConway:
                 name_template=f"{temp_template}_action",
                 src_address=pool_user.payment.address,
                 submit_method=submit_method,
-                build_method=build_method,
+                use_build_cmd=use_build_cmd,
                 tx_files=tx_files_action,
             )
         err_str = str(excinfo.value)
-        if build_method in (
-            clusterlib_utils.BuildMethods.BUILD,
-            clusterlib_utils.BuildMethods.BUILD_EST,
-        ):
+        if use_build_cmd:
             assert (
                 "Stake credential specified in the proposal is not registered on-chain" in err_str
-                or "ProposalReturnAccountDoesNotExist" in err_str  # For node <= 10.1.4
+                or "ProposalReturnAccountDoesNotExist" in err_str  # In node <= 10.1.4
             ), err_str
-        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-            assert "ProposalReturnAccountDoesNotExist" in err_str, err_str
         else:
-            msg = f"Unsupported build method: {build_method}"
-            raise ValueError(msg)
+            assert "ProposalReturnAccountDoesNotExist" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
-    def test_action_unreg_deposit_addr(
+    def test_action_submit_unreg_deposit_addr(
         self,
         cluster: clusterlib.ClusterLib,
         pool_user: clusterlib.PoolUser,
-        build_method: str,
         submit_method: str,
     ):
-        """Test creating or submitting an action with an unregistered deposit return address.
+        """Test submitting an action with an unregistered deposit return address.
 
         Expect failure.
 
-        * `transaction build` - fails at build time because the deposit return stake credential
-          is not registered.
-        * `transaction build-estimate` - behaves like `build`, fails at build time.
-        * `transaction build-raw` - does not check during build; transaction is expected
-          to fail on submission.
+        The transaction is built using `transaction build-raw`, which does not check
+        deposit return address registration. The transaction is expected to fail on submission.
         """
         temp_template = common.get_test_id(cluster)
         return self._run_test_action_unreg_deposit_addr(
             cluster=cluster,
             temp_template=temp_template,
             pool_user=pool_user,
-            build_method=build_method,
+            use_build_cmd=False,
             submit_method=submit_method,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.smoke
+    def test_action_build_unreg_deposit_addr(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_user: clusterlib.PoolUser,
+    ):
+        """Test building a Tx when deposit return address is unregistered.
+
+        Expect failure.
+
+        The `transaction build` command checks deposit return address registration
+        during Tx building, causing the build to fail.
+        """
+        temp_template = common.get_test_id(cluster)
+        return self._run_test_action_unreg_deposit_addr(
+            cluster=cluster,
+            temp_template=temp_template,
+            pool_user=pool_user,
+            use_build_cmd=True,
         )
