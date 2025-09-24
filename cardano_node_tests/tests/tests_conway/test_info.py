@@ -110,7 +110,7 @@ class TestInfo:
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
             src_address=pool_user_ug.payment.address,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files_action,
         )
         reqc.cli023.success()
@@ -202,7 +202,7 @@ class TestInfo:
             payment_addr=pool_user_ug.payment,
             votes=votes,
             keys=vote_keys,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
         reqc.cli024.success()
 
