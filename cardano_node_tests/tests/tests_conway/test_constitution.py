@@ -144,7 +144,7 @@ def script_dreps_lg(
             cluster_obj=cluster,
             name_template=name_template,
             src_address=pool_users[0].payment.address,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
+            use_build_cmd=True,
             txouts=txouts,
             tx_files=tx_files,
         )
@@ -240,7 +240,7 @@ def script_dreps_lg(
             cluster_obj=cluster,
             name_template=f"{temp_template}_dereg",
             src_address=pool_users[0].payment.address,
-            build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # Workaround for CLI issue 942
+            use_build_cmd=False,  # Workaround for CLI issue 942
             tx_files=tx_files,
             withdrawals=withdrawals,
             deposit=-sum(s.registration_deposit for __, s in pool_users_info),
@@ -281,7 +281,7 @@ def script_dreps_lg(
             cluster_obj=cluster,
             name_template=f"{temp_template}_ret",
             src_address=pool_users[0].payment.address,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
+            use_build_cmd=True,
             tx_files=tx_files,
             complex_certs=ret_certs,
             deposit=-sum(d.deposit for d in drep_script_data),
@@ -425,7 +425,7 @@ class TestConstitution:
                 approve_cc=False,
                 approve_drep=False,
                 approve_spo=False,
-                build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # cardano-cli issue #650
+                use_build_cmd=False,  # cardano-cli issue #650
             )
         err_str = str(excinfo.value)
         assert "StakePoolVoter" in err_str, err_str
@@ -440,7 +440,7 @@ class TestConstitution:
             action_ix=action_ix,
             approve_cc=False,
             approve_drep=False,
-            build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # cardano-cli issue #650
+            use_build_cmd=False,  # cardano-cli issue #650
         )
 
         # Vote & approve the action
@@ -454,7 +454,7 @@ class TestConstitution:
             action_ix=action_ix,
             approve_cc=True,
             approve_drep=True,
-            build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # cardano-cli issue #650
+            use_build_cmd=False,  # cardano-cli issue #650
         )
 
         assert cluster.g_query.get_epoch() == init_epoch, (
@@ -498,7 +498,7 @@ class TestConstitution:
             action_ix=action_ix,
             approve_cc=False,
             approve_drep=False,
-            build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # cardano-cli issue #650
+            use_build_cmd=False,  # cardano-cli issue #650
         )
 
         next_rat_state = rat_gov_state["nextRatifyState"]
@@ -566,7 +566,7 @@ class TestConstitution:
                 action_ix=action_ix,
                 approve_cc=False,
                 approve_drep=False,
-                build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # cardano-cli issue #650
+                use_build_cmd=False,  # cardano-cli issue #650
             )
         err_str = str(excinfo.value)
         assert "(GovActionsDoNotExist" in err_str, err_str
