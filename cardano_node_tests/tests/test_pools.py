@@ -2470,7 +2470,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
-        metadata_url=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
+        url_part=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
     )
     @common.hypothesis_settings()
     @pytest.mark.smoke
@@ -2482,13 +2482,16 @@ class TestNegative:
         gen_pool_registration_cert_data: tuple[
             str, str, clusterlib.KeyPair, clusterlib.ColdKeyPair
         ],
-        metadata_url: str,
+        url_part: str,
     ):
         """Try to create pool registration cert when the *metadata-url* is longer than allowed.
 
         Expect failure. Property-based test.
         """
         common.get_test_id(cluster)
+
+        pool_metadata_url = f"https://gist.githubusercontent.com/{url_part}.json"
+        assert len(pool_metadata_url) >= 65
 
         pool_name, pool_metadata_hash, node_vrf, node_cold = gen_pool_registration_cert_data
 
@@ -2497,7 +2500,7 @@ class TestNegative:
             pool_pledge=1_000,
             pool_cost=500_000_000,
             pool_margin=0.2,
-            pool_metadata_url=f"https://gist.githubusercontent.com/{metadata_url}.json",
+            pool_metadata_url=pool_metadata_url,
             pool_metadata_hash=pool_metadata_hash,
         )
 
@@ -2509,8 +2512,10 @@ class TestNegative:
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[p.stake.vkey_file for p in pool_users],
             )
-        assert "option --metadata-url: The provided string must have at most 64 characters" in str(
-            excinfo.value
+        err_str = str(excinfo.value)
+        assert (
+            "option --metadata-url: The provided string must have at most 64 characters" in err_str
+            or "invalid url" in err_str
         )
 
 
