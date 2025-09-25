@@ -165,6 +165,7 @@ def cast_vote(
     drep_skip_votes: bool = False,
     spo_skip_votes: bool = False,
     use_build_cmd: bool = True,
+    build_method: str | None = None,
     witness_count_add: int = 0,
 ) -> governance_utils.VotedVotes:
     """Cast a vote."""
@@ -174,6 +175,12 @@ def cast_vote(
     votes_drep_scripts = []  # DRep votes with script
     votes_spo = []
     anchor_data = governance_utils.get_default_anchor_data()
+
+    if build_method is None:
+        if use_build_cmd:
+            build_method = clusterlib_utils.BuildMethods.BUILD
+        else:
+            build_method = clusterlib_utils.BuildMethods.BUILD_RAW
 
     if approve_cc is not None:
         _votes_cc = [
@@ -283,7 +290,7 @@ def cast_vote(
         votes=votes_simple,
         keys=keys_all,
         script_votes=script_votes,
-        use_build_cmd=use_build_cmd,
+        build_method=build_method,
         witness_count_add=witness_count_add,
     )
 
