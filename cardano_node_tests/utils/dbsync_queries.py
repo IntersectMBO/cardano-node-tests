@@ -1465,7 +1465,7 @@ def query_treasury_withdrawal(txhash: str) -> tp.Generator[TreasuryWithdrawalDBR
             yield TreasuryWithdrawalDBRow(*result)
 
 
-def query_off_chain_vote_data(data_hash: str) -> tp.Generator[OffChainVoteDataDBRow, None, None]:
+def query_off_chain_vote_data(data_hash: tp.Optional[str] = None) -> tp.Generator[OffChainVoteDataDBRow, None, None]:
     """Query the off chain vote data in db-sync."""
     query = (
         "SELECT"
@@ -1482,11 +1482,16 @@ def query_off_chain_vote_data(data_hash: str) -> tp.Generator[OffChainVoteDataDB
         "LEFT JOIN off_chain_vote_gov_action_data gov ON data.id = gov.off_chain_vote_data_id "
         "LEFT JOIN off_chain_vote_reference ref ON data.id = ref.off_chain_vote_data_id "
         "LEFT JOIN voting_anchor va ON data.voting_anchor_id = va.id "
-        "WHERE data.hash = %s "
-        "ORDER BY va.id, ref.id, auth.id, updt.id;"
     )
 
-    with execute(query=query, vars=(rf"\x{data_hash}",)) as cur:
+    query_params = ()
+    if data_hash is not None:
+        query += "WHERE data.hash = %s "
+        query_params = (rf"\x{data_hash}",)
+    
+    query += "ORDER BY va.id, ref.id, auth.id, updt.id;"
+
+    with execute(query=query, vars=query_params) as cur:
         while (result := cur.fetchone()) is not None:
             yield OffChainVoteDataDBRow(*result)
 

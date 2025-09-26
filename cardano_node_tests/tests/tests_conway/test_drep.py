@@ -39,10 +39,13 @@ DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
 MAINNET_DREP_DEPOSIT = 500_000_000
 
-pytestmark = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.CONWAY,
-    reason="runs only with Tx era >= Conway",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.CONWAY,
+        reason="runs only with Tx era >= Conway",
+    ),
+    pytest.mark.dbsync_config
+]
 
 
 @dataclasses.dataclass(frozen=True, order=True)
