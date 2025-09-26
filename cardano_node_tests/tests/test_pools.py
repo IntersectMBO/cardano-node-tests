@@ -2470,9 +2470,9 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
-        url_part=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=25)
+        url_part=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=89)
     )
-    @common.hypothesis_settings()
+    @common.hypothesis_settings(max_examples=500)
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_stake_pool_long_metadata_url(
@@ -2491,7 +2491,7 @@ class TestNegative:
         common.get_test_id(cluster)
 
         pool_metadata_url = f"https://gist.githubusercontent.com/{url_part}.json"
-        assert len(pool_metadata_url) >= 65
+        assert len(pool_metadata_url) >= 129
 
         pool_name, pool_metadata_hash, node_vrf, node_cold = gen_pool_registration_cert_data
 
@@ -2514,8 +2514,11 @@ class TestNegative:
             )
         err_str = str(excinfo.value)
         assert (
-            "option --metadata-url: The provided string must have at most 64 characters" in err_str
+            "option --metadata-url: The provided string must have at most 128 characters" in err_str
             or "invalid url" in err_str
+            # In cardano-node <= 10.6.0
+            or "option --metadata-url: The provided string must have at most 64 characters"
+            in err_str
         )
 
 
