@@ -73,7 +73,7 @@ class TestConway:
         cluster: clusterlib.ClusterLib,
         temp_template: str,
         pool_user: clusterlib.PoolUser,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str = submit_utils.SubmitMethods.CLI,
     ):
         """Run the actual scenario of the 'test_action_unreg_deposit_addr*' tests."""
@@ -104,17 +104,23 @@ class TestConway:
                 name_template=f"{temp_template}_action",
                 src_address=pool_user.payment.address,
                 submit_method=submit_method,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_action,
             )
         err_str = str(excinfo.value)
-        if use_build_cmd:
+        if build_method in (
+            clusterlib_utils.BuildMethods.BUILD,
+            clusterlib_utils.BuildMethods.BUILD_EST,
+        ):
             assert (
                 "Stake credential specified in the proposal is not registered on-chain" in err_str
                 or "ProposalReturnAccountDoesNotExist" in err_str  # In node <= 10.1.4
             ), err_str
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             assert "ProposalReturnAccountDoesNotExist" in err_str, err_str
+        else:
+            msg = f"Unexpected build method: {build_method}"
+            raise ValueError(msg)
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -137,7 +143,7 @@ class TestConway:
             cluster=cluster,
             temp_template=temp_template,
             pool_user=pool_user,
-            use_build_cmd=False,
+            build_method=clusterlib_utils.BuildMethods.BUILD_RAW,
             submit_method=submit_method,
         )
 
@@ -161,5 +167,5 @@ class TestConway:
             cluster=cluster,
             temp_template=temp_template,
             pool_user=pool_user,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
         )
