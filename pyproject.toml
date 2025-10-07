@@ -95,10 +95,6 @@ ignore = ["ANN401", "B905", "D10", "D203", "D212", "D213", "D214", "D215", "D404
 [tool.ruff.lint.isort]
 force-single-line = true
 
-[tool.pytype]
-python_version = "3.11"
-disable = ["import-error"]
-
 [tool.mypy]
 python_version = "3.11"
 show_error_context = true
