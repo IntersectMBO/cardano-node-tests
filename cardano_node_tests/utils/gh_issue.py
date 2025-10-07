@@ -61,7 +61,6 @@ class GHIssue:
         cached_state = self.issue_cache.get(identifier)
 
         if cached_state is None:
-            assert self.github  # for pytype
             try:
                 cached_state = self.github.get_repo(self.repo).get_issue(self.number).state.lower()
             except github.UnknownObjectException:

@@ -14,7 +14,6 @@ init_lint:
 .PHONY: lint
 lint:
 	pre-commit run -a --show-diff-on-failure --color=always
-	if command -v pytype >/dev/null 2>&1; then pytype -k -j auto cardano_node_tests; fi
 
 
 # check if development environment is set up correctly
