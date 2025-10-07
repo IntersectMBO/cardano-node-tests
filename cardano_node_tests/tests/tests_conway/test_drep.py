@@ -79,7 +79,7 @@ def create_drep(
         name_template=f"{name_template}_drep_reg",
         src_address=payment_addr.address,
         submit_method=submit_utils.SubmitMethods.CLI,
-        use_build_cmd=True,
+        build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files_reg,
         deposit=reg_drep.deposit,
     )
@@ -316,7 +316,7 @@ class TestDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -340,7 +340,7 @@ class TestDReps:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
         drep_metadata: dict,
     ):
@@ -399,7 +399,7 @@ class TestDReps:
             name_template=f"{temp_template}_reg",
             src_address=payment_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files_reg,
             deposit=reg_drep.deposit,
         )
@@ -435,7 +435,7 @@ class TestDReps:
                 # The same metadata is used for all the parametrized tests. Therefore the data will
                 # be present in db-sync once the first parametrized test runs. Therefore it doesn't
                 # make sense to check the metadata for all combinations of parameters.
-                if use_build_cmd and submit_method == "cli":
+                if build_method == clusterlib_utils.BuildMethods.BUILD and submit_method == "cli":
 
                     def _query_func():
                         if not drep_data:
@@ -473,7 +473,7 @@ class TestDReps:
             name_template=f"{temp_template}_ret",
             src_address=payment_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files_ret,
             deposit=-reg_drep.deposit,
         )
@@ -603,7 +603,7 @@ class TestNegativeDReps:
     """Tests for DReps where we test failing condition."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_no_witness_register_and_retire(  # noqa: C901
@@ -611,7 +611,7 @@ class TestNegativeDReps:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Test DRep registration and retirement without needing an skey as witness.
 
@@ -658,7 +658,7 @@ class TestNegativeDReps:
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_reg",
                 src_address=payment_addr.address,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_reg_missing,
                 deposit=reg_drep.deposit,
             )
@@ -680,7 +680,7 @@ class TestNegativeDReps:
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_reg",
                 src_address=payment_addr.address,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_reg,
                 deposit=reg_drep.deposit,
             )
@@ -707,7 +707,7 @@ class TestNegativeDReps:
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_ret",
                 src_address=payment_addr.address,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_ret_missing,
                 deposit=-reg_drep.deposit,
             )
@@ -729,7 +729,7 @@ class TestNegativeDReps:
                 cluster_obj=cluster,
                 name_template=f"{temp_template}_ret",
                 src_address=payment_addr.address,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_ret,
                 deposit=-reg_drep.deposit,
             )
@@ -826,7 +826,7 @@ class TestNegativeDReps:
             cluster_obj=cluster,
             name_template=temp_template,
             src_address=payment_addr_rewards.address,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files,
             deposit=deposit_address_amt,
         )
@@ -893,7 +893,7 @@ class TestNegativeDReps:
                 cluster_obj=cluster,
                 name_template=temp_template,
                 src_address=payment_addr.address,
-                use_build_cmd=True,
+                build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files,
                 deposit=deposit_address_amt,
             )
@@ -904,14 +904,14 @@ class TestNegativeDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_drep_no_retirement_before_register(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test that it is not possible to retire DRep before registering it.
@@ -945,7 +945,7 @@ class TestNegativeDReps:
                 name_template=f"{temp_template}_reg2",
                 src_address=payment_addr.address,
                 submit_method=submit_method,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_ret,
                 deposit=deposit_drep_amt,
             )
@@ -956,7 +956,7 @@ class TestNegativeDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_drep_no_multiple_registration(
@@ -964,7 +964,7 @@ class TestNegativeDReps:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Test that DRep cannot be registered multiple times.
@@ -1013,7 +1013,7 @@ class TestNegativeDReps:
             name_template=f"{temp_template}_reg",
             src_address=payment_addr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files_reg,
             deposit=reg_drep.deposit,
         )
@@ -1028,7 +1028,7 @@ class TestNegativeDReps:
                 name_template=f"{temp_template}_reg2",
                 src_address=payment_addr.address,
                 submit_method=submit_method,
-                use_build_cmd=use_build_cmd,
+                build_method=build_method,
                 tx_files=tx_files_reg,
                 deposit=reg_drep.deposit,
             )
@@ -1043,7 +1043,7 @@ class TestDelegDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("drep", ("always_abstain", "always_no_confidence", "custom"))
     @pytest.mark.dbsync
     @pytest.mark.testnets
@@ -1056,7 +1056,7 @@ class TestDelegDReps:
         custom_drep_rewards: governance_utils.DRepRegistration,
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
         drep: str,
     ):
@@ -1081,7 +1081,7 @@ class TestDelegDReps:
         # and submit method, only when we are running on local testnet, and only if we are not
         # running smoke tests.
         check_delegation = (
-            use_build_cmd
+            build_method == clusterlib_utils.BuildMethods.BUILD
             and submit_method == submit_utils.SubmitMethods.CLI
             and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
             and "smoke" not in request.config.getoption("-m")
@@ -1138,7 +1138,7 @@ class TestDelegDReps:
             name_template=temp_template,
             src_address=payment_addr_rewards.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files,
             deposit=deposit_address_amt,
         )
@@ -1257,7 +1257,7 @@ class TestDelegDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("drep", ("always_abstain", "always_no_confidence", "custom"))
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -1269,7 +1269,7 @@ class TestDelegDReps:
         custom_drep_wpr: governance_utils.DRepRegistration,
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
         drep: str,
     ):
@@ -1294,7 +1294,7 @@ class TestDelegDReps:
         # and submit method, only when we are running on local testnet, and only if we are not
         # running smoke tests.
         check_delegation = (
-            use_build_cmd
+            build_method == clusterlib_utils.BuildMethods.BUILD
             and submit_method == submit_utils.SubmitMethods.CLI
             and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
             and "smoke" not in request.config.getoption("-m")
@@ -1337,7 +1337,7 @@ class TestDelegDReps:
             name_template=temp_template,
             src_address=payment_addr_wpr.address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files,
             deposit=deposit_address_amt,
         )
@@ -1498,7 +1498,7 @@ class TestDelegDReps:
             cluster_obj=cluster,
             name_template=f"{temp_template}_deleg_drep1",
             src_address=payment_addr_rewards.address,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files,
             deposit=deposit_address_amt,
         )
@@ -1542,7 +1542,7 @@ class TestDelegDReps:
             cluster_obj=cluster,
             name_template=f"{temp_template}_deleg_drep2",
             src_address=payment_addr_rewards.address,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files,
             deposit=deposit_address_amt,
         )
@@ -1694,7 +1694,7 @@ class TestDRepActivity:
                 cluster_obj=cluster,
                 name_template=name_template,
                 src_address=pool_user.payment.address,
-                use_build_cmd=True,
+                build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files,
                 deposit=deposit_address_amt,
             )
@@ -1794,7 +1794,7 @@ class TestDRepActivity:
                 payment_addr=pool_user_lg.payment,
                 votes=votes,
                 keys=vote_keys,
-                use_build_cmd=True,
+                build_method=clusterlib_utils.BuildMethods.BUILD,
             )
 
             return prop_rec.action_txid
