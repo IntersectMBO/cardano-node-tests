@@ -845,9 +845,11 @@ class TestNegativeDReps:
 
         stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_rewards.stake.address)
 
-        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
-            drep_id=drep1.drep_id
-        ), "Votes are NOT delegated to the correct DRep 1 placed at last of certificates list."
+        assert governance_utils.get_drep_cred_name_from_addr_info(
+            addr_info=stake_addr_info
+        ) == governance_utils.get_drep_cred_name(drep_id=drep1.drep_id), (
+            "Votes are NOT delegated to the correct DRep 1 placed at last of certificates list."
+        )
         reqc.cip087.success()
 
     @allure.link(helpers.get_vcs_link())
@@ -1163,9 +1165,11 @@ class TestDelegDReps:
             f"Stake address is NOT registered: {pool_user_rewards.stake.address}"
         )
         reqc.cli035.start(url=helpers.get_vcs_link())
-        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
-            drep_id=drep_id
-        ), "Votes are NOT delegated to the correct DRep"
+        assert governance_utils.get_drep_cred_name_from_addr_info(
+            addr_info=stake_addr_info
+        ) == governance_utils.get_drep_cred_name(drep_id=drep_id), (
+            "Votes are NOT delegated to the correct DRep"
+        )
         reqc.cli035.success()
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
@@ -1359,9 +1363,11 @@ class TestDelegDReps:
         stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user_wpr.stake.address)
         assert stake_addr_info.delegation, f"Stake address was not delegated yet: {stake_addr_info}"
         assert pool_id == stake_addr_info.delegation, "Stake address delegated to wrong pool"
-        assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
-            drep_id=drep_id
-        ), "Votes are NOT delegated to the correct DRep"
+        assert governance_utils.get_drep_cred_name_from_addr_info(
+            addr_info=stake_addr_info
+        ) == governance_utils.get_drep_cred_name(drep_id=drep_id), (
+            "Votes are NOT delegated to the correct DRep"
+        )
 
         # Check the expected balance
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
@@ -1518,9 +1524,11 @@ class TestDelegDReps:
         stake_addr_info_deleg1 = cluster.g_query.get_stake_addr_info(
             pool_user_rewards.stake.address
         )
-        assert stake_addr_info_deleg1.vote_delegation == governance_utils.get_drep_cred_name(
-            drep_id=drep1.drep_id
-        ), "Votes are NOT delegated to the correct DRep 1"
+        assert governance_utils.get_drep_cred_name_from_addr_info(
+            addr_info=stake_addr_info_deleg1
+        ) == governance_utils.get_drep_cred_name(drep_id=drep1.drep_id), (
+            "Votes are NOT delegated to the correct DRep 1"
+        )
 
         # Change delegation to second DRep
 
@@ -1549,9 +1557,11 @@ class TestDelegDReps:
         stake_addr_info_deleg2 = cluster.g_query.get_stake_addr_info(
             pool_user_rewards.stake.address
         )
-        assert stake_addr_info_deleg2.vote_delegation == governance_utils.get_drep_cred_name(
-            drep_id=drep2.drep_id
-        ), "Votes are NOT changed to the correct DRep 2"
+        assert governance_utils.get_drep_cred_name_from_addr_info(
+            addr_info=stake_addr_info_deleg2
+        ) == governance_utils.get_drep_cred_name(drep_id=drep2.drep_id), (
+            "Votes are NOT changed to the correct DRep 2"
+        )
         reqc.cip086.success()
 
         # Retire the first DRep
@@ -1588,9 +1598,11 @@ class TestDelegDReps:
         else:
             if not stake_addr_info_ret.vote_delegation:
                 issues.ledger_4772.finish_test()
-            assert stake_addr_info_ret.vote_delegation == governance_utils.get_drep_cred_name(
-                drep_id=drep2.drep_id
-            ), "Votes are no longer delegated to DRep 2!"
+            assert governance_utils.get_drep_cred_name_from_addr_info(
+                addr_info=stake_addr_info_ret
+            ) == governance_utils.get_drep_cred_name(drep_id=drep2.drep_id), (
+                "Votes are no longer delegated to DRep 2!"
+            )
         reqc.int002.success()
 
 
@@ -1707,9 +1719,11 @@ class TestDRepActivity:
             assert stake_addr_info.address, (
                 f"Stake address is NOT registered: {pool_user.stake.address}"
             )
-            assert stake_addr_info.vote_delegation == governance_utils.get_drep_cred_name(
-                drep_id=drep_reg.drep_id
-            ), "Votes are NOT delegated to the correct DRep"
+            assert governance_utils.get_drep_cred_name_from_addr_info(
+                addr_info=stake_addr_info
+            ) == governance_utils.get_drep_cred_name(drep_id=drep_reg.drep_id), (
+                "Votes are NOT delegated to the correct DRep"
+            )
 
             out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
             assert (
