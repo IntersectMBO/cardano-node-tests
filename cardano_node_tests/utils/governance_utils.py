@@ -153,12 +153,36 @@ class AnchorData:
 
 
 def get_drep_cred_name(drep_id: str) -> str:
+    if not drep_id:
+        return ""
     cred_name = f"keyHash-{drep_id}"
     if drep_id == "always_abstain":
         cred_name = "alwaysAbstain"
     elif drep_id == "always_no_confidence":
         cred_name = "alwaysNoConfidence"
 
+    return cred_name
+
+
+def get_drep_cred_name_from_addr_info(addr_info: clusterlib.StakeAddrInfo) -> str:
+    drep_id_raw = addr_info.vote_delegation_hex or addr_info.vote_delegation or ""
+    if not drep_id_raw:
+        return ""
+
+    # Decode first if working with Bech32 encoded value.
+    if drep_id_raw.startswith("drep1"):
+        drep_id_sanitized = helpers.decode_bech32(bech32=drep_id_raw)
+    else:
+        # The prefix was already present for the hex value in the older version of cardano-cli.
+        drep_id_sanitized = drep_id_raw.removeprefix("keyHash-")
+
+    if len(drep_id_sanitized) > 56:
+        drep_id_sanitized = drep_id_sanitized[-56:]
+
+    # The DRep ID can be either hex string or special names like "alwaysAbstain".
+    cred_name = (
+        f"keyHash-{drep_id_sanitized}" if len(drep_id_sanitized) == 56 else drep_id_sanitized
+    )
     return cred_name
 
 
