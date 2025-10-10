@@ -1,4 +1,13 @@
-"""Functionality for managing cluster instances."""
+"""High-level management of cluster instances.
+
+This module provides the `ClusterManager` class, which is the main interface for tests to get a
+fully initialized cluster instance. The `ClusterManager` is responsible for selecting an available
+cluster instance that meets the test's resource requirements, preparing the `clusterlib` object,
+and performing cleanup actions after the test has finished.
+
+The `ClusterManager` is instantiated by the `cluster_manager` fixture for each test worker and is
+used by the `cluster` fixture to get a cluster instance for a test.
+"""
 
 import contextlib
 import dataclasses
