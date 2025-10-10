@@ -1,4 +1,20 @@
-"""Functionality for obtaining and setting up a cluster instance."""
+"""Functionality for obtaining and setting up a cluster instance for parallel test execution.
+
+The `ClusterGetter` class is responsible for managing a pool of cluster instances and assigning them
+to tests running in parallel on different pytest workers. It ensures that tests get a suitable,
+properly configured, and healthy cluster instance to run on.
+
+Coordination between workers is achieved through a system of status files created in a shared
+temporary directory. These files signal the state of each cluster instance (e.g., running,
+needs respin), which tests are running on which instance, and what resources are locked or in use.
+
+The core logic is implemented in the `get_cluster_instance` method. It enters a loop where it
+evaluates the state of all available cluster instances against the requirements of the current test
+(e.g., resource needs, custom scripts, priority). It will wait and retry until a suitable instance
+is found and all conditions for starting the test are met. This includes handling cluster restarts
+(respins), resource allocation, and synchronization for tests that share expensive setups
+(marked tests).
+"""
 
 import dataclasses
 import logging
