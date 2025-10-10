@@ -100,3 +100,6 @@ ENV/
 
 # mkdocs documentation
 /site
+
+# AI helpers
+.aider*
