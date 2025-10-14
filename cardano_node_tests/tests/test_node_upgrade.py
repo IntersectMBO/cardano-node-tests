@@ -258,7 +258,7 @@ class TestSetup:
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
             src_address=pool_user_singleton.payment.address,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files_action,
         )
 
@@ -330,7 +330,7 @@ class TestUpgrade:
     @pytest.mark.upgrade_step1
     @pytest.mark.upgrade_step2
     @pytest.mark.upgrade_step3
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize(
         "for_step",
         (
@@ -354,7 +354,7 @@ class TestUpgrade:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs_disposable: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         for_step: int,
         file_type: str,
     ):
@@ -364,7 +364,13 @@ class TestUpgrade:
         be submitted in next node version and/or next era.
         """
         temp_template = common.get_test_id(cluster)
-        build_str = "build" if use_build_cmd else "build_raw"
+        build_str = (
+            "build"
+            if build_method == clusterlib_utils.BuildMethods.BUILD
+            else "build_raw"
+            if build_method == clusterlib_utils.BuildMethods.BUILD_RAW
+            else "build_estimate"
+        )
 
         src_address = payment_addrs_disposable[0].address
         dst_address = payment_addrs_disposable[1].address
@@ -372,7 +378,7 @@ class TestUpgrade:
         txouts = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs_disposable[0].skey_file])
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             tx_raw_output = cluster.g_transaction.build_tx(
                 src_address=src_address,
                 tx_name=temp_template,
@@ -380,12 +386,7 @@ class TestUpgrade:
                 txouts=txouts,
                 fee_buffer=1_000_000,
             )
-            out_file_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=temp_template,
-            )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=src_address,
                 tx_name=temp_template,
@@ -399,11 +400,23 @@ class TestUpgrade:
                 tx_files=tx_files,
                 fee=fee,
             )
-            out_file_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_raw_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            tx_raw_output = cluster.g_transaction.build_estimate_tx(
+                src_address=src_address,
                 tx_name=temp_template,
+                txouts=txouts,
+                tx_files=tx_files,
+                fee_buffer=1_000_000,
             )
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
+
+        out_file_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
 
         copy_files = [
             payment_addrs_disposable[0].skey_file,
@@ -432,7 +445,7 @@ class TestUpgrade:
     @pytest.mark.upgrade_step1
     @pytest.mark.upgrade_step2
     @pytest.mark.upgrade_step3
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize(
         "for_step",
         (
@@ -467,14 +480,20 @@ class TestUpgrade:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-        use_build_cmd: bool,
+        build_method: str,
         for_step: int,
         from_step: int,
         file_type: str,
     ):
         """Submit transaction that was created by previous node version and/or in previous era."""
         temp_template = common.get_test_id(cluster)
-        build_str = "build" if use_build_cmd else "build_raw"
+        build_str = (
+            "build"
+            if build_method == clusterlib_utils.BuildMethods.BUILD
+            else "build_raw"
+            if build_method == clusterlib_utils.BuildMethods.BUILD_RAW
+            else "build_estimate"
+        )
 
         tx_dir = (
             temptools.get_basetemp()
