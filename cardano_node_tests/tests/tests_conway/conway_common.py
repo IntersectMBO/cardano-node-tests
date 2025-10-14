@@ -117,7 +117,6 @@ def submit_vote(
     keys: list[clusterlib.FileType],
     script_votes: clusterlib.OptionalScriptVotes = (),
     submit_method: str = "",
-    use_build_cmd: bool = True,
     build_method: str = clusterlib_utils.BuildMethods.BUILD,
     witness_count_add: int = 0,
 ) -> clusterlib.TxRawOutput:
@@ -135,7 +134,6 @@ def submit_vote(
         name_template=f"{name_template}_vote",
         src_address=payment_addr.address,
         submit_method=submit_method,
-        use_build_cmd=use_build_cmd,
         build_method=build_method,
         tx_files=tx_files,
         script_votes=script_votes,
@@ -164,7 +162,6 @@ def cast_vote(
     cc_skip_votes: bool = False,
     drep_skip_votes: bool = False,
     spo_skip_votes: bool = False,
-    use_build_cmd: bool = True,
     build_method: str | None = None,
     witness_count_add: int = 0,
 ) -> governance_utils.VotedVotes:
@@ -177,10 +174,7 @@ def cast_vote(
     anchor_data = governance_utils.get_default_anchor_data()
 
     if build_method is None:
-        if use_build_cmd:
-            build_method = clusterlib_utils.BuildMethods.BUILD
-        else:
-            build_method = clusterlib_utils.BuildMethods.BUILD_RAW
+        build_method = clusterlib_utils.BuildMethods.BUILD
 
     if approve_cc is not None:
         _votes_cc = [
