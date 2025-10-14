@@ -1,3 +1,17 @@
+"""Cluster instance status files.
+
+Status files are used for communication and synchronization between pytest workers.
+
+All status files are created in the single temp directory shared by all workers
+(the directory returned by `temptools.get_pytest_root_tmp()`). This allows all
+workers to see status files created by other workers.
+
+Common components of status file names:
+* `_@@<resource_name>@@_`: resource name
+* `_%%<mark>%%_`: test mark
+* `_<worker_id>`: pytest worker ID
+"""
+
 import pathlib as pl
 import re
 import typing as tp

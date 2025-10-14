@@ -3,7 +3,7 @@
 #   timestamp: 2021-03-10T11:38:36+00:00
 from __future__ import annotations
 
-from pydantic import BaseModel  # pytype: disable=import-error
+from pydantic import BaseModel
 from pydantic import Field
 
 

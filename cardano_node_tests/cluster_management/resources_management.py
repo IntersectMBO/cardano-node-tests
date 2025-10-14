@@ -1,4 +1,17 @@
-"""Functionality for getting a cluster instance that has required resources available."""
+"""Functionality for selecting a cluster instance that has required resources available.
+
+Resources can be requested by name (string).
+
+It is also possible to use filters. A filter is a class that gets a list of all unavailable
+resources and returns a list of resources that should be used. An example is `OneOf`, which returns
+one usable resource from a given list of resources. The unavailable resources passed to the filter
+include resources that are unavailable because they are locked, and also resources that were
+already selected by preceding filters in the same request.
+
+It is possible to use multiple `OneOf` filters in a single request. For example, using `OneOf`
+filter with the same set of resources twice will result in selecting two different resources from
+that set.
+"""
 
 import random
 import typing as tp
