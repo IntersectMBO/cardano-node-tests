@@ -235,9 +235,7 @@ def _bytes_flags(flags: int) -> int:
 
 
 def _compile_bytes_from_pattern(
-    pat: re.Pattern[str] | None,
-    *,
-    encoding: str = "utf-8",
+    pat: re.Pattern[str] | None, *, encoding: str = "utf-8"
 ) -> re.Pattern[bytes] | None:
     """Compile a *string* regex as a *bytes* regex, sanitizing flags.
 
@@ -251,10 +249,7 @@ def _compile_bytes_from_pattern(
 
 
 def _compile_bytes_from_str(
-    pat: str,
-    *,
-    flags: int = 0,
-    encoding: str = "utf-8",
+    pat: str, *, flags: int = 0, encoding: str = "utf-8"
 ) -> re.Pattern[bytes]:
     """Compile a *string* regex as a *bytes* regex, sanitizing flags.
 
@@ -391,7 +386,7 @@ def _search_log_lines(  # noqa: C901
 
 
 def add_ignore_rule(
-    files_glob: str, regex: str, ignore_file_id: str, *, skip_after: float = 0.0
+    *, files_glob: str, regex: str, ignore_file_id: str, skip_after: float = 0.0
 ) -> None:
     """Add ignore rule for expected errors.
 
@@ -419,11 +414,11 @@ def add_ignore_rule(
 
 
 def find_msgs_in_logs(
+    *,
     regex: str,
     logfile: pl.Path,
     seek_offset: int,
     timestamp: float,
-    *,
     only_first: bool = False,
     encoding: str = "utf-8",
 ) -> list[str]:
@@ -552,7 +547,7 @@ def check_msgs_presence_in_logs(  # noqa: C901
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pairs: list[tuple[str, str]], worker_id: str) -> tp.Iterator[None]:
+def expect_errors(regex_pairs: list[tuple[str, str]], *, worker_id: str) -> tp.Iterator[None]:
     """Make sure the expected errors are present in logs.
 
     Context manager.
@@ -718,7 +713,7 @@ def search_supervisord_logs() -> list[tuple[pl.Path, str]]:
     return errors
 
 
-def clean_ignore_rules(ignore_file_id: str) -> None:
+def clean_ignore_rules(*, ignore_file_id: str) -> None:
     """Cleanup relevant ignore rules file.
 
     Delete ignore file identified by `ignore_file_id` when it is no longer valid.

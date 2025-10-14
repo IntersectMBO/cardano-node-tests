@@ -9,11 +9,11 @@ from cardano_node_tests.utils import cluster_nodes
 LOGGER = logging.getLogger(__name__)
 
 
-def get_published_url(name: str = "") -> str:
+def get_published_url(*, name: str = "") -> str:
     """Return the URL of the published file."""
     http_port = (
         cluster_nodes.get_cluster_type()
-        .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
+        .cluster_scripts.get_instance_ports(instance_num=cluster_nodes.get_instance_num())
         .webserver
     )
 
@@ -23,7 +23,7 @@ def get_published_url(name: str = "") -> str:
     return url
 
 
-def publish(file_path: pl.Path, published_name: str = "", exist_ok: bool = False) -> str:
+def publish(*, file_path: pl.Path, published_name: str = "", exist_ok: bool = False) -> str:
     """Publish file on an internal web server and return the URL."""
     fname = published_name or file_path.name
     if not fname:
@@ -43,7 +43,7 @@ def publish(file_path: pl.Path, published_name: str = "", exist_ok: bool = False
     return url
 
 
-def create_file(name: str, data: str, exist_ok: bool = False) -> str:
+def create_file(*, name: str, data: str, exist_ok: bool = False) -> str:
     """Create file on an internal web server and return the URL."""
     web_dir = cluster_nodes.get_cluster_env().state_dir / "webserver" / "p"
     web_dir.mkdir(exist_ok=True)
@@ -58,7 +58,7 @@ def create_file(name: str, data: str, exist_ok: bool = False) -> str:
     return url
 
 
-def unpublish(url: str, missing_ok: bool = True) -> None:
+def unpublish(*, url: str, missing_ok: bool = True) -> None:
     """Unpublish file from the internal web server."""
     encoded_url_parts = url.split("/p/")
     if len(encoded_url_parts) != 2:

@@ -39,7 +39,7 @@ def is_running() -> bool:
     return cluster_nodes.services_status(service_names=["submit_api"])[0].status == "RUNNING"
 
 
-def tx2cbor(tx_file: clusterlib.FileType, destination_dir: clusterlib.FileType = ".") -> pl.Path:
+def tx2cbor(*, tx_file: clusterlib.FileType, destination_dir: clusterlib.FileType = ".") -> pl.Path:
     """Convert signed Tx to binary CBOR."""
     tx_file = pl.Path(tx_file)
     out_file = pl.Path(destination_dir).expanduser() / f"{tx_file.name}.cbor"
@@ -55,7 +55,7 @@ def tx2cbor(tx_file: clusterlib.FileType, destination_dir: clusterlib.FileType =
     return out_file
 
 
-def post_cbor(cbor_file: clusterlib.FileType, url: str) -> requests.Response:
+def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     """Post binary CBOR representation of Tx to `cardano-submit-api` service on `url`."""
     headers = {"Content-Type": "application/cbor"}
     with open(cbor_file, "rb") as in_fp:
@@ -83,13 +83,13 @@ def post_cbor(cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     return response
 
 
-def submit_tx_bare(tx_file: clusterlib.FileType) -> SubmitApiOut:
+def submit_tx_bare(*, tx_file: clusterlib.FileType) -> SubmitApiOut:
     """Submit a signed Tx using `cardano-submit-api` service."""
     cbor_file = tx2cbor(tx_file=tx_file)
 
     submit_api_port = (
         cluster_nodes.get_cluster_type()
-        .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
+        .cluster_scripts.get_instance_ports(instance_num=cluster_nodes.get_instance_num())
         .submit_api
     )
 
@@ -111,6 +111,7 @@ def submit_tx_bare(tx_file: clusterlib.FileType) -> SubmitApiOut:
 
 
 def submit_tx(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_file: clusterlib.FileType,
     txins: list[clusterlib.UTXOData],
@@ -130,14 +131,14 @@ def submit_tx(
         err = None
 
         if r == 0:
-            txid = submit_tx_bare(tx_file).txid
+            txid = submit_tx_bare(tx_file=tx_file).txid
         else:
             if not txid:
                 msg = "The TxId is not known."
                 raise SubmitApiError(msg)
             LOGGER.warning(f"Resubmitting transaction '{txid}' (from '{tx_file}').")
             try:
-                submit_tx_bare(tx_file)
+                submit_tx_bare(tx_file=tx_file)
             except SubmitApiError as exc:
                 # Check if resubmitting failed because an input UTxO was already spent
                 if "BadInputsUTxO" not in str(exc):

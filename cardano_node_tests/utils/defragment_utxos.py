@@ -9,6 +9,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def defragment(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     address: str,
     skey_file: pl.Path,

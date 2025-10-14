@@ -62,7 +62,9 @@ def kill_old_cluster(instance_num: int, log_func: tp.Callable[[str], None]) -> N
 
         return cmdline
 
-    port_nums = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(instance_num)
+    port_nums = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
+        instance_num=instance_num
+    )
     port_strs = [
         # Add whitestpace to the end of each port number to avoid matching a port number that is a
         # prefix of another port number.

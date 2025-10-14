@@ -63,9 +63,9 @@ class TestBasicSmash:
         pools_ids = cluster_obj.g_query.get_stake_pools()
         locked_pool_number = pool_name.replace("node-pool", "")
         pattern = re.compile(r"pool" + re.escape(locked_pool_number) + r"(\D|$)")
-        pools = [next(dbsync_queries.query_pool_data(p)) for p in pools_ids]
+        pools = [next(dbsync_queries.query_pool_data(pool_id_bech32=p)) for p in pools_ids]
         locked_pool = next(p for p in pools if p.metadata_url and pattern.search(p.metadata_url))
-        locked_pool_data = dbsync_utils.get_pool_data(locked_pool.view)
+        locked_pool_data = dbsync_utils.get_pool_data(pool_id_bech32=locked_pool.view)
         assert locked_pool_data is not None, "Locked pool data not found!"
         return locked_pool_data
 
@@ -90,7 +90,8 @@ class TestBasicSmash:
         # Offchain metadata is inserted into database few minutes after start of a cluster
         def _query_func():
             pool_metadata = next(
-                iter(dbsync_queries.query_off_chain_pool_data(locked_pool.view)), None
+                iter(dbsync_queries.query_off_chain_pool_data(pool_id_bech32=locked_pool.view)),
+                None,
             )
             if pool_metadata is None:
                 msg = f"no off-chain pool data record found for pool {pool_id}"
@@ -154,7 +155,7 @@ class TestBasicSmash:
         )
         # Ensure re-delisting an already delisted pool returns an error
         try:
-            smash.delist_pool(pool_id)
+            smash.delist_pool(pool_id=pool_id)
         except requests.exceptions.RequestException as err:
             check_request_error(
                 err=err,
