@@ -123,7 +123,7 @@ def register_delegate_stake_addr(
     pool_id: str,
     redeemer_file: pl.Path,
     reference_script_utxos: list[clusterlib.UTXOData] | None,
-    build_method: str,
+    use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Submit registration certificate and delegate to pool."""
     temp_template = f"{temp_template}_reg_deleg"
@@ -186,7 +186,7 @@ def register_delegate_stake_addr(
             fee_buffer=2_000_000,
             witness_override=len(tx_files.signing_key_files),
         )
-        if build_method == clusterlib_utils.BuildMethods.BUILD
+        if use_build_cmd
         else []
     )
 
@@ -195,7 +195,7 @@ def register_delegate_stake_addr(
         name_template=temp_template,
         src_address=pool_user.payment.address,
         txins=txins,
-        build_method=build_method,
+        use_build_cmd=use_build_cmd,
         tx_files=tx_files,
         complex_certs=[reg_cert_script, deleg_cert_script],
         raw_fee=raw_fee,
@@ -224,7 +224,7 @@ def register_stake_addr(
     pool_user: delegation.PoolUserScript,
     redeemer_file: pl.Path,
     reference_script_utxos: list[clusterlib.UTXOData] | None,
-    build_method: str,
+    use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Register a stake address."""
     temp_template = f"{temp_template}_reg"
@@ -250,7 +250,7 @@ def register_stake_addr(
     tx_files = clusterlib.TxFiles(signing_key_files=[pool_user.payment.skey_file])
     plutus_costs_reg = []
 
-    if build_method == clusterlib_utils.BuildMethods.BUILD:
+    if use_build_cmd:
         tx_raw_output_reg = cluster_obj.g_transaction.build_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
@@ -309,7 +309,7 @@ def delegate_stake_addr(
     pool_id: str,
     redeemer_file: pl.Path,
     reference_script_utxos: list[clusterlib.UTXOData] | None,
-    build_method: str,
+    use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Delegate a stake address to a pool."""
     temp_template = f"{temp_template}_deleg"
@@ -335,7 +335,7 @@ def delegate_stake_addr(
     tx_files = clusterlib.TxFiles(signing_key_files=[pool_user.payment.skey_file])
     plutus_costs_deleg = []
 
-    if build_method == clusterlib_utils.BuildMethods.BUILD:
+    if use_build_cmd:
         tx_raw_output_deleg = cluster_obj.g_transaction.build_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
@@ -395,7 +395,7 @@ def deregister_stake_addr(
     pool_user: delegation.PoolUserScript,
     redeemer_file: pl.Path,
     reference_script_utxos: list[clusterlib.UTXOData] | None,
-    build_method: str,
+    use_build_cmd: bool,
 ) -> tuple[clusterlib.TxRawOutput, list[dict]]:
     """Deregister stake address."""
     temp_template = f"{temp_template}_dereg_withdraw"
@@ -434,7 +434,7 @@ def deregister_stake_addr(
 
     plutus_costs = []
 
-    if build_method == clusterlib_utils.BuildMethods.BUILD:
+    if use_build_cmd:
         tx_raw_output = cluster_obj.g_transaction.build_tx(
             src_address=pool_user.payment.address,
             tx_name=temp_template,
@@ -488,7 +488,7 @@ def deregister_stake_addr(
     assert not stake_addr_info.delegation, f"Stake address is still delegated: {stake_addr_info}"
 
     tx_db_dereg = dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
-    if tx_db_dereg and build_method == clusterlib_utils.BuildMethods.BUILD:
+    if tx_db_dereg and use_build_cmd:
         assert pool_user.stake.address in tx_db_dereg.stake_deregistration
 
         # Compare cost of Plutus script with data from db-sync
@@ -504,7 +504,7 @@ def deregister_stake_addr(
 # might be already in use.
 @common.SKIPIF_BUILD_UNUSABLE
 @common.PARAM_PLUTUS_VERSION
-@common.PARAM_BUILD_METHOD_NO_EST
+@common.PARAM_USE_BUILD_CMD
 class TestRegisterAddr:
     """Tests for address registration."""
 
@@ -515,7 +515,7 @@ class TestRegisterAddr:
         cluster_lock_42stake: tuple[clusterlib.ClusterLib, str],
         pool_user: delegation.PoolUserScript,
         plutus_version: str,
-        build_method: str,
+        use_build_cmd: bool,
     ):
         """Register and deregister Plutus script stake address.
 
@@ -615,7 +615,7 @@ class TestRegisterAddr:
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
-            build_method=build_method,
+            use_build_cmd=use_build_cmd,
         )
 
         tx_db_record_reg = dbsync_utils.check_tx(
@@ -640,11 +640,7 @@ class TestRegisterAddr:
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
-            build_method=(
-                clusterlib_utils.BuildMethods.BUILD
-                if VERSIONS.cli != CLI_WITH_ISSUE_942
-                else clusterlib_utils.BuildMethods.BUILD_RAW
-            ),
+            use_build_cmd=use_build_cmd and VERSIONS.cli != CLI_WITH_ISSUE_942,
         )
 
         if reward_error:
@@ -655,7 +651,7 @@ class TestRegisterAddr:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_dereg)
 
         # Compare cost of Plutus script with data from db-sync
-        if tx_db_record_reg and clusterlib_utils.BuildMethods.BUILD:
+        if tx_db_record_reg and use_build_cmd:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record_reg.redeemers, cost_records=plutus_costs_reg
             )
@@ -665,7 +661,7 @@ class TestRegisterAddr:
 # might be already in use.
 @common.SKIPIF_BUILD_UNUSABLE
 @common.PARAM_PLUTUS_VERSION
-@common.PARAM_BUILD_METHOD
+@common.PARAM_USE_BUILD_CMD
 class TestDelegateAddr:
     """Tests for address delegation to stake pools."""
 
@@ -681,7 +677,7 @@ class TestDelegateAddr:
         cluster_lock_42stake: tuple[clusterlib.ClusterLib, str],
         pool_user: delegation.PoolUserScript,
         plutus_version: str,
-        build_method: str,
+        use_build_cmd: bool,
         use_reference_script: bool,
     ):
         """Register, delegate and deregister Plutus script stake address.
@@ -787,7 +783,7 @@ class TestDelegateAddr:
                 pool_id=pool_id,
                 redeemer_file=plutus_common.REDEEMER_42,
                 reference_script_utxos=reference_script_utxos,
-                build_method=build_method,
+                use_build_cmd=use_build_cmd,
             )
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
@@ -802,14 +798,14 @@ class TestDelegateAddr:
                 issues.cli_297.finish_test()
 
             if (
-                build_method == clusterlib_utils.BuildMethods.BUILD
+                use_build_cmd
                 and "overspent budget" in str_exc
                 and VERSIONS.transaction_era >= VERSIONS.CONWAY
                 and VERSIONS.cli >= version.parse("10.2.0.0")
             ):
                 issues.cli_1023.finish_test()
             elif (
-                build_method == clusterlib_utils.BuildMethods.BUILD
+                use_build_cmd
                 and "overspent budget" in str_exc
                 and VERSIONS.transaction_era >= VERSIONS.CONWAY
             ):
@@ -833,9 +829,9 @@ class TestDelegateAddr:
         reward_error = ""
 
         # To speed up test run, skip waiting for rewards in selected scenarios
-        skip_rewards_check = (
-            use_reference_script and build_method == clusterlib_utils.BuildMethods.BUILD_RAW
-        ) or (not use_reference_script and build_method == clusterlib_utils.BuildMethods.BUILD)
+        skip_rewards_check = (use_reference_script and not use_build_cmd) or (
+            not use_reference_script and use_build_cmd
+        )
 
         if not skip_rewards_check:
             LOGGER.info("Waiting 4 epochs for first reward.")
@@ -860,11 +856,7 @@ class TestDelegateAddr:
                 pool_user=pool_user,
                 redeemer_file=plutus_common.REDEEMER_42,
                 reference_script_utxos=reference_script_utxos,
-                build_method=(
-                    clusterlib_utils.BuildMethods.BUILD
-                    if VERSIONS.cli != CLI_WITH_ISSUE_942
-                    else clusterlib_utils.BuildMethods.BUILD_RAW
-                ),
+                use_build_cmd=use_build_cmd and VERSIONS.cli != CLI_WITH_ISSUE_942,
             )
         except clusterlib.CLIError as exc:
             if "(MissingRedeemers" in str(exc):
@@ -903,7 +895,7 @@ class TestDelegateAddr:
         cluster_lock_42stake: tuple[clusterlib.ClusterLib, str],
         pool_user: delegation.PoolUserScript,
         plutus_version: str,
-        build_method: str,
+        use_build_cmd: bool,
     ):
         """Register, delegate and deregister Plutus script stake address.
 
@@ -1015,7 +1007,7 @@ class TestDelegateAddr:
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
-            build_method=build_method,
+            use_build_cmd=use_build_cmd,
         )
 
         # Delegate a stake address
@@ -1033,7 +1025,7 @@ class TestDelegateAddr:
                 pool_id=pool_id,
                 redeemer_file=plutus_common.REDEEMER_42,
                 reference_script_utxos=reference_script_utxos,
-                build_method=build_method,
+                use_build_cmd=use_build_cmd,
             )
 
             assert cluster.g_query.get_epoch() == init_epoch, (
@@ -1052,7 +1044,7 @@ class TestDelegateAddr:
                     pool_user=pool_user,
                     redeemer_file=plutus_common.REDEEMER_42,
                     reference_script_utxos=reference_script_utxos,
-                    build_method=build_method,
+                    use_build_cmd=use_build_cmd,
                 )
 
         tx_db_record_reg = dbsync_utils.check_tx(
@@ -1092,11 +1084,7 @@ class TestDelegateAddr:
             pool_user=pool_user,
             redeemer_file=plutus_common.REDEEMER_42,
             reference_script_utxos=reference_script_utxos,
-            build_method=(
-                clusterlib_utils.BuildMethods.BUILD
-                if VERSIONS.cli != CLI_WITH_ISSUE_942
-                else clusterlib_utils.BuildMethods.BUILD_RAW
-            ),
+            use_build_cmd=use_build_cmd and VERSIONS.cli != CLI_WITH_ISSUE_942,
         )
 
         if reward_error:
@@ -1108,11 +1096,11 @@ class TestDelegateAddr:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_dereg)
 
         # Compare cost of Plutus script with data from db-sync
-        if tx_db_record_reg and build_method == clusterlib_utils.BuildMethods.BUILD:
+        if tx_db_record_reg and use_build_cmd:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record_reg.redeemers, cost_records=plutus_costs_reg
             )
-        if tx_db_record_deleg and build_method == clusterlib_utils.BuildMethods.BUILD:
+        if tx_db_record_deleg and use_build_cmd:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record_deleg.redeemers, cost_records=plutus_costs_deleg
             )
