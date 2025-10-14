@@ -475,6 +475,7 @@ def propose_pparams_update(
         use_build_cmd=True,
         tx_files=tx_files_action,
     )
+
     out_utxos_action = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_action)
     assert (
         clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user.payment.address)[0].amount
