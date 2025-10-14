@@ -415,7 +415,7 @@ class TestUpgrade:
         out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_{build_method}_signed",
         )
 
         copy_files = [
