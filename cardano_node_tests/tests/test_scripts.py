@@ -1798,7 +1798,7 @@ class TestAuxiliaryScripts:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1806,7 +1806,7 @@ class TestAuxiliaryScripts:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Send transaction with auxiliary script and metadata JSON.
@@ -1837,7 +1837,7 @@ class TestAuxiliaryScripts:
             name_template=temp_template,
             src_address=payment_addrs[0].address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files,
         )
 
@@ -1855,7 +1855,7 @@ class TestAuxiliaryScripts:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1863,7 +1863,7 @@ class TestAuxiliaryScripts:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Send transaction with auxiliary script and metadata CBOR.
@@ -1895,7 +1895,7 @@ class TestAuxiliaryScripts:
             name_template=temp_template,
             src_address=payment_addrs[0].address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files,
         )
 
@@ -1913,7 +1913,7 @@ class TestAuxiliaryScripts:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1921,7 +1921,7 @@ class TestAuxiliaryScripts:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         submit_method: str,
     ):
         """Send transaction with auxiliary script and no other metadata.
@@ -1949,7 +1949,7 @@ class TestAuxiliaryScripts:
             name_template=temp_template,
             src_address=payment_addrs[0].address,
             submit_method=submit_method,
-            use_build_cmd=use_build_cmd,
+            build_method=build_method,
             tx_files=tx_files,
         )
 
@@ -1961,14 +1961,14 @@ class TestAuxiliaryScripts:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_tx_script_invalid(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
     ):
         """Build transaction with invalid auxiliary script.
 
@@ -1983,17 +1983,30 @@ class TestAuxiliaryScripts:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            if use_build_cmd:
+            if build_method == clusterlib_utils.BuildMethods.BUILD:
                 cluster.g_transaction.build_tx(
                     src_address=payment_addrs[0].address,
                     tx_name=temp_template,
                     fee_buffer=2_000_000,
                     tx_files=tx_files,
                 )
-            else:
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
                 cluster.g_transaction.build_raw_tx(
-                    src_address=payment_addrs[0].address, tx_name=temp_template, tx_files=tx_files
+                    src_address=payment_addrs[0].address,
+                    tx_name=temp_template,
+                    tx_files=tx_files,
+                    fee=0,
                 )
+            elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+                cluster.g_transaction.build_estimate_tx(
+                    src_address=payment_addrs[0].address,
+                    tx_name=temp_template,
+                    tx_files=tx_files,
+                    fee_buffer=2_000_000,
+                )
+            else:
+                msg = f"Unsupported build method: {build_method}"
+                raise ValueError(msg)
         err_str = str(excinfo.value)
         assert 'Error in $: key "type" not found' in err_str, err_str
 
