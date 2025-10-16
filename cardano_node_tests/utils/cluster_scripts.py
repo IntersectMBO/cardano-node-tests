@@ -49,7 +49,7 @@ def get_testnet_variants() -> list[str]:
     return sorted(local | external)
 
 
-def get_testnet_variant_scriptdir(testnet_variant: str) -> pl.Path | None:
+def get_testnet_variant_scriptdir(*, testnet_variant: str) -> pl.Path | None:
     """Get path to testnet variant scripts directory."""
     if testnet_variant in get_testnet_dirs(LOCAL_SCRIPTS_DIR):
         return LOCAL_SCRIPTS_DIR / testnet_variant
@@ -61,7 +61,7 @@ def get_testnet_variant_scriptdir(testnet_variant: str) -> pl.Path | None:
     return None
 
 
-def get_testnet_variant_scriptdir2(testnet_variant: str) -> pl.Path:
+def get_testnet_variant_scriptdir2(*, testnet_variant: str) -> pl.Path:
     """Get path to testnet variant scripts directory.
 
     Fails if the directory is not found.
@@ -233,12 +233,12 @@ class ScriptsTypes:
     def __init__(self) -> None:
         self.type = "unknown"
 
-    def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
+    def get_instance_ports(self, *, instance_num: int) -> cardonnay_local.InstancePorts:
         """Return ports mapping for given cluster instance."""
         msg = f"Not implemented for cluster instance type '{self.type}'."
         raise NotImplementedError(msg)
 
-    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
+    def copy_scripts_files(self, *, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files.
 
         Testnet files and scripts can be copied and modified by tests before using them.
@@ -248,17 +248,14 @@ class ScriptsTypes:
         raise NotImplementedError(msg)
 
     def prepare_scripts_files(
-        self,
-        destdir: ttypes.FileType,
-        instance_num: int,
-        scriptsdir: ttypes.FileType = "",
+        self, *, destdir: ttypes.FileType, instance_num: int, scriptsdir: ttypes.FileType = ""
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         msg = f"Not implemented for cluster instance type '{self.type}'."
         raise NotImplementedError(msg)
 
     def gen_split_topology_files(
-        self, destdir: ttypes.FileType, instance_num: int, offset: int = 0
+        self, *, destdir: ttypes.FileType, instance_num: int, offset: int = 0
     ) -> None:
         """Generate topology files for split network."""
         msg = f"Not implemented for cluster instance type '{self.type}'."
@@ -284,11 +281,11 @@ class LocalScripts(ScriptsTypes):
             ports_base=configuration.PORTS_BASE,
         )
 
-    def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
+    def get_instance_ports(self, *, instance_num: int) -> cardonnay_local.InstancePorts:
         """Return ports mapping for given cluster instance."""
         return self.custom_cardonnay_scripts.get_instance_ports(instance_num=instance_num)
 
-    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
+    def copy_scripts_files(self, *, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
 
@@ -318,10 +315,7 @@ class LocalScripts(ScriptsTypes):
         )
 
     def prepare_scripts_files(
-        self,
-        destdir: ttypes.FileType,
-        instance_num: int,
-        scriptsdir: ttypes.FileType = "",
+        self, *, destdir: ttypes.FileType, instance_num: int, scriptsdir: ttypes.FileType = ""
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         return self.custom_cardonnay_scripts.prepare_scripts_files(
@@ -331,7 +325,7 @@ class LocalScripts(ScriptsTypes):
         )
 
     def gen_split_topology_files(
-        self, destdir: ttypes.FileType, instance_num: int, offset: int = 0
+        self, *, destdir: ttypes.FileType, instance_num: int, offset: int = 0
     ) -> None:
         """Generate topology files for split network."""
         if self.num_pools < 4:
@@ -403,7 +397,7 @@ class TestnetScripts(ScriptsTypes):
             testnet_variant=configuration.TESTNET_VARIANT
         )
 
-    def get_instance_ports(self, instance_num: int) -> cardonnay_local.InstancePorts:
+    def get_instance_ports(self, *, instance_num: int) -> cardonnay_local.InstancePorts:
         """Return ports mapping for given cluster instance."""
         ports_per_instance = 10
         offset = instance_num * ports_per_instance
@@ -443,7 +437,7 @@ class TestnetScripts(ScriptsTypes):
         )
         return ports
 
-    def copy_scripts_files(self, destdir: ttypes.FileType) -> StartupFiles:
+    def copy_scripts_files(self, *, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files located in this repository."""
         destdir = pl.Path(destdir).expanduser().resolve()
 
@@ -481,7 +475,7 @@ class TestnetScripts(ScriptsTypes):
         )
 
     def _reconfigure_testnet(
-        self, indir: pl.Path, destdir: pl.Path, instance_num: int, globs: list[str]
+        self, *, indir: pl.Path, destdir: pl.Path, instance_num: int, globs: list[str]
     ) -> None:
         """Reconfigure cluster scripts and config files."""
         instance_ports = self.get_instance_ports(instance_num=instance_num)
@@ -527,7 +521,7 @@ class TestnetScripts(ScriptsTypes):
             if "." not in fname or fname.endswith(".sh"):
                 outfile.chmod(0o755)
 
-    def _reconfigure_submit_api_config(self, infile: pl.Path, outfile: pl.Path) -> None:
+    def _reconfigure_submit_api_config(self, *, infile: pl.Path, outfile: pl.Path) -> None:
         """Reconfigure submit-api config file."""
         with open(infile, encoding="utf-8") as in_fp:
             content = in_fp.readlines()
@@ -538,7 +532,7 @@ class TestnetScripts(ScriptsTypes):
         with open(outfile, "w", encoding="utf-8") as out_fp:
             out_fp.write("".join(new_content))
 
-    def _reconfigure_bootstrap(self, indir: pl.Path, destdir: pl.Path, globs: list[str]) -> None:
+    def _reconfigure_bootstrap(self, *, indir: pl.Path, destdir: pl.Path, globs: list[str]) -> None:
         """Copy and reconfigure config files from bootstrap dir."""
         infiles = [indir.glob(g) for g in globs]
         for infile in itertools.chain(*infiles):
@@ -555,7 +549,7 @@ class TestnetScripts(ScriptsTypes):
     def _is_bootstrap_conf_dir(self, bootstrap_dir: pl.Path) -> bool:
         return all(list(bootstrap_dir.glob(g)) for g in self.TESTNET_GLOBS)
 
-    def _get_bootstrap_conf_dir(self, bootstrap_dir: pl.Path) -> pl.Path:
+    def _get_bootstrap_conf_dir(self, *, bootstrap_dir: pl.Path) -> pl.Path:
         bootstrap_conf_dir = bootstrap_dir / self.BOOTSTRAP_CONF
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
             if not configuration.BOOTSTRAP_DIR:
@@ -568,10 +562,7 @@ class TestnetScripts(ScriptsTypes):
         return bootstrap_conf_dir
 
     def prepare_scripts_files(
-        self,
-        destdir: ttypes.FileType,
-        instance_num: int,
-        scriptsdir: ttypes.FileType = "",
+        self, *, destdir: ttypes.FileType, instance_num: int, scriptsdir: ttypes.FileType = ""
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance.
 

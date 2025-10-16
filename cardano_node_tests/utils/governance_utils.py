@@ -152,7 +152,7 @@ class AnchorData:
     data_file: pl.Path | None
 
 
-def get_drep_cred_name(drep_id: str) -> str:
+def get_drep_cred_name(*, drep_id: str) -> str:
     if not drep_id:
         return ""
     cred_name = f"keyHash-{drep_id}"
@@ -164,7 +164,7 @@ def get_drep_cred_name(drep_id: str) -> str:
     return cred_name
 
 
-def get_drep_cred_name_from_addr_info(addr_info: clusterlib.StakeAddrInfo) -> str:
+def get_drep_cred_name_from_addr_info(*, addr_info: clusterlib.StakeAddrInfo) -> str:
     drep_id_raw = addr_info.vote_delegation_hex or addr_info.vote_delegation or ""
     if not drep_id_raw:
         return ""
@@ -186,7 +186,7 @@ def get_drep_cred_name_from_addr_info(addr_info: clusterlib.StakeAddrInfo) -> st
     return cred_name
 
 
-def get_vote_str(vote: clusterlib.Votes) -> str:
+def get_vote_str(*, vote: clusterlib.Votes) -> str:
     if vote == vote.YES:
         return "VoteYes"
     if vote == vote.NO:
@@ -197,7 +197,7 @@ def get_vote_str(vote: clusterlib.Votes) -> str:
     raise ValueError(msg)
 
 
-def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
+def check_drep_delegation(*, deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
     drep_records = deleg_state["dstate"]["unified"]["credentials"]
 
     stake_addr_key = f"keyHash-{stake_addr_hash}"
@@ -210,7 +210,7 @@ def check_drep_delegation(deleg_state: dict, drep_id: str, stake_addr_hash: str)
 
 
 def check_drep_stake_distribution(
-    distrib_state: dict[str, tp.Any], drep_id: str, min_amount: int
+    *, distrib_state: dict[str, tp.Any], drep_id: str, min_amount: int
 ) -> None:
     cred_name = get_drep_cred_name(drep_id=drep_id)
     expected_drep = f"drep-{cred_name}"
@@ -220,8 +220,7 @@ def check_drep_stake_distribution(
 
 
 def get_prev_action(
-    action_type: PrevGovActionIds,
-    gov_state: dict[str, tp.Any],
+    *, action_type: PrevGovActionIds, gov_state: dict[str, tp.Any]
 ) -> PrevActionRec:
     prev_action_rec = (
         gov_state["nextRatifyState"]["nextEnactState"]["prevGovActionIds"][action_type.value] or {}
@@ -233,7 +232,7 @@ def get_prev_action(
 
 
 def _lookup_action(
-    actions: list[dict[str, tp.Any]], action_txid: str, action_ix: int = 0
+    *, actions: list[dict[str, tp.Any]], action_txid: str, action_ix: int = 0
 ) -> dict[str, tp.Any]:
     prop: dict[str, tp.Any] = {}
     for _a in actions:
@@ -245,23 +244,21 @@ def _lookup_action(
 
 
 def lookup_proposal(
-    gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
+    *, gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
 ) -> dict[str, tp.Any]:
     proposals: list[dict[str, tp.Any]] = gov_state["proposals"]
     return _lookup_action(actions=proposals, action_txid=action_txid, action_ix=action_ix)
 
 
 def lookup_ratified_actions(
-    gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
+    *, gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
 ) -> dict[str, tp.Any]:
     ratified_actions: list[dict[str, tp.Any]] = gov_state["nextRatifyState"]["enactedGovActions"]
     return _lookup_action(actions=ratified_actions, action_txid=action_txid, action_ix=action_ix)
 
 
 def lookup_expired_actions(
-    gov_state: dict[str, tp.Any],
-    action_txid: str,
-    action_ix: int = 0,
+    *, gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
 ) -> dict[str, tp.Any]:
     removed_actions: list[dict[str, tp.Any]] = gov_state["nextRatifyState"]["expiredGovActions"]
     raction: dict[str, tp.Any] = {}
@@ -273,6 +270,7 @@ def lookup_expired_actions(
 
 
 def get_drep_reg_record(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     deposit_amt: int = -1,
@@ -307,6 +305,7 @@ def get_drep_reg_record(
 
 
 def get_script_drep_reg_record(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     script_hash: str,
@@ -334,6 +333,7 @@ def get_script_drep_reg_record(
 
 
 def get_cc_member_auth_record(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     destination_dir: clusterlib.FileType = ".",
@@ -366,6 +366,7 @@ def get_cc_member_auth_record(
 
 
 def check_action_view(  # noqa: C901
+    *,
     cluster_obj: clusterlib.ClusterLib,
     action_data: ActionsAllT,
     return_addr_vkey_hash: str = "",
@@ -444,7 +445,7 @@ def check_action_view(  # noqa: C901
         }
     elif isinstance(action_data, clusterlib.ActionUpdateCommittee):
 
-        def _get_cvkey_hash(member: clusterlib.CCMember) -> str:
+        def _get_cvkey_hash(*, member: clusterlib.CCMember) -> str:
             if member.cold_vkey_file:
                 cvkey_hash = cluster_obj.g_governance.committee.get_key_hash(
                     vkey_file=member.cold_vkey_file
@@ -520,6 +521,7 @@ def check_action_view(  # noqa: C901
 
 
 def check_vote_view(  # noqa: C901
+    *,
     cluster_obj: clusterlib.ClusterLib,
     vote_data: VotesAllT,
 ) -> None:
@@ -605,9 +607,7 @@ def check_vote_view(  # noqa: C901
     assert vote_view_out == expected_vote_out, f"{vote_view_out} != {expected_vote_out}"
 
 
-def wait_delayed_ratification(
-    cluster_obj: clusterlib.ClusterLib,
-) -> None:
+def wait_delayed_ratification(*, cluster_obj: clusterlib.ClusterLib) -> None:
     """Wait until ratification is no longer delayed."""
     for __ in range(3):
         next_rat_state = cluster_obj.g_query.get_gov_state()["nextRatifyState"]
@@ -619,7 +619,7 @@ def wait_delayed_ratification(
         raise TimeoutError(msg)
 
 
-def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
+def get_delegated_stake(*, cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
     """Get total stake delegated to SPOs and DReps."""
     total_lovelace = cluster_obj.genesis["maxLovelaceSupply"]
 
@@ -635,9 +635,7 @@ def get_delegated_stake(cluster_obj: clusterlib.ClusterLib) -> StakeDelegation:
 
 
 def is_drep_active(
-    cluster_obj: clusterlib.ClusterLib,
-    drep_state: DRepStateT,
-    epoch: int = -1,
+    *, cluster_obj: clusterlib.ClusterLib, drep_state: DRepStateT, epoch: int = -1
 ) -> bool:
     """Check if DRep is active."""
     if epoch == -1:
@@ -646,7 +644,7 @@ def is_drep_active(
     return bool(drep_state[0][1].get("expiry", 0) > epoch)
 
 
-def is_cc_active(cc_member_state: dict[str, tp.Any]) -> bool:
+def is_cc_active(*, cc_member_state: dict[str, tp.Any]) -> bool:
     """Check if CC member is active."""
     if not cc_member_state:
         return False
@@ -659,6 +657,7 @@ def is_cc_active(cc_member_state: dict[str, tp.Any]) -> bool:
 
 
 def create_dreps(
+    *,
     name_template: str,
     num: int,
     cluster_obj: clusterlib.ClusterLib,
@@ -740,6 +739,7 @@ def create_dreps(
 
 
 def create_script_dreps(
+    *,
     name_template: str,
     script_inputs: list[DRepScriptRegInputs],
     cluster_obj: clusterlib.ClusterLib,
@@ -843,7 +843,7 @@ def create_script_dreps(
 
 
 def get_anchor_data(
-    cluster_obj: clusterlib.ClusterLib, name_template: str, anchor_text: str
+    *, cluster_obj: clusterlib.ClusterLib, name_template: str, anchor_text: str
 ) -> AnchorData:
     """Publish anchor data and return the URL and data hash."""
     anchor_file = pl.Path(f"{name_template}_anchor.txt")

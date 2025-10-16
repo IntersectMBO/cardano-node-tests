@@ -70,7 +70,7 @@ class Versions:
         self.smash_platform = smash_version_db.get("platform")
         self.smash_git_rev = smash_version_db.get("git_rev")
 
-    def _get_cardano_version(self, version_str: str) -> dict:
+    def _get_cardano_version(self, *, version_str: str) -> dict:
         """Return version info for cardano-*."""
         env_info, git_info, *__ = version_str.splitlines()
         ver, platform, ghc, *__ = env_info.split(" - ")

@@ -36,6 +36,7 @@ def is_submit_api_available() -> bool:
 
 
 def submit_tx(
+    *,
     submit_method: str,
     cluster_obj: clusterlib.ClusterLib,
     tx_file: clusterlib.FileType,

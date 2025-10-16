@@ -186,9 +186,7 @@ def _txout_has_inline_datum(txout: clusterlib.TxOut) -> bool:
     return bool(txout.inline_datum_cbor_file or txout.inline_datum_file or txout.inline_datum_value)
 
 
-def utxodata2txout(
-    utxodata: dbsync_types.UTxORecord | clusterlib.UTXOData,
-) -> clusterlib.TxOut:
+def utxodata2txout(*, utxodata: dbsync_types.UTxORecord | clusterlib.UTXOData) -> clusterlib.TxOut:
     """Convert `UTxORecord` or `UTxOData` to `clusterlib.TxOut`."""
     return clusterlib.TxOut(
         address=utxodata.address,
@@ -215,13 +213,14 @@ def utxorecord2utxodata(utxorecord: dbsync_types.UTxORecord) -> clusterlib.UTXOD
 
 
 def check_tx_outs(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,
 ) -> None:
     """Check that the Tx outputs match the data from db-sync."""
     tx_txouts = {_sanitize_txout(cluster_obj=cluster_obj, txout=r) for r in tx_raw_output.txouts}
-    db_txouts = {utxodata2txout(r) for r in response.txouts}
+    db_txouts = {utxodata2txout(utxodata=r) for r in response.txouts}
 
     len_db_txouts, len_out_txouts = len(response.txouts), len(tx_raw_output.txouts)
 
@@ -245,10 +244,7 @@ def check_tx_outs(
         assert tx_txouts == db_txouts, f"TX outputs don't match ({tx_txouts} != {db_txouts})"
 
 
-def check_tx_ins(
-    tx_raw_output: clusterlib.TxRawOutput,
-    response: dbsync_types.TxRecord,
-) -> None:
+def check_tx_ins(*, tx_raw_output: clusterlib.TxRawOutput, response: dbsync_types.TxRecord) -> None:
     """Check that the Tx inputs match the data from db-sync."""
     combined_txins: list[clusterlib.UTXOData] = [
         *tx_raw_output.txins,
@@ -264,10 +260,7 @@ def check_tx_ins(
     )
 
 
-def check_tx_fee(
-    tx_raw_output: clusterlib.TxRawOutput,
-    response: dbsync_types.TxRecord,
-) -> None:
+def check_tx_fee(*, tx_raw_output: clusterlib.TxRawOutput, response: dbsync_types.TxRecord) -> None:
     """Check that the Tx fee matches the data from db-sync."""
     # Unknown fee is set to -1
     if tx_raw_output.fee == -1:
@@ -282,8 +275,7 @@ def check_tx_fee(
 
 
 def check_tx_validity(
-    tx_raw_output: clusterlib.TxRawOutput,
-    response: dbsync_types.TxRecord,
+    *, tx_raw_output: clusterlib.TxRawOutput, response: dbsync_types.TxRecord
 ) -> None:
     """Check that the Tx validity interval match the data from db-sync."""
     assert response.invalid_before == tx_raw_output.invalid_before, (
@@ -298,8 +290,7 @@ def check_tx_validity(
 
 
 def check_tx_mint(
-    tx_raw_output: clusterlib.TxRawOutput,
-    response: dbsync_types.TxRecord,
+    *, tx_raw_output: clusterlib.TxRawOutput, response: dbsync_types.TxRecord
 ) -> None:
     """Check that the Tx minting matches the data from db-sync."""
     tx_mint_txouts = list(itertools.chain.from_iterable(m.txouts for m in tx_raw_output.mint))
@@ -310,15 +301,14 @@ def check_tx_mint(
         f"Number of MA minting doesn't match ({len_db_mint} != {len_out_mint})"
     )
 
-    db_mint_txouts = sorted(utxodata2txout(r) for r in response.mint)
+    db_mint_txouts = sorted(utxodata2txout(utxodata=r) for r in response.mint)
     assert tx_mint_by_token == db_mint_txouts, (
         f"MA minting outputs don't match ({tx_mint_by_token} != {db_mint_txouts})"
     )
 
 
 def check_tx_withdrawals(
-    tx_raw_output: clusterlib.TxRawOutput,
-    response: dbsync_types.TxRecord,
+    *, tx_raw_output: clusterlib.TxRawOutput, response: dbsync_types.TxRecord
 ) -> None:
     """Check that the Tx withdrawals match the data from db-sync."""
     tx_withdrawals = sorted(
@@ -338,6 +328,7 @@ def check_tx_withdrawals(
 
 
 def check_tx_collaterals(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,
@@ -355,7 +346,7 @@ def check_tx_collaterals(
     tx_collaterals_flat = set(itertools.chain.from_iterable(tx_collaterals_nested))
     # TODO: support multi-assets in collateral inputs
     tx_collaterals = {r for r in tx_collaterals_flat if r.coin == clusterlib.DEFAULT_COIN}
-    db_collaterals = {utxorecord2utxodata(utxorecord=r) for r in response.collaterals}
+    db_collaterals = {utxorecord2utxodata(r) for r in response.collaterals}
 
     assert tx_collaterals == db_collaterals, (
         f"TX collaterals don't match ({tx_collaterals} != {db_collaterals})"
@@ -388,6 +379,7 @@ def check_tx_collaterals(
 
 
 def check_tx_scripts(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,
@@ -441,6 +433,7 @@ def check_tx_scripts(
 
 
 def check_tx_datum(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,
@@ -464,15 +457,16 @@ def check_tx_datum(
         for r in tx_raw_output.txouts
         if _txout_has_inline_datum(r)
     }
-    db_txouts_inline_datums = {utxodata2txout(r) for r in response.txouts if r.inline_datum_hash}
+    db_txouts_inline_datums = {
+        utxodata2txout(utxodata=r) for r in response.txouts if r.inline_datum_hash
+    }
     assert tx_txouts_inline_datums == db_txouts_inline_datums, (
         f"Inline datums don't match ({tx_txouts_inline_datums} != {db_txouts_inline_datums})"
     )
 
 
 def check_tx_reference_inputs(
-    tx_raw_output: clusterlib.TxRawOutput,
-    response: dbsync_types.TxRecord,
+    *, tx_raw_output: clusterlib.TxRawOutput, response: dbsync_types.TxRecord
 ) -> None:
     """Check that the Tx reference inputs match the data from db-sync."""
     txins_utxos_reference_inputs = {
@@ -488,6 +482,7 @@ def check_tx_reference_inputs(
 
 
 def check_tx_reference_scripts(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,
@@ -512,8 +507,7 @@ def check_tx_reference_scripts(
 
 
 def check_tx_required_signers(
-    tx_raw_output: clusterlib.TxRawOutput,
-    response: dbsync_types.TxRecord,
+    *, tx_raw_output: clusterlib.TxRawOutput, response: dbsync_types.TxRecord
 ) -> None:
     """Check that the Tx required signers match the data from db-sync."""
     if tx_raw_output.required_signers:
@@ -530,6 +524,7 @@ def check_tx_required_signers(
 
 
 def check_tx(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_raw_output: clusterlib.TxRawOutput,
     response: dbsync_types.TxRecord,

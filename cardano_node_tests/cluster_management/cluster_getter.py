@@ -116,7 +116,7 @@ class ClusterGetter:
     def ports(self) -> cardonnay_local.InstancePorts:
         """Return port mappings for current cluster instance."""
         return cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
-            self.cluster_instance_num
+            instance_num=self.cluster_instance_num
         )
 
     def _create_startup_files_dir(self, instance_num: int) -> pl.Path:
@@ -935,7 +935,7 @@ class ClusterGetter:
                     self.log(f"c{instance_num}: can run test '{cget_status.current_test}'")
                     # Set environment variables that are needed when respinning the cluster
                     # and running tests
-                    cluster_nodes.set_cluster_env(instance_num)
+                    cluster_nodes.set_cluster_env(instance_num=instance_num)
 
                     # Remove "prio" status file
                     if prio:

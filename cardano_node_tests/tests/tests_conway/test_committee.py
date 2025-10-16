@@ -940,7 +940,10 @@ class TestCommittee:
                     _get_res_cert(idx=i, cc_auth=r)
                     for i, r in enumerate((cc_auth_record1, cc_auth_record2, cc_auth_record3))
                     if governance_utils.is_cc_active(
-                        auth_committee_state["committee"].get(f"keyHash-{r.key_hash}") or {}
+                        cc_member_state=auth_committee_state["committee"].get(
+                            f"keyHash-{r.key_hash}"
+                        )
+                        or {}
                     )
                 ]
 
@@ -1830,7 +1833,7 @@ class TestCommittee:
         constitution_url = web.publish(file_path=constitution_file)
         constitution_hash = cluster.g_governance.get_anchor_data_hash(file_text=constitution_file)
         (
-            const_action,
+            _const_action,
             const_action_txid,
             const_action_ix,
         ) = conway_common.propose_change_constitution(

@@ -12,7 +12,7 @@ from cardano_clusterlib import transaction_group
 LOGGER = logging.getLogger(__name__)
 
 
-def record_cli_coverage(cli_args: list[str], coverage_dict: dict) -> None:
+def record_cli_coverage(*, cli_args: list[str], coverage_dict: dict) -> None:
     """Record coverage info for CLI commands.
 
     Args:
@@ -47,7 +47,7 @@ def record_cli_coverage(cli_args: list[str], coverage_dict: dict) -> None:
             parent_dict = cur_dict
 
 
-def create_submitted_file(tx_file: clusterlib.FileType) -> None:
+def create_submitted_file(*, tx_file: clusterlib.FileType) -> None:
     """Create a `.submitted` status file when the Tx was successfully submitted."""
     tx_path = pl.Path(tx_file)
     submitted_symlink = tx_path.with_name(f"{tx_path.name}.submitted")
@@ -84,10 +84,7 @@ class ClusterLib(clusterlib.ClusterLib):
         return self._transaction_group
 
     def cli(
-        self,
-        cli_args: list[str],
-        timeout: float | None = None,
-        add_default_args: bool = True,
+        self, cli_args: list[str], timeout: float | None = None, add_default_args: bool = True
     ) -> clusterlib.CLIOut:
         """Run the `cardano-cli` command.
 
