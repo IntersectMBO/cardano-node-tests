@@ -55,7 +55,7 @@ def multisig_tx(
     build_method: str = clusterlib_utils.BuildMethods.BUILD_RAW,
 ) -> clusterlib.TxRawOutput:
     """Build and submit multisig transaction."""
-    if bool(multisig_script) ^ bool(script_utxos):
+    if bool(multisig_script) != bool(script_utxos):
         err = "Both `multisig_script` and `script_utxos` must be provided"
         raise ValueError(err)
 
