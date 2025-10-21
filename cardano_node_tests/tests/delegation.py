@@ -97,7 +97,7 @@ def cluster_and_pool(
                 if pool_id in stake_pools:
                     return cluster_obj, pool_id
 
-        blocks_before = clusterlib_utils.get_blocks_before(cluster_obj)
+        blocks_before = clusterlib_utils.get_blocks_before(cluster_obj=cluster_obj)
         # Sort pools by how many blocks they produce
         pool_ids_s = sorted(blocks_before, key=blocks_before.get, reverse=True)  # type: ignore
         # Select a pool with reasonable margin

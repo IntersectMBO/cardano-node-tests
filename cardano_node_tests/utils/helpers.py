@@ -77,6 +77,7 @@ def environ(env: dict) -> tp.Iterator[None]:
 
 def run_command(
     command: str | list,
+    *,
     workdir: ttypes.FileType = "",
     ignore_fail: bool = False,
     shell: bool = False,
@@ -110,7 +111,7 @@ def run_command(
     return stdout
 
 
-def run_in_bash(command: str, workdir: ttypes.FileType = "") -> bytes:
+def run_in_bash(command: str, *, workdir: ttypes.FileType = "") -> bytes:
     """Run command(s) in bash."""
     cmd = ["bash", "-o", "pipefail", "-c", f"{command}"]
     return run_command(cmd, workdir=workdir)
@@ -154,7 +155,7 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
     True
     """
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%y%m%d_%H%M%S%f")[:-3]
-    rand_str_component = get_rand_str(rand_str_length)
+    rand_str_component = get_rand_str(length=rand_str_length)
     rand_str_component = rand_str_component and f"_{rand_str_component}"
     return f"{timestamp}{rand_str_component}"
 
@@ -190,7 +191,7 @@ def get_vcs_link() -> str:
     return url
 
 
-def checksum(filename: ttypes.FileType, blocksize: int = 65536) -> str:
+def checksum(filename: ttypes.FileType, *, blocksize: int = 65536) -> str:
     """Return file checksum."""
     hash_o = hashlib.blake2b()
     with open(filename, "rb") as f:
@@ -199,7 +200,7 @@ def checksum(filename: ttypes.FileType, blocksize: int = 65536) -> str:
     return hash_o.hexdigest()
 
 
-def write_json(out_file: ttypes.FileType, content: dict) -> ttypes.FileType:
+def write_json(*, out_file: ttypes.FileType, content: dict) -> ttypes.FileType:
     """Write dictionary content to JSON file."""
     with open(pl.Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
         out_fp.write(json.dumps(content, indent=4))
@@ -211,7 +212,7 @@ def decode_bech32(bech32: str) -> str:
     return run_command(f"echo '{bech32}' | bech32", shell=True).decode().strip()
 
 
-def encode_bech32(prefix: str, data: str) -> str:
+def encode_bech32(*, prefix: str, data: str) -> str:
     """Convert to bech32 string."""
     return run_command(f"echo '{data}' | bech32 {prefix}", shell=True).decode().strip()
 
@@ -263,7 +264,7 @@ def get_eof_offset(infile: pl.Path) -> int:
     return last_line_pos
 
 
-def is_in_interval(num1: float, num2: float, frac: float = 0.1) -> bool:
+def is_in_interval(num1: float, num2: float, *, frac: float = 0.1) -> bool:
     """Check that the num1 is in the interval defined by num2 and its fraction."""
     num2_frac = num2 * frac
     _min = num2 - num2_frac
@@ -289,10 +290,7 @@ def tool_has(command: str) -> bool:
     return not cmd_err.startswith("Invalid")
 
 
-def flatten(
-    iterable: tp.Iterable,
-    ltypes: type[tp.Iterable] | None = None,
-) -> tp.Generator:
+def flatten(iterable: tp.Iterable, *, ltypes: type[tp.Iterable] | None = None) -> tp.Generator:
     """Flatten an irregular (arbitrarily nested) iterable of iterables."""
     ltypes = ltypes if ltypes is not None else abc.Iterable
     remainder = iter(iterable)
@@ -310,7 +308,7 @@ def flatten(
 
 
 def validate_dict_values(
-    dict1: dict[str, tp.Any], dict2: dict[str, tp.Any], keys: tp.Iterable[str]
+    dict1: dict[str, tp.Any], dict2: dict[str, tp.Any], *, keys: tp.Iterable[str]
 ) -> list[str]:
     """Compare values for specified keys between two dictionaries and return discrepancies.
 

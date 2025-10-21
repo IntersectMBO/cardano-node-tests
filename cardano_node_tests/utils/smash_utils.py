@@ -50,7 +50,7 @@ class SmashClient:
         self.instance_num = instance_num
         self.port = (
             cluster_nodes.get_cluster_type()
-            .cluster_scripts.get_instance_ports(self.instance_num)
+            .cluster_scripts.get_instance_ports(instance_num=self.instance_num)
             .smash
         )
         self.base_url = f"http://localhost:{self.port}"
@@ -62,7 +62,7 @@ class SmashClient:
         password = os.environ.get("SMASH_PASSWORD", "password")
         return rauth.HTTPBasicAuth(admin, password) if admin and password else None
 
-    def get_pool_metadata(self, pool_id: str, pool_meta_hash: str) -> PoolMetadata:
+    def get_pool_metadata(self, *, pool_id: str, pool_meta_hash: str) -> PoolMetadata:
         """Fetch stake pool metadata from SMASH, returning a `PoolMetadata`."""
         url = f"{self.base_url}/api/v1/metadata/{pool_id}/{pool_meta_hash}"
         response = http_client.get_session().get(url, auth=self.auth)
@@ -75,7 +75,7 @@ class SmashClient:
             homepage=data["homepage"],
         )
 
-    def delist_pool(self, pool_id: str) -> PoolData:
+    def delist_pool(self, *, pool_id: str) -> PoolData:
         """Delist a stake pool, returning PoolData on success or a RequestException on failure."""
         url = f"{self.base_url}/api/v1/delist"
         response = http_client.get_session().patch(url, json={"poolId": pool_id}, auth=self.auth)
@@ -83,7 +83,7 @@ class SmashClient:
         data = response.json()
         return PoolData(pool_id=data["poolId"])
 
-    def enlist_pool(self, pool_id: str) -> PoolData:
+    def enlist_pool(self, *, pool_id: str) -> PoolData:
         """Enlist a stake pool, returning PoolData on success or a RequestException on failure."""
         url = f"{self.base_url}/api/v1/enlist"
         response = http_client.get_session().patch(url, json={"poolId": pool_id}, auth=self.auth)
@@ -91,7 +91,7 @@ class SmashClient:
         data = response.json()
         return PoolData(pool_id=data["poolId"])
 
-    def reserve_ticker(self, ticker_name: str, pool_hash: str) -> PoolTicker:
+    def reserve_ticker(self, *, ticker_name: str, pool_hash: str) -> PoolTicker:
         """Reserve a ticker for a stake pool."""
         url = f"{self.base_url}/api/v1/tickers/{ticker_name}"
         response = http_client.get_session().post(url, json={"poolId": pool_hash}, auth=self.auth)
@@ -99,7 +99,7 @@ class SmashClient:
         data = response.json()
         return PoolTicker(name=data["name"])
 
-    def get_pool_errors(self, pool_id: str, from_date: str | None = None) -> list[PoolError]:
+    def get_pool_errors(self, *, pool_id: str, from_date: str | None = None) -> list[PoolError]:
         """Fetch errors for a specific stake pool."""
         url = f"{self.base_url}/api/v1/errors/{pool_id}"
         params = {"fromDate": from_date} if from_date else None
@@ -137,7 +137,7 @@ class SmashManager:
         """Get a singleton instance of `SmashClient` for the given cluster instance."""
         instance_num = cluster_nodes.get_instance_num()
         if instance_num not in cls.instances:
-            cls.instances[instance_num] = SmashClient(instance_num)
+            cls.instances[instance_num] = SmashClient(instance_num=instance_num)
         return cls.instances[instance_num]
 
 
@@ -155,7 +155,7 @@ def get_client() -> SmashClient | None:
     return SmashManager.get_smash_instance()
 
 
-def check_smash_pool_errors(pool_id: str, pool_metadata_hash: str) -> list[PoolError] | None:
+def check_smash_pool_errors(*, pool_id: str, pool_metadata_hash: str) -> list[PoolError] | None:
     """Check if pool errors are correctly reported in SMASH."""
     if not is_smash_running():
         return None
@@ -168,8 +168,10 @@ def check_smash_pool_errors(pool_id: str, pool_metadata_hash: str) -> list[PoolE
     assert smash_pool_errors_future == []
 
     # Test pool errors endpoint with current datetime
-    dbsync_pool_data_records = list(dbsync_queries.query_pool_data(pool_id))
-    dbsync_pool_errors = list(dbsync_queries.query_off_chain_pool_fetch_error(pool_id))
+    dbsync_pool_data_records = list(dbsync_queries.query_pool_data(pool_id_bech32=pool_id))
+    dbsync_pool_errors = list(
+        dbsync_queries.query_off_chain_pool_fetch_error(pool_id_bech32=pool_id)
+    )
     smash_pool_errors = smash.get_pool_errors(pool_id=pool_id)
 
     assert dbsync_pool_data_records, "No pool data found in dbsync."
@@ -204,13 +206,13 @@ def check_smash_pool_errors(pool_id: str, pool_metadata_hash: str) -> list[PoolE
     return smash_pool_errors
 
 
-def check_smash_pool_retired(pool_id: str) -> list[PoolData] | None:
+def check_smash_pool_retired(*, pool_id: str) -> list[PoolData] | None:
     """Check if pool is correctly reported as retired in SMASH."""
     if not is_smash_running():
         return None
     smash = SmashManager.get_smash_instance()
 
-    dbsync_pool_data = list(dbsync_queries.query_pool_data(pool_id))
+    dbsync_pool_data = list(dbsync_queries.query_pool_data(pool_id_bech32=pool_id))
     retired_pools = smash.get_retired_pools()
 
     assert dbsync_pool_data, "No pool data found in dbsync."

@@ -179,7 +179,7 @@ class DBSyncConfigBuilder:
         }
         self._preset_applied = False
 
-    def with_preset(self, preset: Preset) -> tp.Self:
+    def with_preset(self, *, preset: Preset) -> tp.Self:
         self._preset_applied = True
 
         if preset == Preset.FULL:
@@ -243,13 +243,14 @@ class DBSyncConfigBuilder:
 
         return self
 
-    def with_tx_cbor(self, value: SettingState) -> tp.Self:
+    def with_tx_cbor(self, *, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["tx_cbor"] = value
         return self
 
     def with_tx_out(
         self,
+        *,
         value: TxOutMode,
         force_tx_in: bool | None = None,
         use_address_table: bool | None = None,
@@ -260,47 +261,47 @@ class DBSyncConfigBuilder:
             )
         return self
 
-    def with_ledger(self, value: LedgerMode) -> tp.Self:
+    def with_ledger(self, *, value: LedgerMode) -> tp.Self:
         if not self._preset_applied:
             self._config["ledger"] = value
         return self
 
-    def with_shelley(self, enable: bool) -> tp.Self:
+    def with_shelley(self, *, enable: bool) -> tp.Self:
         if not self._preset_applied:
             self._config["shelley"] = ShelleyConfig(enable=enable)
         return self
 
-    def with_multi_asset(self, enable: bool) -> tp.Self:
+    def with_multi_asset(self, *, enable: bool) -> tp.Self:
         if not self._preset_applied:
             self._config["multi_asset"] = MultiAssetConfig(enable=enable)
         return self
 
-    def with_metadata(self, enable: bool, keys: list[int] | None = None) -> tp.Self:
+    def with_metadata(self, *, enable: bool, keys: list[int] | None = None) -> tp.Self:
         if not self._preset_applied:
             self._config["metadata"] = MetadataConfig(enable=enable, keys=keys)
         return self
 
-    def with_plutus(self, enable: bool) -> tp.Self:
+    def with_plutus(self, *, enable: bool) -> tp.Self:
         if not self._preset_applied:
             self._config["plutus"] = PlutusConfig(enable=enable)
         return self
 
-    def with_governance(self, value: SettingState) -> tp.Self:
+    def with_governance(self, *, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["governance"] = value
         return self
 
-    def with_offchain_pool_data(self, value: SettingState) -> tp.Self:
+    def with_offchain_pool_data(self, *, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["offchain_pool_data"] = value
         return self
 
-    def with_pool_stat(self, value: SettingState) -> tp.Self:
+    def with_pool_stat(self, *, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["pool_stat"] = value
         return self
 
-    def with_remove_jsonb_from_schema(self, value: SettingState) -> tp.Self:
+    def with_remove_jsonb_from_schema(self, *, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["remove_jsonb_from_schema"] = value
         return self
@@ -383,7 +384,7 @@ class DBSyncManager:
         """Get a fresh `DBSyncConfigBuilder` config builder instance with default config."""
         return DBSyncConfigBuilder()
 
-    def update_config(self, config: dict | DBSyncConfigBuilder | None) -> pl.Path:
+    def update_config(self, *, config: dict | DBSyncConfigBuilder | None) -> pl.Path:
         """
         Update the `dbsync-config.yaml` file with new settings.
 
@@ -440,7 +441,7 @@ class DBSyncManager:
         )
 
     def restart_with_config(
-        self, custom_config: dict | DBSyncConfigBuilder | None = None
+        self, *, custom_config: dict | DBSyncConfigBuilder | None = None
     ) -> pl.Path:
         """
         Restart `cardano-db-sync` with a new configuration, ensuring atomic updates.

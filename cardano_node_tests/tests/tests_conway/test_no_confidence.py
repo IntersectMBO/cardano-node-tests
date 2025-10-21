@@ -142,7 +142,7 @@ class TestNoConfidence:
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
             src_address=pool_user_lg.payment.address,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files_action,
         )
 
