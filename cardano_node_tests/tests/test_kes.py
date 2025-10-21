@@ -82,7 +82,7 @@ def cluster_kes(
 
 def _save_metrics(pool_num: int, temp_template: str) -> None:
     instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
-        cluster_nodes.get_instance_num()
+        instance_num=cluster_nodes.get_instance_num()
     )
     port = instance_ports.node_ports[pool_num].prometheus
 

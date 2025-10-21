@@ -28,6 +28,7 @@ TxInputGroup = list[tuple[list[clusterlib.UTXOData], pl.Path]]
 
 
 def reregister_stake_addr(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     stake_addr: clusterlib.AddressRecord,
@@ -95,6 +96,7 @@ def reregister_stake_addr(
 
 
 def deregister_stake_addr(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     stake_addr: clusterlib.AddressRecord,
@@ -137,6 +139,7 @@ def deregister_stake_addr(
 
 
 def retire_drep(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     drep_keys: clusterlib.KeyPair,
@@ -169,7 +172,7 @@ def retire_drep(
 
 
 def get_tx_inputs(
-    cluster_obj: clusterlib.ClusterLib, src_addrs: list[clusterlib.AddressRecord]
+    *, cluster_obj: clusterlib.ClusterLib, src_addrs: list[clusterlib.AddressRecord]
 ) -> TxInputGroup:
     """Return signing keys and transaction inputs for given addresses.
 
@@ -204,7 +207,7 @@ def dedup_tx_inputs(tx_inputs: TxInputGroup) -> TxInputGroup:
 
 
 def batch_tx_inputs(
-    tx_inputs: TxInputGroup, batch_size: int = 100
+    tx_inputs: TxInputGroup, *, batch_size: int = 100
 ) -> tp.Generator[TxInputGroup, None, None]:
     """Batch transaction inputs."""
     current_batch: TxInputGroup = []
@@ -243,6 +246,7 @@ def flatten_tx_inputs(
 
 
 def return_funds_to_faucet(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     tx_inputs: TxInputGroup,
     faucet_address: str,
@@ -295,7 +299,7 @@ def return_funds_to_faucet(
     cluster_obj.wait_for_new_block(new_blocks=3)
 
 
-def create_addr_record(addr_file: pl.Path) -> clusterlib.AddressRecord:
+def create_addr_record(*, addr_file: pl.Path) -> clusterlib.AddressRecord:
     """Return a `clusterlib.AddressRecord`."""
     f_name = addr_file.name.replace(".addr", "")
     basedir = addr_file.parent
@@ -354,7 +358,10 @@ def dedup_addresses(
 
 
 def cleanup_addresses(
-    cluster_obj: clusterlib.ClusterLib, location: pl.Path, faucet_payment: clusterlib.AddressRecord
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    location: pl.Path,
+    faucet_payment: clusterlib.AddressRecord,
 ) -> None:
     """Cleanup addresses."""
     files_found = list(dedup_addresses(filter_addr_files(find_addr_files(location))))
@@ -388,7 +395,7 @@ def cleanup_addresses(
 
             if f_name.endswith("_stake.addr"):
                 try:
-                    stake_addr = create_addr_record(fpath)
+                    stake_addr = create_addr_record(addr_file=fpath)
                 except ValueError as exc:
                     LOGGER.debug(f"Skipping: {exc}")
                     continue
@@ -412,7 +419,7 @@ def cleanup_addresses(
                 )
             else:
                 try:
-                    payment_addr = create_addr_record(fpath)
+                    payment_addr = create_addr_record(addr_file=fpath)
                 except ValueError as exc:
                     LOGGER.debug(f"Skipping: {exc}")
                     continue
@@ -436,7 +443,10 @@ def cleanup_addresses(
 
 
 def cleanup_certs(
-    cluster_obj: clusterlib.ClusterLib, location: pl.Path, faucet_payment: clusterlib.AddressRecord
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    location: pl.Path,
+    faucet_payment: clusterlib.AddressRecord,
 ) -> None:
     """Cleanup certificates."""
     files_found = list(find_cert_files(location))
@@ -496,8 +506,7 @@ def cleanup_certs(
 
 
 def _get_faucet_payment_rec(
-    address: str = "",
-    skey_file: clusterlib.FileType = "",
+    *, address: str = "", skey_file: clusterlib.FileType = ""
 ) -> clusterlib.AddressRecord:
     """Get the faucet payment record.
 
@@ -518,12 +527,12 @@ def _get_faucet_payment_rec(
         # Try to infer the faucet address and keys from cluster env
         cluster_env = cluster_nodes.get_cluster_env()
         faucet_addr_file = cluster_env.state_dir / "shelley" / "faucet.addr"
-        faucet_payment = create_addr_record(faucet_addr_file)
+        faucet_payment = create_addr_record(addr_file=faucet_addr_file)
 
     return faucet_payment
 
 
-def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.Tuple[int, int]:
+def addresses_info(*, cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.Tuple[int, int]:
     """Return the total balance and rewards of all addresses in the given location."""
     balance = 0
     rewards = 0
@@ -564,7 +573,7 @@ def addresses_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> tp.
     return balance, rewards
 
 
-def fees_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> int:
+def fees_info(*, cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> int:
     """Return the total fees of all signed transactions in the given location."""
     fees = 0
     for fpath in find_submitted_tx_files(location):
@@ -576,6 +585,7 @@ def fees_info(cluster_obj: clusterlib.ClusterLib, location: pl.Path) -> int:
 
 
 def cleanup(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     location: clusterlib.FileType,
     faucet_address: str = "",

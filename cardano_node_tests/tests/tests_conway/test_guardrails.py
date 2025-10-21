@@ -278,7 +278,7 @@ def propose_param_changes(
         cluster_obj=cluster,
         name_template=f"{temp_template}_action",
         src_address=cluster_with_constitution.payment_addr.address,
-        use_build_cmd=False,
+        build_method=clusterlib_utils.BuildMethods.BUILD_RAW,
         tx_files=tx_files,
         complex_proposals=[proposal_script],
         deposit=deposit_amt,

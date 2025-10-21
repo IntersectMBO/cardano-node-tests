@@ -110,7 +110,7 @@ class TestPrometheus:
         """Test that list of available metrics == list of expected metrics."""
         prometheus_port = (
             cluster_nodes.get_cluster_type()
-            .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
+            .cluster_scripts.get_instance_ports(instance_num=cluster_nodes.get_instance_num())
             .prometheus_pool1
         )
 
@@ -133,9 +133,9 @@ class TestEKG:
         """Test that available EKG metrics matches the expected schema."""
         ekg_port = (
             cluster_nodes.get_cluster_type()
-            .cluster_scripts.get_instance_ports(cluster_nodes.get_instance_num())
+            .cluster_scripts.get_instance_ports(instance_num=cluster_nodes.get_instance_num())
             .ekg_pool1
         )
 
         response = get_ekg_metrics(ekg_port)
-        model_ekg.Model.validate(response.json())
+        model_ekg.Model.model_validate(response.json())

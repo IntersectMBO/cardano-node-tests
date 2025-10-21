@@ -769,7 +769,9 @@ class TestPParamUpdate:
                 update_proposal=net_nodrep_prop_rec.future_pparams,
                 txhash=net_nodrep_prop_rec.action_txid,
             )
-            dbsync_utils.check_conway_param_update_proposal(net_nodrep_prop_rec.future_pparams)
+            dbsync_utils.check_conway_param_update_proposal(
+                param_proposal_ledger=net_nodrep_prop_rec.future_pparams
+            )
             reqc.db008.success()
         except AssertionError as exc:
             db_errors_final.append(f"db-sync network params update error: {exc}")
@@ -824,7 +826,9 @@ class TestPParamUpdate:
                     update_proposal=eco_nodrep_prop_rec.future_pparams,
                     txhash=eco_nodrep_prop_rec.action_txid,
                 )
-                dbsync_utils.check_conway_param_update_proposal(eco_nodrep_prop_rec.future_pparams)
+                dbsync_utils.check_conway_param_update_proposal(
+                    param_proposal_ledger=eco_nodrep_prop_rec.future_pparams
+                )
             except AssertionError as exc:
                 db_errors_final.append(f"db-sync economic params update error: {exc}")
 
@@ -901,7 +905,9 @@ class TestPParamUpdate:
                 update_proposal=tech_nodrep_prop_rec.future_pparams,
                 txhash=tech_nodrep_prop_rec.action_txid,
             )
-            dbsync_utils.check_conway_param_update_proposal(tech_nodrep_prop_rec.future_pparams)
+            dbsync_utils.check_conway_param_update_proposal(
+                param_proposal_ledger=tech_nodrep_prop_rec.future_pparams
+            )
         except AssertionError as exc:
             db_errors_final.append(f"db-sync technical params update error: {exc}")
 
@@ -996,7 +1002,9 @@ class TestPParamUpdate:
                     update_proposal=gov_nodrep_prop_rec.future_pparams,
                     txhash=gov_nodrep_prop_rec.action_txid,
                 )
-                dbsync_utils.check_conway_param_update_proposal(gov_nodrep_prop_rec.future_pparams)
+                dbsync_utils.check_conway_param_update_proposal(
+                    param_proposal_ledger=gov_nodrep_prop_rec.future_pparams
+                )
             except AssertionError as exc:
                 db_errors_final.append(f"db-sync governance params update error: {exc}")
 
@@ -1059,7 +1067,9 @@ class TestPParamUpdate:
                     update_proposal=mix_nodrep_prop_rec.future_pparams,
                     txhash=mix_nodrep_prop_rec.action_txid,
                 )
-                dbsync_utils.check_conway_param_update_proposal(mix_nodrep_prop_rec.future_pparams)
+                dbsync_utils.check_conway_param_update_proposal(
+                    param_proposal_ledger=mix_nodrep_prop_rec.future_pparams
+                )
             except AssertionError as exc:
                 db_errors_final.append(f"db-sync mixed group params update error: {exc}")
 
@@ -1141,7 +1151,9 @@ class TestPParamUpdate:
             dbsync_utils.check_conway_gov_action_proposal_description(
                 update_proposal=fin_prop_rec.future_pparams, txhash=fin_prop_rec.action_txid
             )
-            dbsync_utils.check_conway_param_update_proposal(fin_prop_rec.future_pparams)
+            dbsync_utils.check_conway_param_update_proposal(
+                param_proposal_ledger=fin_prop_rec.future_pparams
+            )
         except AssertionError as exc:
             db_errors_final.append(f"db-sync 'final' params update error: {exc}")
 

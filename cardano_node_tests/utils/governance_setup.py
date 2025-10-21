@@ -105,6 +105,7 @@ def _cast_vote(
 
 
 def create_vote_stake(
+    *,
     name_template: str,
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
@@ -130,7 +131,7 @@ def create_vote_stake(
     return pool_users
 
 
-def load_committee(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.CCKeyMember]:
+def load_committee(*, cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.CCKeyMember]:
     genesis_cc_members = cluster_obj.conway_genesis.get("committee", {}).get("members") or {}
     if not genesis_cc_members:
         return []
@@ -165,7 +166,7 @@ def load_committee(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.
     return cc_members
 
 
-def load_dreps(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.DRepRegistration]:
+def load_dreps(*, cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.DRepRegistration]:
     """Load DReps from the state directory."""
     data_dir = cluster_obj.state_dir / GOV_DATA_DIR
     deposit_amt = cluster_obj.g_query.get_drep_deposit()
@@ -191,7 +192,7 @@ def load_dreps(cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.DRep
     return dreps
 
 
-def load_drep_users(cluster_obj: clusterlib.ClusterLib) -> list[clusterlib.PoolUser]:
+def load_drep_users(*, cluster_obj: clusterlib.ClusterLib) -> list[clusterlib.PoolUser]:
     """Load DReps users from the state directory."""
     data_dir = cluster_obj.state_dir / GOV_DATA_DIR
 
@@ -223,8 +224,7 @@ def load_drep_users(cluster_obj: clusterlib.ClusterLib) -> list[clusterlib.PoolU
 
 
 def setup(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_obj: clusterlib.ClusterLib,
+    *, cluster_manager: cluster_management.ClusterManager, cluster_obj: clusterlib.ClusterLib
 ) -> governance_utils.GovernanceRecords:
     cc_members = load_committee(cluster_obj=cluster_obj)
     drep_reg_records = load_dreps(cluster_obj=cluster_obj)
@@ -260,8 +260,7 @@ def setup(
 
 
 def get_default_governance(
-    cluster_manager: cluster_management.ClusterManager,
-    cluster_obj: clusterlib.ClusterLib,
+    *, cluster_manager: cluster_management.ClusterManager, cluster_obj: clusterlib.ClusterLib
 ) -> governance_utils.GovernanceRecords:
     """Get default governance data for CC members, DReps and SPOs."""
     if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
@@ -310,6 +309,7 @@ def get_default_governance(
 
 
 def save_default_governance(
+    *,
     dreps_reg: list[governance_utils.DRepRegistration],
     drep_delegators: list[clusterlib.PoolUser],
     cc_members: list[governance_utils.CCKeyMember],
@@ -339,6 +339,7 @@ def save_default_governance(
 
 
 def refresh_cc_keys(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     cc_members: list[governance_utils.CCKeyMember],
     governance_data: governance_utils.GovernanceRecords,
@@ -398,6 +399,7 @@ def refresh_cc_keys(
 
 
 def auth_cc_members(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     cc_members: list[governance_utils.CCKeyMember],
     name_template: str,
@@ -455,6 +457,7 @@ def auth_cc_members(
 
 
 def reinstate_committee(  # noqa: C901
+    *,
     cluster_obj: clusterlib.ClusterLib,
     governance_data: governance_utils.GovernanceRecords,
     name_template: str,

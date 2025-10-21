@@ -73,26 +73,28 @@ def check_dbsync_state(
                 f"Invalid column condition format: {condition}"
             )
             column_condition = condition.value.split(":", 1)[1]
-            dbsync_utils.check_column_condition(table, column, column_condition)
+            dbsync_utils.check_column_condition(
+                table=table, column=column, condition=column_condition
+            )
         else:  # Table-level check
             assert isinstance(condition, TableCondition), (
                 f"Invalid table condition format: {condition}"
             )
             match condition:
                 case TableCondition.EMPTY:
-                    assert dbsync_utils.table_empty(key), (
+                    assert dbsync_utils.table_empty(table=key), (
                         f"Expected {key} to be empty, but it is not."
                     )
                 case TableCondition.NOT_EMPTY:
-                    assert not dbsync_utils.table_empty(key), (
+                    assert not dbsync_utils.table_empty(table=key), (
                         f"Expected {key} to have data, but it is empty."
                     )
                 case TableCondition.EXISTS:
-                    assert dbsync_utils.table_exists(key), (
+                    assert dbsync_utils.table_exists(table=key), (
                         f"Expected {key} to exist, but it does not."
                     )
                 case TableCondition.NOT_EXISTS:
-                    assert not dbsync_utils.table_exists(key), (
+                    assert not dbsync_utils.table_exists(table=key), (
                         f"Expected {key} to NOT exist, but it does."
                     )
                 case _:

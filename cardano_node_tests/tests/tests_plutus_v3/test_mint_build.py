@@ -121,7 +121,7 @@ class TestPlutusBatch5V3Builtins:
                 cluster_obj=cluster_obj,
                 name_template=f"{temp_template}_step2",
                 src_address=payment_addr.address,
-                use_build_cmd=True,
+                build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files_step2,
                 txins=mint_utxos,
                 txouts=txouts_step2,

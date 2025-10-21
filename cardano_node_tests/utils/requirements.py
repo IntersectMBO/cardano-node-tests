@@ -31,13 +31,7 @@ class Req:
         url: An url of the requirement.
     """
 
-    def __init__(
-        self,
-        id: str,
-        group: str = "",
-        url: str = "",
-        enabled: bool = True,
-    ) -> None:
+    def __init__(self, *, id: str, group: str = "", url: str = "", enabled: bool = True) -> None:
         self.id = str(id)
         self.group = group
         self.url = url
@@ -79,7 +73,7 @@ class Req:
         )
         return False
 
-    def start(self, url: str = "") -> "Req":
+    def start(self, *, url: str = "") -> "Req":
         if not self.enabled:
             return self
 
@@ -92,7 +86,7 @@ class Req:
         return f"<Req: id='{self.id}', group='{self.group}', url='{self.url}'>"
 
 
-def collect_executed_req(base_dir: pl.Path) -> dict:
+def collect_executed_req(*, base_dir: pl.Path) -> dict:
     """Collect executed requirements."""
     collected: dict = {}
     for rf in base_dir.glob("**/requirements/req-*.json"):
@@ -136,7 +130,7 @@ def merge_reqs(*reqs: dict[str, dict]) -> dict:
     return merged
 
 
-def get_mapped_req(mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C901
+def get_mapped_req(*, mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C901
     """Get mapped requirements."""
     with open(mapping, encoding="utf-8") as in_fp:
         requirements_mapping = json.load(in_fp)
