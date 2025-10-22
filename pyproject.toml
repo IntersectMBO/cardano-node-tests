@@ -42,7 +42,7 @@ pytest-xdist = "^3.7.0"
 PyYAML = "^6.0.2"
 requests = "^2.32.4"
 pytest-subtests = "^0.14.2"
-cardonnay = "^0.2.3"
+cardonnay = "^0.2.4"
 
 [tool.poetry.group.dev]
 optional = true
