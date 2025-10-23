@@ -1622,7 +1622,7 @@ class TestIncrementalSigning:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_USE_BUILD_CMD
+    @common.PARAM_BUILD_METHOD_NO_EST
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
     @pytest.mark.smoke
@@ -1632,7 +1632,7 @@ class TestIncrementalSigning:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        use_build_cmd: bool,
+        build_method: str,
         tx_is: str,
         submit_method: str,
     ):
@@ -1666,7 +1666,7 @@ class TestIncrementalSigning:
             signing_key_files=payment_skey_files,
         )
 
-        if use_build_cmd:
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             tx_output = cluster.g_transaction.build_tx(
                 src_address=src_addr.address,
                 tx_name=temp_template,
@@ -1675,7 +1675,16 @@ class TestIncrementalSigning:
                 fee_buffer=1_000_000,
                 witness_override=len(payment_skey_files),
             )
-        else:
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            tx_output = cluster.g_transaction.build_estimate_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                txouts=txouts,
+                fee_buffer=1_000_000,
+                witness_count_add=len(payment_skey_files),
+            )
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             fee = cluster.g_transaction.calculate_tx_fee(
                 src_address=src_addr.address,
                 tx_name=temp_template,
@@ -1690,6 +1699,9 @@ class TestIncrementalSigning:
                 tx_files=tx_files,
                 fee=fee,
             )
+        else:
+            msg = f"Unsupported build method: {build_method}"
+            raise ValueError(msg)
 
         # Sign or witness Tx body with part of the skeys and thus create Tx file that will be used
         # for incremental signing
