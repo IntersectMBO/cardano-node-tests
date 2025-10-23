@@ -296,18 +296,53 @@ def delegate_multisig_stake_addr(
     signing_key_files = [pool_user.payment.skey_file, *skey_files]
     witness_len = len(signing_key_files)
 
-    tx_output = clusterlib_utils.build_and_submit_tx(
-        cluster_obj=cluster_obj,
-        name_template=temp_template,
-        src_address=src_address,
-        tx_files=clusterlib.TxFiles(
-            signing_key_files=signing_key_files,
-        ),
-        complex_certs=complex_certs,
-        fee_buffer=2_000_000,
-        witness_count_add=witness_len,
-        build_method=build_method,
+    if build_method in (
+        clusterlib_utils.BuildMethods.BUILD,
+        clusterlib_utils.BuildMethods.BUILD_EST,
+    ):
+        tx_output = cluster_obj.g_transaction.build_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            fee_buffer=2_000_000,
+            witness_override=witness_len,
+        )
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
+        fee = cluster_obj.g_transaction.calculate_tx_fee(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            witness_count_add=witness_len,
+        )
+        tx_output = cluster_obj.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            fee=fee,
+        )
+    else:
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
+
+    # Create witness file for each key
+    witness_files = [
+        cluster_obj.g_transaction.witness_tx(
+            tx_body_file=tx_output.out_file,
+            witness_name=f"{temp_template}_skey{idx}",
+            signing_key_files=[skey],
+        )
+        for idx, skey in enumerate(signing_key_files, start=1)
+    ]
+
+    # Sign TX using witness files
+    tx_witnessed_file = cluster_obj.g_transaction.assemble_tx(
+        tx_body_file=tx_output.out_file,
+        witness_files=witness_files,
+        tx_name=temp_template,
     )
+
+    # Submit signed TX
+    cluster_obj.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_output.txins)
 
     # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit() if stake_addr_reg_cert_file else 0
