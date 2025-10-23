@@ -18,7 +18,7 @@ class DBSyncCache:
     conns: tp.ClassVar[dict[int, psycopg2.extensions.connection | None]] = {0: None}
 
 
-def _conn(instance_num: int) -> psycopg2.extensions.connection:
+def _conn(*, instance_num: int) -> psycopg2.extensions.connection:
     # Call `psycopg2.connect` with an empty string so it uses PG* env variables.
     # Temporarily set PGDATABASE env var to the database corresponding to `instance_num`.
     with helpers.environ({"PGDATABASE": f"{configuration.DBSYNC_DB}{instance_num}"}):
@@ -27,7 +27,7 @@ def _conn(instance_num: int) -> psycopg2.extensions.connection:
     return conn
 
 
-def _close(instance_num: int, conn: psycopg2.extensions.connection | None) -> None:
+def _close(*, instance_num: int, conn: psycopg2.extensions.connection | None) -> None:
     if conn is None or conn.closed == 1:
         return
 

@@ -65,7 +65,7 @@ CERTIFICATES_INFORMATION = {
 }
 
 
-def load_raw(tx_view: str) -> dict:
+def load_raw(*, tx_view: str) -> dict:
     """Load tx view output as YAML."""
     tx_loaded: dict = yaml.safe_load(tx_view)
     return tx_loaded
@@ -223,14 +223,14 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     )
 
 
-def load_tx_view(cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path) -> dict[str, tp.Any]:
+def load_tx_view(*, cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path) -> dict[str, tp.Any]:
     tx_view_raw = cluster_obj.g_transaction.view_tx(tx_body_file=tx_body_file)
     tx_loaded: dict[str, tp.Any] = load_raw(tx_view=tx_view_raw)
     return tx_loaded
 
 
 def check_tx_view(  # noqa: C901
-    cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
+    *, cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> dict[str, tp.Any]:
     """Check output of the `transaction view` command."""
     tx_loaded = load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_raw_output.out_file)

@@ -17,7 +17,9 @@ ARTIFACTS_BASE_DIR_ARG = "--artifacts-base-dir"
 CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
 
 
-def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config) -> pl.Path | None:
+def save_cli_coverage(
+    *, cluster_obj: clusterlib.ClusterLib, pytest_config: Config
+) -> pl.Path | None:
     """Save CLI coverage info."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     # pyrefly: ignore  # missing-attribute
@@ -33,7 +35,7 @@ def save_cli_coverage(cluster_obj: clusterlib.ClusterLib, pytest_config: Config)
     return json_file
 
 
-def save_start_script_coverage(log_file: pl.Path, pytest_config: Config) -> pl.Path | None:
+def save_start_script_coverage(*, log_file: pl.Path, pytest_config: Config) -> pl.Path | None:
     """Save info about CLI commands executed by cluster start script."""
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and log_file.exists()):
@@ -47,7 +49,7 @@ def save_start_script_coverage(log_file: pl.Path, pytest_config: Config) -> pl.P
     return dest_file
 
 
-def save_cluster_artifacts(save_dir: pl.Path, state_dir: pl.Path) -> None:
+def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
     """Save cluster artifacts (logs, certs, etc.)."""
     dir_rand_str = ""
     cluster_instance_id_log = state_dir / CLUSTER_INSTANCE_ID_FILENAME
@@ -84,7 +86,7 @@ def save_cluster_artifacts(save_dir: pl.Path, state_dir: pl.Path) -> None:
     LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
 
 
-def copy_artifacts(pytest_tmp_dir: pl.Path, pytest_config: Config) -> None:
+def copy_artifacts(*, pytest_tmp_dir: pl.Path, pytest_config: Config) -> None:
     """Copy collected tests and cluster artifacts to artifacts dir."""
     artifacts_base_dir = pytest_config.getoption(ARTIFACTS_BASE_DIR_ARG)
     if not artifacts_base_dir:

@@ -53,7 +53,7 @@ def main() -> int:
     if not socket_env:
         LOGGER.error("The `CARDANO_NODE_SOCKET_PATH` environment variable is not set.")
         return 1
-    if bool(args.address) ^ bool(args.skey_file):
+    if bool(args.address) != bool(args.skey_file):
         LOGGER.error(
             "Both address and skey file must be provided, or neither of them should be provided."
         )

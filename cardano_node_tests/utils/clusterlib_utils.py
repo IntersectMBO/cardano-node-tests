@@ -66,6 +66,7 @@ class KeyGenMethods(enum.StrEnum):
 
 
 def build_and_submit_tx(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     src_address: str,
@@ -298,6 +299,7 @@ def build_and_submit_tx(
 
 
 def register_stake_address(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     pool_user: clusterlib.PoolUser,
     name_template: str,
@@ -330,6 +332,7 @@ def register_stake_address(
 
 
 def deregister_stake_address(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     pool_user: clusterlib.PoolUser,
     name_template: str,
@@ -379,6 +382,7 @@ def deregister_stake_address(
 
 
 def gen_payment_addr_and_keys_from_mnemonic(
+    *,
     name: str,
     cluster_obj: clusterlib.ClusterLib,
     size: tp.Literal[12, 15, 18, 21, 24] = 24,
@@ -481,6 +485,7 @@ def create_stake_addr_records(
 
 
 def create_pool_users(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     no_of_addr: int = 1,
@@ -508,7 +513,7 @@ def create_pool_users(
     return pool_users
 
 
-def wait_for_rewards(cluster_obj: clusterlib.ClusterLib) -> None:
+def wait_for_rewards(*, cluster_obj: clusterlib.ClusterLib) -> None:
     """Wait until 4th epoch, if necessary, for first reward distribution."""
     epoch = cluster_obj.g_query.get_epoch()
     if epoch >= 4:
@@ -520,7 +525,7 @@ def wait_for_rewards(cluster_obj: clusterlib.ClusterLib) -> None:
 
 
 def load_registered_pool_data(
-    cluster_obj: clusterlib.ClusterLib, pool_name: str, pool_id: str
+    *, cluster_obj: clusterlib.ClusterLib, pool_name: str, pool_id: str
 ) -> clusterlib.PoolData:
     """Load data of existing registered pool."""
     if pool_id.startswith("pool"):
@@ -549,7 +554,9 @@ def load_registered_pool_data(
 
 
 def check_pool_data(  # noqa: C901
-    pool_params: dict, pool_creation_data: clusterlib.PoolData
+    *,
+    pool_params: dict,
+    pool_creation_data: clusterlib.PoolData,
 ) -> str:
     """Check that actual pool state corresponds with pool creation data."""
     errors_list = []
@@ -611,7 +618,7 @@ def check_pool_data(  # noqa: C901
     return "\n\n".join(errors_list)
 
 
-def check_updated_params(update_proposals: list[UpdateProposal], protocol_params: dict) -> None:
+def check_updated_params(*, update_proposals: list[UpdateProposal], protocol_params: dict) -> None:
     """Compare update proposals with actual protocol parameters."""
     failures = []
     for u in update_proposals:
@@ -635,9 +642,7 @@ def check_updated_params(update_proposals: list[UpdateProposal], protocol_params
         raise AssertionError(msg)
 
 
-def get_pparams_update_args(
-    update_proposals: list[UpdateProposal],
-) -> list[str]:
+def get_pparams_update_args(*, update_proposals: list[UpdateProposal]) -> list[str]:
     """Get cli arguments for pparams update action."""
     if not update_proposals:
         return []
@@ -648,6 +653,7 @@ def get_pparams_update_args(
 
 
 def mint_or_burn_witness(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: list[NativeTokenRec],
     temp_template: str,
@@ -789,6 +795,7 @@ def mint_or_burn_witness(
 
 
 def mint_or_burn_sign(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     new_tokens: list[NativeTokenRec],
     temp_template: str,
@@ -901,6 +908,7 @@ def mint_or_burn_sign(
 
 
 def withdraw_reward_w_build(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     stake_addr_record: clusterlib.AddressRecord,
     dst_addr_record: clusterlib.AddressRecord,
@@ -1026,9 +1034,7 @@ def new_tokens(
     return tokens_to_mint
 
 
-def _get_ledger_state_cmd(
-    cluster_obj: clusterlib.ClusterLib,
-) -> str:
+def _get_ledger_state_cmd(*, cluster_obj: clusterlib.ClusterLib) -> str:
     cardano_cli_args = [
         "cardano-cli",
         "latest",
@@ -1049,9 +1055,7 @@ def _get_ledger_state_cmd(
     return ledger_state_cmd
 
 
-def get_delegation_state(
-    cluster_obj: clusterlib.ClusterLib,
-) -> dict:
+def get_delegation_state(*, cluster_obj: clusterlib.ClusterLib) -> dict:
     """Get `delegationState` section of ledger state."""
     ledger_state_cmd = _get_ledger_state_cmd(cluster_obj=cluster_obj)
 
@@ -1069,9 +1073,7 @@ def get_delegation_state(
     return deleg_state
 
 
-def get_blocks_before(
-    cluster_obj: clusterlib.ClusterLib,
-) -> dict[str, int]:
+def get_blocks_before(*, cluster_obj: clusterlib.ClusterLib) -> dict[str, int]:
     """Get `blocksBefore` section of ledger state with bech32 encoded pool ids."""
     ledger_state_cmd = _get_ledger_state_cmd(cluster_obj=cluster_obj)
 
@@ -1091,9 +1093,7 @@ def get_blocks_before(
     }
 
 
-def get_ledger_state(
-    cluster_obj: clusterlib.ClusterLib,
-) -> dict:
+def get_ledger_state(*, cluster_obj: clusterlib.ClusterLib) -> dict:
     """Return the current ledger state info."""
     ledger_state_cmd = _get_ledger_state_cmd(cluster_obj=cluster_obj)
 
@@ -1112,6 +1112,7 @@ def get_ledger_state(
 
 
 def save_ledger_state(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     state_name: str,
     ledger_state: dict | None = None,
@@ -1129,13 +1130,14 @@ def save_ledger_state(
         Path: A path to the generated state JSON file.
     """
     json_file = pl.Path(destination_dir) / f"{state_name}_ledger_state.json"
-    ledger_state = ledger_state or get_ledger_state(cluster_obj)
+    ledger_state = ledger_state or get_ledger_state(cluster_obj=cluster_obj)
     with open(json_file, "w", encoding="utf-8") as fp_out:
         json.dump(ledger_state, fp_out, indent=4)
     return json_file
 
 
 def wait_for_epoch_interval(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     start: int,
     stop: int,
@@ -1205,7 +1207,7 @@ def wait_for_epoch_interval(
         raise RuntimeError(msg)
 
 
-def load_body_metadata(tx_body_file: pl.Path) -> tp.Any:
+def load_body_metadata(*, tx_body_file: pl.Path) -> tp.Any:
     """Load metadata from file containing transaction body."""
     with open(tx_body_file, encoding="utf-8") as body_fp:
         tx_body_json = json.load(body_fp)
@@ -1220,7 +1222,7 @@ def load_body_metadata(tx_body_file: pl.Path) -> tp.Any:
     return metadata
 
 
-def load_tx_metadata(tx_body_file: pl.Path) -> TxMetadata:
+def load_tx_metadata(*, tx_body_file: pl.Path) -> TxMetadata:
     """Load transaction metadata from file containing transaction body."""
     metadata_section = load_body_metadata(tx_body_file=tx_body_file)
 
@@ -1251,7 +1253,7 @@ def load_tx_metadata(tx_body_file: pl.Path) -> TxMetadata:
     return TxMetadata(metadata=metadata, aux_data=aux_data)
 
 
-def datum_hash_from_txout(cluster_obj: clusterlib.ClusterLib, txout: clusterlib.TxOut) -> str:
+def datum_hash_from_txout(*, cluster_obj: clusterlib.ClusterLib, txout: clusterlib.TxOut) -> str:
     """Return datum hash from `clusterlib.TxOut`."""
     datum_hash = txout.datum_hash
 
@@ -1282,6 +1284,7 @@ def datum_hash_from_txout(cluster_obj: clusterlib.ClusterLib, txout: clusterlib.
 
 
 def create_script_context(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     plutus_version: int,
     redeemer_file: pl.Path,
@@ -1325,7 +1328,7 @@ def cli_has(command: str) -> bool:
 
 
 def check_txins_spent(
-    cluster_obj: clusterlib.ClusterLib, txins: list[clusterlib.UTXOData], wait_blocks: int = 2
+    *, cluster_obj: clusterlib.ClusterLib, txins: list[clusterlib.UTXOData], wait_blocks: int = 2
 ) -> None:
     """Check that txins were spent."""
     if wait_blocks > 0:
@@ -1339,6 +1342,7 @@ def check_txins_spent(
 
 
 def create_reference_utxo(
+    *,
     temp_template: str,
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
@@ -1380,7 +1384,7 @@ def create_reference_utxo(
     return reference_utxo, tx_raw_output
 
 
-def get_utxo_ix_offset(utxos: list[clusterlib.UTXOData], txouts: list[clusterlib.TxOut]) -> int:
+def get_utxo_ix_offset(*, utxos: list[clusterlib.UTXOData], txouts: list[clusterlib.TxOut]) -> int:
     """Get offset of index of the first user-defined txout.
 
     Change txout created by `transaction build` used to be UTxO with index 0, now it is the last
@@ -1399,6 +1403,7 @@ def get_utxo_ix_offset(utxos: list[clusterlib.UTXOData], txouts: list[clusterlib
 
 
 def gen_byron_addr(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,
     destination_dir: cl_types.FileType = ".",
@@ -1451,7 +1456,7 @@ def gen_byron_addr(
     return clusterlib.AddressRecord(address=address, vkey_file=vkey_file, skey_file=skey_file)
 
 
-def get_plutus_b64(script_file: cl_types.FileType) -> str:
+def get_plutus_b64(*, script_file: cl_types.FileType) -> str:
     """Get base64 encoded binary version of Plutus script from file."""
     with open(script_file, encoding="utf-8") as fp_in:
         script_str = json.load(fp_in)
@@ -1463,7 +1468,7 @@ def get_plutus_b64(script_file: cl_types.FileType) -> str:
     return script_base64
 
 
-def get_snapshot_rec(ledger_snapshot: dict) -> dict[str, int | list]:
+def get_snapshot_rec(*, ledger_snapshot: dict) -> dict[str, int | list]:
     """Get uniform record for ledger state snapshot."""
     hashes: dict[str, int | list] = {}
 
@@ -1480,7 +1485,7 @@ def get_snapshot_rec(ledger_snapshot: dict) -> dict[str, int | list]:
     return hashes
 
 
-def get_snapshot_delegations(ledger_snapshot: dict) -> dict[str, list[str]]:
+def get_snapshot_delegations(*, ledger_snapshot: dict) -> dict[str, list[str]]:
     """Get delegations data from ledger state snapshot."""
     delegations: dict[str, list[str]] = {}
 
@@ -1498,6 +1503,7 @@ def get_snapshot_delegations(ledger_snapshot: dict) -> dict[str, list[str]]:
 
 
 def create_collaterals(
+    *,
     cluster: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
     temp_template: str,
@@ -1530,6 +1536,7 @@ def create_collaterals(
 
 
 def build_stake_multisig_script(
+    *,
     cluster_obj: clusterlib.ClusterLib,
     script_name: str,
     script_type_arg: str,
@@ -1579,7 +1586,9 @@ def build_stake_multisig_script(
     return out_file
 
 
-def get_just_lovelace_utxos(address_utxos: list[clusterlib.UTXOData]) -> list[clusterlib.UTXOData]:
+def get_just_lovelace_utxos(
+    *, address_utxos: list[clusterlib.UTXOData]
+) -> list[clusterlib.UTXOData]:
     """Get UTxOs with just Lovelace."""
     return cl_txtools._get_usable_utxos(
         address_utxos=address_utxos, coins={clusterlib.DEFAULT_COIN}

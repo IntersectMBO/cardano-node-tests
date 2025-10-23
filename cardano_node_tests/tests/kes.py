@@ -82,7 +82,7 @@ def check_kes_period_info_result(  # noqa: C901
         KesScenarios.INVALID_COUNTERS,
     ):
         instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
-            cluster_nodes.get_instance_num()
+            instance_num=cluster_nodes.get_instance_num()
         )
         prometheus_port = instance_ports.node_ports[pool_num].prometheus
         response = http_client.get_session().get(

@@ -158,7 +158,7 @@ class TestTreasuryDonation:
             current_treasury_value=treasury_val,
             treasury_donation=amount,
             change_address=payment_addr_singleton.address,
-            use_build_cmd=True,
+            build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files,
         )
 

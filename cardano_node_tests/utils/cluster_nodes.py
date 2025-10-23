@@ -82,13 +82,13 @@ class ClusterType:
         msg = f"Not implemented for cluster type '{self.type}'."
         raise NotImplementedError(msg)
 
-    def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
+    def get_cluster_obj(self, *, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         msg = f"Not implemented for cluster type '{self.type}'."
         raise NotImplementedError(msg)
 
     def create_addrs_data(
-        self, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
+        self, *, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
     ) -> dict[str, dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         msg = f"Not implemented for cluster type '{self.type}'."
@@ -119,7 +119,7 @@ class LocalCluster(ClusterType):
         _uses_shortcut = not (byron_dir / "address-000-converted").exists()
         return _uses_shortcut
 
-    def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
+    def get_cluster_obj(self, *, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = custom_clusterlib.ClusterLib(
@@ -135,7 +135,7 @@ class LocalCluster(ClusterType):
         return cluster_obj
 
     def create_addrs_data(
-        self, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
+        self, *, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
     ) -> dict[str, dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         destination_dir = pl.Path(destination_dir).expanduser()
@@ -234,7 +234,7 @@ class TestnetCluster(ClusterType):
         self._testnet_type = testnet_type
         return testnet_type
 
-    def get_cluster_obj(self, command_era: str = "") -> clusterlib.ClusterLib:
+    def get_cluster_obj(self, *, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
         cluster_env = get_cluster_env()
         cluster_obj = custom_clusterlib.ClusterLib(
@@ -249,9 +249,7 @@ class TestnetCluster(ClusterType):
         return cluster_obj
 
     def create_addrs_data(
-        self,
-        cluster_obj: clusterlib.ClusterLib,
-        destination_dir: clusterlib.FileType = ".",
+        self, *, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
     ) -> dict[str, dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
         # Store record of the original faucet address
@@ -304,7 +302,7 @@ def get_cluster_type() -> ClusterType:
     return LocalCluster()
 
 
-def get_cardano_node_socket_path(instance_num: int, socket_file_name: str = "") -> pl.Path:
+def get_cardano_node_socket_path(*, instance_num: int, socket_file_name: str = "") -> pl.Path:
     """Return path to socket file in the given cluster instance."""
     socket_file_name = socket_file_name or configuration.STARTUP_CARDANO_NODE_SOCKET_PATH.name
     state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
@@ -315,7 +313,7 @@ def get_cardano_node_socket_path(instance_num: int, socket_file_name: str = "") 
     return new_socket_path
 
 
-def set_cluster_env(instance_num: int, socket_file_name: str = "") -> None:
+def set_cluster_env(*, instance_num: int, socket_file_name: str = "") -> None:
     """Set env variables for the given cluster instance."""
     socket_path = get_cardano_node_socket_path(
         instance_num=instance_num, socket_file_name=socket_file_name
@@ -358,7 +356,7 @@ def get_cluster_env() -> ClusterEnv:
 
 
 def run_supervisorctl(
-    args: list[str], instance_num: int | None = None, ignore_fail: bool = False
+    args: list[str], *, instance_num: int | None = None, ignore_fail: bool = False
 ) -> bytes:
     """Run `supervisorctl` command."""
     if instance_num is None:
@@ -372,7 +370,7 @@ def run_supervisorctl(
 
 
 def reload_supervisor_config(
-    instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
+    *, instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
     """Reload supervisor configuration."""
     LOGGER.info("Reloading supervisor configuration.")
@@ -399,7 +397,7 @@ def start_cluster(cmd: str, args: list[str]) -> clusterlib.ClusterLib:
 
 
 def restart_all_nodes(
-    instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
+    *, instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
     """Restart all Cardano nodes of the running cluster."""
     LOGGER.info("Restarting all cluster nodes.")
@@ -415,7 +413,9 @@ def restart_all_nodes(
         time.sleep(delay)
 
 
-def services_action(service_names: list[str], action: str, instance_num: int | None = None) -> None:
+def services_action(
+    service_names: list[str], *, action: str, instance_num: int | None = None
+) -> None:
     """Perform action on services on the running cluster."""
     LOGGER.info(f"Performing '{action}' action on services {service_names}.")
 
@@ -427,13 +427,13 @@ def services_action(service_names: list[str], action: str, instance_num: int | N
             raise Exception(msg) from exc
 
 
-def start_nodes(node_names: list[str], instance_num: int | None = None) -> None:
+def start_nodes(node_names: list[str], *, instance_num: int | None = None) -> None:
     """Start list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="start", instance_num=instance_num)
 
 
-def stop_nodes(node_names: list[str], instance_num: int | None = None) -> None:
+def stop_nodes(node_names: list[str], *, instance_num: int | None = None) -> None:
     """Stop list of Cardano nodes of the running cluster."""
     service_names = [f"nodes:{n}" for n in node_names]
     services_action(service_names=service_names, action="stop", instance_num=instance_num)
@@ -441,6 +441,7 @@ def stop_nodes(node_names: list[str], instance_num: int | None = None) -> None:
 
 def restart_nodes(
     node_names: list[str],
+    *,
     instance_num: int | None = None,
     delay: int = configuration.TX_SUBMISSION_DELAY,
 ) -> None:
@@ -454,7 +455,7 @@ def restart_nodes(
 
 
 def services_status(
-    service_names: list[str] | None = None, instance_num: int | None = None
+    service_names: list[str] | None = None, *, instance_num: int | None = None
 ) -> list[ServiceStatus]:
     """Return status info for list of services running on the running cluster (all by default)."""
     service_names_arg = service_names if service_names else ["all"]
@@ -494,7 +495,7 @@ def services_status(
     return statuses
 
 
-def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
+def load_pools_data(*, cluster_obj: clusterlib.ClusterLib) -> dict:
     """Load data for pools existing in the cluster environment."""
     data_dir = get_cluster_env().state_dir / "nodes"
 
@@ -544,7 +545,7 @@ def load_pools_data(cluster_obj: clusterlib.ClusterLib) -> dict:
 
 
 def setup_test_addrs(
-    cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
+    *, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
 ) -> pl.Path:
     """Set addresses and their keys up for usage in tests."""
     destination_dir = pl.Path(destination_dir).expanduser()
@@ -556,7 +557,7 @@ def setup_test_addrs(
         cluster_obj=cluster_obj, destination_dir=destination_dir
     )
 
-    pools_data = load_pools_data(cluster_obj)
+    pools_data = load_pools_data(cluster_obj=cluster_obj)
     data_file = pl.Path(cluster_env.state_dir) / ADDRS_DATA
     with open(data_file, "wb") as out_data:
         pickle.dump({**addrs_data, **pools_data}, out_data)
