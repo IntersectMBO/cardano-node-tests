@@ -296,16 +296,21 @@ def delegate_multisig_stake_addr(
     signing_key_files = [pool_user.payment.skey_file, *skey_files]
     witness_len = len(signing_key_files)
 
-    if build_method in (
-        clusterlib_utils.BuildMethods.BUILD,
-        clusterlib_utils.BuildMethods.BUILD_EST,
-    ):
+    if build_method == clusterlib_utils.BuildMethods.BUILD:
         tx_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
             tx_name=temp_template,
             complex_certs=complex_certs,
             fee_buffer=2_000_000,
             witness_override=witness_len,
+        )
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+        tx_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            fee_buffer=2_000_000,
+            witness_count_add=witness_len,
         )
     elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
         fee = cluster_obj.g_transaction.calculate_tx_fee(
