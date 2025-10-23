@@ -72,7 +72,6 @@ def build_and_submit_tx(
     src_address: str,
     submit_method: str = "",
     build_method: str = "",
-    use_build_cmd: bool = False,  # Deprecated
     txins: clusterlib.OptionalUTXOData = (),
     txouts: clusterlib.OptionalTxOuts = (),
     readonly_reference_txins: clusterlib.OptionalUTXOData = (),
@@ -116,14 +115,11 @@ def build_and_submit_tx(
         * build_raw
         * build_estimate
 
-    Use `use_build_cmd` to switch between `transaction build` and `transaction build-raw`
-    (deprecated).
     """
     tx_files = tx_files or clusterlib.TxFiles()
     submit_method = submit_method or submit_utils.SubmitMethods.CLI
 
-    if not build_method:
-        build_method = BuildMethods.BUILD if use_build_cmd else BuildMethods.BUILD_RAW
+    build_method = build_method or BuildMethods.BUILD
 
     if build_method == BuildMethods.BUILD_RAW:
         # Resolve withdrawal amounts here (where -1 for total rewards amount is used) so the

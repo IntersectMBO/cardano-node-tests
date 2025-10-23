@@ -729,7 +729,7 @@ def create_dreps(
         cluster_obj=cluster_obj,
         name_template=f"{name_template}_reg",
         src_address=payment_addr.address,
-        use_build_cmd=True,
+        build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files,
         deposit=(drep_reg_records[0].deposit + stake_deposit) * len(drep_reg_records),
         destination_dir=destination_dir,
@@ -828,7 +828,7 @@ def create_script_dreps(
         cluster_obj=cluster_obj,
         name_template=f"{name_template}_reg",
         src_address=payment_addr.address,
-        use_build_cmd=True,
+        build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files,
         complex_certs=[
             *[c.registration_cert for c in drep_script_data],
