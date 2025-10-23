@@ -1666,10 +1666,7 @@ class TestIncrementalSigning:
             signing_key_files=payment_skey_files,
         )
 
-        if build_method in (
-            clusterlib_utils.BuildMethods.BUILD,
-            clusterlib_utils.BuildMethods.BUILD_EST,
-        ):
+        if build_method == clusterlib_utils.BuildMethods.BUILD:
             tx_output = cluster.g_transaction.build_tx(
                 src_address=src_addr.address,
                 tx_name=temp_template,
@@ -1677,6 +1674,15 @@ class TestIncrementalSigning:
                 txouts=txouts,
                 fee_buffer=1_000_000,
                 witness_override=len(payment_skey_files),
+            )
+        elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+            tx_output = cluster.g_transaction.build_estimate_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                tx_files=tx_files,
+                txouts=txouts,
+                fee_buffer=1_000_000,
+                witness_count_add=len(payment_skey_files),
             )
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             fee = cluster.g_transaction.calculate_tx_fee(
