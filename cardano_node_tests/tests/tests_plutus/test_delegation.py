@@ -834,7 +834,7 @@ class TestDelegateAddr:
 
         # To speed up test run, skip waiting for rewards in selected scenarios
         skip_rewards_check = (
-            use_reference_script and build_method == clusterlib_utils.BuildMethods.BUILD_RAW
+            use_reference_script and build_method != clusterlib_utils.BuildMethods.BUILD
         ) or (not use_reference_script and build_method == clusterlib_utils.BuildMethods.BUILD)
 
         if not skip_rewards_check:
