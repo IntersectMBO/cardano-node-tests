@@ -321,6 +321,17 @@ class TestSetup:
         )
 
 
+def _get_build_str(build_method: str) -> str:
+    if build_method == clusterlib_utils.BuildMethods.BUILD:
+        return "build"
+    if build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
+        return "build_raw"
+    if build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+        return "build_estimate"
+    msg = f"Unsupported build method: {build_method}"
+    raise ValueError(msg)
+
+
 class TestUpgrade:
     """Tests for node upgrade testing."""
 
@@ -364,13 +375,7 @@ class TestUpgrade:
         be submitted in next node version and/or next era.
         """
         temp_template = common.get_test_id(cluster)
-        build_str = (
-            "build"
-            if build_method == clusterlib_utils.BuildMethods.BUILD
-            else "build_raw"
-            if build_method == clusterlib_utils.BuildMethods.BUILD_RAW
-            else "build_estimate"
-        )
+        build_str = _get_build_str(build_method)
 
         src_address = payment_addrs_disposable[0].address
         dst_address = payment_addrs_disposable[1].address
@@ -487,13 +492,7 @@ class TestUpgrade:
     ):
         """Submit transaction that was created by previous node version and/or in previous era."""
         temp_template = common.get_test_id(cluster)
-        build_str = (
-            "build"
-            if build_method == clusterlib_utils.BuildMethods.BUILD
-            else "build_raw"
-            if build_method == clusterlib_utils.BuildMethods.BUILD_RAW
-            else "build_estimate"
-        )
+        build_str = _get_build_str(build_method)
 
         tx_dir = (
             temptools.get_basetemp()
