@@ -246,7 +246,7 @@ def delegate_multisig_stake_addr(
     skey_files: tp.Iterable[clusterlib.FileType],
     pool_id: str = "",
     cold_vkey: pl.Path | None = None,
-    use_build_cmd: bool = False,
+    build_method=clusterlib_utils.BuildMethods.BUILD_RAW,
 ) -> DelegationScriptOut:
     """Submit registration certificate and delegate a multisig stake address to a pool."""
     # Create stake address registration cert if address is not already registered
@@ -296,7 +296,7 @@ def delegate_multisig_stake_addr(
     signing_key_files = [pool_user.payment.skey_file, *skey_files]
     witness_len = len(signing_key_files)
 
-    if use_build_cmd:
+    if build_method == clusterlib_utils.BuildMethods.BUILD:
         tx_output = cluster_obj.g_transaction.build_tx(
             src_address=src_address,
             tx_name=temp_template,
@@ -304,7 +304,15 @@ def delegate_multisig_stake_addr(
             fee_buffer=2_000_000,
             witness_override=witness_len,
         )
-    else:
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
+        tx_output = cluster_obj.g_transaction.build_estimate_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            complex_certs=complex_certs,
+            fee_buffer=2_000_000,
+            witness_count_add=witness_len,
+        )
+    elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
         fee = cluster_obj.g_transaction.calculate_tx_fee(
             src_address=src_address,
             tx_name=temp_template,
@@ -317,6 +325,9 @@ def delegate_multisig_stake_addr(
             complex_certs=complex_certs,
             fee=fee,
         )
+    else:
+        msg = f"Unsupported build method: {build_method}"
+        raise ValueError(msg)
 
     # Create witness file for each key
     witness_files = [
