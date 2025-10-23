@@ -186,7 +186,7 @@ class TestTreasuryWithdrawals:
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_action_bootstrap",
                     src_address=pool_user_ug_treasury.payment.address,
-                    use_build_cmd=False,
+                    build_method=clusterlib_utils.BuildMethods.BUILD_RAW,
                     tx_files=tx_files_action,
                     deposit=actions_deposit_combined + stake_deposit_amt,
                 )
@@ -201,7 +201,7 @@ class TestTreasuryWithdrawals:
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_action_build",
                     src_address=pool_user_ug_treasury.payment.address,
-                    use_build_cmd=True,
+                    build_method=clusterlib_utils.BuildMethods.BUILD,
                     tx_files=tx_files_action,
                 )
             err_str = str(excinfo.value)
@@ -221,7 +221,7 @@ class TestTreasuryWithdrawals:
             submit_method=submit_utils.SubmitMethods.API
             if submit_utils.is_submit_api_available()
             else submit_utils.SubmitMethods.CLI,
-            use_build_cmd=False,
+            build_method=clusterlib_utils.BuildMethods.BUILD_RAW,
             tx_files=tx_files_action,
             deposit=actions_deposit_combined + stake_deposit_amt,
         )
