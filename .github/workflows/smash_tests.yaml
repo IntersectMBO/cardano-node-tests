@@ -120,7 +120,7 @@ jobs:
 
 
       - name: Publish cardano-db-sync and SMASH logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: db_sync_and smash_logs_${{ env.ENVM }}
@@ -128,7 +128,7 @@ jobs:
 
 
       - name: Publish test reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: pytest_results_${{ env.ENVM }}
