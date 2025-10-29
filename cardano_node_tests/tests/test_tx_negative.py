@@ -683,7 +683,11 @@ class TestNegative:
         # It should NOT be possible to submit a transaction twice
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(out_file_signed)
-        assert "ValueNotConservedUTxO" in str(excinfo.value)
+        exc_str = str(excinfo.value)
+        assert (
+            '(ConwayMempoolFailure "All inputs are spent.' in exc_str  # In cardano-node >= 10.6.0
+            or "(ValueNotConservedUTxO" in exc_str
+        ), exc_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1149,7 +1153,10 @@ class TestNegative:
                 or "The following tx input(s) were not present in the UTxO" in err
             ), err
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-            assert "BadInputsUTxO" in err, err
+            assert (
+                '(ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
+                or "(BadInputsUTxO" in err
+            ), err
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
@@ -1189,7 +1196,10 @@ class TestNegative:
                 or "The following tx input(s) were not present in the UTxO" in err
             ), err
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-            assert "BadInputsUTxO" in err, err
+            assert (
+                '(ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
+                or "(BadInputsUTxO" in err
+            ), err
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
