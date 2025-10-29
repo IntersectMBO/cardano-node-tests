@@ -642,6 +642,10 @@ def check_pool_data(  # noqa: C901
 
 def check_updated_params(*, update_proposals: list[UpdateProposal], protocol_params: dict) -> None:
     """Compare update proposals with actual protocol parameters."""
+    if not protocol_params:
+        msg = "Protocol parameters dictionary is empty!"
+        raise ValueError(msg)
+
     failures = []
     for u in update_proposals:
         if u.check_func:
