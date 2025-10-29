@@ -651,19 +651,25 @@ def check_pool_data(  # noqa: C901
 
     errors_list = []
 
-    if ledger_pool_data["publicKey"] != db_pool_data.hash:
+    public_key = (
+        ledger_pool_data.get("publicKey")  # In cardano-node < 10.6.0
+        or helpers.decode_bech32(pool_id)
+    )
+
+    if public_key != db_pool_data.hash:
         errors_list.append(
-            "'publicKey' value is different than expected; "
-            f"Expected: {ledger_pool_data['publicKey']} vs Returned: {db_pool_data.hash}"
+            "key hash value is different than expected; "
+            f"Expected: {public_key} vs Returned: {db_pool_data.hash}"
         )
 
-    if ledger_pool_data["cost"] != db_pool_data.fixed_cost:
+    sps_cost = helpers.get_pool_param("spsCost", pool_params=ledger_pool_data)
+    if sps_cost != db_pool_data.fixed_cost:
         errors_list.append(
             "'cost' value is different than expected; "
-            f"Expected: {ledger_pool_data['cost']} vs Returned: {db_pool_data.fixed_cost}"
+            f"Expected: {sps_cost} vs Returned: {db_pool_data.fixed_cost}"
         )
 
-    metadata = ledger_pool_data.get("metadata") or {}
+    metadata = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
 
     metadata_hash = metadata.get("hash") or ""
     if metadata_hash != db_pool_data.metadata_hash:
@@ -681,34 +687,39 @@ def check_pool_data(  # noqa: C901
             f"Returned: {db_pool_data.metadata_url}"
         )
 
-    if sorted(ledger_pool_data["owners"]) != sorted(db_pool_data.owners):
+    sps_owners = helpers.get_pool_param("spsOwners", pool_params=ledger_pool_data)
+    if sorted(sps_owners) != sorted(db_pool_data.owners):
         errors_list.append(
             "'owners' value is different than expected; "
-            f"Expected: {ledger_pool_data['owners']} vs Returned: {db_pool_data.owners}"
+            f"Expected: {sps_owners} vs Returned: {db_pool_data.owners}"
         )
 
-    if ledger_pool_data["vrf"] != db_pool_data.vrf_key_hash:
+    sps_vrf = helpers.get_pool_param("spsVrf", pool_params=ledger_pool_data)
+    if sps_vrf != db_pool_data.vrf_key_hash:
         errors_list.append(
             "'vrf' value is different than expected; "
-            f"Expected: {ledger_pool_data['vrf']} vs Returned: {db_pool_data.vrf_key_hash}"
+            f"Expected: {sps_vrf} vs Returned: {db_pool_data.vrf_key_hash}"
         )
 
-    if ledger_pool_data["pledge"] != db_pool_data.pledge:
+    sps_pledge = helpers.get_pool_param("spsPledge", pool_params=ledger_pool_data)
+    if sps_pledge != db_pool_data.pledge:
         errors_list.append(
             "'pledge' value is different than expected; "
-            f"Expected: {ledger_pool_data['pledge']} vs Returned: {db_pool_data.pledge}"
+            f"Expected: {sps_pledge} vs Returned: {db_pool_data.pledge}"
         )
 
-    if ledger_pool_data["margin"] != db_pool_data.margin:
+    sps_margin = helpers.get_pool_param("spsMargin", pool_params=ledger_pool_data)
+    if sps_margin != db_pool_data.margin:
         errors_list.append(
             "'margin' value is different than expected; "
-            f"Expected: {ledger_pool_data['margin']} vs Returned: {db_pool_data.margin}"
+            f"Expected: {sps_margin} vs Returned: {db_pool_data.margin}"
         )
 
-    ledger_reward_credential = ledger_pool_data["rewardAccount"]["credential"]
+    sps_reward_account = helpers.get_pool_param("spsRewardAccount", pool_params=ledger_pool_data)
+    ledger_reward_credential = sps_reward_account["credential"]
     # The "KeyHash" is present in cardano-node >= 8.4.0
-    ledger_reward_address = (
-        ledger_reward_credential.get("key hash") or ledger_reward_credential["keyHash"]
+    ledger_reward_address = ledger_reward_credential.get("keyHash") or ledger_reward_credential.get(
+        "key hash"
     )
     if ledger_reward_address != db_pool_data.reward_addr:
         errors_list.append(
@@ -716,10 +727,11 @@ def check_pool_data(  # noqa: C901
             f"Expected: {ledger_reward_address} vs Returned: {db_pool_data.reward_addr}"
         )
 
-    if ledger_pool_data["relays"] and ledger_pool_data["relays"] != db_pool_data.relays:
+    sps_relays = helpers.get_pool_param("spsRelays", pool_params=ledger_pool_data)
+    if sps_relays and sps_relays != db_pool_data.relays:
         errors_list.append(
             "'relays' value is different than expected; "
-            f"Expected: {ledger_pool_data['relays']} vs Returned: {db_pool_data.relays}"
+            f"Expected: {sps_relays} vs Returned: {db_pool_data.relays}"
         )
 
     if errors_list:
@@ -739,7 +751,8 @@ def check_pool_off_chain_data(
         msg = f"no off chain data for pool {pool_id}"
         raise DbSyncNoResponseError(msg)
 
-    metadata_hash = (ledger_pool_data.get("metadata") or {}).get("hash") or ""
+    metadata = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
+    metadata_hash = metadata.get("hash") or ""
     db_metadata_hash = db_pool_off_chain_data[0].hash.hex()
 
     assert metadata_hash == db_metadata_hash, (
@@ -762,7 +775,8 @@ def check_pool_off_chain_fetch_error(
         raise DbSyncNoResponseError(msg)
 
     fetch_error_str = db_pool_off_chain_fetch_error[0].fetch_error or ""
-    metadata_url = (ledger_pool_data.get("metadata") or {}).get("url") or ""
+    metadata = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
+    metadata_url = metadata.get("url") or ""
 
     assert (
         f'Connection failure error when fetching metadata from PoolUrl "{metadata_url}"'

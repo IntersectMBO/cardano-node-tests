@@ -23,6 +23,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -117,7 +118,8 @@ def _check_staking(
 
         assert (
             # Strip 'e0' from the beginning of the address hash
-            helpers.decode_bech32(stake_addr_info.address)[2:] in pool_params["owners"]
+            helpers.decode_bech32(stake_addr_info.address)[2:]
+            in helpers.get_pool_param("owners", pool_params=pool_params)
         ), "'owner' value is different than expected"
 
 
@@ -1465,12 +1467,12 @@ class TestStakePool:
             raise ValueError(msg)
 
         # Check that pool is going to be updated with correct data
-        future_params = cluster.g_query.get_pool_state(
-            stake_pool_id=pool_creation_out.stake_pool_id
-        ).future_pool_params
-        assert not clusterlib_utils.check_pool_data(
-            pool_params=future_params, pool_creation_data=pool_data_updated
-        )
+        pool_state = cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id)
+        has_issue_5365 = pool_state.future_pool_params == pool_state.pool_params
+        if not has_issue_5365:
+            assert not clusterlib_utils.check_pool_data(
+                pool_params=pool_state.future_pool_params, pool_creation_data=pool_data_updated
+            )
 
         if cluster.epoch_length_sec <= TWO_HOURS_SEC:
             cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
@@ -1481,6 +1483,9 @@ class TestStakePool:
                 stake_pool_id=pool_creation_out.stake_pool_id,
                 pool_data=pool_data_updated,
             )
+
+        if has_issue_5365:
+            issues.ledger_5365.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD_NO_EST
@@ -1589,12 +1594,12 @@ class TestStakePool:
             raise ValueError(msg)
 
         # Check that pool is going to be updated with correct data
-        future_params = cluster.g_query.get_pool_state(
-            stake_pool_id=pool_creation_out.stake_pool_id
-        ).future_pool_params
-        assert not clusterlib_utils.check_pool_data(
-            pool_params=future_params, pool_creation_data=pool_data_updated
-        )
+        pool_state = cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id)
+        has_issue_5365 = pool_state.future_pool_params == pool_state.pool_params
+        if not has_issue_5365:
+            assert not clusterlib_utils.check_pool_data(
+                pool_params=pool_state.future_pool_params, pool_creation_data=pool_data_updated
+            )
 
         if cluster.epoch_length_sec <= TWO_HOURS_SEC:
             cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
@@ -1605,6 +1610,9 @@ class TestStakePool:
                 stake_pool_id=pool_creation_out.stake_pool_id,
                 pool_data=pool_data_updated,
             )
+
+        if has_issue_5365:
+            issues.ledger_5365.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets

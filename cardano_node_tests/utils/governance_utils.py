@@ -198,7 +198,10 @@ def get_vote_str(*, vote: clusterlib.Votes) -> str:
 
 
 def check_drep_delegation(*, deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
-    drep_records = deleg_state["dstate"]["unified"]["credentials"]
+    dstate = deleg_state["dstate"]
+    drep_records = dstate.get("accounts") or {}  # In cardano-node >= 10.6.0
+    if not drep_records:
+        drep_records = dstate.get("unified", {}).get("credentials") or {}
 
     stake_addr_key = f"keyHash-{stake_addr_hash}"
     stake_addr_val = drep_records.get(stake_addr_key) or {}

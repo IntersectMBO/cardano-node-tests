@@ -54,6 +54,12 @@ class TxMetadata:
     aux_data: list
 
 
+@dataclasses.dataclass(frozen=True, order=True)
+class ChainAccount:
+    reserves: int
+    treasury: int
+
+
 class BuildMethods:
     BUILD: tp.Final[str] = "build"
     BUILD_RAW: tp.Final[str] = "build_raw"
@@ -524,6 +530,19 @@ def wait_for_rewards(*, cluster_obj: clusterlib.ClusterLib) -> None:
     cluster_obj.wait_for_epoch(epoch_no=4, padding_seconds=10)
 
 
+def get_chain_account_state(*, ledger_state: dict) -> ChainAccount:
+    """Get chain account state from ledger state dict."""
+    state_before = ledger_state["stateBefore"]
+    account_state = (
+        state_before.get("esChainAccountState")  # In cardano-node >= 10.6.0
+        or state_before.get("esAccountState")
+    )
+    if account_state is None:
+        err = "Neither 'esChainAccountState' nor 'esAccountState' found in ledger state"
+        raise KeyError(err)
+    return ChainAccount(reserves=account_state["reserves"], treasury=account_state["treasury"])
+
+
 def load_registered_pool_data(
     *, cluster_obj: clusterlib.ClusterLib, pool_name: str, pool_id: str
 ) -> clusterlib.PoolData:
@@ -532,18 +551,18 @@ def load_registered_pool_data(
         pool_id = helpers.decode_bech32(pool_id)
 
     pool_state: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
-    metadata = pool_state.get("metadata") or {}
+    metadata = helpers.get_pool_param("spsMetadata", pool_params=pool_state) or {}
 
     # TODO: extend to handle more relays records
-    relays_list = pool_state.get("relays") or []
+    relays_list = helpers.get_pool_param("spsRelays", pool_params=pool_state) or []
     relay = relays_list[0] if relays_list else {}
     relay = relay.get("single host address") or {}
 
     pool_data = clusterlib.PoolData(
         pool_name=pool_name,
-        pool_pledge=pool_state["pledge"],
-        pool_cost=pool_state["cost"],
-        pool_margin=pool_state["margin"],
+        pool_pledge=helpers.get_pool_param("spsPledge", pool_params=pool_state),
+        pool_cost=helpers.get_pool_param("spsCost", pool_params=pool_state),
+        pool_margin=helpers.get_pool_param("spsMargin", pool_params=pool_state),
         pool_metadata_url=metadata.get("url") or "",
         pool_metadata_hash=metadata.get("hash") or "",
         pool_relay_ipv4=relay.get("IPv4") or "",
@@ -561,33 +580,36 @@ def check_pool_data(  # noqa: C901
     """Check that actual pool state corresponds with pool creation data."""
     errors_list = []
 
-    if pool_params["cost"] != pool_creation_data.pool_cost:
+    def _get_param(key: str) -> tp.Any:
+        return helpers.get_pool_param(key, pool_params=pool_params)
+
+    if _get_param("spsCost") != pool_creation_data.pool_cost:
         errors_list.append(
             "'cost' value is different than expected; "
-            f"Expected: {pool_creation_data.pool_cost} vs Returned: {pool_params['cost']}"
+            f"Expected: {pool_creation_data.pool_cost} vs Returned: {_get_param('spsCost')}"
         )
 
-    if pool_params["margin"] != pool_creation_data.pool_margin:
+    if _get_param("spsMargin") != pool_creation_data.pool_margin:
         errors_list.append(
             "'margin' value is different than expected; "
-            f"Expected: {pool_creation_data.pool_margin} vs Returned: {pool_params['margin']}"
+            f"Expected: {pool_creation_data.pool_margin} vs Returned: {_get_param('spsMargin')}"
         )
 
-    if pool_params["pledge"] != pool_creation_data.pool_pledge:
+    if _get_param("spsPledge") != pool_creation_data.pool_pledge:
         errors_list.append(
             "'pledge' value is different than expected; "
-            f"Expected: {pool_creation_data.pool_pledge} vs Returned: {pool_params['pledge']}"
+            f"Expected: {pool_creation_data.pool_pledge} vs Returned: {_get_param('spsPledge')}"
         )
 
-    if pool_params["relays"] != (pool_creation_data.pool_relay_dns or []):
+    if _get_param("spsRelays") != (pool_creation_data.pool_relay_dns or []):
         errors_list.append(
             "'relays' value is different than expected; "
             f"Expected: {pool_creation_data.pool_relay_dns} vs "
-            f"Returned: {pool_params['relays']}"
+            f"Returned: {_get_param('spsRelays')}"
         )
 
     if pool_creation_data.pool_metadata_url and pool_creation_data.pool_metadata_hash:
-        metadata = pool_params.get("metadata") or {}
+        metadata = _get_param("spsMetadata") or {}
 
         metadata_hash = metadata.get("hash")
         if metadata_hash != pool_creation_data.pool_metadata_hash:
@@ -604,10 +626,10 @@ def check_pool_data(  # noqa: C901
                 f"Expected: {pool_creation_data.pool_metadata_url} vs "
                 f"Returned: {metadata_url}"
             )
-    elif pool_params["metadata"] is not None:
+    elif _get_param("spsMetadata") is not None:
         errors_list.append(
             "'metadata' value is different than expected; "
-            f"Expected: None vs Returned: {pool_params['metadata']}"
+            f"Expected: None vs Returned: {_get_param('spsMetadata')}"
         )
 
     if errors_list:

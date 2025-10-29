@@ -141,7 +141,13 @@ def submit_tx(
                 submit_tx_bare(tx_file=tx_file)
             except SubmitApiError as exc:
                 # Check if resubmitting failed because an input UTxO was already spent
-                if "BadInputsUTxO" not in str(exc):
+                exc_str = str(exc)
+                inputs_spent = (
+                    '(ConwayMempoolFailure "All inputs are spent.'
+                    in exc_str  # In cardano-node >= 10.6.0
+                    or "(BadInputsUTxO" in exc_str
+                )
+                if not inputs_spent:
                     raise
                 err = exc
                 # If here, the TX is likely still in mempool and we need to wait
