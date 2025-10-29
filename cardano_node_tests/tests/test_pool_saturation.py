@@ -52,11 +52,9 @@ def _get_saturation_threshold(
     cluster_obj: clusterlib.ClusterLib, ledger_state: dict, pool_id: str
 ) -> int:
     """Calculate how much Lovelace is needed to reach saturation threshold."""
-    account_state = ledger_state["stateBefore"]["esAccountState"]
+    account_state = clusterlib_utils.get_chain_account_state(ledger_state=ledger_state)
     active_supply = (
-        cluster_obj.genesis["maxLovelaceSupply"]
-        - account_state["reserves"]
-        - account_state["treasury"]
+        cluster_obj.genesis["maxLovelaceSupply"] - account_state.reserves - account_state.treasury
     )
     k_param = cluster_obj.g_query.get_protocol_params()["stakePoolTargetNum"]
     saturation_amount = int(active_supply / k_param)

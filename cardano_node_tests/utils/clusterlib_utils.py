@@ -54,6 +54,12 @@ class TxMetadata:
     aux_data: list
 
 
+@dataclasses.dataclass(frozen=True, order=True)
+class ChainAccount:
+    reserves: int
+    treasury: int
+
+
 class BuildMethods:
     BUILD: tp.Final[str] = "build"
     BUILD_RAW: tp.Final[str] = "build_raw"
@@ -522,6 +528,19 @@ def wait_for_rewards(*, cluster_obj: clusterlib.ClusterLib) -> None:
     new_epochs = 4 - epoch
     LOGGER.info(f"Waiting {new_epochs} epoch(s) to get first rewards.")
     cluster_obj.wait_for_epoch(epoch_no=4, padding_seconds=10)
+
+
+def get_chain_account_state(*, ledger_state: dict) -> ChainAccount:
+    """Get chain account state from ledger state dict."""
+    state_before = ledger_state["stateBefore"]
+    account_state = (
+        state_before.get("esChainAccountState")  # In cardano-node >= 10.6.0
+        or state_before.get("esAccountState")
+    )
+    if account_state is None:
+        err = "Neither 'esChainAccountState' nor 'esAccountState' found in ledger state"
+        raise KeyError(err)
+    return ChainAccount(reserves=account_state["reserves"], treasury=account_state["treasury"])
 
 
 def load_registered_pool_data(
