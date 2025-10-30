@@ -174,7 +174,7 @@ NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
 make install
 ```
 
-### 🧱 Start Development Cluster
+### 🔧 Activate Dev Environment
 
 ```sh
 cd ../cardano-node
@@ -182,10 +182,12 @@ git checkout <tag>
 nix develop .#devops
 /bin/bash --login  # fresh shell needed
 cd ../cardano-node-tests
-source "$(poetry env info --path)"/bin/activate
-export PYTHONPATH="$(echo $VIRTUAL_ENV/lib/python3*/site-packages):$PYTHONPATH"
-export CARDANO_NODE_SOCKET_PATH="$PWD/dev_workdir/state-cluster0/bft1.socket" DEV_CLUSTER_RUNNING=1
-mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
+source .source.dev
+```
+
+### 🧱 Start Development Cluster
+
+```sh
 prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 ./dev_workdir/conway_fast/start-cluster
 ```
