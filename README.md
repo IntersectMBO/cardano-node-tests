@@ -200,6 +200,12 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 make check_dev_env
 ```
 
+### 🧰 Reinstall `cardano-clusterlib` in Editable Mode
+
+```sh
+make reinstall-editable repo=../cardano-clusterlib-py
+```
+
 ### 🧪 Run Individual Tests
 
 ```sh
@@ -212,18 +218,6 @@ pytest -m smoke cardano_node_tests/tests/test_cli.py
 ```sh
 source "$(poetry env info --path)"/bin/activate
 make lint
-```
-
-### 🧰 Use `cardano-clusterlib` in Dev Mode
-
-```sh
-source "$(poetry env info --path)"/bin/activate
-make install
-pip uninstall cardano-clusterlib
-cd ../cardano-clusterlib-py
-pip install -e . --config-settings editable_mode=compat
-cd -
-python -c 'from cardano_clusterlib import clusterlib_klass; print(clusterlib_klass.__file__)'
 ```
 
 > ⚠️ After each dependencies update, repeat the steps above to retain dev mode.
