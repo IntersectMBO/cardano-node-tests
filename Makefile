@@ -35,6 +35,17 @@ build_doc:
 doc:
 	./scripts/deploy_doc.sh
 
+
+# reinstall cardano-clusterlib-py in editable mode from a given git repository
+.PHONY: reinstall-editable
+reinstall-editable:
+	@if [ -z "$(repo)" ]; then \
+		echo "Usage: make reinstall-editable repo=/path/to/cardano-clusterlib-py" >&2; \
+		exit 1; \
+	fi
+	@./scripts/clusterlib_reinstall_editable.sh "$(repo)"
+
+
 # run tests
 
 TESTS_DIR ?= cardano_node_tests/
