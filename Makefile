@@ -3,6 +3,20 @@
 install:
 	./scripts/setup_dev_venv.sh
 
+# check if development environment is set up correctly
+.PHONY: check_dev_env
+check_dev_env:
+	@./scripts/check_dev_env.sh
+
+# reinstall cardano-clusterlib-py in editable mode from a given git repository
+.PHONY: reinstall-editable
+reinstall-editable:
+	@if [ -z "$(repo)" ]; then \
+		echo "Usage: make reinstall-editable repo=/path/to/cardano-clusterlib-py" >&2; \
+		exit 1; \
+	fi
+	@./scripts/clusterlib_reinstall_editable.sh "$(repo)"
+
 # initialize linters
 .PHONY: init_linters
 init_lint:
@@ -15,13 +29,6 @@ init_lint:
 lint:
 	pre-commit run -a --show-diff-on-failure --color=always
 
-
-# check if development environment is set up correctly
-.PHONY: check_dev_env
-check_dev_env:
-	@./scripts/check_dev_env.sh
-
-
 # build sphinx documentation
 .PHONY: build_doc
 build_doc:
@@ -29,18 +36,7 @@ build_doc:
 	$(MAKE) -C src_docs clean
 	$(MAKE) -C src_docs html
 
-
 # build and deploy sphinx documentation
 .PHONY: doc
 doc:
 	./scripts/deploy_doc.sh
-
-
-# reinstall cardano-clusterlib-py in editable mode from a given git repository
-.PHONY: reinstall-editable
-reinstall-editable:
-	@if [ -z "$(repo)" ]; then \
-		echo "Usage: make reinstall-editable repo=/path/to/cardano-clusterlib-py" >&2; \
-		exit 1; \
-	fi
-	@./scripts/clusterlib_reinstall_editable.sh "$(repo)"
