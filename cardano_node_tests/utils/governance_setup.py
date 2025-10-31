@@ -75,7 +75,7 @@ def _cast_vote(
         cluster_obj=cluster_obj,
         name_template=f"{name_template}_vote",
         src_address=payment_addr.address,
-        use_build_cmd=True,
+        build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files,
     )
 
@@ -429,7 +429,7 @@ def auth_cc_members(
         cluster_obj=cluster_obj,
         name_template=f"{name_template}_cc_auth",
         src_address=payment_addr.address,
-        use_build_cmd=True,
+        build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files,
     )
 
@@ -498,7 +498,7 @@ def reinstate_committee(  # noqa: C901
         cluster_obj=cluster_obj,
         name_template=f"{name_template}_action",
         src_address=pool_user.payment.address,
-        use_build_cmd=True,
+        build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files_action,
     )
 
