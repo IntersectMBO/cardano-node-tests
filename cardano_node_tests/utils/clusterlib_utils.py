@@ -119,7 +119,7 @@ def build_and_submit_tx(
     tx_files = tx_files or clusterlib.TxFiles()
     submit_method = submit_method or submit_utils.SubmitMethods.CLI
 
-    build_method = build_method or BuildMethods.BUILD
+    build_method = build_method or BuildMethods.BUILD_RAW
 
     if build_method == BuildMethods.BUILD_RAW:
         # Resolve withdrawal amounts here (where -1 for total rewards amount is used) so the
