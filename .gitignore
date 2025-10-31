@@ -26,6 +26,7 @@ __pycache__/
 
 # Env variables
 /.source*
+!/.source.dev
 
 # Distribution / packaging
 .Python

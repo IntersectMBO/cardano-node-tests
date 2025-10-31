@@ -94,7 +94,7 @@ jobs:
           echo "current branch3: $(git branch --show-current)"
           python sync_tests/node_write_sync_values_to_db.py -e ${{ matrix.env }}
       - name: generate artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: node_logs_${{ matrix.env }}_${{ matrix.os }}

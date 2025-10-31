@@ -75,9 +75,14 @@ def _repeat_submit(cluster_obj: clusterlib.ClusterLib, tx_file: pl.Path) -> str:
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_file)
         except clusterlib.CLIError as exc:
             exc_str = str(exc)
-            if r == 0 and "(BadInputsUTxO" in exc_str:
+            inputs_spent = (
+                '(ConwayMempoolFailure "All inputs are spent.'
+                in exc_str  # In cardano-node >= 10.6.0
+                or "(BadInputsUTxO" in exc_str
+            )
+            if r == 0 and inputs_spent:
                 err_str = "Tx input is missing, maybe temporary fork happened?"
-            elif "(BadInputsUTxO" in exc_str:
+            elif inputs_spent:
                 break
             raise
         if r > 2:

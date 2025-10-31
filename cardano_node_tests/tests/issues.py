@@ -191,6 +191,12 @@ ledger_4772 = blockers.GH(
     fixed_in="10.1.3.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="Delegation to DRep2 removed after retirement of DRep1.",
 )
+ledger_5365 = blockers.GH(
+    issue=5365,
+    repo="IntersectMBO/cardano-ledger",
+    fixed_in="10.6.0.0",
+    message="queryPoolState returns current pool params instead of the future ones.",
+)
 
 node_3788 = blockers.GH(
     issue=3788,

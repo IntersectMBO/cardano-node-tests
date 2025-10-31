@@ -126,13 +126,13 @@ jobs:
             curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@testrun-report.xml"
           fi
       - name: ↟ Upload testing artifacts on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: testing-artifacts
           path: testing_artifacts.tar.xz
       - name: ↟ Upload Allure results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         # When using `always()`, you lose ability to manually cancel the workflow.
         # Use `success() || failure()` instead.
         if: success() || failure()
@@ -140,13 +140,13 @@ jobs:
           name: allure-results
           path: allure-results.tar.xz
       - name: ↟ Upload HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: success() || failure()
         with:
           name: testrun-report
           path: testrun-report.html
       - name: ↟ Upload testrun files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: success() || failure()
         with:
           name: testrun-files
@@ -157,7 +157,7 @@ jobs:
             deselected_tests.txt
             requirements_coverage.json
       - name: ↟ Upload CLI coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: success() || failure()
         with:
           name: cli-coverage
