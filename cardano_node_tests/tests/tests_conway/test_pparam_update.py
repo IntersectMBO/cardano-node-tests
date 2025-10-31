@@ -1145,6 +1145,8 @@ class TestPParamUpdate:
         )
         fin_approve_epoch = cluster.g_query.get_epoch()
 
+        assert not cluster.g_query.get_future_pparams(), "Future pparams should be empty"
+
         # db-sync check
         [r.start(url=_url) for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
         try:
@@ -1194,7 +1196,7 @@ class TestPParamUpdate:
         )
 
         def _check_state(state: dict):
-            pparams = state.get("curPParams") or state.get("currentPParams") or {}
+            pparams = state.get("curPParams") or state.get("currentPParams") or state or {}
             clusterlib_utils.check_updated_params(
                 update_proposals=fin_update_proposals, protocol_params=pparams
             )
@@ -1228,6 +1230,7 @@ class TestPParamUpdate:
 
             next_rat_state = rat_gov_state["nextRatifyState"]
             _check_state(next_rat_state["nextEnactState"])
+            _check_state(cluster.g_query.get_future_pparams())
             reqc.cip038_04.start(url=helpers.get_vcs_link())
             assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
             reqc.cip038_04.success()
@@ -1281,6 +1284,8 @@ class TestPParamUpdate:
             reqc.cip064_03.success()
         if is_spo_total_below_threshold:
             reqc.cip064_04.success()
+
+        assert not cluster.g_query.get_future_pparams(), "Future pparams should be empty"
 
         # db-sync check
         try:
