@@ -359,9 +359,9 @@ class TestTreasuryWithdrawals:
         voted_votes = _cast_vote(approve=True, vote_id="yes")
         approved_epoch = cluster.g_query.get_epoch()
 
-        treasury_init = clusterlib_utils.get_ledger_state(cluster_obj=cluster)["stateBefore"][
-            "esAccountState"
-        ]["treasury"]
+        treasury_init = clusterlib_utils.get_chain_account_state(
+            ledger_state=clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        ).treasury
 
         # Check ratification
         rat_epoch = cluster.wait_for_epoch(epoch_no=approved_epoch + 1, padding_seconds=5)
@@ -400,9 +400,9 @@ class TestTreasuryWithdrawals:
         assert "(GovActionsDoNotExist" in err_str, err_str
 
         reqc.cip079.start(url=helpers.get_vcs_link())
-        treasury_finish = clusterlib_utils.get_ledger_state(cluster_obj=cluster)["stateBefore"][
-            "esAccountState"
-        ]["treasury"]
+        treasury_finish = clusterlib_utils.get_chain_account_state(
+            ledger_state=clusterlib_utils.get_ledger_state(cluster_obj=cluster)
+        ).treasury
         assert treasury_init != treasury_finish, "Treasury balance didn't change"
         reqc.cip079.success()
 

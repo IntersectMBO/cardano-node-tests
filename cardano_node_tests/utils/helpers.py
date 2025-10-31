@@ -332,3 +332,22 @@ def validate_dict_values(
             errors.append(msg)
 
     return errors
+
+
+def get_pool_param(key: str, *, pool_params: dict) -> tp.Any:
+    """Get pool parameter value from pool params dict."""
+    # Keys are prefixed with "sps" in cardano-node 10.6.0+
+    # E.g. "owner" -> "spsOwner"
+    if key.startswith("sps"):
+        sps_key = key
+        old_key = f"{key[3].lower()}{key[4:]}"
+    else:
+        sps_key = f"sps{key.capitalize()}"
+        old_key = key
+
+    val = pool_params.get(sps_key)
+    if val is None:
+        # Try to use old key name
+        val = pool_params.get(old_key)
+
+    return val

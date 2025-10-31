@@ -115,7 +115,13 @@ class TestManyUTXOs:
                         # transactions. This can happen from time to time, we stress
                         # the network here and waiting for 2 blocks may not be enough to get a
                         # transaction through.
-                        if "BadInputsUTxO" not in str(err):
+                        exc_str = str(err)
+                        inputs_spent = (
+                            '(ConwayMempoolFailure "All inputs are spent.'
+                            in exc_str  # In cardano-node >= 10.6.0
+                            or "(BadInputsUTxO" in exc_str
+                        )
+                        if not inputs_spent:
                             raise
                         excp = err
                     else:

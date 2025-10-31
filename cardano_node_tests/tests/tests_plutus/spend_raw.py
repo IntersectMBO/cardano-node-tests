@@ -297,7 +297,13 @@ def _spend_locked_txin(  # noqa: C901
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
         except clusterlib.CLIError as exc:
             # Check if resubmitting failed because an input UTxO was already spent
-            if "(BadInputsUTxO" not in str(exc):
+            str_exc = str(exc)
+            inputs_spent = (
+                '(ConwayMempoolFailure "All inputs are spent.'
+                in str_exc  # In cardano-node >= 10.6.0
+                or "(BadInputsUTxO" in str_exc
+            )
+            if not inputs_spent:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")

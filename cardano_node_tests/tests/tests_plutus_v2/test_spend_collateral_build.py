@@ -207,7 +207,12 @@ class TestCollateralOutput:
             if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
-            if "(BadInputsUTxO" not in str_exc:
+            inputs_spent = (
+                '(ConwayMempoolFailure "All inputs are spent.'
+                in str_exc  # In cardano-node >= 10.6.0
+                or "(BadInputsUTxO" in str_exc
+            )
+            if not inputs_spent:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
@@ -351,7 +356,12 @@ class TestCollateralOutput:
             if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
-            if "(BadInputsUTxO" not in str_exc:
+            inputs_spent = (
+                '(ConwayMempoolFailure "All inputs are spent.'
+                in str_exc  # In cardano-node >= 10.6.0
+                or "(BadInputsUTxO" in str_exc
+            )
+            if not inputs_spent:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
