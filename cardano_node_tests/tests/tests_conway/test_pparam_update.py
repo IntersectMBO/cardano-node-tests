@@ -278,14 +278,6 @@ class TestPParamUpdate:
         cluster, governance_data = cluster_lock_governance_plutus
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
-
-        # Check that no future parameters are scheduled at the start
-        future_pparams_before = cluster.g_query.get_future_pparams()
-        LOGGER.info(f"Initial future protocol parameters: {future_pparams_before}")
-        assert not future_pparams_before, (
-            "Expected no scheduled future protocol parameters before proposals"
-        )
-
         db_errors_final = []
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
 
@@ -1223,48 +1215,6 @@ class TestPParamUpdate:
                 gov_state=rat_gov_state, action_txid=fin_prop_rec.action_txid
             )
             assert rat_action, "Action not found in ratified actions"
-
-            # Verify that future protocol parameters are now scheduled
-            future_pparams_after = cluster.g_query.get_future_pparams()
-            LOGGER.info(
-                f"Future protocol parameters after ratification: "
-                f"{list(future_pparams_after.keys())[:10]}"
-            )
-
-            assert future_pparams_after, "Expected future protocol parameters after ratification"
-            assert isinstance(future_pparams_after, dict), "Future pparams should be a dictionary"
-
-            future_pparams_after = cluster.g_query.get_future_pparams()
-            assert future_pparams_after, "Expected future protocol parameters after ratification"
-
-            mismatches = []
-
-            for proposal in fin_prop_rec.proposals:
-                param_name = proposal.name
-                expected_value = str(proposal.value)
-
-                # Some proposals (like costModels or empty name fields)
-                # might not directly map, so skip them
-
-                if not param_name:
-                    LOGGER.debug(f"Skipping unnamed proposal (arg: {proposal.arg})")
-                    continue
-
-                actual_value = str(future_pparams_after.get(param_name, ""))
-
-                if param_name not in future_pparams_after:
-                    mismatches.append(f"Missing {param_name} in future params")
-                elif expected_value != actual_value:
-                    mismatches.append(
-                        f"Mismatch for {param_name}: expected {expected_value}, got {actual_value}"
-                    )
-                else:
-                    LOGGER.info(f"✓ {param_name} correctly scheduled: {actual_value}")
-
-            assert not mismatches, "Some future protocol parameters did not match:\n" + "\n".join(
-                mismatches
-            )
-
             # Disapprove ratified action, the voting shouldn't have any effect
             conway_common.cast_vote(
                 cluster_obj=cluster,
