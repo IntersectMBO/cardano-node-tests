@@ -483,6 +483,13 @@ class TestConstitution:
         conway_common.save_gov_state(
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
+
+        rat_state = cluster.g_query.get_ratify_state()
+        clusterlib_utils.check_ratify_state(
+            ratify_state=rat_state,
+            expected_txid=action_txid,
+        )
+
         rat_action = governance_utils.lookup_ratified_actions(
             gov_state=rat_gov_state, action_txid=action_txid
         )

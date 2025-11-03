@@ -1615,3 +1615,36 @@ def get_just_lovelace_utxos(
     return cl_txtools._get_usable_utxos(
         address_utxos=address_utxos, coins={clusterlib.DEFAULT_COIN}
     )
+
+
+def check_ratify_state(
+    *,
+    ratify_state: dict,
+    expected_txid: str,
+    expected_fields: tp.Iterable[str] = (
+        "enactedGovActions",
+        "expiredGovActions",
+        "nextEnactState",
+        "ratificationDelayed",
+    ),
+) -> None:
+    """Validate ratify-state structure and ensure the expected action is listed.
+
+    Args:
+        ratify_state: The JSON output from `cardano-cli query ratify-state`.
+        expected_txid: The transaction ID of the action expected to be ratified.
+        expected_fields: Required top-level fields.
+
+    Raises:
+        AssertionError: If the structure or contents are not as expected.
+    """
+    missing_fields = set(expected_fields) - set(ratify_state)
+    if missing_fields:
+        msg = f"Missing expected fields in ratify-state: {missing_fields}"
+        raise AssertionError(msg)
+
+    enacted = ratify_state.get("enactedGovActions", [])
+    action_txids = {a.get("actionId", {}).get("txId") for a in enacted}
+    if expected_txid not in action_txids:
+        msg = f"Expected txid {expected_txid} not found in enactedGovActions."
+        raise AssertionError(msg)
