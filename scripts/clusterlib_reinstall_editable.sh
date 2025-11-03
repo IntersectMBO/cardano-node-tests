@@ -14,23 +14,23 @@ REPO_PATH=$1
 TOP_DIR="$(readlink -m "${0%/*}/..")"
 cd "$TOP_DIR" >/dev/null
 
-# Sanity checks
-if [ -n "${IN_NIX_SHELL:-""}" ]; then
-  err "This script is not supposed to run inside nix shell."
-  exit 1
-fi
-
 # Activate poetry virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
   # shellcheck disable=SC2091
   $(poetry env activate)
-  # Override PYTHONPATH to prefer virtual environment packages over nix packages
-  PYTHONPATH="$(echo "$VIRTUAL_ENV"/lib/python3*/site-packages):${PYTHONPATH:-}"
-  export PYTHONPATH
 fi
 if [ -z "${VIRTUAL_ENV:-}" ]; then
   err "Failed to activate virtual environment."
   exit 1
+fi
+
+# Filter out nix python packages from PYTHONPATH.
+# This avoids conflicts between nix-installed packages and poetry virtual environment packages.
+PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":")"
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH
+else
+  unset PYTHONPATH
 fi
 
 # Double-check python is actually running inside a venv
