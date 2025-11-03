@@ -54,8 +54,12 @@ if [ -z "\${IN_NIX_SHELL:-""}" ]; then
   echo "WARNING: This script is supposed to be sourced from nix shell." >&2
 fi
 source "$VIRTUAL_ENV/bin/activate"
-PYTHONPATH="$(echo "\$VIRTUAL_ENV"/lib/python3*/site-packages):\$PYTHONPATH"
-export PYTHONPATH
+PYTHONPATH="\$(echo "\${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":")"
+if [ -n "\${PYTHONPATH:-}" ]; then
+  export PYTHONPATH
+else
+  unset PYTHONPATH
+fi
 export CARDANO_NODE_SOCKET_PATH="$PWD/dev_workdir/state-cluster0/bft1.socket"
 export TMPDIR="$PWD/dev_workdir/tmp"
 export DEV_CLUSTER_RUNNING=1

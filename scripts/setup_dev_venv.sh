@@ -8,10 +8,17 @@ abort_install=0
 
 set -eu
 
-if [ -n "${IN_NIX_SHELL:-""}" ]; then
-  echo "This script is not supposed to run inside nix shell." >&2
-  abort_install=1
-fi
+filter_out_nix(){
+  # Filter out nix python packages from PYTHONPATH.
+  # This avoids conflicts between nix-installed packages and poetry virtual environment packages.
+  PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":")"
+  if [ -n "${PYTHONPATH:-}" ]; then
+    export PYTHONPATH
+  else
+    unset PYTHONPATH
+  fi
+}
+
 if ! command -v poetry >/dev/null 2>&1; then
   echo "Poetry is not installed. Please install it first." >&2
   abort_install=1
@@ -33,6 +40,7 @@ if [ -n "${VIRTUAL_ENV:-""}" ]; then
     exit 1
   fi
 
+  filter_out_nix
   poetry install --with docs --with dev
   exit 0
 fi
@@ -47,6 +55,7 @@ if [ "$abort_install" -eq 1 ]; then
   exit 1
 fi
 
+filter_out_nix
 poetry env use "python$PYTHON_VERSION"
 poetry install --with docs --with dev
 

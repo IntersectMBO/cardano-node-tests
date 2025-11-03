@@ -20,9 +20,15 @@ fi
 if [ -z "${VIRTUAL_ENV:-}" ]; then
   # shellcheck disable=SC2091
   $(poetry env activate)
-  # Override PYTHONPATH to prefer virtual environment packages over nix packages
-  PYTHONPATH="$(echo "$VIRTUAL_ENV"/lib/python3*/site-packages):$PYTHONPATH"
+fi
+
+# Filter out nix python packages from PYTHONPATH.
+# This avoids conflicts between nix-installed packages and poetry virtual environment packages.
+PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":")"
+if [ -n "${PYTHONPATH:-}" ]; then
   export PYTHONPATH
+else
+  unset PYTHONPATH
 fi
 
 # Set Cardano Node socket path and other environment variables
