@@ -18,11 +18,13 @@ reinstall-editable:
 	@./scripts/clusterlib_reinstall_editable.sh "$(repo)"
 
 # initialize linters
-.PHONY: init_linters
+.PHONY: init_lint
 init_lint:
 	pre-commit clean
 	pre-commit gc
 	find . -path '*/.mypy_cache/*' -delete
+	pre-commit uninstall
+	pre-commit install --install-hooks
 
 # run linters
 .PHONY: lint
