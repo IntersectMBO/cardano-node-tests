@@ -47,16 +47,16 @@ mkdir -p "$TMPDIR"
 export TMPDIR
 
 # Remove ghcup from PATH to avoid conflicts with nix environment
-PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":")"
+PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":" | sed 's/:*$//')"
 export PATH
 
-# Prepend instance-specific .bin directory to PATH if it exists
-if [ -e "$PWD/.bin${INSTANCE_NUM}" ]; then
+# Prepend instance-specific .bin directory to PATH if it exists and if not already present
+if [ -e "$PWD/.bin${INSTANCE_NUM}" ] && [[ ":$PATH:" != *":$PWD/.bin${INSTANCE_NUM}:"* ]]; then
   export PATH="$PWD/.bin${INSTANCE_NUM}:$PATH"
 fi
 
-# Prepend default .bin directory to PATH for instance 0 if it exists
-if [ "$INSTANCE_NUM" = 0 ] && [ -e "$PWD/.bin" ]; then
+# Prepend default .bin directory to PATH for instance 0 if it exists and if not already present
+if [ "$INSTANCE_NUM" = 0 ] && [ -e "$PWD/.bin" ] && [[ ":$PATH:" != *":$PWD/.bin:"* ]]; then
   export PATH="$PWD/.bin:$PATH"
 fi
 
