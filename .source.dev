@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# An environment setup script for cardano-node-tests local development.
+#
+# Create a `.source` script in the root of the repository.
+# Source this file from the .source script. You can also include additional environment
+# variables such as DBSYNC_SCHEMA_DIR and GITHUB_TOKEN in that file, or change INSTANCE_NUM.
+#
+# export DBSYNC_SCHEMA_DIR="$HOME/Source/repos/cardano-db-sync/schema"
+# export GITHUB_TOKEN=ghp_....
+INSTANCE_NUM="${INSTANCE_NUM:-0}"
+
+# Ensure we are in the correct directory
+if [[ "${PWD##*/}" != "cardano-node-tests"* ]]; then
+  echo "Must be in cardano-node-tests* directory" >&2
+  return 1
+fi
+
+# Activate poetry virtual environment
+if [ -z "${VIRTUAL_ENV:-}" ]; then
+  # shellcheck disable=SC2091
+  $(poetry env activate)
+fi
+
+# Filter out nix python packages from PYTHONPATH.
+# This avoids conflicts between nix-installed packages and poetry virtual environment packages.
+PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//')"
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH
+else
+  unset PYTHONPATH
+fi
+
+# Set Cardano Node socket path and other environment variables
+export CARDANO_NODE_SOCKET_PATH="/var/tmp/cardonnay/state-cluster${INSTANCE_NUM}/bft1.socket"
+export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 NO_ARTIFACTS=1
+unset BOOTSTRAP_DIR
+
+mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
+
+# Set temporary directory for this instance
+TMPDIR="$PWD/tmp"
+if [ "$INSTANCE_NUM" != 0 ]; then
+  TMPDIR="$PWD/tmp${INSTANCE_NUM}"
+fi
+mkdir -p "$TMPDIR"
+export TMPDIR
+
+# Remove ghcup from PATH to avoid conflicts with nix environment
+PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":" | sed 's/:*$//')"
+export PATH
+
+# Prepend instance-specific .bin directory to PATH if it exists and if not already present
+if [ -e "$PWD/.bin${INSTANCE_NUM}" ] && [[ ":$PATH:" != *":$PWD/.bin${INSTANCE_NUM}:"* ]]; then
+  export PATH="$PWD/.bin${INSTANCE_NUM}:$PATH"
+fi
+
+# Prepend default .bin directory to PATH for instance 0 if it exists and if not already present
+if [ "$INSTANCE_NUM" = 0 ] && [ -e "$PWD/.bin" ] && [[ ":$PATH:" != *":$PWD/.bin:"* ]]; then
+  export PATH="$PWD/.bin:$PATH"
+fi
+
+# Set database connection environment variables for db-sync
+export PGHOST=localhost PGUSER=postgres
+
+# Enable SMASH server if available
+if [ -n "${DBSYNC_SCHEMA_DIR:-}" ] && command -v cardano-smash-server >/dev/null 2>&1; then
+  export SMASH=true
+fi
+
+# Enable cardano-cli bash completion
+if ! command -v _cardano-cli >/dev/null 2>&1 && command -v cardano-cli >/dev/null 2>&1; then
+  # shellcheck disable=SC1090
+  . <(cardano-cli --bash-completion-script cardano-cli)
+fi
+
+unset INSTANCE_NUM

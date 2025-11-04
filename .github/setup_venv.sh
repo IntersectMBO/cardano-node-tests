@@ -17,8 +17,14 @@ fi
 # shellcheck disable=SC1090,SC1091
 . "$_VENV_DIR/bin/activate"
 
-PYTHONPATH="$(echo "$VIRTUAL_ENV"/lib/python3*/site-packages):$PYTHONPATH"
-export PYTHONPATH
+# Filter out nix python packages from PYTHONPATH.
+# This avoids conflicts between nix-installed packages and poetry virtual environment packages.
+PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//')"
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH
+else
+  unset PYTHONPATH
+fi
 
 if [ -z "$_REQS_INSTALLED" ]; then
   poetry install -n

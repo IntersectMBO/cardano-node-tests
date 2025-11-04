@@ -91,7 +91,7 @@ export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 # assume we run tests on testnet when `BOOTSTRAP_DIR` is set
 if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/relay1.socket"
-  export MAKE_TARGET="${MAKE_TARGET:-"testnets"}"
+  export RUN_TARGET="${RUN_TARGET:-"testnets"}"
 fi
 
 echo "### Dependencies setup ###"
@@ -227,7 +227,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
   export PATH="$PATH_PREPEND":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   retval=0
-  make "${MAKE_TARGET:-"tests"}" || retval="$?"
+  . .github/run_tests.sh "${RUN_TARGET:-"tests"}" || retval="$?"
   df -h .
   echo "::endgroup::"  # end group for "Testrun"
 
