@@ -19,7 +19,7 @@ fi
 
 # Filter out nix python packages from PYTHONPATH.
 # This avoids conflicts between nix-installed packages and poetry virtual environment packages.
-PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//')"
+PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
 if [ -n "${PYTHONPATH:-}" ]; then
   export PYTHONPATH
 else
