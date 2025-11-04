@@ -79,8 +79,8 @@ if [ "$HAS_PYTHON" = "$true" ]; then
     printf "in python venv: $IN_VENV\n"
 
     if [ "$IN_VENV" = "$true" ]; then
-      VENV_IN_PYTHONPATH="$([[ "${PYTHONPATH:-}" == *"${VIRTUAL_ENV:-"missing__"}"* ]]; process_result)" || exit_code=1
-      printf "venv in PYTHONPATH: $VENV_IN_PYTHONPATH\n"
+      NIX_NOT_IN_PYTHONPATH="$([[ "${PYTHONPATH:-"empty__"}" != */nix/store/* ]]; process_result)" || exit_code=1
+      printf "nix not in PYTHONPATH: $NIX_NOT_IN_PYTHONPATH\n"
     fi
 
     pushd "$HOME" > /dev/null || exit 1

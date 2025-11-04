@@ -4,10 +4,6 @@ abort_install=0
 
 set -eu
 
-if [ -n "${IN_NIX_SHELL:-""}" ]; then
-  echo "This script is not supposed to run inside nix shell." >&2
-  abort_install=1
-fi
 if ! command -v poetry >/dev/null 2>&1; then
   echo "Poetry is not installed. Please install it first." >&2
   abort_install=1
@@ -18,6 +14,15 @@ if [ ! -d "cardano_node_tests" ]; then
 fi
 if [ "$abort_install" -eq 1 ]; then
   exit 1
+fi
+
+# Filter out nix python packages from PYTHONPATH.
+# This avoids conflicts between nix-installed packages and poetry virtual environment packages.
+PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//')"
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH
+else
+  unset PYTHONPATH
 fi
 
 poetry lock "$@"
