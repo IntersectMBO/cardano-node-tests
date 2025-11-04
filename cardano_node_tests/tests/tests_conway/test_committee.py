@@ -1104,9 +1104,10 @@ class TestCommittee:
         assert rat_action, "Action not found in ratified actions"
 
         rat_state = cluster.g_query.get_ratify_state()
-        clusterlib_utils.check_ratify_state(
+        governance_utils.check_ratified_action(
             ratify_state=rat_state,
-            expected_txid=action_add_txid,
+            action_txid=action_add_txid,
+            action_ix=action_add_ix,
         )
 
         # Disapprove ratified add action, the voting shouldn't have any effect

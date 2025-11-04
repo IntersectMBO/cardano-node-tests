@@ -484,10 +484,11 @@ class TestConstitution:
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
 
-        rat_state = cluster.g_query.get_ratify_state()
-        clusterlib_utils.check_ratify_state(
-            ratify_state=rat_state,
-            expected_txid=action_txid,
+        rat_st = cluster.g_query.get_ratify_state()
+        governance_utils.check_ratified_action(
+            ratify_state=rat_st,
+            action_txid=action_txid,
+            action_ix=action_ix,
         )
 
         rat_action = governance_utils.lookup_ratified_actions(

@@ -169,3 +169,18 @@ class TestConway:
             pool_user=pool_user,
             build_method=clusterlib_utils.BuildMethods.BUILD,
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    def test_ratify_state_fields(self, cluster: clusterlib.ClusterLib):
+        """Check that 'cardano-cli query ratify-state' output has the expected fields."""
+        ratify_state = cluster.g_query.get_ratify_state()
+        expected_fields = {
+            "enactedGovActions",
+            "expiredGovActions",
+            "nextEnactState",
+            "ratificationDelayed",
+        }
+
+        missing = expected_fields - set(ratify_state)
+        assert not missing, f"Missing expected fields in ratify-state: {missing}"
