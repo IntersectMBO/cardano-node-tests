@@ -870,19 +870,3 @@ def get_default_anchor_data() -> AnchorData:
     except FileExistsError:
         url = web.get_published_url(name="default_anchor.txt")
     return AnchorData(url=url, hash=data_hash, data_file=None)
-
-
-def check_ratified_action(
-    *, ratify_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
-) -> dict[str, tp.Any]:
-    """Verify that the expected action (txid, ix) exists in the enacted governance actions."""
-    enacted_actions = ratify_state.get("enactedGovActions", [])
-    matched_action = _lookup_action(
-        actions=enacted_actions,
-        action_txid=action_txid,
-        action_ix=action_ix,
-    )
-    if not matched_action:
-        msg = f"Action ({action_txid}#{action_ix}) not found in enactedGovActions."
-        raise AssertionError(msg)
-    return matched_action
