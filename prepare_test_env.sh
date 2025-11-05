@@ -54,7 +54,7 @@ if [ -z "\${IN_NIX_SHELL:-""}" ]; then
   echo "WARNING: This script is supposed to be sourced from nix shell." >&2
 fi
 source "$VIRTUAL_ENV/bin/activate"
-PYTHONPATH="\$(echo "\${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//')"
+PYTHONPATH="\$(echo "\${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
 if [ -n "\${PYTHONPATH:-}" ]; then
   export PYTHONPATH
 else
