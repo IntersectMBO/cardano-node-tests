@@ -74,7 +74,7 @@ printf "start: %(%H:%M:%S)T\n" -1
 # update cardano-node to specified revision
 # If BASE_TAR_URL is set, instead of using nix, download and extract binaries for base revision
 # from a published tarball to save disk space, and use the same nix env as will be used for
-# UPGRADE_REVISION. We are running out of space on Github Actions runners.
+# UPGRADE_REVISION. We are running out of space on GitHub Actions runners.
 if [[ -z "${BASE_TAR_URL:-""}" && -n "${BASE_REVISION:-""}" ]]; then
   NODE_OVERRIDE=$(node_override "${BASE_REVISION}")
 elif [ -n "${UPGRADE_REVISION:-""}" ]; then
@@ -174,7 +174,7 @@ fi
 
 _cleanup
 
-# prepare artifacts for upload in Github Actions
+# prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
   # save testing artifacts
   ./.github/save_artifacts.sh

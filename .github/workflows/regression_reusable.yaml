@@ -173,7 +173,7 @@ jobs:
           password: ${{secrets.GMAIL_PASSWORD}}
           subject: "Status: ${{ steps.testing-step.outcome }}; workflow: ${{ github.workflow }}"
           to: ${{secrets.CI_FAIL_MAILS}}
-          from: Cardano Github Actions
+          from: Cardano GitHub Actions
           body: "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           reply_to: noreply@github.com
           attachments: testrun-report.html

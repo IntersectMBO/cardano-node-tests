@@ -41,18 +41,16 @@ class GH:
         self.gh_issue = gh_issue.GHIssue(number=self.issue, repo=self.repo)
 
         self.is_blocked: tp.Callable[[], bool]
-        if self.repo == "IntersectMBO/cardano-node":
-            self.is_blocked = self._node_issue_is_blocked
-        elif self.repo == "IntersectMBO/cardano-cli":
+        if self.repo == "IntersectMBO/cardano-cli":
             self.is_blocked = self._cli_issue_is_blocked
         elif self.repo == "IntersectMBO/cardano-db-sync":
             self.is_blocked = self._dbsync_issue_is_blocked
         else:
             self.is_blocked = self._issue_is_blocked
 
-    def _node_issue_is_blocked(self) -> bool:
-        """Check if node issue is blocked."""
-        # Assume that the issue is blocked if no Github token was provided and so the check
+    def _issue_blocked_in_version(self, product_version: version.Version) -> bool:
+        """Check if an issue is blocked in given product version."""
+        # Assume that the issue is blocked if no GitHub token was provided and so the check
         # cannot be performed.
         if not self.gh_issue.TOKEN:
             LOGGER.warning(
@@ -65,78 +63,24 @@ class GH:
         if not self.gh_issue.is_closed():
             return True
 
-        # The issue is blocked if it was fixed in a node version that is greater than
-        # the node version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:  # noqa:SIM103
+        # The issue is blocked if it was fixed or integrated into a product version that is greater
+        # than the product version we are currently running.
+        if self.fixed_in and version.parse(self.fixed_in) > product_version:  # noqa:SIM103
             return True
 
         return False
 
     def _cli_issue_is_blocked(self) -> bool:
-        """Check if generic issue is blocked."""
-        # Assume that the issue is blocked if no Github token was provided and so the check
-        # cannot be performed.
-        if not self.gh_issue.TOKEN:
-            LOGGER.warning(
-                "No GitHub token provided, cannot check if issue '%s' is blocked",
-                f"{self.repo}#{self.issue}",
-            )
-            return True
-
-        # The issue is blocked if it is was not closed yet
-        if not self.gh_issue.is_closed():
-            return True
-
-        # The issue is blocked if it was fixed in a cli version that is greater than
-        # the cli version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.cli:  # noqa:SIM103
-            return True
-
-        return False
+        """Check if cardano-cli issue is blocked."""
+        return self._issue_blocked_in_version(VERSIONS.cli)
 
     def _dbsync_issue_is_blocked(self) -> bool:
         """Check if dbsync issue is blocked."""
-        # Assume that the issue is blocked if no Github token was provided and so the check
-        # cannot be performed.
-        if not self.gh_issue.TOKEN:
-            LOGGER.warning(
-                "No GitHub token provided, cannot check if issue '%s' is blocked",
-                f"{self.repo}#{self.issue}",
-            )
-            return True
-
-        # The issue is blocked if it is was not closed yet
-        if not self.gh_issue.is_closed():
-            return True
-
-        # The issue is blocked if it was fixed in a dbsync version that is greater than
-        # the dbsync version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.dbsync:  # noqa:SIM103
-            return True
-
-        return False
+        return self._issue_blocked_in_version(VERSIONS.dbsync)
 
     def _issue_is_blocked(self) -> bool:
-        """Check if generic issue is blocked."""
-        # Assume that the issue is blocked if no Github token was provided and so the check
-        # cannot be performed.
-        if not self.gh_issue.TOKEN:
-            LOGGER.warning(
-                "No GitHub token provided, cannot check if issue '%s' is blocked",
-                f"{self.repo}#{self.issue}",
-            )
-            return True
-
-        # The issue is blocked if it is was not closed yet
-        if not self.gh_issue.is_closed():
-            return True
-
-        # The issue is blocked if the fix was integrated into a node version that is greater than
-        # the node version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > VERSIONS.node:  # noqa:SIM103
-            return True
-
-        return False
+        """Check if an issue is blocked."""
+        return self._issue_blocked_in_version(VERSIONS.node)
 
     def finish_test(self) -> None:
         """Fail or Xfail test with GitHub issue reference."""

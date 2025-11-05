@@ -18,7 +18,7 @@ Test statuses
 Nightly results
 ---------------
 
-`Results on Github Actions <https://github.com/IntersectMBO/cardano-node-tests/actions?query=workflow%3A%22Nightly+tests%22+event%3Aschedule+branch%3Amaster++>`__
+`Results on GitHub Actions <https://github.com/IntersectMBO/cardano-node-tests/actions?query=workflow%3A%22Nightly+tests%22+event%3Aschedule+branch%3Amaster++>`__
 
 * `nightly <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly/>`__:  |nightly-badge|
    * network in Conway era
