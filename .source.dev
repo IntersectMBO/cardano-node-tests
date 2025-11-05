@@ -24,7 +24,7 @@ fi
 
 # Filter out nix python packages from PYTHONPATH.
 # This avoids conflicts between nix-installed packages and poetry virtual environment packages.
-PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//')"
+PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
 if [ -n "${PYTHONPATH:-}" ]; then
   export PYTHONPATH
 else
@@ -47,7 +47,7 @@ mkdir -p "$TMPDIR"
 export TMPDIR
 
 # Remove ghcup from PATH to avoid conflicts with nix environment
-PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":" | sed 's/:*$//')"
+PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":" | sed 's/:*$//' || :)"
 export PATH
 
 # Prepend instance-specific .bin directory to PATH if it exists and if not already present
