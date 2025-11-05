@@ -254,10 +254,14 @@ def lookup_proposal(
 
 
 def lookup_ratified_actions(
-    *, gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
+    *, state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
 ) -> dict[str, tp.Any]:
-    ratified_actions: list[dict[str, tp.Any]] = gov_state["nextRatifyState"]["enactedGovActions"]
-    return _lookup_action(actions=ratified_actions, action_txid=action_txid, action_ix=action_ix)
+    if "nextRatifyState" in state:
+        enacted_actions = state["nextRatifyState"].get("enactedGovActions", [])
+    else:
+        enacted_actions = state.get("enactedGovActions", [])
+
+    return _lookup_action(actions=enacted_actions, action_txid=action_txid, action_ix=action_ix)
 
 
 def lookup_expired_actions(

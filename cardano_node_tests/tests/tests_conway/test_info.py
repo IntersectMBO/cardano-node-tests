@@ -227,18 +227,18 @@ class TestInfo:
         conway_common.save_gov_state(
             gov_state=approved_gov_state, name_template=f"{temp_template}_approved_{approved_epoch}"
         )
-        rat_info_action = governance_utils.lookup_ratified_actions(
-            gov_state=approved_gov_state,
+
+        rat_state = cluster.g_query.get_ratify_state()
+        rat_action = governance_utils.lookup_ratified_actions(
+            state=rat_state,
             action_txid=action_txid,
-            action_ix=action_ix,
         )
-        assert not rat_info_action, "Action found in ratified actions"
+        assert not rat_action, "Action found in ratified actions"
         reqc.cip053.success()
 
+        # Check ratification delay flag
         reqc.cip038_05.start(url=helpers.get_vcs_link())
-        assert not approved_gov_state["nextRatifyState"]["ratificationDelayed"], (
-            "Ratification is delayed unexpectedly"
-        )
+        assert not rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
         reqc.cip038_05.success()
 
         # Check deposit is returned

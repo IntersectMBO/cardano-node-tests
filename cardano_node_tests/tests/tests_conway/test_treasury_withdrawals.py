@@ -371,7 +371,7 @@ class TestTreasuryWithdrawals:
         )
         for action_ix in range(actions_num):
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=action_txid, action_ix=action_ix
+                state=rat_gov_state, action_txid=action_txid, action_ix=action_ix
             )
             assert rat_action, f"Action with ix {action_ix} not found in ratified actions"
 
@@ -651,7 +651,7 @@ class TestTreasuryWithdrawals:
         )
         for action_ix in range(actions_num):
             assert not governance_utils.lookup_ratified_actions(
-                gov_state=nonrat_gov_state, action_txid=action_txid, action_ix=action_ix
+                state=nonrat_gov_state, action_txid=action_txid, action_ix=action_ix
             ), f"Action {action_txid}#{action_ix} got ratified unexpectedly"
 
         # Check that the actions are not enacted

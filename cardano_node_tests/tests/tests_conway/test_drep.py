@@ -1824,7 +1824,7 @@ class TestDRepActivity:
                 name_template=f"{temp_template}_{action_id}_drep_activity_rat_{rat_epoch}",
             )
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=action_txid
+                state=rat_gov_state, action_txid=action_txid
             )
 
             rat_records[action_id] = DRepRatRecord(id=action_id, ratified=bool(rat_action))

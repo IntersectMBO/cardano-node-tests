@@ -1099,17 +1099,9 @@ class TestCommittee:
             gov_state=rat_add_gov_state, name_template=f"{temp_template}_rat_add_{rat_epoch}"
         )
         rat_action = governance_utils.lookup_ratified_actions(
-            gov_state=rat_add_gov_state, action_txid=action_add_txid
+            state=rat_add_gov_state, action_txid=action_add_txid
         )
         assert rat_action, "Action not found in ratified actions"
-
-        rat_state = cluster.g_query.get_ratify_state()
-        governance_utils.check_ratified_action(
-            ratify_state=rat_state,
-            action_txid=action_add_txid,
-            action_ix=action_add_ix,
-        )
-
         # Disapprove ratified add action, the voting shouldn't have any effect
         conway_common.cast_vote(
             cluster_obj=cluster,
@@ -1210,7 +1202,7 @@ class TestCommittee:
         # time as the add action is enacted, because ratification of new actions was delayed by
         # the add action.
         rat_action = governance_utils.lookup_ratified_actions(
-            gov_state=enact_add_gov_state, action_txid=action_rem_txid
+            state=enact_add_gov_state, action_txid=action_rem_txid
         )
         assert rat_action, "Action not found in ratified actions"
         reqc.cip038_01.success()
@@ -1474,7 +1466,7 @@ class TestCommittee:
                 gov_state=gov_state, name_template=f"{name_template}_{epoch_no}"
             )
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=gov_state, action_txid=action_txid, action_ix=action_ix
+                state=gov_state, action_txid=action_txid, action_ix=action_ix
             )
             assert rat_action, "Action not found in ratified actions"
             return gov_state
@@ -1730,15 +1722,12 @@ class TestCommittee:
             # Check ratification
             epoch_rat = cluster.wait_for_epoch(epoch_no=approval_epoch + 1, padding_seconds=5)
 
-            rat_gov_state = cluster.g_query.get_gov_state()
-            conway_common.save_gov_state(
-                gov_state=rat_gov_state, name_template=f"{name_template}_rat_{epoch_rat}"
+            rat_state = cluster.g_query.get_ratify_state()
+            rat_action_direct = governance_utils.lookup_ratified_actions(
+                state=rat_state,
+                action_txid=action_txid,
             )
-
-            rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=action_txid
-            )
-            assert rat_action, "Action not found in ratified actions"
+            assert rat_action_direct, "Action not found in ratified actions (ratify-state)"
 
             # Wait for enactment
             epoch_enact = cluster.wait_for_epoch(epoch_no=epoch_rat + 1, padding_seconds=5)

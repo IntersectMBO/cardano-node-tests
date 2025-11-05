@@ -172,7 +172,7 @@ def cluster_with_constitution(
             cluster.wait_for_epoch(epoch_no=approve_epoch + 1, padding_seconds=5)
             rat_gov_state = cluster.g_query.get_gov_state()
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=action_txid
+                state=rat_gov_state, action_txid=action_txid
             )
             assert rat_action, "Action not found in ratified actions"
 

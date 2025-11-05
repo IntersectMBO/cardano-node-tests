@@ -144,7 +144,7 @@ class TestUpdateBuiltIns:
                 gov_state=rat_gov_state, name_template=f"{_name_template}_{rat_epoch}"
             )
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state,
+                state=rat_gov_state,
                 action_txid=cost_model_proposal.action_txid,
                 action_ix=cost_model_proposal.action_ix,
             )
