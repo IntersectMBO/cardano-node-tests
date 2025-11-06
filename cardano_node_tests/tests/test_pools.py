@@ -2713,3 +2713,24 @@ class TestPoolVoteDeleg:
         for subt in self.get_subtests():
             with subtests.test(scenario=subt.__name__):
                 subt(cluster=cluster, pools=pools)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    def test_stake_pool_default_vote(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pools: list[clusterlib.PoolCreationOutput],
+    ):
+        """Check 'cardano-cli query stake-pool-default-vote' for registered SPOs."""
+        for pool in pools:
+            result = cluster.g_query.get_stake_pool_default_vote(
+                spo_vkey_file=pool.cold_key_pair.vkey_file
+            )
+
+            assert isinstance(result, str), "Expected string output from stake-pool-default-vote"
+            assert result in {
+                "DefaultYes",
+                "DefaultNo",
+                "DefaultAbstain",
+                "DefaultNoConfidence",
+            }, f"Unexpected default vote value: {result}"
