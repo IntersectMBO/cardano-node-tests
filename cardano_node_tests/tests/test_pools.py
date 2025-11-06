@@ -2681,7 +2681,7 @@ class TestPoolVoteDeleg:
             """Check vote delegation if reward address is not delegated to any pool."""
             assert (
                 cluster.g_query.get_spo_stake_distribution(
-                    spo_vkey_file=pools[0].cold_key_pair.vkey_file
+                    spo_vkey_file=pools[2].cold_key_pair.vkey_file
                 )[0].vote_delegation
                 == "drep-alwaysAbstain"
             )
