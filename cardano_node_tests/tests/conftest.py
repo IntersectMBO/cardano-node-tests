@@ -287,7 +287,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
         return
 
     alluredir = configuration.LAUNCH_PATH / alluredir
-    metadata: dict[str, tp.Any] = pytest_config.stash[metadata_key]  # type: ignore
+    metadata = tp.cast(dict[str, tp.Any], pytest_config.stash[metadata_key])
     with open(alluredir / "environment.properties", "w+", encoding="utf-8") as infile:
         for k, v in metadata.items():
             if isinstance(v, dict):
