@@ -252,7 +252,7 @@ fi
 
 _cleanup
 
-# prepare artifacts for upload in Github Actions
+# prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
 
   # move reports to root dir
