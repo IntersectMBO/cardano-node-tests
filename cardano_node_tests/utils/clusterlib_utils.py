@@ -990,11 +990,12 @@ def withdraw_reward_w_build(
 
     # Check that rewards were transferred
     src_reward_balance = cluster_obj.g_query.get_address_balance(dst_address)
+    assert tx_raw_withdrawal_output.withdrawals  # for typechecking
     if (
         src_reward_balance
         != src_init_balance
         - tx_raw_withdrawal_output.fee
-        + tx_raw_withdrawal_output.withdrawals[0].amount  # type: ignore
+        + tx_raw_withdrawal_output.withdrawals[0].amount
     ):
         msg = f"Incorrect balance for destination address `{dst_address}`."
         raise RuntimeError(msg)

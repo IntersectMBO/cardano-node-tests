@@ -498,7 +498,7 @@ def check_plutus_costs(
     # Sort records by total cost
     sorted_plutus = sorted(
         plutus_costs,
-        key=lambda x: x["executionUnits"]["memory"]  # type: ignore
+        key=lambda x: x["executionUnits"]["memory"]
         + x["executionUnits"]["steps"]
         + x["lovelaceCost"],
     )

@@ -50,10 +50,14 @@ if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
 def _get_manager_fixture_line_str() -> str:
     """Get `filename#lineno` of current fixture, called from contextmanager."""
     # Get past `cache_fixture` and `contextmanager` to the fixture
-    calling_frame = inspect.currentframe().f_back.f_back.f_back  # type: ignore
-    if not calling_frame:
+    calling_frame = None
+    with contextlib.suppress(AttributeError):
+        calling_frame = inspect.currentframe().f_back.f_back.f_back  # type: ignore
+
+    if calling_frame is None:
         msg = "Couldn't get the calling frame."
         raise ValueError(msg)
+
     return helpers.get_line_str_from_frame(frame=calling_frame)
 
 
