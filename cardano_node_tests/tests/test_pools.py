@@ -2660,15 +2660,17 @@ class TestPoolVoteDeleg:
                 == "drep-alwaysAbstain"
             )
 
-            # Check stake-pool-default-vote
-            default_vote = cluster.g_query.get_stake_pool_default_vote(
+        yield reward_to_owner_pool
+
+        def reward_to_owner_pool_default_vote(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            result = cluster.g_query.get_stake_pool_default_vote(
                 spo_vkey_file=pools[0].cold_key_pair.vkey_file
             )
-            assert default_vote == "DefaultAbstain", (
-                f"Unexpected default vote for owner pool: {default_vote}"
-            )
+            assert result == "DefaultAbstain", f"Expected 'DefaultAbstain', got {result}"
 
-        yield reward_to_owner_pool
+        yield reward_to_owner_pool_default_vote
 
         def reward_to_other_pool(
             cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
@@ -2681,15 +2683,17 @@ class TestPoolVoteDeleg:
                 == "drep-alwaysNoConfidence"
             )
 
-            # Check stake-pool-default-vote
-            default_vote = cluster.g_query.get_stake_pool_default_vote(
+        yield reward_to_other_pool
+
+        def reward_to_other_pool_default_vote(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            result = cluster.g_query.get_stake_pool_default_vote(
                 spo_vkey_file=pools[1].cold_key_pair.vkey_file
             )
-            assert default_vote == "DefaultNoConfidence", (
-                f"Unexpected default vote for other pool: {default_vote}"
-            )
+            assert result == "DefaultNoConfidence", f"Expected 'DefaultNoConfidence', got {result}"
 
-        yield reward_to_other_pool
+        yield reward_to_other_pool_default_vote
 
         def reward_no_deleg(
             cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
@@ -2702,24 +2706,17 @@ class TestPoolVoteDeleg:
                 == "drep-alwaysAbstain"
             )
 
-            # Check stake-pool-default-vote
-            default_vote = cluster.g_query.get_stake_pool_default_vote(
-                spo_vkey_file=pools[2].cold_key_pair.vkey_file
-            )
-            assert default_vote == "DefaultAbstain", (
-                f"Unexpected default vote for un-delegated pool: {default_vote}"
-            )
-
-            # Negative check: Ensure other pools didn't accidentally lose their vote type
-            other_votes = [
-                cluster.g_query.get_stake_pool_default_vote(spo_vkey_file=p.cold_key_pair.vkey_file)
-                for p in pools[:2]
-            ]
-            assert all(v in ("DefaultAbstain", "DefaultNoConfidence") for v in other_votes), (
-                "Unexpected change in default vote for previously delegated pools"
-            )
-
         yield reward_no_deleg
+
+        def reward_no_deleg_default_vote(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            result = cluster.g_query.get_stake_pool_default_vote(
+                spo_vkey_file=pools[0].cold_key_pair.vkey_file
+            )
+            assert result == "DefaultAbstain", f"Expected 'DefaultAbstain', got {result}"
+
+        yield reward_no_deleg_default_vote
 
         def all_individual_same(
             cluster: clusterlib.ClusterLib,
