@@ -108,6 +108,10 @@ class TestInfo:
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
 
+        # Get epoch where the action was submitted for keeping track of
+        # epoch to wait for the gov action expiry
+        action_epoch = cluster.g_query.get_epoch()
+
         reqc.cli023.start(url=helpers.get_vcs_link())
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -117,10 +121,6 @@ class TestInfo:
             tx_files=tx_files_action,
         )
         reqc.cli023.success()
-
-        # Get epoch where the action was submitted for keeping track of
-        # epoch to wait for the gov action expiry
-        action_epoch = cluster.g_query.get_epoch()
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
@@ -148,9 +148,17 @@ class TestInfo:
             == governance_utils.ActionTags.INFO_ACTION.value
         ), "Incorrect action tag"
 
-        # Vote
-
         action_ix = prop_action["actionId"]["govActionIx"]
+
+        prop_query_action = cluster.g_query.get_proposals(
+            action_txid=action_txid, action_ix=action_ix
+        )
+
+        assert cluster.g_query.get_epoch() == action_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
+
+        # Vote
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.cli021, reqc.cip053, reqc.cip059)]
@@ -197,6 +205,7 @@ class TestInfo:
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
         )
+        vote_epoch = cluster.g_query.get_epoch()
 
         reqc.cli024.start(url=helpers.get_vcs_link())
         vote_tx_output = conway_common.submit_vote(
@@ -209,7 +218,9 @@ class TestInfo:
         )
         reqc.cli024.success()
 
-        vote_epoch = cluster.g_query.get_epoch()
+        assert cluster.g_query.get_epoch() == vote_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
 
         vote_txid = cluster.g_transaction.get_txid(tx_body_file=vote_tx_output.out_file)
 
@@ -224,7 +235,14 @@ class TestInfo:
         assert prop_vote["dRepVotes"], "No DRep votes"
         assert prop_vote["stakePoolVotes"], "No stake pool votes"
 
-        # Check that the Info action cannot be ratified
+        # Ensure the proposal is being queried in an epoch where it is eligible for ratification.
+        # A proposal cannot be ratified in the same epoch in which it was submitted.
+        cluster.wait_for_epoch(epoch_no=action_epoch + 1, padding_seconds=5)
+        prop_query_rat = cluster.g_query.get_proposals(action_txid=action_txid, action_ix=action_ix)
+        all_proposals = cluster.g_query.get_proposals()
+
+        # Check that the Info action cannot be ratified.
+        # The `vote_epoch` may or may not be the same epoch as `action_epoch`.
         approved_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
         approved_gov_state = cluster.g_query.get_gov_state()
         conway_common.save_gov_state(
@@ -290,6 +308,13 @@ class TestInfo:
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_drep[0])
         governance_utils.check_vote_view(cluster_obj=cluster, vote_data=votes_spo[0])
         reqc.cli022.success()
+
+        # Check `query proposals`
+        assert not prop_query_action, (
+            f"Expected no proposals in action creation epoch, but found: {prop_query_action}"
+        )
+        assert prop_query_rat, "No proposals found in ratification eligible epoch"
+        assert all_proposals, "No proposals found in all proposals query"
 
         # Check dbsync
         reqc.db013.start(url=helpers.get_vcs_link())
