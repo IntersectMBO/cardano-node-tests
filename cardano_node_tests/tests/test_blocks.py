@@ -11,6 +11,7 @@ import shutil
 import signal
 import sqlite3
 import time
+import typing as tp
 
 import allure
 import pytest
@@ -336,7 +337,7 @@ class TestCollectData:
             cur = conn.cursor()
             for pool_id_dec, num_blocks in blocks_before.items():
                 pool_rec = pool_mapping[pool_id_dec]
-                pool_idx: int = pool_rec["pool_idx"]  # type: ignore
+                pool_idx = tp.cast(int, pool_rec["pool_idx"])
                 cur.execute(
                     "INSERT INTO blocks VALUES (?, ?, ?, ?, ?, ?)",
                     (

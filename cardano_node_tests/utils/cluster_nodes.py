@@ -569,4 +569,4 @@ def load_addrs_data() -> dict:
     """Load data about addresses and their keys for usage in tests."""
     data_file = pl.Path(get_cluster_env().state_dir) / ADDRS_DATA
     with open(data_file, "rb") as in_data:
-        return pickle.load(in_data)  # type: ignore
+        return tp.cast(dict, pickle.load(in_data))

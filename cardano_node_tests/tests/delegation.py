@@ -99,7 +99,7 @@ def cluster_and_pool(
 
         blocks_before = clusterlib_utils.get_blocks_before(cluster_obj=cluster_obj)
         # Sort pools by how many blocks they produce
-        pool_ids_s = sorted(blocks_before, key=blocks_before.get, reverse=True)  # type: ignore
+        pool_ids_s = sorted(blocks_before, key=lambda x: blocks_before.get(x) or 0, reverse=True)
         # Select a pool with reasonable margin
         for pool_id in pool_ids_s:
             pool_params = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id)
