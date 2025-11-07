@@ -2712,7 +2712,7 @@ class TestPoolVoteDeleg:
             cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
         ):
             result = cluster.g_query.get_stake_pool_default_vote(
-                spo_vkey_file=pools[0].cold_key_pair.vkey_file
+                spo_vkey_file=pools[2].cold_key_pair.vkey_file
             )
             assert result == "DefaultAbstain", f"Expected 'DefaultAbstain', got {result}"
 
