@@ -83,7 +83,11 @@ def _load_assets(assets: dict[str, dict[str, int]]) -> list[tuple[int, str]]:
         for asset_name_rec, amount in policy_rec.items():
             asset_name = asset_name_rec
             if "asset " in asset_name:
-                asset_name = re.search(r"asset ([0-9a-f]*)", asset_name).group(1)  # type: ignore
+                asset_name_search = re.search(r"asset ([0-9a-f]*)", asset_name)
+                if asset_name_search is None:
+                    err = f"Cannot parse asset name from: {asset_name}"
+                    raise ValueError(err)
+                asset_name = asset_name_search.group(1)
             elif asset_name == "default asset":
                 asset_name = ""
             token = f"{policy_key}.{asset_name}" if asset_name else policy_key
@@ -95,11 +99,11 @@ def _load_assets(assets: dict[str, dict[str, int]]) -> list[tuple[int, str]]:
 def _load_coins_data(coins_data: dict | str) -> list[tuple[int, str]]:
     # `coins_data` for Mary+ Tx era has Lovelace amount and policies info,
     # for older Tx eras it's just Lovelace amount
-    try:
-        amount_lovelace = coins_data.get(clusterlib.DEFAULT_COIN)  # type: ignore
-        policies_data: dict = coins_data  # type: ignore
-    except AttributeError:
-        amount_lovelace = int(coins_data.split()[0] or 0)  # type: ignore
+    if isinstance(coins_data, dict):
+        amount_lovelace = coins_data.get(clusterlib.DEFAULT_COIN)
+        policies_data = coins_data
+    else:
+        amount_lovelace = int(coins_data.split()[0] or 0)
         policies_data = {}
 
     loaded_data = []

@@ -45,8 +45,31 @@ class ColumnCondition(str, enum.Enum):
     IS_NULL = "column_condition:IS NULL"
 
 
+GOVERNANCE_TABLES = (
+    db_sync.Table.COMMITTEE_DE_REGISTRATION,
+    db_sync.Table.COMMITTEE_MEMBER,
+    db_sync.Table.COMMITTEE_REGISTRATION,
+    db_sync.Table.COMMITTEE,
+    db_sync.Table.CONSTITUTION,
+    db_sync.Table.DELEGATION_VOTE,
+    db_sync.Table.DREP_DISTR,
+    db_sync.Table.DREP_REGISTRATION,
+    db_sync.Table.EPOCH_STATE,
+    db_sync.Table.GOV_ACTION_PROPOSAL,
+    db_sync.Table.OFF_CHAIN_VOTE_DATA,
+    db_sync.Table.OFF_CHAIN_VOTE_DREP_DATA,
+    db_sync.Table.OFF_CHAIN_VOTE_EXTERNAL_UPDATE,
+    db_sync.Table.OFF_CHAIN_VOTE_FETCH_ERROR,
+    db_sync.Table.OFF_CHAIN_VOTE_GOV_ACTION_DATA,
+    db_sync.Table.OFF_CHAIN_VOTE_REFERENCE,
+    db_sync.Table.VOTING_ANCHOR,
+    db_sync.Table.VOTING_PROCEDURE,
+    db_sync.Table.TREASURY_WITHDRAWAL,
+)
+
+
 def check_dbsync_state(
-    expected_state: dict[tp.Union[str, db_sync.Table], TableCondition | ColumnCondition],
+    expected_state: dict[str | db_sync.Table, TableCondition | ColumnCondition],
 ) -> None:
     """Check the state of db-sync tables and columns against expected conditions.
 
@@ -145,7 +168,6 @@ class TestDBSyncConfig:
             """Test `tx_out` option."""
             db_config = db_sync_manager.get_config_builder()
 
-            # Test tx_out : enable
             db_sync_manager.restart_with_config(
                 custom_config=db_config.with_tx_out(
                     value=db_sync.TxOutMode.ENABLE, force_tx_in=False, use_address_table=False
@@ -160,7 +182,6 @@ class TestDBSyncConfig:
                 }
             )
 
-            # Test tx_out : disable
             db_sync_manager.restart_with_config(
                 custom_config=db_config.with_tx_out(
                     value=db_sync.TxOutMode.DISABLE, force_tx_in=True, use_address_table=True
@@ -178,6 +199,43 @@ class TestDBSyncConfig:
             )
 
         yield basic_tx_out
+
+        def governance(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `governance` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_governance(value=db_sync.SettingState.ENABLE)
+            )
+
+            # Off-chain data is inserted into the DB a few minutes after the restart of db-sync
+            def _query_func():
+                empty_tables = [
+                    table for table in GOVERNANCE_TABLES if dbsync_utils.table_empty(table=table)
+                ]
+
+                if empty_tables:
+                    msg = f"Following tables are still empty: {empty_tables}"
+                    raise dbsync_utils.DbSyncNoResponseError(msg)
+
+                return True
+
+            dbsync_utils.retry_query(query_func=_query_func, timeout=600)
+
+            check_dbsync_state(
+                expected_state={t: TableCondition.NOT_EMPTY for t in GOVERNANCE_TABLES}  # noqa: C420
+            )
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_governance(value=db_sync.SettingState.DISABLE)
+            )
+            check_dbsync_state(
+                expected_state={t: TableCondition.EMPTY for t in GOVERNANCE_TABLES}  # noqa: C420
+            )
+
+        yield governance
 
         def tx_cbor_value_enable(
             db_sync_manager: db_sync.DBSyncManager,

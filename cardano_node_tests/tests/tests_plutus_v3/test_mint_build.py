@@ -81,7 +81,7 @@ class TestPlutusBatch5V3Builtins:
 
         # Step 1: fund the token issuer and create UTXO for collaterals
 
-        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
+        mint_utxos, collateral_utxos, _tx_output_step1 = mint_build._fund_issuer(
             cluster_obj=cluster_obj,
             temp_template=temp_template,
             payment_addr=payment_addr,
