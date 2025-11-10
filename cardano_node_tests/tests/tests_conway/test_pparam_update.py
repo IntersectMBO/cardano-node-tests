@@ -1212,7 +1212,7 @@ class TestPParamUpdate:
             )
 
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=fin_prop_rec.action_txid
+                state=rat_gov_state, action_txid=fin_prop_rec.action_txid
             )
             assert rat_action, "Action not found in ratified actions"
             # Disapprove ratified action, the voting shouldn't have any effect

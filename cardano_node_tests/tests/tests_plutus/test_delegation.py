@@ -503,12 +503,12 @@ def deregister_stake_addr(
 # Don't run these tests on testnets as a stake address corresponding to the Plutus script
 # might be already in use.
 @common.SKIPIF_BUILD_UNUSABLE
-@common.PARAM_PLUTUS_VERSION
-@common.PARAM_BUILD_METHOD_NO_EST
 class TestRegisterAddr:
     """Tests for address registration."""
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     def test_register_deregister(
         self,
@@ -655,7 +655,7 @@ class TestRegisterAddr:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_dereg)
 
         # Compare cost of Plutus script with data from db-sync
-        if tx_db_record_reg and clusterlib_utils.BuildMethods.BUILD:
+        if tx_db_record_reg and build_method == clusterlib_utils.BuildMethods.BUILD:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record_reg.redeemers, cost_records=plutus_costs_reg
             )

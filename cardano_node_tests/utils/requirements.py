@@ -4,15 +4,14 @@ import enum
 import json
 import logging
 import pathlib as pl
-import typing as tp
 
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
 
-class GroupsKnown:
-    CHANG_US: tp.Final[str] = "chang_us"
+class GroupsKnown(enum.StrEnum):
+    CHANG_US = "chang_us"
 
 
 class Statuses(enum.Enum):

@@ -60,10 +60,10 @@ class ChainAccount:
     treasury: int
 
 
-class BuildMethods:
-    BUILD: tp.Final[str] = "build"
-    BUILD_RAW: tp.Final[str] = "build_raw"
-    BUILD_EST: tp.Final[str] = "build_estimate"
+class BuildMethods(enum.StrEnum):
+    BUILD = "build"
+    BUILD_RAW = "build_raw"
+    BUILD_EST = "build_estimate"
 
 
 class KeyGenMethods(enum.StrEnum):

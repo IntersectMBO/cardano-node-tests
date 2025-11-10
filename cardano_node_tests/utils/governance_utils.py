@@ -254,9 +254,12 @@ def lookup_proposal(
 
 
 def lookup_ratified_actions(
-    *, gov_state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
+    *, state: dict[str, tp.Any], action_txid: str, action_ix: int = 0
 ) -> dict[str, tp.Any]:
-    ratified_actions: list[dict[str, tp.Any]] = gov_state["nextRatifyState"]["enactedGovActions"]
+    ratified_actions = state.get("enactedGovActions") or state.get("nextRatifyState", {}).get(
+        "enactedGovActions", []
+    )
+
     return _lookup_action(actions=ratified_actions, action_txid=action_txid, action_ix=action_ix)
 
 
