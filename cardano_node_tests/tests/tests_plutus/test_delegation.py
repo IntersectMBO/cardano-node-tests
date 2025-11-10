@@ -655,7 +655,7 @@ class TestRegisterAddr:
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_dereg)
 
         # Compare cost of Plutus script with data from db-sync
-        if tx_db_record_reg and clusterlib_utils.BuildMethods.BUILD:
+        if tx_db_record_reg and build_method == clusterlib_utils.BuildMethods.BUILD:
             dbsync_utils.check_plutus_costs(
                 redeemer_records=tx_db_record_reg.redeemers, cost_records=plutus_costs_reg
             )
