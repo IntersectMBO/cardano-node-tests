@@ -311,11 +311,11 @@ class TestNegative:
 
         assert "ExpiredUTxO" in exc_val or "OutsideValidityIntervalUTxO" in exc_val, exc_val
 
-        slot_no = int(
-            re.search(r"ValidityInterval .*SJust \(SlotNo ([0-9]*)", exc_val).group(  # type: ignore
-                1
-            )
-        )
+        slot_no_search = re.search(r"ValidityInterval .*SJust \(SlotNo ([0-9]*)", exc_val)
+        if slot_no_search is None:
+            err = "Cannot find SlotNo in CLI error output"
+            raise RuntimeError(err)
+        slot_no = int(slot_no_search.group(1))
 
         return slot_no, exc_val, tx_output
 

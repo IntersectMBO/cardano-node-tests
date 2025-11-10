@@ -172,19 +172,27 @@ def get_current_line_str() -> str:
 
     NOTE: this will not work correctly if called from context manager.
     """
-    calling_frame = inspect.currentframe().f_back  # type: ignore
+    calling_frame = None
+    with contextlib.suppress(AttributeError):
+        calling_frame = inspect.currentframe().f_back  # type: ignore
+
     if not calling_frame:
         msg = "Couldn't get the calling frame."
         raise ValueError(msg)
+
     return get_line_str_from_frame(frame=calling_frame)
 
 
 def get_vcs_link() -> str:
     """Return link to the current line in GitHub."""
-    calling_frame = inspect.currentframe().f_back  # type: ignore
+    calling_frame = None
+    with contextlib.suppress(AttributeError):
+        calling_frame = inspect.currentframe().f_back  # type: ignore
+
     if not calling_frame:
         msg = "Couldn't get the calling frame."
         raise ValueError(msg)
+
     line_str = get_line_str_from_frame(frame=calling_frame)
     loc_part = line_str[line_str.find("cardano_node_tests") :]
     url = f"{GITHUB_URL}/blob/{get_current_commit()}/{loc_part}"

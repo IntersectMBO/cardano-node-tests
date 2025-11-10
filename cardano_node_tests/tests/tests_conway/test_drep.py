@@ -318,6 +318,7 @@ class TestDReps:
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
+    @pytest.mark.dbsync_config
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.parametrize(
