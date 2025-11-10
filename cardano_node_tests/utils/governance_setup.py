@@ -566,7 +566,7 @@ def reinstate_committee(  # noqa: C901
     cluster_obj.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
     rat_gov_state = cluster_obj.g_query.get_gov_state()
     rat_action = governance_utils.lookup_ratified_actions(
-        gov_state=rat_gov_state, action_txid=action_txid
+        state=rat_gov_state, action_txid=action_txid
     )
     if not rat_action:
         msg = "Action not found in ratified actions."

@@ -185,7 +185,7 @@ class TestSetup:
         )
 
         rat_action = governance_utils.lookup_ratified_actions(
-            gov_state=rat_gov_state, action_txid=prop_rec.action_txid
+            state=rat_gov_state, action_txid=prop_rec.action_txid
         )
         assert rat_action, "Action not found in ratified actions"
 
@@ -302,7 +302,7 @@ class TestSetup:
             gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
         )
         rat_action = governance_utils.lookup_ratified_actions(
-            gov_state=rat_gov_state, action_txid=action_txid
+            state=rat_gov_state, action_txid=action_txid
         )
         assert rat_action, "Action not found in ratified actions"
 

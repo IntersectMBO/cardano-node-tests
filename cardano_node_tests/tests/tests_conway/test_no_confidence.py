@@ -230,7 +230,7 @@ class TestNoConfidence:
                 gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
             )
             rat_action = governance_utils.lookup_ratified_actions(
-                gov_state=rat_gov_state, action_txid=action_txid
+                state=rat_gov_state, action_txid=action_txid
             )
             assert rat_action, "Action not found in ratified actions"
 
@@ -426,7 +426,7 @@ class TestNoConfidence:
 
             # Check that the action is not ratified
             rat_const_action = governance_utils.lookup_ratified_actions(
-                gov_state=approved_gov_state,
+                state=approved_gov_state,
                 action_txid=const_action_txid,
                 action_ix=const_action_ix,
             )
