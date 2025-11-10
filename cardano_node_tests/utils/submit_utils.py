@@ -12,7 +12,7 @@ class SubmitMethods(enum.StrEnum):
     CLI = "cli"
 
 
-# The "submit_method" is a fixtrue defined in `conftest.py`.
+# The "submit_method" is a fixture defined in `conftest.py`.
 PARAM_SUBMIT_METHOD = pytest.mark.parametrize(
     "submit_method",
     (
