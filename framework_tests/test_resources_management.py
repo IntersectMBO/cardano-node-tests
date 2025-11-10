@@ -1,6 +1,6 @@
 from cardano_node_tests.cluster_management import resources_management
 
-ALL_POOLS = {"pool1", "pool2", "pool3", "pool4", "pool5"}
+ALL_POOLS = frozenset({"pool1", "pool2", "pool3", "pool4", "pool5"})
 
 
 def test_get_lockable():

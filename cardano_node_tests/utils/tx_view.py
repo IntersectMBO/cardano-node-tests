@@ -5,6 +5,7 @@ import json
 import logging
 import pathlib as pl
 import re
+import types
 import typing as tp
 
 import yaml
@@ -15,54 +16,56 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-CERTIFICATES_INFORMATION = {
-    "genesis key delegation": {"VRF key hash", "delegate key hash", "genesis key hash"},
-    "MIR": {
-        "pot",
-        "target stake addresses",
-        "send to treasury",
-        "send to reserves",
-        "MIR amount",  # node 8.3.0+
-    },
-    "stake address deregistration": {
-        "stake credential key hash",
-        "stake credential script hash",
-        "key hash",  # node 8.3.0+
-        "script hash",  # node 8.3.0+
-        "keyHash",  # node 8.4.0+
-        "scriptHash",  # node 8.4.0+
-    },
-    "stake address registration": {
-        "stake credential key hash",
-        "stake credential script hash",
-        "key hash",  # node 8.3.0+
-        "script hash",  # node 8.3.0+
-        "keyHash",  # node 8.4.0+
-        "scriptHash",  # node 8.4.0+
-    },
-    "stake address delegation": {
-        "pool",
-        "stake credential key hash",
-        "stake credential script hash",
-        "credential",  # node 8.3.0+
-    },
-    "stake pool retirement": {"epoch", "pool"},
-    "stake pool registration": {
-        "VRF key hash",
-        "vrf",  # node 8.3.0+
-        "cost",
-        "margin",
-        "metadata",
-        "owners (stake key hashes)",
-        "owners",  # node 8.3.0+
-        "pledge",
-        "pool",
-        "relays",
-        "reward account",
-        "rewardAccount",  # node 8.3.0+
-        "publicKey",  # node 8.3.0+
-    },
-}
+CERTIFICATES_INFORMATION = types.MappingProxyType(
+    {
+        "genesis key delegation": {"VRF key hash", "delegate key hash", "genesis key hash"},
+        "MIR": {
+            "pot",
+            "target stake addresses",
+            "send to treasury",
+            "send to reserves",
+            "MIR amount",  # node 8.3.0+
+        },
+        "stake address deregistration": {
+            "stake credential key hash",
+            "stake credential script hash",
+            "key hash",  # node 8.3.0+
+            "script hash",  # node 8.3.0+
+            "keyHash",  # node 8.4.0+
+            "scriptHash",  # node 8.4.0+
+        },
+        "stake address registration": {
+            "stake credential key hash",
+            "stake credential script hash",
+            "key hash",  # node 8.3.0+
+            "script hash",  # node 8.3.0+
+            "keyHash",  # node 8.4.0+
+            "scriptHash",  # node 8.4.0+
+        },
+        "stake address delegation": {
+            "pool",
+            "stake credential key hash",
+            "stake credential script hash",
+            "credential",  # node 8.3.0+
+        },
+        "stake pool retirement": {"epoch", "pool"},
+        "stake pool registration": {
+            "VRF key hash",
+            "vrf",  # node 8.3.0+
+            "cost",
+            "margin",
+            "metadata",
+            "owners (stake key hashes)",
+            "owners",  # node 8.3.0+
+            "pledge",
+            "pool",
+            "relays",
+            "reward account",
+            "rewardAccount",  # node 8.3.0+
+            "publicKey",  # node 8.3.0+
+        },
+    }
+)
 
 
 def load_raw(*, tx_view: str) -> dict:

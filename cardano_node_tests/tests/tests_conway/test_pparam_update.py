@@ -32,79 +32,93 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-NETWORK_GROUP_PPARAMS = {
-    "maxBlockBodySize",
-    "maxTxSize",
-    "maxBlockHeaderSize",
-    "maxValueSize",
-    "maxTxExecutionUnits",
-    "maxBlockExecutionUnits",
-    "maxCollateralInputs",
-}
+NETWORK_GROUP_PPARAMS = frozenset(
+    {
+        "maxBlockBodySize",
+        "maxTxSize",
+        "maxBlockHeaderSize",
+        "maxValueSize",
+        "maxTxExecutionUnits",
+        "maxBlockExecutionUnits",
+        "maxCollateralInputs",
+    }
+)
 
-ECONOMIC_GROUP_PPARAMS = {
-    "txFeePerByte",
-    "txFeeFixed",
-    "stakeAddressDeposit",
-    "stakePoolDeposit",
-    "monetaryExpansion",
-    "treasuryCut",
-    "minPoolCost",
-    "utxoCostPerByte",
-    "executionUnitPrices",
-}
+ECONOMIC_GROUP_PPARAMS = frozenset(
+    {
+        "txFeePerByte",
+        "txFeeFixed",
+        "stakeAddressDeposit",
+        "stakePoolDeposit",
+        "monetaryExpansion",
+        "treasuryCut",
+        "minPoolCost",
+        "utxoCostPerByte",
+        "executionUnitPrices",
+    }
+)
 
-TECHNICAL_GROUP_PPARAMS = {
-    "poolPledgeInfluence",
-    "poolRetireMaxEpoch",
-    "stakePoolTargetNum",
-    "costModels",
-    "collateralPercentage",
-}
+TECHNICAL_GROUP_PPARAMS = frozenset(
+    {
+        "poolPledgeInfluence",
+        "poolRetireMaxEpoch",
+        "stakePoolTargetNum",
+        "costModels",
+        "collateralPercentage",
+    }
+)
 
-GOVERNANCE_GROUP_PPARAMS = {
-    "govActionLifetime",
-    "govActionDeposit",
-    "dRepDeposit",
-    "dRepActivity",
-    "committeeMinSize",
-    "committeeMaxTermLength",
-}
+GOVERNANCE_GROUP_PPARAMS = frozenset(
+    {
+        "govActionLifetime",
+        "govActionDeposit",
+        "dRepDeposit",
+        "dRepActivity",
+        "committeeMinSize",
+        "committeeMaxTermLength",
+    }
+)
 
-GOVERNANCE_GROUP_PPARAMS_DREP_THRESHOLDS = {
-    "committeeNoConfidence",
-    "committeeNormal",
-    "hardForkInitiation",
-    "motionNoConfidence",
-    "ppEconomicGroup",
-    "ppGovGroup",
-    "ppNetworkGroup",
-    "ppTechnicalGroup",
-    "treasuryWithdrawal",
-    "updateToConstitution",
-}
+GOVERNANCE_GROUP_PPARAMS_DREP_THRESHOLDS = frozenset(
+    {
+        "committeeNoConfidence",
+        "committeeNormal",
+        "hardForkInitiation",
+        "motionNoConfidence",
+        "ppEconomicGroup",
+        "ppGovGroup",
+        "ppNetworkGroup",
+        "ppTechnicalGroup",
+        "treasuryWithdrawal",
+        "updateToConstitution",
+    }
+)
 
-GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS = {
-    "committeeNoConfidence",
-    "committeeNormal",
-    "hardForkInitiation",
-    "motionNoConfidence",
-    "ppSecurityGroup",
-}
+GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS = frozenset(
+    {
+        "committeeNoConfidence",
+        "committeeNormal",
+        "hardForkInitiation",
+        "motionNoConfidence",
+        "ppSecurityGroup",
+    }
+)
 
 # Security related pparams that require also SPO approval
-SECURITY_PPARAMS = {
-    "maxBlockBodySize",
-    "maxTxSize",
-    "maxBlockHeaderSize",
-    "maxValueSize",
-    "maxBlockExecutionUnits",
-    "txFeePerByte",
-    "txFeeFixed",
-    "utxoCostPerByte",
-    "govActionDeposit",
-    "minFeeRefScriptsCoinsPerByte",  # not in 8.8 release yet
-}
+SECURITY_PPARAMS = frozenset(
+    {
+        "maxBlockBodySize",
+        "maxTxSize",
+        "maxBlockHeaderSize",
+        "maxValueSize",
+        "maxBlockExecutionUnits",
+        "txFeePerByte",
+        "txFeeFixed",
+        "utxoCostPerByte",
+        "govActionDeposit",
+        "minFeeRefScriptsCoinsPerByte",  # not in 8.8 release yet
+    }
+)
 
 
 def _get_rational_str(value: float) -> str:

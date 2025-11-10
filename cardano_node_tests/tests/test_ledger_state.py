@@ -16,14 +16,16 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 
-LEDGER_STATE_KEYS = {
-    "blocksBefore",
-    "blocksCurrent",
-    "lastEpoch",
-    "possibleRewardUpdate",
-    "stakeDistrib",
-    "stateBefore",
-}
+LEDGER_STATE_KEYS = frozenset(
+    {
+        "blocksBefore",
+        "blocksCurrent",
+        "lastEpoch",
+        "possibleRewardUpdate",
+        "stakeDistrib",
+        "stateBefore",
+    }
+)
 
 
 class TestLedgerState:
