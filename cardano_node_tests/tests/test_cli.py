@@ -29,9 +29,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data"
 
-ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
-
-
 pytestmark = common.SKIPIF_WRONG_ERA
 
 
@@ -373,7 +370,7 @@ class TestAddressInfo:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(address=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @hypothesis.given(address=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_address_info_with_invalid_address(self, cluster: clusterlib.ClusterLib, address: str):
@@ -471,7 +468,7 @@ class TestAddressBuild:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("option", ("vkey", "vkey_file", "script_file"))
-    @hypothesis.given(key=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @hypothesis.given(key=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_invalid_payment_info(
@@ -531,7 +528,7 @@ class TestAddressBuild:
             "address",
         ),
     )
-    @hypothesis.given(key=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @hypothesis.given(key=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_invalid_stake_info(
@@ -619,7 +616,7 @@ class TestAddressKeyHash:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
-    @hypothesis.given(vkey=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @hypothesis.given(vkey=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_invalid_verification_key(self, cluster: clusterlib.ClusterLib, option: str, vkey: str):
@@ -866,7 +863,7 @@ class TestQueryUTxO:
             assert "expecting digit" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(filter_str=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @hypothesis.given(filter_str=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_address_invalid_data(self, cluster: clusterlib.ClusterLib, filter_str: str):
@@ -922,7 +919,7 @@ class TestStakeAddressKeyHash:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
-    @hypothesis.given(vkey=st.text(alphabet=ADDR_ALPHABET, min_size=1))
+    @hypothesis.given(vkey=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_invalid_verification_key(self, cluster: clusterlib.ClusterLib, option: str, vkey: str):

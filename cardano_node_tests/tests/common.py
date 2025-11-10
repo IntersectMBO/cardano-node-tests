@@ -1,4 +1,5 @@
 import logging
+import string
 import time
 import typing as tp
 
@@ -19,6 +20,8 @@ LOGGER = logging.getLogger(__name__)
 
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
+
+ADDR_ALPHABET = string.ascii_lowercase + string.digits
 
 ORDER5_BYRON = (
     pytest.mark.order(5) if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop

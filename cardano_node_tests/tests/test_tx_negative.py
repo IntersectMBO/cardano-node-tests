@@ -7,7 +7,6 @@ import dataclasses
 import logging
 import pathlib as pl
 import re
-import string
 import time
 import typing as tp
 
@@ -30,8 +29,6 @@ from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
-
-ADDR_ALPHABET = list(f"{string.ascii_lowercase}{string.digits}")
 
 
 class TestNegative:
@@ -872,7 +869,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -899,7 +896,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
     @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
@@ -957,7 +954,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
     @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
@@ -985,7 +982,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
     @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
@@ -1044,7 +1041,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=98, max_size=98))
+    @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1096,7 +1093,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(addr=st.text(alphabet=ADDR_ALPHABET, min_size=50, max_size=250))
+    @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1205,7 +1202,7 @@ class TestNegative:
             raise ValueError(msg)
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
+    @hypothesis.given(utxo_hash=st.text(alphabet=common.ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
     @common.PARAM_BUILD_METHOD
     @pytest.mark.smoke
@@ -1241,7 +1238,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
-    @hypothesis.given(utxo_hash=st.text(alphabet=ADDR_ALPHABET, min_size=10, max_size=550))
+    @hypothesis.given(utxo_hash=st.text(alphabet=common.ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
     @pytest.mark.testnets
