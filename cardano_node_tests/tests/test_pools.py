@@ -2668,7 +2668,7 @@ class TestPoolVoteDeleg:
             result = cluster.g_query.get_stake_pool_default_vote(
                 spo_vkey_file=pools[0].cold_key_pair.vkey_file
             )
-            assert result == "DefaultAbstain", f"Expected 'DefaultAbstain', got {result}"
+            assert result == "DefaultAbstain"
 
         yield reward_to_owner_pool_default_vote
 
@@ -2691,7 +2691,7 @@ class TestPoolVoteDeleg:
             result = cluster.g_query.get_stake_pool_default_vote(
                 spo_vkey_file=pools[1].cold_key_pair.vkey_file
             )
-            assert result == "DefaultNoConfidence", f"Expected 'DefaultNoConfidence', got {result}"
+            assert result == "DefaultNoConfidence"
 
         yield reward_to_other_pool_default_vote
 
@@ -2714,7 +2714,7 @@ class TestPoolVoteDeleg:
             result = cluster.g_query.get_stake_pool_default_vote(
                 spo_vkey_file=pools[2].cold_key_pair.vkey_file
             )
-            assert result == "DefaultAbstain", f"Expected 'DefaultAbstain', got {result}"
+            assert result == "DefaultAbstain"
 
         yield reward_no_deleg_default_vote
 
