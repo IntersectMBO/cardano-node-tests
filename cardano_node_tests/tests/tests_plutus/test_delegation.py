@@ -503,12 +503,12 @@ def deregister_stake_addr(
 # Don't run these tests on testnets as a stake address corresponding to the Plutus script
 # might be already in use.
 @common.SKIPIF_BUILD_UNUSABLE
-@common.PARAM_PLUTUS_VERSION
-@common.PARAM_BUILD_METHOD_NO_EST
 class TestRegisterAddr:
     """Tests for address registration."""
 
     @allure.link(helpers.get_vcs_link())
+    @common.PARAM_PLUTUS_VERSION
+    @common.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     def test_register_deregister(
         self,
