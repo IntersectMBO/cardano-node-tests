@@ -1,6 +1,7 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
 
 import dataclasses
+import enum
 import functools
 import json
 import logging
@@ -43,10 +44,10 @@ class ServiceStatus:
     message: str = ""
 
 
-class Testnets:
-    preview: tp.Final[str] = "preview"
-    preprod: tp.Final[str] = "preprod"
-    mainnet: tp.Final[str] = "mainnet"
+class Testnets(enum.StrEnum):
+    preview = "preview"
+    preprod = "preprod"
+    mainnet = "mainnet"
 
 
 class ClusterType:

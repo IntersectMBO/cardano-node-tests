@@ -1,5 +1,5 @@
+import enum
 import shutil
-import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
@@ -7,9 +7,9 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.utils import submit_api
 
 
-class SubmitMethods:
-    API: tp.Final[str] = "api"
-    CLI: tp.Final[str] = "cli"
+class SubmitMethods(enum.StrEnum):
+    API = "api"
+    CLI = "cli"
 
 
 # The "submit_method" is a fixtrue defined in `conftest.py`.
