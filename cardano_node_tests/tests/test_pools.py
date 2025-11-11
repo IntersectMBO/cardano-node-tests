@@ -2662,6 +2662,16 @@ class TestPoolVoteDeleg:
 
         yield reward_to_owner_pool
 
+        def reward_to_owner_pool_default_vote(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            result = cluster.g_query.get_stake_pool_default_vote(
+                spo_vkey_file=pools[0].cold_key_pair.vkey_file
+            )
+            assert result == "DefaultAbstain"
+
+        yield reward_to_owner_pool_default_vote
+
         def reward_to_other_pool(
             cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
         ):
@@ -2675,6 +2685,16 @@ class TestPoolVoteDeleg:
 
         yield reward_to_other_pool
 
+        def reward_to_other_pool_default_vote(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            result = cluster.g_query.get_stake_pool_default_vote(
+                spo_vkey_file=pools[1].cold_key_pair.vkey_file
+            )
+            assert result == "DefaultNoConfidence"
+
+        yield reward_to_other_pool_default_vote
+
         def reward_no_deleg(
             cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
         ):
@@ -2687,6 +2707,16 @@ class TestPoolVoteDeleg:
             )
 
         yield reward_no_deleg
+
+        def reward_no_deleg_default_vote(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            result = cluster.g_query.get_stake_pool_default_vote(
+                spo_vkey_file=pools[2].cold_key_pair.vkey_file
+            )
+            assert result == "DefaultAbstain"
+
+        yield reward_no_deleg_default_vote
 
         def all_individual_same(
             cluster: clusterlib.ClusterLib,
