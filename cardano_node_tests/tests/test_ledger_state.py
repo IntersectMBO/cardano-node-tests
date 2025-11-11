@@ -56,6 +56,7 @@ class TestLedgerState:
                 raise
             issues.node_3859.finish_test()
             raise
+
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
             state_name=temp_template,
