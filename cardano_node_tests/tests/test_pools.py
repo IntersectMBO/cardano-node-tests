@@ -2545,7 +2545,7 @@ class TestPoolVoteDeleg:
     ) -> list[clusterlib.PoolCreationOutput]:
         """Create pools for testing vote delegation scenarios."""
         temp_template = common.get_test_id(cluster)
-        num_pools = 3
+        num_pools = 4
 
         # Create pool owners
         pool_owners = common.get_pool_users(
@@ -2589,22 +2589,19 @@ class TestPoolVoteDeleg:
                 )
             )
 
-            # Delegate reward address to a DRep.
-            # Delegate stake to pools:
-            #  * first reward address is delegated to the first pool,
-            #  * second reward address is delegated to the first pool,
+            # Delegate reward address to a pool and a DRep:
+            #  * first reward address is delegated to the first pool
+            #    and vote is delegated to the Always Abstain DRep
+            #  * second reward address is delegated to the first pool
+            #    and vote is delegated to the Always No Confidence DRep
             #  * third reward address is not delegated to any pool
+            #    and vote is delegated to the Always Abstain DRep
+            #  * fourth reward address is not delegated to any pool
+            #    and vote is not delegated to any DRep
 
             vote_always_abstain = i % 2 == 0
 
-            if i == 2:
-                deleg_vote_cert = cluster.g_stake_address.gen_vote_delegation_cert(
-                    addr_name=name_template,
-                    stake_vkey_file=reward_addr.vkey_file,
-                    always_abstain=vote_always_abstain,
-                    always_no_confidence=not vote_always_abstain,
-                )
-            else:
+            if i in (0, 1):
                 deleg_vote_cert = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
                     addr_name=name_template,
                     stake_vkey_file=reward_addr.vkey_file,
@@ -2612,7 +2609,15 @@ class TestPoolVoteDeleg:
                     always_abstain=vote_always_abstain,
                     always_no_confidence=not vote_always_abstain,
                 )
-            delegation_cert_files.append(deleg_vote_cert)
+                delegation_cert_files.append(deleg_vote_cert)
+            elif i == 2:
+                deleg_vote_cert = cluster.g_stake_address.gen_vote_delegation_cert(
+                    addr_name=name_template,
+                    stake_vkey_file=reward_addr.vkey_file,
+                    always_abstain=vote_always_abstain,
+                    always_no_confidence=not vote_always_abstain,
+                )
+                delegation_cert_files.append(deleg_vote_cert)
 
         # Submit all the delegation certificates
         tx_files = clusterlib.TxFiles(
@@ -2643,7 +2648,7 @@ class TestPoolVoteDeleg:
 
         return pools_out
 
-    def get_subtests(self) -> tp.Generator[tp.Callable, None, None]:
+    def get_subtests(self) -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
         """Get pool vote delegation scenarios.
 
         The scenarios are executed as subtests in the `test_pool_delegation` test.
@@ -2695,7 +2700,7 @@ class TestPoolVoteDeleg:
 
         yield reward_to_other_pool_default_vote
 
-        def reward_no_deleg(
+        def reward_no_pool_deleg(
             cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
         ):
             """Check vote delegation if reward address is not delegated to any pool."""
@@ -2706,15 +2711,38 @@ class TestPoolVoteDeleg:
                 == "drep-alwaysAbstain"
             )
 
-        yield reward_no_deleg
+        yield reward_no_pool_deleg
 
-        def reward_no_deleg_default_vote(
+        def reward_no_pool_deleg_default_vote(
             cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
         ):
             result = cluster.g_query.get_stake_pool_default_vote(
                 spo_vkey_file=pools[2].cold_key_pair.vkey_file
             )
             assert result == "DefaultAbstain"
+
+        yield reward_no_pool_deleg_default_vote
+
+        def reward_no_deleg(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            """Check vote delegation if reward address is not delegated to any pool."""
+            assert (
+                cluster.g_query.get_spo_stake_distribution(
+                    spo_vkey_file=pools[3].cold_key_pair.vkey_file
+                )[0].vote_delegation
+                == ""
+            )
+
+        yield reward_no_deleg
+
+        def reward_no_deleg_default_vote(
+            cluster: clusterlib.ClusterLib, pools: list[clusterlib.PoolCreationOutput]
+        ):
+            result = cluster.g_query.get_stake_pool_default_vote(
+                spo_vkey_file=pools[3].cold_key_pair.vkey_file
+            )
+            assert result == "DefaultNo"
 
         yield reward_no_deleg_default_vote
 
