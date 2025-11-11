@@ -56,16 +56,6 @@ class TestLedgerState:
                 raise
             issues.node_3859.finish_test()
             raise
-
-        peer_snapshot = cluster.g_query.get_ledger_peer_snapshot()
-        assert "bigLedgerPools" in peer_snapshot, (
-            f"Missing expected key 'bigLedgerPools' in ledger-peer-snapshot output: "
-            f"{peer_snapshot.keys()}"
-        )
-        assert all("relativeStake" in p for p in peer_snapshot["bigLedgerPools"]), (
-            "Missing 'relativeStake' in some pool records"
-        )
-
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
             state_name=temp_template,

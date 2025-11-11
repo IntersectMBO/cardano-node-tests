@@ -263,6 +263,28 @@ class TestCLI:
             errors_str = "\n".join(errors)
             raise AssertionError(errors_str)
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    def test_ledger_peer_snapshot(self, cluster: clusterlib.ClusterLib):
+        """Test `cardano-cli query ledger-peer-snapshot`.
+
+        * ensure the command runs successfully
+        * ensure minimal expected keys exist
+        """
+        common.get_test_id(cluster)
+
+        peer_snapshot = cluster.g_query.get_ledger_peer_snapshot()
+
+        expected_keys = {"bigLedgerPools", "slotNo", "version"}
+        missing_keys = expected_keys - set(peer_snapshot)
+        assert not missing_keys
+
+        pools = peer_snapshot.get("bigLedgerPools", [])
+        assert isinstance(pools, list)
+        if pools:
+            assert all("relativeStake" in p for p in pools)
+
 
 class TestAddressInfo:
     """Tests for cardano-cli address info."""
