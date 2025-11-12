@@ -45,37 +45,6 @@ file_is_available() {
   esac
 }
 
-case "${DBSYNC_REV:-""}" in
-  "" )
-    echo "The value for DBSYNC_REV cannot be empty" >&2
-    exit 1
-    ;;
-
-  "master" | "HEAD" )
-    export DBSYNC_REV="master"
-
-    if [ ! -e cardano-db-sync ]; then
-      git clone --depth 1 https://github.com/IntersectMBO/cardano-db-sync.git
-    fi
-
-    cd cardano-db-sync || exit 1
-    git fetch origin master
-    ;;
-
-  * )
-    if [ ! -e cardano-db-sync ]; then
-      git clone https://github.com/IntersectMBO/cardano-db-sync.git
-    fi
-
-    cd cardano-db-sync || exit 1
-    git fetch
-    ;;
-esac
-
-git stash
-git checkout "$DBSYNC_REV"
-git rev-parse HEAD
-
 DBSYNC_TAR_URL="${DBSYNC_TAR_URL:-""}"
 
 # Check if DBSYNC_TAR_URL is empty and DBSYNC_REV is a version number
@@ -88,22 +57,55 @@ if [[ -z "$DBSYNC_TAR_URL" && "$DBSYNC_REV" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
   fi
 fi
 
-
 if [ -n "$DBSYNC_TAR_URL" ]; then
   # download db-sync
-  DBSYNC_TAR_FILE="$WORKDIR/dbsync_bins.tar.gz"
+  mkdir -p cardano-db-sync && cd cardano-db-sync || exit 1
+  DBSYNC_TAR_FILE="$PWD/dbsync_bins.tar.gz"
   curl -sSL "$DBSYNC_TAR_URL" > "$DBSYNC_TAR_FILE" || exit 1
-  rm -rf "${WORKDIR}/dbsync_download"
-  mkdir -p "${WORKDIR}/dbsync_download/"
-  tar -C "${WORKDIR}/dbsync_download/" -xzf "$DBSYNC_TAR_FILE" || exit 1
+  rm -rf "${PWD}/dbsync_download"
+  mkdir -p "${PWD}/dbsync_download/"
+  tar -C "${PWD}/dbsync_download/" -xzf "$DBSYNC_TAR_FILE" || exit 1
   rm -f "$DBSYNC_TAR_FILE"
   rm -f db-sync-node
-  ln -s "${WORKDIR}/dbsync_download" db-sync-node || exit 1
+  ln -s "${PWD}/dbsync_download" db-sync-node || exit 1
   rm -f smash-server || rm -f smash-server/bin/cardano-smash-server
   mkdir -p smash-server/bin
-  ln -s "${WORKDIR}/dbsync_download/bin/cardano-smash-server" smash-server/bin/cardano-smash-server || exit 1
+  ln -s "${PWD}/dbsync_download/bin/cardano-smash-server" smash-server/bin/cardano-smash-server || exit 1
+  DBSYNC_SCHEMA_DIR="$(readlink -m db-sync-node)/schema"
+  export DBSYNC_SCHEMA_DIR
 else
   # Build db-sync
+  case "${DBSYNC_REV:-""}" in
+    "" )
+      echo "The value for DBSYNC_REV cannot be empty" >&2
+      exit 1
+      ;;
+
+    "master" | "HEAD" )
+      export DBSYNC_REV="master"
+
+      if [ ! -e cardano-db-sync ]; then
+        git clone --depth 1 https://github.com/IntersectMBO/cardano-db-sync.git
+      fi
+
+      cd cardano-db-sync || exit 1
+      git fetch origin master
+      ;;
+
+    * )
+      if [ ! -e cardano-db-sync ]; then
+        git clone https://github.com/IntersectMBO/cardano-db-sync.git
+      fi
+
+      cd cardano-db-sync || exit 1
+      git fetch
+      ;;
+  esac
+
+  git stash
+  git checkout "$DBSYNC_REV"
+  git rev-parse HEAD
+
   nix build --accept-flake-config .#cardano-db-sync -o db-sync-node \
     || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o db-sync-node \
     || exit 1
@@ -111,6 +113,8 @@ else
   if [ "${SMASH:-"false"}" != "false" ]; then
     nix build --accept-flake-config .#cardano-smash-server -o smash-server || exit 1
   fi
+  DBSYNC_SCHEMA_DIR="$PWD/schema"
+  export DBSYNC_SCHEMA_DIR
 fi
 
 if [ ! -e db-sync-node/bin/cardano-db-sync ]; then
@@ -125,20 +129,21 @@ if [ -e smash-server/bin/cardano-smash-server ]; then
 fi
 export PATH_PREPEND
 
-export DBSYNC_SCHEMA_DIR="$PWD/schema"
-
 if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
   # Delete the indexes only after the binaries are ready, so the binaries can be retrieved from
   # the nix binary cache if available.
+  chmod -R u+w "$DBSYNC_SCHEMA_DIR" # Add write permissions
   rm -f "$DBSYNC_SCHEMA_DIR"/migration-4-000*
 
-  cleanup_dbsync_repo() {
-    local _origpwd="$PWD"
-    cd "$DBSYNC_SCHEMA_DIR"/.. || exit 1
-    # shellcheck disable=SC2015
-    git stash && git stash drop || :
-    cd "$_origpwd" || exit 1
-  }
+  if [ -z "$DBSYNC_TAR_URL" ]; then
+    cleanup_dbsync_repo() {
+      local _origpwd="$PWD"
+      cd "$DBSYNC_SCHEMA_DIR"/.. || exit 1
+      # shellcheck disable=SC2015
+      git stash && git stash drop || :
+      cd "$_origpwd" || exit 1
+    }
+  fi
 fi
 
 cd "$REPODIR" || exit 1
