@@ -186,6 +186,7 @@ class TestPlutusBatch5V3Builtins:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
     @pytest.mark.team_plutus
+    @pytest.mark.upgrade_step3
     def test_plutusv3_builtins(
         self,
         update_cost_model: None,  # noqa: ARG002
