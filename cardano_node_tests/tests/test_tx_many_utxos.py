@@ -29,7 +29,6 @@ class TestManyUTXOs:
     @pytest.fixture
     def cluster(self, cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
         return cluster_manager.get(
-            mark="many_utxos",
             lock_resources=[cluster_management.Resources.PERF],
             prio=True,
         )
