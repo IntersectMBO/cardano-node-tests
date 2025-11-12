@@ -244,6 +244,12 @@ class TestBuildMinting:
             expected_costs=[script_expected_fee["cost"]],
         )
 
+        ref_size_data = cluster.g_query.get_ref_script_size(utxo=reference_utxo)
+
+        ref_size = ref_size_data.get("refScriptSize") or ref_size_data.get("refInputScriptSize")
+        assert ref_size is not None, f"Missing refScriptSize field in output: {ref_size_data}"
+        assert ref_size >= 0, f"refScriptSize must be non-negative, got {ref_size}"
+
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
