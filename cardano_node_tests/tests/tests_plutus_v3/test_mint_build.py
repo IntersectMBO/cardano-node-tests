@@ -1,24 +1,76 @@
 """Tests for minting with Plutus using `transaction build`."""
 
 import logging
+import pathlib as pl
 
 import allure
 import pytest
+import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.tests.tests_plutus import mint_build
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
+
+DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
 pytestmark = [
     common.SKIPIF_PLUTUSV3_UNUSABLE,
     pytest.mark.plutus,
 ]
+
+
+@pytest.fixture
+def cluster(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    """Mark whole governance and Plutus as "locked"."""
+    cluster_obj = cluster_manager.get(
+        use_resources=cluster_management.Resources.ALL_POOLS,
+        lock_resources=[
+            cluster_management.Resources.COMMITTEE,
+            cluster_management.Resources.DREPS,
+            cluster_management.Resources.PLUTUS,
+        ],
+    )
+    return cluster_obj
+
+
+@pytest.fixture
+def update_cost_model(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> None:
+    """Update cost model to include values for the batch5 of Plutus Core built-in functions."""
+    pparams = cluster.g_query.get_protocol_params()
+    if len(pparams["costModels"]["PlutusV3"]) >= 297:
+        return
+
+    temp_template = common.get_test_id(cluster)
+    cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
+
+    pool_user = common.get_registered_pool_user(
+        name_template=temp_template,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+    )
+    governance_data = governance_setup.get_default_governance(
+        cluster_manager=cluster_manager, cluster_obj=cluster
+    )
+    conway_common.update_cost_model(
+        cluster_obj=cluster,
+        name_template=temp_template,
+        governance_data=governance_data,
+        cost_proposal_file=cost_proposal_file,
+        pool_user=pool_user,
+    )
 
 
 class TestPlutusBatch5V3Builtins:
@@ -31,18 +83,9 @@ class TestPlutusBatch5V3Builtins:
     fail_scripts = plutus_common.FAILING_MINTING_BITWISE_SCRIPTS_V3
 
     @pytest.fixture
-    def skip_bootstrap(
-        self,
-        cluster: clusterlib.ClusterLib,
-    ) -> None:
-        pparams = cluster.g_query.get_protocol_params()
-        if pparams["protocolVersion"]["major"] < 10 or len(pparams["costModels"]["PlutusV3"]) < 297:
-            pytest.skip("Needs to run on PV10+ with updated PlutusV3 cost model.")
-
-    @pytest.fixture
     def payment_addrs(
         self,
-        skip_bootstrap: None,  # noqa: ARG002
+        update_cost_model: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
@@ -53,7 +96,7 @@ class TestPlutusBatch5V3Builtins:
             cluster_obj=cluster,
             num=2,
             fund_idx=[0],
-            amount=100_000_000,
+            amount=700_000_000,
         )
         return addrs
 
@@ -141,47 +184,29 @@ class TestPlutusBatch5V3Builtins:
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "script",
-        success_scripts,
-        ids=(s.script_file.stem for s in success_scripts),
-    )
     @pytest.mark.team_plutus
-    @pytest.mark.smoke
-    def test_plutus_success(
+    def test_plutusv3_builtins(
         self,
-        skip_bootstrap: None,  # noqa: ARG002
+        update_cost_model: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
-        script: plutus_common.PlutusScriptData,
+        subtests: pytest_subtests.SubTests,
     ):
-        """Test scenarios that are supposed to succeed."""
-        self.run_scenario(
-            cluster_obj=cluster,
-            payment_addrs=payment_addrs,
-            plutus_v_record=script,
-            success_expected=True,
-        )
+        """Test minting with the batch5 of Plutus Core built-in functions."""
+        for script in self.success_scripts:
+            with subtests.test(script=script.script_file.stem):
+                self.run_scenario(
+                    cluster_obj=cluster,
+                    payment_addrs=payment_addrs,
+                    plutus_v_record=script,
+                    success_expected=True,
+                )
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "script",
-        fail_scripts,
-        ids=(s.script_file.stem for s in fail_scripts),
-    )
-    @pytest.mark.team_plutus
-    @pytest.mark.smoke
-    def test_plutus_fail(
-        self,
-        skip_bootstrap: None,  # noqa: ARG002
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: list[clusterlib.AddressRecord],
-        script: plutus_common.PlutusScriptData,
-    ):
-        """Test scenarios that are supposed to fail."""
-        self.run_scenario(
-            cluster_obj=cluster,
-            payment_addrs=payment_addrs,
-            plutus_v_record=script,
-            success_expected=False,
-        )
+        for script in self.fail_scripts:
+            with subtests.test(script=script.script_file.stem):
+                self.run_scenario(
+                    cluster_obj=cluster,
+                    payment_addrs=payment_addrs,
+                    plutus_v_record=script,
+                    success_expected=False,
+                )
