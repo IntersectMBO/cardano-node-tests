@@ -94,8 +94,8 @@ if [ -n "$DBSYNC_TAR_URL" ]; then
   DBSYNC_TAR_FILE="$WORKDIR/dbsync_bins.tar.gz"
   curl -sSL "$DBSYNC_TAR_URL" > "$DBSYNC_TAR_FILE" || exit 1
   rm -rf "${WORKDIR}/dbsync_download"
-  mkdir -p "${WORKDIR}/dbsync_download/bin"
-  tar -C "${WORKDIR}/dbsync_download/bin" -xzf "$DBSYNC_TAR_FILE" || exit 1
+  mkdir -p "${WORKDIR}/dbsync_download/"
+  tar -C "${WORKDIR}/dbsync_download/" -xzf "$DBSYNC_TAR_FILE" || exit 1
   rm -f "$DBSYNC_TAR_FILE"
   rm -f db-sync-node
   ln -s "${WORKDIR}/dbsync_download" db-sync-node || exit 1
