@@ -184,6 +184,7 @@ class TestPlutusBatch5V3Builtins:
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     @pytest.mark.team_plutus
     def test_plutusv3_builtins(
         self,
