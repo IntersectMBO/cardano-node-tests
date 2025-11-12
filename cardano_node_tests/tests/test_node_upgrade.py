@@ -1,6 +1,5 @@
 """Tests for node upgrade."""
 
-import json
 import logging
 import os
 import pathlib as pl
@@ -117,91 +116,18 @@ class TestSetup:
         """Test cost model update."""
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
-        cost_proposal_file = DATA_DIR / "cost_models_pv10.json"
+        cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster
         )
-        governance_utils.wait_delayed_ratification(cluster_obj=cluster)
-
-        proposals = [
-            clusterlib_utils.UpdateProposal(
-                arg="--cost-model-file",
-                value=str(cost_proposal_file),
-                name="",  # costModels
-            ),
-        ]
-
-        with open(cost_proposal_file, encoding="utf-8") as fp:
-            cost_models_in = json.load(fp)
-
-        prev_action_rec = governance_utils.get_prev_action(
-            action_type=governance_utils.PrevGovActionIds.PPARAM_UPDATE,
-            gov_state=cluster.g_query.get_gov_state(),
-        )
-
-        def _propose_pparams_update(
-            name_template: str,
-            proposals: list[clusterlib_utils.UpdateProposal],
-        ) -> conway_common.PParamPropRec:
-            anchor_data = governance_utils.get_default_anchor_data()
-            return conway_common.propose_pparams_update(
-                cluster_obj=cluster,
-                name_template=name_template,
-                anchor_url=anchor_data.url,
-                anchor_data_hash=anchor_data.hash,
-                pool_user=pool_user_singleton,
-                proposals=proposals,
-                prev_action_rec=prev_action_rec,
-            )
-
-        def _check_models(cost_models: dict):
-            for m in ("PlutusV1", "PlutusV2", "PlutusV3"):
-                if m not in cost_models_in:
-                    continue
-                assert len(cost_models_in[m]) == len(cost_models[m]), f"Unexpected length for {m}"
-
-        # Propose the action
-        prop_rec = _propose_pparams_update(name_template=temp_template, proposals=proposals)
-        _check_models(prop_rec.future_pparams["costModels"])
-
-        # Vote & approve the action by CC
-        conway_common.cast_vote(
+        conway_common.update_cost_model(
             cluster_obj=cluster,
+            name_template=temp_template,
             governance_data=governance_data,
-            name_template=f"{temp_template}_cc",
-            payment_addr=pool_user_singleton.payment,
-            action_txid=prop_rec.action_txid,
-            action_ix=prop_rec.action_ix,
-            approve_cc=True,
+            cost_proposal_file=cost_proposal_file,
+            pool_user=pool_user_singleton,
         )
-        vote_epoch = cluster.g_query.get_epoch()
-
-        # Check ratification
-        rat_epoch = cluster.wait_for_epoch(epoch_no=vote_epoch + 1, padding_seconds=5)
-        rat_gov_state = cluster.g_query.get_gov_state()
-        conway_common.save_gov_state(
-            gov_state=rat_gov_state, name_template=f"{temp_template}_rat_{rat_epoch}"
-        )
-
-        rat_action = governance_utils.lookup_ratified_actions(
-            state=rat_gov_state, action_txid=prop_rec.action_txid
-        )
-        assert rat_action, "Action not found in ratified actions"
-
-        next_rat_state = rat_gov_state["nextRatifyState"]
-        _check_models(next_rat_state["nextEnactState"]["curPParams"]["costModels"])
-        assert not next_rat_state["ratificationDelayed"], "Ratification is delayed unexpectedly"
-
-        # Check enactment
-        enact_epoch = cluster.wait_for_epoch(
-            epoch_no=vote_epoch + 2, padding_seconds=5, future_is_ok=False
-        )
-        enact_gov_state = cluster.g_query.get_gov_state()
-        conway_common.save_gov_state(
-            gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
-        )
-        _check_models(enact_gov_state["currentPParams"]["costModels"])
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.disabled(reason="The test is not needed when we are already in PV10 on mainnet")
