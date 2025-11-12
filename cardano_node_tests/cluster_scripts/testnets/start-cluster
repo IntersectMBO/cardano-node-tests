@@ -36,7 +36,7 @@ if [ -e "$SCRIPT_DIR/shell_env" ]; then
   source "$SCRIPT_DIR/shell_env"
 fi
 
-if ! ( rm -rf "$STATE_CLUSTER" || rm -rf "$STATE_CLUSTER"; ); then
+if ! rm_retry "$STATE_CLUSTER"; then
   echo "Could not remove existing '$STATE_CLUSTER'" >&2
   exit 1
 fi
