@@ -54,8 +54,8 @@ export DEV_CLUSTER_RUNNING=1
 export CLUSTERS_COUNT=1
 export FORBID_RESTART=1
 export NO_ARTIFACTS=1
-export CLUSTER_ERA="${CLUSTER_ERA:-""}"
-export COMMAND_ERA="${COMMAND_ERA:-""}"
+export CLUSTER_ERA="${CLUSTER_ERA:-}"
+export COMMAND_ERA="${COMMAND_ERA:-}"
 EoF
 
 # shellcheck disable=SC1091

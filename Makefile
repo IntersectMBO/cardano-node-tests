@@ -17,6 +17,15 @@ reinstall-editable:
 	fi
 	@./scripts/clusterlib_reinstall_editable.sh "$(repo)"
 
+# set up test environment
+.PHONY: test-env
+test-env:
+	@if [ -z "$(era)" ]; then \
+		echo "Usage: make test-env era=conway" >&2; \
+		exit 1; \
+	fi
+	@./scripts/setup_test_env.sh "$(era)"
+
 # initialize linters
 .PHONY: init_lint
 init_lint:

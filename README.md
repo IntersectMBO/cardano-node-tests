@@ -41,7 +41,7 @@ Run tests easily using GitHub Actions:
   ./.github/regression.sh
   ```
 
-> ℹ️ **NOTE:** Using `CI_BYRON_CLUSTER` will cause the local cluster to progress from Byron ➝ Conway, which takes approximately 40 minutes.
+> ℹ️ **NOTE:** Using `CI_BYRON_CLUSTER` will cause the local testnet cluster to progress from Byron ➝ Conway, which takes approximately 40 minutes.
 
 ---
 
@@ -65,48 +65,48 @@ Run tests easily using GitHub Actions:
 
 ---
 
-## 🔁 Persistent Local Cluster for Repeated Testing
+## 🔁 Persistent Local Testnet for Repeated Testing
 
-For workflows requiring repeated test runs on a persistent cluster:
+For workflows requiring repeated test runs on a persistent testnet cluster:
 
 1. Start a Nix shell:
 
   ```sh
   nix flake update --accept-flake-config --override-input cardano-node github:IntersectMBO/cardano-node/master
   nix develop --accept-flake-config
+  /bin/bash --login  # fresh shell needed
   ```
 
-2. Prepare the test environment:
+2. Set up the local test environment:
 
   ```sh
-  ./scripts/setup_test_env.sh conway
+  make test-env era=conway
+  ```
+
+3. Activate the environment:
+
+  ```sh
   source ./dev_workdir/.source
   ```
 
-3. Launch the cluster:
+4. Launch the local testnet cluster:
 
   ```sh
   ./dev_workdir/conway_fast/start-cluster
   ```
 
-4. Run your tests:
+5. Run your tests:
 
   ```sh
   pytest -s -k test_minting_one_token cardano_node_tests/tests/tests_plutus
   pytest -s --log-level=debug -k test_minting_one_token cardano_node_tests/tests/tests_plutus
   ```
 
-5. Stop the cluster:
+6. Stop the testnet cluster:
 
   ```sh
   ./dev_workdir/conway_fast/stop-cluster
   ```
-
-To reuse the same environment in another shell:
-
-```sh
-source ./dev_workdir/.source
-```
 
 ---
 
@@ -186,7 +186,7 @@ cd ../cardano-node-tests
 source .source.dev
 ```
 
-### 🧱 Start Development Cluster
+### 🧱 Start Development Testnet Cluster
 
 ```sh
 prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
