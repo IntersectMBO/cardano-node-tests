@@ -59,7 +59,7 @@ if [ "$1" = "step1" ]; then
   export TESTNET_VARIANT
 
   # generate local cluster scripts
-  PYTHONPATH="$PYTHONPATH:$PWD" cardano_node_tests/prepare_cluster_scripts.py \
+  prepare-cluster-scripts \
     -d "$CLUSTER_SCRIPTS_DIR" \
     -t "$TESTNET_VARIANT"
 

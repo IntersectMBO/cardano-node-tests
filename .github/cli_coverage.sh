@@ -11,7 +11,7 @@ get_coverage() {
   oldpwd="$PWD"
   cd "$tests_repo"
   retval=0
-  PYTHONPATH="$PWD:$PYTHONPATH" cardano_node_tests/cardano_cli_coverage.py \
+  PYTHONPATH="$PWD:${PYTHONPATH:-}" cardano_node_tests/cardano_cli_coverage.py \
     -i .cli_coverage/cli_coverage_* -o "$1" || retval=1
   cd "$oldpwd"
   return "$retval"
