@@ -91,6 +91,8 @@ def main() -> int:
 
     if not args.dest_dir:
         LOGGER.error("The 'destdir' must be set.")
+        return 1
+
     destdir = pl.Path(args.dest_dir)
 
     testnet_variant = args.testnet_variant
