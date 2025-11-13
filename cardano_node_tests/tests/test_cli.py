@@ -1028,18 +1028,11 @@ class TestAdvancedQueries:
                     for p in cluster_management.Resources.ALL_POOLS
                 ]
                 stake_snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
-            elif option == "total_stake":
-                stake_snapshot = cluster_obj.g_query.get_stake_snapshot()
             else:
                 msg = f"Unknown option: {option}"
                 raise ValueError(msg)
         except json.decoder.JSONDecodeError:
             issues.node_3859.finish_test()
-        except clusterlib.CLIError as err:
-            err_str = str(err)
-            if "Missing" in err_str or "Invalid option" in err_str:
-                pytest.skip(f"The '{option}' scenario not available with this cardano-cli version.")
-            raise
 
         expected_pool_ids_mapping = {p: helpers.decode_bech32(bech32=p) for p in expected_pool_ids}
 
@@ -1190,7 +1183,6 @@ class TestAdvancedQueries:
         (
             "single_pool",
             "multiple_pools",
-            "total_stake",
             pytest.param(
                 "all_pools",
                 marks=common.SKIPIF_ON_TESTNET,
