@@ -98,6 +98,7 @@ def main() -> int:
     testnet_variant = args.testnet_variant
     if not testnet_variant:
         LOGGER.error("The testnet variant must be set.")
+        return 1
 
     if args.clean:
         shutil.rmtree(destdir, ignore_errors=True)
