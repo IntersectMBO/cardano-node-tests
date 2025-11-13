@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ -z "${IN_NIX_SHELL:-""}" ]; then
   echo "This script is supposed to be run from nix shell." >&2
@@ -21,11 +21,16 @@ case "${1:-""}" in
     ;;
 esac
 
+ORIG_PWD="$PWD"
 REPODIR="$(readlink -m "${0%/*}/..")"
-cd "$REPODIR" || exit 1
-
 export WORKDIR="$REPODIR/dev_workdir"
 
+if [ "$ORIG_PWD" = "$WORKDIR" ]; then
+  echo "Please run this script from outside of '$WORKDIR'" >&2
+  exit 1
+fi
+
+cd "$REPODIR" || exit 1
 rm -rf "${WORKDIR:?}"
 mkdir -p "${WORKDIR}/tmp"
 
@@ -62,15 +67,21 @@ EoF
 source "$WORKDIR/.source"
 prepare-cluster-scripts -d "$WORKDIR/${CLUSTER_ERA}_fast" -t "${CLUSTER_ERA}_fast"
 
+# Compute a relative path only if WORKDIR is under ORIG_PWD
+if [[ "$WORKDIR" == "$ORIG_PWD"* ]]; then
+    REL_WORKDIR="./${WORKDIR#"$ORIG_PWD"/}"
+else
+    REL_WORKDIR="$WORKDIR"
+fi
+
 echo
+echo "========================================"
+echo "      🚀  Test Environment Ready"
+echo "========================================"
 echo
-echo "------------------------"
-echo "|    Test Env Ready     |"
-echo "------------------------"
+echo "👉  Activate the environment:"
+echo "    source $REL_WORKDIR/.source"
 echo
-echo "To activate it, source the env with:"
-echo "source $WORKDIR/.source"
-echo
-echo "To start local testnet, run:"
-echo "$WORKDIR/${CLUSTER_ERA}_fast/start-cluster"
+echo "👉  Start the local testnet:"
+echo "    $REL_WORKDIR/${CLUSTER_ERA}_fast/start-cluster"
 echo
