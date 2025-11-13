@@ -79,7 +79,8 @@ For workflows requiring repeated test runs on a persistent cluster:
 2. Prepare the test environment:
 
   ```sh
-  source ./prepare_test_env.sh conway
+  ./scripts/setup_test_env.sh conway
+  source ./dev_workdir/.source
   ```
 
 3. Launch the cluster:
