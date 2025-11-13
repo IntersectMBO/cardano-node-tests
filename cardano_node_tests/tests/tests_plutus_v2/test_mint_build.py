@@ -246,9 +246,19 @@ class TestBuildMinting:
 
         ref_size_data = cluster.g_query.get_ref_script_size(utxo=reference_utxo)
 
-        ref_size = ref_size_data.get("refScriptSize") or ref_size_data.get("refInputScriptSize")
-        assert ref_size is not None, f"Missing refScriptSize field in output: {ref_size_data}"
-        assert ref_size >= 0, f"refScriptSize must be non-negative, got {ref_size}"
+        ref_size = ref_size_data.get("refInputScriptSize")
+        assert ref_size is not None, f"Missing refInputScriptSize field in output: {ref_size_data}"
+
+        expected_sizes = {
+            "v2": 1893,
+            "v3": 6,
+        }
+        expected_size = expected_sizes.get(plutus_version)
+        assert expected_size is not None, f"Unexpected Plutus version: {plutus_version}"
+
+        assert ref_size == expected_size, (
+            f"Unexpected reference script size: expected {expected_size}, got {ref_size}"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
