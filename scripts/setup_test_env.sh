@@ -32,17 +32,16 @@ mkdir -p "${WORKDIR}/tmp"
 # shellcheck disable=SC1091
 . "$REPODIR/.github/setup_venv.sh"
 
-prepare-cluster-scripts -d "$WORKDIR/${CLUSTER_ERA}_fast" -t "${CLUSTER_ERA}_fast"
-
 cat > "$WORKDIR/.source" <<EoF
-if [ -z "\${IN_NIX_SHELL:-""}" ]; then
+if [ -z "\${IN_NIX_SHELL:-}" ]; then
   echo "WARNING: This script is supposed to be sourced from nix shell." >&2
 fi
-if [ -n "\${VIRTUAL_ENV:-""}" ]; then
-  echo "This script should be sourced outside of any virtual environment." >&2
+if [ -z "\${VIRTUAL_ENV:-}" ]; then
+  source "$VIRTUAL_ENV/bin/activate"
+elif [ "\${VIRTUAL_ENV:-}" != "$VIRTUAL_ENV" ]; then
+  echo "ERROR: A different virtual environment is already activated." >&2
   return 1
 fi
-source "$VIRTUAL_ENV/bin/activate"
 PYTHONPATH="\$(echo "\${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
 if [ -n "\${PYTHONPATH:-}" ]; then
   export PYTHONPATH
@@ -58,6 +57,10 @@ export NO_ARTIFACTS=1
 export CLUSTER_ERA="${CLUSTER_ERA:-""}"
 export COMMAND_ERA="${COMMAND_ERA:-""}"
 EoF
+
+# shellcheck disable=SC1091
+source "$WORKDIR/.source"
+prepare-cluster-scripts -d "$WORKDIR/${CLUSTER_ERA}_fast" -t "${CLUSTER_ERA}_fast"
 
 echo
 echo
