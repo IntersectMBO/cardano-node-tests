@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-_VENV_DIR="${_VENV_DIR:-"$WORKDIR/.venv"}"
+_VENV_DIR="${_VENV_DIR:-"${WORKDIR:?}/.venv"}"
 
 if [ "${1:-""}" = "clean" ]; then
   rm -rf "$_VENV_DIR"
@@ -27,7 +27,7 @@ else
 fi
 
 if [ -z "$_REQS_INSTALLED" ]; then
-  poetry install -n
+  POETRY_VIRTUALENVS_PATH="${WORKDIR:?}" poetry install -n
 fi
 
 unset _VENV_DIR _REQS_INSTALLED
