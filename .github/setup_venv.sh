@@ -11,7 +11,7 @@ fi
 _REQS_INSTALLED="true"
 if [ ! -e "$_VENV_DIR" ]; then
   _REQS_INSTALLED=""
-  python3 -m venv "$_VENV_DIR"
+  python3 -m venv "$_VENV_DIR" --prompt tests-venv
 fi
 
 # shellcheck disable=SC1090,SC1091
