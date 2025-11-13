@@ -41,7 +41,7 @@ if [ -n "${VIRTUAL_ENV:-""}" ]; then
   fi
 
   filter_out_nix
-  poetry install --with docs --with dev
+  POETRY_VIRTUALENVS_PATH="$PWD" poetry install --with docs --with dev
   exit 0
 fi
 
