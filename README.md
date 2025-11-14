@@ -80,7 +80,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 2. Set up the local test environment:
 
   ```sh
-  make test-env era=conway
+  make test-env
   ```
 
 3. Activate the environment:
