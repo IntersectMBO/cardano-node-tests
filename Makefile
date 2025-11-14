@@ -20,11 +20,7 @@ reinstall-editable:
 # set up test environment
 .PHONY: test-env
 test-env:
-	@if [ -z "$(era)" ]; then \
-		echo "Usage: make test-env era=conway" >&2; \
-		exit 1; \
-	fi
-	@./scripts/setup_test_env.sh "$(era)"
+	@./scripts/setup_test_env.sh conway
 
 # initialize linters
 .PHONY: init_lint
