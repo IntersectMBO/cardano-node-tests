@@ -4,65 +4,71 @@ Testnet Bootstrap
 Configuration
 -------------
 
-* Rename the directory to eg. `preview_bootstrap`
-* Go to <https://book.world.dev.cardano.org/environments.html>
-  and download genesis and configuration files
-* Replace the empty placeholder files with the downloaded files, so the file names are preserved
-* Make sure the `config-relay1.json` points to correct names of the genesis files (the file names differ from the downloaded ones)
+* Copy and rename this directory, for example to `preview_bootstrap`.
+* Visit <https://book.world.dev.cardano.org/environments.html>
+  and download the genesis and configuration files.
+* Replace the empty placeholder files in this directory with the downloaded files, preserving the original file names.
+* Ensure that `config-relay1.json` references the correct genesis file names (these typically differ from the downloaded names).
 
-Nix shell
+Nix Shell
 ---------
 
-The assumption is you are running all the following commands in the DevOps nix-shell.
+All commands below assume you are running inside the DevOps Nix shell.
 
 Faucet
 ------
 
-* If you already have an address on the testnet, create a `shelley/faucet.addr` file with the address,
-  and `shelley/faucet.vkey` and `shelley/faucet.skey` with the corresponding keys
-* OR run the `faucet_setup.sh` script. Export `TESTNET_NAME` and optionally `APIKEY`
+* If you already have a testnet address, create `shelley/faucet.addr` with the address,
+  and add `shelley/faucet.vkey` and `shelley/faucet.skey` with the corresponding keys.
+* **Or** run the `faucet_setup.sh` script. Export `TESTNET_NAME` and optionally `APIKEY` before running it.
 
-Running the node
+Running the Node
 ----------------
 
-* Run the `run_relay1.sh` script
-* Wait until the node is synced (check in another terminal window)
+* Run the `run_relay1.sh` script.
+* Wait until the node is fully synced (you can monitor progress from another terminal).
 
-Running the db-sync
---------------------
+Running db-sync
+---------------
 
-* Set the `CARDANO_NODE_SOCKET_PATH`: `export CARDANO_NODE_SOCKET_PATH=$PWD/relay1.socket`
-* When you don't have db and snapshot for the given testnet available, start & setup postgres with clean db
+* Set the `CARDANO_NODE_SOCKET_PATH`:
+
+    ```sh
+    export CARDANO_NODE_SOCKET_PATH=$PWD/relay1.socket
+    ```
+
+* If you **do not** already have a database and snapshot for the given testnet, start Postgres with a clean database:
 
     ```sh
     /path/to/cardano-node-tests-repo/scripts/postgres-start.sh ~/tmp/postgres-for-testnet/ -k
     ./postgres-setup.sh
     ```
 
-* When you already have db and snapshot for the given testnet available, start postgres with correct data
+* If you **do** already have a database and snapshot, start Postgres using the existing data:
 
     ```sh
     /path/to/cardano-node-tests-repo/scripts/postgres-start.sh ~/tmp/postgres-for-testnet/
     ```
 
-* Start db-sync ONLY AFTER the node is fully synced:
+* Start db-sync **only after the node is fully synced**:
 
     ```sh
-    ./run-cardano-dbsync
+    ./run_dbsync.sh
     ```
 
-* Wait until the db-sync is fully synced
+* Wait until db-sync has fully synced.
 
-Running tests
+Running Tests
 -------------
 
-Once the node and optionally db-sync are fully synced, you can stop them and start the tests.
-Note that the testing framework will start node and db-sync processes automatically. It will use the synced states of both node and db-sync if available in the bootstrap directory.
+Once the node and (optionally) db-sync are fully synced, you can stop them and run the tests.
+The testing framework will start fresh node and db-sync processes automatically, and will reuse
+the synced data from the bootstrap directory.
 
-* open another terminal
-* cd to `cardano-node-tests` repository
-* run the tests
+* Open another terminal.
+* Change to the `cardano-node-tests` repository.
+* Run the tests:
 
     ```sh
-    NODE_REV=10.4.1 BOOTSTRAP_DIR=~/path/to/preview_bootstrap ./.github/regression.sh
+    NODE_REV=10.5.1 BOOTSTRAP_DIR=~/path/to/preview_bootstrap ./.github/regression.sh
     ```
