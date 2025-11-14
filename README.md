@@ -86,7 +86,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 3. Activate the environment:
 
   ```sh
-  source ./dev_workdir/.source
+  source ./dev_workdir/activate
   ```
 
 4. Launch the local testnet cluster:
