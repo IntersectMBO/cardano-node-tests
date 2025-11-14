@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-if [ -z "${IN_NIX_SHELL:-""}" ]; then
-  echo "This script is supposed to be run from nix shell." >&2
+if [ -n "${VIRTUAL_ENV:-""}" ]; then
+  echo "This script should be run outside of any virtual environment." >&2
   exit 1
 fi
 
-if [ -n "${VIRTUAL_ENV:-""}" ]; then
-  echo "This script should be run outside of any virtual environment." >&2
+if ! command -v poetry >/dev/null 2>&1; then
+  echo "This script requires 'poetry' to be installed and available in PATH." >&2
   exit 1
 fi
 
@@ -37,9 +37,15 @@ mkdir -p "${WORKDIR}/tmp"
 # shellcheck disable=SC1091
 . "$REPODIR/.github/setup_venv.sh"
 
-cat > "$WORKDIR/.source" <<EoF
-if [ -z "\${IN_NIX_SHELL:-}" ]; then
-  echo "WARNING: This script is supposed to be sourced from nix shell." >&2
+cat > "$WORKDIR/activate" <<EoF
+if ! command -v cardano-node >/dev/null 2>&1; then
+  echo "WARNING: 'cardano-node' is not in PATH." >&2
+fi
+if ! command -v cardano-cli >/dev/null 2>&1; then
+  echo "WARNING: 'cardano-cli' is not in PATH." >&2
+fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "WARNING: 'jq' is not in PATH." >&2
 fi
 if [ -z "\${VIRTUAL_ENV:-}" ]; then
   source "$VIRTUAL_ENV/bin/activate"
@@ -64,7 +70,7 @@ export COMMAND_ERA="${COMMAND_ERA:-}"
 EoF
 
 # shellcheck disable=SC1091
-source "$WORKDIR/.source"
+source "$WORKDIR/activate"
 prepare-cluster-scripts -d "$WORKDIR/${CLUSTER_ERA}_fast" -t "${CLUSTER_ERA}_fast"
 
 # Compute a relative path only if WORKDIR is under ORIG_PWD
@@ -80,7 +86,7 @@ echo "      🚀  Test Environment Ready"
 echo "========================================"
 echo
 echo "👉  Activate the environment:"
-echo "    source $REL_WORKDIR/.source"
+echo "    source $REL_WORKDIR/activate"
 echo
 echo "👉  Start the local testnet:"
 echo "    $REL_WORKDIR/${CLUSTER_ERA}_fast/start-cluster"
