@@ -43,7 +43,7 @@ SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
 )
 
 SKIPIF_BUILD_EST_1199 = pytest.mark.skipif(
-    issues.cli_1199.is_blocked(),
+    True,  # We don't want to execute `issues.cli_1199.is_blocked()` during import time
     reason="`build-estimate` fails to balance tx with no txouts",
 )
 
