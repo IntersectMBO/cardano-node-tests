@@ -13,7 +13,7 @@ if [ ! -d "cardano_node_tests" ]; then
   abort_install=1
 fi
 if [ "$abort_install" -eq 1 ]; then
-  exit 1
+  exit 10
 fi
 
 # Filter out nix python packages from PYTHONPATH.

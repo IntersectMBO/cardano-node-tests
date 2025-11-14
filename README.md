@@ -223,13 +223,13 @@ make lint
 
 > ⚠️ After each dependencies update, repeat the steps above to retain dev mode.
 
-### 📦 Update Poetry Dependencies
+### 📦 Update Poetry Lockfile
 
 ```sh
-./poetry_update_deps.sh
+make update-lockfile
 ```
 
-### 📚 Build Documentation
+### 📚 Build and Deploy Documentation
 
 ```sh
 make doc
