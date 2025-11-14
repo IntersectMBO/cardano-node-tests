@@ -22,6 +22,18 @@ reinstall-editable:
 test-env:
 	@./scripts/setup_test_env.sh conway
 
+# update poetry lockfile
+.PHONY: update-lockfile
+update-lockfile:
+	@exit_code=0; \
+	./scripts/poetry_update_lock.sh || exit_code=$$?; \
+	if [ $$exit_code -ne 0 ] && [ $$exit_code -ne 10 ]; then \
+		echo "Poetry lockfile update failed. Retrying without cache..." >&2; \
+		./scripts/poetry_update_lock.sh --no-cache; \
+	else \
+		exit $$exit_code; \
+	fi
+
 # initialize linters
 .PHONY: init_lint
 init_lint:
