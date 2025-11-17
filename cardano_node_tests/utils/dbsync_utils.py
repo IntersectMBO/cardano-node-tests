@@ -1440,31 +1440,21 @@ def get_action_data(  # noqa: C901
                 "block_id": vote.vot_anchor_block_id,
             }
 
-    if vote is None:
-        msg = "vote is not expected to be None here"
-        raise RuntimeError(msg)
-    if gov_action is None:
-        msg = "gov_action is not expected to be None here"
-        raise RuntimeError(msg)
-    if voting_anchor is None:
-        msg = "voting_anchor is not expected to be None here"
-        raise RuntimeError(msg)
-
     vote_data = dbsync_types.OffChainVoteDataRecord(
-        id=vote.data_id,
-        vot_anchor_id=vote.data_vot_anchor_id,
-        hash=vote.data_hash.hex(),
-        json=vote.data_json,
-        bytes=vote.data_bytes.hex(),
-        warning=vote.data_warning,
-        language=vote.data_language,
-        comment=vote.data_comment,
-        is_valid=vote.data_is_valid,
+        id=vote.data_id if vote is not None else 0,
+        vot_anchor_id=vote.data_vot_anchor_id if vote is not None else 0,
+        hash=vote.data_hash.hex() if vote is not None else '',
+        json=vote.data_json if vote is not None else {},
+        bytes=vote.data_bytes.hex() if vote is not None else '',
+        warning=vote.data_warning if vote is not None else '',
+        language=vote.data_language if vote is not None else '',
+        comment=vote.data_comment if vote is not None else '',
+        is_valid=vote.data_is_valid if vote is not None else None,
         authors=list(authors),
         references=list(references),
-        gov_action_data=gov_action,
+        gov_action_data = tp.cast(dict[str, tp.Any], gov_action if (vote is not None and vote.gov_act_id is not None) else {}),
         external_updates=list(external_updates),
-        voting_anchor=voting_anchor,
+        voting_anchor=voting_anchor if voting_anchor is not None else {},
     )
 
     return vote_data
