@@ -169,9 +169,9 @@ class TestCollateralOutput:
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             inputs_spent = (
-                '(ConwayMempoolFailure "All inputs are spent.'
+                'ConwayMempoolFailure "All inputs are spent.'
                 in str_exc  # In cardano-node >= 10.6.0
-                or "(BadInputsUTxO" in str_exc
+                or "BadInputsUTxO" in str_exc
             )
             if not inputs_spent:
                 raise
@@ -332,9 +332,9 @@ class TestCollateralOutput:
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             inputs_spent = (
-                '(ConwayMempoolFailure "All inputs are spent.'
+                'ConwayMempoolFailure "All inputs are spent.'
                 in str_exc  # In cardano-node >= 10.6.0
-                or "(BadInputsUTxO" in str_exc
+                or "BadInputsUTxO" in str_exc
             )
             if not inputs_spent:
                 raise

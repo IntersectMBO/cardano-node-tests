@@ -91,9 +91,9 @@ class TestMempool:
             except clusterlib.CLIError as exc:  # noqa: PERF203
                 exc_str = str(exc)
                 inputs_spent = (
-                    '(ConwayMempoolFailure "All inputs are spent.'
+                    'ConwayMempoolFailure "All inputs are spent.'
                     in exc_str  # In cardano-node >= 10.6.0
-                    or "(BadInputsUTxO" in exc_str
+                    or "BadInputsUTxO" in exc_str
                 )
                 if r == 0 or not inputs_spent:
                     raise
