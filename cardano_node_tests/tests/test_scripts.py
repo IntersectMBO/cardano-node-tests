@@ -2584,7 +2584,7 @@ class TestReferenceUTxO:
             txins=[reference_utxo],
             txouts=txouts,
             tx_files=tx_files,
-            witness_override=2 if address_type == "byron" else None,
+            witness_override=2,
             byron_witness_count=1 if address_type == "byron" else 0,
         )
 
