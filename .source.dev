@@ -6,15 +6,17 @@
 # Source this file from the .source script. You can also include additional environment
 # variables such as DBSYNC_SCHEMA_DIR and GITHUB_TOKEN in that file, or change INSTANCE_NUM.
 #
+
+[ -n "${BASH_VERSION:-}" ] || {
+  echo "This script must be sourced from bash." >&2
+  return 1
+}
+
 # export DBSYNC_SCHEMA_DIR="$HOME/Source/repos/cardano-db-sync/schema"
 # export GITHUB_TOKEN=ghp_....
 INSTANCE_NUM="${INSTANCE_NUM:-0}"
 
-# Ensure we are in the correct directory
-if [[ "${PWD##*/}" != "cardano-node-tests"* ]]; then
-  echo "Must be in cardano-node-tests* directory" >&2
-  return 1
-fi
+_ROOT_DIR_CNT="$(readlink -m "${BASH_SOURCE[0]}/..")"
 
 # Activate poetry virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
@@ -39,9 +41,9 @@ unset BOOTSTRAP_DIR
 mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
 
 # Set temporary directory for this instance
-TMPDIR="$PWD/tmp"
+TMPDIR="$_ROOT_DIR_CNT/tmp"
 if [ "$INSTANCE_NUM" != 0 ]; then
-  TMPDIR="$PWD/tmp${INSTANCE_NUM}"
+  TMPDIR="$_ROOT_DIR_CNT/tmp${INSTANCE_NUM}"
 fi
 mkdir -p "$TMPDIR"
 export TMPDIR
@@ -51,13 +53,16 @@ PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":" | sed 's/:*$/
 export PATH
 
 # Prepend instance-specific .bin directory to PATH if it exists and if not already present
-if [ -e "$PWD/.bin${INSTANCE_NUM}" ] && [[ ":$PATH:" != *":$PWD/.bin${INSTANCE_NUM}:"* ]]; then
-  export PATH="$PWD/.bin${INSTANCE_NUM}:$PATH"
+if [ -e "$_ROOT_DIR_CNT/.bin${INSTANCE_NUM}" ] \
+  && [[ ":$PATH:" != *":$_ROOT_DIR_CNT/.bin${INSTANCE_NUM}:"* ]]; then
+  export PATH="$_ROOT_DIR_CNT/.bin${INSTANCE_NUM}:$PATH"
 fi
 
 # Prepend default .bin directory to PATH for instance 0 if it exists and if not already present
-if [ "$INSTANCE_NUM" = 0 ] && [ -e "$PWD/.bin" ] && [[ ":$PATH:" != *":$PWD/.bin:"* ]]; then
-  export PATH="$PWD/.bin:$PATH"
+if [ "$INSTANCE_NUM" = 0 ] \
+  && [ -e "$_ROOT_DIR_CNT/.bin" ] \
+  && [[ ":$PATH:" != *":$_ROOT_DIR_CNT/.bin:"* ]]; then
+  export PATH="$_ROOT_DIR_CNT/.bin:$PATH"
 fi
 
 # Set database connection environment variables for db-sync
@@ -68,10 +73,10 @@ if [ -n "${DBSYNC_SCHEMA_DIR:-}" ] && command -v cardano-smash-server >/dev/null
   export SMASH=true
 fi
 
+unset INSTANCE_NUM _ROOT_DIR_CNT
+
 # Enable cardano-cli bash completion
 if ! command -v _cardano-cli >/dev/null 2>&1 && command -v cardano-cli >/dev/null 2>&1; then
   # shellcheck disable=SC1090
   . <(cardano-cli --bash-completion-script cardano-cli)
 fi
-
-unset INSTANCE_NUM
