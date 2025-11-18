@@ -1151,8 +1151,8 @@ class TestNegative:
             ), err
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             assert (
-                '(ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
-                or "(BadInputsUTxO" in err
+                'ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
+                or "BadInputsUTxO" in err
             ), err
         else:
             msg = f"Unsupported build method: {build_method}"
@@ -1194,8 +1194,8 @@ class TestNegative:
             ), err
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             assert (
-                '(ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
-                or "(BadInputsUTxO" in err
+                'ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
+                or "BadInputsUTxO" in err
             ), err
         else:
             msg = f"Unsupported build method: {build_method}"
