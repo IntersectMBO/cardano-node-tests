@@ -464,6 +464,35 @@ MINTING_RIPEMD_160_V3 = PlutusScriptData(
 
 SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 
+# Array builtin scripts (CIP-0138, Plutus Core Batch 6)
+# NOTE: Array builtins require Protocol Version 11+
+MINTING_INDEXARRAY_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingIndexArrayPolicyScriptV3.plutus"
+MINTING_INDEXARRAY_V3 = PlutusScriptData(
+    script_file=MINTING_INDEXARRAY_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=0, per_space=0, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_LENGTHOFARRAY_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingLengthOfArrayPolicyScriptV3.plutus"
+MINTING_LENGTHOFARRAY_V3 = PlutusScriptData(
+    script_file=MINTING_LENGTHOFARRAY_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=0, per_space=0, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+MINTING_LISTTOARRAY_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingListToArrayPolicyScriptV3.plutus"
+MINTING_LISTTOARRAY_V3 = PlutusScriptData(
+    script_file=MINTING_LISTTOARRAY_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=0, per_space=0, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+SUCCEEDING_MINTING_ARRAY_SCRIPTS_V3 = (
+    MINTING_INDEXARRAY_V3,
+    MINTING_LENGTHOFARRAY_V3,
+    MINTING_LISTTOARRAY_V3,
+)
+
 
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusOp:
