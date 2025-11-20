@@ -287,7 +287,16 @@ MINTING_SECP256K1_SCHNORR = {
 
 # ----- Succeeding bitwise tests ----- #
 
+# These are used to fill in the execution costs of scripts where we don't yet
+# know what the cost is.  We're not currently checking the costs (and it seems
+# to be difficult when the script fails anyway), so the values here don't really
+# matter.
+
+UNKOWN_PER_TIME =1_000_000
+UNKOWN_PER_SPACE =100_000
 UNKNOWN_FIXED_COST = 777_777
+UNDETERMINED_COST = ExecutionCost(per_time=UNKOWN_PER_TIME, per_space=UNKOWN_PER_SPACE, fixed_cost=UNKNOWN_FIXED_COST)
+
 
 MINTING_ANDBYTESTRING_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingAndByteStringPolicyScriptV3.plutus"
 MINTING_ANDBYTESTRING_V3 = PlutusScriptData(
@@ -443,10 +452,6 @@ FAILING_BITWISE_SCRIPT_FILES_V3 = (
     "failingWriteBitsPolicyScriptV3_19.plutus",
 )
 
-# We're not currently checking the costs (and it seems to be difficult when the
-# script fails anyway), so the values here don't really matter.
-UNDETERMINED_COST = ExecutionCost(per_time=1_000_000, per_space=100_000, fixed_cost=1234)
-
 
 FAILING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
     PlutusScriptData(
@@ -472,7 +477,7 @@ MINTING_DROPLIST_PLUTUS_V3 = SCRIPTS_V3_BATCH6_DIR / "succeedingDropListPolicySc
 MINTING_DROPLIST_V3 = PlutusScriptData(
     script_file=MINTING_DROPLIST_PLUTUS_V3,
     script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-    execution_cost=ExecutionCost(per_time=UNDETERMINED_COST, per_space=UNDETERMINED_COST, fixed_cost=UNKNOWN_FIXED_COST),
+    execution_cost=UNDETERMINED_COST,
 )
 
 SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = (
