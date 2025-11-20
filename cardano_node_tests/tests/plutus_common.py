@@ -472,7 +472,7 @@ MINTING_DROPLIST_PLUTUS_V3 = SCRIPTS_V3_BATCH6_DIR / "succeedingDropListPolicySc
 MINTING_DROPLIST_V3 = PlutusScriptData(
     script_file=MINTING_DROPLIST_PLUTUS_V3,
     script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-    execution_cost=ExecutionCost(per_time=6598460, per_space=14710, fixed_cost=UNKNOWN_FIXED_COST),
+    execution_cost=ExecutionCost(per_time=UNDETERMINED_COST, per_space=UNDETERMINED_COST, fixed_cost=UNKNOWN_FIXED_COST),
 )
 
 SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = (

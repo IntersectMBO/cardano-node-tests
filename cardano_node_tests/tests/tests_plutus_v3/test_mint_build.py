@@ -222,15 +222,15 @@ class TestPlutusBatch6V3Builtins:
 
     fail_scripts = plutus_common.FAILING_MINTING_BATCH6_SCRIPTS_V3
 
-    @pytest.fixture
-    def skip_bootstrap(
-        self,
-        cluster: clusterlib.ClusterLib,
-    ) -> None:
-        pparams = cluster.g_query.get_protocol_params()
-        # Batch 6 builtins require PV11 - currently not supported in cardano-node-tests
-        if pparams["protocolVersion"]["major"] < 11:
-            pytest.skip("Batch 6 builtins require PV11+ (currently not supported in cardano-node-tests)")
+    # @pytest.fixture
+    # def skip_bootstrap(
+    #     self,
+    #     cluster: clusterlib.ClusterLib,
+    # ) -> None:
+    #     pparams = cluster.g_query.get_protocol_params()
+    #     # Batch 6 builtins require PV11 - currently not supported in cardano-node-tests
+    #     if pparams["protocolVersion"]["major"] < 11:
+    #         pytest.skip("Batch 6 builtins require PV11+ (currently not supported in cardano-node-tests)")
 
     @pytest.fixture
     def payment_addrs(
