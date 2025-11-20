@@ -219,9 +219,18 @@ class TestPlutusBatch6V3Builtins:
 
     Array builtins (indexArray, lengthOfArray, listToArray) require Protocol Version 11.
     NOTE: These tests are blocked until PV11 support is added to cardano-node-tests.
+
+    At PV11, array builtins become available across all Plutus versions:
+    - PlutusV1, V2, V3
+    - Plutus language 1.0.0 and 1.1.0
+    - Total combinations: 3 functions × 3 versions × 2 languages = 18 test cases
+
+    Current status: Only V3/1.1.0 scripts exist (3 of 18).
+    Missing scripts will cause test failures until generated in plutus-scripts-e2e.
     """
 
-    success_scripts = plutus_common.SUCCEEDING_MINTING_ARRAY_SCRIPTS_V3
+    # All 18 array builtin combinations (matrix testing)
+    success_scripts = plutus_common.ARRAY_BUILTIN_SCRIPTS_ALL
 
     @pytest.fixture
     def skip_bootstrap(
@@ -330,7 +339,7 @@ class TestPlutusBatch6V3Builtins:
     @pytest.mark.parametrize(
         "script",
         success_scripts,
-        ids=(s.script_file.stem for s in success_scripts),
+        ids=list(plutus_common.ARRAY_BUILTIN_SCRIPTS.keys()),
     )
     @pytest.mark.team_plutus
     @pytest.mark.smoke
@@ -341,7 +350,14 @@ class TestPlutusBatch6V3Builtins:
         payment_addrs: list[clusterlib.AddressRecord],
         script: plutus_common.PlutusScriptData,
     ):
-        """Test array builtin functions (indexArray, lengthOfArray, listToArray)."""
+        """Test array builtins across all Plutus versions and language versions.
+
+        Tests matrix of:
+        - Functions: indexArray, lengthOfArray, listToArray
+        - Plutus versions: V1, V2, V3
+        - Language versions: 1.0.0, 1.1.0
+        Total: 18 combinations
+        """
         self.run_scenario(
             cluster_obj=cluster,
             payment_addrs=payment_addrs,

@@ -466,26 +466,56 @@ SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 
 # Array builtin scripts (CIP-0138, Plutus Core Batch 6)
 # NOTE: Array builtins require Protocol Version 11+
-MINTING_INDEXARRAY_PLUTUS_V3 = SCRIPTS_V3_DIR / "batch6/succeedingIndexArrayPolicyScriptV3.plutus"
-MINTING_INDEXARRAY_V3 = PlutusScriptData(
-    script_file=MINTING_INDEXARRAY_PLUTUS_V3,
-    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-    execution_cost=ExecutionCost(per_time=0, per_space=0, fixed_cost=UNKNOWN_FIXED_COST),
-)
+#
+# At PV11, array builtins become available in PlutusV1, V2, and V3 with both
+# Plutus language 1.0.0 and 1.1.0. This section programmatically generates
+# all 18 combinations (3 functions × 3 versions × 2 languages).
+#
+# Current status: Only V3/1.1.0 scripts exist (3 of 18).
+# TODO: Generate remaining 15 scripts in plutus-scripts-e2e repository.
 
-MINTING_LENGTHOFARRAY_PLUTUS_V3 = SCRIPTS_V3_DIR / "batch6/succeedingLengthOfArrayPolicyScriptV3.plutus"
-MINTING_LENGTHOFARRAY_V3 = PlutusScriptData(
-    script_file=MINTING_LENGTHOFARRAY_PLUTUS_V3,
-    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-    execution_cost=ExecutionCost(per_time=0, per_space=0, fixed_cost=UNKNOWN_FIXED_COST),
-)
+# Configuration for all array builtin combinations
+_ARRAY_FUNCTIONS = ["IndexArray", "LengthOfArray", "ListToArray"]
+_PLUTUS_VERSIONS = [
+    ("v1", "V1", clusterlib.ScriptTypes.PLUTUS_V1),
+    ("v2", "V2", clusterlib.ScriptTypes.PLUTUS_V2),
+    ("v3", "V3", clusterlib.ScriptTypes.PLUTUS_V3),
+]
+_LANGUAGE_VERSIONS = ["1_0_0", "1_1_0"]
 
-MINTING_LISTTOARRAY_PLUTUS_V3 = SCRIPTS_V3_DIR / "batch6/succeedingListToArrayPolicyScriptV3.plutus"
-MINTING_LISTTOARRAY_V3 = PlutusScriptData(
-    script_file=MINTING_LISTTOARRAY_PLUTUS_V3,
-    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-    execution_cost=ExecutionCost(per_time=0, per_space=0, fixed_cost=UNKNOWN_FIXED_COST),
-)
+# Programmatically generate all array builtin script definitions
+ARRAY_BUILTIN_SCRIPTS = {}
+for func in _ARRAY_FUNCTIONS:
+    for dir_name, version_name, script_type in _PLUTUS_VERSIONS:
+        for lang_ver in _LANGUAGE_VERSIONS:
+            # Key format: INDEXARRAY_V3_1_1_0
+            key = f"{func.upper()}_{version_name}_{lang_ver}"
+
+            # Path format: v3/batch6/1.1.0/succeedingIndexArrayPolicyScriptV3_1_1_0.plutus
+            script_filename = f"succeeding{func}PolicyScript{version_name}_{lang_ver}.plutus"
+            script_path = (
+                SCRIPTS_DIR
+                / dir_name
+                / "batch6"
+                / lang_ver.replace("_", ".")
+                / script_filename
+            )
+
+            ARRAY_BUILTIN_SCRIPTS[key] = PlutusScriptData(
+                script_file=script_path,
+                script_type=script_type,
+                execution_cost=ExecutionCost(
+                    per_time=0, per_space=0, fixed_cost=UNKNOWN_FIXED_COST
+                ),
+            )
+
+# All 18 array builtin scripts as tuple for parametrized testing
+ARRAY_BUILTIN_SCRIPTS_ALL = tuple(ARRAY_BUILTIN_SCRIPTS.values())
+
+# Backward compatibility: Keep V3/1.1.0 scripts with old names
+MINTING_INDEXARRAY_V3 = ARRAY_BUILTIN_SCRIPTS["INDEXARRAY_V3_1_1_0"]
+MINTING_LENGTHOFARRAY_V3 = ARRAY_BUILTIN_SCRIPTS["LENGTHOFARRAY_V3_1_1_0"]
+MINTING_LISTTOARRAY_V3 = ARRAY_BUILTIN_SCRIPTS["LISTTOARRAY_V3_1_1_0"]
 
 SUCCEEDING_MINTING_ARRAY_SCRIPTS_V3 = (
     MINTING_INDEXARRAY_V3,
