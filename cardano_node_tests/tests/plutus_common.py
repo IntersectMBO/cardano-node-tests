@@ -292,10 +292,12 @@ MINTING_SECP256K1_SCHNORR = {
 # to be difficult when the script fails anyway), so the values here don't really
 # matter.
 
-UNKOWN_PER_TIME =1_000_000
-UNKOWN_PER_SPACE =100_000
+UNKNOWN_PER_TIME = 1_000_000
+UNKNOWN_PER_SPACE = 100_000
 UNKNOWN_FIXED_COST = 777_777
-UNDETERMINED_COST = ExecutionCost(per_time=UNKOWN_PER_TIME, per_space=UNKOWN_PER_SPACE, fixed_cost=UNKNOWN_FIXED_COST)
+UNDETERMINED_COST = ExecutionCost(
+    per_time=UNKNOWN_PER_TIME, per_space=UNKNOWN_PER_SPACE, fixed_cost=UNKNOWN_FIXED_COST
+)
 
 
 MINTING_ANDBYTESTRING_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingAndByteStringPolicyScriptV3.plutus"
@@ -480,11 +482,9 @@ MINTING_DROPLIST_V3 = PlutusScriptData(
     execution_cost=UNDETERMINED_COST,
 )
 
-SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = (
-    MINTING_DROPLIST_V3,
-)
+SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = (MINTING_DROPLIST_V3,)
 
-FAILING_MINTING_BATCH6_SCRIPTS_V3 = (
+FAILING_BATCH6_SCRIPT_FILES_V3 = (
     "expensiveDropListPolicyScriptV3_1.plutus",
     "expensiveDropListPolicyScriptV3_2.plutus",
     "expensiveDropListPolicyScriptV3_3.plutus",
@@ -498,7 +498,7 @@ FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=UNDETERMINED_COST,
     )
-    for n in FAILING_MINTING_BATCH6_SCRIPTS_V3
+    for n in FAILING_BATCH6_SCRIPT_FILES_V3
 )
 
 
