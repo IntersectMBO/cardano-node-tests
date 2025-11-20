@@ -16,6 +16,8 @@ PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
 SCRIPTS_V3_DIR = PLUTUS_DIR / "v3"
+SCRIPTS_V3_BATCH6_DIR = SCRIPTS_V3_DIR / "batch6"
+
 SEPC256K1_ECDSA_DIR = PLUTUS_DIR / "sepc256k1_ecdsa"
 SEPC256K1_SCHNORR_DIR = PLUTUS_DIR / "sepc256k1_schnorr"
 
@@ -463,6 +465,36 @@ MINTING_RIPEMD_160_V3 = PlutusScriptData(
 )
 
 SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
+
+# ------ Batch 6 builtins (Plutus V3 only) ------ #
+
+MINTING_DROPLIST_PLUTUS_V3 = SCRIPTS_V3_BATCH6_DIR / "succeedingDropListPolicyScriptV3.plutus"
+MINTING_DROPLIST_V3 = PlutusScriptData(
+    script_file=MINTING_DROPLIST_PLUTUS_V3,
+    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+    execution_cost=ExecutionCost(per_time=6598460, per_space=14710, fixed_cost=UNKNOWN_FIXED_COST),
+)
+
+SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = (
+    MINTING_DROPLIST_V3,
+)
+
+FAILING_MINTING_BATCH6_SCRIPTS_V3 = (
+    "expensiveDropListPolicyScriptV3_1.plutus",
+    "expensiveDropListPolicyScriptV3_2.plutus",
+    "expensiveDropListPolicyScriptV3_3.plutus",
+    "expensiveDropListPolicyScriptV3_4.plutus",
+    "expensiveDropListPolicyScriptV3_5.plutus",
+)
+
+FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH6_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in FAILING_MINTING_BATCH6_SCRIPTS_V3
+)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
