@@ -6,6 +6,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 ENV TAGGED_VERSION ''
 COPY install-node.sh /
-RUN chmod +x /install-node.sh
+RUN apt-get update -y \
+    && apt-get install curl -y \
+    && chmod +x /install-node.sh
 
 ENTRYPOINT ./install-node.sh $TAGGED_VERSION
