@@ -22,6 +22,9 @@ export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
 rm -rf "${REPORTS_DIR:?}"
 mkdir -p "$REPORTS_DIR"
 
+# Non-P2P mode is no longer supported since cardano-node 10.6.0
+unset ENABLE_LEGACY MIXED_P2P
+
 #
 # STEP1 - start local cluster and run smoke tests for the first time
 #
@@ -30,7 +33,6 @@ if [ "$1" = "step1" ]; then
   printf "STEP1 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=1
-  export ENABLE_LEGACY=1
 
   if [ -n "${BASE_TAR_URL:-""}" ]; then
     # download and extract base revision binaries
@@ -108,8 +110,6 @@ elif [ "$1" = "step2" ]; then
   printf "STEP2 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=2
-  export MIXED_P2P=1
-  unset ENABLE_LEGACY
 
   NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
@@ -274,7 +274,6 @@ elif [ "$1" = "step3" ]; then
   printf "STEP3 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=3
-  unset ENABLE_LEGACY MIXED_P2P
 
   NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
