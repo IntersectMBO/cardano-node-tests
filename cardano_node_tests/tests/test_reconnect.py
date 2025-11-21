@@ -105,13 +105,32 @@ class TestNodeReconnect:
 
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
-            tx_raw_output = cluster_obj.g_transaction.send_tx(
-                src_address=src_addr.address,
-                tx_name=f"{temp_template}_{int(curr_time)}",
-                txouts=txouts,
-                tx_files=tx_files,
-                verify_tx=False,
-            )
+            # Repeat transaction submission in case the selected inputs were already spent
+            # by one of the previous transactions that are still in the mempool.
+            for r in range(3):
+                try:
+                    tx_raw_output = cluster_obj.g_transaction.send_tx(
+                        src_address=src_addr.address,
+                        tx_name=f"{temp_template}_r{r}_{int(curr_time)}",
+                        txouts=txouts,
+                        tx_files=tx_files,
+                        verify_tx=False,
+                    )
+                except clusterlib.CLIError as exc:
+                    exc_str = str(exc)
+                    inputs_spent = (
+                        'ConwayMempoolFailure "All inputs are spent.'
+                        in exc_str  # In cardano-node >= 10.6.0
+                        or "BadInputsUTxO" in exc_str
+                    )
+                    if inputs_spent:
+                        time.sleep(2)
+                        continue
+                    raise
+                break
+            else:
+                msg = "Transaction submission failed, all inputs are spent."
+                raise RuntimeError(msg)
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
         return tx_raw_output
