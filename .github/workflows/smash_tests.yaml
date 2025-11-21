@@ -44,7 +44,7 @@ jobs:
           echo 'EPOCHS='${{ github.event.inputs.epochs_to_sync }} >> $GITHUB_ENV
 
       - name: Checkout repository with SMASH tests
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: IntersectMBO/cardano-node-tests
           ref: 'smash_tests'
@@ -56,7 +56,7 @@ jobs:
 
 
       - name: Checkout cardano-db-sync repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: IntersectMBO/cardano-db-sync
           path: cardano-db-sync
