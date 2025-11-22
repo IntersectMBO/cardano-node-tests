@@ -49,16 +49,13 @@ Nightly upgrade testing
    * network in Conway era
    * protocol version 10
    * Constitutional Commitee has 5 members
-   * legacy network topology
    * smoke tests
    * governance info action test
 * `Step 2 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step2/>`__:  |nightly-upgrade-step2-badge|
    * upgrade all nodes except one to the latest cardano-node master
-   * mixed network topology (half nodes P2P, half nodes legacy topology)
    * smoke tests
 * `Step 3 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step3/>`__:  |nightly-upgrade-step3-badge|
    * upgrade the last remaining node to latest cardano-node master
-   * P2P network topology
    * smoke tests
    * governance treasury withdrawal action test
 
