@@ -28,7 +28,7 @@ jobs:
     steps:
 
       - name: Checkout cardano-db-sync Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: IntersectMBO/cardano-db-sync
           path: cardano-db-sync
