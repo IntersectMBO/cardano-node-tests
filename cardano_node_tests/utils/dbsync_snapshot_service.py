@@ -1,12 +1,9 @@
+import dataclasses
 import logging
 import re
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
-from dataclasses import field
 from datetime import datetime
 from datetime import timezone
-from typing import List
-from typing import Tuple
 
 import requests
 
@@ -16,7 +13,7 @@ logger = logging.getLogger(__name__)
 S3_NS_URL = "http://s3.amazonaws.com/doc/2006-03-01/"
 
 
-@dataclass
+@dataclasses.dataclass
 class SnapshotFile:
     """Dataclass to hold parsed snapshot file information."""
 
@@ -24,7 +21,7 @@ class SnapshotFile:
     name: str
     last_modified: datetime  # Timezone-aware datetime object
     size: int
-    size_gb: float = field(init=False)
+    size_gb: float = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         self.size_gb = self.size / (1024**3)
@@ -40,11 +37,11 @@ class DBSyncSnapshotService:
         """Fetch XML content from the S3 bucket using REST API."""
         params = {"list-type": "2", "prefix": prefix, "delimiter": delimiter}
 
-        response = requests.get(self.BUCKET_URL, params=params)
+        response = requests.get(self.BUCKET_URL, params=params, timeout=30)
         response.raise_for_status()
         return response.content
 
-    def _parse_s3_xml(self, xml_content: bytes) -> Tuple[List[str], List[SnapshotFile]]:
+    def _parse_s3_xml(self, xml_content: bytes) -> tuple[list[str], list[SnapshotFile]]:
         """Parse S3 XML response using exact namespace search paths with None checks."""
         root = ET.fromstring(xml_content)
         ns_tag = f"{{{S3_NS_URL}}}"
@@ -66,39 +63,16 @@ class DBSyncSnapshotService:
             modified_tag = content.find(f"{ns_tag}LastModified")
             size_tag = content.find(f"{ns_tag}Size")
 
-            if not all(
-                [
-                    key_tag is not None and key_tag.text,
-                    modified_tag is not None and modified_tag.text,
-                    size_tag is not None and size_tag.text,
-                ]
+            if (key_tag is None or modified_tag is None or size_tag is None) or not (
+                key_tag.text and modified_tag.text and size_tag.text
             ):
                 logger.warning(
-                    "Skipping malformed S3 object entry: Missing Key, LastModified, or Size."
+                    "Skipping malformed S3 object entry: Missing Key, LastModified, or Size tag."
                 )
-                continue  # Skip this entry if critical data is missing
+                continue  # Skip this entry if critical tags are missing
 
-            # Use explicit variables to store the text content only if it exists
-            key_text = key_tag.text if key_tag is not None else None
-            modified_text = modified_tag.text if modified_tag is not None else None
-            size_text = size_tag.text if size_tag is not None else None
-
-            # Ensure all three critical tags and their text content exist
-            if not all([key_text, modified_text, size_text]):
-                logger.warning(
-                    "Skipping malformed S3 object entry: Missing Key, LastModified, or Size."
-                )
-                continue  # Skip this entry if critical data is missing
-
-            key = key_text
-            last_modified_str = modified_text
-            size_str = size_text
-
-            if last_modified_str is None:
-                continue
-
-            if key is None:
-                continue
+            key = key_tag.text or ""
+            last_modified_str = modified_tag.text or ""
 
             file_date = datetime.strptime(last_modified_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
                 tzinfo=timezone.utc
@@ -109,7 +83,7 @@ class DBSyncSnapshotService:
                     key=key,
                     name=key.split("/")[-1],
                     last_modified=file_date,
-                    size=int(size_str) if size_str else 0,
+                    size=int(size_tag.text or 0),
                 )
             )
 
@@ -137,7 +111,6 @@ class DBSyncSnapshotService:
         xml_content = self._get_s3_objects(prefix=version_prefix)
         _, files = self._parse_s3_xml(xml_content)
 
-        # Filter: Revert to the original working filter (.tgz AND 'snapshot')
         snapshot_files = [
             f for f in files if f.name.endswith(".tgz") and "snapshot" in f.name.lower()
         ]
@@ -146,7 +119,8 @@ class DBSyncSnapshotService:
             file_names = [f.name for f in files]
             logger.warning(f"Files found in S3 response for {version_prefix}: {file_names}")
             error_msg = (
-                f"No snapshot files found for version {version}. Filtered files: {file_names}"
+                f"No snapshot files found for version {version}."
+                f" All files in response: {file_names}"
             )
             raise RuntimeError(error_msg)
 

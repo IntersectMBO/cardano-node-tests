@@ -18,11 +18,10 @@ from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dbsync_snapshot_service
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
-from cardano_node_tests.utils.dbsync_snapshot_service import DBSyncSnapshotService
-from cardano_node_tests.utils.dbsync_snapshot_service import SnapshotFile
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -290,8 +289,7 @@ class TestDBSync:
         cluster_manager: cluster_management.ClusterManager,
         worker_id: str,
     ):
-        """
-        Check that db-sync reconnects to the node after the node is restarted.
+        """Check that db-sync reconnects to the node after the node is restarted.
 
         * restart all nodes of the running cluster
         * submit a transaction
@@ -391,38 +389,40 @@ class TestDBSync:
 class TestDBSyncSnapshot:
     """Tests for db-sync snapshot availability and freshness."""
 
-    @pytest.fixture()
-    def db_sync_snapshots(
-        self,
-    ) -> DBSyncSnapshotService | None:
-        return DBSyncSnapshotService()
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    def test_latest_snapshot_freshness(self, db_sync_snapshots: DBSyncSnapshotService):
-        """
-        Check that the latest db-sync snapshot is not older than 5 days.
+    def test_latest_snapshot_freshness(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+    ):
+        """Check that the latest db-sync snapshot is not older than 5 days.
 
         This test uses the S3 REST API to query the Cardano mainnet snapshot repository
         and verifies that the most recent snapshot is fresh.
         """
+        common.get_test_id(cluster_manager)
+        db_sync_snapshots = dbsync_snapshot_service.DBSyncSnapshotService()
+
         # 1. Find latest version
         latest_version = db_sync_snapshots.get_latest_version()
         LOGGER.info(f"Latest db-sync version: {latest_version}")
 
         # 2. Get latest snapshot for that version
-        latest_snapshot: SnapshotFile = db_sync_snapshots.get_latest_snapshot(latest_version)
+        latest_snapshot: dbsync_snapshot_service.SnapshotFile = (
+            db_sync_snapshots.get_latest_snapshot(latest_version)
+        )
 
         LOGGER.info(f"Latest snapshot: {latest_snapshot.name}")
         LOGGER.info(f"Snapshot date: {latest_snapshot.last_modified.isoformat()}")
         LOGGER.info(f"Snapshot size: {latest_snapshot.size_gb:.2f} GB")
 
         # 3. Perform freshness check
-        five_days_ago = datetime.now(timezone.utc) - timedelta(days=5)
+        now_utc = datetime.now(timezone.utc)
+        five_days_ago = now_utc - timedelta(days=5)
 
         assert latest_snapshot.last_modified >= five_days_ago, (
             f"The latest snapshot is too old. "
-            f"Age: {(datetime.now(timezone.utc) - latest_snapshot.last_modified).days} days. "
+            f"Age: {(now_utc - latest_snapshot.last_modified).days} days. "
             f"Snapshot date: {latest_snapshot.last_modified.strftime('%Y-%m-%d %H:%M:%S UTC')}, "
             f"Limit: 5 days ago ({five_days_ago.strftime('%Y-%m-%d %H:%M:%S UTC')})."
         )
