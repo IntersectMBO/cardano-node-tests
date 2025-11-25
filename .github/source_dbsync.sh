@@ -57,22 +57,22 @@ if [[ -z "$DBSYNC_TAR_URL" && "$DBSYNC_REV" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
   fi
 fi
 
-if [ -n "$DBSYNC_TAR_URL" ]; then
-  # download db-sync
-  mkdir -p cardano-db-sync && cd cardano-db-sync || exit 1
-  DBSYNC_TAR_FILE="$PWD/dbsync_bins.tar.gz"
+if [ -n "${DBSYNC_TAR_URL:-}" ]; then
+  # Download db-sync
+  DBSYNC_TAR_FILE="${WORKDIR}/dbsync_bins.tar.gz"
   curl -sSL "$DBSYNC_TAR_URL" > "$DBSYNC_TAR_FILE" || exit 1
-  rm -rf "${PWD}/dbsync_download"
-  mkdir -p "${PWD}/dbsync_download/"
-  tar -C "${PWD}/dbsync_download/" -xzf "$DBSYNC_TAR_FILE" || exit 1
+  rm -rf dbsync_download
+  mkdir -p dbsync_download
+  tar -C dbsync_download -xzf "$DBSYNC_TAR_FILE" || exit 1
   rm -f "$DBSYNC_TAR_FILE"
   rm -f db-sync-node
-  ln -s "${PWD}/dbsync_download" db-sync-node || exit 1
+  ln -s dbsync_download db-sync-node || exit 1
+  DBSYNC_SCHEMA_DIR="${WORKDIR}/db-sync-node/schema"
+  chmod -R u+w "$DBSYNC_SCHEMA_DIR" # Add write permissions
+  export DBSYNC_SCHEMA_DIR
   rm -f smash-server || rm -f smash-server/bin/cardano-smash-server
   mkdir -p smash-server/bin
-  ln -s "${PWD}/dbsync_download/bin/cardano-smash-server" smash-server/bin/cardano-smash-server || exit 1
-  DBSYNC_SCHEMA_DIR="$(readlink -m db-sync-node)/schema"
-  export DBSYNC_SCHEMA_DIR
+  ln -s "${WORKDIR}/dbsync_download/bin/cardano-smash-server" smash-server/bin/cardano-smash-server || exit 1
 else
   # Build db-sync
   case "${DBSYNC_REV:-""}" in
@@ -132,7 +132,6 @@ export PATH_PREPEND
 if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
   # Delete the indexes only after the binaries are ready, so the binaries can be retrieved from
   # the nix binary cache if available.
-  chmod -R u+w "$DBSYNC_SCHEMA_DIR" # Add write permissions
   rm -f "$DBSYNC_SCHEMA_DIR"/migration-4-000*
 
   if [ -z "$DBSYNC_TAR_URL" ]; then
