@@ -1,12 +1,9 @@
+import dataclasses
 import logging
 import re
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
-from dataclasses import field
 from datetime import datetime
 from datetime import timezone
-from typing import List
-from typing import Tuple
 
 import requests
 
@@ -16,7 +13,7 @@ logger = logging.getLogger(__name__)
 S3_NS_URL = "http://s3.amazonaws.com/doc/2006-03-01/"
 
 
-@dataclass
+@dataclasses.dataclass
 class SnapshotFile:
     """Dataclass to hold parsed snapshot file information."""
 
@@ -24,7 +21,7 @@ class SnapshotFile:
     name: str
     last_modified: datetime  # Timezone-aware datetime object
     size: int
-    size_gb: float = field(init=False)
+    size_gb: float = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         self.size_gb = self.size / (1024**3)
@@ -44,7 +41,7 @@ class DBSyncSnapshotService:
         response.raise_for_status()
         return response.content
 
-    def _parse_s3_xml(self, xml_content: bytes) -> Tuple[List[str], List[SnapshotFile]]:
+    def _parse_s3_xml(self, xml_content: bytes) -> tuple[list[str], list[SnapshotFile]]:
         """Parse S3 XML response using exact namespace search paths with None checks."""
         root = ET.fromstring(xml_content)
         ns_tag = f"{{{S3_NS_URL}}}"
