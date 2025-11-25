@@ -81,7 +81,7 @@ fi
 if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
   :  # don't touch `TESTNET_VARIANT` when running on testnet
 elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
-  export TESTNET_VARIANT="${TESTNET_VARIANT:-"$CLUSTER_ERA"}_slow"
+  export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_slow"}"
 else
   export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_fast"}"
 fi
