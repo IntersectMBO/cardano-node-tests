@@ -9,12 +9,10 @@ else
   exit 1
 fi
 
-GIT_OBJECT_TYPE=""
 GIT_OBJECT=""
 
-while getopts t:o: flag; do
+while getopts o: flag; do
   case "${flag}" in
-    t) GIT_OBJECT_TYPE=${OPTARG};;
     o) GIT_OBJECT=${OPTARG};;
     *) echo "Error in command line parsing" >&2
       exit 1
@@ -26,6 +24,5 @@ $container_manager build . -f ubuntu/Dockerfile -t cardano-node-ubuntu || exit 1
 $container_manager run \
   --security-opt label=disable \
   -it \
-  -e GIT_OBJECT_TYPE="$GIT_OBJECT_TYPE" \
   -e GIT_OBJECT="$GIT_OBJECT" \
   cardano-node-ubuntu
