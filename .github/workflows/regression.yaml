@@ -26,6 +26,7 @@ on:
         - team_plutus
         - not long
         - conway only
+        - many utxos
         default: all
       topology:
         type: choice

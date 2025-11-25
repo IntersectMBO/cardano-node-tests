@@ -49,6 +49,11 @@ if [ "$MARKEXPR" = "all" ]; then
 elif [ "$MARKEXPR" = "conway only" ]; then
   unset MARKEXPR
   export TESTS_DIR="cardano_node_tests/tests/tests_conway"
+elif [ "$MARKEXPR" = "many utxos" ]; then
+  unset MARKEXPR
+  export CLUSTERS_COUNT=1
+  export TEST_THREADS=0
+  export TESTS_DIR="cardano_node_tests/tests/test_tx_many_utxos.py"
 elif [ "$MARKEXPR" = "dbsync config" ]; then
   export CLUSTERS_COUNT=1
   export MARKEXPR="(dbsync and smoke) or dbsync_config"
