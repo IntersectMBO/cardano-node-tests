@@ -163,7 +163,7 @@ target_tests() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests "$@"
+  run_real_tests --timeout=10800 --session-timeout=72000 "$@"
 }
 
 target_testpr() {
@@ -177,7 +177,7 @@ target_testpr() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests "$@"
+  run_real_tests --timeout=1200 --session-timeout=2700 "$@"
 }
 
 target_testnets() {
@@ -191,7 +191,7 @@ target_testnets() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests "$@"
+  run_real_tests --timeout=7200 --session-timeout=10800 "$@"
 }
 
 # Dispatch
