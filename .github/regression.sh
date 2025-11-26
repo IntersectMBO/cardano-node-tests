@@ -207,6 +207,34 @@ if [ "$(echo "$PWD"/.bin/*)" != "${PWD}/.bin/*" ]; then
   echo
 fi
 
+# function to monitor system resources and log them every 10 minutes
+monitor_system() {
+  : > monitor.log
+
+  while true; do
+    {
+      echo "===== $(date) ====="
+      echo "--- CPU ---"
+      top -b -n1 | head -5
+      echo "--- MEM ---"
+      free -h
+      echo "--- DISK ---"
+      df -h .
+      echo
+    } >> monitor.log
+
+    sleep 600 # 10 minutes
+  done
+}
+
+# start monitor in background
+monitor_system &
+MON_PID=$!
+
+# ensure cleanup on ANY exit (success, error, Ctrl-C, set -e, etc.)
+# shellcheck disable=SC2064
+trap "echo 'Stopping monitor'; kill $MON_PID 2>/dev/null || true" EXIT
+
 # Run tests and generate report
 
 # shellcheck disable=SC2046,SC2119
