@@ -21,6 +21,7 @@
 #   DESELECT_FROM_FILE: path to file with tests to deselect
 #   CLUSTERS_COUNT: number of local testnet clusters to launch
 #   FORBID_RESTART: if set to 1, do not restart clusters between tests
+#   SESSION_TIMEOUT: overall timeout for the test session (e.g. 10800 for 3 hours)
 #
 # Notes:
 # - If PYTEST_ARGS is provided, we disable cleanup and the initial "skip all" pass.
@@ -51,9 +52,15 @@ All targets respect the same env vars as the original Makefile.
 EOF
 }
 
-pytest_w_echo() {
-  echo "Running: PYTEST_ADDOPTS='${PYTEST_ADDOPTS:-}' pytest $*"
-  pytest "$@"
+run_pytest() {
+  if [ -n "${SESSION_TIMEOUT:-}" ]; then
+    local -a timeout_arr=( "--signal=INT" "--kill-after=0" "$SESSION_TIMEOUT" )
+    echo "Running: PYTEST_ADDOPTS='${PYTEST_ADDOPTS:-}' timeout ${timeout_arr[*]} pytest $*"
+    timeout "${timeout_arr[@]}" pytest "$@"
+  else
+    echo "Running: PYTEST_ADDOPTS='${PYTEST_ADDOPTS:-}' pytest $*"
+    pytest "$@"
+  fi
 }
 
 ensure_dirs() {
@@ -133,7 +140,7 @@ initial_skip_pass() {
 }
 
 run_real_tests() {
-  pytest_w_echo \
+  run_pytest \
     "$TESTS_DIR" \
     "${MARKEXPR_ARR[@]}" \
     "${DESELECT_FROM_FILE_ARR[@]}" \
@@ -157,19 +164,21 @@ ensure_markexpr_default() {
 target_tests() {
   export DbSyncAbortOnPanic="${DbSyncAbortOnPanic:-1}"
   TEST_THREADS="${TEST_THREADS:-20}"
+  SESSION_TIMEOUT="${SESSION_TIMEOUT:-10800}"
 
   ensure_dirs
   set_common_env
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests --timeout=10800 --session-timeout=72000 "$@"
+  run_real_tests --timeout=7200 "$@"
 }
 
 target_testpr() {
   export TESTPR=1
   export CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
   TEST_THREADS="${TEST_THREADS:-20}"
+  SESSION_TIMEOUT="${SESSION_TIMEOUT:-2700}"
   ensure_markexpr_default "smoke"
 
   ensure_dirs
@@ -177,13 +186,14 @@ target_testpr() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests --timeout=1200 --session-timeout=2700 "$@"
+  run_real_tests --timeout=1200 "$@"
 }
 
 target_testnets() {
   export CLUSTERS_COUNT=1
   export FORBID_RESTART=1
   TEST_THREADS="${TEST_THREADS:-15}"
+  SESSION_TIMEOUT="${SESSION_TIMEOUT:-72000}"
   ensure_markexpr_default "testnets"
 
   ensure_dirs
@@ -191,7 +201,7 @@ target_testnets() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests --timeout=7200 --session-timeout=10800 "$@"
+  run_real_tests --timeout=7200 "$@"
 }
 
 # Dispatch
