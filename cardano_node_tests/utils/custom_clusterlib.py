@@ -96,6 +96,10 @@ class ClusterLib(clusterlib.ClusterLib):
         Returns:
             clusterlib.CLIOut: A data container containing command stdout and stderr.
         """
+        # Set a default timeout. This is a change of behavior compared to the base class!
+        if timeout is None:
+            timeout = 120
+
         cli_args_strs_all = [str(arg) for arg in cli_args]
         if add_default_args:
             cli_args_strs_all.insert(0, "cardano-cli")
