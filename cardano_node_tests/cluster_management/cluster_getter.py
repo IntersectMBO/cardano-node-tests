@@ -99,6 +99,15 @@ class ClusterGetter:
         self.pytest_tmp_dir = temptools.get_pytest_root_tmp()
         self.cluster_lock = common.get_cluster_lock_file()
 
+        # Soft timeout (seconds): applies when no cluster is selected.
+        self.grace_period_soft = 3600
+        # Hard timeout (seconds): always applies, regardless of cluster selection.
+        self.grace_period_hard = 7200
+        # Time window (seconds) before deadline when stricter dead cluster checks apply.
+        self.strict_check_window = 1200
+        # Maximum allowed fraction of dead clusters during strict check window.
+        self.strict_dead_fraction = 0.51
+
         self._cluster_instance_num = -1
 
     @property
@@ -564,12 +573,41 @@ class ClusterGetter:
         # If here, this will be the first test with the mark
         return True
 
-    def _fail_on_all_dead(self) -> None:
-        """Fail if all cluster instances are dead."""
-        dead_clusters = status_files.list_cluster_dead_files()
-        if len(dead_clusters) == self.num_of_instances:
-            msg = "All clusters are dead, cannot run."
+    def _check_dead_fraction(self, max_dead_fraction: float) -> None:
+        """Fail if the fraction of dead cluster instances is too high."""
+        total = self.num_of_instances
+        if total == 0:
+            msg = "Number of cluster instances must be greater than 0."
+            raise ValueError(msg)
+        dead_count = len(status_files.list_cluster_dead_files())
+        dead_fraction = dead_count / total
+
+        if dead_fraction >= max_dead_fraction:
+            if dead_count == total:
+                msg = "All cluster instances are dead."
+            else:
+                msg = (
+                    "Too many cluster instances are dead: "
+                    f"{dead_count} out of {total} "
+                    f"({dead_fraction:.0%} dead, "
+                    f"maximum allowed: {max_dead_fraction:.0%})."
+                )
             raise RuntimeError(msg)
+
+    def _fail_on_dead_clusters(self, remaining_time_sec: float) -> None:
+        """Fail based on how many cluster instances are dead and time left.
+
+        Use a stricter failure threshold as we approach the deadline.
+        If we've been waiting a long time and too many cluster instances are dead,
+        it's better to fail than continue trying with too few usable instances.
+        """
+        if remaining_time_sec <= self.strict_check_window:
+            max_dead_fraction = self.strict_dead_fraction
+        else:
+            # Early in the wait period we only fail if all instances are dead.
+            max_dead_fraction = 1.0
+
+        self._check_dead_fraction(max_dead_fraction)
 
     def _cleanup_dead_clusters(self, cget_status: _ClusterGetStatus) -> None:
         """Cleanup if the selected cluster instance failed to start."""
@@ -805,8 +843,24 @@ class ClusterGetter:
 
         self.log(f"want to run test '{cget_status.current_test}'")
 
-        # Iterate until it is possible to start the test
+        # Iterate until it is possible to start the test. Timeout after grace period.
+        now = time.monotonic()
+        deadline_soft = now + self.grace_period_soft
+        deadline_hard = now + self.grace_period_hard
         while True:
+            now = time.monotonic()
+            remaining_soft = deadline_soft - now
+            remaining_hard = deadline_hard - now
+
+            # Timeout after soft grace period if no cluster instance was selected yet
+            if cget_status.selected_instance == -1 and remaining_soft <= 0:
+                msg = "Timeout (soft) while waiting to obtain cluster instance."
+                raise TimeoutError(msg)
+            # Timeout after hard grace period even if cluster instance was already selected
+            if remaining_hard <= 0:
+                msg = "Timeout (hard) while waiting to obtain cluster instance."
+                raise TimeoutError(msg)
+
             if cget_status.respin_ready:
                 self._respin(scriptsdir=scriptsdir)
 
@@ -819,8 +873,7 @@ class ClusterGetter:
                 if self._is_already_running():
                     return self.cluster_instance_num
 
-                # Fail if all cluster instances are dead
-                self._fail_on_all_dead()
+                self._fail_on_dead_clusters(remaining_time_sec=remaining_soft)
 
                 if mark:
                     # Check if tests with my mark are already locked to any cluster instance
