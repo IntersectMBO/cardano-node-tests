@@ -116,32 +116,32 @@ You can fine-tune test runs using these environment variables:
 
 | Variable                | Description                                |
 | ----------------------- | ------------------------------------------ |
-| `SCHEDULING_LOG`        | Path to scheduler log output.              |
-| `PYTEST_ARGS`           | Extra options passed to pytest.            |
-| `MARKEXPR`              | Marker expression for pytest filtering.    |
-| `TEST_THREADS`          | Number of pytest workers (default: 20).    |
-| `MAX_TESTS_PER_CLUSTER` | Max tests per cluster (default: 8).        |
+| `BOOTSTRAP_DIR`         | Bootstrap testnet directory.               |
 | `CLUSTERS_COUNT`        | Number of clusters to launch (default: 9). |
 | `CLUSTER_ERA`           | Cluster era (default: `conway`).           |
 | `COMMAND_ERA`           | CLI command target era.                    |
-| `NUM_POOLS`             | Number of stake pools (default: 3).        |
 | `ENABLE_LEGACY`         | Use legacy networking.                     |
-| `MIXED_P2P`             | Use a mix of P2P and legacy networking.    |
-| `UTXO_BACKEND`          | Backend type: `mem` or `disk`.             |
-| `TESTNET_VARIANT`       | Name of the testnet variant to use.        |
-| `BOOTSTRAP_DIR`         | Bootstrap testnet directory.               |
 | `KEEP_CLUSTERS_RUNNING` | Don't shut down clusters after tests.      |
+| `MARKEXPR`              | Marker expression for pytest filtering.    |
+| `MAX_TESTS_PER_CLUSTER` | Max tests per cluster (default: 8).        |
+| `MIXED_P2P`             | Use a mix of P2P and legacy networking.    |
+| `NUM_POOLS`             | Number of stake pools (default: 3).        |
 | `PORTS_BASE`            | Starting port number for cluster services. |
+| `SCHEDULING_LOG`        | Path to scheduler log output.              |
+| `TESTNET_VARIANT`       | Name of the testnet variant to use.        |
+| `UTXO_BACKEND`          | Backend type: `mem` or `disk`.             |
 
 ### ▶️ Additional for `regression.sh`
 
 | Variable           | Description                                 |
 | ------------------ | ------------------------------------------- |
-| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow).     |
-| `NODE_REV`         | `cardano-node` version (default: `master`). |
-| `DBSYNC_REV`       | `cardano-db-sync` version.                  |
 | `CARDANO_CLI_REV`  | `cardano-cli` version.                      |
+| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow).     |
+| `DBSYNC_REV`       | `cardano-db-sync` version.                  |
+| `NODE_REV`         | `cardano-node` version (default: `master`). |
 | `PLUTUS_APPS_REV`  | `plutus-apps` version (default: `main`).    |
+| `PYTEST_ARGS`      | Extra options passed to pytest.            |
+| `TEST_THREADS`     | Number of pytest workers (default: 20).    |
 
 ### 💡 Usage Examples
 
