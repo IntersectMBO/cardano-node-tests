@@ -143,8 +143,7 @@ def submit_tx(
                 # Check if resubmitting failed because an input UTxO was already spent
                 exc_str = str(exc)
                 inputs_spent = (
-                    'ConwayMempoolFailure "All inputs are spent.'
-                    in exc_str  # In cardano-node >= 10.6.0
+                    "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
                     or "BadInputsUTxO" in exc_str
                 )
                 if not inputs_spent:

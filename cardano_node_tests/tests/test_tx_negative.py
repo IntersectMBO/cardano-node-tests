@@ -682,7 +682,7 @@ class TestNegative:
             cluster.g_transaction.submit_tx_bare(out_file_signed)
         exc_str = str(excinfo.value)
         assert (
-            '(ConwayMempoolFailure "All inputs are spent.' in exc_str  # In cardano-node >= 10.6.0
+            "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
             or "(ValueNotConservedUTxO" in exc_str
         ), exc_str
 
@@ -1151,7 +1151,7 @@ class TestNegative:
             ), err
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             assert (
-                'ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
+                "All inputs are spent" in err  # In cardano-node >= 10.6.0
                 or "BadInputsUTxO" in err
             ), err
         else:
@@ -1194,7 +1194,7 @@ class TestNegative:
             ), err
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             assert (
-                'ConwayMempoolFailure "All inputs are spent.' in err  # In cardano-node >= 10.6.0
+                "All inputs are spent" in err  # In cardano-node >= 10.6.0
                 or "BadInputsUTxO" in err
             ), err
         else:
