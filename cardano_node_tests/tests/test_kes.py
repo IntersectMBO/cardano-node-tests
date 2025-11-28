@@ -115,11 +115,11 @@ def _check_block_production(
         ledger_state=ledger_state,
     )
 
-    # Check if the pool is minting any blocks
+    # Check if the pool is forging any blocks
     blocks_made = ledger_state["blocksCurrent"] or {}
-    is_minting = pool_id_dec in blocks_made
+    is_forging = pool_id_dec in blocks_made
 
-    return epoch, is_minting
+    return epoch, is_forging
 
 
 class TestKES:
@@ -146,9 +146,9 @@ class TestKES:
         * start local cluster instance configured with short KES period and low number of key
           evolutions, so KES expires soon on all pools
         * refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
-          the pools keep minting blocks
+          the pools keep forging blocks
         * wait for KES expiration on the selected pool
-        * check that the pool with expired KES didn't mint blocks in an epoch that followed after
+        * check that the pool with expired KES didn't forge blocks in an epoch that followed after
           KES expiration
         * check KES period info command with an operational certificate with an expired KES
         * check KES period info command with operational certificates with a valid KES
@@ -167,7 +167,7 @@ class TestKES:
         expire_pool_id_dec = helpers.decode_bech32(expire_pool_id)
 
         # Refresh opcert on all pools except of pool1, so KES doesn't expire on those pools and
-        # the pools keep minting blocks.
+        # the pools keep forging blocks.
         refreshed_nodes = [
             f"pool{i}" for i in range(2, len(cluster_management.Resources.ALL_POOLS) + 1)
         ]
@@ -312,7 +312,7 @@ class TestKES:
             # supposed to expire.
             _refresh_opcerts()
 
-            this_epoch, is_minting = _check_block_production(
+            this_epoch, is_forging = _check_block_production(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 pool_id_dec=expire_pool_id_dec,
@@ -322,9 +322,9 @@ class TestKES:
             _save_all_metrics(temp_template=f"{temp_template}_{this_epoch}_before_refresh")
             _save_all_period_info(temp_template=f"{temp_template}_{this_epoch}_before_refresh")
 
-            # Check that the expired pool is not minting any blocks
-            assert not is_minting, (
-                f"The pool '{expire_pool_name}' has minted blocks in epoch {this_epoch}"
+            # Check that the expired pool is not forging any blocks
+            assert not is_forging, (
+                f"The pool '{expire_pool_name}' has forged blocks in epoch {this_epoch}"
             )
 
             # Refresh opcerts one more time on pools that are not supposed to expire
@@ -358,16 +358,16 @@ class TestKES:
 
         * generate new operational certificate with `--kes-period` in the future
         * restart the node with the new operational certificate
-        * check that the pool is not minting any blocks
+        * check that the pool is not forging any blocks
         * if network era > Alonzo
 
             - generate new operational certificate with valid `--kes-period`, but counter value +2
               from last used operational certificate
             - restart the node
-            - check that the pool is not minting any blocks
+            - check that the pool is not forging any blocks
 
         * generate new operational certificate with valid `--kes-period` and restart the node
-        * check that the pool is minting blocks again
+        * check that the pool is forging blocks again
         """
         __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
@@ -425,7 +425,7 @@ class TestKES:
                 LOGGER.info("Checking blocks production for 4 epochs.")
                 this_epoch = cluster.g_query.get_epoch()
                 for invalid_opcert_epoch in range(4):
-                    this_epoch, is_minting = _check_block_production(
+                    this_epoch, is_forging = _check_block_production(
                         cluster_obj=cluster,
                         temp_template=temp_template,
                         pool_id_dec=pool_id_dec,
@@ -433,9 +433,9 @@ class TestKES:
                     )
                     _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
-                    # Check that the pool is not minting any blocks
-                    assert not is_minting, (
-                        f"The pool '{pool_name}' has minted blocks in epoch {this_epoch}"
+                    # Check that the pool is not forging any blocks
+                    assert not is_forging, (
+                        f"The pool '{pool_name}' has forged blocks in epoch {this_epoch}"
                     )
 
                     if invalid_opcert_epoch == 1:
@@ -532,7 +532,7 @@ class TestKES:
             updated_epoch = cluster.g_query.get_epoch()
             this_epoch = updated_epoch
             for __ in range(6):
-                this_epoch, is_minting = _check_block_production(
+                this_epoch, is_forging = _check_block_production(
                     cluster_obj=cluster,
                     temp_template=temp_template,
                     pool_id_dec=pool_id_dec,
@@ -540,8 +540,8 @@ class TestKES:
                 )
                 _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
-                # Check that the pool is minting blocks
-                if is_minting:
+                # Check that the pool is forging blocks
+                if is_forging:
                     break
             else:
                 try:
@@ -560,7 +560,7 @@ class TestKES:
                     raise
 
                 msg = (
-                    f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
+                    f"The pool '{pool_name}' has not forged any blocks since epoch {updated_epoch}."
                 )
                 raise AssertionError(msg)
 
@@ -608,12 +608,12 @@ class TestKES:
 
         * generate new operational certificate with valid `--kes-period`
         * copy new operational certificate to the node
-        * stop the node so the corresponding pool is not minting new blocks
-        * check `kes-period-info` while the pool is not minting blocks
+        * stop the node so the corresponding pool is not forging new blocks
+        * check `kes-period-info` while the pool is not forging blocks
         * start the node with the new operational certificate
-        * check that the pool is minting blocks again
+        * check that the pool is forging blocks again
         * check that metrics reported by `kes-period-info` got updated once the pool started
-          minting blocks again
+          forging blocks again
         * check `kes-period-info` with the old (replaced) operational certificate
         """
         __: tp.Any  # mypy workaround
@@ -652,12 +652,12 @@ class TestKES:
             )
             shutil.copy(new_opcert_file, opcert_file)
 
-            # Stop the node so the corresponding pool is not minting new blocks
+            # Stop the node so the corresponding pool is not forging new blocks
             cluster_nodes.stop_nodes([node_name])
 
             time.sleep(10)
 
-            # Check kes-period-info while the pool is not minting blocks
+            # Check kes-period-info while the pool is not forging blocks
             kes_period_info_new = cluster.g_query.get_kes_period_info(opcert_file)
             with open(f"{temp_template}_kes_period_info_1.json", "w", encoding="utf-8") as out_fp:
                 json.dump(kes_period_info_new, out_fp, indent=2)
@@ -700,7 +700,7 @@ class TestKES:
             updated_epoch = cluster.g_query.get_epoch()
             this_epoch = updated_epoch
             for __ in range(6):
-                this_epoch, is_minting = _check_block_production(
+                this_epoch, is_forging = _check_block_production(
                     cluster_obj=cluster,
                     temp_template=temp_template,
                     pool_id_dec=pool_id_dec,
@@ -708,8 +708,8 @@ class TestKES:
                 )
                 _save_metrics(pool_num=pool_num, temp_template=f"{temp_template}_{this_epoch}")
 
-                # Check that the pool is minting blocks
-                if is_minting:
+                # Check that the pool is forging blocks
+                if is_forging:
                     break
             else:
                 try:
@@ -728,12 +728,12 @@ class TestKES:
                     raise
 
                 msg = (
-                    f"The pool '{pool_name}' has not minted any blocks since epoch {updated_epoch}."
+                    f"The pool '{pool_name}' has not forged any blocks since epoch {updated_epoch}."
                 )
                 raise AssertionError(msg)
 
         # Check that metrics reported by kes-period-info got updated once the pool started
-        # minting blocks again
+        # forging blocks again
         kes_period_info_updated = cluster.g_query.get_kes_period_info(opcert_file)
         with open(f"{temp_template}_kes_period_info_3.json", "w", encoding="utf-8") as out_fp:
             json.dump(kes_period_info_updated, out_fp, indent=2)

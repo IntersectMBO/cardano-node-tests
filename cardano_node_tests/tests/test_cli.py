@@ -1088,7 +1088,7 @@ class TestAdvancedQueries:
                         f"{expected_pool_ids_dec.symmetric_difference(out_pool_ids_dec)}"
                     )
                 # Active stake can be lower than sum of stakes, as some pools may not be running
-                # and minting blocks
+                # and forging blocks
                 if sum_mark < stake_snapshot["total"]["stakeMark"]:
                     total_stake_errors.append(
                         f"active_mark: {sum_mark} < {stake_snapshot['total']['stakeMark']}"

@@ -35,7 +35,7 @@ class PoolRecord:
     delegation_out: delegation.DelegationOut
     user_rewards: list[RewardRecord]
     owner_rewards: list[RewardRecord]
-    blocks_minted: dict[int, int]
+    blocks_forged: dict[int, int]
     saturation_amounts: dict[int, int]
 
 
@@ -96,7 +96,7 @@ def _get_reward_per_block(pool_record: PoolRecord, owner_rewards: bool = False) 
         assert for_epoch == rew_for.epoch_no
         results[for_epoch] = (
             rew_received.reward_per_epoch
-            / pool_record.blocks_minted[for_epoch]
+            / pool_record.blocks_forged[for_epoch]
             / rew_for.stake_total
         )
 
@@ -282,7 +282,7 @@ class TestPoolSaturation:
                 delegation_out=delegation_out,
                 user_rewards=[],
                 owner_rewards=[],
-                blocks_minted={},
+                blocks_forged={},
                 saturation_amounts={},
             )
 
@@ -344,7 +344,7 @@ class TestPoolSaturation:
                     prev_user_reward = pool_rec.user_rewards[-1].reward_total
                     prev_owner_reward = pool_rec.owner_rewards[-1].reward_total
 
-                    pool_rec.blocks_minted[this_epoch - 1] = (
+                    pool_rec.blocks_forged[this_epoch - 1] = (
                         ledger_state["blocksBefore"].get(pool_rec.id_dec) or 0
                     )
 
