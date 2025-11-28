@@ -43,7 +43,6 @@ PyYAML = "^6.0.2"
 requests = "^2.32.4"
 pytest-subtests = "^0.14.2"
 cardonnay = "^0.2.8"
-pytest-timeout = "^2.4.0"
 
 [tool.poetry.group.dev]
 optional = true

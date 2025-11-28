@@ -21,7 +21,7 @@
 #   DESELECT_FROM_FILE: path to file with tests to deselect
 #   CLUSTERS_COUNT: number of local testnet clusters to launch
 #   FORBID_RESTART: if set to 1, do not restart clusters between tests
-#   SESSION_TIMEOUT: overall timeout for the test session (e.g. 10800 for 3 hours)
+#   SESSION_TIMEOUT: timeout for the test session (e.g. 10800 for 3 hours)
 #
 # Notes:
 # - If PYTEST_ARGS is provided, we disable cleanup and the initial "skip all" pass.
@@ -171,7 +171,7 @@ target_tests() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests --timeout=7200 "$@"
+  run_real_tests "$@"
 }
 
 target_testpr() {
@@ -186,7 +186,7 @@ target_testpr() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests --timeout=1200 "$@"
+  run_real_tests "$@"
 }
 
 target_testnets() {
@@ -201,7 +201,7 @@ target_testnets() {
   compute_common_args
   cleanup_previous_run
   initial_skip_pass
-  run_real_tests --timeout=7200 "$@"
+  run_real_tests "$@"
 }
 
 # Dispatch
