@@ -45,14 +45,14 @@ class TestLeadershipSchedule:
         cluster_use_pool: tuple[clusterlib.ClusterLib, str],
         for_epoch: str,
     ):
-        """Check that blocks were minted according to leadership schedule.
+        """Check that blocks were forged according to leadership schedule.
 
         * query leadership schedule for selected pool for current epoch or next epoch
         * wait for epoch that comes after the queried epoch
-        * get info about minted blocks in queried epoch for the selected pool
-        * compare leadership schedule with blocks that were actually minted
+        * get info about forged blocks in queried epoch for the selected pool
+        * compare leadership schedule with blocks that were actually forged
         * compare log records with ledger state dump
-        * (optional) check minted blocks in db-sync
+        * (optional) check forged blocks in db-sync
         """
         cluster, pool_name = cluster_use_pool
         pool_short_name = f"{pool_name.replace('node-', '')}"
@@ -94,7 +94,7 @@ class TestLeadershipSchedule:
         # Wait for epoch that comes after the queried epoch
         cluster.wait_for_epoch(epoch_no=queried_epoch + 1, padding_seconds=10, future_is_ok=False)
 
-        # Get number of minted blocks from ledger
+        # Get number of forged blocks from ledger
         ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
         clusterlib_utils.save_ledger_state(
             cluster_obj=cluster,
@@ -103,13 +103,13 @@ class TestLeadershipSchedule:
         )
         blocks_before: dict[str, int] = ledger_state["blocksBefore"]
         pool_id_dec = helpers.decode_bech32(pool_id)
-        minted_blocks_ledger = blocks_before.get(pool_id_dec) or 0
+        forged_blocks_ledger = blocks_before.get(pool_id_dec) or 0
 
         errors: list[str] = []
 
         def _check_logs() -> None:
-            # Get info about minted blocks in queried epoch for the selected pool
-            minted_lines = logfiles.find_msgs_in_logs(
+            # Get info about forged blocks in queried epoch for the selected pool
+            forged_lines = logfiles.find_msgs_in_logs(
                 regex='"TraceForgedBlock"',
                 logfile=pool_log,
                 seek_offset=seek_offset,
@@ -123,67 +123,67 @@ class TestLeadershipSchedule:
             first_slot_queried_ep = first_slot_this_ep - (ep_num_after_queried * ep_length)
             last_slot_queried_ep = first_slot_queried_ep + ep_length - 1
             slots_pattern = re.compile(r'"slot",Number (\d+)\.0')
-            slots_when_minted = {
+            slots_when_forged = {
                 s
-                for m in minted_lines
+                for m in forged_lines
                 if (o := slots_pattern.search(m)) is not None
                 and first_slot_queried_ep <= (s := int(o.group(1))) <= last_slot_queried_ep
             }
-            with open(f"{debug_log_template}_minted.txt", "w", encoding="utf-8") as out_fp:
-                out_fp.write(f"{pool_id_dec}: {slots_when_minted}")
+            with open(f"{debug_log_template}_forged.txt", "w", encoding="utf-8") as out_fp:
+                out_fp.write(f"{pool_id_dec}: {slots_when_forged}")
 
-            # Compare leadership schedule with blocks that were actually minted
-            difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
+            # Compare leadership schedule with blocks that were actually forged
+            difference_scheduled = slots_when_forged.difference(slots_when_scheduled)
             if difference_scheduled:
                 errors.append(
-                    f"Some blocks were minted in other slots than scheduled: {difference_scheduled}"
+                    f"Some blocks were forged in other slots than scheduled: {difference_scheduled}"
                 )
 
-            difference_minted = slots_when_scheduled.difference(slots_when_minted)
-            if len(difference_minted) > len(leadership_schedule) // 5:
-                errors.append(f"Lot of slots missed: {difference_minted}")
+            difference_forged = slots_when_scheduled.difference(slots_when_forged)
+            if len(difference_forged) > len(leadership_schedule) // 5:
+                errors.append(f"Lot of slots missed: {difference_forged}")
 
             # Compare log records with ledger state dump
-            minted_blocks_logs = len(slots_when_minted)
-            # Some minted block may not be adopted, and so the total number of adopted blocks
-            # may be lower than the number of minted blocks.
-            if minted_blocks_ledger > minted_blocks_logs:
+            forged_blocks_logs = len(slots_when_forged)
+            # Some forged block may not be adopted, and so the total number of adopted blocks
+            # may be lower than the number of forged blocks.
+            if forged_blocks_ledger > forged_blocks_logs:
                 errors.append(
-                    "Number of minted blocks reported by ledger state "
+                    "Number of forged blocks reported by ledger state "
                     "is higher than number extracted from log file: "
-                    f"{minted_blocks_ledger} vs {minted_blocks_logs}"
+                    f"{forged_blocks_ledger} vs {forged_blocks_logs}"
                 )
 
         def _check_dbsync() -> None:
-            # Get info about minted blocks in queried epoch for the selected pool
-            minted_blocks = list(
+            # Get info about forged blocks in queried epoch for the selected pool
+            forged_blocks = list(
                 dbsync_queries.query_blocks(
                     pool_id_bech32=pool_id, epoch_from=queried_epoch, epoch_to=queried_epoch
                 )
             )
-            slots_when_minted = {r.slot_no for r in minted_blocks}
-            with open(f"{debug_log_template}_db_minted.txt", "w", encoding="utf-8") as out_fp:
-                out_fp.write(f"{pool_id_dec}: {slots_when_minted}")
+            slots_when_forged = {r.slot_no for r in forged_blocks}
+            with open(f"{debug_log_template}_db_forged.txt", "w", encoding="utf-8") as out_fp:
+                out_fp.write(f"{pool_id_dec}: {slots_when_forged}")
 
-            # Compare leadership schedule with blocks that were actually minted
-            difference_scheduled = slots_when_minted.difference(slots_when_scheduled)
+            # Compare leadership schedule with blocks that were actually forged
+            difference_scheduled = slots_when_forged.difference(slots_when_scheduled)
             if difference_scheduled:
                 errors.append(
-                    "DB-Sync: Some blocks were minted in other slots than scheduled: "
+                    "DB-Sync: Some blocks were forged in other slots than scheduled: "
                     f"{difference_scheduled}"
                 )
 
-            difference_minted = slots_when_scheduled.difference(slots_when_minted)
-            if len(difference_minted) > len(leadership_schedule) // 3:
-                errors.append(f"DB-Sync: Lot of slots missed: {difference_minted}")
+            difference_forged = slots_when_scheduled.difference(slots_when_forged)
+            if len(difference_forged) > len(leadership_schedule) // 3:
+                errors.append(f"DB-Sync: Lot of slots missed: {difference_forged}")
 
             # Compare db-sync records with ledger state dump
-            minted_blocks_db = len(slots_when_minted)
-            if minted_blocks_ledger != minted_blocks_db:
+            forged_blocks_db = len(slots_when_forged)
+            if forged_blocks_ledger != forged_blocks_db:
                 errors.append(
-                    "DB-Sync: Numbers of minted blocks reported by ledger state "
+                    "DB-Sync: Numbers of forged blocks reported by ledger state "
                     "and db-sync don't match: "
-                    f"{minted_blocks_ledger} vs {minted_blocks_db}"
+                    f"{forged_blocks_ledger} vs {forged_blocks_db}"
                 )
 
         _check_logs()

@@ -201,7 +201,7 @@ class TestLedgerState:
             if sum_go != stake_snapshot["total"]["stakeGo"]:
                 errors.append(f"total_go: {sum_go} != {stake_snapshot['total']['stakeGo']}")
         # Active stake can be lower than sum of stakes, as some pools may not be running
-        # and minting blocks
+        # and forging blocks
         else:
             if sum_mark < stake_snapshot["activeStakeMark"]:
                 errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
