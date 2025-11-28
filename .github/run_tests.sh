@@ -21,7 +21,7 @@
 #   DESELECT_FROM_FILE: path to file with tests to deselect
 #   CLUSTERS_COUNT: number of local testnet clusters to launch
 #   FORBID_RESTART: if set to 1, do not restart clusters between tests
-#   SESSION_TIMEOUT: timeout for the test session (e.g. 10800 for 3 hours)
+#   SESSION_TIMEOUT: timeout for the test session (e.g. 3h for 3 hours)
 #
 # Notes:
 # - If PYTEST_ARGS is provided, we disable cleanup and the initial "skip all" pass.
@@ -164,7 +164,7 @@ ensure_markexpr_default() {
 target_tests() {
   export DbSyncAbortOnPanic="${DbSyncAbortOnPanic:-1}"
   TEST_THREADS="${TEST_THREADS:-20}"
-  SESSION_TIMEOUT="${SESSION_TIMEOUT:-10800}"
+  SESSION_TIMEOUT="${SESSION_TIMEOUT:-3h}"
 
   ensure_dirs
   set_common_env
@@ -178,7 +178,7 @@ target_testpr() {
   export TESTPR=1
   export CLUSTERS_COUNT="${CLUSTERS_COUNT:-5}"
   TEST_THREADS="${TEST_THREADS:-20}"
-  SESSION_TIMEOUT="${SESSION_TIMEOUT:-2700}"
+  SESSION_TIMEOUT="${SESSION_TIMEOUT:-45m}"
   ensure_markexpr_default "smoke"
 
   ensure_dirs
@@ -193,7 +193,7 @@ target_testnets() {
   export CLUSTERS_COUNT=1
   export FORBID_RESTART=1
   TEST_THREADS="${TEST_THREADS:-15}"
-  SESSION_TIMEOUT="${SESSION_TIMEOUT:-72000}"
+  SESSION_TIMEOUT="${SESSION_TIMEOUT:-20h}"
   ensure_markexpr_default "testnets"
 
   ensure_dirs
