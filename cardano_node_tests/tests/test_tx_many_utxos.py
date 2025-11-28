@@ -116,8 +116,7 @@ class TestManyUTXOs:
                         # transaction through.
                         exc_str = str(err)
                         inputs_spent = (
-                            'ConwayMempoolFailure "All inputs are spent.'
-                            in exc_str  # In cardano-node >= 10.6.0
+                            "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
                             or "BadInputsUTxO" in exc_str
                         )
                         if not inputs_spent:

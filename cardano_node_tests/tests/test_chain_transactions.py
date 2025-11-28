@@ -76,8 +76,7 @@ def _repeat_submit(cluster_obj: clusterlib.ClusterLib, tx_file: pl.Path) -> str:
         except clusterlib.CLIError as exc:
             exc_str = str(exc)
             inputs_spent = (
-                'ConwayMempoolFailure "All inputs are spent.'
-                in exc_str  # In cardano-node >= 10.6.0
+                "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
                 or "BadInputsUTxO" in exc_str
             )
             if r == 0 and inputs_spent:
