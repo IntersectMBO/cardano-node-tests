@@ -198,22 +198,30 @@ def unique_time_str() -> str:
     return str(time.time()).replace(".", "")[-8:]
 
 
-def get_test_id(cluster_obj: clusterlib.ClusterLib) -> str:
+def get_test_id(
+    cluster_or_manager: clusterlib.ClusterLib | cluster_management.ClusterManager,
+) -> str:
     """Return unique test ID - function name + assigned cluster instance + random string.
 
     Log the test ID into cluster manager log file.
     """
+    if isinstance(cluster_or_manager, clusterlib.ClusterLib):
+        cid_part = f"_ci{cluster_or_manager.cluster_id}"
+        cm: cluster_management.ClusterManager = cluster_or_manager._cluster_manager  # type: ignore
+    else:
+        cid_part = ""
+        cm = cluster_or_manager
+
+    cinstance = str(cm._cluster_instance_num) if cm._cluster_instance_num != -1 else ""
+
     curr_test = pytest_utils.get_current_test()
     rand_str = clusterlib.get_rand_str(6)
-    test_id = (
-        f"{curr_test.test_function}{curr_test.test_params}_ci{cluster_obj.cluster_id}_{rand_str}"
-    )
+    test_id = f"{curr_test.test_function}{curr_test.test_params}{cid_part}_{rand_str}"
 
     # Log test ID to cluster manager log file - getting test ID happens early
     # after the start of a test, so the log entry can be used for determining
     # time of the test start
-    cm: cluster_management.ClusterManager = cluster_obj._cluster_manager  # type: ignore
-    cm.log(f"c{cm.cluster_instance_num}: got ID `{test_id}` for '{curr_test.full}'")
+    cm.log(f"c{cinstance}: got ID `{test_id}` for '{curr_test.full}'")
 
     return test_id
 
