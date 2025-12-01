@@ -4,10 +4,9 @@ FROM fedora:latest
 ENV TZ=Europe/London
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-ENV TAGGED_VERSION ''
 COPY install-node.sh /
 RUN yum update -y \
     && yum install curl diffutils awk -y \
     && chmod +x /install-node.sh
 
-CMD ./install-node.sh $TAGGED_VERSION
+CMD ./install-node.sh
