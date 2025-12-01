@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM docker.io/library/ubuntu:latest
 
 # workaround for timezone manual intervention
 ENV TZ=Europe/London
@@ -9,4 +9,4 @@ RUN apt-get update -y \
     && apt-get install curl -y \
     && chmod +x /install-node.sh
 
-ENTRYPOINT ./install-node.sh
+ENTRYPOINT ["./install-node.sh"]
