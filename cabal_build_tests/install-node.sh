@@ -16,9 +16,19 @@ CABAL_VERSION="3.12.1.0"
 echo ""
 
 if [[ -z "${GIT_OBJECT}" ]]; then
-  >&2 printf "Please specify 'GIT_OBJECT' on docker run.\ne.g. '-e GIT_OBJECT=8.0.0' for tags, or '-e GIT_OBJECT=78wagy3aw87ef' for commits."
+  >&2 printf "Please specify 'GIT_OBJECT' on docker run.\ne.g. '-e GIT_OBJECT=10.6.1' for tags, or '-e GIT_OBJECT=78wagy3aw87ef' for commits."
   exit 1
 fi
+
+on_exit() {
+  if [[ "${KEEP_RUNNING:-0}" = "1" ]]; then
+      echo "Container will stay alive for debugging..."
+      echo "You can use 'docker exec -it <container-id> /bin/bash' in a separate session to play in the environment."
+      echo "Press Ctrl+C here to stop the container."
+      tail -f /dev/null
+  fi
+}
+trap on_exit EXIT
 
 echo "Using git object '$GIT_OBJECT'"
 
@@ -199,6 +209,3 @@ fi
 
 # Success message
 printf "\nSuccess\n\n"
-echo "You can use 'docker exec -it <container-id> /bin/bash' in a separate session to play in the environment."
-echo "Press any key to stop the container."
-read -r

@@ -25,4 +25,5 @@ $container_manager run \
   --security-opt label=disable \
   -it \
   -e GIT_OBJECT="$GIT_OBJECT" \
+  -e KEEP_RUNNING="${KEEP_RUNNING:-1}" \
   cardano-node-ubuntu
