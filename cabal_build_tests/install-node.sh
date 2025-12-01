@@ -16,7 +16,7 @@ CABAL_VERSION="3.12.1.0"
 echo ""
 
 if [[ -z "${GIT_OBJECT}" ]]; then
-  >&2 printf "Please specify 'GIT_OBJECT' on docker run.\ne.g. '-e GIT_OBJECT=10.6.1' for tags, or '-e GIT_OBJECT=78wagy3aw87ef' for commits."
+  >&2 printf "Please specify 'GIT_OBJECT' on docker run.\ne.g. '-e GIT_OBJECT=10.6.1' for tags, or '-e GIT_OBJECT=78ab9c3a87ef' for commits."
   exit 1
 fi
 
@@ -38,28 +38,46 @@ cd ~ || exit 1
 # Set up ~/.local/bin
 mkdir -p ~/.local/bin || exit 1
 
-if [[ "$PATH" != *"~/.local/bin"* ]]; then
-  export PATH=~/.local/bin:"$PATH"
+if [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]]; then
+  export PATH="${HOME}/.local/bin:${PATH}"
 else
   echo "'PATH' already contains ~/.local/bin"
 fi
 
+
+# Check OS and install this script's dependencies
+distro=""
+if [[ "$(</etc/os-release)" == *"fedora"* ]]; then
+  echo "Running on Fedora"
+  distro="fedora"
+elif [[ "$(</etc/os-release)" == *"ubuntu"* ]]; then
+  echo "Running on Ubuntu"
+  distro="ubuntu"
+  apt-get update -y
+  apt-get install curl -y
+else
+  >&2 echo "/etc/os-release does not contain 'fedora' or 'ubuntu'"
+  >&2 cat /etc/os-release
+  exit 1
+fi
+
+# Workaround for timezone issues
+export TZ=Europe/London
+ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo "$TZ" > /etc/timezone
+
+
+### Checking the actual installation steps ###
+
 # Install dependencies
 
 echo "Install dependencies"
-if [[ "$(</etc/os-release)" == *"fedora"* ]]; then
-  echo "Running on Fedora"
+if [[ "$distro" == "fedora" ]]; then
   yum update -y
   yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
   yum install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
-elif [[ "$(</etc/os-release)" == *"ubuntu"* ]]; then
-  echo "Running on Ubuntu"
+elif [[ "$distro" == "ubuntu" ]]; then
   apt-get update -y
   apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libncurses-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libtool autoconf liblmdb-dev -y
-else
-  >&2 echo "/etc/os-relase does not contain 'fedora' or 'ubuntu'"
-  >&2 cat /etc/os-release
-  exit 1
 fi
 
 # Version of iohk-nix
