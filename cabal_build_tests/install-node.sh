@@ -45,6 +45,7 @@ else
 fi
 
 # Install dependencies
+
 echo "Install dependencies"
 if [[ "$(</etc/os-release)" == *"fedora"* ]]; then
   echo "Running on Fedora"
