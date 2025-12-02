@@ -1,0 +1,47 @@
+10.6.1
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.6.1>
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.6.1-conway_01/>`__
+     - |:heavy_check_mark:|
+   * - `LMDB disk UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.6.1-conway_disk_01/>`__
+     - |:x:| \ :sup:`1`
+   * - Testing on `Preview`
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (10.5.1 to 10.6.1)
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Reconnection testing
+     - |:heavy_check_mark:|
+   * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C)
+     - |:heavy_check_mark:|
+   * - `Sync testing on Mainnet (Linux) <https://docs.google.com/document/d/e/2PACX-1vRkOUHsUjX8PjDmsfPHjp0D3vWNqSY6B6b8k49-hn_l-e8H2mEAoZ2q1ub_g9sS4EgHH-bZWVxRLq6x/pub>`__
+     - |:heavy_check_mark:|
+   * - Byron to Conway hard-fork testing
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:x:| \ :sup:`2`
+
+| \ :sup:`1` - Consensus issue, see `issue #1787 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
+| \ :sup:`2` - Incorrect build instructions, see `PR #1685 <https://github.com/cardano-foundation/developer-portal/pull/1685>`__
+
+New issues
+----------
+
+| [BUG] - cardano-cli queries hang indefinitely with V1LMDB backend: `issue #947 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
+| [BUG] - ObsoleteNode and no blocks forged on PV11: `issue #6382 <https://github.com/IntersectMBO/cardano-node/issues/6382>`__
