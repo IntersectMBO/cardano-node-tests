@@ -46,5 +46,5 @@ Regression testing on a local cluster
 New issues
 ----------
 
-| [BUG] - cardano-cli queries hang indefinitely with V1LMDB backend: `issue #947 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
+| [BUG] - cardano-cli queries hang indefinitely with V1LMDB backend: `issue #1787 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
 | [BUG] - ObsoleteNode and no blocks forged on PV11: `issue #6382 <https://github.com/IntersectMBO/cardano-node/issues/6382>`__
