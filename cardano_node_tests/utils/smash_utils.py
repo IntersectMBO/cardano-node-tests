@@ -5,7 +5,6 @@ import os
 import shutil
 import typing as tp
 
-import requests
 from requests import auth as rauth
 
 from cardano_node_tests.utils import cluster_nodes
@@ -122,7 +121,7 @@ class SmashClient:
     def get_retired_pools(self) -> list[PoolData]:
         """Fetch list of retired pools."""
         url = f"{self.base_url}/api/v1/retired"
-        response = requests.get(url, auth=self.auth)
+        response = http_client.get_session().get(url, auth=self.auth)
         response.raise_for_status()
         data = response.json()
         retired_pools = [PoolData(pool_id=ret_pool["poolId"]) for ret_pool in data]
