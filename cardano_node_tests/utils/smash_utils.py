@@ -45,7 +45,7 @@ class PoolError:
 class SmashClient:
     """Utility class for interacting with SMASH via REST API."""
 
-    def __init__(self, instance_num: int) -> None:
+    def __init__(self, instance_num: int, req_timeout: int = 10) -> None:
         self.instance_num = instance_num
         self.port = (
             cluster_nodes.get_cluster_type()
@@ -54,6 +54,7 @@ class SmashClient:
         )
         self.base_url = f"http://localhost:{self.port}"
         self.auth = self._get_auth()
+        self.req_timeout = req_timeout
 
     def _get_auth(self) -> rauth.HTTPBasicAuth | None:
         """Get Basic Auth credentials if configured."""
@@ -64,7 +65,7 @@ class SmashClient:
     def get_pool_metadata(self, *, pool_id: str, pool_meta_hash: str) -> PoolMetadata:
         """Fetch stake pool metadata from SMASH, returning a `PoolMetadata`."""
         url = f"{self.base_url}/api/v1/metadata/{pool_id}/{pool_meta_hash}"
-        response = http_client.get_session().get(url, auth=self.auth)
+        response = http_client.get_session().get(url, auth=self.auth, timeout=self.req_timeout)
         response.raise_for_status()
         data = response.json()
         return PoolMetadata(
@@ -77,7 +78,9 @@ class SmashClient:
     def delist_pool(self, *, pool_id: str) -> PoolData:
         """Delist a stake pool, returning PoolData on success or a RequestException on failure."""
         url = f"{self.base_url}/api/v1/delist"
-        response = http_client.get_session().patch(url, json={"poolId": pool_id}, auth=self.auth)
+        response = http_client.get_session().patch(
+            url, json={"poolId": pool_id}, auth=self.auth, timeout=self.req_timeout
+        )
         response.raise_for_status()
         data = response.json()
         return PoolData(pool_id=data["poolId"])
@@ -85,7 +88,9 @@ class SmashClient:
     def enlist_pool(self, *, pool_id: str) -> PoolData:
         """Enlist a stake pool, returning PoolData on success or a RequestException on failure."""
         url = f"{self.base_url}/api/v1/enlist"
-        response = http_client.get_session().patch(url, json={"poolId": pool_id}, auth=self.auth)
+        response = http_client.get_session().patch(
+            url, json={"poolId": pool_id}, auth=self.auth, timeout=self.req_timeout
+        )
         response.raise_for_status()
         data = response.json()
         return PoolData(pool_id=data["poolId"])
@@ -93,7 +98,9 @@ class SmashClient:
     def reserve_ticker(self, *, ticker_name: str, pool_hash: str) -> PoolTicker:
         """Reserve a ticker for a stake pool."""
         url = f"{self.base_url}/api/v1/tickers/{ticker_name}"
-        response = http_client.get_session().post(url, json={"poolId": pool_hash}, auth=self.auth)
+        response = http_client.get_session().post(
+            url, json={"poolId": pool_hash}, auth=self.auth, timeout=self.req_timeout
+        )
         response.raise_for_status()
         data = response.json()
         return PoolTicker(name=data["name"])
@@ -102,7 +109,9 @@ class SmashClient:
         """Fetch errors for a specific stake pool."""
         url = f"{self.base_url}/api/v1/errors/{pool_id}"
         params = {"fromDate": from_date} if from_date else None
-        response = http_client.get_session().get(url, params=params, auth=self.auth)
+        response = http_client.get_session().get(
+            url, params=params, auth=self.auth, timeout=self.req_timeout
+        )
         response.raise_for_status()
         data = response.json()
         pool_errors = [
@@ -121,7 +130,7 @@ class SmashClient:
     def get_retired_pools(self) -> list[PoolData]:
         """Fetch list of retired pools."""
         url = f"{self.base_url}/api/v1/retired"
-        response = http_client.get_session().get(url, auth=self.auth)
+        response = http_client.get_session().get(url, auth=self.auth, timeout=self.req_timeout)
         response.raise_for_status()
         data = response.json()
         retired_pools = [PoolData(pool_id=ret_pool["poolId"]) for ret_pool in data]
