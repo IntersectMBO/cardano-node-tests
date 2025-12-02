@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from datetime import timezone
 
-import requests
+from cardano_node_tests.utils import http_client
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class DBSyncSnapshotService:
         """Fetch XML content from the S3 bucket using REST API."""
         params = {"list-type": "2", "prefix": prefix, "delimiter": delimiter}
 
-        response = requests.get(self.BUCKET_URL, params=params, timeout=30)
+        response = http_client.get_session().get(self.BUCKET_URL, params=params, timeout=30)
         response.raise_for_status()
         return response.content
 
