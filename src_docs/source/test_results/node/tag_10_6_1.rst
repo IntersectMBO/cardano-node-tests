@@ -36,9 +36,12 @@ Regression testing on a local cluster
      - |:heavy_check_mark:|
    * - Check build instructions changes
      - |:x:| \ :sup:`2`
+   * - Starting node in protocol version 11
+     - |:x:| \ :sup:`3`
 
 | \ :sup:`1` - Consensus issue, see `issue #1787 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
 | \ :sup:`2` - Incorrect build instructions, see `PR #1685 <https://github.com/cardano-foundation/developer-portal/pull/1685>`__
+| \ :sup:`3` - Node issue, see `issue #6382 <https://github.com/IntersectMBO/cardano-node/issues/6382>`__
 
 New issues
 ----------
