@@ -4,8 +4,8 @@
 * Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.6.1>
 
 
-Regression testing on a local cluster
--------------------------------------
+Release Testing Checklists
+--------------------------
 
 .. list-table:: Regression Testsuite
    :widths: 64 7
