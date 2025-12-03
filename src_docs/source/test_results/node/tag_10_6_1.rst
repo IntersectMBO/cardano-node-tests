@@ -14,7 +14,7 @@ Regression testing on a local cluster
    * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.6.1-conway_01/>`__
      - |:heavy_check_mark:|
    * - `LMDB disk UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.6.1-conway_disk_01/>`__
-     - |:x:| \ :sup:`1`
+     - |:x:|\ :sup:`1`
    * - Testing on `Preview`
      - |:heavy_check_mark:|
 
@@ -35,9 +35,9 @@ Regression testing on a local cluster
    * - Byron to Conway hard-fork testing
      - |:heavy_check_mark:|
    * - Check build instructions changes
-     - |:x:| \ :sup:`2`
+     - |:x:|\ :sup:`2`
    * - Starting node in protocol version 11
-     - |:x:| \ :sup:`3`
+     - |:x:|\ :sup:`3`
 
 | \ :sup:`1` - Consensus issue, see `issue #1787 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
 | \ :sup:`2` - Incorrect build instructions, see `PR #1685 <https://github.com/cardano-foundation/developer-portal/pull/1685>`__
@@ -46,5 +46,5 @@ Regression testing on a local cluster
 New issues
 ----------
 
-| [BUG] - cardano-cli queries hang indefinitely with V1LMDB backend: `issue #1787 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
-| [BUG] - ObsoleteNode and no blocks forged on PV11: `issue #6382 <https://github.com/IntersectMBO/cardano-node/issues/6382>`__
+| **[BUG]** - ``cardano-cli`` queries hang indefinitely with V1LMDB backend: `issue #1787 <https://github.com/IntersectMBO/ouroboros-consensus/issues/1787>`__
+| **[BUG]** - ``ObsoleteNode`` and no blocks forged on PV11: `issue #6382 <https://github.com/IntersectMBO/cardano-node/issues/6382>`__
