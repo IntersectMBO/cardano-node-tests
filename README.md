@@ -133,15 +133,15 @@ You can fine-tune test runs using these environment variables:
 
 ### ▶️ Additional for `regression.sh`
 
-| Variable           | Description                                 |
-| ------------------ | ------------------------------------------- |
-| `CARDANO_CLI_REV`  | `cardano-cli` version.                      |
-| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow).     |
-| `DBSYNC_REV`       | `cardano-db-sync` version.                  |
-| `NODE_REV`         | `cardano-node` version (default: `master`). |
-| `PLUTUS_APPS_REV`  | `plutus-apps` version (default: `main`).    |
-| `PYTEST_ARGS`      | Extra options passed to pytest.            |
-| `TEST_THREADS`     | Number of pytest workers (default: 20).    |
+| Variable           | Description                                       |
+| ------------------ | ------------------------------------------------- |
+| `CARDANO_CLI_REV`  | `cardano-cli` version.                            |
+| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow).           |
+| `DBSYNC_REV`       | `cardano-db-sync` version.                        |
+| `NODE_REV`         | `cardano-node` version (default: `master`).       |
+| `PYTEST_ARGS`      | Extra options passed to pytest.                   |
+| `TEST_THREADS`     | Number of pytest workers (default: `20`).         |
+| `PROTOCOL_VERSION` | Cardano protocol version to use (default: `10`).  |
 
 ### 💡 Usage Examples
 
