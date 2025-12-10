@@ -48,7 +48,6 @@ def _get_scripts_hashes(
     for r in records:
         if not r.script_file:
             continue
-        # pyrefly: ignore  # bad-argument-type
         shash = cluster_obj.g_transaction.get_policyid(script_file=r.script_file)
         shash_rec = hashes_db.get(shash)
         if shash_rec is None:
@@ -138,9 +137,7 @@ def _compare_redeemers(
         )
 
         for tx_rec in tx_recs:
-            # pyrefly: ignore  # missing-attribute
             tx_unit_steps = tx_rec.execution_units[0] if tx_rec.execution_units else None
-            # pyrefly: ignore  # missing-attribute
             tx_unit_mem = tx_rec.execution_units[1] if tx_rec.execution_units else None
 
             missing_tx_unit_steps = not (tx_unit_steps and tx_unit_mem)

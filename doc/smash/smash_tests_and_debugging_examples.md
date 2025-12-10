@@ -71,7 +71,7 @@ select * from delisted_pool;
 
 | id |                          hash_raw
 | -- | -----------------------------------------------------------
-| 1 | \xa5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41
+| 1  | \xa5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41
 
 
 ## Reserving a ticker

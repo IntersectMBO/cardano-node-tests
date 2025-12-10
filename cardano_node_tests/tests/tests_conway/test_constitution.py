@@ -305,7 +305,7 @@ def governance_w_scripts_lg(
     ],
 ) -> governance_utils.GovernanceRecords:
     """Create a governance records with script DReps."""
-    cluster, default_governance = cluster_lock_gov_script
+    _cluster, default_governance = cluster_lock_gov_script
     script_dreps, script_delegators = script_dreps_lg
     return dataclasses.replace(
         default_governance, drep_scripts_reg=script_dreps, drep_scripts_delegators=script_delegators

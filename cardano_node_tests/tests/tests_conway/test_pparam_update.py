@@ -696,7 +696,6 @@ class TestPParamUpdate:
             anchor_data = governance_utils.get_default_anchor_data()
             # Increment count for a submitted proposal
             nonlocal submitted_proposal_count
-            # pyrefly: ignore  # unknown-name
             submitted_proposal_count += 1
             return conway_common.propose_pparams_update(
                 cluster_obj=cluster,

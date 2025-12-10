@@ -127,7 +127,7 @@ def check_missing_builtin(
 
     # Step 1: fund the token issuer
 
-    mint_utxos, collateral_utxos, __, tx_raw_output_step1 = _fund_issuer(
+    mint_utxos, collateral_utxos, *__ = _fund_issuer(
         cluster_obj=cluster_obj,
         temp_template=temp_template,
         payment_addr=payment_addr,
