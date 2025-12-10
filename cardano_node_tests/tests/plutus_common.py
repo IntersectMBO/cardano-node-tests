@@ -475,7 +475,9 @@ SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 
 # ------ Batch 6 builtins (Plutus V3 only) ------ #
 
-MINTING_DROPLIST_PLUTUS_V3 = SCRIPTS_V3_BATCH6_110_DIR / "succeedingDropListPolicyScriptV3.plutus"
+MINTING_DROPLIST_PLUTUS_V3 = (
+    SCRIPTS_V3_BATCH6_110_DIR / "succeedingDropListPolicyScript_V3_110.plutus"
+)
 MINTING_DROPLIST_V3 = PlutusScriptData(
     script_file=MINTING_DROPLIST_PLUTUS_V3,
     script_type=clusterlib.ScriptTypes.PLUTUS_V3,
@@ -484,21 +486,21 @@ MINTING_DROPLIST_V3 = PlutusScriptData(
 
 SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = (MINTING_DROPLIST_V3,)
 
-FAILING_BATCH6_SCRIPT_FILES_V3 = (
-    "expensiveDropListPolicyScriptV3_1.plutus",
-    "expensiveDropListPolicyScriptV3_2.plutus",
-    "expensiveDropListPolicyScriptV3_3.plutus",
-    "expensiveDropListPolicyScriptV3_4.plutus",
-    "expensiveDropListPolicyScriptV3_5.plutus",
+OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
+    "expensiveDropListPolicyScript_V3_110_1.plutus",
+    "expensiveDropListPolicyScript_V3_110_2.plutus",
+    "expensiveDropListPolicyScript_V3_110_3.plutus",
+    "expensiveDropListPolicyScript_V3_110_4.plutus",
+    "expensiveDropListPolicyScript_V3_110_5.plutus",
 )
 
-FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
     PlutusScriptData(
         script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=UNDETERMINED_COST,
     )
-    for n in FAILING_BATCH6_SCRIPT_FILES_V3
+    for n in OVERSPENDING_BATCH6_SCRIPT_FILES_V3
 )
 
 
