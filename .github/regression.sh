@@ -61,6 +61,9 @@ fi
 CLUSTER_ERA="${CLUSTER_ERA:-"$DEFAULT_CLUSTER_ERA"}"
 if [ "$CLUSTER_ERA" = "conway 10" ]; then
   CLUSTER_ERA="conway"
+elif [ "$CLUSTER_ERA" = "conway 11" ]; then
+  CLUSTER_ERA="conway"
+  export PROTOCOL_VERSION=11
 fi
 export CLUSTER_ERA
 

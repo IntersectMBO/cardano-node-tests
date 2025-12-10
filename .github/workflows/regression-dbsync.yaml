@@ -17,6 +17,7 @@ on:
         description: "Cluster era"
         options:
         - conway 10
+        - conway 11
         default: conway 10
       markexpr:
         type: choice
