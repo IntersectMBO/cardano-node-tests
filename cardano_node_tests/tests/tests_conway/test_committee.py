@@ -278,7 +278,10 @@ class TestCommittee:
                                 submit_method=smethod,
                             )
                         err_str = str(excinfo.value)
-                        assert "(VotersDoNotExist" in err_str, err_str
+                        assert (
+                            "UnelectedCommitteeVoters" in err_str  # In protocol version >= 11
+                            or "VotersDoNotExist" in err_str
+                        ), err_str
 
         # Update committee action is not supported in bootstrap period
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
