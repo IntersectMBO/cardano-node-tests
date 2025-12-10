@@ -284,7 +284,7 @@ class TestNodeReconnect:
                 for check_no in range(1, 11):
                     try:
                         _assert()
-                    except AssertionError:  # noqa: PERF203
+                    except AssertionError:
                         if check_no == 10:
                             raise
                         LOGGER.info(f"AssertionError on check {check_no}")

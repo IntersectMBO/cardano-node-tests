@@ -170,7 +170,7 @@ def check_smash_pool_errors(*, pool_id: str, pool_metadata_hash: str) -> list[Po
     smash = SmashManager.get_smash_instance()
 
     # Test pool errors endpoint for a date set in the future
-    utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
+    utc_now = datetime.datetime.now(tz=datetime.UTC)
     future_date = (utc_now + datetime.timedelta(days=365 * 5)).strftime("%d.%m.%Y")
     smash_pool_errors_future = smash.get_pool_errors(pool_id=pool_id, from_date=future_date)
     assert smash_pool_errors_future == []
@@ -199,7 +199,7 @@ def check_smash_pool_errors(*, pool_id: str, pool_metadata_hash: str) -> list[Po
         # Parse the time string and check if it has a valid format
         error_time_utc = datetime.datetime.strptime(
             smash_pool_error.time, "%d.%m.%Y. %H:%M:%S"
-        ).replace(tzinfo=datetime.timezone.utc)
+        ).replace(tzinfo=datetime.UTC)
 
         time_diff = datetime.timedelta(minutes=20)
         assert error_time_utc <= utc_now, "Error time must not be in the future."

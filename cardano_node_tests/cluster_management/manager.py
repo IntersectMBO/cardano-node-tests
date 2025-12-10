@@ -113,9 +113,7 @@ class ClusterManager:
             locking.FileLockIfXdist(self.log_lock),
             open(configuration.SCHEDULING_LOG, "a", encoding="utf-8") as logfile,
         ):
-            logfile.write(
-                f"{datetime.datetime.now(tz=datetime.timezone.utc)} on {self.worker_id}: {msg}\n"
-            )
+            logfile.write(f"{datetime.datetime.now(tz=datetime.UTC)} on {self.worker_id}: {msg}\n")
 
     def save_worker_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this pytest worker.

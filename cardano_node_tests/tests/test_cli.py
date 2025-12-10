@@ -1400,7 +1400,7 @@ class TestQuerySlotNumber:
         """Test `query slot-number`."""
         common.get_test_id(cluster)
 
-        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        timestamp = datetime.datetime.now(datetime.UTC)
         slot_number = cluster.g_query.get_slot_number(timestamp=timestamp)
 
         # In case the test runs on epoch boundary, the tip could still be in the previous epoch.
@@ -1423,7 +1423,7 @@ class TestQuerySlotNumber:
         """
         common.get_test_id(cluster)
 
-        timestamp_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+        timestamp_str = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.query_cli(["slot-number", timestamp_str])
@@ -1445,7 +1445,7 @@ class TestQuerySlotNumber:
         """
         common.get_test_id(cluster)
 
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
 
         timestamp = now.replace(year=now.year * 4) if time_val == "above" else now.replace(year=1)
 
