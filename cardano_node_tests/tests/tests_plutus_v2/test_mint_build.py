@@ -281,7 +281,7 @@ class TestBuildMinting:
 
         # Step 1: fund the token issuer and create UTxOs for collaterals and reference script
 
-        mint_utxos, collateral_utxos, reference_utxo, tx_output_step1 = mint_build._fund_issuer(
+        mint_utxos, collateral_utxos, reference_utxo, _tx_output_step1 = mint_build._fund_issuer(
             cluster_obj=cluster,
             temp_template=temp_template,
             payment_addr=payment_addr,

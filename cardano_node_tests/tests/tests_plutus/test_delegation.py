@@ -624,8 +624,6 @@ class TestRegisterAddr:
 
         # Step 3: withdraw rewards and deregister
 
-        reward_error = ""
-
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
@@ -646,9 +644,6 @@ class TestRegisterAddr:
                 else clusterlib_utils.BuildMethods.BUILD_RAW
             ),
         )
-
-        if reward_error:
-            raise AssertionError(reward_error)
 
         # Check tx_view of step 2 and step 3
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_reg)

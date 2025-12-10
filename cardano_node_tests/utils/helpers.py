@@ -100,14 +100,11 @@ def run_command(
         retcode = p.returncode
 
     if not ignore_fail and retcode != 0:
-        # pyrefly: ignore  # missing-attribute
         err_dec = stderr.decode()
-        # pyrefly: ignore  # missing-attribute
         err_dec = err_dec or stdout.decode()
         msg = f"An error occurred while running `{cmd_str}`: {err_dec}"
         raise RuntimeError(msg)
 
-    # pyrefly: ignore  # bad-return
     return stdout
 
 
@@ -300,16 +297,14 @@ def tool_has(command: str) -> bool:
 
 def flatten(iterable: tp.Iterable, *, ltypes: type[tp.Iterable] | None = None) -> tp.Generator:
     """Flatten an irregular (arbitrarily nested) iterable of iterables."""
-    ltypes = ltypes if ltypes is not None else abc.Iterable
+    ltypes_p = ltypes if ltypes is not None else abc.Iterable
     remainder = iter(iterable)
     while True:
         try:
             first = next(remainder)
         except StopIteration:
             break
-        # pyrefly: ignore  # invalid-argument
-        if isinstance(first, ltypes) and not isinstance(first, str | bytes):
-            # pyrefly: ignore  # bad-argument-type
+        if isinstance(first, ltypes_p) and not isinstance(first, str | bytes):
             remainder = itertools.chain(first, remainder)
         else:
             yield first

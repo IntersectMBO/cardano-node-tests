@@ -262,9 +262,9 @@ class TestTreasuryWithdrawals:
         def _cast_vote(
             approve: bool, vote_id: str, add_spo_votes: bool = False
         ) -> governance_utils.VotedVotes:
-            votes_cc = []
-            votes_drep = []
-            votes_spo = []
+            votes_cc: list[clusterlib.VoteCC] = []
+            votes_drep: list[clusterlib.VoteDrep] = []
+            votes_spo: list[clusterlib.VoteSPO] = []
             for action_ix in range(actions_num):
                 votes_cc.extend(
                     [

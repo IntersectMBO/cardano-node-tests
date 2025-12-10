@@ -1608,7 +1608,7 @@ class TestTimeLocking:
         build_method = request.node.callspec.params["fund_script_before_slot_in_future"]
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
-        multisig_script, script_address, script_utxos, tx_output, before_slot = (
+        multisig_script, _script_address, script_utxos, tx_output, before_slot = (
             fund_script_before_slot_in_future
         )
 
@@ -1665,7 +1665,7 @@ class TestTimeLocking:
         build_method = request.node.callspec.params["fund_script_after_slot_in_future"]
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
-        multisig_script, script_address, script_utxos, tx_output, after_slot = (
+        multisig_script, _script_address, script_utxos, tx_output, after_slot = (
             fund_script_after_slot_in_future
         )
 
@@ -1742,7 +1742,7 @@ class TestTimeLocking:
         build_method = request.node.callspec.params["fund_script_after_slot_in_past"]
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
-        multisig_script, script_address, script_utxos, tx_output, after_slot = (
+        multisig_script, _script_address, script_utxos, tx_output, after_slot = (
             fund_script_after_slot_in_past
         )
 

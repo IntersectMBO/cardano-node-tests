@@ -19,10 +19,8 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data" / "mnemonic_golden"
 
-# pyrefly: ignore  # no-matching-overload
 KEY_TYPES = tuple(clusterlib.KeyType)
 KEY_TYPE_IDS = tuple(k.value.replace("-", "_") for k in KEY_TYPES)
-# pyrefly: ignore  # no-matching-overload
 OUT_FORMATS = tuple(clusterlib.OutputFormat)
 OUT_FORMAT_IDS = tuple(k.value.replace("-", "_") for k in OUT_FORMATS)
 

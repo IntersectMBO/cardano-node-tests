@@ -157,6 +157,7 @@ _cleanup() {
   fi
 }
 
+# shellcheck disable=SC2329
 _cleanup_testnet_on_interrupt() {
   [ -z "${BOOTSTRAP_DIR:-""}" ] && return
 
@@ -185,6 +186,7 @@ _cleanup_testnet_on_interrupt() {
 }
 
 # cleanup on Ctrl+C or error
+# shellcheck disable=SC2329
 _interrupted() {
   # Do testnet cleanup only on interrupted testrun. When not interrupted,
   # cleanup is done as part of a testrun.

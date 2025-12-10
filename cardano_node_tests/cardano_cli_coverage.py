@@ -101,11 +101,9 @@ def merge_coverage(dict_a: dict, dict_b: dict) -> dict:
     mergeable = (list, set, tuple)
     addable = (int, float)
     for key, value in dict_b.items():
-        # pyrefly: ignore  # invalid-argument
         if key in dict_a and isinstance(value, mergeable) and isinstance(dict_a[key], mergeable):
             new_list = set(dict_a[key]).union(value)
             dict_a[key] = sorted(new_list)
-        # pyrefly: ignore  # invalid-argument
         elif key in dict_a and isinstance(value, addable) and isinstance(dict_a[key], addable):
             dict_a[key] += value
         # Skipped arguments and commands are not in the available commands dict
@@ -124,7 +122,6 @@ def cli(cli_args: tp.Iterable[str]) -> str:
     assert not isinstance(cli_args, str), "`cli_args` must be sequence of strings"
     with subprocess.Popen(list(cli_args), stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
         __, stderr = p.communicate()
-    # pyrefly: ignore  # missing-attribute
     return stderr.decode()
 
 
