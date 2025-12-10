@@ -1,19 +1,21 @@
-[tool.poetry]
+[project]
 name = "cardano-node-tests"
 version = "0.1.0"
 description = "Functional tests for cardano-node"
-license = "Apache-2.0"
 authors = [
-    "Martin Kourim <martin.kourim@iohk.io>",
-    "Sara Tomaz <sara.tomaz@iohk.io>",
-    "Artur Wieczorek <artur.wieczorek@iohk.io>",
-    "Dorin Solomon <dorin.solomon@iohk.io>",
+    { name = "Martin Kourim", email = "martin.kourim@iohk.io" },
+    { name = "Sara Tomaz", email = "sara.tomaz@iohk.io" },
+    { name = "Artur Wieczorek", email = "artur.wieczorek@iohk.io" },
 ]
+requires-python = ">=3.11,<4.0"
 readme = "README.md"
-homepage = "https://tests.cardano.intersectmbo.org/"
-repository = "https://github.com/IntersectMBO/cardano-node-tests"
-documentation = "https://tests.cardano.intersectmbo.org/"
-keywords = ["cardano", "cardano-node", "cardano-cli", "cardano-node-tests"]
+license = "Apache-2.0"
+keywords = [
+    "cardano",
+    "cardano-node",
+    "cardano-cli",
+    "cardano-node-tests",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Framework :: Pytest",
@@ -21,59 +23,57 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Topic :: Software Development :: Testing",
 ]
-packages = [{include = "cardano_node_tests"}]
+dependencies = [
+    "PyYAML>=6.0.2,<7",
+    "allure-pytest>=2.14.3,<3",
+    "cardano-clusterlib>=0.9.8,<0.10",
+    "cardonnay>=0.2.10,<0.3",
+    "cbor2>=5.6.5,<6",
+    "filelock>=3.18.0,<4",
+    "hypothesis>=6.135.17,<7",
+    "psycopg2-binary>=2.9.10,<3",
+    "pydantic>=2.11.7,<3",
+    "pygithub>=2.6.1,<3",
+    "pytest-html>=4.1.1,<5",
+    "pytest-metadata>=3.1.1,<4",
+    "pytest-order>=1.3.0,<2",
+    "pytest-select>=0.1.2,<0.2",
+    "pytest-subtests>=0.14.2,<0.15",
+    "pytest-xdist>=3.7.0,<4",
+    "pytest>=8.4.1,<9",
+    "requests>=2.32.4,<3",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<4.0"
-allure-pytest = "^2.14.3"
-cardano-clusterlib = "^0.9.8"
-cbor2 = "^5.6.5"
-filelock = "^3.18.0"
-hypothesis = "^6.135.17"
-psycopg2-binary = "^2.9.10"
-pydantic = "^2.11.7"
-pygithub = "^2.6.1"
-pytest = "^8.4.1"
-pytest-html = "^4.1.1"
-pytest-metadata = "^3.1.1"
-pytest-order = "^1.3.0"
-pytest-select = "^0.1.2"
-pytest-xdist = "^3.7.0"
-PyYAML = "^6.0.2"
-requests = "^2.32.4"
-pytest-subtests = "^0.14.2"
-cardonnay = "^0.2.10"
+[project.urls]
+Homepage = "https://tests.cardano.intersectmbo.org/"
+Repository = "https://github.com/IntersectMBO/cardano-node-tests"
+Documentation = "https://tests.cardano.intersectmbo.org/"
+"Bug Tracker" = "https://github.com/IntersectMBO/cardano-node-tests/issues"
 
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^4.0.1"
-types-PyYAML = "^6.0.12.20250516"
-types-requests = "^2.32.4.20250611"
-mypy = "^1.16.1"
-ipython = "^9.3.0"
-pyrefly = "^0.22.0"
-pyright = "^1.1.404"
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-Sphinx = "^8.2.3"
-m2r2 = "^0.3.4"
-sphinx-rtd-theme = "^3.0.2"
-sphinxemoji = "^0.3.1"
-
-[tool.poetry.scripts]
+[project.scripts]
 testnet-cleanup = "cardano_node_tests.testnet_cleanup:main"
 defragment-utxos = "cardano_node_tests.defragment_utxos:main"
 prepare-cluster-scripts = "cardano_node_tests.prepare_cluster_scripts:main"
 split-topology = "cardano_node_tests.split_topology:main"
 cardano-cli-coverage = "cardano_node_tests.cardano_cli_coverage:main"
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/IntersectMBO/cardano-node-tests/issues"
+[dependency-groups]
+dev = [
+    "ipython>=9.3.0,<10",
+    "mypy>=1.16.1,<2",
+    "pre-commit>=4.0.1,<5",
+    "pyrefly>=0.22.0,<0.23",
+    "pyright>=1.1.404,<2",
+    "types-PyYAML>=6.0.12.20250516,<7",
+    "types-requests>=2.32.4.20250611,<3",
+]
+docs = [
+    "Sphinx>=8.2.3,<9",
+    "m2r2>=0.3.4,<0.4",
+    "sphinx-rtd-theme>=3.0.2,<4",
+    "sphinxemoji>=0.3.1,<0.4",
+]
+
 
 [build-system]
 requires = ["poetry-core"]
