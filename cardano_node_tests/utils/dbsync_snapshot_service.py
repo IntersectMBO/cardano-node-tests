@@ -2,8 +2,8 @@ import dataclasses
 import logging
 import re
 import xml.etree.ElementTree as ET
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 
 from cardano_node_tests.utils import http_client
 
@@ -75,7 +75,7 @@ class DBSyncSnapshotService:
             last_modified_str = modified_tag.text or ""
 
             file_date = datetime.strptime(last_modified_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-                tzinfo=timezone.utc
+                tzinfo=UTC
             )
 
             files.append(

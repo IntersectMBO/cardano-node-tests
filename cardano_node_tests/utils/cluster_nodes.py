@@ -423,7 +423,7 @@ def services_action(
     for service_name in service_names:
         try:
             run_supervisorctl(args=[action, service_name], instance_num=instance_num)
-        except Exception as exc:  # noqa: PERF203
+        except Exception as exc:
             msg = f"Failed to {action} service `{service_name}`"
             raise Exception(msg) from exc
 

@@ -835,7 +835,7 @@ def check_plutus_costs(
     for db_record, cost_record in zip(sorted_db, sorted_costs):
         try:
             check_plutus_cost(redeemer_record=db_record, cost_record=cost_record)
-        except AssertionError as err:  # noqa: PERF203
+        except AssertionError as err:
             errors.append(f"{db_record.script_hash}:\n{err}")
 
     if errors:

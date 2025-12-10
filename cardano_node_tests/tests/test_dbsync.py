@@ -3,9 +3,9 @@
 import logging
 import time
 import typing as tp
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 
 import allure
 import pytest
@@ -417,7 +417,7 @@ class TestDBSyncSnapshot:
         LOGGER.info(f"Snapshot size: {latest_snapshot.size_gb:.2f} GB")
 
         # 3. Perform freshness check
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         five_days_ago = now_utc - timedelta(days=5)
 
         assert latest_snapshot.last_modified >= five_days_ago, (

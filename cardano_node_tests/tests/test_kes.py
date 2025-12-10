@@ -296,12 +296,12 @@ class TestKES:
 
         with logfiles.expect_errors(expected_errors, worker_id=worker_id):
             LOGGER.info(
-                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+                f"{datetime.datetime.now(tz=datetime.UTC)}: "
                 f"Waiting for slot no {expire_slot} for KES expiration."
             )
             cluster.wait_for_slot(slot=expire_slot)
             LOGGER.info(
-                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+                f"{datetime.datetime.now(tz=datetime.UTC)}: "
                 f"KES expired (?); tip: '{cluster.g_query.get_tip()}'."
             )
 
@@ -339,7 +339,7 @@ class TestKES:
             )
 
             LOGGER.info(
-                f"{datetime.datetime.now(tz=datetime.timezone.utc)}: "
+                f"{datetime.datetime.now(tz=datetime.UTC)}: "
                 "Waiting 90 secs to make sure the expected errors make it to log files."
             )
             time.sleep(90)

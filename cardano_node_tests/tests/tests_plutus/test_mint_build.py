@@ -412,8 +412,7 @@ class TestBuildMinting:
 
         # POSIX timestamp + offset
         redeemer_value = (
-            int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp() * 1_000)
-            + timestamp_offset_ms
+            int(datetime.datetime.now(tz=datetime.UTC).timestamp() * 1_000) + timestamp_offset_ms
         )
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
@@ -661,8 +660,7 @@ class TestBuildMinting:
 
         # POSIX timestamp + offset
         redeemer_value_timerange = (
-            int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp() * 1_000)
-            + timestamp_offset_ms
+            int(datetime.datetime.now(tz=datetime.UTC).timestamp() * 1_000) + timestamp_offset_ms
         )
 
         policyid2 = cluster.g_transaction.get_policyid(script_file2)
