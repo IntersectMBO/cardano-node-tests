@@ -16,6 +16,8 @@ PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
 SCRIPTS_V3_DIR = PLUTUS_DIR / "v3"
+SCRIPTS_V3_BATCH6_110_DIR = SCRIPTS_V3_DIR / "batch6" / "1.1.0"
+
 SEPC256K1_ECDSA_DIR = PLUTUS_DIR / "sepc256k1_ecdsa"
 SEPC256K1_SCHNORR_DIR = PLUTUS_DIR / "sepc256k1_schnorr"
 
@@ -285,7 +287,18 @@ MINTING_SECP256K1_SCHNORR = {
 
 # ----- Succeeding bitwise tests ----- #
 
+# These are used to fill in the execution costs of scripts where we don't yet
+# know what the cost is.  We're not currently checking the costs (and it seems
+# to be difficult when the script fails anyway), so the values here don't really
+# matter.
+
+UNKNOWN_PER_TIME = 1_000_000
+UNKNOWN_PER_SPACE = 100_000
 UNKNOWN_FIXED_COST = 777_777
+UNDETERMINED_COST = ExecutionCost(
+    per_time=UNKNOWN_PER_TIME, per_space=UNKNOWN_PER_SPACE, fixed_cost=UNKNOWN_FIXED_COST
+)
+
 
 MINTING_ANDBYTESTRING_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingAndByteStringPolicyScriptV3.plutus"
 MINTING_ANDBYTESTRING_V3 = PlutusScriptData(
@@ -441,10 +454,6 @@ FAILING_BITWISE_SCRIPT_FILES_V3 = (
     "failingWriteBitsPolicyScriptV3_19.plutus",
 )
 
-# We're not currently checking the costs (and it seems to be difficult when the
-# script fails anyway), so the values here don't really matter.
-UNDETERMINED_COST = ExecutionCost(per_time=1_000_000, per_space=100_000, fixed_cost=1234)
-
 
 FAILING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
     PlutusScriptData(
@@ -463,6 +472,60 @@ MINTING_RIPEMD_160_V3 = PlutusScriptData(
 )
 
 SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
+
+# ------ Batch 6 builtins (Plutus V3 only) ------ #
+#
+# Includes tests for casing on constants, which are released with the same hard-fork
+
+
+SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (
+    "succeedingDropListPolicyScriptV3.plutus",
+
+    "caseBoolHappy_V3_110.plutus",
+    "caseIntegerHappy_V3_110.plutus",
+    "caseListHappy_V3_110.plutus",
+    "casePairHappy_V3_110.plutus",
+    "caseUnitHappy_V3_110.plutus",
+)
+
+SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in SUCCEEDING_BATCH6_SCRIPT_FILES_V3
+)
+
+FAILING_BATCH6_SCRIPT_FILES_V3 = (
+    "expensiveDropListPolicyScriptV3_1.plutus",
+    "expensiveDropListPolicyScriptV3_2.plutus",
+    "expensiveDropListPolicyScriptV3_3.plutus",
+    "expensiveDropListPolicyScriptV3_4.plutus",
+    "expensiveDropListPolicyScriptV3_5.plutus",
+
+    "caseBoolUnhappyMoreBranches_V3_110.plutus",
+    "caseBoolUnhappyNoBranches_V3_110.plutus",
+    "caseIntegerUnhappyNoBranches_V3_110.plutus",
+    "caseIntegerUnhappyNoMatchNegative_V3_110.plutus",
+    "caseIntegerUnhappyNoMatchOver_V3_110.plutus",
+    "caseListUnhappyMoreBranches_V3_110.plutus",
+    "caseListUnhappyNoBranches_V3_110.plutus",
+    "caseListUnhappyNoMatchNil_V3_110.plutus",
+    "casePairUnhappyMoreBranches_V3_110.plutus",
+    "casePairUnhappyNoBranches_V3_110.plutus",
+    "caseUnitUnhappyMoreBranches_V3_110.plutus",
+    "caseUnitUnhappyNoBranches_V3_110.plutus",
+)
+
+FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in FAILING_BATCH6_SCRIPT_FILES_V3
+)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
