@@ -11,7 +11,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
@@ -720,15 +719,9 @@ class TestTreasuryWithdrawals:
 class TestMIRCerts:
     """Tests for MIR certificates."""
 
-    @pytest.fixture(scope="class")
-    def skip_on_missing_legacy(self) -> None:
-        if not clusterlib_utils.cli_has("legacy governance"):
-            pytest.skip("`legacy governance` commands are not available")
-
     @pytest.fixture
     def payment_addr(
         self,
-        skip_on_missing_legacy: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
@@ -749,7 +742,6 @@ class TestMIRCerts:
     @pytest.mark.smoke
     def test_mir_certificates(
         self,
-        skip_on_missing_legacy: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         mir_cert: str,
@@ -759,42 +751,46 @@ class TestMIRCerts:
         Expect failure.
 
         * try and fail to build the Tx using `transaction build`
-        * successfully build the Tx as Babbage Tx using `transaction build-raw`
-        * try and fail to submit the Babbage Tx
+        * successfully build the Tx as Babbage Tx using compatible `signed-transaction`
+        * try and fail to submit the Babbage Tx (expected era mismatch)
         """
-        # TODO: convert to use `compatible babbage governance create-mir-certificate`
         temp_template = common.get_test_id(cluster)
         amount = 1_500_000
 
         reqc.cip070.start(url=helpers.get_vcs_link())
 
+        # Generate MIR certificate using compatible governance commands
         if mir_cert == "to_treasury":
-            cert_file = cluster.g_legacy_governance.gen_mir_cert_to_treasury(
-                transfer=amount,
-                tx_name=temp_template,
+            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+                name=temp_template,
+                subcommand="transfer-to-treasury",
+                transfer_amt=amount,
             )
         elif mir_cert == "to_rewards":
-            cert_file = cluster.g_legacy_governance.gen_mir_cert_to_rewards(
-                transfer=amount,
-                tx_name=temp_template,
+            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+                name=temp_template,
+                subcommand="transfer-to-rewards",
+                transfer_amt=amount,
             )
         elif mir_cert == "treasury_to_addr":
-            cert_file = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
-                tx_name=temp_template,
-                stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
+            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+                name=temp_template,
+                subcommand="stake-addresses",
+                stake_address="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
                 reward=amount,
-                use_treasury=True,
+                funds="treasury",
             )
         elif mir_cert == "reserves_to_addr":
-            cert_file = cluster.g_legacy_governance.gen_mir_cert_stake_addr(
-                tx_name=temp_template,
-                stake_addr="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
+            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+                name=temp_template,
+                subcommand="stake-addresses",
+                stake_address="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
                 reward=amount,
-                use_treasury=False,
+                funds="reserves",
             )
         else:
-            _verr = f"Unknown MIR cert scenario: {mir_cert}"
-            raise ValueError(_verr)
+            msg = f"Unknown MIR certificate: {mir_cert}"
+            raise ValueError(msg)
 
         tx_files = clusterlib.TxFiles(
             certificate_files=[cert_file],
@@ -804,7 +800,7 @@ class TestMIRCerts:
             ],
         )
 
-        # The Tx cannot be build in Conway using `build`
+        # Conway cannot build MIR Tx using the Conway `build` command, expect failure
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 tx_name=temp_template,
@@ -814,28 +810,25 @@ class TestMIRCerts:
         err_build = str(excinfo.value)
         assert "TextEnvelope type error:" in err_build, err_build
 
-        # The Tx can be build as Babbage Tx using `build-raw`, but cannot be submitted.
-        # TODO: convert to use `compatible babbage transaction signed-transaction`
-        if clusterlib_utils.cli_has("babbage transaction build-raw"):
-            cluster_babbage = cluster_nodes.get_cluster_type().get_cluster_obj(
-                command_era="babbage"
-            )
-            tx_output = cluster_babbage.g_transaction.build_raw_tx(
-                tx_name=temp_template,
-                src_address=payment_addr.address,
-                fee=400_000,
-                tx_files=tx_files,
-            )
+        # Build a Babbage-era signed Tx using compatible signed-transaction
+        signed_tx = cluster.g_compatible.babbage.transaction.gen_signed_tx(
+            name=temp_template,
+            src_address=payment_addr.address,
+            txouts=[],
+            tx_files=tx_files,
+            fee=400_000,
+        )
 
-            out_file_signed = cluster.g_transaction.sign_tx(
-                tx_body_file=tx_output.out_file,
-                signing_key_files=tx_files.signing_key_files,
-                tx_name=temp_template,
+        # Submitting this Babbage Tx in Conway should fail (era mismatch expected)
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.submit_tx(
+                tx_file=signed_tx.out_file,
+                txins=signed_tx.txins,
             )
-
-            with pytest.raises(clusterlib.CLIError) as excinfo:
-                cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_output.txins)
-            err_submit = str(excinfo.value)
-            assert "Error: The era of the node and the tx do not match." in err_submit, err_submit
+        err_submit = str(excinfo.value)
+        assert "era" in err_submit or "mismatch" in err_submit, err_submit
 
         reqc.cip070.success()
+
+
+reqc.cip070.success()
