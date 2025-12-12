@@ -247,7 +247,7 @@ class TestPlutusV3Builtins:
     batch5_overspend_scripts = ()
 
     batch6_success_scripts = plutus_common.SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3
-    batch6_fail_scripts = ()
+    batch6_fail_scripts = plutus_common.FAILING_MINTING_BATCH6_SCRIPTS_V3
     batch6_overspend_scripts = plutus_common.OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3
 
     @allure.link(helpers.get_vcs_link())
