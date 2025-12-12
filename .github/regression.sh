@@ -77,7 +77,7 @@ fi
 
 # Decrease the number of tests per cluster if we are using the "disk" (LMDB) UTxO backend to avoid
 # having too many concurrent readers.
-if [ -z "${MAX_TESTS_PER_CLUSTER:-""}" ] && [ "${UTXO_BACKEND:-""}" = "disk" ]; then
+if [ -z "${MAX_TESTS_PER_CLUSTER:-""}" ] && [[ "${UTXO_BACKEND:-""}" = "disk"* ]]; then
   export MAX_TESTS_PER_CLUSTER=5
 fi
 
