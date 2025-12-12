@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV3",
+    "description": "caseIntegerUnhappyNoMatchOver_V3_110",
+    "cborHex": "4b010100294801a93526a4c1"
+}

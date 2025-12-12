@@ -474,17 +474,27 @@ MINTING_RIPEMD_160_V3 = PlutusScriptData(
 SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 
 # ------ Batch 6 builtins (Plutus V3 only) ------ #
+#
+# Includes tests for casing on constants, which will be released together with batch 6 in PV 11
 
-MINTING_DROPLIST_PLUTUS_V3 = (
-    SCRIPTS_V3_BATCH6_110_DIR / "succeedingDropListPolicyScript_V3_110.plutus"
-)
-MINTING_DROPLIST_V3 = PlutusScriptData(
-    script_file=MINTING_DROPLIST_PLUTUS_V3,
-    script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-    execution_cost=UNDETERMINED_COST,
+SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (
+    "succeedingDropListPolicyScript_V3_110.plutus",
+
+    "caseBoolHappy_V3_110.plutus",
+    "caseIntegerHappy_V3_110.plutus",
+    "caseListHappy_V3_110.plutus",
+    "casePairHappy_V3_110.plutus",
+    "caseUnitHappy_V3_110.plutus",
 )
 
-SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = (MINTING_DROPLIST_V3,)
+SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in SUCCEEDING_BATCH6_SCRIPT_FILES_V3
+)
 
 OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
     "expensiveDropListPolicyScript_V3_110_1.plutus",
@@ -502,6 +512,31 @@ OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
     )
     for n in OVERSPENDING_BATCH6_SCRIPT_FILES_V3
 )
+
+FAILING_BATCH6_SCRIPT_FILES_V3 = (
+    "caseBoolUnhappyMoreBranches_V3_110.plutus",
+    "caseBoolUnhappyNoBranches_V3_110.plutus",
+    "caseIntegerUnhappyNoBranches_V3_110.plutus",
+    "caseIntegerUnhappyNoMatchNegative_V3_110.plutus",
+    "caseIntegerUnhappyNoMatchOver_V3_110.plutus",
+    "caseListUnhappyMoreBranches_V3_110.plutus",
+    "caseListUnhappyNoBranches_V3_110.plutus",
+    "caseListUnhappyNoMatchNil_V3_110.plutus",
+    "casePairUnhappyMoreBranches_V3_110.plutus",
+    "casePairUnhappyNoBranches_V3_110.plutus",
+    "caseUnitUnhappyMoreBranches_V3_110.plutus",
+    "caseUnitUnhappyNoBranches_V3_110.plutus",
+)
+
+FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in FAILING_BATCH6_SCRIPT_FILES_V3
+)
+
 
 
 @dataclasses.dataclass(frozen=True, order=True)
