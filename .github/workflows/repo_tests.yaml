@@ -27,7 +27,7 @@ jobs:
         installer-parallel: true
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}
@@ -35,7 +35,7 @@ jobs:
       run: SETUPTOOLS_ENABLE_FEATURES="legacy-editable" POETRY_VIRTUALENVS_PATH="$PWD" poetry install --no-interaction --with dev
     - name: Load cached pre-commit env
       id: cached-pre-commit
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cache/pre-commit
         key: pre-commit-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
