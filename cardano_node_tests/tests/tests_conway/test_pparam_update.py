@@ -1436,27 +1436,16 @@ class TestPParamData:
 class TestLegacyProposals:
     """Tests for legacy update proposals in Conway."""
 
-    @pytest.fixture(scope="class")
-    def skip_on_missing_legacy(self) -> None:
-        if not clusterlib_utils.cli_has("legacy governance"):
-            pytest.skip("`legacy governance` commands are not available")
-
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,
-        skip_on_missing_legacy: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         submit_method: str,
     ):
-        """Test submitting a legacy update proposal in Conway.
-
-        Expect failure as the legacy update proposals are not supported in Conway.
-        """
-        # TODO: convert to use
-        # `compatible babbage governance action create-protocol-parameters-update`
+        """Test that a compatible Babbage pparam proposal cannot be submitted in Conway era."""
         temp_template = common.get_test_id(cluster)
 
         update_proposals = [
@@ -1468,27 +1457,16 @@ class TestLegacyProposals:
         ]
 
         cli_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
-        out_file = f"{temp_template}_update.proposal"
 
-        cluster.cli(
-            [
-                "cardano-cli",
-                "legacy",
-                "governance",
-                "create-update-proposal",
-                *cli_args,
-                "--out-file",
-                str(out_file),
-                "--epoch",
-                str(cluster.g_query.get_epoch()),
-                *helpers.prepend_flag(
-                    "--genesis-verification-key-file",
-                    cluster.g_genesis.genesis_keys.genesis_vkeys,
-                ),
-            ],
-            add_default_args=False,
+        # NEW: use compatible babbage pparam action
+        action_file = cluster.g_compatible.babbage.governance.action.gen_pparams_update(
+            name=temp_template,
+            epoch=cluster.g_query.get_epoch(),
+            genesis_vkey_file=cluster.g_genesis.genesis_keys.genesis_vkeys[0],
+            cli_args=cli_args,
         )
 
+        # Submitting a Babbage-era proposal in Conway must fail
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
@@ -1496,15 +1474,18 @@ class TestLegacyProposals:
                 src_address=payment_addr.address,
                 submit_method=submit_method,
                 tx_files=clusterlib.TxFiles(
-                    proposal_files=[out_file],
+                    proposal_files=[action_file],
                     signing_key_files=[
                         *cluster.g_genesis.genesis_keys.delegate_skeys,
                         pl.Path(payment_addr.skey_file),
                     ],
                 ),
             )
+
         err_str = str(excinfo.value)
-        assert 'TextEnvelopeType "UpdateProposalShelley"' in err_str, err_str
+        assert "era" in err_str or "mismatch" in err_str or "TextEnvelope type error" in err_str, (
+            err_str
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke

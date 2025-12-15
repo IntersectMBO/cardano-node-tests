@@ -716,80 +716,70 @@ class TestTreasuryWithdrawals:
         [r.success() for r in (reqc.cip032ex, reqc.cip069ex)]
 
 
+@pytest.mark.parametrize("era", ["shelley", "mary", "alonzo", "babbage"])
+@pytest.mark.parametrize(
+    "mir_cert",
+    ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr"),
+)
 class TestMIRCerts:
-    """Tests for MIR certificates."""
+    """Tests for MIR certificates in all compatible eras."""
 
     @pytest.fixture
-    def payment_addr(
-        self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-    ) -> clusterlib.AddressRecord:
-        """Create new payment address."""
-        addr = common.get_payment_addr(
+    def payment_addr(self, cluster_manager, cluster):
+        return common.get_payment_addr(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             caching_key=helpers.get_current_line_str(),
             amount=4_000_000,
         )
-        return addr
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize(
-        "mir_cert", ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr")
-    )
     @pytest.mark.smoke
-    def test_mir_certificates(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addr: clusterlib.AddressRecord,
-        mir_cert: str,
-    ):
-        """Try to use MIR certificates in Conway+ eras.
+    def test_mir_certificates(self, cluster, payment_addr, era, mir_cert):
+        """
+        Try each MIR certificate across all compatible eras.
 
-        Expect failure.
-
-        * try and fail to build the Tx using `transaction build`
-        * successfully build the Tx as Babbage Tx using compatible `signed-transaction`
-        * try and fail to submit the Babbage Tx (expected era mismatch)
+        Expected behavior:
+        * Conway build fails with MIR (TextEnvelope type error)
+        * Compatible <era> signed-transaction builds successfully
+        * Submitting a non-Conway tx in Conway must fail (era mismatch)
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_500_000
 
         reqc.cip070.start(url=helpers.get_vcs_link())
 
-        # Generate MIR certificate using compatible governance commands
+        # Get compatible governance for selected era dynamically
+        gov = getattr(cluster.g_compatible, era).governance
+
+        # Generate cert based on MIR type
         if mir_cert == "to_treasury":
-            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+            cert_file = gov.gen_mir_cert_to_treasury(
                 name=temp_template,
-                subcommand="transfer-to-treasury",
-                transfer_amt=amount,
+                transfer=amount,
             )
         elif mir_cert == "to_rewards":
-            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+            cert_file = gov.gen_mir_cert_to_rewards(
                 name=temp_template,
-                subcommand="transfer-to-rewards",
-                transfer_amt=amount,
+                transfer=amount,
             )
         elif mir_cert == "treasury_to_addr":
-            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+            cert_file = gov.gen_mir_cert_stake_addr(
                 name=temp_template,
-                subcommand="stake-addresses",
                 stake_address="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
                 reward=amount,
-                funds="treasury",
+                use_treasury=True,
             )
         elif mir_cert == "reserves_to_addr":
-            cert_file = cluster.g_compatible.babbage.governance.gen_mir_cert(
+            cert_file = gov.gen_mir_cert_stake_addr(
                 name=temp_template,
-                subcommand="stake-addresses",
                 stake_address="stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt",
                 reward=amount,
-                funds="reserves",
+                use_treasury=False,
             )
         else:
-            msg = f"Unknown MIR certificate: {mir_cert}"
+            msg = f"Unknown MIR certificate type: {mir_cert}"
             raise ValueError(msg)
 
         tx_files = clusterlib.TxFiles(
@@ -800,18 +790,18 @@ class TestMIRCerts:
             ],
         )
 
-        # Conway cannot build MIR Tx using the Conway `build` command, expect failure
+        # Conway build MUST fail
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_tx(
                 tx_name=temp_template,
                 src_address=payment_addr.address,
                 tx_files=tx_files,
             )
-        err_build = str(excinfo.value)
-        assert "TextEnvelope type error:" in err_build, err_build
+        assert "TextEnvelope type error" in str(excinfo.value)
 
-        # Build a Babbage-era signed Tx using compatible signed-transaction
-        signed_tx = cluster.g_compatible.babbage.transaction.gen_signed_tx(
+        # Build signed tx using compatible <era> transaction command
+        tx_builder = getattr(cluster.g_compatible, era).transaction
+        signed_tx = tx_builder.gen_signed_tx(
             name=temp_template,
             src_address=payment_addr.address,
             txouts=[],
@@ -819,14 +809,14 @@ class TestMIRCerts:
             fee=400_000,
         )
 
-        # Submitting this Babbage Tx in Conway should fail (era mismatch expected)
+        # Submitting non-Conway tx in Conway MUST fail
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(
                 tx_file=signed_tx.out_file,
                 txins=signed_tx.txins,
             )
-        err_submit = str(excinfo.value)
-        assert "era" in err_submit or "mismatch" in err_submit, err_submit
+        err = str(excinfo.value)
+        assert "era" in err or "mismatch" in err
 
         reqc.cip070.success()
 
