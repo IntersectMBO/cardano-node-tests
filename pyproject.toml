@@ -56,14 +56,18 @@ defragment-utxos = "cardano_node_tests.defragment_utxos:main"
 prepare-cluster-scripts = "cardano_node_tests.prepare_cluster_scripts:main"
 split-topology = "cardano_node_tests.split_topology:main"
 cardano-cli-coverage = "cardano_node_tests.cardano_cli_coverage:main"
+block-production-graph = "cardano_node_tests.block_production_graph:main"
 
 [dependency-groups]
 dev = [
     "ipython (>=9.8.0,<10.0.0)",
+    "matplotlib (>=3.10.8,<4.0.0)",
     "mypy (>=1.19.0,<2.0.0)",
+    "pandas (>=2.3.3,<3.0.0)",
     "pre-commit (>=4.5.0,<5.0.0)",
     "pyrefly (>=0.45.1,<0.46.0)",
     "pyright (>=1.1.406,<1.1.407)", # Regression in 1.1.407, see #11060
+    "seaborn (>=0.13.2,<0.14.0)",
     "types-pyyaml (>=6.0.12.20250915,<7.0.0.0)",
     "types-requests (>=2.32.4.20250913,<3.0.0.0)",
 ]
