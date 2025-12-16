@@ -184,3 +184,61 @@ class TestConway:
 
         missing = expected_fields - set(ratify_state)
         assert not missing, f"Missing expected fields in ratify-state: {missing}"
+
+
+class TestNegativeLegacyGovernance:
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("era", ["shelley", "mary", "alonzo", "babbage"])
+    @pytest.mark.smoke
+    def test_mixed_legacy_govaction_and_conway_vote_cert_fails(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_user: clusterlib.PoolUser,
+        era: str,
+    ):
+        """Mixing a legacy governance action with a Conway vote-delegation cert must fail."""
+        temp_template = common.get_test_id(cluster)
+
+        payment_rec = pool_user.payment
+        stake_rec = pool_user.stake
+
+        pool_ids = cluster.g_query.get_stake_pools()
+        assert pool_ids, "No stake pools available on this testnet"
+        pool_id = pool_ids[0]
+
+        era_api = getattr(cluster.g_compatible, era)
+        legacy_prop = era_api.governance.action.gen_pparams_update(
+            name=temp_template,
+            epoch=cluster.g_query.get_epoch(),
+            genesis_vkey_file=cluster.g_genesis.genesis_keys.genesis_vkeys[0],
+            cli_args=["--max-block-body-size", "65536"],
+        )
+
+        conway_vote = cluster.g_stake_address.gen_stake_and_vote_delegation_cert(
+            addr_name=f"{temp_template}_vote",
+            stake_vkey_file=stake_rec.vkey_file,
+            stake_pool_id=pool_id,
+            always_abstain=True,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[legacy_prop, conway_vote],
+            signing_key_files=[payment_rec.skey_file, stake_rec.skey_file],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=payment_rec.address,
+                tx_name=f"{temp_template}_mixed_fail",
+                tx_files=tx_files,
+            )
+
+        err = str(excinfo.value)
+
+        print("\n >>>>> ERROR START")
+        print(err)
+        print(" >>>>> ERROR END\n")
+
+        assert "TextEnvelope type error" in err, err
+        assert "Expected: CertificateConway" in err, err
+        assert "Actual: UpdateProposalShelley" in err, err

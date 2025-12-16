@@ -1433,40 +1433,54 @@ class TestPParamData:
         [r.success() for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
 
 
+ERA_VALID_PPARAM = {
+    # Allowed in Shelley and mary compatible CLI
+    "shelley": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+    "mary": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+    # Allowed in Alonzo and babbage compatible CLI
+    "alonzo": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+    "babbage": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+}
+
+
 class TestLegacyProposals:
     """Tests for legacy update proposals in Conway."""
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.parametrize("era", ["shelley", "mary", "alonzo", "babbage"])
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         submit_method: str,
+        era: str,
     ):
-        """Test that a compatible Babbage pparam proposal cannot be submitted in Conway era."""
+        """Test a compatible-era (Shelley, Mary, Alonzo, Babbage)."""
         temp_template = common.get_test_id(cluster)
+
+        arg, val, name = ERA_VALID_PPARAM[era]
 
         update_proposals = [
             clusterlib_utils.UpdateProposal(
-                arg="--max-collateral-inputs",
-                value=4,
-                name="maxCollateralInputs",
+                arg=arg,
+                value=val,
+                name=name,
             ),
         ]
 
         cli_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
 
-        # NEW: use compatible babbage pparam action
-        action_file = cluster.g_compatible.babbage.governance.action.gen_pparams_update(
+        era_api = getattr(cluster.g_compatible, era)
+
+        action_file = era_api.governance.action.gen_pparams_update(
             name=temp_template,
             epoch=cluster.g_query.get_epoch(),
             genesis_vkey_file=cluster.g_genesis.genesis_keys.genesis_vkeys[0],
             cli_args=cli_args,
         )
 
-        # Submitting a Babbage-era proposal in Conway must fail
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
@@ -1483,54 +1497,13 @@ class TestLegacyProposals:
             )
 
         err_str = str(excinfo.value)
-        assert "era" in err_str or "mismatch" in err_str or "TextEnvelope type error" in err_str, (
-            err_str
-        )
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.smoke
-    def test_legacy_proposal_build(
-        self,
-        cluster: clusterlib.ClusterLib,
-    ):
-        """Test building a legacy update proposal with Conway cardano-cli.
+        print("\nERROR MESSAGE START")
+        print(err_str)
+        print(" ERROR MESSAGE END\n")
 
-        Expect failure as the legacy update proposals are not supported in Conway.
-        """
-        temp_template = common.get_test_id(cluster)
-
-        update_proposals = [
-            clusterlib_utils.UpdateProposal(
-                arg="--max-collateral-inputs",
-                value=4,
-                name="maxCollateralInputs",
-            ),
-        ]
-
-        cli_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
-        out_file = f"{temp_template}_update.proposal"
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "cardano-cli",
-                    "conway",
-                    "governance",
-                    "create-update-proposal",
-                    *cli_args,
-                    "--out-file",
-                    str(out_file),
-                    "--epoch",
-                    str(cluster.g_query.get_epoch()),
-                    *helpers.prepend_flag(
-                        "--genesis-verification-key-file",
-                        cluster.g_genesis.genesis_keys.genesis_vkeys,
-                    ),
-                ],
-                add_default_args=False,
-            )
-        err_str = str(excinfo.value)
-        assert "Invalid argument `create-update-proposal'" in err_str, err_str
+        assert "TextEnvelope type error" in err_str
+        assert "UpdateProposalShelley" in err_str
 
 
 class TestNegativeCostModels:
