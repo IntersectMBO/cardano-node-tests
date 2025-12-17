@@ -478,38 +478,15 @@ SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 # Includes tests for casing on constants, which will be released together with batch 6 in PV 11
 
 SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (
-    "succeedingDropListPolicyScript_V3_110.plutus",
     "caseBoolHappy_V3_110.plutus",
     "caseIntegerHappy_V3_110.plutus",
     "caseListHappy_V3_110.plutus",
     "casePairHappy_V3_110.plutus",
     "caseUnitHappy_V3_110.plutus",
-)
-
-SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
-        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-        execution_cost=UNDETERMINED_COST,
-    )
-    for n in SUCCEEDING_BATCH6_SCRIPT_FILES_V3
-)
-
-OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
-    "expensiveDropListPolicyScript_V3_110_1.plutus",
-    "expensiveDropListPolicyScript_V3_110_2.plutus",
-    "expensiveDropListPolicyScript_V3_110_3.plutus",
-    "expensiveDropListPolicyScript_V3_110_4.plutus",
-    "expensiveDropListPolicyScript_V3_110_5.plutus",
-)
-
-OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
-        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-        execution_cost=UNDETERMINED_COST,
-    )
-    for n in OVERSPENDING_BATCH6_SCRIPT_FILES_V3
+    "succeedingDropListPolicyScript_V3_110.plutus",
+    "succeedingExpModIntegerExponentOnePolicyScript_V3_110.plutus",
+    "succeedingExpModIntegerInversePolicyScript_V3_110.plutus",
+    "succeedingExpModIntegerPolicyScript_V3_110.plutus",
 )
 
 FAILING_BATCH6_SCRIPT_FILES_V3 = (
@@ -525,6 +502,41 @@ FAILING_BATCH6_SCRIPT_FILES_V3 = (
     "casePairUnhappyNoBranches_V3_110.plutus",
     "caseUnitUnhappyMoreBranches_V3_110.plutus",
     "caseUnitUnhappyNoBranches_V3_110.plutus",
+    "failingExpModIntegerScript_V3_110_1.plutus",
+    "failingExpModIntegerScript_V3_110_10.plutus",
+    "failingExpModIntegerScript_V3_110_11.plutus",
+    "failingExpModIntegerScript_V3_110_12.plutus",
+    "failingExpModIntegerScript_V3_110_13.plutus",
+    "failingExpModIntegerScript_V3_110_14.plutus",
+    "failingExpModIntegerScript_V3_110_15.plutus",
+    "failingExpModIntegerScript_V3_110_16.plutus",
+    "failingExpModIntegerScript_V3_110_17.plutus",
+    "failingExpModIntegerScript_V3_110_18.plutus",
+    "failingExpModIntegerScript_V3_110_2.plutus",
+    "failingExpModIntegerScript_V3_110_3.plutus",
+    "failingExpModIntegerScript_V3_110_4.plutus",
+    "failingExpModIntegerScript_V3_110_5.plutus",
+    "failingExpModIntegerScript_V3_110_6.plutus",
+    "failingExpModIntegerScript_V3_110_7.plutus",
+    "failingExpModIntegerScript_V3_110_8.plutus",
+    "failingExpModIntegerScript_V3_110_9.plutus",
+)
+
+OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
+    "expensiveDropListPolicyScript_V3_110_1.plutus",
+    "expensiveDropListPolicyScript_V3_110_2.plutus",
+    "expensiveDropListPolicyScript_V3_110_3.plutus",
+    "expensiveDropListPolicyScript_V3_110_4.plutus",
+    "expensiveDropListPolicyScript_V3_110_5.plutus",
+)
+
+SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in SUCCEEDING_BATCH6_SCRIPT_FILES_V3
 )
 
 FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
@@ -534,6 +546,15 @@ FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
         execution_cost=UNDETERMINED_COST,
     )
     for n in FAILING_BATCH6_SCRIPT_FILES_V3
+)
+
+OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for n in OVERSPENDING_BATCH6_SCRIPT_FILES_V3
 )
 
 

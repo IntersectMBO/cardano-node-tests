@@ -214,8 +214,8 @@ def run_plutusv3_builtins_test(
         num=2,
         fund_idx=[0],
         caching_key="plutusv3_builtins_batch_testing",
-        amount=700_000_000,
-        min_amount=300_000_000,
+        amount=1400_000_000,
+        min_amount=600_000_000,
     )
 
     cases = (
