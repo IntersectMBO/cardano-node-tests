@@ -183,9 +183,9 @@ def run_scenario(
         ):
             return
         if outcome == Outcomes.ERROR and (
-                "The machine terminated because of an error" in str_excp or
-                "Script evaluation error" in str_excp
-                ):
+            "The machine terminated because of an error" in str_excp
+            or "Script evaluation error" in str_excp
+        ):
             return
         raise
 
