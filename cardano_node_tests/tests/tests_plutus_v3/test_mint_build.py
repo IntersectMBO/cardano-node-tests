@@ -70,6 +70,8 @@ def update_cost_model(
     cost_model_len: int,
 ) -> None:
     """Update cost model to include values for new Plutus Core built-in functions."""
+    name_template = f"{temp_template}_cost_model_upd"
+
     if prot_version == BATCH5_PROT_VERSION:
         if cost_model_len >= BATCH5_COST_MODEL_LEN:
             return
@@ -86,7 +88,7 @@ def update_cost_model(
         return
 
     pool_user = common.get_registered_pool_user(
-        name_template=temp_template,
+        name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,
     )
@@ -95,7 +97,7 @@ def update_cost_model(
     )
     conway_common.update_cost_model(
         cluster_obj=cluster_obj,
-        name_template=temp_template,
+        name_template=name_template,
         governance_data=governance_data,
         cost_proposal_file=cost_proposal_file,
         pool_user=pool_user,
@@ -103,15 +105,26 @@ def update_cost_model(
 
 
 def run_scenario(
+    cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
-    payment_addrs: list[clusterlib.AddressRecord],
     plutus_v_record: plutus_common.PlutusScriptData,
     outcome: Outcomes,
     is_cost_model_ok: bool,
     is_prot_version_ok: bool,
 ):
     """Run an e2e test for a Plutus builtin."""
+    payment_addrs = common.get_payment_addrs(
+        name_template=temp_template,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster_obj,
+        num=2,
+        fund_idx=[0],
+        caching_key="plutusv3_builtins_batch_testing",
+        amount=1_000_000_000,
+        min_amount=300_000_000,
+    )
+
     payment_addr = payment_addrs[0]
     issuer_addr = payment_addrs[1]
 
@@ -207,17 +220,6 @@ def run_plutusv3_builtins_test(
     subtests: pytest_subtests.SubTests,
 ):
     """Run minting tests with the tested Plutus Core built-in functions."""
-    payment_addrs = common.get_payment_addrs(
-        name_template=temp_template,
-        cluster_manager=cluster_manager,
-        cluster_obj=cluster_obj,
-        num=2,
-        fund_idx=[0],
-        caching_key="plutusv3_builtins_batch_testing",
-        amount=1400_000_000,
-        min_amount=600_000_000,
-    )
-
     cases = (
         (success_scripts, Outcomes.SUCCESS),
         (fail_scripts, Outcomes.ERROR),
@@ -229,9 +231,9 @@ def run_plutusv3_builtins_test(
             script_stem = script.script_file.stem
             with subtests.test(variant=f"{variant}_{script_stem}"):
                 run_scenario(
+                    cluster_manager=cluster_manager,
                     cluster_obj=cluster_obj,
                     temp_template=f"{temp_template}_{script_stem}",
-                    payment_addrs=payment_addrs,
                     plutus_v_record=script,
                     outcome=outcome,
                     is_cost_model_ok=is_cost_model_ok,
