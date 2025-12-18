@@ -182,7 +182,10 @@ def run_scenario(
             "overspending the budget." in str_excp
         ):
             return
-        if outcome == Outcomes.ERROR and "The machine terminated because of an error" in str_excp:
+        if outcome == Outcomes.ERROR and (
+                "The machine terminated because of an error" in str_excp or
+                "Script evaluation error" in str_excp
+                ):
             return
         raise
 
