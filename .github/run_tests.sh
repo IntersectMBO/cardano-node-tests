@@ -54,7 +54,7 @@ EOF
 
 run_pytest() {
   if [ -n "${SESSION_TIMEOUT:-}" ]; then
-    local -a timeout_arr=( "--signal=INT" "--kill-after=0" "$SESSION_TIMEOUT" )
+    local -a timeout_arr=( "--foreground" "--signal=INT" "--kill-after=0" "$SESSION_TIMEOUT" )
     echo "Running: PYTEST_ADDOPTS='${PYTEST_ADDOPTS:-}' timeout ${timeout_arr[*]} pytest $*"
     timeout "${timeout_arr[@]}" pytest "$@"
   else

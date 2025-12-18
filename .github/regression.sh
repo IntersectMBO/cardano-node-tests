@@ -2,7 +2,11 @@
 # shellcheck shell=bash disable=SC2317
 
 set -Eeuo pipefail
-trap 'echo "Error at line $LINENO"' ERR
+
+# shellcheck disable=SC2016
+basic_err_string='echo "Error at line $LINENO"'
+# shellcheck disable=SC2064
+trap "$basic_err_string" ERR
 
 nix --version
 df -h .
@@ -188,6 +192,12 @@ _cleanup_testnet_on_interrupt() {
 # cleanup on Ctrl+C or error
 # shellcheck disable=SC2329
 _interrupted() {
+  # Ignore further interrupts and errors during cleanup
+  trap '' SIGINT
+  # shellcheck disable=SC2064
+  trap "$basic_err_string" ERR
+  set +e
+
   # Do testnet cleanup only on interrupted testrun. When not interrupted,
   # cleanup is done as part of a testrun.
   _cleanup_testnet_on_interrupt || :
@@ -238,7 +248,7 @@ MON_PID=$!
 
 # ensure cleanup on ANY exit (success, error, Ctrl-C, set -e, etc.)
 # shellcheck disable=SC2064
-trap "echo 'Stopping monitor'; kill $MON_PID 2>/dev/null || true" EXIT
+trap "echo 'Stopping monitor'; kill ${MON_PID:-} 2>/dev/null || true" EXIT
 
 # Run tests and generate report
 
@@ -283,7 +293,13 @@ if [ "${KEEP_CLUSTERS_RUNNING:-""}" = 1 ]; then
   read -r
 fi
 
+# redefine the ERR trap to avoid interfering with cleanup
+# shellcheck disable=SC2064
+trap "$basic_err_string" ERR
+# ignore Ctrl+C during cleanup
+trap '' SIGINT
 _cleanup
+trap - SIGINT
 
 # prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-""}" ]; then
