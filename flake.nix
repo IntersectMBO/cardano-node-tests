@@ -34,6 +34,7 @@
                 nodePkgs.cardano-node
                 nodePkgs.cardano-submit-api
                 nodePkgs.bech32
+                pkgs.bashInteractive
                 pkgs.poetry
                 py3Full
                 py3Pkgs.virtualenv

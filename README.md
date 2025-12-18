@@ -74,7 +74,6 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
   ```sh
   nix flake update --accept-flake-config --override-input cardano-node github:IntersectMBO/cardano-node/master
   nix develop --accept-flake-config
-  /bin/bash --login  # fresh shell needed
   ```
 
 2. Set up the local test environment:
@@ -107,6 +106,8 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
   ```sh
   ./dev_workdir/conway_fast/stop-cluster
   ```
+
+> ℹ️ **Pro Tip:** Next time, you can omit step 2 if the environment is already set up.
 
 ---
 
@@ -182,7 +183,7 @@ make install
 cd ../cardano-node
 git checkout <tag>
 nix develop .#devops
-/bin/bash --login  # fresh shell needed
+/usr/bin/bash --login  # run interactive bash
 cd ../cardano-node-tests
 source .source.dev
 ```
