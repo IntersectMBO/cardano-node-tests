@@ -185,9 +185,9 @@ def run_scenario(
         )
     except clusterlib.CLIError as excp:
         str_excp = str(excp)
-        if (
-            not is_prot_version_ok
-            and "not available in language PlutusV3 at and protocol version" in str_excp
+        if not is_prot_version_ok and (
+            "not available in language PlutusV3 at and protocol version" in str_excp
+            or "Script evaluation error" in str_excp
         ):
             return
         if (not is_cost_model_ok or outcome == Outcomes.OVERSPEND) and (
