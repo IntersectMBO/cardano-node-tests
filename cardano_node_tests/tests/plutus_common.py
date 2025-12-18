@@ -479,7 +479,6 @@ SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 
 SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (
     "succeedingDropListPolicyScript_V3_110.plutus",
-
     "caseBoolHappy_V3_110.plutus",
     "caseIntegerHappy_V3_110.plutus",
     "caseListHappy_V3_110.plutus",
@@ -536,7 +535,6 @@ FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
     )
     for n in FAILING_BATCH6_SCRIPT_FILES_V3
 )
-
 
 
 @dataclasses.dataclass(frozen=True, order=True)
