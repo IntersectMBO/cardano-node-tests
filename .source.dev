@@ -16,12 +16,12 @@
 # export GITHUB_TOKEN=ghp_....
 INSTANCE_NUM="${INSTANCE_NUM:-0}"
 
-_ROOT_DIR_CNT="$(readlink -m "${BASH_SOURCE[0]}/..")"
+_root_dir_cnt="$(readlink -m "${BASH_SOURCE[0]}/..")"
 
 # Activate poetry virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
-  # shellcheck disable=SC2091
-  $(poetry env activate)
+  # shellcheck disable=SC2046,SC1091
+  source $(poetry env info --path)/bin/activate
 fi
 
 # Filter out nix python packages from PYTHONPATH.
@@ -41,9 +41,9 @@ unset BOOTSTRAP_DIR
 mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
 
 # Set temporary directory for this instance
-TMPDIR="$_ROOT_DIR_CNT/tmp"
+TMPDIR="$_root_dir_cnt/tmp"
 if [ "$INSTANCE_NUM" != 0 ]; then
-  TMPDIR="$_ROOT_DIR_CNT/tmp${INSTANCE_NUM}"
+  TMPDIR="$_root_dir_cnt/tmp${INSTANCE_NUM}"
 fi
 mkdir -p "$TMPDIR"
 export TMPDIR
@@ -53,16 +53,16 @@ PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":" | sed 's/:*$/
 export PATH
 
 # Prepend instance-specific .bin directory to PATH if it exists and if not already present
-if [ -e "$_ROOT_DIR_CNT/.bin${INSTANCE_NUM}" ] \
-  && [[ ":$PATH:" != *":$_ROOT_DIR_CNT/.bin${INSTANCE_NUM}:"* ]]; then
-  export PATH="$_ROOT_DIR_CNT/.bin${INSTANCE_NUM}:$PATH"
+if [ -e "$_root_dir_cnt/.bin${INSTANCE_NUM}" ] \
+  && [[ ":$PATH:" != *":$_root_dir_cnt/.bin${INSTANCE_NUM}:"* ]]; then
+  export PATH="$_root_dir_cnt/.bin${INSTANCE_NUM}:$PATH"
 fi
 
 # Prepend default .bin directory to PATH for instance 0 if it exists and if not already present
 if [ "$INSTANCE_NUM" = 0 ] \
-  && [ -e "$_ROOT_DIR_CNT/.bin" ] \
-  && [[ ":$PATH:" != *":$_ROOT_DIR_CNT/.bin:"* ]]; then
-  export PATH="$_ROOT_DIR_CNT/.bin:$PATH"
+  && [ -e "$_root_dir_cnt/.bin" ] \
+  && [[ ":$PATH:" != *":$_root_dir_cnt/.bin:"* ]]; then
+  export PATH="$_root_dir_cnt/.bin:$PATH"
 fi
 
 # Set database connection environment variables for db-sync
@@ -73,7 +73,7 @@ if [ -n "${DBSYNC_SCHEMA_DIR:-}" ] && command -v cardano-smash-server >/dev/null
   export SMASH=true
 fi
 
-unset INSTANCE_NUM _ROOT_DIR_CNT
+unset INSTANCE_NUM _root_dir_cnt
 
 # Enable cardano-cli bash completion
 if ! command -v _cardano-cli >/dev/null 2>&1 && command -v cardano-cli >/dev/null 2>&1; then
