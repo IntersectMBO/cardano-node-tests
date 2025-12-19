@@ -392,7 +392,7 @@ def start_cluster(cmd: str, args: list[str]) -> clusterlib.ClusterLib:
     args_str = " ".join(args)
     args_str = f" {args_str}" if args_str else ""
     LOGGER.info(f"Starting cluster with `{cmd}{args_str}`.")
-    helpers.run_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir)
+    helpers.run_command(f"{cmd}{args_str}", workdir=get_cluster_env().work_dir, merge_stderr=True)
     LOGGER.info("Cluster started.")
     return get_cluster_type().get_cluster_obj()
 
