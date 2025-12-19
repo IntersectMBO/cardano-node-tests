@@ -81,9 +81,9 @@ def run_command(
     workdir: ttypes.FileType = "",
     ignore_fail: bool = False,
     shell: bool = False,
+    merge_stderr: bool = False,
 ) -> bytes:
     """Run command."""
-    cmd: str | list
     if isinstance(command, str):
         cmd = command if shell else command.split()
         cmd_str = command
@@ -94,14 +94,17 @@ def run_command(
     LOGGER.debug("Running `%s`", cmd_str)
 
     with subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell, cwd=workdir or None
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE,
+        shell=shell,
+        cwd=workdir or None,
     ) as p:
         stdout, stderr = p.communicate()
         retcode = p.returncode
 
     if not ignore_fail and retcode != 0:
-        err_dec = stderr.decode()
-        err_dec = err_dec or stdout.decode()
+        err_dec = (stderr or stdout).decode()
         msg = f"An error occurred while running `{cmd_str}`: {err_dec}"
         raise RuntimeError(msg)
 
