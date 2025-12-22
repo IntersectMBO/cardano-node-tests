@@ -487,6 +487,11 @@ SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (
     "succeedingExpModIntegerExponentOnePolicyScript_V3_110.plutus",
     "succeedingExpModIntegerInversePolicyScript_V3_110.plutus",
     "succeedingExpModIntegerPolicyScript_V3_110.plutus",
+    # -- Not available until Plutus 1.54.0.0
+    "succeedingG1MultiScalarMulPolicyScript1_V3_110.plutus",
+    "succeedingG1MultiScalarMulPolicyScript2_V3_110.plutus",
+    "succeedingG2MultiScalarMulPolicyScript1_V3_110.plutus",
+    "succeedingG2MultiScalarMulPolicyScript2_V3_110.plutus",
 )
 
 FAILING_BATCH6_SCRIPT_FILES_V3 = (
