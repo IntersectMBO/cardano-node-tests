@@ -2529,6 +2529,150 @@ class TestNegative:
             in err_str
         )
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_legacy_pool_registration_rejected_in_conway(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        era: str,
+    ):
+        """Reject legacy stake pool registration in Conway.
+
+        * Generate a stake pool registration certificate using the compatible CLI
+        for a legacy era.
+        * Attempt to submit the legacy certificate in a Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        pool_users = common.get_pool_users(
+            name_template=f"{temp_template}_{era}_legacy",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=1,
+            fund_idx=[0],
+            amount=600_000_000,
+        )
+
+        node_vrf = cluster.g_node.gen_vrf_key_pair(f"{temp_template}_{era}_vrf")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(f"{temp_template}_{era}_cold")
+
+        era_api = getattr(cluster.g_compatible, era)
+
+        legacy_pool_reg_cert = era_api.stake_pool.gen_registration_cert(
+            name=f"{temp_template}_{era}_pool",
+            pool_data=clusterlib.PoolData(
+                pool_name=f"{temp_template}_{era}_pool",
+                pool_pledge=5,
+                pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
+                pool_margin=0.01,
+            ),
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[legacy_pool_reg_cert],
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                pool_users[0].stake.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=pool_users[0].payment.address,
+                tx_name=f"{temp_template}_{era}_legacy_pool_reg",
+                tx_files=tx_files,
+            )
+
+        err = str(excinfo.value)
+
+        assert "TextEnvelope type error" in err, err
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_legacy_pool_registration_plus_conway_delegation_fails(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        era: str,
+    ):
+        """Reject mixed legacy pool registration and Conway delegation.
+
+        * Generate a legacy stake pool registration certificate using compatible CLI.
+        * Generate a Conway-era stake address delegation certificate.
+        * Submit both certificates in a single Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        # Pool user for funding and signing
+        pool_users = common.get_pool_users(
+            name_template=f"{temp_template}_{era}_mixed",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=1,
+            fund_idx=[0],
+            amount=600_000_000,
+        )
+
+        payment_rec = pool_users[0].payment
+        stake_rec = pool_users[0].stake
+
+        # Generate pool keys
+        node_vrf = cluster.g_node.gen_vrf_key_pair(f"{temp_template}_{era}_vrf")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(f"{temp_template}_{era}_cold")
+
+        # Legacy (compatible-era) pool registration certificate
+        era_api = getattr(cluster.g_compatible, era)
+        legacy_pool_reg_cert = era_api.stake_pool.gen_registration_cert(
+            name=f"{temp_template}_{era}_legacy_pool",
+            pool_data=clusterlib.PoolData(
+                pool_name=f"{temp_template}_{era}_legacy_pool",
+                pool_pledge=5,
+                pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
+                pool_margin=0.01,
+            ),
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[stake_rec.vkey_file],
+        )
+
+        # Conway-era stake delegation certificate
+        conway_deleg_cert = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+            addr_name=f"{temp_template}_{era}_deleg",
+            stake_vkey_file=stake_rec.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[legacy_pool_reg_cert, conway_deleg_cert],
+            signing_key_files=[
+                payment_rec.skey_file,
+                stake_rec.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=payment_rec.address,
+                tx_name=f"{temp_template}_{era}_legacy_plus_conway_fail",
+                tx_files=tx_files,
+            )
+
+        err = str(excinfo.value)
+
+        assert "TextEnvelope type error" in err, err
+
 
 @pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.CONWAY, reason="runs only with Tx era >= Conway"

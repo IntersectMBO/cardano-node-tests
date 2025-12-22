@@ -716,11 +716,6 @@ class TestTreasuryWithdrawals:
         [r.success() for r in (reqc.cip032ex, reqc.cip069ex)]
 
 
-@pytest.mark.parametrize("era", ["shelley", "mary", "alonzo", "babbage"])
-@pytest.mark.parametrize(
-    "mir_cert",
-    ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr"),
-)
 class TestMIRCerts:
     """Tests for MIR certificates in all compatible eras."""
 
@@ -735,15 +730,17 @@ class TestMIRCerts:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.smoke
+    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.parametrize(
+        "mir_cert",
+        ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr"),
+    )
     def test_mir_certificates(self, cluster, payment_addr, era, mir_cert):
-        """
-        Try each MIR certificate across all compatible eras.
+        """Try each MIR certificate across all compatible eras.
 
-        Expected behavior:
-        * Conway build fails with MIR (TextEnvelope type error)
-        * Compatible <era> signed-transaction builds successfully
-        * Submitting a non-Conway tx in Conway must fail (era mismatch)
+        * Conway build fails with MIR (TextEnvelope type error).
+        * Compatible-era signed transaction builds successfully.
+        * Submitting a non-Conway transaction in Conway fails due to era mismatch.
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_500_000
@@ -819,6 +816,3 @@ class TestMIRCerts:
         assert "era" in err or "mismatch" in err
 
         reqc.cip070.success()
-
-
-reqc.cip070.success()

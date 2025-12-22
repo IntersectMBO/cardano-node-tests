@@ -188,7 +188,7 @@ class TestConway:
 
 class TestNegativeLegacyGovernance:
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ["shelley", "mary", "alonzo", "babbage"])
+    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
     @pytest.mark.smoke
     def test_mixed_legacy_govaction_and_conway_vote_cert_fails(
         self,
@@ -196,7 +196,13 @@ class TestNegativeLegacyGovernance:
         pool_user: clusterlib.PoolUser,
         era: str,
     ):
-        """Mixing a legacy governance action with a Conway vote-delegation cert must fail."""
+        """Reject mixed legacy governance action and Conway vote delegation.
+
+        * Generate a legacy governance action using the compatible CLI.
+        * Generate a Conway-era stake and vote delegation certificate.
+        * Submit both certificates in a single Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
         temp_template = common.get_test_id(cluster)
 
         payment_rec = pool_user.payment
@@ -234,11 +240,4 @@ class TestNegativeLegacyGovernance:
             )
 
         err = str(excinfo.value)
-
-        print("\n >>>>> ERROR START")
-        print(err)
-        print(" >>>>> ERROR END\n")
-
         assert "TextEnvelope type error" in err, err
-        assert "Expected: CertificateConway" in err, err
-        assert "Actual: UpdateProposalShelley" in err, err

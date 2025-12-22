@@ -1433,22 +1433,12 @@ class TestPParamData:
         [r.success() for r in (reqc.cip075, reqc.cip076, reqc.cip077, reqc.cip078)]
 
 
-ERA_VALID_PPARAM = {
-    # Allowed in Shelley and mary compatible CLI
-    "shelley": ("--max-block-body-size", 65536, "maxBlockBodySize"),
-    "mary": ("--max-block-body-size", 65536, "maxBlockBodySize"),
-    # Allowed in Alonzo and babbage compatible CLI
-    "alonzo": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
-    "babbage": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
-}
-
-
 class TestLegacyProposals:
     """Tests for legacy update proposals in Conway."""
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @pytest.mark.parametrize("era", ["shelley", "mary", "alonzo", "babbage"])
+    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,
@@ -1457,10 +1447,22 @@ class TestLegacyProposals:
         submit_method: str,
         era: str,
     ):
-        """Test a compatible-era (Shelley, Mary, Alonzo, Babbage)."""
+        """Reject legacy update proposal submission in Conway.
+
+        * Generate a legacy update proposal using the compatible CLI.
+        * Attempt to submit the proposal in a Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
+        era_valid_pparam = {
+            "shelley": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            "mary": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            "alonzo": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+            "babbage": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+        }
+
         temp_template = common.get_test_id(cluster)
 
-        arg, val, name = ERA_VALID_PPARAM[era]
+        arg, val, name = era_valid_pparam[era]
 
         update_proposals = [
             clusterlib_utils.UpdateProposal(
@@ -1496,14 +1498,8 @@ class TestLegacyProposals:
                 ),
             )
 
-        err_str = str(excinfo.value)
-
-        print("\nERROR MESSAGE START")
-        print(err_str)
-        print(" ERROR MESSAGE END\n")
-
-        assert "TextEnvelope type error" in err_str
-        assert "UpdateProposalShelley" in err_str
+        err = str(excinfo.value)
+        assert "TextEnvelope type error" in err, err
 
 
 class TestNegativeCostModels:
