@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV3",
+    "description": "failingInsertUnderflowQuantityPolicyScript_V3_100",
+    "cborHex": "585a01000032232498cccdef244103666f6f0048810362617200483f7ffffffffffff8fabda9f4e02c7a61f3727337f8a3ad910df19ba63002122002323001001223350014bd6f7b6301119aba035002223376000400266008008003"
+}
