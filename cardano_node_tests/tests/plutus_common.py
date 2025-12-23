@@ -487,6 +487,9 @@ SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (
     "succeedingExpModIntegerExponentOnePolicyScript_V3_110.plutus",
     "succeedingExpModIntegerInversePolicyScript_V3_110.plutus",
     "succeedingExpModIntegerPolicyScript_V3_110.plutus",
+    "succeedingIndexArrayPolicyScript_V3_110.plutus",
+    "succeedingLengthOfArrayPolicyScript_V3_110.plutus",
+    "succeedingListToArrayPolicyScript_V3_110.plutus",
 )
 
 FAILING_BATCH6_SCRIPT_FILES_V3 = (
