@@ -4,12 +4,14 @@ import pathlib as pl
 
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 PLUTUS_DIR = DATA_DIR / "plutus"
@@ -490,48 +492,6 @@ SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (
     "succeedingIndexArrayPolicyScript_V3_110.plutus",
     "succeedingLengthOfArrayPolicyScript_V3_110.plutus",
     "succeedingListToArrayPolicyScript_V3_110.plutus",
-    "succeedingDeleteExistingCoinPolicyScript_V3_100.plutus",
-    "succeedingDeleteExistingCoinPolicyScript_V3_110.plutus",
-    "succeedingDeleteMissingCoinPolicyScript_V3_100.plutus",
-    "succeedingDeleteMissingCoinPolicyScript_V3_110.plutus",
-    "succeedingInsertExistingCoinPolicyScript_V3_100.plutus",
-    "succeedingInsertExistingCoinPolicyScript_V3_110.plutus",
-    "succeedingInsertNewCoinPolicyScript_V3_100.plutus",
-    "succeedingInsertNewCoinPolicyScript_V3_110.plutus",
-    "succeedingLookupMissingCoinPolicyScript_V3_100.plutus",
-    "succeedingLookupMissingCoinPolicyScript_V3_110.plutus",
-    "succeedingScaleValueNegativePolicyScript_V3_100.plutus",
-    "succeedingScaleValueNegativePolicyScript_V3_110.plutus",
-    "succeedingScaleValuePositivePolicyScript_V3_100.plutus",
-    "succeedingScaleValuePositivePolicyScript_V3_110.plutus",
-    "succeedingScaleValueZeroPolicyScript_V3_100.plutus",
-    "succeedingScaleValueZeroPolicyScript_V3_110.plutus",
-    "succeedingUnionValueAssociativePolicyScript_V3_100.plutus",
-    "succeedingUnionValueAssociativePolicyScript_V3_110.plutus",
-    "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_100.plutus",
-    "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_110.plutus",
-    "succeedingUnionValueCommutativePolicyScript_V3_100.plutus",
-    "succeedingUnionValueCommutativePolicyScript_V3_110.plutus",
-    "succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_100.plutus",
-    "succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_110.plutus",
-    "succeedingUnionValueEmptyIdentityPolicyScript_V3_100.plutus",
-    "succeedingUnionValueEmptyIdentityPolicyScript_V3_110.plutus",
-    "succeedingUnionValueInversablePolicyScript_V3_100.plutus",
-    "succeedingUnionValueInversablePolicyScript_V3_110.plutus",
-    "succeedingValueContainsDisjointPolicyScript_V3_100.plutus",
-    "succeedingValueContainsDisjointPolicyScript_V3_110.plutus",
-    "succeedingValueContainsEmptyPolicyScript_V3_100.plutus",
-    "succeedingValueContainsEmptyPolicyScript_V3_110.plutus",
-    "succeedingValueContainsIsSubValuePolicyScript_V3_100.plutus",
-    "succeedingValueContainsIsSubValuePolicyScript_V3_110.plutus",
-    "succeedingValueContainsReflexivePolicyScript_V3_100.plutus",
-    "succeedingValueContainsReflexivePolicyScript_V3_110.plutus",
-    "succeedingValueContainsRightExtraKeyPolicyScript_V3_100.plutus",
-    "succeedingValueContainsRightExtraKeyPolicyScript_V3_110.plutus",
-    "succeedingValueContainsRightHigherAmountPolicyScript_V3_100.plutus",
-    "succeedingValueContainsRightHigherAmountPolicyScript_V3_110.plutus",
-    "succeedingValueDataRoundTripPolicyScript_V3_100.plutus",
-    "succeedingValueDataRoundTripPolicyScript_V3_110.plutus",
 )
 
 FAILING_BATCH6_SCRIPT_FILES_V3 = (
@@ -565,28 +525,6 @@ FAILING_BATCH6_SCRIPT_FILES_V3 = (
     "failingExpModIntegerScript_V3_110_7.plutus",
     "failingExpModIntegerScript_V3_110_8.plutus",
     "failingExpModIntegerScript_V3_110_9.plutus",
-    "failingInsertInvalidCurrencySymbolPolicyScript_V3_100.plutus",
-    "failingInsertInvalidCurrencySymbolPolicyScript_V3_110.plutus",
-    "failingInsertInvalidTokenNamePolicyScript_V3_100.plutus",
-    "failingInsertInvalidTokenNamePolicyScript_V3_110.plutus",
-    "failingInsertOverflowQuantityPolicyScript_V3_100.plutus",
-    "failingInsertOverflowQuantityPolicyScript_V3_110.plutus",
-    "failingInsertUnderflowQuantityPolicyScript_V3_100.plutus",
-    "failingInsertUnderflowQuantityPolicyScript_V3_110.plutus",
-    "failingScaleValueOverflowPolicyScript_V3_100.plutus",
-    "failingScaleValueOverflowPolicyScript_V3_110.plutus",
-    "failingScaleValueUnderflowPolicyScript_V3_100.plutus",
-    "failingScaleValueUnderflowPolicyScript_V3_110.plutus",
-    "failingUnionValueOverflowPolicyScript_V3_100.plutus",
-    "failingUnionValueOverflowPolicyScript_V3_110.plutus",
-    "failingUnionValueUnderflowPolicyScript_V3_100.plutus",
-    "failingUnionValueUnderflowPolicyScript_V3_110.plutus",
-    "failingUnValueDataInvalidDataPolicyScript_V3_100.plutus",
-    "failingUnValueDataInvalidDataPolicyScript_V3_110.plutus",
-    "failingValueContainsLeftNegativePolicyScript_V3_100.plutus",
-    "failingValueContainsLeftNegativePolicyScript_V3_110.plutus",
-    "failingValueContainsRightNegativePolicyScript_V3_100.plutus",
-    "failingValueContainsRightNegativePolicyScript_V3_110.plutus",
 )
 
 OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
@@ -596,6 +534,78 @@ OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
     "expensiveDropListPolicyScript_V3_110_4.plutus",
     "expensiveDropListPolicyScript_V3_110_5.plutus",
 )
+
+if VERSIONS.node >= version.parse("10.7.0"):
+    SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (  # type: ignore[assignment]
+        *SUCCEEDING_BATCH6_SCRIPT_FILES_V3,
+        "succeedingDeleteExistingCoinPolicyScript_V3_100.plutus",
+        "succeedingDeleteExistingCoinPolicyScript_V3_110.plutus",
+        "succeedingDeleteMissingCoinPolicyScript_V3_100.plutus",
+        "succeedingDeleteMissingCoinPolicyScript_V3_110.plutus",
+        "succeedingInsertExistingCoinPolicyScript_V3_100.plutus",
+        "succeedingInsertExistingCoinPolicyScript_V3_110.plutus",
+        "succeedingInsertNewCoinPolicyScript_V3_100.plutus",
+        "succeedingInsertNewCoinPolicyScript_V3_110.plutus",
+        "succeedingLookupMissingCoinPolicyScript_V3_100.plutus",
+        "succeedingLookupMissingCoinPolicyScript_V3_110.plutus",
+        "succeedingScaleValueNegativePolicyScript_V3_100.plutus",
+        "succeedingScaleValueNegativePolicyScript_V3_110.plutus",
+        "succeedingScaleValuePositivePolicyScript_V3_100.plutus",
+        "succeedingScaleValuePositivePolicyScript_V3_110.plutus",
+        "succeedingScaleValueZeroPolicyScript_V3_100.plutus",
+        "succeedingScaleValueZeroPolicyScript_V3_110.plutus",
+        "succeedingUnionValueAssociativePolicyScript_V3_100.plutus",
+        "succeedingUnionValueAssociativePolicyScript_V3_110.plutus",
+        "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_100.plutus",
+        "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_110.plutus",
+        "succeedingUnionValueCommutativePolicyScript_V3_100.plutus",
+        "succeedingUnionValueCommutativePolicyScript_V3_110.plutus",
+        "succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_100.plutus",
+        "succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_110.plutus",
+        "succeedingUnionValueEmptyIdentityPolicyScript_V3_100.plutus",
+        "succeedingUnionValueEmptyIdentityPolicyScript_V3_110.plutus",
+        "succeedingUnionValueInversablePolicyScript_V3_100.plutus",
+        "succeedingUnionValueInversablePolicyScript_V3_110.plutus",
+        "succeedingValueContainsDisjointPolicyScript_V3_100.plutus",
+        "succeedingValueContainsDisjointPolicyScript_V3_110.plutus",
+        "succeedingValueContainsEmptyPolicyScript_V3_100.plutus",
+        "succeedingValueContainsEmptyPolicyScript_V3_110.plutus",
+        "succeedingValueContainsIsSubValuePolicyScript_V3_100.plutus",
+        "succeedingValueContainsIsSubValuePolicyScript_V3_110.plutus",
+        "succeedingValueContainsReflexivePolicyScript_V3_100.plutus",
+        "succeedingValueContainsReflexivePolicyScript_V3_110.plutus",
+        "succeedingValueContainsRightExtraKeyPolicyScript_V3_100.plutus",
+        "succeedingValueContainsRightExtraKeyPolicyScript_V3_110.plutus",
+        "succeedingValueContainsRightHigherAmountPolicyScript_V3_100.plutus",
+        "succeedingValueContainsRightHigherAmountPolicyScript_V3_110.plutus",
+        "succeedingValueDataRoundTripPolicyScript_V3_100.plutus",
+        "succeedingValueDataRoundTripPolicyScript_V3_110.plutus",
+    )
+    FAILING_BATCH6_SCRIPT_FILES_V3 = (  # type: ignore[assignment]
+        *FAILING_BATCH6_SCRIPT_FILES_V3,
+        "failingInsertInvalidCurrencySymbolPolicyScript_V3_100.plutus",
+        "failingInsertInvalidCurrencySymbolPolicyScript_V3_110.plutus",
+        "failingInsertInvalidTokenNamePolicyScript_V3_100.plutus",
+        "failingInsertInvalidTokenNamePolicyScript_V3_110.plutus",
+        "failingInsertOverflowQuantityPolicyScript_V3_100.plutus",
+        "failingInsertOverflowQuantityPolicyScript_V3_110.plutus",
+        "failingInsertUnderflowQuantityPolicyScript_V3_100.plutus",
+        "failingInsertUnderflowQuantityPolicyScript_V3_110.plutus",
+        "failingScaleValueOverflowPolicyScript_V3_100.plutus",
+        "failingScaleValueOverflowPolicyScript_V3_110.plutus",
+        "failingScaleValueUnderflowPolicyScript_V3_100.plutus",
+        "failingScaleValueUnderflowPolicyScript_V3_110.plutus",
+        "failingUnionValueOverflowPolicyScript_V3_100.plutus",
+        "failingUnionValueOverflowPolicyScript_V3_110.plutus",
+        "failingUnionValueUnderflowPolicyScript_V3_100.plutus",
+        "failingUnionValueUnderflowPolicyScript_V3_110.plutus",
+        "failingUnValueDataInvalidDataPolicyScript_V3_100.plutus",
+        "failingUnValueDataInvalidDataPolicyScript_V3_110.plutus",
+        "failingValueContainsLeftNegativePolicyScript_V3_100.plutus",
+        "failingValueContainsLeftNegativePolicyScript_V3_110.plutus",
+        "failingValueContainsRightNegativePolicyScript_V3_100.plutus",
+        "failingValueContainsRightNegativePolicyScript_V3_110.plutus",
+    )
 
 SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
     PlutusScriptData(
