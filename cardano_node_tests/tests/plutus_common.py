@@ -538,6 +538,10 @@ OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
 if VERSIONS.node >= version.parse("10.7.0"):
     SUCCEEDING_BATCH6_SCRIPT_FILES_V3 = (  # type: ignore[assignment]
         *SUCCEEDING_BATCH6_SCRIPT_FILES_V3,
+        "succeedingG1MultiScalarMulPolicyScript1_V3_110.plutus",
+        "succeedingG1MultiScalarMulPolicyScript2_V3_110.plutus",
+        "succeedingG2MultiScalarMulPolicyScript1_V3_110.plutus",
+        "succeedingG2MultiScalarMulPolicyScript2_V3_110.plutus",
         "succeedingDeleteExistingCoinPolicyScript_V3_100.plutus",
         "succeedingDeleteExistingCoinPolicyScript_V3_110.plutus",
         "succeedingDeleteMissingCoinPolicyScript_V3_100.plutus",
