@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV3",
+    "description": "failingUnValueDataInvalidDataPolicyScript_V3_110",
+    "cborHex": "583201010032232498df19ba73002801a601010100c00d3001010200c000323001001229001a5eb824466ae80008cc0100100041"
+}

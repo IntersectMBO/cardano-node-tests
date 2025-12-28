@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV3",
+    "description": "casePairUnhappyNoBranches_V3_110",
+    "cborHex": "4a010100294bded0802011"
+}

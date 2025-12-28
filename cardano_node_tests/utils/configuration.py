@@ -27,9 +27,11 @@ CONFIRM_BLOCKS_NUM = int(os.environ.get("CONFIRM_BLOCKS_NUM") or 0)
 
 # Used also in startup scripts
 UTXO_BACKEND = os.environ.get("UTXO_BACKEND") or ""
-if UTXO_BACKEND not in ("", "mem", "disk"):
+if UTXO_BACKEND not in ("", "mem", "disk", "disklmdb", "empty"):
     msg = f"Invalid UTXO_BACKEND: {UTXO_BACKEND}"
     raise RuntimeError(msg)
+# Used also in startup scripts
+MIXED_UTXO_BACKENDS = os.environ.get("MIXED_UTXO_BACKENDS") or ""
 
 # Resolve CARDANO_NODE_SOCKET_PATH
 STARTUP_CARDANO_NODE_SOCKET_PATH = (

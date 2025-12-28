@@ -74,7 +74,6 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
   ```sh
   nix flake update --accept-flake-config --override-input cardano-node github:IntersectMBO/cardano-node/master
   nix develop --accept-flake-config
-  /bin/bash --login  # fresh shell needed
   ```
 
 2. Set up the local test environment:
@@ -108,28 +107,31 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
   ./dev_workdir/conway_fast/stop-cluster
   ```
 
+> ℹ️ **Pro Tip:** Next time, you can omit step 2 if the environment is already set up.
+
 ---
 
 ## ⚙️ Test Configuration Variables
 
 You can fine-tune test runs using these environment variables:
 
-| Variable                | Description                                |
-| ----------------------- | ------------------------------------------ |
-| `BOOTSTRAP_DIR`         | Bootstrap testnet directory.               |
-| `CLUSTERS_COUNT`        | Number of clusters to launch (default: 9). |
-| `CLUSTER_ERA`           | Cluster era (default: `conway`).           |
-| `COMMAND_ERA`           | CLI command target era.                    |
-| `ENABLE_LEGACY`         | Use legacy networking.                     |
-| `KEEP_CLUSTERS_RUNNING` | Don't shut down clusters after tests.      |
-| `MARKEXPR`              | Marker expression for pytest filtering.    |
-| `MAX_TESTS_PER_CLUSTER` | Max tests per cluster (default: 8).        |
-| `MIXED_P2P`             | Use a mix of P2P and legacy networking.    |
-| `NUM_POOLS`             | Number of stake pools (default: 3).        |
-| `PORTS_BASE`            | Starting port number for cluster services. |
-| `SCHEDULING_LOG`        | Path to scheduler log output.              |
-| `TESTNET_VARIANT`       | Name of the testnet variant to use.        |
-| `UTXO_BACKEND`          | Backend type: `mem` or `disk`.             |
+| Variable                | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `BOOTSTRAP_DIR`         | Bootstrap testnet directory.                        |
+| `CLUSTERS_COUNT`        | Number of clusters to launch (default: 9).          |
+| `CLUSTER_ERA`           | Cluster era (default: `conway`).                    |
+| `COMMAND_ERA`           | CLI command target era.                             |
+| `ENABLE_LEGACY`         | Use legacy networking.                              |
+| `KEEP_CLUSTERS_RUNNING` | Don't shut down clusters after tests.               |
+| `MARKEXPR`              | Marker expression for pytest filtering.             |
+| `MAX_TESTS_PER_CLUSTER` | Max tests per cluster (default: 8).                 |
+| `MIXED_P2P`             | Use a mix of P2P and legacy networking.             |
+| `NUM_POOLS`             | Number of stake pools (default: 3).                 |
+| `PORTS_BASE`            | Starting port number for cluster services.          |
+| `SCHEDULING_LOG`        | Path to scheduler log output.                       |
+| `TESTNET_VARIANT`       | Name of the testnet variant to use.                 |
+| `UTXO_BACKEND`          | Backend type: `mem`, `disk`, `disklmdb` or `empty`. |
+| `MIXED_UTXO_BACKENDS`   | List of UTXO backends for mixed setup.              |
 
 ### ▶️ Additional for `regression.sh`
 
@@ -181,7 +183,7 @@ make install
 cd ../cardano-node
 git checkout <tag>
 nix develop .#devops
-/bin/bash --login  # fresh shell needed
+/usr/bin/bash --login  # run interactive bash
 cd ../cardano-node-tests
 source .source.dev
 ```

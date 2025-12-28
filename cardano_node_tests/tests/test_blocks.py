@@ -263,12 +263,20 @@ class TestCollectData:
         )
         return addrs
 
+    @pytest.fixture
+    def block_production_db(self) -> tp.Generator[sqlite3.Connection, None, None]:
+        """Open block production db."""
+        conn = sqlite3.connect(configuration.BLOCK_PRODUCTION_DB)
+        yield conn
+        conn.close()
+
     @allure.link(helpers.get_vcs_link())
-    def test_block_production(  # noqa: C901
+    def test_block_production(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        block_production_db: sqlite3.Connection,
     ):
         """Record number of blocks produced by each pool over multiple epochs.
 
@@ -282,12 +290,9 @@ class TestCollectData:
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(5)
         num_epochs = int(os.environ.get("BLOCK_PRODUCTION_EPOCHS") or 50)
-
-        topology = "p2p"
-        if configuration.MIXED_P2P:
-            topology = "mixed"
-        elif configuration.ENABLE_LEGACY:
-            topology = "legacy"
+        mixed_backends = (
+            configuration.MIXED_UTXO_BACKENDS.split() if configuration.MIXED_UTXO_BACKENDS else []
+        )
 
         pool_mapping = {}
         for idx, pn in enumerate(cluster_management.Resources.ALL_POOLS, start=1):
@@ -301,28 +306,29 @@ class TestCollectData:
             delegation.delegate_stake_addr(
                 cluster_obj=cluster,
                 addrs_data=cluster_manager.cache.addrs_data,
-                temp_template=temp_template,
+                temp_template=f"{temp_template}_pool_{idx}",
                 pool_id=pool_id,
             )
 
         # Create sqlite db
-        conn = sqlite3.connect(configuration.BLOCK_PRODUCTION_DB)
+        conn = block_production_db
         cur = conn.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS runs(run_id, topology)")
+        cur.execute("CREATE TABLE IF NOT EXISTS runs(run_id, backend)")
         cur.execute(
             "CREATE TABLE IF NOT EXISTS"
-            " blocks(run_id, epoch_no, pool_id, pool_idx, topology, num_blocks)"
+            " blocks(run_id, epoch_no, pool_id, pool_idx, backend, num_blocks)"
         )
-        cur.execute("INSERT INTO runs VALUES (?, ?)", (rand, topology))
+        cur.execute(
+            "INSERT INTO runs VALUES (?, ?)",
+            (rand, "mixed" if mixed_backends else configuration.UTXO_BACKEND),
+        )
         conn.commit()
         cur.close()
 
-        def _get_pool_topology(pool_idx: int) -> str:
-            if topology == "legacy":
-                return "legacy"
-            if topology == "mixed":
-                return "p2p" if pool_idx % 2 == 0 else "legacy"
-            return "p2p"
+        def _get_pool_utxo_backend(pool_idx: int) -> str:
+            if mixed_backends:
+                return mixed_backends[(pool_idx - 1) % len(mixed_backends)]
+            return configuration.UTXO_BACKEND
 
         def _save_state(curr_epoch: int) -> None:
             ledger_state = clusterlib_utils.get_ledger_state(cluster_obj=cluster)
@@ -345,7 +351,7 @@ class TestCollectData:
                         curr_epoch - 1,
                         pool_rec["pool_id"],
                         pool_idx,
-                        _get_pool_topology(pool_idx),
+                        _get_pool_utxo_backend(pool_idx),
                         num_blocks,
                     ),
                 )
@@ -386,8 +392,6 @@ class TestCollectData:
 
         # Save also data for the last epoch
         _save_state(cluster.g_query.get_epoch())
-
-        conn.close()
 
 
 @pytest.mark.skipif(configuration.ENABLE_LEGACY, reason="runs only on P2P enabled clusters")

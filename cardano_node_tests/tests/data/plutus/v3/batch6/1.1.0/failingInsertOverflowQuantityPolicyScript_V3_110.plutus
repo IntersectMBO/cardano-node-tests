@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV3",
+    "description": "failingInsertOverflowQuantityPolicyScript_V3_110",
+    "cborHex": "585801010032232498cccdef244103666f6f0048810362617200483fbffffffffffff8fabda9f4e02c7a61f3727337f8a3ad910df19ba63002800191800800914800d2f5bded8c12233574120052233760004002330040040011"
+}

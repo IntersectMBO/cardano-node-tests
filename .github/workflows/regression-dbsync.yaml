@@ -51,6 +51,7 @@ on:
         - ""
         - mem
         - disk
+        - disklmdb
         default: ""
       byron_cluster:
         type: boolean
