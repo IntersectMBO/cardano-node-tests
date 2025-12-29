@@ -1249,3 +1249,73 @@ class TestNegative:
             "DelegateeNotRegisteredDELEG" in err_msg  # Before cardano-node 10.0.0
             or "DelegateeStakePoolNotRegisteredDELEG" in err_msg
         ), err_msg
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_legacy_stake_delegation_rejected_in_conway(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        era: str,
+    ):
+        """Reject legacy stake address delegation in Conway.
+
+        * Register stake address using Conway-era commands.
+        * Generate a stake address delegation certificate using the compatible CLI
+          for a legacy era.
+        * Attempt to submit the legacy certificate in a Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        # Create funded pool user
+        pool_users = common.get_pool_users(
+            name_template=f"{temp_template}_{era}_legacy",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=1,
+            fund_idx=[0],
+            amount=600_000_000,
+        )
+        pool_user = pool_users[0]
+
+        # Register stake address using Conway commands
+        clusterlib_utils.register_stake_address(
+            cluster_obj=cluster,
+            pool_user=pool_user,
+            name_template=f"{temp_template}_{era}_reg",
+            deposit_amt=cluster.g_query.get_address_deposit(),
+        )
+
+        # Use an EXISTING registered pool
+        pool_ids = cluster.g_query.get_stake_pools()
+        assert pool_ids, "No registered stake pools available on this testnet"
+        pool_id = pool_ids[0]
+
+        # Generate legacy delegation cert via compatible CLI
+        era_api = getattr(cluster.g_compatible, era)
+        legacy_stake_deleg_cert = era_api.stake_address.gen_delegation_cert(
+            name=f"{temp_template}_{era}_deleg",
+            stake_vkey_file=pool_user.stake.vkey_file,
+            stake_pool_id=pool_id,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[legacy_stake_deleg_cert],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                pool_user.stake.skey_file,
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=pool_user.payment.address,
+                tx_name=f"{temp_template}_{era}_legacy_deleg",
+                tx_files=tx_files,
+            )
+
+        err = str(excinfo.value)
+        assert "TextEnvelope type error" in err, err
