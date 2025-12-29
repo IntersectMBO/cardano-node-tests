@@ -1,24 +1,41 @@
 #!/bin/bash
 
-_origpwd="$PWD"
-cd "$WORKDIR" || exit 1
+# Build cardano-cli from the standalone repo into $WORKDIR/cardano-cli-build<postfix>
+cardano_cli_build() {
+  local cli_rev="${1:?}"
+  local node_bindir_postfix="${2:-}"
+  local origpwd="$PWD"
 
-if [ -z "${CARDANO_CLI_REV:-""}" ]; then
-  echo "The value for CARDANO_CLI_REV cannot be empty" >&2
-  exit 1
-fi
+  if [ -z "$cli_rev" ]; then
+    echo "The value for CARDANO_CLI_REV cannot be empty" >&2
+    return 1
+  fi
 
-# Build `cardano-cli`
-nix build \
-  --accept-flake-config \
-  --no-write-lock-file \
-  "github://github.com/IntersectMBO/cardano-cli?ref=${CARDANO_CLI_REV}#cardano-cli" \
-  -o cardano-cli-build || exit 1
-[ -e cardano-cli-build/bin/cardano-cli ] || exit 1
+  cd "$WORKDIR" || return 1
 
-# Add `cardano-cli` to PATH_PREPEND
-PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m cardano-cli-build/bin)"
-export PATH_PREPEND
+  local out="cardano-cli-build${node_bindir_postfix}"
+  nix build \
+    --accept-flake-config \
+    --no-write-lock-file \
+    "github://github.com/IntersectMBO/cardano-cli?ref=${cli_rev}#cardano-cli" \
+    -o "$out" || { cd "$origpwd" || true; return 1; }
 
-cd "$_origpwd" || exit 1
-unset _origpwd
+  [ -e "${out}/bin/cardano-cli" ] || { cd "$origpwd" || true; return 1; }
+
+  cd "$origpwd" || return 1
+}
+
+# Print PATH to prepend for the standalone cardano-cli build output.
+cardano_cli_print_path_prepend() {
+  local node_bindir_postfix="${1:-}"
+  local origpwd="$PWD"
+
+  cd "$WORKDIR" || return 1
+
+  local out="cardano-cli-build${node_bindir_postfix}"
+  local bin_dir
+  bin_dir="$(readlink -m "${out}/bin")" || { cd "$origpwd" || true; return 1; }
+
+  cd "$origpwd" || return 1
+  echo "${bin_dir:+"${bin_dir}:"}"
+}

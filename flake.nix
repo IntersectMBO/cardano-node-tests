@@ -28,21 +28,23 @@
             postgres = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ glibcLocales postgresql lsof procps ];
             };
-            venv = pkgs.mkShell {
+            testenv = pkgs.mkShell {
               nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ [
-                nodePkgs.cardano-cli
-                nodePkgs.cardano-node
-                nodePkgs.cardano-submit-api
-                nodePkgs.bech32
-                pkgs.bashInteractive
                 pkgs.poetry
                 py3Full
                 py3Pkgs.virtualenv
               ];
             };
-            # Use 'venv' directly as 'default' and 'dev'
-            default = venv;
-            dev = venv;
+            dev = pkgs.mkShell {
+              nativeBuildInputs = testenv.nativeBuildInputs ++ [
+                nodePkgs.cardano-cli
+                nodePkgs.cardano-node
+                nodePkgs.cardano-submit-api
+                nodePkgs.bech32
+                pkgs.bashInteractive
+              ];
+            };
+            default = dev;
           };
         });
 

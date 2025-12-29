@@ -114,14 +114,6 @@ elif [ "$1" = "step2" ]; then
   NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
 
-  # Setup `cardano-cli` binary
-  if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
-    export CARDANO_CLI_REV="$UPGRADE_CLI_REVISION"
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_cardano_cli.sh
-    export PATH="$WORKDIR/cardano-cli-build/bin":"$PATH"
-  fi
-
   # add binaries saved in step1 to the PATH
   export PATH="${STEP1_BIN}:${PATH}"
 
@@ -277,17 +269,6 @@ elif [ "$1" = "step3" ]; then
 
   NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
-
-  # Setup `cardano-cli` binary
-  if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
-    export CARDANO_CLI_REV="$UPGRADE_CLI_REVISION"
-    # the cardano-cli binary is already built in step2
-    if [ ! -e "$WORKDIR/cardano-cli-build/bin/cardano-cli" ]; then
-      echo "Failed to find the requested 'cardano-cli' binary" >&2
-      exit 6
-    fi
-    export PATH="$WORKDIR/cardano-cli-build/bin":"$PATH"
-  fi
 
   # generate config and topology files for p2p mode
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_p2p/state-cluster0/bft1.socket" \
