@@ -323,11 +323,6 @@ if [ -n "${GITHUB_ACTIONS:-}" ]; then
 
   # save testing artifacts
   ./.github/save_artifacts.sh || :
-
-  # compress scheduling log
-  if [ -e "$SCHEDULING_LOG" ]; then
-    xz "$SCHEDULING_LOG"
-  fi
 fi
 
 exit "$retval"

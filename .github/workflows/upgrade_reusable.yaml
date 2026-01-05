@@ -93,7 +93,7 @@ jobs:
         with:
           name: testrun-files
           path: |
-            scheduling.log.xz
+            scheduling.log
             errors_all.log
       - name: ↟ Upload CLI coverage
         uses: actions/upload-artifact@v6

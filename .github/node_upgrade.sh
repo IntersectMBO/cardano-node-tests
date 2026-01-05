@@ -171,9 +171,6 @@ _cleanup
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
   # save testing artifacts
   ./.github/save_artifacts.sh
-
-  # compress scheduling log
-  xz "$SCHEDULING_LOG"
 fi
 
 exit "$retval"
