@@ -88,22 +88,21 @@ if [ -z "${BASE_TAR_URL:-}" ]; then
   cardano_bins_build_all "$BASE_REVISION" "" "_base"
   PATH_PREPEND_BASE="$(cardano_bins_print_path_prepend "" "_base")"
 fi
-export PATH_PREPEND_BASE
 
 # Prepare cardano-node for the upgrade revision
 cardano_bins_build_all "${UPGRADE_REVISION:-"master"}" "${UPGRADE_CLI_REVISION:-}" "_upgrade"
 PATH_PREPEND_UPGRADE="$(cardano_bins_print_path_prepend "${UPGRADE_CLI_REVISION:-}" "_upgrade")"
-export PATH_PREPEND_UPGRADE
 
 # Prepare cardano-cli for the upgrade revision if UPGRADE_CLI_REVISION is set
 if [ -n "${UPGRADE_CLI_REVISION:-}" ]; then
-  export CARDANO_CLI_REV="$UPGRADE_CLI_REVISION"
   # shellcheck disable=SC1090,SC1091
   . .github/source_cardano_cli.sh
   cardano_cli_build "$UPGRADE_CLI_REVISION" "_upgrade"
   PATH_PREPEND_UPGRADE="$(cardano_cli_print_path_prepend "_upgrade")${PATH_PREPEND_UPGRADE}"
-  export PATH_PREPEND_UPGRADE
 fi
+
+export PATH_PREPEND_BASE
+export PATH_PREPEND_UPGRADE
 
 # optimize nix store space if requested
 if [ "${CI_OPTIMIZE_SPACE:-"false"}" != "false" ]; then
