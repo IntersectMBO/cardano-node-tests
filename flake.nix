@@ -23,7 +23,7 @@
         {
           devShells = rec {
             base = pkgs.mkShell {
-              nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnumake gnutar jq xz ];
+              nativeBuildInputs = with pkgs; [ bash coreutils curl git gnugrep gnutar jq xz ];
             };
             postgres = pkgs.mkShell {
               nativeBuildInputs = with pkgs; [ glibcLocales postgresql lsof procps ];
