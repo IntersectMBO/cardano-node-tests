@@ -15,10 +15,6 @@ if [[ -z "${BASE_TAR_URL:-}" && -z "${BASE_REVISION:-}" ]]; then
   exit 1
 fi
 
-if [ -n "${GITHUB_ACTIONS:-}" ]; then
-  CI_OPTIMIZE_SPACE="${CI_OPTIMIZE_SPACE:-"true"}"
-fi
-
 nix --version
 df -h .
 
@@ -104,8 +100,8 @@ fi
 export PATH_PREPEND_BASE
 export PATH_PREPEND_UPGRADE
 
-# optimize nix store space if requested
-if [ "${CI_OPTIMIZE_SPACE:-"false"}" != "false" ]; then
+# optimize nix store if running in GitHub Actions
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
   nix store gc || :
 fi
 

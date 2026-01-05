@@ -8,10 +8,6 @@ basic_err_string='echo "Error at line $LINENO"'
 # shellcheck disable=SC2064
 trap "$basic_err_string" ERR
 
-if [ -n "${GITHUB_ACTIONS:-}" ]; then
-  CI_OPTIMIZE_SPACE="${CI_OPTIMIZE_SPACE:-"true"}"
-fi
-
 nix --version
 df -h .
 
@@ -163,8 +159,8 @@ cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
 PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
 export PATH_PREPEND
 
-# optimize nix store space if requested
-if [ "${CI_OPTIMIZE_SPACE:-"false"}" != "false" ]; then
+# optimize nix store if running in GitHub Actions
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
   nix store gc || :
 fi
 
