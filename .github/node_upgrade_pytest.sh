@@ -22,9 +22,6 @@ export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
 rm -rf "${REPORTS_DIR:?}"
 mkdir -p "$REPORTS_DIR"
 
-# Non-P2P mode is no longer supported since cardano-node 10.6.0
-unset ENABLE_LEGACY MIXED_P2P
-
 #
 # STEP1 - start local cluster and run smoke tests for the first time
 #
@@ -114,38 +111,30 @@ elif [ "$1" = "step2" ]; then
   NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
 
-  # Setup `cardano-cli` binary
-  if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
-    export CARDANO_CLI_REV="$UPGRADE_CLI_REVISION"
-    # shellcheck disable=SC1090,SC1091
-    . .github/source_cardano_cli.sh
-    export PATH="$WORKDIR/cardano-cli-build/bin":"$PATH"
-  fi
-
   # add binaries saved in step1 to the PATH
   export PATH="${STEP1_BIN}:${PATH}"
 
-  # generate config and topology files for the "mixed" mode
-  CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_mixed/state-cluster0/bft1.socket" \
+  # re-generate config and topology files
+  CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step2/state-cluster0/bft1.socket" \
     DRY_RUN=1 \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
   # copy newly generated topology files to the cluster state dir
-  cp -f "$WORKDIR"/dry_mixed/state-cluster0/topology-*.json "$STATE_CLUSTER"
+  cp -f "$WORKDIR"/dry_config_step2/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
   if [ -n "${REPLACE_GENESIS_STEP2:-""}" ]; then
     # Copy newly generated Alonzo genesis to the cluster state dir
-    cp -f "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley"
+    cp -f "$WORKDIR/dry_config_step2/state-cluster0/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley"
 
     # Copy newly generated Conway genesis file to the cluster state dir, use committee members from the original
     # Conway genesis.
     jq \
       --argfile src "$STATE_CLUSTER/shelley/genesis.conway.step1.json" \
       '.committee.members = $src.committee.members' \
-      "$WORKDIR/dry_mixed/state-cluster0/shelley/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
+      "$WORKDIR/dry_config_step2/state-cluster0/shelley/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
   fi
 
-  # use the original shelley and byron genesis files
+  # use the original Shelley and Byron genesis files
   BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   # hashes of the original alonzo and conway genesis files
@@ -158,7 +147,7 @@ elif [ "$1" = "step2" ]; then
     "$STATE_CLUSTER/shelley/genesis.conway.json")"
 
   # copy newly generated config files to the cluster state dir
-  for conf in "$WORKDIR"/dry_mixed/state-cluster0/config-*.json; do
+  for conf in "$WORKDIR"/dry_config_step2/state-cluster0/config-*.json; do
     fname="${conf##*/}"
 
     if [ "$fname" = "config-pool3.json" ]; then
@@ -208,10 +197,12 @@ elif [ "$1" = "step2" ]; then
   "$STATE_CLUSTER/supervisorctl" status
 
   # print path to cardano-node binaries
+  echo "pool1 node binary:"
   pool1_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool1)"
-  ls -l "/proc/$pool1_pid/exe"
+  readlink -m "/proc/$pool1_pid/exe"
+  echo "pool3 node binary:"
   pool3_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool3)"
-  ls -l "/proc/$pool3_pid/exe"
+  readlink -m "/proc/$pool3_pid/exe"
 
   # check that nodes are running
   if [ "$pool1_pid" = 0 ] || [ "$pool3_pid" = 0 ]; then
@@ -278,31 +269,20 @@ elif [ "$1" = "step3" ]; then
   NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
 
-  # Setup `cardano-cli` binary
-  if [ -n "${UPGRADE_CLI_REVISION:-""}" ]; then
-    export CARDANO_CLI_REV="$UPGRADE_CLI_REVISION"
-    # the cardano-cli binary is already built in step2
-    if [ ! -e "$WORKDIR/cardano-cli-build/bin/cardano-cli" ]; then
-      echo "Failed to find the requested 'cardano-cli' binary" >&2
-      exit 6
-    fi
-    export PATH="$WORKDIR/cardano-cli-build/bin":"$PATH"
-  fi
-
-  # generate config and topology files for p2p mode
-  CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_p2p/state-cluster0/bft1.socket" \
+  # re-generate config and topology files
+  CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step3/state-cluster0/bft1.socket" \
     DRY_RUN=1 \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
   # copy newly generated topology files to the cluster state dir
-  cp -f "$WORKDIR"/dry_p2p/state-cluster0/topology-*.json "$STATE_CLUSTER"
+  cp -f "$WORKDIR"/dry_config_step3/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
   # Copy newly generated config files to the cluster state dir, but use the original genesis files
   BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  for conf in "$WORKDIR"/dry_p2p/state-cluster0/config-*.json; do
+  for conf in "$WORKDIR"/dry_config_step3/state-cluster0/config-*.json; do
     fname="${conf##*/}"
     jq \
       --arg byron_hash "$BYRON_GENESIS_HASH" \
@@ -325,10 +305,12 @@ elif [ "$1" = "step3" ]; then
   "$STATE_CLUSTER/supervisorctl" status
 
   # print path to cardano-node binaries
+  echo "pool1 node binary:"
   pool1_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool1)"
-  ls -l "/proc/$pool1_pid/exe"
+  readlink -m "/proc/$pool1_pid/exe"
+  echo "pool3 node binary:"
   pool3_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool3)"
-  ls -l "/proc/$pool3_pid/exe"
+  readlink -m "/proc/$pool3_pid/exe"
 
   # check that nodes are running
   if [ "$pool1_pid" = 0 ] || [ "$pool3_pid" = 0 ]; then

@@ -72,6 +72,8 @@ jobs:
   reusable_run:
     runs-on: ubuntu-latest
     steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@v9
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Install Nix
@@ -151,7 +153,7 @@ jobs:
         with:
           name: testrun-files
           path: |
-            scheduling.log.xz
+            scheduling.log
             errors_all.log
             testrun-report.xml
             deselected_tests.txt
@@ -164,7 +166,7 @@ jobs:
           name: cli-coverage
           path: cli_coverage.json
       - name: ✉ Mail failure report
-        uses: dawidd6/action-send-mail@v6
+        uses: dawidd6/action-send-mail@v7
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS && github.event_name == 'schedule'
         with:
           server_address: smtp.gmail.com
