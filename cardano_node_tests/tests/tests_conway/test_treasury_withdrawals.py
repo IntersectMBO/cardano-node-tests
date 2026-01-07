@@ -730,7 +730,7 @@ class TestMIRCerts:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
     @pytest.mark.parametrize(
         "mir_cert",
         ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr"),

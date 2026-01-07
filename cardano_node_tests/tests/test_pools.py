@@ -2530,7 +2530,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_pool_registration_rejected_in_conway(
@@ -2596,7 +2596,7 @@ class TestNegative:
         assert "TextEnvelope type error" in err, err
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_pool_registration_plus_conway_delegation_fails(

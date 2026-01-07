@@ -1438,7 +1438,7 @@ class TestLegacyProposals:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,
@@ -1455,6 +1455,7 @@ class TestLegacyProposals:
         """
         era_valid_pparam = {
             "shelley": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            "allegra": ("--max-block-body-size", 65536, "maxBlockBodySize"),
             "mary": ("--max-block-body-size", 65536, "maxBlockBodySize"),
             "alonzo": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
             "babbage": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
@@ -1476,7 +1477,7 @@ class TestLegacyProposals:
 
         era_api = getattr(cluster.g_compatible, era)
 
-        action_file = era_api.governance.action.gen_pparams_update(
+        action_file = era_api.governance.gen_pparams_update(
             name=temp_template,
             epoch=cluster.g_query.get_epoch(),
             genesis_vkey_file=cluster.g_genesis.genesis_keys.genesis_vkeys[0],

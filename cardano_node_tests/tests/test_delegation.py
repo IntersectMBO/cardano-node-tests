@@ -1251,7 +1251,7 @@ class TestNegative:
         ), err_msg
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_stake_delegation_rejected_in_conway(

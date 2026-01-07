@@ -188,7 +188,7 @@ class TestConway:
 
 class TestNegativeLegacyGovernance:
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ("shelley", "mary", "alonzo", "babbage"))
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
     @pytest.mark.smoke
     def test_mixed_legacy_govaction_and_conway_vote_cert_fails(
         self,
@@ -213,7 +213,7 @@ class TestNegativeLegacyGovernance:
         pool_id = pool_ids[0]
 
         era_api = getattr(cluster.g_compatible, era)
-        legacy_prop = era_api.governance.action.gen_pparams_update(
+        legacy_prop = era_api.governance.gen_pparams_update(
             name=temp_template,
             epoch=cluster.g_query.get_epoch(),
             genesis_vkey_file=cluster.g_genesis.genesis_keys.genesis_vkeys[0],
