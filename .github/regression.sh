@@ -34,9 +34,9 @@ mkdir -p "$WORKDIR"
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
-if [ "${CI_TOPOLOGY:-""}" = "legacy" ]; then
+if [ "${CI_TOPOLOGY:-}" = "legacy" ]; then
   export ENABLE_LEGACY=1
-elif [ "${CI_TOPOLOGY:-""}" = "mixed" ]; then
+elif [ "${CI_TOPOLOGY:-}" = "mixed" ]; then
   export MIXED_P2P=1
   export NUM_POOLS="${NUM_POOLS:-4}"
 fi
@@ -47,7 +47,7 @@ rm -rf "${ARTIFACTS_DIR:?}"
 export SCHEDULING_LOG=scheduling.log
 : > "$SCHEDULING_LOG"
 
-MARKEXPR="${MARKEXPR:-""}"
+MARKEXPR="${MARKEXPR:-}"
 if [ "$MARKEXPR" = "all" ]; then
   unset MARKEXPR
 elif [ "$MARKEXPR" = "conway only" ]; then
@@ -58,7 +58,7 @@ elif [ "$MARKEXPR" = "dbsync config" ]; then
   export MARKEXPR="(dbsync and smoke) or dbsync_config"
 fi
 
-if [ -n "${CLUSTERS_COUNT:-""}" ]; then
+if [ -n "${CLUSTERS_COUNT:-}" ]; then
   export CLUSTERS_COUNT
 fi
 
@@ -71,7 +71,7 @@ elif [ "$CLUSTER_ERA" = "conway 11" ]; then
 fi
 export CLUSTER_ERA
 
-TX_ERA="${TX_ERA:-""}"
+TX_ERA="${TX_ERA:-}"
 if [ "$TX_ERA" = "conway" ] || [ "$CLUSTER_ERA" = "conway" ]; then
   unset TX_ERA
   export COMMAND_ERA="conway"
@@ -81,11 +81,11 @@ fi
 
 # Decrease the number of tests per cluster if we are using the "disk" (LMDB) UTxO backend to avoid
 # having too many concurrent readers.
-if [ -z "${MAX_TESTS_PER_CLUSTER:-""}" ] && [[ "${UTXO_BACKEND:-""}" = "disk"* ]]; then
+if [ -z "${MAX_TESTS_PER_CLUSTER:-}" ] && [[ "${UTXO_BACKEND:-}" = "disk"* ]]; then
   export MAX_TESTS_PER_CLUSTER=5
 fi
 
-if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
+if [ -n "${BOOTSTRAP_DIR:-}" ]; then
   :  # don't touch `TESTNET_VARIANT` when running on testnet
 elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
   export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_slow"}"
@@ -96,7 +96,7 @@ fi
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
 # assume we run tests on testnet when `BOOTSTRAP_DIR` is set
-if [ -n "${BOOTSTRAP_DIR:-""}" ]; then
+if [ -n "${BOOTSTRAP_DIR:-}" ]; then
   export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/relay1.socket"
   export RUN_TARGET="${RUN_TARGET:-"testnets"}"
 fi
@@ -104,7 +104,7 @@ fi
 echo "### Dependencies setup ###"
 
 # setup dbsync (disabled by default)
-case "${DBSYNC_REV:-""}" in
+case "${DBSYNC_REV:-}" in
   "" )
     ;;
   "none" )
@@ -132,7 +132,7 @@ case "${PLUTUS_APPS_REV:="none"}" in
 esac
 
 # setup cardano-cli (use the built-in version by default)
-case "${CARDANO_CLI_REV:-""}" in
+case "${CARDANO_CLI_REV:-}" in
   "" )
     ;;
   "none" )
@@ -141,8 +141,28 @@ case "${CARDANO_CLI_REV:-""}" in
   * )
     # shellcheck disable=SC1090,SC1091
     . .github/source_cardano_cli.sh
+    cardano_cli_build "$CARDANO_CLI_REV"
+    PATH_PREPEND="$(cardano_cli_print_path_prepend "")${PATH_PREPEND}"
+    export PATH_PREPEND
     ;;
 esac
+
+# setup cardano-node binaries
+case "${NODE_REV:-}" in
+  "" | "none" )
+    NODE_REV=master
+    ;;
+esac
+# shellcheck disable=SC1090,SC1091
+. .github/source_cardano_node.sh
+cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
+PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
+export PATH_PREPEND
+
+# optimize nix store if running in GitHub Actions
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
+  nix store gc || :
+fi
 
 echo "### Cleanup setup ###"
 
@@ -154,16 +174,11 @@ _cleanup() {
   if command -v stop_postgres >/dev/null 2>&1; then
     stop_postgres || :
   fi
-
-  # cleanup dbsync repo if modified
-  if command -v cleanup_dbsync_repo >/dev/null 2>&1; then
-    cleanup_dbsync_repo || :
-  fi
 }
 
 # shellcheck disable=SC2329
 _cleanup_testnet_on_interrupt() {
-  [ -z "${BOOTSTRAP_DIR:-""}" ] && return
+  [ -z "${BOOTSTRAP_DIR:-}" ] && return
 
   _PYTEST_CURRENT="$(find "$WORKDIR" -type l -name pytest-current)"
   [ -z "$_PYTEST_CURRENT" ] && return
@@ -176,7 +191,7 @@ _cleanup_testnet_on_interrupt() {
   printf "start: %(%H:%M:%S)T\n" -1
 
   # shellcheck disable=SC2016
-  nix develop --accept-flake-config .#venv --command bash -c '
+  nix develop --accept-flake-config .#testenv --command bash -c '
     . .github/setup_venv.sh
     export PATH="$PATH_PREPEND":"$PATH"
     export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
@@ -210,10 +225,6 @@ echo "::endgroup::"  # end group for "Script setup"
 
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
-
-# function to update cardano-node to specified branch and/or revision, or to the latest available
-# shellcheck disable=SC1090,SC1091
-. .github/nix_override_cardano_node.sh
 
 if [ "$(echo "$PWD"/.bin/*)" != "${PWD}/.bin/*" ]; then
   echo
@@ -252,10 +263,8 @@ trap "echo 'Stopping monitor'; kill ${MON_PID:-} 2>/dev/null || true" EXIT
 
 # Run tests and generate report
 
-# shellcheck disable=SC2046,SC2119
-nix flake update --accept-flake-config $(node_override)
 # shellcheck disable=SC2016
-nix develop --accept-flake-config .#venv --command bash -c '
+nix develop --accept-flake-config .#testenv --command bash -c '
   set -euo pipefail
   echo "::endgroup::"  # end group for "Nix env setup"
 
@@ -286,7 +295,7 @@ nix develop --accept-flake-config .#venv --command bash -c '
 
 # Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
 # After any key is pressed, resume this script and stop all running cluster instances.
-if [ "${KEEP_CLUSTERS_RUNNING:-""}" = 1 ]; then
+if [ "${KEEP_CLUSTERS_RUNNING:-}" = 1 ]; then
   echo
   echo "KEEP_CLUSTERS_RUNNING is set, leaving clusters running until any key is pressed."
   echo "Press any key to continue..."
@@ -302,7 +311,7 @@ _cleanup
 trap - SIGINT
 
 # prepare artifacts for upload in GitHub Actions
-if [ -n "${GITHUB_ACTIONS:-""}" ]; then
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
 
   # move reports to root dir
   if [ -e .reports/testrun-report.html ]; then
@@ -314,11 +323,6 @@ if [ -n "${GITHUB_ACTIONS:-""}" ]; then
 
   # save testing artifacts
   ./.github/save_artifacts.sh || :
-
-  # compress scheduling log
-  if [ -e "$SCHEDULING_LOG" ]; then
-    xz "$SCHEDULING_LOG"
-  fi
 fi
 
 exit "$retval"

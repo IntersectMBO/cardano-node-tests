@@ -45,7 +45,7 @@ file_is_available() {
   esac
 }
 
-DBSYNC_TAR_URL="${DBSYNC_TAR_URL:-""}"
+DBSYNC_TAR_URL="${DBSYNC_TAR_URL:-}"
 
 # Check if DBSYNC_TAR_URL is empty and DBSYNC_REV is a version number
 if [[ -z "$DBSYNC_TAR_URL" && "$DBSYNC_REV" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
@@ -68,14 +68,13 @@ if [ -n "${DBSYNC_TAR_URL:-}" ]; then
   rm -f db-sync-node
   ln -s dbsync_download db-sync-node || exit 1
   DBSYNC_SCHEMA_DIR="${WORKDIR}/db-sync-node/schema"
-  chmod -R u+w "$DBSYNC_SCHEMA_DIR" # Add write permissions
   export DBSYNC_SCHEMA_DIR
   rm -f smash-server || rm -f smash-server/bin/cardano-smash-server
   mkdir -p smash-server/bin
   ln -s "${WORKDIR}/dbsync_download/bin/cardano-smash-server" smash-server/bin/cardano-smash-server || exit 1
 else
   # Build db-sync
-  case "${DBSYNC_REV:-""}" in
+  case "${DBSYNC_REV:-}" in
     "" )
       echo "The value for DBSYNC_REV cannot be empty" >&2
       exit 1
@@ -106,43 +105,44 @@ else
   git checkout "$DBSYNC_REV"
   git rev-parse HEAD
 
-  nix build --accept-flake-config .#cardano-db-sync -o db-sync-node \
-    || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o db-sync-node \
+  # Build cardano-db-sync
+  nix build --accept-flake-config .#cardano-db-sync -o "${WORKDIR}/db-sync-node" \
+    || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o "${WORKDIR}/db-sync-node" \
     || exit 1
+
   # Build cardano-smash-server
   if [ "${SMASH:-"false"}" != "false" ]; then
-    nix build --accept-flake-config .#cardano-smash-server -o smash-server || exit 1
+    nix build --accept-flake-config .#cardano-smash-server -o "${WORKDIR}/smash-server" || exit 1
   fi
-  DBSYNC_SCHEMA_DIR="$PWD/schema"
+
+  mv "$PWD/schema" "${WORKDIR}/db-sync-schema"
+  DBSYNC_SCHEMA_DIR="${WORKDIR}/db-sync-schema"
   export DBSYNC_SCHEMA_DIR
+
+  cd "$WORKDIR" || exit 1
+  rm -rf cardano-db-sync # Save space by removing the source code
 fi
 
-if [ ! -e db-sync-node/bin/cardano-db-sync ]; then
+if [ ! -e "${WORKDIR}/db-sync-node/bin/cardano-db-sync" ]; then
   echo "The \`cardano-db-sync\` binary not found, line $LINENO in sourced db-sync setup" >&2  # assert
+  exit 1
+fi
+if  [ "${SMASH:-"false"}" != "false" ] && [ ! -e "${WORKDIR}/smash-server/bin/cardano-smash-server" ]; then
+  echo "The \`cardano-smash-server\` binary not found, line $LINENO in sourced db-sync setup" >&2  # assert
   exit 1
 fi
 
 # Add `cardano-db-sync` and `cardano-smash-server` to PATH_PREPEND
-PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m db-sync-node/bin)"
+PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m "${WORKDIR}/db-sync-node/bin")"
 if [ -e smash-server/bin/cardano-smash-server ]; then
-  PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m smash-server/bin)"
+  PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m "${WORKDIR}/smash-server/bin")"
 fi
 export PATH_PREPEND
 
-if [ -n "${DBSYNC_SKIP_INDEXES:-""}" ]; then
-  # Delete the indexes only after the binaries are ready, so the binaries can be retrieved from
-  # the nix binary cache if available.
+# Remove migration files that create indexes
+if [ -n "${DBSYNC_SKIP_INDEXES:-}" ]; then
+  chmod -R u+w "$DBSYNC_SCHEMA_DIR"
   rm -f "$DBSYNC_SCHEMA_DIR"/migration-4-000*
-
-  if [ -z "$DBSYNC_TAR_URL" ]; then
-    cleanup_dbsync_repo() {
-      local _origpwd="$PWD"
-      cd "$DBSYNC_SCHEMA_DIR"/.. || exit 1
-      # shellcheck disable=SC2015
-      git stash && git stash drop || :
-      cd "$_origpwd" || exit 1
-    }
-  fi
 fi
 
 cd "$REPODIR" || exit 1
