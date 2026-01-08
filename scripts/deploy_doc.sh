@@ -58,5 +58,6 @@ git commit -n -m "Documentation update"
 
 # push to origin/github_pages (upstream/github_pages)
 printf "\n-------------------------------------------\n\n"
-printf "Push changes manually:\ngit push -f origin github_pages\nor\ngit push -f upstream github_pages\n\n"
-printf "Then switch back to '%s' branch:\ngit checkout %s\n" "$cur_branch" "$cur_branch"
+printf "👉  Check the documentation:\n    %s\n\n" "file://${PWD}/src_docs/build/html/index.html"
+printf "👉  Push the changes:\n    git push -f origin github_pages\n    or\n    git push -f upstream github_pages\n\n"
+printf "👉  Then switch back to '%s' branch:\n    git checkout %s\n" "$cur_branch" "$cur_branch"
