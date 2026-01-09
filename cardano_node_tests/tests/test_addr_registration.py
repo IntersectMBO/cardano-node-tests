@@ -789,3 +789,57 @@ class TestNegative:
         else:
             err = f"Invalid issue: {issue}"
             raise ValueError(err)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_legacy_stake_addr_registration_rejected_in_conway(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        era: str,
+    ):
+        """Reject legacy stake address registration in Conway.
+
+        * Generate a stake address registration certificate using the compatible CLI
+        for a legacy era.
+        * Attempt to submit the legacy certificate in a Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        pool_users = common.get_pool_users(
+            name_template=f"{temp_template}_{era}_legacy",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=1,
+            fund_idx=[0],
+            amount=600_000_000,
+        )
+
+        era_api = getattr(cluster.g_compatible, era)
+
+        legacy_stake_reg_cert = era_api.stake_address.gen_registration_cert(
+            name=f"{temp_template}_{era}_stake",
+            stake_vkey_file=pool_users[0].stake.vkey_file,
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[legacy_stake_reg_cert],
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                pool_users[0].stake.skey_file,
+            ],
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.send_tx(
+                src_address=pool_users[0].payment.address,
+                tx_name=f"{temp_template}_{era}_legacy_stake_reg",
+                tx_files=tx_files,
+            )
+
+        err = str(excinfo.value)
+
+        assert "TextEnvelope type error" in err, err

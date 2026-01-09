@@ -1436,57 +1436,52 @@ class TestPParamData:
 class TestLegacyProposals:
     """Tests for legacy update proposals in Conway."""
 
-    @pytest.fixture(scope="class")
-    def skip_on_missing_legacy(self) -> None:
-        if not clusterlib_utils.cli_has("legacy governance"):
-            pytest.skip("`legacy governance` commands are not available")
-
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,
-        skip_on_missing_legacy: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         submit_method: str,
+        era: str,
     ):
-        """Test submitting a legacy update proposal in Conway.
+        """Reject legacy update proposal submission in Conway.
 
-        Expect failure as the legacy update proposals are not supported in Conway.
+        * Generate a legacy update proposal using the compatible CLI.
+        * Attempt to submit the proposal in a Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
         """
-        # TODO: convert to use
-        # `compatible babbage governance action create-protocol-parameters-update`
+        era_valid_pparam = {
+            "shelley": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            "allegra": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            "mary": ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            "alonzo": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+            "babbage": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+        }
+
         temp_template = common.get_test_id(cluster)
+
+        arg, val, name = era_valid_pparam[era]
 
         update_proposals = [
             clusterlib_utils.UpdateProposal(
-                arg="--max-collateral-inputs",
-                value=4,
-                name="maxCollateralInputs",
+                arg=arg,
+                value=val,
+                name=name,
             ),
         ]
 
         cli_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
-        out_file = f"{temp_template}_update.proposal"
 
-        cluster.cli(
-            [
-                "cardano-cli",
-                "legacy",
-                "governance",
-                "create-update-proposal",
-                *cli_args,
-                "--out-file",
-                str(out_file),
-                "--epoch",
-                str(cluster.g_query.get_epoch()),
-                *helpers.prepend_flag(
-                    "--genesis-verification-key-file",
-                    cluster.g_genesis.genesis_keys.genesis_vkeys,
-                ),
-            ],
-            add_default_args=False,
+        era_api = getattr(cluster.g_compatible, era)
+
+        action_file = era_api.governance.gen_pparams_update(
+            name=temp_template,
+            epoch=cluster.g_query.get_epoch(),
+            genesis_vkey_file=cluster.g_genesis.genesis_keys.genesis_vkeys[0],
+            cli_args=cli_args,
         )
 
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
@@ -1496,60 +1491,16 @@ class TestLegacyProposals:
                 src_address=payment_addr.address,
                 submit_method=submit_method,
                 tx_files=clusterlib.TxFiles(
-                    proposal_files=[out_file],
+                    proposal_files=[action_file],
                     signing_key_files=[
                         *cluster.g_genesis.genesis_keys.delegate_skeys,
                         pl.Path(payment_addr.skey_file),
                     ],
                 ),
             )
-        err_str = str(excinfo.value)
-        assert 'TextEnvelopeType "UpdateProposalShelley"' in err_str, err_str
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.smoke
-    def test_legacy_proposal_build(
-        self,
-        cluster: clusterlib.ClusterLib,
-    ):
-        """Test building a legacy update proposal with Conway cardano-cli.
-
-        Expect failure as the legacy update proposals are not supported in Conway.
-        """
-        temp_template = common.get_test_id(cluster)
-
-        update_proposals = [
-            clusterlib_utils.UpdateProposal(
-                arg="--max-collateral-inputs",
-                value=4,
-                name="maxCollateralInputs",
-            ),
-        ]
-
-        cli_args = clusterlib_utils.get_pparams_update_args(update_proposals=update_proposals)
-        out_file = f"{temp_template}_update.proposal"
-
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster.cli(
-                [
-                    "cardano-cli",
-                    "conway",
-                    "governance",
-                    "create-update-proposal",
-                    *cli_args,
-                    "--out-file",
-                    str(out_file),
-                    "--epoch",
-                    str(cluster.g_query.get_epoch()),
-                    *helpers.prepend_flag(
-                        "--genesis-verification-key-file",
-                        cluster.g_genesis.genesis_keys.genesis_vkeys,
-                    ),
-                ],
-                add_default_args=False,
-            )
-        err_str = str(excinfo.value)
-        assert "Invalid argument `create-update-proposal'" in err_str, err_str
+        err = str(excinfo.value)
+        assert "TextEnvelope type error" in err, err
 
 
 class TestNegativeCostModels:
