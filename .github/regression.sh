@@ -4,9 +4,9 @@
 set -Eeuo pipefail
 
 # shellcheck disable=SC2016
-basic_err_string='echo "Error at line $LINENO"'
+_err_string='echo "Error at line $LINENO"'
 # shellcheck disable=SC2064
-trap "$basic_err_string" ERR
+trap "$_err_string" ERR
 
 nix --version
 df -h .
@@ -204,22 +204,25 @@ _cleanup_testnet_on_interrupt() {
   echo "::endgroup::"
 }
 
-# cleanup on Ctrl+C or error
 # shellcheck disable=SC2329
-_interrupted() {
-  # Ignore further interrupts and errors during cleanup
-  trap '' SIGINT
+_last_cleanup() {
+  # Redefine the ERR trap to avoid interfering with cleanup
   # shellcheck disable=SC2064
-  trap "$basic_err_string" ERR
-  set +e
+  trap "$_err_string" ERR
+  # Ignore further interrupts during cleanup
+  trap '' SIGINT
 
   # Do testnet cleanup only on interrupted testrun. When not interrupted,
   # cleanup is done as part of a testrun.
   _cleanup_testnet_on_interrupt || :
   _cleanup
+
+  trap - SIGINT
 }
-trap '_interrupted; exit 130' SIGINT
-trap 'echo "Error at line $LINENO"; _interrupted' ERR
+# last cleanup on Ctrl+C or error
+trap '_last_cleanup; exit 130' SIGINT
+# shellcheck disable=SC2064
+trap "${_err_string}; _last_cleanup" ERR
 
 echo "::endgroup::"  # end group for "Script setup"
 
@@ -302,13 +305,7 @@ if [ "${KEEP_CLUSTERS_RUNNING:-}" = 1 ]; then
   read -r
 fi
 
-# redefine the ERR trap to avoid interfering with cleanup
-# shellcheck disable=SC2064
-trap "$basic_err_string" ERR
-# ignore Ctrl+C during cleanup
-trap '' SIGINT
-_cleanup
-trap - SIGINT
+_last_cleanup
 
 # prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then

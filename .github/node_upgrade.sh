@@ -1,5 +1,5 @@
 #! /usr/bin/env -S nix develop --accept-flake-config .#base -c bash
-# shellcheck shell=bash
+# shellcheck shell=bash disable=SC2317
 
 # controlling environment variables:
 # BASE_TAR_URL - URL of a tarball with binaries for base revision
@@ -8,7 +8,10 @@
 # UPGRADE_CLI_REVISION - revision of cardano-cli to upgrade to (optional)
 
 set -Eeuo pipefail
-trap 'echo "Error at line $LINENO"' ERR
+# shellcheck disable=SC2016
+_err_string='echo "Error at line $LINENO"'
+# shellcheck disable=SC2064
+trap "$_err_string" ERR
 
 if [[ -z "${BASE_TAR_URL:-}" && -z "${BASE_REVISION:-}" ]]; then
   echo "BASE_TAR_URL or BASE_REVISION must be set"
@@ -34,12 +37,22 @@ _cleanup() {
   stop_instances "$WORKDIR" || :
 }
 
-_cleanup
+# shellcheck disable=SC2329
+_last_cleanup() {
+  # Redefine the ERR trap to avoid interfering with cleanup
+  # shellcheck disable=SC2064
+  trap "$_err_string" ERR
+  # Ignore further interrupts during cleanup
+  trap '' SIGINT
+  _cleanup
+  trap - SIGINT
+}
+# last cleanup on Ctrl+C or error
+trap '_last_cleanup; exit 130' SIGINT
+# shellcheck disable=SC2064
+trap "${_err_string}; _last_cleanup" ERR
 
-# cleanup on Ctrl+C
-trap '_cleanup; exit 130' SIGINT
-# cleanup on error
-trap 'echo "Error at line $LINENO"; _cleanup' ERR
+_cleanup
 
 # create clean workdir
 rm -rf "${WORKDIR:?}"
@@ -165,7 +178,7 @@ fi
 # grep testing artifacts for errors
 ./.github/grep_errors.sh
 
-_cleanup
+_last_cleanup
 
 # prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
