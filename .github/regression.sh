@@ -34,13 +34,6 @@ mkdir -p "$WORKDIR"
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
-if [ "${CI_TOPOLOGY:-}" = "legacy" ]; then
-  export ENABLE_LEGACY=1
-elif [ "${CI_TOPOLOGY:-}" = "mixed" ]; then
-  export MIXED_P2P=1
-  export NUM_POOLS="${NUM_POOLS:-4}"
-fi
-
 export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 rm -rf "${ARTIFACTS_DIR:?}"
 
@@ -91,6 +84,10 @@ elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
   export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_slow"}"
 else
   export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_fast"}"
+fi
+
+if [ "${ALLOW_UNSTABLE_ERROR_MESSAGES:-"false"}" == "false" ]; then
+  unset ALLOW_UNSTABLE_ERROR_MESSAGES
 fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"

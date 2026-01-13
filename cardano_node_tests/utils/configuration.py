@@ -80,6 +80,9 @@ HAS_SMASH = HAS_DBSYNC and bool(os.environ.get("SMASH"))
 
 DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
 
+# Allow unstable error messages in tests
+ALLOW_UNSTABLE_ERROR_MESSAGES = bool(os.environ.get("ALLOW_UNSTABLE_ERROR_MESSAGES"))
+
 # Cluster instances are kept running after tests finish
 KEEP_CLUSTERS_RUNNING = bool(os.environ.get("KEEP_CLUSTERS_RUNNING"))
 
