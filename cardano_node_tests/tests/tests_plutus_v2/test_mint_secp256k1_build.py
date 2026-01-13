@@ -244,26 +244,26 @@ class TestSECP256k1:
                 redeemer_file=redeemer_file,
             )
 
-        err_msg = str(excinfo.value)
+        exc_value = str(excinfo.value)
 
         # Before protocol version 8 the SECP256k1 is blocked.
         # After that the usage is limited by high cost model.
         is_forbidden = (
             "Forbidden builtin function: (builtin "
             f"verify{algorithm.capitalize()}Secp256k1Signature)"
-            in err_msg
+            in exc_value
             or f"Builtin function Verify{algorithm.capitalize()}Secp256k1Signature "
             "is not available in language PlutusV2 at and protocol version 7.0"
-            in err_msg
+            in exc_value
         )
 
         is_overspending = (
             "The machine terminated part way through evaluation due to "
-            "overspending the budget." in err_msg
+            "overspending the budget." in exc_value
         )
 
         if before_pv8:
-            assert is_forbidden or is_overspending, err_msg
+            assert is_forbidden or is_overspending, exc_value
         # From protocol version 8 the SECP256k1 functions are allowed and
         # when we provide wrong data meaningful error messages are expected.
         elif plutus_version == "v2":
@@ -276,7 +276,7 @@ class TestSECP256k1:
                 "no_pubkey": "Invalid verification key",
                 "no_sig": "Invalid signature",
             }
-            assert expected_error_messages[test_vector] in err_msg, err_msg
+            assert expected_error_messages[test_vector] in exc_value, exc_value
         elif plutus_version == "v3":
             # PT5: PlutusTx.Prelude.check: input is 'False'. The untyped script we use for
             # PlutusV3 is different from the PlutusV2 script, and doesn't produce the same error

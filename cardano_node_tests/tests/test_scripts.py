@@ -905,8 +905,9 @@ class TestNegative:
                 multisig_script=multisig_script,
                 script_utxos=script_utxos,
             )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -962,8 +963,9 @@ class TestNegative:
                 multisig_script=multisig_script,
                 script_utxos=script_utxos,
             )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -1027,8 +1029,9 @@ class TestNegative:
                     multisig_script=multisig_script,
                     script_utxos=script_utxos,
                 )
-            err_str = str(excinfo.value)
-            assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -1421,8 +1424,9 @@ class TestTimeLocking:
                 invalid_hereafter=None,  # missing required validity interval for "before"
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD
@@ -1481,19 +1485,20 @@ class TestTimeLocking:
                 invalid_hereafter=-1,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
+        exc_value = str(excinfo.value)
 
         # In node versions >= 1.36.0 we are checking error from
         # `cardano-cli transaction build/build-raw`
-        if "SLOT must not be less than" in err_str:
+        if "SLOT must not be less than" in exc_value:
             return
 
         # In node versions < 1.36.0 we were checking error from `cardano-cli transaction submit`
-        assert "OutsideValidityIntervalUTxO" in err_str, err_str
+        with common.allow_unstable_error_messages():
+            assert "OutsideValidityIntervalUTxO" in exc_value, exc_value
 
         slot_no = 0
         _slot_search = re.search(
-            r"ValidityInterval {invalidBefore = SJust \(SlotNo ([0-9]*)", err_str
+            r"ValidityInterval {invalidBefore = SJust \(SlotNo ([0-9]*)", exc_value
         )
         if _slot_search is not None:
             slot_no = int(_slot_search.group(1))
@@ -1554,8 +1559,9 @@ class TestTimeLocking:
                 invalid_hereafter=before_slot - slot_no,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert "OutsideValidityIntervalUTxO" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "OutsideValidityIntervalUTxO" in exc_value, exc_value
 
         # Send funds from script address - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1572,8 +1578,9 @@ class TestTimeLocking:
                 invalid_hereafter=before_slot + slot_no,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -1629,8 +1636,9 @@ class TestTimeLocking:
                 invalid_hereafter=before_slot + slot_no,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -1688,8 +1696,9 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot + slot_no + 100,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert "OutsideValidityIntervalUTxO" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "OutsideValidityIntervalUTxO" in exc_value, exc_value
 
         # Send funds from script address - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1706,8 +1715,9 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -1766,8 +1776,9 @@ class TestTimeLocking:
                 invalid_hereafter=after_slot - slot_no,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert "ScriptWitnessNotValidatingUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -2007,8 +2018,9 @@ class TestAuxiliaryScripts:
             else:
                 msg = f"Unsupported build method: {build_method}"
                 raise ValueError(msg)
-        err_str = str(excinfo.value)
-        assert 'Error in $: key "type" not found' in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert 'Error in $: key "type" not found' in exc_value, exc_value
 
 
 class TestIncrementalSigning:
@@ -3024,8 +3036,8 @@ class TestNested:
                 submit_method=submit_method,
                 build_method=build_method,
             )
-        err_str = str(excinfo.value)
-        assert expected_err in err_str, err_str
+        exc_value = str(excinfo.value)
+        assert expected_err in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -3112,11 +3124,12 @@ class TestCompatibility:
                 invalid_hereafter=150,
                 submit_method=submit_method,
             )
-        err_str = str(excinfo.value)
-        assert (
-            "SimpleScriptV2 is not supported" in err_str
-            or "Transaction validity lower bound not supported in Shelley" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "SimpleScriptV2 is not supported" in exc_value
+                or "Transaction validity lower bound not supported in Shelley" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -3159,8 +3172,9 @@ class TestCompatibility:
                 submit_method=submit_method,
                 tx_files=tx_files,
             )
-        err_str = str(excinfo.value)
-        assert (
-            "Transaction auxiliary scripts are not supported" in err_str
-            or "Auxiliary scripts cannot be used" in err_str  # node <= 1.35.6
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Transaction auxiliary scripts are not supported" in exc_value
+                or "Auxiliary scripts cannot be used" in exc_value  # node <= 1.35.6
+            ), exc_value

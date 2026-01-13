@@ -1071,5 +1071,6 @@ class TestNegativeMIRCerts:
                 tx_name=temp_template,
                 tx_files=tx_files,
             )
-        err_str = str(excinfo.value)
-        assert "InsufficientForInstantaneousRewardsDELEG" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "InsufficientForInstantaneousRewardsDELEG" in exc_value, exc_value

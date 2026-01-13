@@ -1921,11 +1921,14 @@ class TestPoolCost:
             )
 
         # Check that it failed in an expected way
-        err = str(excinfo.value)
-        if pool_cost < 0:
-            assert "--pool-cost: Failed reading" in err or "expecting digit" in err
-        else:
-            assert "StakePoolCostTooLowPOOL" in err
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            if pool_cost < 0:
+                assert (
+                    "--pool-cost: Failed reading" in exc_value or "expecting digit" in exc_value
+                ), exc_value
+            else:
+                assert "StakePoolCostTooLowPOOL" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
@@ -2058,7 +2061,9 @@ class TestNegative:
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
             )
-        assert "Expected: VrfVerificationKey_PraosVRF" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Expected: VrfVerificationKey_PraosVRF" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2085,8 +2090,9 @@ class TestNegative:
                 cold_vkey_file=node_cold.skey_file,  # skey instead of vkey
                 owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
             )
-        err_msg = str(excinfo.value)
-        assert ": StakePoolVerificationKey" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert ": StakePoolVerificationKey" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2113,7 +2119,9 @@ class TestNegative:
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[pool_users[0].stake.skey_file],  # skey instead of vkey
             )
-        assert "Expected: StakeVerificationKeyShelley" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Expected: StakeVerificationKeyShelley" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2154,7 +2162,9 @@ class TestNegative:
                 tx_name="missing_cold_key",
                 tx_files=tx_files,
             )
-        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2193,7 +2203,9 @@ class TestNegative:
             cluster.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address, tx_name="missing_skey", tx_files=tx_files
             )
-        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD_NO_EST
@@ -2234,9 +2246,9 @@ class TestNegative:
                 fee_buffer=2_000_000,
                 build_method=build_method,
             )
-
-        err_msg = str(excinfo.value)
-        assert "StakePoolNotRegisteredOnKeyPOOL" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "StakePoolNotRegisteredOnKeyPOOL" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2262,7 +2274,9 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        assert 'key "name" not found' in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert 'key "name" not found' in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2288,7 +2302,9 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        assert 'key "description" not found' in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert 'key "description" not found' in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2314,7 +2330,9 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        assert 'key "ticker" not found' in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert 'key "ticker" not found' in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -2340,7 +2358,9 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        assert 'key "homepage" not found' in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert 'key "homepage" not found' in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_name=st.text(min_size=51))
@@ -2370,11 +2390,12 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        err_value = str(excinfo.value)
-        assert (
-            "Stake pool metadata must consist of at most 512 bytes" in err_value
-            or '"name" must have at most 50 characters' in err_value
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Stake pool metadata must consist of at most 512 bytes" in exc_value
+                or '"name" must have at most 50 characters' in exc_value
+            )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_description=st.text(min_size=256, max_size=1000))
@@ -2404,11 +2425,12 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        err_value = str(excinfo.value)
-        assert (
-            "Stake pool metadata must consist of at most 512 bytes" in err_value
-            or '"description" must have at most 255 characters' in err_value
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Stake pool metadata must consist of at most 512 bytes" in exc_value
+                or '"description" must have at most 255 characters' in exc_value
+            )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_ticker=st.text())
@@ -2440,11 +2462,12 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        err_value = str(excinfo.value)
-        assert (
-            "Stake pool metadata must consist of at most 512 bytes" in err_value
-            or '"ticker" must have at least 3 and at most 5 characters' in err_value
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Stake pool metadata must consist of at most 512 bytes" in exc_value
+                or '"ticker" must have at least 3 and at most 5 characters' in exc_value
+            )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(pool_homepage=st.text(min_size=425, max_size=1000))
@@ -2474,7 +2497,9 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file)
-        assert "Stake pool metadata must consist of at most 512 bytes" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Stake pool metadata must consist of at most 512 bytes" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -2520,14 +2545,16 @@ class TestNegative:
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[p.stake.vkey_file for p in pool_users],
             )
-        err_str = str(excinfo.value)
-        assert (
-            "option --metadata-url: The provided string must have at most 128 characters" in err_str
-            or "invalid url" in err_str
-            # In cardano-node <= 10.6.0
-            or "option --metadata-url: The provided string must have at most 64 characters"
-            in err_str
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "option --metadata-url: The provided string must have at most 128 characters"
+                in exc_value
+                or "invalid url" in exc_value
+                # In cardano-node <= 10.6.0
+                or "option --metadata-url: The provided string must have at most 64 characters"
+                in exc_value
+            )
 
 
 @pytest.mark.skipif(

@@ -901,8 +901,9 @@ class TestNegativeDReps:
                 deposit=deposit_address_amt,
             )
 
-        err_msg = str(excinfo.value)
-        assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "StakeKeyNotRegisteredDELEG" in exc_value, exc_value
         reqc.cip088.success()
 
     @allure.link(helpers.get_vcs_link())
@@ -952,9 +953,9 @@ class TestNegativeDReps:
                 tx_files=tx_files_ret,
                 deposit=deposit_drep_amt,
             )
-
-        err_msg = str(excinfo.value)
-        assert "ConwayDRepNotRegistered" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ConwayDRepNotRegistered" in exc_value, exc_value
         reqc.cip089.success()
 
     @allure.link(helpers.get_vcs_link())
@@ -1035,9 +1036,9 @@ class TestNegativeDReps:
                 tx_files=tx_files_reg,
                 deposit=reg_drep.deposit,
             )
-
-        err_msg = str(excinfo.value)
-        assert "ConwayDRepAlreadyRegistered" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ConwayDRepAlreadyRegistered" in exc_value, exc_value
         reqc.cip090.success()
 
 

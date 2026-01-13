@@ -413,11 +413,13 @@ class TestNegativeReadonlyReferenceInputs:
                 join_txouts=False,
                 script_txins=plutus_txins,
             )
-        err_str = str(excinfo.value)
-        assert re.search(
-            f'TranslationLogicMissingInput .*unTxId = SafeHash "{reference_input[0].utxo_hash}"',
-            err_str,
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert re.search(
+                "TranslationLogicMissingInput "
+                f'.*unTxId = SafeHash "{reference_input[0].utxo_hash}"',
+                exc_value,
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -550,5 +552,6 @@ class TestNegativeReadonlyReferenceInputs:
                     f"{temp_template}_tx.body",
                 ]
             )
-        err_str = str(excinfo.value)
-        assert re.search(r"Missing: *\(--tx-in TX[_-]IN", err_str), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert re.search(r"Missing: *\(--tx-in TX[_-]IN", exc_value), exc_value

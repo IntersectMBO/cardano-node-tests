@@ -805,7 +805,10 @@ class TestKES:
                     str(out_file),
                 ]
             )
-        assert "Missing: --kes-period NATURAL" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Missing: --kes-period NATURAL" in exc_value, exc_value
+
         assert not out_file.exists(), "New operational certificate was generated"
 
     @allure.link(helpers.get_vcs_link())

@@ -233,12 +233,13 @@ class TestLeadershipSchedule:
                 cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
                 for_next=True,
             )
-        err_str = str(excinfo.value)
+        exc_value = str(excinfo.value)
 
-        if "PastHorizon" in err_str:
+        if "PastHorizon" in exc_value:
             issues.node_4002.finish_test()
 
-        assert "current stake distribution is currently unstable" in err_str, err_str
+        with common.allow_unstable_error_messages():
+            assert "current stake distribution is currently unstable" in exc_value, exc_value
 
 
 @pytest.mark.skipif(

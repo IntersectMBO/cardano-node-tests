@@ -63,8 +63,9 @@ class TestConway:
                 ],
                 add_default_args=False,
             )
-        err_str = str(excinfo.value)
-        assert "Invalid argument" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Invalid argument" in exc_value, exc_value
 
         reqc.cip071.success()
 
@@ -107,17 +108,20 @@ class TestConway:
                 build_method=build_method,
                 tx_files=tx_files_action,
             )
-        err_str = str(excinfo.value)
+        exc_value = str(excinfo.value)
         if build_method in (
             clusterlib_utils.BuildMethods.BUILD,
             clusterlib_utils.BuildMethods.BUILD_EST,
         ):
-            assert (
-                "Stake credential specified in the proposal is not registered on-chain" in err_str
-                or "ProposalReturnAccountDoesNotExist" in err_str  # In node <= 10.1.4
-            ), err_str
+            with common.allow_unstable_error_messages():
+                assert (
+                    "Stake credential specified in the proposal is not registered on-chain"
+                    in exc_value
+                    or "ProposalReturnAccountDoesNotExist" in exc_value  # In node <= 10.1.4
+                ), exc_value
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-            assert "ProposalReturnAccountDoesNotExist" in err_str, err_str
+            with common.allow_unstable_error_messages():
+                assert "ProposalReturnAccountDoesNotExist" in exc_value, exc_value
         else:
             msg = f"Unexpected build method: {build_method}"
             raise ValueError(msg)

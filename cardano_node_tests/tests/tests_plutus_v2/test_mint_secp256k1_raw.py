@@ -222,16 +222,15 @@ class TestSECP256k1:
                 script_file=script_file,
                 redeemer_file=redeemer_file,
             )
-
-        err_msg = str(excinfo.value)
+        exc_value = str(excinfo.value)
 
         # Before protocol version 8 the SECP256k1 is blocked.
         # After that the usage is limited by high cost model.
-        is_forbidden = "MalformedScriptWitnesses" in err_msg
+        is_forbidden = "MalformedScriptWitnesses" in exc_value
 
         is_overspending = (
             "The machine terminated part way through evaluation due to "
-            "overspending the budget." in err_msg
+            "overspending the budget." in exc_value
         )
 
         # From protocol version 8 the SECP256k1 functions are allowed
@@ -251,7 +250,7 @@ class TestSECP256k1:
         }
 
         if before_pv8:
-            assert is_forbidden or is_overspending, err_msg
+            assert is_forbidden or is_overspending, exc_value
         else:
-            assert re.search(expected_error_messages[test_vector], err_msg), err_msg
-            # Assert expected_error_messages[test_vector] in err_msg, err_msg
+            assert re.search(expected_error_messages[test_vector], exc_value), exc_value
+            # Assert expected_error_messages[test_vector] in exc_value, exc_value

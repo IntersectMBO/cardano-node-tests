@@ -151,8 +151,9 @@ class TestCommittee:
                 build_method=build_method,
                 tx_files=tx_files_auth,
             )
-        err_str = str(excinfo.value)
-        assert "ConwayCommitteeIsUnknown" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ConwayCommitteeIsUnknown" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -277,11 +278,12 @@ class TestCommittee:
                                 build_method=build_method,
                                 submit_method=smethod,
                             )
-                        err_str = str(excinfo.value)
-                        assert (
-                            "UnelectedCommitteeVoters" in err_str  # In protocol version >= 11
-                            or "VotersDoNotExist" in err_str
-                        ), err_str
+                        exc_value = str(excinfo.value)
+                        with common.allow_unstable_error_messages():
+                            assert (
+                                "UnelectedCommitteeVoters" in exc_value  # In protocol version >= 11
+                                or "VotersDoNotExist" in exc_value
+                            ), exc_value
 
         # Update committee action is not supported in bootstrap period
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
@@ -404,12 +406,13 @@ class TestCommittee:
                                 build_method=build_method,
                                 submit_method=smethod,
                             )
-                        err_str = str(excinfo.value)
-                        assert re.search(
-                            "ConwayMempoolFailure .*Unelected committee members are not allowed "
-                            "to cast votes:",
-                            err_str,
-                        ), err_str
+                        exc_value = str(excinfo.value)
+                        with common.allow_unstable_error_messages():
+                            assert re.search(
+                                "ConwayMempoolFailure .*Unelected committee members are not "
+                                "allowed to cast votes:",
+                                exc_value,
+                            ), exc_value
                         subtest_errors.pop()
 
         if not subtest_errors:
@@ -496,8 +499,9 @@ class TestCommittee:
                     tx_files=tx_files,
                     deposit=deposit_amt,
                 )
-            err_str = str(excinfo.value)
-            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "DisallowedProposalDuringBootstrap" in exc_value, exc_value
             reqc.cip026_01.success()
             return
 
@@ -1066,8 +1070,9 @@ class TestCommittee:
                     approve_drep=True,
                     approve_spo=True,
                 )
-            err_str = str(excinfo.value)
-            assert "CommitteeVoter" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "CommitteeVoter" in exc_value, exc_value
 
         # Vote & disapprove the removal action
         conway_common.cast_vote(
@@ -1199,8 +1204,9 @@ class TestCommittee:
                 approve_drep=False,
                 approve_spo=False,
             )
-        err_str = str(excinfo.value)
-        assert "(GovActionsDoNotExist" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "GovActionsDoNotExist" in exc_value, exc_value
 
         # Check ratification of removal action. The removal action should be ratified at the same
         # time as the add action is enacted, because ratification of new actions was delayed by
@@ -1224,8 +1230,9 @@ class TestCommittee:
                 approve_drep=False,
                 approve_spo=False,
             )
-        err_str = str(excinfo.value)
-        assert "(VotingOnExpiredGovAction" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "VotingOnExpiredGovAction" in exc_value, exc_value
 
         next_rat_rem_state = enact_add_gov_state["nextRatifyState"]
         _check_cc_member2_removed(gov_state=next_rat_rem_state["nextEnactState"])
@@ -1282,8 +1289,9 @@ class TestCommittee:
                 approve_drep=True,
                 approve_spo=True,
             )
-        err_str = str(excinfo.value)
-        assert "(GovActionsDoNotExist" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "GovActionsDoNotExist" in exc_value, exc_value
 
         # Resign CC member
         _resign_member(res_member=cc_members[2])
@@ -1689,9 +1697,9 @@ class TestCommittee:
                 prev_action_ix=prev_action_rec.ix,
                 deposit_return_stake_vkey_file=pool_user.stake.vkey_file,
             )
-
-        err_str = str(excinfo.value)
-        assert "Please enter a value in the range [0,1]" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Please enter a value in the range [0,1]" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")

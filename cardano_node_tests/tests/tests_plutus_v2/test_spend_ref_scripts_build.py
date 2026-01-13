@@ -763,8 +763,9 @@ class TestNegativeReferenceScripts:
                 amount=100_000,
                 use_reference_script=True,
             )
-        err_str = str(excinfo.value)
-        assert "Syntax error in script" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Syntax error in script" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -919,11 +920,12 @@ class TestNegativeReferenceScripts:
                 script_txins=plutus_txins,
                 change_address=payment_addrs[0].address,
             )
-        err_str = str(excinfo.value)
-        assert (
-            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
-            or "Plutus script evaluation failed" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "following scripts have execution failures" in exc_value  # In cli 10.1.1.0+
+                or "Plutus script evaluation failed" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1006,11 +1008,12 @@ class TestNegativeReferenceScripts:
                 script_txins=plutus_txins,
                 change_address=payment_addrs[0].address,
             )
-        err_str = str(excinfo.value)
-        assert (
-            "ReferenceInputsNotSupported" in err_str
-            or "InlineDatumsNotSupported" in err_str  # in Conway
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "ReferenceInputsNotSupported" in exc_value
+                or "InlineDatumsNotSupported" in exc_value  # in Conway
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1161,11 +1164,12 @@ class TestNegativeReferenceScripts:
                 script_txins=plutus_txins,
                 change_address=payment_addrs[0].address,
             )
-        err_str = str(excinfo.value)
-        assert (
-            "ReferenceInputsNotSupported" in err_str
-            or "InlineDatumsNotSupported" in err_str  # in Conway
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "ReferenceInputsNotSupported" in exc_value
+                or "InlineDatumsNotSupported" in exc_value  # in Conway
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1258,5 +1262,6 @@ class TestNegativeReferenceScripts:
                 script_txins=plutus_txins,
                 change_address=payment_addrs[0].address,
             )
-        err_str = str(excinfo.value)
-        assert "ByronTxOutInContext" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ByronTxOutInContext" in exc_value, exc_value

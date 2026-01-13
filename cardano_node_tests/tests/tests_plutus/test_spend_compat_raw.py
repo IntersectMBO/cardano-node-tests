@@ -90,9 +90,9 @@ class TestCompatibility:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-
-        err_str = str(excinfo.value)
-        assert "PlutusScriptV2 is not supported" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "PlutusScriptV2 is not supported" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -144,6 +144,6 @@ class TestCompatibility:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-
-        err_str = str(excinfo.value)
-        assert "PlutusScriptV1 is not supported" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "PlutusScriptV1 is not supported" in exc_value, exc_value

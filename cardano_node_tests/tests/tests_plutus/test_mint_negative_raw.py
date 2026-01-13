@@ -182,11 +182,12 @@ class TestMintingNegative:
         )
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        str_err = str(excinfo.value)
-        assert (
-            "MissingRequiredSigners" in str_err  # on node version < 8.8.0
-            or "MissingVKeyWitnessesUTXOW" in str_err
-        ), str_err
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "MissingRequiredSigners" in exc_value  # on node version < 8.8.0
+                or "MissingVKeyWitnessesUTXOW" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -280,10 +281,12 @@ class TestMintingNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        err_str = str(excinfo.value)
-        assert (
-            "The budget was overspent" in err_str or "due to overspending the budget" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "The budget was overspent" in exc_value
+                or "due to overspending the budget" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -378,7 +381,9 @@ class TestMintingNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        assert "FeeTooSmallUTxO" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "FeeTooSmallUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(data=st.data())
@@ -495,8 +500,9 @@ class TestMintingNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        err_str = str(excinfo.value)
-        assert "ExUnitsTooBigUTxO" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ExUnitsTooBigUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -602,8 +608,9 @@ class TestMintingNegative:
         )
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        err_str = str(excinfo.value)
-        assert "(PlutusFailure" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "PlutusFailure" in exc_value, exc_value
 
 
 class TestNegativeCollateral:
@@ -707,7 +714,9 @@ class TestNegativeCollateral:
         # It should NOT be possible to mint with an invalid collateral
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        assert "NoCollateralInputs" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "NoCollateralInputs" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -810,4 +819,6 @@ class TestNegativeCollateral:
         # It should NOT be possible to mint with a collateral with insufficient funds
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        assert "InsufficientCollateral" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "InsufficientCollateral" in exc_value, exc_value

@@ -795,14 +795,16 @@ class TestMinting:
 
                 with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
                     _mint_tokens()
-                err_msg = str(excinfo.value)
-                assert (
-                    # On cardano-node 10.0.0+
-                    re.search(rf"MaxTxSizeUTxO .* {max_tx_size}", err_msg)
-                    # On older cardano-node releases
-                    or "OutputTooBigUTxO" in err_msg  # For `build-raw` command
-                    or "balance of the transaction is negative" in err_msg  # For `build` command
-                ), "Unexpected error message"
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert (
+                        # On cardano-node 10.0.0+
+                        re.search(rf"MaxTxSizeUTxO .* {max_tx_size}", exc_value)
+                        # On older cardano-node releases
+                        or "OutputTooBigUTxO" in exc_value  # For `build-raw` command
+                        or "balance of the transaction is negative"
+                        in exc_value  # For `build` command
+                    ), exc_value
             finally:
                 logging.disable(logging.NOTSET)
                 # Wait for the log files to be written
@@ -949,14 +951,16 @@ class TestMinting:
 
                 with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
                     _mint_tokens()
-                err_msg = str(excinfo.value)
-                assert (
-                    # On cardano-node 10.0.0+
-                    re.search(rf"MaxTxSizeUTxO .* {max_tx_size}", err_msg)
-                    # On older cardano-node releases
-                    or "OutputTooBigUTxO" in err_msg  # For `build-raw` command
-                    or "balance of the transaction is negative" in err_msg  # For `build` command
-                ), "Unexpected error message"
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert (
+                        # On cardano-node 10.0.0+
+                        re.search(rf"MaxTxSizeUTxO .* {max_tx_size}", exc_value)
+                        # On older cardano-node releases
+                        or "OutputTooBigUTxO" in exc_value  # For `build-raw` command
+                        or "balance of the transaction is negative"
+                        in exc_value  # For `build` command
+                    ), "Unexpected error message"
             finally:
                 logging.disable(logging.NOTSET)
                 # Wait for the log files to be written
@@ -1436,7 +1440,9 @@ class TestPolicies:
                 invalid_before=1,
                 invalid_hereafter=before_slot,
             )
-        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "OutsideValidityIntervalUTxO" in exc_value, exc_value
 
         # Token minting - invalid range, slot is already in the past
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1447,7 +1453,9 @@ class TestPolicies:
                 invalid_before=1,
                 invalid_hereafter=before_slot + 1,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
@@ -1510,7 +1518,9 @@ class TestPolicies:
                 invalid_before=1,
                 invalid_hereafter=before_slot + 1,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
@@ -1573,7 +1583,9 @@ class TestPolicies:
                 invalid_before=after_slot,
                 invalid_hereafter=after_slot + 100,
             )
-        assert "OutsideValidityIntervalUTxO" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "OutsideValidityIntervalUTxO" in exc_value, exc_value
 
         # Token minting - invalid range, slot is in the future
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -1584,7 +1596,9 @@ class TestPolicies:
                 invalid_before=1,
                 invalid_hereafter=after_slot,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
@@ -1647,7 +1661,9 @@ class TestPolicies:
                 invalid_before=1,
                 invalid_hereafter=after_slot,
             )
-        assert "ScriptWitnessNotValidatingUTXOW" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         mint_utxos = cluster.g_query.get_utxo(address=token_mint_addr.address)
         for t in tokens_to_mint:
@@ -2097,9 +2113,12 @@ class TestTransfer:
                     fee_buffer=2_000_000,
                     tx_files=tx_files,
                 )
-            assert expected_error in str(excinfo.value)
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert expected_error in exc_value, exc_value
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             expected_error = "OutputTooSmallUTxO"
+            err_str = ""
 
             try:
                 cluster.g_transaction.send_tx(
@@ -2109,8 +2128,11 @@ class TestTransfer:
                     tx_files=tx_files,
                 )
             except clusterlib.CLIError as err:
-                if expected_error not in str(err):
-                    raise
+                err_str = str(err)
+
+            if err_str:
+                with common.allow_unstable_error_messages():
+                    assert expected_error in err_str, err_str
         elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
             expected_error = "Minimum required UTxO:"
 
@@ -2121,7 +2143,9 @@ class TestTransfer:
                     txouts=txouts,
                     tx_files=tx_files,
                 )
-            assert expected_error in str(excinfo.value)
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert expected_error in exc_value, exc_value
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
@@ -2179,14 +2203,15 @@ class TestTransfer:
                 finally:
                     logging.disable(logging.NOTSET)
 
-            exc_val = str(excinfo.value)
-            assert (
-                "The transaction does not balance in its use of assets"
-                in exc_val  # In node 10.4.0+
-                or "Non-Ada assets are unbalanced" in exc_val
-                or "Illegal Value in TxOut" in exc_val  # In node 9.2.0+
-                or re.search(r"Negative quantity \(-[0-9]*\) in transaction output", exc_val)
-            ), exc_val
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert (
+                    "The transaction does not balance in its use of assets"
+                    in exc_value  # In node 10.4.0+
+                    or "Non-Ada assets are unbalanced" in exc_value
+                    or "Illegal Value in TxOut" in exc_value  # In node 9.2.0+
+                    or re.search(r"Negative quantity \(-[0-9]*\) in transaction output", exc_value)
+                ), exc_value
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 try:
@@ -2201,8 +2226,9 @@ class TestTransfer:
                 finally:
                     logging.disable(logging.NOTSET)
 
-            exc_val = str(excinfo.value)
-            assert "ValueNotConservedUTxO" in exc_val, exc_val
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "ValueNotConservedUTxO" in exc_value, exc_value
 
         elif build_method == clusterlib_utils.BuildMethods.BUILD_EST:
             with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -2217,11 +2243,11 @@ class TestTransfer:
                 finally:
                     logging.disable(logging.NOTSET)
 
-            exc_val = str(excinfo.value)
+            exc_value = str(excinfo.value)
             # TODO: refine once CLI issue #1199 is fixed
             # At this point we don't know the exact error string from build-estimate.
             # Fail explicitly so we can capture and refine later.
-            pytest.fail(f"Unexpected error for build-estimate (CLI issue #1199): {exc_val}")
+            pytest.fail(f"Unexpected error for build-estimate (CLI issue #1199): {exc_value}")
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
@@ -2329,12 +2355,13 @@ class TestNegative:
                 new_tokens=[token_mint],
                 temp_template=f"{temp_template}_mint",
             )
-        exc_val = str(excinfo.value)
-        assert (
-            "the bytestring should be no longer than 32 bytes long" in exc_val
-            or "name exceeds 32 bytes" in exc_val
-            or "expecting hexadecimal digit" in exc_val
-        ), exc_val
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "the bytestring should be no longer than 32 bytes long" in exc_value
+                or "name exceeds 32 bytes" in exc_value
+                or "expecting hexadecimal digit" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(token_amount=st.integers(min_value=MAX_TOKEN_AMOUNT + 1))
@@ -2374,9 +2401,9 @@ class TestNegative:
                 new_tokens=[token_mint],
                 temp_template=f"{temp_template}_mint",
             )
-
-        exc_val = str(excinfo.value)
-        assert "the number exceeds the max bound" in exc_val, exc_val
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "the number exceeds the max bound" in exc_value, exc_value
 
 
 @common.SKIPIF_WRONG_ERA

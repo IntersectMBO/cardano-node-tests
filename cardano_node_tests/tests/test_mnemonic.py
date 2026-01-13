@@ -439,8 +439,9 @@ class TestNegativeMnemonic:
         common.get_test_id(cluster)
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_key.gen_mnemonic(size=size)  # type: ignore
-        err_value = str(excinfo.value)
-        assert "Invalid mnemonic size" in err_value
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Invalid mnemonic size" in exc_value, exc_value
 
     @common.hypothesis_settings(max_examples=500)
     @hypothesis.given(bad_case=invalid_mnemonic_files)
@@ -461,11 +462,12 @@ class TestNegativeMnemonic:
                 mnemonic_file=target,
                 account_number=0,
             )
-        err_value = str(excinfo.value)
-        assert (
-            "Error reading mnemonic file" in err_value
-            or "Error converting the mnemonic into a key" in err_value
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Error reading mnemonic file" in exc_value
+                or "Error converting the mnemonic into a key" in exc_value
+            )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("key_type", KEY_TYPES, ids=KEY_TYPE_IDS)
@@ -507,5 +509,8 @@ class TestNegativeMnemonic:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_key.derive_from_mnemonic(**kwargs)
-        err_value = str(excinfo.value)
-        assert "unexpected" in err_value or "Error converting the mnemonic into a key" in err_value
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "unexpected" in exc_value or "Error converting the mnemonic into a key" in exc_value
+            ), exc_value

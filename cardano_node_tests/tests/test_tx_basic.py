@@ -1747,8 +1747,9 @@ class TestIncrementalSigning:
                 tx_file=tx_signed,
                 txins=tx_output.txins,
             )
-        err_str = str(excinfo.value)
-        assert "MissingVKeyWitnessesUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
         # Incrementally sign the already signed Tx with the required skey
         tx_signed = cluster.g_transaction.sign_tx(

@@ -198,11 +198,12 @@ class TestNegativeDatum:
                 amount=amount,
             )
 
-        err_str = str(excinfo.value)
-        assert (
-            "NonOutputSupplimentaryDatums" in err_str
-            or "NotAllowedSupplementalDatums" in err_str  # on node version >= 8.6.0
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "NonOutputSupplimentaryDatums" in exc_value
+                or "NotAllowedSupplementalDatums" in exc_value  # on node version >= 8.6.0
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
@@ -247,9 +248,9 @@ class TestNegativeDatum:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-
-        err_str = str(excinfo.value)
-        assert "JSON object expected. Unexpected value" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "JSON object expected. Unexpected value" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -307,11 +308,12 @@ class TestNegativeDatum:
                 amount=amount,
             )
 
-        err_str = str(excinfo.value)
-        assert (
-            "NonOutputSupplimentaryDatums" in err_str
-            or "NotAllowedSupplementalDatums" in err_str  # on node version >= 8.6.0
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "NonOutputSupplimentaryDatums" in exc_value
+                or "NotAllowedSupplementalDatums" in exc_value  # on node version >= 8.6.0
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -400,9 +402,9 @@ class TestNegativeDatum:
                 amount=amount_redeem,
                 tx_files=tx_files_redeem,
             )
-
-        err_str = str(excinfo.value)
-        assert "ExtraneousScriptWitnessesUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ExtraneousScriptWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.binary(min_size=65))

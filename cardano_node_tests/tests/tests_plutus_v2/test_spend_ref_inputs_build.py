@@ -540,17 +540,19 @@ class TestNegativeReadonlyReferenceInputs:
                 script_txins=plutus_txins,
                 change_address=payment_addrs[0].address,
             )
-        err_str = str(excinfo.value)
-        assert (
-            # TODO: in 1.35.3 and older - cardano-node issue #4012
-            f"following tx input(s) were not present in the UTxO: \n{reference_input[0].utxo_hash}"
-            in err_str
-            or re.search(
-                "TranslationLogicMissingInput .*unTxId = SafeHash "
-                f'"{reference_input[0].utxo_hash}"',
-                err_str,
-            )
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                # TODO: in 1.35.3 and older - cardano-node issue #4012
+                "following tx input(s) were not present in the UTxO:"
+                f" \n{reference_input[0].utxo_hash}"
+                in exc_value
+                or re.search(
+                    "TranslationLogicMissingInput .*unTxId = SafeHash "
+                    f'"{reference_input[0].utxo_hash}"',
+                    exc_value,
+                )
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -687,5 +689,6 @@ class TestNegativeReadonlyReferenceInputs:
                     str(cluster.network_magic),
                 ]
             )
-        err_str = str(excinfo.value)
-        assert re.search(r"Missing: *\(--tx-in TX[_-]IN", err_str), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert re.search(r"Missing: *\(--tx-in TX[_-]IN", exc_value), exc_value
