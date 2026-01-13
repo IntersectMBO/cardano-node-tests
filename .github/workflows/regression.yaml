@@ -28,14 +28,6 @@ on:
         - not long
         - conway only
         default: all
-      topology:
-        type: choice
-        description: "Network topology"
-        options:
-        - p2p
-        - legacy
-        - mixed
-        default: p2p
       utxo_backend:
         type: choice
         description: "UTxO backend"
@@ -45,6 +37,10 @@ on:
         - disk
         - disklmdb
         default: ""
+      allow_unstable_error_msgs:
+        type: boolean
+        default: false
+        description: "Allow unstable error messages"
       byron_cluster:
         type: boolean
         default: false
@@ -68,8 +64,8 @@ jobs:
       cli_rev: ${{ inputs.cli_rev }}
       cluster_era: ${{ inputs.cluster_era }}
       markexpr: ${{ inputs.markexpr }}
-      topology: ${{ inputs.topology }}
       utxo_backend: ${{ inputs.utxo_backend }}
+      allow_unstable_error_msgs: ${{ inputs.allow_unstable_error_msgs }}
       byron_cluster: ${{ inputs.byron_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}

@@ -23,15 +23,7 @@ on:
         required: false
         type: string
         default: ""
-      tx_era:
-        required: false
-        type: string
-        default: ""
       markexpr:
-        required: false
-        type: string
-        default: ""
-      topology:
         required: false
         type: string
         default: ""
@@ -39,6 +31,10 @@ on:
         required: false
         type: string
         default: ""
+      allow_unstable_error_msgs:
+        required: false
+        type: boolean
+        default: false
       byron_cluster:
         required: false
         type: boolean
@@ -92,10 +88,9 @@ jobs:
           echo "CARDANO_CLI_REV=${{ inputs.cli_rev }}" >> .github_ci_env
           echo "DBSYNC_REV=${{ inputs.dbsync_rev }}" >> .github_ci_env
           echo "CLUSTER_ERA=${{ inputs.cluster_era }}" >> .github_ci_env
-          echo "TX_ERA=${{ inputs.tx_era }}" >> .github_ci_env
           echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
-          echo "CI_TOPOLOGY=${{ inputs.topology }}" >> .github_ci_env
           echo "UTXO_BACKEND=${{ inputs.utxo_backend }}" >> .github_ci_env
+          echo "ALLOW_UNSTABLE_ERROR_MESSAGES=${{ inputs.allow_unstable_error_msgs }}" >> .github_ci_env
           echo "CI_BYRON_CLUSTER=${{ inputs.byron_cluster }}" >> .github_ci_env
           echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
           echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env
