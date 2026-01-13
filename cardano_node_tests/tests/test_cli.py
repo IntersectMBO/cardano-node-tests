@@ -404,10 +404,9 @@ class TestAddressInfo:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_address.get_address_info(address=address)
-
-        err_str = str(excinfo.value)
-
-        assert "Invalid address" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Invalid address" in exc_value, exc_value
 
 
 class TestAddressBuild:
@@ -535,10 +534,9 @@ class TestAddressBuild:
                 payment_vkey_file=vkey_file,
                 payment_script_file=script_file,
             )
-
-        err_str = str(excinfo.value)
-
-        assert "Invalid key" in err_str or "Syntax error in script" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Invalid key" in exc_value or "Syntax error in script" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -597,14 +595,13 @@ class TestAddressBuild:
                 stake_script_file=script_file,
                 stake_address=key if option == "address" else None,
             )
-
-        err_str = str(excinfo.value)
-
-        assert (
-            "Invalid key" in err_str
-            or "Syntax error in script" in err_str
-            or "invalid address" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Invalid key" in exc_value
+                or "Syntax error in script" in exc_value
+                or "invalid address" in exc_value
+            ), exc_value
 
 
 class TestAddressKeyHash:
@@ -665,10 +662,9 @@ class TestAddressKeyHash:
                 payment_vkey=vkey if option == "vkey" else None,
                 payment_vkey_file=vkey_file,
             )
-
-        err_str = str(excinfo.value)
-
-        assert "Invalid key" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Invalid key" in exc_value, exc_value
 
 
 class TestKey:
@@ -737,12 +733,12 @@ class TestKey:
             cluster.g_key.gen_non_extended_verification_key(
                 key_name=temp_template, extended_verification_key_file=payment_keys.skey_file
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            "Error: Invalid key." in err_str
-            or "TextEnvelope type error:  Expected one of:" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Error: Invalid key." in exc_value
+                or "TextEnvelope type error:  Expected one of:" in exc_value
+            ), exc_value
 
 
 class TestQueryUTxO:
@@ -873,16 +869,15 @@ class TestQueryUTxO:
                     *cluster.magic_args,
                 ]
             )
-
-        err_str = str(excinfo.value)
-
-        if invalid_param == "tx_hash":
-            assert (
-                "expecting hexadecimal digit" in err_str
-                or "expecting transaction id (hexadecimal)" in err_str
-            ), err_str
-        else:
-            assert "expecting digit" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            if invalid_param == "tx_hash":
+                assert (
+                    "expecting hexadecimal digit" in exc_value
+                    or "expecting transaction id (hexadecimal)" in exc_value
+                ), exc_value
+            else:
+                assert "expecting digit" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(filter_str=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
@@ -905,9 +900,9 @@ class TestQueryUTxO:
                     *cluster.magic_args,
                 ]
             )
-
-        err_str = str(excinfo.value)
-        assert "invalid address" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "invalid address" in exc_value, exc_value
 
 
 class TestStakeAddressKeyHash:
@@ -968,10 +963,9 @@ class TestStakeAddressKeyHash:
                 stake_vkey=vkey if option == "vkey" else None,
                 stake_vkey_file=vkey_file,
             )
-
-        err_str = str(excinfo.value)
-
-        assert "Invalid key" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Invalid key" in exc_value, exc_value
 
 
 class TestAdvancedQueries:
@@ -1427,9 +1421,9 @@ class TestQuerySlotNumber:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.query_cli(["slot-number", timestamp_str])
-        err_str = str(excinfo.value)
-
-        assert "parseTimeOrError" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "parseTimeOrError" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("time_val", ("above", "bellow"))
@@ -1451,6 +1445,6 @@ class TestQuerySlotNumber:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_query.get_slot_number(timestamp=timestamp)
-        err_str = str(excinfo.value)
-
-        assert "PastHorizon" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "PastHorizon" in exc_value, exc_value

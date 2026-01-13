@@ -681,7 +681,9 @@ class TestLocking:
             amount=amount,
             expect_failure=True,
         )
-        assert "PlutusFailure" in err, err
+        assert err, "The script spending was expected to fail."
+        with common.allow_unstable_error_messages():
+            assert "PlutusFailure" in err, err
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -998,8 +1000,8 @@ class TestLocking:
                     plutus_op=plutus_op,
                     amount=amount,
                 )
-            err_str = str(excinfo.value)
-            assert any(e in err_str for e in exp_errors), err_str
+            exc_value = str(excinfo.value)
+            assert any(e in exc_value for e in exp_errors), exc_value
         else:
             spend_raw._spend_locked_txin(
                 temp_template=temp_template,

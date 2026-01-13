@@ -92,5 +92,6 @@ class TestCompatibility:
                 submit_tx=False,
             )
 
-        err_str = str(excinfo.value)
-        assert "PlutusScriptV2 is not supported" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "PlutusScriptV2 is not supported" in exc_value, exc_value

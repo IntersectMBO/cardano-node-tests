@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import string
 import time
@@ -603,3 +604,19 @@ def is_fee_in_interval(fee: float, expected_fee: float, frac: float = 0.1) -> bo
     if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
         return True
     return helpers.is_in_interval(fee, expected_fee, frac=frac)
+
+
+@contextlib.contextmanager
+def allow_unstable_error_messages() -> tp.Iterator[None]:
+    """Catch AssertionError and either log it or raise it.
+
+    Used in tests where error messages can vary between node/CLI versions.
+    """
+    if not configuration.ALLOW_UNSTABLE_ERROR_MESSAGES:
+        yield
+        return
+
+    try:
+        yield
+    except AssertionError:
+        LOGGER.exception("AssertionError suppressed")

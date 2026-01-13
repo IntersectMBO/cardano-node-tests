@@ -463,9 +463,9 @@ class TestBuildMinting:
                     txouts=txouts_step2,
                     mint=plutus_mint_data,
                 )
-            err_str = str(excinfo.value)
-
-            assert "Reference inputs do not match redeemer" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "Reference inputs do not match redeemer" in exc_value, exc_value
             return
 
         tx_output_step2 = cluster.g_transaction.build_tx(
@@ -591,9 +591,9 @@ class TestBuildMinting:
                     txouts=txouts_step2,
                     mint=plutus_mint_data,
                 )
-            err_str = str(excinfo.value)
-
-            assert "Unexpected reference script at each reference input" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "Unexpected reference script at each reference input" in exc_value, exc_value
             return
 
         tx_output_step2 = cluster.g_transaction.build_tx(
@@ -736,8 +736,9 @@ class TestBuildMinting:
                     mint=plutus_mint_data,
                     readonly_reference_txins=reference_input,
                 )
-            err_str = str(excinfo.value)
-            assert "Unexpected inline datum at each reference input" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "Unexpected inline datum at each reference input" in exc_value, exc_value
             return
 
         tx_output_step2 = cluster.g_transaction.build_tx(

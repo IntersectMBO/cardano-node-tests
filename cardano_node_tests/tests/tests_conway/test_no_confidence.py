@@ -220,8 +220,9 @@ class TestNoConfidence:
                     approve_drep=True,
                     approve_spo=True,
                 )
-            err_str = str(excinfo.value)
-            assert "CommitteeVoter" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "CommitteeVoter" in exc_value, exc_value
 
             # Check ratification
             rat_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 1, padding_seconds=5)
@@ -295,8 +296,9 @@ class TestNoConfidence:
                     approve_drep=False,
                     approve_spo=False,
                 )
-            err_str = str(excinfo.value)
-            assert "(GovActionsDoNotExist" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "GovActionsDoNotExist" in exc_value, exc_value
 
             reqc.cip041.start(url=helpers.get_vcs_link())
             governance_setup.reinstate_committee(
@@ -392,8 +394,9 @@ class TestNoConfidence:
                     approve_cc=True,
                     approve_drep=True,
                 )
-            err_str = str(excinfo.value)
-            assert "(VotersDoNotExist" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "VotersDoNotExist" in exc_value, exc_value
 
             # Make sure we have enough time to submit the votes in one epoch
             clusterlib_utils.wait_for_epoch_interval(

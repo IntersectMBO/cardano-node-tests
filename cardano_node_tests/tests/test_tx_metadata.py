@@ -69,8 +69,9 @@ class TestMetadata:
                 tx_name="wrong_json_format",
                 tx_files=tx_files,
             )
-        str_err = str(excinfo.value)
-        assert "The JSON metadata top level must be a map" in str_err, str_err
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "The JSON metadata top level must be a map" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -99,8 +100,9 @@ class TestMetadata:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-        str_err = str(excinfo.value)
-        assert "The JSON metadata top level must be a map" in str_err, str_err
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "The JSON metadata top level must be a map" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -126,12 +128,13 @@ class TestMetadata:
                 tx_name="invalid_metadata",
                 tx_files=tx_files,
             )
-        str_err = str(excinfo.value)
-        assert (
-            "expecting record key literal" in str_err  # cardano-cli >= 10.11.1.1
-            or "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
-            or "JSON parse error:" in str_err
-        ), str_err
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "expecting record key literal" in exc_value  # cardano-cli >= 10.11.1.1
+                or "Failed reading: satisfy" in exc_value  # cardano-node < 8.7.0
+                or "JSON parse error:" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -161,12 +164,13 @@ class TestMetadata:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-        str_err = str(excinfo.value)
-        assert (
-            "expecting record key literal" in str_err  # cardano-cli >= 10.11.1.1
-            or "Failed reading: satisfy" in str_err  # cardano-node < 8.7.0
-            or "JSON parse error:" in str_err
-        ), str_err
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "expecting record key literal" in exc_value  # cardano-cli >= 10.11.1.1
+                or "Failed reading: satisfy" in exc_value  # cardano-node < 8.7.0
+                or "JSON parse error:" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -189,10 +193,11 @@ class TestMetadata:
                 tx_name="too_long_metadata",
                 tx_files=tx_files,
             )
-        str_err = str(excinfo.value)
-        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err, (
-            str_err
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Text string metadata value must consist of at most 64 UTF8 bytes" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -220,10 +225,11 @@ class TestMetadata:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-        str_err = str(excinfo.value)
-        assert "Text string metadata value must consist of at most 64 UTF8 bytes" in str_err, (
-            str_err
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Text string metadata value must consist of at most 64 UTF8 bytes" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke

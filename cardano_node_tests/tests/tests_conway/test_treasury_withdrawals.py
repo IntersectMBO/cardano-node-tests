@@ -191,8 +191,9 @@ class TestTreasuryWithdrawals:
                     tx_files=tx_files_action,
                     deposit=actions_deposit_combined + stake_deposit_amt,
                 )
-            err_str = str(excinfo.value)
-            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "DisallowedProposalDuringBootstrap" in exc_value, exc_value
             reqc.cip026_03.success()
             return
 
@@ -205,10 +206,12 @@ class TestTreasuryWithdrawals:
                     build_method=clusterlib_utils.BuildMethods.BUILD,
                     tx_files=tx_files_action,
                 )
-            err_str = str(excinfo.value)
-            assert (
-                "Stake credential specified in the proposal is not registered on-chain" in err_str
-            ), err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert (
+                    "Stake credential specified in the proposal is not registered on-chain"
+                    in exc_value
+                ), exc_value
 
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -349,8 +352,9 @@ class TestTreasuryWithdrawals:
         # Check that SPOs cannot vote on treasury withdrawal action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="with_spos", add_spo_votes=True)
-        err_str = str(excinfo.value)
-        assert "StakePoolVoter" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "StakePoolVoter" in exc_value, exc_value
 
         # Vote & disapprove the action
         _cast_vote(approve=False, vote_id="no")
@@ -397,8 +401,9 @@ class TestTreasuryWithdrawals:
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
             _cast_vote(approve=False, vote_id="enacted")
-        err_str = str(excinfo.value)
-        assert "(GovActionsDoNotExist" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "GovActionsDoNotExist" in exc_value, exc_value
 
         reqc.cip079.start(url=helpers.get_vcs_link())
         treasury_finish = clusterlib_utils.get_chain_account_state(
@@ -512,8 +517,9 @@ class TestTreasuryWithdrawals:
                     tx_files=tx_files_action,
                     deposit=actions_deposit_combined + stake_deposit_amt,
                 )
-            err_str = str(excinfo.value)
-            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "DisallowedProposalDuringBootstrap" in exc_value, exc_value
             return
 
         # Make sure we have enough time to submit the proposals in one epoch
@@ -812,7 +818,8 @@ class TestMIRCerts:
                 tx_files=tx_files,
             )
         err_build = str(excinfo.value)
-        assert "TextEnvelope type error:" in err_build, err_build
+        with common.allow_unstable_error_messages():
+            assert "TextEnvelope type error:" in err_build, err_build
 
         # The Tx can be build as Babbage Tx using `build-raw`, but cannot be submitted.
         # TODO: convert to use `compatible babbage transaction signed-transaction`
@@ -836,6 +843,9 @@ class TestMIRCerts:
             with pytest.raises(clusterlib.CLIError) as excinfo:
                 cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=tx_output.txins)
             err_submit = str(excinfo.value)
-            assert "Error: The era of the node and the tx do not match." in err_submit, err_submit
+            with common.allow_unstable_error_messages():
+                assert "Error: The era of the node and the tx do not match." in err_submit, (
+                    err_submit
+                )
 
         reqc.cip070.success()

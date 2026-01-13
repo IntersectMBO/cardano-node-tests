@@ -274,13 +274,16 @@ class TestNegativeDatum:
                 issues.cli_800.finish_test()
 
         if not in_conway_plus:
+            assert err_str, "Expected error was not raised"
             if address_type == "script_address":
-                assert "txin does not have a script datum" in err_str, err_str
+                with common.allow_unstable_error_messages():
+                    assert "txin does not have a script datum" in err_str, err_str
             else:
-                assert (
-                    "not a Plutus script witnessed tx input" in err_str
-                    or "points to a script hash that is not known" in err_str
-                ), err_str
+                with common.allow_unstable_error_messages():
+                    assert (
+                        "not a Plutus script witnessed tx input" in err_str
+                        or "points to a script hash that is not known" in err_str
+                    ), err_str
 
         # Check expected fees
         expected_fee_fund = 199_087
@@ -325,9 +328,9 @@ class TestNegativeDatum:
                 plutus_op=plutus_op,
                 amount=100_000,
             )
-
-        err_str = str(excinfo.value)
-        assert "JSON object expected. Unexpected value" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "JSON object expected. Unexpected value" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -388,9 +391,11 @@ class TestNegativeDatum:
                 return
             issues.cli_800.finish_test()
 
-        assert (
-            "The Plutus script witness has the wrong datum (according to the UTxO)." in err_str
-        ), err_str
+        assert err_str, "Expected error was not raised"
+        with common.allow_unstable_error_messages():
+            assert (
+                "The Plutus script witness has the wrong datum (according to the UTxO)." in err_str
+            ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -478,9 +483,9 @@ class TestNegativeDatum:
                 amount=amount_redeem,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert "points to a script hash that is not known" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "points to a script hash that is not known" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.binary(min_size=65))

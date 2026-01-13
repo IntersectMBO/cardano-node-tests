@@ -147,5 +147,6 @@ class TestNegativeCollateralOutput:
         # It should NOT be possible to mint with an unbalanced total collateral
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        err_str = str(excinfo.value)
-        assert "IncorrectTotalCollateralField" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "IncorrectTotalCollateralField" in exc_value, exc_value

@@ -716,8 +716,9 @@ class TestNegativeReferenceScripts:
                 amount=amount,
                 redeem_cost=redeem_cost,
             )
-        err_str = str(excinfo.value)
-        assert "Syntax error in script" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Syntax error in script" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -864,16 +865,16 @@ class TestNegativeReferenceScripts:
                 tx_file=tx_signed_redeem,
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
-        err_str = str(excinfo.value)
+        exc_value = str(excinfo.value)
         script2_hash = helpers.decode_bech32(bech32=script_address_2)[2:]
 
         if not (
-            rf"ScriptHash \"{script2_hash}\") fails" in err_str  # node < 8.10.0
-            or f'The script hash is:ScriptHash \\"{script2_hash}\\"' in err_str
+            rf"ScriptHash \"{script2_hash}\") fails" in exc_value  # node < 8.10.0
+            or f'The script hash is:ScriptHash \\"{script2_hash}\\"' in exc_value
         ):
             # Try matching the error message with base64 encoded binary script instead
             script2_base64 = clusterlib_utils.get_plutus_b64(script_file=plutus_op2.script_file)
-            assert rf"script failed:\n\"{script2_base64}\"" in err_str, err_str
+            assert rf"script failed:\n\"{script2_base64}\"" in exc_value, exc_value
             issues.ledger_3731.finish_test()
 
     @allure.link(helpers.get_vcs_link())
@@ -964,11 +965,12 @@ class TestNegativeReferenceScripts:
                 tx_file=tx_signed_redeem,
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
-        err_str = str(excinfo.value)
-        assert (
-            "ReferenceInputsNotSupported" in err_str
-            or "InlineDatumsNotSupported" in err_str  # in Conway
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "ReferenceInputsNotSupported" in exc_value
+                or "InlineDatumsNotSupported" in exc_value  # in Conway
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1114,11 +1116,12 @@ class TestNegativeReferenceScripts:
                 tx_file=tx_signed_redeem,
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
-        err_str = str(excinfo.value)
-        assert (
-            "ReferenceInputsNotSupported" in err_str
-            or "InlineDatumsNotSupported" in err_str  # in Conway
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "ReferenceInputsNotSupported" in exc_value
+                or "InlineDatumsNotSupported" in exc_value  # in Conway
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1219,5 +1222,6 @@ class TestNegativeReferenceScripts:
                 tx_file=tx_signed_redeem,
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
-        err_str = str(excinfo.value)
-        assert "ByronTxOutInContext" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ByronTxOutInContext" in exc_value, exc_value

@@ -493,11 +493,12 @@ class TestDelegateAddr:
                 tx_name=f"{temp_template}_dereg_fail",
                 tx_files=tx_files_deregister,
             )
-        err_msg = str(excinfo.value)
-        assert (
-            "StakeKeyNonZeroAccountBalanceDELEG" in err_msg
-            or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in err_msg
-        ), err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "StakeKeyNonZeroAccountBalanceDELEG" in exc_value
+                or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in exc_value
+            ), exc_value
 
         src_payment_balance = cluster.g_query.get_address_balance(src_address)
         reward_balance = cluster.g_query.get_stake_addr_info(
@@ -664,11 +665,12 @@ class TestDelegateAddr:
                 tx_files=tx_files_deregister,
                 complex_certs=[dereg_cert_script],
             )
-        err_msg = str(excinfo.value)
-        assert (
-            "StakeKeyNonZeroAccountBalanceDELEG" in err_msg
-            or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in err_msg
-        ), err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "StakeKeyNonZeroAccountBalanceDELEG" in exc_value
+                or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in exc_value
+            ), exc_value
 
         src_payment_balance = cluster.g_query.get_address_balance(src_address)
         reward_balance = cluster.g_query.get_stake_addr_info(
@@ -1020,11 +1022,12 @@ class TestNegative:
                 stake_pool_id=pool_id,
                 always_abstain=True,
             )
-        err_msg = str(excinfo.value)
-        assert (
-            "Expected: StakeVerificationKeyShelley" in err_msg
-            or "MissingVKeyWitnessesUTXOW" in err_msg
-        ), err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "Expected: StakeVerificationKeyShelley" in exc_value
+                or "MissingVKeyWitnessesUTXOW" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1073,8 +1076,9 @@ class TestNegative:
                 tx_name=f"{temp_template}_deleg",
                 tx_files=tx_files,
             )
-        err_msg = str(excinfo.value)
-        assert "MissingVKeyWitnessesUTXOW" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD_NO_EST
@@ -1121,10 +1125,12 @@ class TestNegative:
                 witness_override=len(tx_files.signing_key_files),
             )
 
-        err_msg = str(excinfo.value)
-        assert (
-            "StakeDelegationImpossibleDELEG" in err_msg or "StakeKeyNotRegisteredDELEG" in err_msg
-        ), err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "StakeDelegationImpossibleDELEG" in exc_value
+                or "StakeKeyNotRegisteredDELEG" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD_NO_EST
@@ -1190,10 +1196,12 @@ class TestNegative:
                 witness_override=len(tx_files.signing_key_files),
             )
 
-        err_msg = str(excinfo.value)
-        assert (
-            "StakeDelegationImpossibleDELEG" in err_msg or "StakeKeyNotRegisteredDELEG" in err_msg
-        ), err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "StakeDelegationImpossibleDELEG" in exc_value
+                or "StakeKeyNotRegisteredDELEG" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1244,8 +1252,9 @@ class TestNegative:
                 tx_name=f"{temp_template}_deleg",
                 tx_files=tx_files,
             )
-        err_msg = str(excinfo.value)
-        assert (
-            "DelegateeNotRegisteredDELEG" in err_msg  # Before cardano-node 10.0.0
-            or "DelegateeStakePoolNotRegisteredDELEG" in err_msg
-        ), err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "DelegateeNotRegisteredDELEG" in exc_value  # Before cardano-node 10.0.0
+                or "DelegateeStakePoolNotRegisteredDELEG" in exc_value
+            ), exc_value

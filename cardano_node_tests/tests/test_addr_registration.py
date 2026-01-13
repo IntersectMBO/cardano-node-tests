@@ -536,8 +536,9 @@ class TestNegative:
                 deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
                 stake_vkey_file=pool_users[0].payment.vkey_file,
             )
-        err_msg = str(excinfo.value)
-        assert "Expected: StakeVerificationKeyShelley" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Expected: StakeVerificationKeyShelley" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -574,8 +575,9 @@ class TestNegative:
             cluster.g_transaction.send_tx(
                 src_address=user_payment.address, tx_name=temp_template, tx_files=tx_files
             )
-        err_msg = str(excinfo.value)
-        assert "MissingVKeyWitnessesUTXOW" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD_NO_EST
@@ -638,8 +640,9 @@ class TestNegative:
                     witness_count_add=len(tx_files.signing_key_files),
                 )
 
-        err_msg = str(excinfo.value)
-        assert "StakeKeyNotRegisteredDELEG" in err_msg, err_msg
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "StakeKeyNotRegisteredDELEG" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD_NO_EST
@@ -768,8 +771,9 @@ class TestNegative:
                     tx_files=tx_files_script,
                     signing_key_files=signing_key_files,
                 )
-            err_msg = str(excinfo.value)
-            assert "MissingScriptWitnessesUTXOW" in err_msg, err_msg
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "MissingScriptWitnessesUTXOW" in exc_value, exc_value
 
         # Scenario2: One skey is missing when witnesing the Tx
         elif issue == "missing_skey":
@@ -783,8 +787,9 @@ class TestNegative:
                     complex_certs=[reg_cert_script],
                     signing_key_files=signing_key_files[:-1],
                 )
-            err_msg = str(excinfo.value)
-            assert "ScriptWitnessNotValidatingUTXOW" in err_msg, err_msg
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
         else:
             err = f"Invalid issue: {issue}"

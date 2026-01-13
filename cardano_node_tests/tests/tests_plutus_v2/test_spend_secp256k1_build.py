@@ -319,10 +319,10 @@ class TestSECP256k1:
                 script_txins=plutus_txins,
                 change_address=payment_addrs[0].address,
             )
-        err_str = str(excinfo.value)
+        exc_value = str(excinfo.value)
 
-        if "Negative numbers indicate the overspent budget" not in err_str:
+        if "Negative numbers indicate the overspent budget" not in exc_value:
             plutus_common.xfail_on_secp_error(
-                cluster_obj=cluster, algorithm=algorithm, err_msg=err_str
+                cluster_obj=cluster, algorithm=algorithm, err_msg=exc_value
             )
-            pytest.fail(f"Unexpected error message: {err_str}")
+            pytest.fail(f"Unexpected error message: {exc_value}")

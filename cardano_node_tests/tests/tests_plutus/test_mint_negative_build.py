@@ -179,11 +179,12 @@ class TestBuildMintingNegative:
                 tx_file=tx_signed_step2,
                 txins=mint_utxos,
             )
-        str_err = str(excinfo.value)
-        assert (
-            "MissingRequiredSigners" in str_err  # on node version < 8.8.0
-            or "MissingVKeyWitnessesUTXOW" in str_err
-        ), str_err
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "MissingRequiredSigners" in exc_value  # on node version < 8.8.0
+                or "MissingVKeyWitnessesUTXOW" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -268,14 +269,14 @@ class TestBuildMintingNegative:
                 txouts=txouts,
                 mint=plutus_mint_data,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            'Error in $: key "description" not found' in err_str  # In cli 10.1.1.0+
-            or "expected a script in the Plutus script language, but it is actually "
-            "using SimpleScriptLanguage"
-            in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                'Error in $: key "description" not found' in exc_value  # In cli 10.1.1.0+
+                or "expected a script in the Plutus script language, but it is actually "
+                "using SimpleScriptLanguage"
+                in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -349,15 +350,17 @@ class TestBuildMintingNegative:
             cluster.g_transaction.calculate_min_req_utxo(txouts=mint_txouts)
         min_req_utxo_error = str(excinfo.value)
 
-        assert (
-            "the bytestring should be no longer than 32 bytes long" in min_token_error
-            or "AssetName deserisalisation failed" in min_token_error
-        ), min_token_error
+        with common.allow_unstable_error_messages():
+            assert (
+                "the bytestring should be no longer than 32 bytes long" in min_token_error
+                or "AssetName deserisalisation failed" in min_token_error
+            ), min_token_error
 
-        assert (
-            "the bytestring should be no longer than 32 bytes long" in min_req_utxo_error
-            or "AssetName deserisalisation failed" in min_req_utxo_error
-        ), min_req_utxo_error
+        with common.allow_unstable_error_messages():
+            assert (
+                "the bytestring should be no longer than 32 bytes long" in min_req_utxo_error
+                or "AssetName deserisalisation failed" in min_req_utxo_error
+            ), min_req_utxo_error
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -457,8 +460,9 @@ class TestBuildMintingNegative:
                 mint=plutus_mint_data,
                 invalid_hereafter=None,  # Required validity interval is missing here
             )
-        err_str = str(excinfo.value)
-        assert (
-            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
-            or "Plutus script evaluation failed" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "following scripts have execution failures" in exc_value  # In cli 10.1.1.0+
+                or "Plutus script evaluation failed" in exc_value
+            ), exc_value

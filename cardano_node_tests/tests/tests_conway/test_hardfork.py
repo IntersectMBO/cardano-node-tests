@@ -162,8 +162,9 @@ class TestHardfork:
                 approve_drep=False,
                 approve_spo=False,
             )
-        err_str = str(excinfo.value)
-        assert "(DisallowedVotesDuringBootstrap ((DRepVoter" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "DisallowedVotesDuringBootstrap ((DRepVoter" in exc_value, exc_value
         reqc.cip026_04.success()
 
         # Vote & disapprove the action
@@ -270,8 +271,9 @@ class TestHardfork:
                 approve_drep=False,
                 approve_spo=False,
             )
-        err_str = str(excinfo.value)
-        assert "(GovActionsDoNotExist" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "GovActionsDoNotExist" in exc_value, exc_value
 
         # Check action view
         governance_utils.check_action_view(cluster_obj=cluster, action_data=hardfork_action)

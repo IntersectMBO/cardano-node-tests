@@ -125,8 +125,9 @@ class TestNegativeInlineDatum:
                 redeem_cost=redeem_cost,
                 use_inline_datum=True,
             )
-        err_str = str(excinfo.value)
-        assert "JSON object expected. Unexpected value" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "JSON object expected. Unexpected value" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -212,8 +213,9 @@ class TestNegativeInlineDatum:
                 tx_file=tx_signed_redeem,
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
-        err_str = str(excinfo.value)
-        assert "InlineDatumsNotSupported" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "InlineDatumsNotSupported" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_content=st.text(alphabet=string.ascii_letters, min_size=65))
@@ -349,8 +351,9 @@ class TestNegativeInlineDatum:
                 tx_file=tx_signed_redeem,
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
-        err_str = str(excinfo.value)
-        assert (
-            "NonOutputSupplimentaryDatums" in err_str
-            or "NotAllowedSupplementalDatums" in err_str  # on node version >= 8.6.0
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "NonOutputSupplimentaryDatums" in exc_value
+                or "NotAllowedSupplementalDatums" in exc_value  # on node version >= 8.6.0
+            ), exc_value

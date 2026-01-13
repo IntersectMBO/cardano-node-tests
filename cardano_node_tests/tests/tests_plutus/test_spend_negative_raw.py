@@ -162,7 +162,9 @@ class TestNegative:
             expect_failure=True,
         )
 
-        assert "ValidationTagMismatch (IsValid True)" in err, err
+        assert err, "Expected failure did not happen"
+        with common.allow_unstable_error_messages():
+            assert "ValidationTagMismatch (IsValid True)" in err, err
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -216,11 +218,12 @@ class TestNegative:
                 plutus_op=plutus_op2,
                 amount=amount,
             )
-        err_str = str(excinfo.value)
-        assert (
-            "(MissingScriptWitnessesUTXOW" in err_str
-            and " (ExtraneousScriptWitnessesUTXOW" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "(MissingScriptWitnessesUTXOW" in exc_value
+                and " (ExtraneousScriptWitnessesUTXOW" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -272,8 +275,9 @@ class TestNegative:
                 plutus_op=plutus_op2,
                 amount=amount,
             )
-        err_str = str(excinfo.value)
-        assert "(MissingScriptWitnessesUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingScriptWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -338,9 +342,9 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-
-        err_str = str(excinfo.value)
-        assert "CollateralContainsNonADA" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "CollateralContainsNonADA" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -392,9 +396,11 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        err_str = str(excinfo.value)
-        assert "transaction submit" in err_str, err_str
-        assert "ScriptsNotPaidUTxO" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "transaction submit" in exc_value, exc_value
+        with common.allow_unstable_error_messages():
+            assert "ScriptsNotPaidUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -451,9 +457,9 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-
-        err_str = str(excinfo.value)
-        assert "InsufficientCollateral" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "InsufficientCollateral" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -606,16 +612,16 @@ class TestNegative:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
-        err_str = str(excinfo.value)
+        exc_value = str(excinfo.value)
         script2_hash = helpers.decode_bech32(bech32=script_address2)[2:]
 
         if not (
-            rf"ScriptHash \"{script2_hash}\") fails" in err_str  # node < 8.10.0
-            or f'The script hash is:ScriptHash \\"{script2_hash}\\"' in err_str
+            rf"ScriptHash \"{script2_hash}\") fails" in exc_value  # node < 8.10.0
+            or f'The script hash is:ScriptHash \\"{script2_hash}\\"' in exc_value
         ):
             # Try matching the error message with base64 encoded binary script instead
             script2_base64 = clusterlib_utils.get_plutus_b64(script_file=plutus_op2.script_file)
-            assert rf"script failed:\n\"{script2_base64}\"" in err_str, err_str
+            assert rf"script failed:\n\"{script2_base64}\"" in exc_value, exc_value
             issues.ledger_3731.finish_test()
 
     @allure.link(helpers.get_vcs_link())
@@ -685,8 +691,9 @@ class TestNegative:
                 plutus_op=plutus_op,
                 amount=amount,
             )
-        err_str = str(excinfo.value)
-        assert "ExUnitsTooBigUTxO" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ExUnitsTooBigUTxO" in exc_value, exc_value
 
 
 class TestNegativeRedeemer:
@@ -1004,9 +1011,9 @@ class TestNegativeRedeemer:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
-
-        err_str = str(excinfo.value)
-        assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ValidationTagMismatch (IsValid True)" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
@@ -1179,9 +1186,9 @@ class TestNegativeRedeemer:
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
-
-        err_str = str(excinfo.value)
-        assert "ValidationTagMismatch (IsValid True)" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ValidationTagMismatch (IsValid True)" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(min_size=65))
@@ -1459,7 +1466,9 @@ class TestNegativeRedeemer:
             cost_per_unit=cost_per_unit,
             plutus_version=plutus_version,
         )
-        assert "Invalid JSON format" in err, err
+        assert err, "Expected failure when using invalid JSON format for redeemer"
+        with common.allow_unstable_error_messages():
+            assert "Invalid JSON format" in err, err
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(

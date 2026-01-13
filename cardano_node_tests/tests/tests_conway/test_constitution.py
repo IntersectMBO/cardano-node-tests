@@ -385,8 +385,9 @@ class TestConstitution:
                     constitution_hash=constitution_hash,
                     pool_user=pool_user_lg,
                 )
-            err_str = str(excinfo.value)
-            assert "(DisallowedProposalDuringBootstrap" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "DisallowedProposalDuringBootstrap" in exc_value, exc_value
             reqc.cip026_02.success()
             return
 
@@ -427,8 +428,9 @@ class TestConstitution:
                 approve_spo=False,
                 build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # cardano-cli issue #650
             )
-        err_str = str(excinfo.value)
-        assert "StakePoolVoter" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "StakePoolVoter" in exc_value, exc_value
 
         # Vote & disapprove the action
         conway_common.cast_vote(
@@ -551,8 +553,9 @@ class TestConstitution:
                 dst_addr_record=pool_user_lg.payment,
                 tx_name=temp_template,
             )
-        err_str = str(excinfo.value)
-        assert "(ConwayWdrlNotDelegatedToDRep" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ConwayWdrlNotDelegatedToDRep" in exc_value, exc_value
         reqc.cip027.success()
 
         # Try to vote on enacted action
@@ -568,8 +571,9 @@ class TestConstitution:
                 approve_drep=False,
                 build_method=clusterlib_utils.BuildMethods.BUILD_RAW,  # cardano-cli issue #650
             )
-        err_str = str(excinfo.value)
-        assert "(GovActionsDoNotExist" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "GovActionsDoNotExist" in exc_value, exc_value
 
         # Check action view
         reqc.cli020.start(url=helpers.get_vcs_link())

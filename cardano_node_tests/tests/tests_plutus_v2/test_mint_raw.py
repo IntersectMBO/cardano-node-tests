@@ -342,13 +342,13 @@ class TestMinting:
                     mint=plutus_mint_data,
                     readonly_reference_txins=reference_input,
                 )
-            err_str = str(excinfo.value)
+            exc_value = str(excinfo.value)
 
-            if "Unexpected datum hash at each reference input" not in err_str:
-                if "The machine terminated because of an error" in err_str:
+            if "Unexpected datum hash at each reference input" not in exc_value:
+                if "The machine terminated because of an error" in exc_value:
                     issues.node_4488.finish_test()
 
-                pytest.fail(f"Unexpected error message: {err_str}")
+                pytest.fail(f"Unexpected error message: {exc_value}")
 
             return
 

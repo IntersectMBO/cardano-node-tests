@@ -102,8 +102,9 @@ class TestNegative:
                 plutus_op=plutus_op2,
                 amount=-1,
             )
-        err_str = str(excinfo.value)
-        assert "points to a Plutus script that does not exist" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "points to a Plutus script that does not exist" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -156,8 +157,9 @@ class TestNegative:
                 plutus_op=plutus_op2,
                 amount=-1,
             )
-        err_str = str(excinfo.value)
-        assert "(MissingScriptWitnessesUTXOW" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "(MissingScriptWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -229,7 +231,9 @@ class TestNegative:
         if VERSIONS.cli >= version.parse("10.0.0.0"):
             assert not exc_str, exc_str
         else:
-            assert "CollateralContainsNonADA" in exc_str, exc_str
+            assert exc_str, "Expected error was not raised"
+            with common.allow_unstable_error_messages():
+                assert "CollateralContainsNonADA" in exc_str, exc_str
 
         # Check expected fees
         expected_fee_fund = 173597
@@ -287,15 +291,15 @@ class TestNegative:
                 amount=-1,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            "expected to be key witnessed but are actually script witnessed: "
-            f'["{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"]'
-            in err_str
-            # In 1.35.3 and older
-            or "Expected key witnessed collateral" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "expected to be key witnessed but are actually script witnessed: "
+                f'["{script_utxos[0].utxo_hash}#{script_utxos[0].utxo_ix}"]'
+                in exc_value
+                # In 1.35.3 and older
+                or "Expected key witnessed collateral" in exc_value
+            ), exc_value
 
         # Check expected fees
         expected_fee_fund = 168_845
@@ -376,12 +380,12 @@ class TestNegative:
                 amount=-1,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
-            or "Plutus script evaluation failed" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "following scripts have execution failures" in exc_value  # In cli 10.1.1.0+
+                or "Plutus script evaluation failed" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
@@ -537,12 +541,12 @@ class TestNegative:
                 script_txins=plutus_txins,
                 change_address=payment_addrs[0].address,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
-            or "Plutus script evaluation failed" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "following scripts have execution failures" in exc_value  # In cli 10.1.1.0+
+                or "Plutus script evaluation failed" in exc_value
+            ), exc_value
 
 
 class TestNegativeRedeemer:
@@ -651,14 +655,14 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            # On node version < 1.36.0
-            "Value out of range within the script data" in err_str
-            # See node commit 2efdd2c173bee8f2463937cebb20614adf6180f0
-            or "Incorrect datum" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                # On node version < 1.36.0
+                "Value out of range within the script data" in exc_value
+                # See node commit 2efdd2c173bee8f2463937cebb20614adf6180f0
+                or "Incorrect datum" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -721,12 +725,12 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            "following scripts have execution failures" in err_str  # In cli 10.1.1.0+
-            or "Plutus script evaluation failed" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "following scripts have execution failures" in exc_value  # In cli 10.1.1.0+
+                or "Plutus script evaluation failed" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(min_value=common.MAX_UINT64 + 1))
@@ -851,9 +855,9 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert "logs: Incorrect datum. Expected 42." in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "logs: Incorrect datum. Expected 42." in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(min_size=65))
@@ -904,12 +908,12 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            "must consist of at most 64 bytes" in err_str  # on node version < 1.36.0
-            or "Incorrect datum" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "must consist of at most 64 bytes" in exc_value  # on node version < 1.36.0
+                or "Incorrect datum" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
@@ -961,11 +965,12 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            'The value in the field "int" does not have the type required by the schema.' in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                'The value in the field "int" does not have the type required by the schema.'
+                in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
@@ -1017,11 +1022,12 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            'The value in the field "int" does not have the type required by the schema.' in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                'The value in the field "int" does not have the type required by the schema.'
+                in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
@@ -1073,12 +1079,12 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            'The value in the field "bytes" does not have the type required by the schema.'
-            in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                'The value in the field "bytes" does not have the type required by the schema.'
+                in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
@@ -1130,12 +1136,12 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            'The value in the field "bytes" does not have the type required by the schema.'
-            in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                'The value in the field "bytes" does not have the type required by the schema.'
+                in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.text())
@@ -1186,9 +1192,9 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert "JSON object expected. Unexpected value" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "JSON object expected. Unexpected value" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -1246,18 +1252,19 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            # On node version < 1.36.0
-            'Expected a single field named "int", "bytes", "string", "list" or "map".' in err_str
-            # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
-            or 'Expected a single field named "int", "bytes", "list" or "map".' in err_str
-            or (
-                redeemer_type in self.KNOWN_FIELDS
-                and "JSON schema error within the script data" in err_str
-            )
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                # On node version < 1.36.0
+                'Expected a single field named "int", "bytes", "string", "list" or "map".'
+                in exc_value
+                # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
+                or 'Expected a single field named "int", "bytes", "list" or "map".' in exc_value
+                or (
+                    redeemer_type in self.KNOWN_FIELDS
+                    and "JSON schema error within the script data" in exc_value
+                )
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(
@@ -1315,15 +1322,16 @@ class TestNegativeRedeemer:
                 amount=self.AMOUNT,
                 submit_tx=False,
             )
-
-        err_str = str(excinfo.value)
-        assert (
-            # On node version < 1.36.0
-            'Expected a single field named "int", "bytes", "string", "list" or "map".' in err_str
-            # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
-            or 'Expected a single field named "int", "bytes", "list" or "map".' in err_str
-            or (
-                redeemer_type in self.KNOWN_FIELDS
-                and "JSON schema error within the script data" in err_str
-            )
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                # On node version < 1.36.0
+                'Expected a single field named "int", "bytes", "string", "list" or "map".'
+                in exc_value
+                # See node commit ac662d8e46554c1ed02d485bfdd69e7ec04d8613
+                or 'Expected a single field named "int", "bytes", "list" or "map".' in exc_value
+                or (
+                    redeemer_type in self.KNOWN_FIELDS
+                    and "JSON schema error within the script data" in exc_value
+                )
+            ), exc_value

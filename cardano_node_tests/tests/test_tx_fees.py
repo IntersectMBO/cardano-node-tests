@@ -89,7 +89,9 @@ class TestFee:
                 tx_files=tx_files,
                 fee=fee,
             )
-        assert "option --fee:" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "option --fee:" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fee_change", (0, 1.1, 1.5, 2))
@@ -133,7 +135,9 @@ class TestFee:
                 tx_files=tx_files,
                 fee=int(fee),
             )
-        assert "FeeTooSmallUTxO" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "FeeTooSmallUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("fee_add", (0, 1_000, 100_000, 1_000_000))

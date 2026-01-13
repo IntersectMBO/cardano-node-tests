@@ -34,8 +34,7 @@ class TestUnbalanced:
         src_address = payment_addrs[0].address
         dst_address = payment_addrs[1].address
 
-        err_str = ""
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
                 [
                     "transaction",
@@ -51,17 +50,16 @@ class TestUnbalanced:
                     *cluster.magic_args,
                 ]
             )
-        except clusterlib.CLIError as err:
-            err_str = str(err)
-
-        if amount < 0:
-            assert (
-                "Value must be positive in UTxO" in err_str  # In cli 10.1.1.0+
-                or "Illegal Value in TxOut" in err_str  # In node 9.2.0+
-                or "Negative quantity" in err_str
-            ), err_str
-        else:
-            assert "Minimum UTxO threshold not met for tx output" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            if amount < 0:
+                assert (
+                    "Value must be positive in UTxO" in exc_value  # In cli 10.1.1.0+
+                    or "Illegal Value in TxOut" in exc_value  # In node 9.2.0+
+                    or "Negative quantity" in exc_value
+                ), exc_value
+            else:
+                assert "Minimum UTxO threshold not met for tx output" in exc_value, exc_value
 
     @pytest.fixture
     def payment_addrs(
@@ -140,16 +138,17 @@ class TestUnbalanced:
                 fee=fee,
                 ttl=ttl,
             )
-        exc_val = str(excinfo.value)
-        assert (
-            "option --tx-out: Failed reading" in exc_val
-            or "TxOutAdaOnly" in exc_val
-            or "AdaAssetId,-1" in exc_val
-            or "Negative quantity" in exc_val  # cardano-node >= 8.7.0
-            or "Illegal Value in TxOut" in exc_val  # cardano-node >= 9.2.0
-        )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "option --tx-out: Failed reading" in exc_value
+                or "TxOutAdaOnly" in exc_value
+                or "AdaAssetId,-1" in exc_value
+                or "Negative quantity" in exc_value  # cardano-node >= 8.7.0
+                or "Illegal Value in TxOut" in exc_value  # cardano-node >= 9.2.0
+            )
 
-        if "CallStack" in exc_val:
+        if "CallStack" in exc_value:
             issues.cli_904.finish_test()
 
     @allure.link(helpers.get_vcs_link())
@@ -191,11 +190,12 @@ class TestUnbalanced:
                 txouts=txouts,
                 tx_files=tx_files,
             )
-        exc_val = str(excinfo.value)
-        assert (
-            "The net balance of the transaction is negative" in exc_val
-            or "Illegal Value in TxOut" in exc_val  # In node 9.2.0+
-        ), exc_val
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "The net balance of the transaction is negative" in exc_value
+                or "Illegal Value in TxOut" in exc_value  # In node 9.2.0+
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(change_amount=st.integers(min_value=2_000_000, max_value=MAX_LOVELACE_AMOUNT))
@@ -254,9 +254,12 @@ class TestUnbalanced:
         # It should NOT be possible to submit an unbalanced transaction
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(out_file_signed)
-        exc_val = str(excinfo.value)
-        # TODO: see https://github.com/IntersectMBO/cardano-node/issues/2555
-        assert "ValueNotConservedUTxO" in exc_val or "DeserialiseFailure" in exc_val, exc_val
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            # TODO: see https://github.com/IntersectMBO/cardano-node/issues/2555
+            assert "ValueNotConservedUTxO" in exc_value or "DeserialiseFailure" in exc_value, (
+                exc_value
+            )
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(change_amount=st.integers(min_value=MAX_LOVELACE_AMOUNT + 1))
@@ -286,6 +289,7 @@ class TestUnbalanced:
             clusterlib.TxOut(address=payment_addrs[0].address, amount=change_amount),
         ]
 
+        err_str = ""
         try:
             cluster.g_transaction.build_raw_tx_bare(
                 out_file=out_file_tx,
@@ -296,8 +300,11 @@ class TestUnbalanced:
                 ttl=ttl,
             )
         except clusterlib.CLIError as exc:
-            exc_val = str(exc)
-            assert "out of bounds" in exc_val or "exceeds the max bound" in exc_val, exc_val
+            err_str = str(exc)
+
+        if err_str:
+            with common.allow_unstable_error_messages():
+                assert "out of bounds" in err_str or "exceeds the max bound" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -427,8 +434,9 @@ class TestUnbalanced:
             # Submit the signed transaction
             cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
 
-        exc_val = str(excinfo_build.value)
-        assert "OutputTooSmallUTxO" in exc_val, exc_val
+        exc_value = str(excinfo_build.value)
+        with common.allow_unstable_error_messages():
+            assert "OutputTooSmallUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(amount=st.integers(min_value=-MAX_LOVELACE_AMOUNT, max_value=-1))

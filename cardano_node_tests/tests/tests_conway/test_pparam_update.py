@@ -758,8 +758,9 @@ class TestPParamUpdate:
                     if net_nodrep_prop_rec.proposal_names.isdisjoint(SECURITY_PPARAMS)
                     else True,
                 )
-            err_str = str(excinfo.value)
-            assert "(DisallowedVotesDuringBootstrap" in err_str, err_str
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "DisallowedVotesDuringBootstrap" in exc_value, exc_value
         else:
             conway_common.cast_vote(
                 cluster_obj=cluster,
@@ -892,8 +893,9 @@ class TestPParamUpdate:
                 approve_drep=None if is_in_bootstrap else False,
                 approve_spo=True,
             )
-        err_str = str(excinfo.value)
-        assert "StakePoolVoter" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "StakePoolVoter" in exc_value, exc_value
 
         _url = helpers.get_vcs_link()
         reqc.cip065.start(url=_url)
@@ -1325,8 +1327,9 @@ class TestPParamUpdate:
                 approve_cc=False,
                 approve_drep=None if is_in_bootstrap else False,
             )
-        err_str = str(excinfo.value)
-        assert "(GovActionsDoNotExist" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "GovActionsDoNotExist" in exc_value, exc_value
 
         # Check that deposit is returned for the enacted pparam proposal right after enactment.
         # Check that deposit is returned also for pparam proposals that are no longer valid
@@ -1503,8 +1506,9 @@ class TestLegacyProposals:
                     ],
                 ),
             )
-        err_str = str(excinfo.value)
-        assert 'TextEnvelopeType "UpdateProposalShelley"' in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert 'TextEnvelopeType "UpdateProposalShelley"' in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1548,8 +1552,9 @@ class TestLegacyProposals:
                 ],
                 add_default_args=False,
             )
-        err_str = str(excinfo.value)
-        assert "Invalid argument `create-update-proposal'" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Invalid argument `create-update-proposal'" in exc_value, exc_value
 
 
 class TestNegativeCostModels:
@@ -1564,10 +1569,7 @@ class TestNegativeCostModels:
         """Test incompatible Plutus cost models."""
         cluster, __ = cluster_use_governance
         temp_template = common.get_test_id(cluster)
-        exp_error = ""
-
         cm_file = "cost_models_dict.json"
-        exp_error = "blake2b-cpu-arguments-intercept"
 
         update_proposal = [
             clusterlib_utils.UpdateProposal(
@@ -1593,5 +1595,6 @@ class TestNegativeCostModels:
                 proposals=update_proposal,
                 prev_action_rec=prev_action_rec,
             )
-        err_str = str(excinfo.value)
-        assert exp_error in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "blake2b-cpu-arguments-intercept" in exc_value, exc_value

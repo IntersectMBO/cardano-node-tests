@@ -177,5 +177,6 @@ class TestCompatibility:
                 txouts=txouts,
                 readonly_reference_txins=reference_input,
             )
-        err_str = str(excinfo.value)
-        assert "Reference inputs cannot be used" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Reference inputs cannot be used" in exc_value, exc_value

@@ -211,9 +211,13 @@ def check_missing_builtin(
     cost_model_len = len(pv2_cost_model)
 
     if prot_ver < 10:
-        assert "(MalformedScriptWitnesses" in err, err
+        assert err, "Transaction succeeded but expected to fail"
+        with common.allow_unstable_error_messages():
+            assert "MalformedScriptWitnesses" in err, err
     elif cost_model_len < 185 or pv2_cost_model[-1] == 9223372036854775807:
-        assert "overspending the budget" in err, err
+        assert err, "Transaction succeeded but expected to fail"
+        with common.allow_unstable_error_messages():
+            assert "overspending the budget" in err, err
     elif not err:
         _check_txout()
     else:

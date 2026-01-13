@@ -118,9 +118,10 @@ class TestNegative:
             else:
                 msg = f"Unsupported build method: {build_method}"
                 raise ValueError(msg)
-        exc_val = str(excinfo.value)
-        # TODO: better match
-        assert "invalid address" in exc_val or "An error occurred" in exc_val, exc_val
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            # TODO: better match
+            assert "invalid address" in exc_value or "An error occurred" in exc_value, exc_value
 
     def _send_funds_from_invalid_address(
         self,
@@ -163,7 +164,9 @@ class TestNegative:
             else:
                 msg = f"Unsupported build method: {build_method}"
                 raise ValueError(msg)
-        assert "invalid address" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "invalid address" in exc_value, exc_value
 
     def _send_funds_invalid_change_address(
         self,
@@ -186,7 +189,9 @@ class TestNegative:
                 tx_files=tx_files,
                 fee_buffer=1_000_000,
             )
-        assert "invalid address" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "invalid address" in exc_value, exc_value
 
     def _send_funds_with_invalid_utxo(
         self,
@@ -249,7 +254,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         txouts = [clusterlib.TxOut(address=dst_address, amount=2_000_000)]
 
-        exc_val = ""
+        exc_str = ""
         slot_no = tx_output = None
 
         try:
@@ -287,10 +292,10 @@ class TestNegative:
                 msg = f"Unsupported build method: {build_method}"
                 raise ValueError(msg)
         except clusterlib.CLIError as exc:
-            exc_val = str(exc)
-            if "SLOT must not" not in exc_val:
+            exc_str = str(exc)
+            if "SLOT must not" not in exc_str:
                 raise
-            return slot_no, exc_val, tx_output
+            return slot_no, exc_str, tx_output
 
         # Prior to node 1.36.0, it was possible to build a transaction with invalid interval,
         # but it was not possible to submit it.
@@ -304,17 +309,19 @@ class TestNegative:
         # It should NOT be possible to submit a transaction with negative ttl
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.g_transaction.submit_tx_bare(out_file_signed)
-        exc_val = str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "ExpiredUTxO" in exc_value or "OutsideValidityIntervalUTxO" in exc_value, (
+                exc_value
+            )
 
-        assert "ExpiredUTxO" in exc_val or "OutsideValidityIntervalUTxO" in exc_val, exc_val
-
-        slot_no_search = re.search(r"ValidityInterval .*SJust \(SlotNo ([0-9]*)", exc_val)
+        slot_no_search = re.search(r"ValidityInterval .*SJust \(SlotNo ([0-9]*)", exc_value)
         if slot_no_search is None:
             err = "Cannot find SlotNo in CLI error output"
             raise RuntimeError(err)
         slot_no = int(slot_no_search.group(1))
 
-        return slot_no, exc_val, tx_output
+        return slot_no, exc_value, tx_output
 
     def _get_validity_range(
         self, cluster_obj: clusterlib.ClusterLib, tx_body_file: pl.Path
@@ -491,7 +498,9 @@ class TestNegative:
             build_method=build_method,
         )
 
-        assert "(OutsideValidityIntervalUTxO" in err_str, err_str
+        assert err_str, "Expected error but none was raised"
+        with common.allow_unstable_error_messages():
+            assert "OutsideValidityIntervalUTxO" in err_str, err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -621,7 +630,10 @@ class TestNegative:
             build_method=build_method,
         )
 
-        assert "(OutsideValidityIntervalUTxO" in err_str, err_str
+        assert err_str, "Expected error but none was raised"
+        with common.allow_unstable_error_messages():
+            assert "OutsideValidityIntervalUTxO" in err_str, err_str
+
         assert slot_no == before_value, f"SlotNo: {slot_no}, `before_value`: {before_value}"
 
     @allure.link(helpers.get_vcs_link())
@@ -680,11 +692,12 @@ class TestNegative:
         # It should NOT be possible to submit a transaction twice
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(out_file_signed)
-        exc_str = str(excinfo.value)
-        assert (
-            "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
-            or "(ValueNotConservedUTxO" in exc_str
-        ), exc_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "All inputs are spent" in exc_value  # In cardano-node >= 10.6.0
+                or "(ValueNotConservedUTxO" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -754,7 +767,9 @@ class TestNegative:
                     str(out_file_signed),
                 ]
             )
-        assert "HandshakeError" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "HandshakeError" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -782,7 +797,9 @@ class TestNegative:
                 txouts=txouts,
                 tx_files=tx_files,
             )
-        assert "MissingVKeyWitnessesUTXOW" in str(excinfo.value)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -810,11 +827,12 @@ class TestNegative:
                 txouts=txouts,
                 tx_files=tx_files,
             )
-        err_str = str(excinfo.value)
-        assert (
-            "The era of the node and the tx do not match" in err_str
-            or "HardForkEncoderDisabledEra" in err_str
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "The era of the node and the tx do not match" in exc_value
+                or "HardForkEncoderDisabledEra" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD
@@ -1134,26 +1152,30 @@ class TestNegative:
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = dataclasses.replace(utxo, utxo_ix=5)
-        err = self._send_funds_with_invalid_utxo(
+        err_str = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
             pool_users=pool_users,
             utxo=utxo_copy,
             temp_template=temp_template,
             build_method=build_method,
         )
+        assert err_str, "Expected error but none was raised"
+
         if build_method in (
             clusterlib_utils.BuildMethods.BUILD,
             clusterlib_utils.BuildMethods.BUILD_EST,
         ):
-            assert (
-                "The UTxO is empty" in err
-                or "The following tx input(s) were not present in the UTxO" in err
-            ), err
+            with common.allow_unstable_error_messages():
+                assert (
+                    "The UTxO is empty" in err_str
+                    or "The following tx input(s) were not present in the UTxO" in err_str
+                ), err_str
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-            assert (
-                "All inputs are spent" in err  # In cardano-node >= 10.6.0
-                or "BadInputsUTxO" in err
-            ), err
+            with common.allow_unstable_error_messages():
+                assert (
+                    "All inputs are spent" in err_str  # In cardano-node >= 10.6.0
+                    or "BadInputsUTxO" in err_str
+                ), err_str
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
@@ -1177,26 +1199,30 @@ class TestNegative:
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         new_hash = f"{utxo.utxo_hash[:-4]}fd42"
         utxo_copy = dataclasses.replace(utxo, utxo_hash=new_hash)
-        err = self._send_funds_with_invalid_utxo(
+        err_str = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
             pool_users=pool_users,
             utxo=utxo_copy,
             temp_template=temp_template,
             build_method=build_method,
         )
+        assert err_str, "Expected error but none was raised"
+
         if build_method in (
             clusterlib_utils.BuildMethods.BUILD,
             clusterlib_utils.BuildMethods.BUILD_EST,
         ):
-            assert (
-                "The UTxO is empty" in err
-                or "The following tx input(s) were not present in the UTxO" in err
-            ), err
+            with common.allow_unstable_error_messages():
+                assert (
+                    "The UTxO is empty" in err_str
+                    or "The following tx input(s) were not present in the UTxO" in err_str
+                ), err_str
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
-            assert (
-                "All inputs are spent" in err  # In cardano-node >= 10.6.0
-                or "BadInputsUTxO" in err
-            ), err
+            with common.allow_unstable_error_messages():
+                assert (
+                    "All inputs are spent" in err_str  # In cardano-node >= 10.6.0
+                    or "BadInputsUTxO" in err_str
+                ), err_str
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
@@ -1222,19 +1248,22 @@ class TestNegative:
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = dataclasses.replace(utxo, utxo_hash=utxo_hash)
-        err = self._send_funds_with_invalid_utxo(
+        err_str = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
             pool_users=pool_users,
             utxo=utxo_copy,
             temp_template=temp_template,
             build_method=build_method,
         )
-        assert (
-            "Failed to deserialise" in err  # With node 10.5.0+
-            or "Incorrect transaction id format" in err
-            or "Failed reading" in err
-            or "expecting transaction id (hexadecimal)" in err
-        )
+
+        assert err_str, "Expected error but none was raised"
+        with common.allow_unstable_error_messages():
+            assert (
+                "Failed to deserialise" in err_str  # With node 10.5.0+
+                or "Incorrect transaction id format" in err_str
+                or "Failed reading" in err_str
+                or "expecting transaction id (hexadecimal)" in err_str
+            ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -1258,19 +1287,22 @@ class TestNegative:
 
         utxo = cluster.g_query.get_utxo(address=pool_users[0].payment.address)[0]
         utxo_copy = dataclasses.replace(utxo, utxo_hash=utxo_hash)
-        err = self._send_funds_with_invalid_utxo(
+        err_str = self._send_funds_with_invalid_utxo(
             cluster_obj=cluster,
             pool_users=pool_users,
             utxo=utxo_copy,
             temp_template=temp_template,
             build_method=clusterlib_utils.BuildMethods.BUILD,
         )
-        assert (
-            "Failed to deserialise" in err  # With node 10.5.0+
-            or "Incorrect transaction id format" in err
-            or "Failed reading" in err
-            or "expecting transaction id (hexadecimal)" in err
-        )
+
+        assert err_str, "Expected error but none was raised"
+        with common.allow_unstable_error_messages():
+            assert (
+                "Failed to deserialise" in err_str  # With node 10.5.0+
+                or "Incorrect transaction id format" in err_str
+                or "Failed reading" in err_str
+                or "expecting transaction id (hexadecimal)" in err_str
+            ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1318,14 +1350,17 @@ class TestNegative:
             else:
                 issues.cli_796.finish_test()
 
+        assert err_str, "Expected error but none was raised"
+
         if "Transaction _ fee not supported in" in err_str:
             issues.node_4591.finish_test()
 
-        assert (
-            "fee must be specified" in err_str
-            or "Implicit transaction fee not supported" in err_str
-            or "Missing: --fee LOVELACE" in err_str  # node >= 8.12.0
-        ), err_str
+        with common.allow_unstable_error_messages():
+            assert (
+                "fee must be specified" in err_str
+                or "Implicit transaction fee not supported" in err_str
+                or "Missing: --fee LOVELACE" in err_str  # node >= 8.12.0
+            ), err_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -1368,15 +1403,15 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        err_str = str(excinfo.value)
-
-        if "Transaction validity upper bound not supported" in err_str:
+        exc_value = str(excinfo.value)
+        if "Transaction validity upper bound not supported" in exc_value:
             issues.node_4591.finish_test()
 
-        assert (
-            "TTL must be specified" in err_str
-            or "Transaction validity upper bound must be specified" in err_str
-        ), err_str
+        with common.allow_unstable_error_messages():
+            assert (
+                "TTL must be specified" in exc_value
+                or "Transaction validity upper bound must be specified" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1416,8 +1451,9 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        err_str = str(excinfo.value)
-        assert re.search(r"Missing: *\(--tx-in TX[_-]IN", err_str), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert re.search(r"Missing: *\(--tx-in TX[_-]IN", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -1454,11 +1490,12 @@ class TestNegative:
                 fee=1_000,
                 invalid_before=10,  # the unsupported argument
             )
-        err_str = str(excinfo.value)
-        assert (
-            "validity lower bound not supported" in err_str
-            or "validity lower bound cannot be used" in err_str  # node <= 1.35.6
-        ), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert (
+                "validity lower bound not supported" in exc_value
+                or "validity lower bound cannot be used" in exc_value  # node <= 1.35.6
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -1502,8 +1539,9 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        err_str = str(excinfo.value)
-        assert re.search(r"Missing: *\(--tx-in TX[_-]IN", err_str), err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert re.search(r"Missing: *\(--tx-in TX[_-]IN", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -1546,7 +1584,9 @@ class TestNegative:
                     *helpers.prepend_flag("--tx-out", txouts),
                 ]
             )
-        assert re.search(r"Missing:.* --change-address ADDRESS", str(excinfo.value))
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert re.search(r"Missing:.* --change-address ADDRESS", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -1593,4 +1633,6 @@ class TestNegative:
                     ),
                 ]
             )
-        assert re.search(r"Invalid option.*--change-address", str(excinfo.value))
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert re.search(r"Invalid option.*--change-address", exc_value), exc_value

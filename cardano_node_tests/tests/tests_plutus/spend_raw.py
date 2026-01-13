@@ -327,7 +327,6 @@ def _spend_locked_txin(  # noqa: C901
     if expect_failure:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
-        err = str(excinfo.value)
         assert cluster_obj.g_query.get_address_balance(dst_addr.address) == dst_init_balance, (
             f"Collateral was spent from `{dst_addr.address}`"
         )
@@ -337,7 +336,7 @@ def _spend_locked_txin(  # noqa: C901
                 f"Inputs were unexpectedly spent for `{u.address}`"
             )
 
-        return err, tx_raw_output
+        return str(excinfo.value), tx_raw_output
 
     cluster_obj.g_transaction.submit_tx(
         tx_file=tx_signed, txins=[t.txins[0] for t in tx_raw_output.script_txins if t.txins]
