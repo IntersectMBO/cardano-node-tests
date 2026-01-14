@@ -262,9 +262,8 @@ class TestUnbalanced:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @hypothesis.given(change_amount=st.integers(min_value=MAX_LOVELACE_AMOUNT + 1))
-    @hypothesis.example(change_amount=2_000_000)
-    @hypothesis.example(change_amount=MAX_LOVELACE_AMOUNT + 1)
+    @hypothesis.given(amount=st.integers(min_value=MAX_LOVELACE_AMOUNT + 1))
+    @hypothesis.example(amount=MAX_LOVELACE_AMOUNT + 1)
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -273,7 +272,7 @@ class TestUnbalanced:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
-        change_amount: int,
+        amount: int,
     ):
         """Try to build a transaction with output Lovelace amount that is out of bounds."""
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
@@ -286,11 +285,10 @@ class TestUnbalanced:
         # Use only the UTxO with the highest amount
         txins = [pbt_highest_utxo]
         txouts = [
-            clusterlib.TxOut(address=payment_addrs[0].address, amount=change_amount),
+            clusterlib.TxOut(address=payment_addrs[0].address, amount=amount),
         ]
 
-        err_str = ""
-        try:
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.build_raw_tx_bare(
                 out_file=out_file_tx,
                 txins=txins,
@@ -299,12 +297,9 @@ class TestUnbalanced:
                 fee=fee,
                 ttl=ttl,
             )
-        except clusterlib.CLIError as exc:
-            err_str = str(exc)
-
-        if err_str:
-            with common.allow_unstable_error_messages():
-                assert "out of bounds" in err_str or "exceeds the max bound" in err_str, err_str
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "out of bounds" in exc_value or "exceeds the max bound" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
