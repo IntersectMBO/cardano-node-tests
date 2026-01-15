@@ -13,8 +13,6 @@ df -h .
 
 retval=0
 
-DEFAULT_CLUSTER_ERA="conway"
-
 REPODIR="$(readlink -m "${0%/*}/..")"
 cd "$REPODIR"
 
@@ -55,21 +53,11 @@ if [ -n "${CLUSTERS_COUNT:-}" ]; then
   export CLUSTERS_COUNT
 fi
 
-CLUSTER_ERA="${CLUSTER_ERA:-"$DEFAULT_CLUSTER_ERA"}"
-if [ "$CLUSTER_ERA" = "conway 10" ]; then
-  CLUSTER_ERA="conway"
-elif [ "$CLUSTER_ERA" = "conway 11" ]; then
-  CLUSTER_ERA="conway"
+if [ "${CLUSTER_ERA:-}" = "conway 10" ]; then
+  export CLUSTER_ERA="conway"
+elif [ "${CLUSTER_ERA:-}" = "conway 11" ]; then
+  export CLUSTER_ERA="conway"
   export PROTOCOL_VERSION=11
-fi
-export CLUSTER_ERA
-
-TX_ERA="${TX_ERA:-}"
-if [ "$TX_ERA" = "conway" ] || [ "$CLUSTER_ERA" = "conway" ]; then
-  unset TX_ERA
-  export COMMAND_ERA="conway"
-elif [ "$TX_ERA" = "default" ]; then
-  export TX_ERA=""
 fi
 
 # Decrease the number of tests per cluster if we are using the "disk" (LMDB) UTxO backend to avoid
@@ -78,12 +66,10 @@ if [ -z "${MAX_TESTS_PER_CLUSTER:-}" ] && [[ "${UTXO_BACKEND:-}" = "disk"* ]]; t
   export MAX_TESTS_PER_CLUSTER=5
 fi
 
-if [ -n "${BOOTSTRAP_DIR:-}" ]; then
-  :  # don't touch `TESTNET_VARIANT` when running on testnet
+if [ -n "${TESTNET_VARIANT:-}" ]; then
+  export TESTNET_VARIANT
 elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
-  export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_slow"}"
-else
-  export TESTNET_VARIANT="${TESTNET_VARIANT:-"${CLUSTER_ERA}_fast"}"
+  export TESTNET_VARIANT="${CLUSTER_ERA:-conway}_slow"
 fi
 
 if [ "${ALLOW_UNSTABLE_ERROR_MESSAGES:-"false"}" == "false" ]; then

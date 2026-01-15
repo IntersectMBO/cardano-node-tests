@@ -1249,7 +1249,7 @@ class TestBasicTransactions:
     @pytest.mark.parametrize(
         "cluster_default_tx_era",
         (True, False),
-        ids=("explicit_tx_era", "implicit_tx_era"),
+        ids=("explicit_tx_era", "latest_tx_era"),
         indirect=True,
     )
     @pytest.mark.smoke
@@ -1264,8 +1264,8 @@ class TestBasicTransactions:
     ):
         """Test default Tx era.
 
-        * check that default Tx era is implicit
-        * check that default Tx era can be specified explicitly
+        * check that default Tx era is implicit as `latest`
+        * check that default Tx era can be specified explicitly by its name
         """
         temp_template = common.get_test_id(cluster)
 

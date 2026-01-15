@@ -11,26 +11,36 @@ from cardano_node_tests.utils import helpers
 class Versions:
     """Cluster era, transaction era, node version info."""
 
+    # Era names for latest corresponding (or current mainnet) protocol version
     BYRON: tp.Final[int] = 1
     SHELLEY: tp.Final[int] = 2
     ALLEGRA: tp.Final[int] = 3
     MARY: tp.Final[int] = 4
     ALONZO: tp.Final[int] = 6
     BABBAGE: tp.Final[int] = 8
-    CONWAY: tp.Final[int] = 9
+    CONWAY: tp.Final[int] = 10
+    DIJKSTRA: tp.Final[int] = 12
 
-    DEFAULT_CLUSTER_ERA: tp.Final[int] = 9
-    DEFAULT_TX_ERA: tp.Final[int] = 9
-    LAST_KNOWN_ERA: tp.Final[int] = 9
+    DEFAULT_CLUSTER_ERA: tp.Final[int] = CONWAY
+    DEFAULT_TX_ERA: tp.Final[int] = DEFAULT_CLUSTER_ERA
+    # Latest protocol version supported by the node
+    LAST_KNOWN_PROTOCOL_VERSION: tp.Final[int] = 11
 
+    # Map protocol versions to era names
     MAP: tp.ClassVar[dict[int, str]] = {
+        0: "byron",
         1: "byron",
         2: "shelley",
         3: "allegra",
         4: "mary",
+        5: "alonzo",
         6: "alonzo",
+        7: "babbage",
         8: "babbage",
         9: "conway",
+        10: "conway",
+        11: "conway",
+        12: "dijkstra",
     }
 
     def __init__(self) -> None:
