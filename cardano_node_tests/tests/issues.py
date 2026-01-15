@@ -198,6 +198,13 @@ ledger_5365 = blockers.GH(
     message="queryPoolState returns current pool params instead of the future ones.",
 )
 
+network_5281 = blockers.GH(
+    issue=5281,
+    repo="IntersectMBO/ouroboros-network",
+    fixed_in="10.7.0.0",  # Fixed in some node release after 10.6.1.0
+    message="`UnknownVersionInRsp` for compatible version of cli and node.",
+)
+
 node_3788 = blockers.GH(
     issue=3788,
     fixed_in="8.0.0",

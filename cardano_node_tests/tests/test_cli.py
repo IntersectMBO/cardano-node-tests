@@ -1381,6 +1381,98 @@ class TestPing:
         last_pong = ping_data["pongs"][-1]
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    def test_ping_tip(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test querying tip using `cardano-cli ping` on local node using host and port."""
+        common.get_test_id(cluster)
+
+        instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
+            instance_num=cluster_nodes.get_instance_num()
+        )
+        port = instance_ports.pool1 or instance_ports.relay1
+
+        cli_out = cluster.cli(
+            [
+                "cardano-cli",
+                "ping",
+                "--host",
+                "localhost",
+                "--port",
+                str(port),
+                "--magic",
+                str(cluster.network_magic),
+                "--json",
+                "--tip",
+            ],
+            timeout=30,
+            add_default_args=False,
+        )
+
+        ping_data = cli_out.stdout.rstrip().decode("utf-8")
+        ping_json = json.loads(ping_data.split("\n")[-1])
+
+        tip_ping = ping_json["tip"][-1]["slotNo"]
+        tip_cluster = cluster.g_query.get_slot_no()
+        assert abs(tip_ping - tip_cluster) <= 100, (
+            f"Expected tip close to {tip_cluster}, got {tip_ping}"
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    def test_ping_version(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Test querying versions using `cardano-cli ping` on local node using host and port."""
+        common.get_test_id(cluster)
+
+        instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
+            instance_num=cluster_nodes.get_instance_num()
+        )
+        port = instance_ports.pool1 or instance_ports.relay1
+
+        cli_out = None
+        exc_str = ""
+        try:
+            cli_out = cluster.cli(
+                [
+                    "cardano-cli",
+                    "ping",
+                    "--host",
+                    "localhost",
+                    "--port",
+                    str(port),
+                    "--magic",
+                    str(cluster.network_magic),
+                    "--query-versions",
+                ],
+                timeout=30,
+                add_default_args=False,
+            )
+        except clusterlib.CLIError as exc:
+            exc_str = str(exc)
+            if "UnknownVersionInRsp" not in exc_str:
+                raise
+
+        if exc_str:
+            if VERSIONS.cli_git_rev == VERSIONS.git_rev:
+                # The CLI and node revisions match, so the `UnknownVersionInRsp` error
+                # should not happen.
+                issues.network_5281.finish_test()
+
+            # When the CLI and node revisions differ, the error is expected and acceptable.
+            return
+
+        assert cli_out is not None
+        ping_data = cli_out.stdout.rstrip().decode("utf-8")
+        assert "NodeToNodeVersion" in ping_data, ping_data
+
 
 class TestQuerySlotNumber:
     """Tests for `cardano-cli query slot-number`."""
