@@ -36,14 +36,15 @@ class TestNegative:
 
     @pytest.fixture(scope="class")
     def skip_on_last_era(self) -> None:
-        if VERSIONS.cluster_era == VERSIONS.LAST_KNOWN_ERA:
+        last_known_era_name = VERSIONS.MAP[VERSIONS.LAST_KNOWN_PROTOCOL_VERSION]
+        if VERSIONS.cluster_era_name == last_known_era_name:
             pytest.skip(
                 f"doesn't run with the latest cluster era ({VERSIONS.cluster_era_name})",
             )
 
     @pytest.fixture(scope="class")
     def skip_unknown_last_era(self) -> None:
-        last_known_era_name = VERSIONS.MAP[VERSIONS.LAST_KNOWN_ERA]
+        last_known_era_name = VERSIONS.MAP[VERSIONS.LAST_KNOWN_PROTOCOL_VERSION]
         if not clusterlib_utils.cli_has(last_known_era_name):
             pytest.skip(f"`{last_known_era_name} transaction build-raw` command is not available")
 
