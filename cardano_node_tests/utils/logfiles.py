@@ -29,6 +29,7 @@ ERRORS_IGNORED = [
     r"cardano\.node\.[^:]+:Debug:",
     r"cardano\.node\.[^:]+:Info:",
     "db-sync-node:Info:",
+    r"TxSubmitApi\.[^\]]*\]\(Info,",
     "cardano-tx-submit:Info:",
     "Event: LedgerUpdate",
     "trace.*ErrorPolicy",
