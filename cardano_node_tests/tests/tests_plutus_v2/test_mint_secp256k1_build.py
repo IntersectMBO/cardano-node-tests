@@ -12,6 +12,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_build
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ class TestSECP256k1:
                 redeemer_file=redeemer_file,
             )
         except clusterlib.CLIError as err:
-            before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
+            before_pv8 = clusterlib_utils.get_protocol_version(cluster_obj=cluster) < 8
 
             # The SECP256k1 functions should work from protocol version 8
             if not before_pv8:
@@ -233,7 +234,7 @@ class TestSECP256k1:
 
         redeemer_file = redeemer_dir / f"{test_vector}.redeemer"
 
-        before_pv8 = cluster.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
+        before_pv8 = clusterlib_utils.get_protocol_version(cluster_obj=cluster) < 8
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
             self._fund_issuer_mint_token(

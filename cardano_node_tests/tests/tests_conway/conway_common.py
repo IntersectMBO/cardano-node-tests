@@ -31,8 +31,7 @@ def is_in_bootstrap(
     cluster_obj: clusterlib.ClusterLib,
 ) -> bool:
     """Check if the cluster is in bootstrap period."""
-    pv = cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"]
-    return bool(pv == 9)
+    return bool(clusterlib_utils.get_protocol_version(cluster_obj=cluster_obj) == 9)
 
 
 def get_committee_val(data: dict[str, tp.Any]) -> dict[str, tp.Any]:
