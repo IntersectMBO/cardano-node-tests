@@ -309,11 +309,12 @@ class TestRegisterAddr:
                 deposit=deposit,
             )
         except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
-            if "(ValueNotConservedUTxO" in str(exc) and VERSIONS.transaction_era >= VERSIONS.CONWAY:
+            str_exc = str(exc)
+            if "(ValueNotConservedUTxO" in str_exc and VERSIONS.transaction_era >= VERSIONS.CONWAY:
                 issues.api_484.finish_test()
-            if (
-                build_method == clusterlib_utils.BuildMethods.BUILD_EST
-                and "does not balance in its use of assets" in str(exc)
+            if build_method == clusterlib_utils.BuildMethods.BUILD_EST and (
+                "The transaction balance is negative" in str_exc
+                or "does not balance in its use of assets" in str_exc
             ):
                 issues.cli_1199.finish_test()
             raise
