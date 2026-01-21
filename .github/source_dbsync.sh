@@ -7,6 +7,9 @@ export TEST_THREADS CLUSTERS_COUNT
 _origpwd="$PWD"
 cd "$WORKDIR" || exit 1
 
+# shellcheck disable=SC1090,SC1091
+. .github/common.sh
+
 stop_postgres() {
   echo "Stopping postgres"
 
@@ -111,7 +114,7 @@ else
     || exit 1
 
   # Build cardano-smash-server
-  if [ "${SMASH:-"false"}" != "false" ]; then
+  if is_truthy "${SMASH:-}"; then
     nix build --accept-flake-config .#cardano-smash-server -o "${WORKDIR}/smash-server" || exit 1
   fi
 
@@ -127,7 +130,7 @@ if [ ! -e "${WORKDIR}/db-sync-node/bin/cardano-db-sync" ]; then
   echo "The \`cardano-db-sync\` binary not found, line $LINENO in sourced db-sync setup" >&2  # assert
   exit 1
 fi
-if  [ "${SMASH:-"false"}" != "false" ] && [ ! -e "${WORKDIR}/smash-server/bin/cardano-smash-server" ]; then
+if is_truthy "${SMASH:-}" && [ ! -e "${WORKDIR}/smash-server/bin/cardano-smash-server" ]; then
   echo "The \`cardano-smash-server\` binary not found, line $LINENO in sourced db-sync setup" >&2  # assert
   exit 1
 fi

@@ -20,6 +20,9 @@ export WORKDIR="$REPODIR/run_workdir"
 export PATH_PREPEND="${PWD}/.bin"
 
 # shellcheck disable=SC1090,SC1091
+. .github/common.sh
+
+# shellcheck disable=SC1090,SC1091
 . .github/stop_cluster_instances.sh
 
 # stop all running cluster instances
@@ -68,12 +71,8 @@ fi
 
 if [ -n "${TESTNET_VARIANT:-}" ]; then
   export TESTNET_VARIANT
-elif [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
+elif is_truthy "${CI_BYRON_CLUSTER:-}"; then
   export TESTNET_VARIANT="${CLUSTER_ERA:-conway}_slow"
-fi
-
-if [ "${ALLOW_UNSTABLE_ERROR_MESSAGES:-"false"}" == "false" ]; then
-  unset ALLOW_UNSTABLE_ERROR_MESSAGES
 fi
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"

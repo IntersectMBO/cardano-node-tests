@@ -124,7 +124,7 @@ def pytest_configure(config: tp.Any) -> None:
 
     testrun_name = os.environ.get("CI_TESTRUN_NAME")
     if testrun_name:
-        skip_passed = os.environ.get("CI_SKIP_PASSED") == "true"
+        skip_passed = helpers.is_truthy_env_var("CI_SKIP_PASSED")
         config.stash[metadata_key]["CI_TESTRUN_NAME"] = testrun_name
         config.stash[metadata_key]["CI_SKIP_PASSED"] = str(skip_passed)
 

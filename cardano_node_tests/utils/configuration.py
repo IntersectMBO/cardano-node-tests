@@ -3,6 +3,8 @@
 import os
 import pathlib as pl
 
+from cardano_node_tests.utils import helpers
+
 LAUNCH_PATH = pl.Path.cwd()
 
 NETWORK_MAGIC_LOCAL = 42
@@ -14,13 +16,12 @@ IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 # See `cat /proc/sys/net/ipv4/ip_local_port_range`.
 PORTS_BASE = int(os.environ.get("PORTS_BASE") or 23000)
 
-# Used also in startup scripts as `if [ -n "$VAR" ]...`
-ENABLE_LEGACY = (os.environ.get("ENABLE_LEGACY") or "") != ""
-# Used also in startup scripts as `if [ -n "$VAR" ]...`
-MIXED_P2P = (os.environ.get("MIXED_P2P") or "") != ""
+# Used also in startup scripts
+ENABLE_LEGACY = helpers.is_truthy_env_var("ENABLE_LEGACY")
+# Used also in startup scripts
+MIXED_P2P = helpers.is_truthy_env_var("MIXED_P2P")
 
-# Used also in startup scripts as `if [ -n "$VAR" ]...`
-HAS_CC = (os.environ.get("NO_CC") or "") == ""
+HAS_CC = not helpers.is_truthy_env_var("NO_CC")
 
 # Number of new blocks before the Tx is considered confirmed. Use default value if set to 0.
 CONFIRM_BLOCKS_NUM = int(os.environ.get("CONFIRM_BLOCKS_NUM") or 0)
@@ -65,8 +66,8 @@ MAX_TESTS_PER_CLUSTER = int(os.environ.get("MAX_TESTS_PER_CLUSTER") or 8)
 CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
 CLUSTERS_COUNT = int(CLUSTERS_COUNT or (min(XDIST_WORKERS_COUNT, 9)) or 1)
 
-DEV_CLUSTER_RUNNING = bool(os.environ.get("DEV_CLUSTER_RUNNING"))
-FORBID_RESTART = bool(os.environ.get("FORBID_RESTART"))
+DEV_CLUSTER_RUNNING = helpers.is_truthy_env_var("DEV_CLUSTER_RUNNING")
+FORBID_RESTART = helpers.is_truthy_env_var("FORBID_RESTART")
 
 BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
 
@@ -76,15 +77,15 @@ if not BOOTSTRAP_DIR and NUM_POOLS < 3:
     raise RuntimeError(msg)
 
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_SCHEMA_DIR"))
-HAS_SMASH = HAS_DBSYNC and bool(os.environ.get("SMASH"))
+HAS_SMASH = HAS_DBSYNC and helpers.is_truthy_env_var("SMASH")
 
-DONT_OVERWRITE_OUTFILES = bool(os.environ.get("DONT_OVERWRITE_OUTFILES"))
+DONT_OVERWRITE_OUTFILES = helpers.is_truthy_env_var("DONT_OVERWRITE_OUTFILES")
 
 # Allow unstable error messages in tests
-ALLOW_UNSTABLE_ERROR_MESSAGES = bool(os.environ.get("ALLOW_UNSTABLE_ERROR_MESSAGES"))
+ALLOW_UNSTABLE_ERROR_MESSAGES = helpers.is_truthy_env_var("ALLOW_UNSTABLE_ERROR_MESSAGES")
 
 # Cluster instances are kept running after tests finish
-KEEP_CLUSTERS_RUNNING = bool(os.environ.get("KEEP_CLUSTERS_RUNNING"))
+KEEP_CLUSTERS_RUNNING = helpers.is_truthy_env_var("KEEP_CLUSTERS_RUNNING")
 
 # Determine what scripts to use to start the cluster
 TESTNET_VARIANT = os.environ.get("TESTNET_VARIANT") or ""
