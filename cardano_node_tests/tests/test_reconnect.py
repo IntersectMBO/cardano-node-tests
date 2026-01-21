@@ -21,8 +21,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-TEST_RECONNECT = os.environ.get("TEST_RECONNECT") is not None
-TEST_METRICS_RECONNECT = os.environ.get("TEST_METRICS_RECONNECT") is not None
+TEST_RECONNECT = helpers.is_truthy_env_var("TEST_RECONNECT")
+TEST_METRICS_RECONNECT = helpers.is_truthy_env_var("TEST_METRICS_RECONNECT")
 
 
 @common.SKIPIF_ON_TESTNET

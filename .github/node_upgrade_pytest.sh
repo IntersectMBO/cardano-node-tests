@@ -22,6 +22,9 @@ export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
 rm -rf "${REPORTS_DIR:?}"
 mkdir -p "$REPORTS_DIR"
 
+# shellcheck disable=SC1090,SC1091
+. .github/common.sh
+
 #
 # STEP1 - start local cluster and run smoke tests for the first time
 #
@@ -50,7 +53,7 @@ if [ "$1" = "step1" ]; then
     export PATH="${BASE_REV_BIN}:${PATH}"
   fi
 
-  if [ "${CI_BYRON_CLUSTER:-"false"}" != "false" ]; then
+  if is_truthy "${CI_BYRON_CLUSTER:-}"; then
     : "${TESTNET_VARIANT:="${CLUSTER_ERA}_slow"}"
   else
     : "${TESTNET_VARIANT:="${CLUSTER_ERA}_fast"}"
