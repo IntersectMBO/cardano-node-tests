@@ -29,8 +29,8 @@ CONFIRM_BLOCKS_NUM = int(os.environ.get("CONFIRM_BLOCKS_NUM") or 0)
 # Used also in startup scripts
 UTXO_BACKEND = os.environ.get("UTXO_BACKEND") or ""
 if UTXO_BACKEND not in ("", "mem", "disk", "disklmdb", "empty"):
-    msg = f"Invalid UTXO_BACKEND: {UTXO_BACKEND}"
-    raise RuntimeError(msg)
+    __msg = f"Invalid UTXO_BACKEND: {UTXO_BACKEND}"
+    raise RuntimeError(__msg)
 # Used also in startup scripts
 MIXED_UTXO_BACKENDS = os.environ.get("MIXED_UTXO_BACKENDS") or ""
 
@@ -52,13 +52,13 @@ if BLOCK_PRODUCTION_DB:
 
 CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
 if CLUSTER_ERA not in ("", "conway"):
-    msg = f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}"
-    raise RuntimeError(msg)
+    __msg = f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}"
+    raise RuntimeError(__msg)
 
 COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
 if COMMAND_ERA not in ("", "latest", "conway"):
-    msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
-    raise RuntimeError(msg)
+    __msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
+    raise RuntimeError(__msg)
 
 XDIST_WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 0)
 MAX_TESTS_PER_CLUSTER = int(os.environ.get("MAX_TESTS_PER_CLUSTER") or 8)
@@ -73,8 +73,8 @@ BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
 
 NUM_POOLS = int(os.environ.get("NUM_POOLS") or 3)
 if not BOOTSTRAP_DIR and NUM_POOLS < 3:
-    msg = f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3"
-    raise RuntimeError(msg)
+    __msg = f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3"
+    raise RuntimeError(__msg)
 
 HAS_DBSYNC = bool(os.environ.get("DBSYNC_SCHEMA_DIR"))
 HAS_SMASH = HAS_DBSYNC and helpers.is_truthy_env_var("SMASH")
