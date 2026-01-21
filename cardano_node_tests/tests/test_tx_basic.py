@@ -508,7 +508,11 @@ class TestBasicTransactions:
                 tx_files=tx_files,
             )
         except clusterlib.CLIError as exc:
-            if "balance of the transaction is negative" in str(exc):
+            str_exc = str(exc)
+            if (
+                "The transaction balance is negative" in str_exc
+                or "balance of the transaction is negative" in str_exc
+            ):
                 issues.cli_1199.finish_test()
             raise
 
