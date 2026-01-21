@@ -1515,7 +1515,10 @@ class TestQuerySlotNumber:
             cluster.g_query.query_cli(["slot-number", timestamp_str])
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "parseTimeOrError" in exc_value, exc_value
+            assert (
+                "Malformed timestamp" in exc_value  # In cardano-cli >= 10.14.0.0
+                or "parseTimeOrError" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("time_val", ("above", "bellow"))
