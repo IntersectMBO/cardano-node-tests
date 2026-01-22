@@ -243,10 +243,7 @@ def setup(
 
     # When using "fast" cluster, we need to wait for at least epoch 1 for DReps
     # to be usable. DReps don't vote in PV9.
-    if (
-        drep_reg_records
-        and cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] >= 10
-    ):
+    if drep_reg_records and clusterlib_utils.get_protocol_version(cluster_obj=cluster_obj) >= 10:
         cluster_obj.wait_for_epoch(epoch_no=1, padding_seconds=5)
 
         drep1_rec = cluster_obj.g_query.get_drep_stake_distribution(

@@ -1615,3 +1615,11 @@ def get_just_lovelace_utxos(
     return cl_txtools._get_usable_utxos(
         address_utxos=address_utxos, coins={clusterlib.DEFAULT_COIN}
     )
+
+
+def get_protocol_version(
+    cluster_obj: clusterlib.ClusterLib,
+) -> int:
+    """Get the protocol version major number."""
+    pv = int(cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"])
+    return pv

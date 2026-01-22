@@ -1,5 +1,6 @@
 """Tests for Conway hard-fork."""
 
+import json
 import logging
 
 import allure
@@ -10,6 +11,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -55,7 +57,6 @@ class TestHardfork:
         """Test hardfork action.
 
         * create a "hardfork" action
-        * check that DReps cannot vote during the bootstrap period
         * vote to disapprove the action
         * vote to approve the action
         * check that the action is ratified
@@ -66,8 +67,21 @@ class TestHardfork:
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
 
-        if not conway_common.is_in_bootstrap(cluster_obj=cluster):
-            pytest.skip("The major protocol version needs to be 9.")
+        prot_ver_init = clusterlib_utils.get_protocol_version(cluster_obj=cluster)
+        prot_ver_target = prot_ver_init + 1
+
+        if prot_ver_init >= VERSIONS.LAST_KNOWN_PROTOCOL_VERSION:
+            pytest.skip(
+                "The major protocol version needs to be at most "
+                f"{VERSIONS.LAST_KNOWN_PROTOCOL_VERSION - 1}."
+            )
+
+        with open(
+            cluster_nodes.get_cluster_env().state_dir / "config-pool1.json", encoding="utf-8"
+        ) as in_json:
+            is_experimental_enabled = bool(json.load(in_json).get("ExperimentalHardForksEnabled"))
+        if not is_experimental_enabled:
+            pytest.skip("Experimental hard-forks are not enabled on the cluster.")
 
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address
@@ -92,7 +106,7 @@ class TestHardfork:
             deposit_amt=deposit_amt,
             anchor_url=anchor_data.url,
             anchor_data_hash=anchor_data.hash,
-            protocol_major_version=10,
+            protocol_major_version=prot_ver_target,
             protocol_minor_version=0,
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
@@ -149,23 +163,24 @@ class TestHardfork:
         action_ix = prop_action["actionId"]["govActionIx"]
 
         # Check that DReps cannot vote
-        reqc.cip026_04.start(url=helpers.get_vcs_link())
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            conway_common.cast_vote(
-                cluster_obj=cluster,
-                governance_data=governance_data,
-                name_template=f"{temp_template}_no",
-                payment_addr=pool_user_lg.payment,
-                action_txid=action_txid,
-                action_ix=action_ix,
-                approve_cc=False,
-                approve_drep=False,
-                approve_spo=False,
-            )
-        exc_value = str(excinfo.value)
-        with common.allow_unstable_error_messages():
-            assert "DisallowedVotesDuringBootstrap ((DRepVoter" in exc_value, exc_value
-        reqc.cip026_04.success()
+        if prot_ver_init == 9:
+            reqc.cip026_04.start(url=helpers.get_vcs_link())
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                conway_common.cast_vote(
+                    cluster_obj=cluster,
+                    governance_data=governance_data,
+                    name_template=f"{temp_template}_no",
+                    payment_addr=pool_user_lg.payment,
+                    action_txid=action_txid,
+                    action_ix=action_ix,
+                    approve_cc=False,
+                    approve_drep=False,
+                    approve_spo=False,
+                )
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "DisallowedVotesDuringBootstrap ((DRepVoter" in exc_value, exc_value
+            reqc.cip026_04.success()
 
         # Vote & disapprove the action
         reqc.cip043_01.start(url=helpers.get_vcs_link())
@@ -177,6 +192,7 @@ class TestHardfork:
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=False,
+            approve_drep=False if prot_ver_init > 9 else None,
             approve_spo=False,
         )
         reqc.cli019.success()
@@ -190,6 +206,7 @@ class TestHardfork:
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=True,
+            approve_drep=True if prot_ver_init > 9 else None,
             approve_spo=True,
         )
 
@@ -221,18 +238,19 @@ class TestHardfork:
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=False,
+            approve_drep=False if prot_ver_init > 9 else None,
             approve_spo=False,
         )
 
         assert rat_gov_state["nextRatifyState"]["ratificationDelayed"], "Ratification not delayed"
         reqc.cip038_07.success()
 
-        assert rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9, (
+        assert rat_gov_state["currentPParams"]["protocolVersion"]["major"] == prot_ver_init, (
             "Incorrect major version"
         )
 
         # Check enactment
-        expected_msgs = [("pool1.stdout", r"ProtVer \{pvMajor = Version 10")]
+        expected_msgs = [("pool1.stdout", rf"ProtVer \{{pvMajor = Version {prot_ver_target}")]
         with logfiles.expect_messages(expected_msgs):
             enact_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 2, padding_seconds=15)
 
@@ -240,7 +258,7 @@ class TestHardfork:
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
-        assert enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10, (
+        assert enact_gov_state["currentPParams"]["protocolVersion"]["major"] == prot_ver_target, (
             "Incorrect major version"
         )
 
@@ -268,7 +286,8 @@ class TestHardfork:
                 payment_addr=pool_user_lg.payment,
                 action_txid=action_txid,
                 action_ix=action_ix,
-                approve_drep=False,
+                approve_cc=False,
+                approve_drep=False if prot_ver_init > 9 else None,
                 approve_spo=False,
             )
         exc_value = str(excinfo.value)

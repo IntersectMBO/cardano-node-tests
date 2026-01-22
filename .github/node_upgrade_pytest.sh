@@ -6,16 +6,15 @@ trap 'echo "Error at line $LINENO"' ERR
 retval=0
 
 export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
-
-export CLUSTER_ERA="${CLUSTER_ERA:-"conway"}"
-export COMMAND_ERA="$CLUSTER_ERA"
-
-CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
+
+# default era to use, can be overridden in each step if needed
+export CLUSTER_ERA="${CLUSTER_ERA:-"conway"}"
+export COMMAND_ERA="${COMMAND_ERA:-"$CLUSTER_ERA"}"
+CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 
 # init dir for step1 binaries
 STEP1_BIN="$WORKDIR/step1-bin"
-mkdir -p "$STEP1_BIN"
 
 # init reports dir before each step
 export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
@@ -71,6 +70,7 @@ if [ "$1" = "step1" ]; then
   "$CLUSTER_SCRIPTS_DIR/start-cluster" || exit 6
 
   # backup the original cardano binaries
+  mkdir -p "$STEP1_BIN"
   ln -s "$(command -v cardano-node)" "$STEP1_BIN/cardano-node-step1"
   ln -s "$(command -v cardano-cli)" "$STEP1_BIN/cardano-cli-step1"
 
@@ -119,7 +119,7 @@ elif [ "$1" = "step2" ]; then
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step2/state-cluster0/bft1.socket" \
-    DRY_RUN=1 \
+    DRY_RUN=true \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
   # copy newly generated topology files to the cluster state dir
@@ -137,7 +137,7 @@ elif [ "$1" = "step2" ]; then
       "$WORKDIR/dry_config_step2/state-cluster0/shelley/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
   fi
 
-  # use the original Shelley and Byron genesis files
+  # use the original Byron, Shelley and Dijkstra genesis files
   BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   # hashes of the original alonzo and conway genesis files
@@ -274,7 +274,8 @@ elif [ "$1" = "step3" ]; then
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step3/state-cluster0/bft1.socket" \
-    DRY_RUN=1 \
+    ENABLE_EXPERIMENTAL=true \
+    DRY_RUN=true \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
   # copy newly generated topology files to the cluster state dir
@@ -285,6 +286,12 @@ elif [ "$1" = "step3" ]; then
   SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
   CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  DIJKSTRA_GENESIS_HASH="$(jq -r ".DijkstraGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  if [ -z "$DIJKSTRA_GENESIS_HASH" ] || [ "$DIJKSTRA_GENESIS_HASH" = "null" ]; then
+    cp -f "$WORKDIR/dry_config_step3/state-cluster0/shelley/genesis.dijkstra.json" "$STATE_CLUSTER/shelley"
+    DIJKSTRA_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
+      "$STATE_CLUSTER/shelley/genesis.dijkstra.json")"
+  fi
   for conf in "$WORKDIR"/dry_config_step3/state-cluster0/config-*.json; do
     fname="${conf##*/}"
     jq \
@@ -292,10 +299,12 @@ elif [ "$1" = "step3" ]; then
       --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
       --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
       --arg conway_hash "$CONWAY_GENESIS_HASH" \
+      --arg dijkstra_hash "$DIJKSTRA_GENESIS_HASH" \
       '.ByronGenesisHash = $byron_hash
       | .ShelleyGenesisHash = $shelley_hash
       | .AlonzoGenesisHash = $alonzo_hash
-      | .ConwayGenesisHash = $conway_hash' \
+      | .ConwayGenesisHash = $conway_hash
+      | .DijkstraGenesisHash = $dijkstra_hash' \
       "$conf" > "$STATE_CLUSTER/$fname"
   done
 

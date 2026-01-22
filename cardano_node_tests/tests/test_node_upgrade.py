@@ -1,5 +1,6 @@
 """Tests for node upgrade."""
 
+import json
 import logging
 import os
 import pathlib as pl
@@ -13,6 +14,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
@@ -105,7 +107,6 @@ class TestSetup:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.disabled(reason="The test is not needed when we are already in PV10 on mainnet")
     @pytest.mark.skipif(UPGRADE_TESTS_STEP != 2, reason="runs only on step 2 of upgrade testing")
     def test_update_cost_models(
         self,
@@ -130,7 +131,6 @@ class TestSetup:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.disabled(reason="The test is not needed when we are already in PV10 on mainnet")
     @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
     def test_hardfork(
         self,
@@ -141,6 +141,22 @@ class TestSetup:
         """Test hard fork."""
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
+
+        prot_ver_init = clusterlib_utils.get_protocol_version(cluster_obj=cluster)
+        prot_ver_target = prot_ver_init + 1
+
+        if prot_ver_init >= VERSIONS.LAST_KNOWN_PROTOCOL_VERSION:
+            pytest.skip(
+                "The major protocol version needs to be at most "
+                f"{VERSIONS.LAST_KNOWN_PROTOCOL_VERSION - 1}."
+            )
+
+        with open(
+            cluster_nodes.get_cluster_env().state_dir / "config-pool1.json", encoding="utf-8"
+        ) as in_json:
+            is_experimental_enabled = bool(json.load(in_json).get("ExperimentalHardForksEnabled"))
+        if not is_experimental_enabled:
+            pytest.skip("Experimental hard-forks are not enabled on the cluster.")
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster
@@ -160,7 +176,7 @@ class TestSetup:
             deposit_amt=deposit_amt,
             anchor_url=anchor_data.url,
             anchor_data_hash=anchor_data.hash,
-            protocol_major_version=10,
+            protocol_major_version=prot_ver_target,
             protocol_minor_version=0,
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
@@ -214,6 +230,7 @@ class TestSetup:
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=True,
+            approve_drep=True if prot_ver_init > 9 else None,
             approve_spo=True,
         )
 
@@ -232,7 +249,7 @@ class TestSetup:
         )
         assert rat_action, "Action not found in ratified actions"
 
-        assert rat_gov_state["currentPParams"]["protocolVersion"]["major"] == 9, (
+        assert rat_gov_state["currentPParams"]["protocolVersion"]["major"] == prot_ver_init, (
             "Incorrect major version"
         )
 
@@ -242,7 +259,7 @@ class TestSetup:
         conway_common.save_gov_state(
             gov_state=enact_gov_state, name_template=f"{temp_template}_enact_{enact_epoch}"
         )
-        assert enact_gov_state["currentPParams"]["protocolVersion"]["major"] == 10, (
+        assert enact_gov_state["currentPParams"]["protocolVersion"]["major"] == prot_ver_target, (
             "Incorrect major version"
         )
 

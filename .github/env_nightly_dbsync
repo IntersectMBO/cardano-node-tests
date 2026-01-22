@@ -5,3 +5,4 @@ DBSYNC_REV=13.6.0.5
 DBSYNC_TAR_URL=https://github.com/IntersectMBO/cardano-db-sync/releases/download/13.6.0.5/cardano-db-sync-13.6.0.5-linux.tar.gz
 SMASH=true
 DBSYNC_SKIP_INDEXES=true
+ENABLE_EXPERIMENTAL=true

@@ -875,7 +875,7 @@ def check_return_collateral(cluster_obj: clusterlib.ClusterLib, tx_output: clust
 
 def xfail_on_secp_error(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_msg: str):
     """Xfail a test based on error message when using SECP functions."""
-    before_pv8 = cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"] < 8
+    before_pv8 = clusterlib_utils.get_protocol_version(cluster_obj=cluster_obj) < 8
 
     # The SECP256k1 functions should work from PV8.
     # Before PV8 the SECP256k1 is blocked or limited by high cost model
