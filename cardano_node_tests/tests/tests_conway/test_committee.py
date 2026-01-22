@@ -408,10 +408,13 @@ class TestCommittee:
                             )
                         exc_value = str(excinfo.value)
                         with common.allow_unstable_error_messages():
-                            assert re.search(
-                                "ConwayMempoolFailure .*Unelected committee members are not "
-                                "allowed to cast votes:",
-                                exc_value,
+                            assert (
+                                "UnelectedCommitteeVoters" in exc_value  # In protocol version >= 11
+                                or re.search(
+                                    "ConwayMempoolFailure .*Unelected committee members are not "
+                                    "allowed to cast votes:",
+                                    exc_value,
+                                )
                             ), exc_value
                         subtest_errors.pop()
 
