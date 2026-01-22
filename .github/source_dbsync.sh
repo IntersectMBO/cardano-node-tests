@@ -7,9 +7,6 @@ export TEST_THREADS CLUSTERS_COUNT
 _origpwd="$PWD"
 cd "$WORKDIR" || exit 1
 
-# shellcheck disable=SC1090,SC1091
-. .github/common.sh
-
 stop_postgres() {
   echo "Stopping postgres"
 
