@@ -308,6 +308,42 @@ elif [ "$1" = "step3" ]; then
       "$conf" > "$STATE_CLUSTER/$fname"
   done
 
+  # generate ledger peer snapshot using both node versions
+  cardano-cli query ledger-peer-snapshot \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --socket-path "$STATE_CLUSTER/pool1.socket" \
+    --output-json \
+    --out-file "$STATE_CLUSTER/peer-snapshot-upgrade.json"
+  cardano-cli query ledger-peer-snapshot \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --socket-path "$STATE_CLUSTER/pool3.socket" \
+    --output-json \
+    --out-file "$STATE_CLUSTER/peer-snapshot-base.json"
+
+  if [ ! -e "$STATE_CLUSTER/peer-snapshot-upgrade.json" ]; then
+    echo "Failed to get peer snapshot from pool1" >&2
+    exit 6
+  fi
+  if [ ! -e "$STATE_CLUSTER/peer-snapshot-base.json" ]; then
+    echo "Failed to get peer snapshot from pool3" >&2
+    exit 6
+  fi
+
+  # use the base version snapshot for pool1 and upgrade version snapshot for pool3
+  jq '.peerSnapshotFile = "peer-snapshot-base.json"' \
+    "$STATE_CLUSTER/topology-pool1.json" > "$STATE_CLUSTER/topology-pool1.tmp.json"
+  mv -f "$STATE_CLUSTER/topology-pool1.tmp.json" "$STATE_CLUSTER/topology-pool1.json"
+  jq '.peerSnapshotFile = "peer-snapshot-upgrade.json"' \
+    "$STATE_CLUSTER/topology-pool3.json" > "$STATE_CLUSTER/topology-pool3.tmp.json"
+  mv -f "$STATE_CLUSTER/topology-pool3.tmp.json" "$STATE_CLUSTER/topology-pool3.json"
+
+  # set `GenesisMode` for nodes that will use the ledger peer snapshot
+  for pool in pool1 pool3; do
+    jq '.ConsensusMode = "GenesisMode"' \
+      "$STATE_CLUSTER/config-${pool}.json" > "$STATE_CLUSTER/config-${pool}.tmp.json"
+    mv -f "$STATE_CLUSTER/config-${pool}.tmp.json" "$STATE_CLUSTER/config-${pool}.json"
+  done
+
   # use the upgraded cardano-node binary for pool3
   cp -f "$STATE_CLUSTER/cardano-node-pool3.orig" "$STATE_CLUSTER/cardano-node-pool3"
 
