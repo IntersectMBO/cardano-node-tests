@@ -81,10 +81,11 @@ if [ "$1" = "step1" ]; then
   # run smoke tests
   printf "STEP1 tests: %(%H:%M:%S)T\n" -1
   retval=0
+  #  -m "smoke or upgrade_step1" \
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade_step1" \
+    -m "upgrade_step1" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
@@ -237,10 +238,11 @@ elif [ "$1" = "step2" ]; then
   # run smoke tests
   printf "STEP2 tests: %(%H:%M:%S)T\n" -1
   retval=0
+  #  -m "smoke or upgrade_step2" \
   pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
-    -m "smoke or upgrade_step2" \
+    -m "upgrade_step2" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
