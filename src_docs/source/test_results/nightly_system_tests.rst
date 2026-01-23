@@ -58,6 +58,7 @@ Nightly upgrade testing
    * smoke tests
 * `Step 3 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step3/>`__:  |nightly-upgrade-step3-badge|
    * upgrade the last remaining node to latest cardano-node master
+   * use ledger peer snapshots
    * hard-fork to Conway protocol version 11
    * smoke tests
    * governance treasury withdrawal action test
