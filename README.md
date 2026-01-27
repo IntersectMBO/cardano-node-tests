@@ -195,7 +195,7 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 ./dev_workdir/conway_fast/start-cluster
 ```
 
-> Keys and configs are stored under `./dev_workdir/state-cluster0`.
+> Keys and configs are stored under `/var/tmp/cardonnay/state-cluster0`.
 
 ### ✅ Validate Environment
 
@@ -209,6 +209,8 @@ make check-dev-env
 make reinstall-editable repo=../cardano-clusterlib-py
 ```
 
+> ⚠️ After each dependencies update, repeat the step above to retain dev mode.
+
 ### 🧪 Run Individual Tests
 
 ```sh
@@ -219,11 +221,8 @@ pytest -m smoke cardano_node_tests/tests/test_cli.py
 ### 🧹 Run Linters
 
 ```sh
-source "$(poetry env info --path)"/bin/activate
 make lint
 ```
-
-> ⚠️ After each dependencies update, repeat the steps above to retain dev mode.
 
 ### 📦 Update Poetry Lockfile
 
