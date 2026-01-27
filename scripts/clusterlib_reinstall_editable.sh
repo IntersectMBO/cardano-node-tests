@@ -9,7 +9,7 @@ if [ $# -ne 1 ]; then
   usage
   exit 64
 fi
-REPO_PATH=$1
+REPO_PATH="$(readlink -m "$1")"
 
 TOP_DIR="$(readlink -m "${0%/*}/..")"
 cd "$TOP_DIR" >/dev/null

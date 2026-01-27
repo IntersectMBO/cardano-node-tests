@@ -8,6 +8,15 @@ install:
 check_dev_env:
 	@./scripts/check_dev_env.sh
 
+# update cardano-node binaries from a given git repository
+.PHONY: update-node-bins
+update-node-bins:
+	@if [ -z "$(repo)" ]; then \
+		echo "Usage: make update-node-bins repo=/path/to/cardano-node-repo" >&2; \
+		exit 1; \
+	fi
+	@./scripts/update_node_bins.sh "$(repo)"
+
 # reinstall cardano-clusterlib-py in editable mode from a given git repository
 .PHONY: reinstall-editable
 reinstall-editable:

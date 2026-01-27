@@ -183,9 +183,8 @@ make install
 ```sh
 cd ../cardano-node
 git checkout <tag>
-nix develop .#devops
-/usr/bin/bash --login  # run interactive bash
 cd ../cardano-node-tests
+make update-node-bins repo=../cardano-node
 source .source.dev
 ```
 

@@ -62,11 +62,6 @@ printf "'supervisord' available: $HAS_SUPERVISORD\n"
 printf "'supervisorctl' available: $HAS_SUPERVISORCTL\n"
 printf "'bech32' available: $HAS_BECH32\n"
 
-if [ "$HAS_NIX" = "$true" ]; then
-  USING_NIX_SHELL="$([ -n "${IN_NIX_SHELL:-}" ]; process_result)" || exit_code=1
-  printf "inside nix shell: $USING_NIX_SHELL\n"
-fi
-
 printf "in repo root: $IN_ROOT_DIR\n"
 printf "DEV cluster: $DEV_CLUSTER\n"
 
