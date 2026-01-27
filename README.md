@@ -183,9 +183,8 @@ make install
 ```sh
 cd ../cardano-node
 git checkout <tag>
-nix develop .#devops
-/usr/bin/bash --login  # run interactive bash
 cd ../cardano-node-tests
+make update-node-bins repo=../cardano-node
 source .source.dev
 ```
 
@@ -201,7 +200,7 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 ### ✅ Validate Environment
 
 ```sh
-make check_dev_env
+make check-dev-env
 ```
 
 ### 🧰 Reinstall `cardano-clusterlib` in Editable Mode

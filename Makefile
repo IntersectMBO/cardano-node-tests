@@ -4,9 +4,18 @@ install:
 	./scripts/setup_dev_venv.sh
 
 # check if development environment is set up correctly
-.PHONY: check_dev_env
-check_dev_env:
+.PHONY: check-dev-env
+check-dev-env:
 	@./scripts/check_dev_env.sh
+
+# update cardano-node binaries from a given git repository
+.PHONY: update-node-bins
+update-node-bins:
+	@if [ -z "$(repo)" ]; then \
+		echo "Usage: make update-node-bins repo=/path/to/cardano-node-repo" >&2; \
+		exit 1; \
+	fi
+	@./scripts/update_node_bins.sh "$(repo)"
 
 # reinstall cardano-clusterlib-py in editable mode from a given git repository
 .PHONY: reinstall-editable
@@ -35,8 +44,8 @@ update-lockfile:
 	fi
 
 # initialize linters
-.PHONY: init_lint
-init_lint:
+.PHONY: init-lint
+init-lint:
 	pre-commit clean
 	pre-commit gc
 	find . -path '*/.mypy_cache/*' -delete
