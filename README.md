@@ -200,7 +200,7 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 ### ✅ Validate Environment
 
 ```sh
-make check_dev_env
+make check-dev-env
 ```
 
 ### 🧰 Reinstall `cardano-clusterlib` in Editable Mode
