@@ -37,30 +37,31 @@ process_result() {
 
 HAS_NODE="$([ -n "$(command -v cardano-node)" ]; process_result)" || exit_code=1
 HAS_CLI="$([ -n "$(command -v cardano-cli)" ]; process_result)" || exit_code=1
+HAS_SUBMIT_API="$([ -n "$(command -v cardano-submit-api)" ]; process_result "optional")" || exit_code=1
+HAS_BECH32="$([ -n "$(command -v bech32)" ]; process_result)" || exit_code=1
 HAS_PYTHON="$([ -n "$(command -v python)" ]; process_result)" || exit_code=1
 HAS_PYTEST="$([ -n "$(command -v pytest)" ]; process_result)" || exit_code=1
-HAS_NIX="$([ -n "$(command -v nix-shell)" ]; process_result)" || exit_code=1
+HAS_NIX="$([ -n "$(command -v nix)" ]; process_result)" || exit_code=1
 HAS_JQ="$([ -n "$(command -v jq)" ]; process_result)" || exit_code=1
 HAS_SUPERVISORD="$([ -n "$(command -v supervisord)" ]; process_result)" || exit_code=1
 HAS_SUPERVISORCTL="$([ -n "$(command -v supervisorctl)" ]; process_result)" || exit_code=1
-HAS_BECH32="$([ -n "$(command -v bech32)" ]; process_result)" || exit_code=1
 
 IN_ROOT_DIR="$([ -d "cardano_node_tests" ]; process_result)" || exit_code=1
 DEV_CLUSTER="$([ -n "${DEV_CLUSTER_RUNNING:-}" ]; process_result)" || exit_code=1
 SOCKET_PATH_SET="$([ -n "${CARDANO_NODE_SOCKET_PATH:-}" ]; process_result)" || exit_code=1
 USE_DBSYNC="$([ -n "${DBSYNC_SCHEMA_DIR:-}" ]; process_result "optional")" || exit_code=1
-P2P_NET="$([ -z "${ENABLE_LEGACY:-}" ]; process_result "optional")" || exit_code=1
 
 
 printf "'cardano-node' available: $HAS_NODE\n"
 printf "'cardano-cli' available: $HAS_CLI\n"
+printf "'cardano-submit-api' available (optional): $HAS_SUBMIT_API\n"
+printf "'bech32' available: $HAS_BECH32\n"
 printf "'python' available: $HAS_PYTHON\n"
 printf "'pytest' available: $HAS_PYTEST\n"
-printf "'nix-shell' available: $HAS_NIX\n"
+printf "'nix' available: $HAS_NIX\n"
 printf "'jq' available: $HAS_JQ\n"
 printf "'supervisord' available: $HAS_SUPERVISORD\n"
 printf "'supervisorctl' available: $HAS_SUPERVISORCTL\n"
-printf "'bech32' available: $HAS_BECH32\n"
 
 printf "in repo root: $IN_ROOT_DIR\n"
 printf "DEV cluster: $DEV_CLUSTER\n"
@@ -116,7 +117,5 @@ if [ "$USE_DBSYNC" = "$true" ]; then
   HAS_PSQL="$([ -n "$(command -v psql)" ]; process_result)" || exit_code=1
   printf "'psql' available: $HAS_PSQL\n"
 fi
-
-printf "P2P network (optional): $P2P_NET\n"
 
 exit "$exit_code"
