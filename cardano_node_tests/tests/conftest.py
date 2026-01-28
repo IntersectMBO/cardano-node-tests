@@ -98,8 +98,6 @@ def pytest_configure(config: tp.Any) -> None:
     config.stash[metadata_key]["CLUSTER_ERA"] = configuration.CLUSTER_ERA
     config.stash[metadata_key]["COMMAND_ERA"] = configuration.COMMAND_ERA
     config.stash[metadata_key]["TESTNET_VARIANT"] = configuration.TESTNET_VARIANT
-    config.stash[metadata_key]["ENABLE_LEGACY"] = str(configuration.ENABLE_LEGACY)
-    config.stash[metadata_key]["MIXED_P2P"] = str(configuration.MIXED_P2P)
     config.stash[metadata_key]["NUM_POOLS"] = str(configuration.NUM_POOLS)
     config.stash[metadata_key]["UTXO_BACKEND"] = configuration.UTXO_BACKEND
     config.stash[metadata_key]["MIXED_UTXO_BACKENDS"] = configuration.MIXED_UTXO_BACKENDS

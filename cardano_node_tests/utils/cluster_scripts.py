@@ -68,8 +68,8 @@ def get_testnet_variant_scriptdir2(*, testnet_variant: str) -> pl.Path:
     """
     scriptdir = get_testnet_variant_scriptdir(testnet_variant=testnet_variant)
     if not scriptdir:
-        err = f"Testnet variant '{testnet_variant}' scripts directory not found."
-        raise RuntimeError(err)
+        msg = f"Testnet variant '{testnet_variant}' scripts directory not found."
+        raise RuntimeError(msg)
 
     return scriptdir
 
@@ -126,21 +126,8 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
 
         return ""
 
-    def _gen_legacy_topology(self, addr: str, ports: tp.Iterable[int]) -> dict:
-        """Generate legacy topology for given ports."""
-        producers = [
-            {
-                "addr": addr or self._get_rand_addr(),
-                "port": port,
-                "valency": 1,
-            }
-            for port in ports
-        ]
-        topology = {"Producers": producers}
-        return topology
-
     def _gen_p2p_topology(self, addr: str, ports: list[int], fixed_ports: list[int]) -> dict:
-        """Generate p2p topology for given ports."""
+        """Generate topology for given ports."""
         # Select fixed ports and several randomly selected ports
         sample_ports = random.sample(ports, 3) if len(ports) > 3 else ports
         selected_ports = set(fixed_ports + sample_ports)
@@ -304,11 +291,11 @@ class LocalScripts(ScriptsTypes):
         config_glob = "config-*.json"
         genesis_spec_json = destdir / "genesis.spec.json"
         if not (start_script.exists() and genesis_spec_json.exists()):
-            err = (
+            msg = (
                 f"Start script '{start_script}' or genesis spec file '{genesis_spec_json}' "
                 "not found in the copied cluster scripts directory."
             )
-            raise FileNotFoundError(err)
+            raise FileNotFoundError(msg)
 
         return StartupFiles(
             start_script=start_script, genesis_spec=genesis_spec_json, config_glob=config_glob
@@ -359,22 +346,13 @@ class LocalScripts(ScriptsTypes):
             all_except = ports_group[:]
             all_except.remove(node_rec.node)
             node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
-
-            # Legacy topology
-            topology = self.custom_cardonnay_scripts._gen_legacy_topology(
-                addr=addr, ports=all_except
-            )
-            helpers.write_json(
-                out_file=destdir / f"split-topology-{node_name}.json", content=topology
-            )
-
-            # P2P topology
             fixed_ports = all_except[:4]
-            p2p_topology = self.custom_cardonnay_scripts._gen_p2p_topology(
+
+            topology_content = self.custom_cardonnay_scripts._gen_p2p_topology(
                 addr=addr, ports=all_except, fixed_ports=fixed_ports
             )
             helpers.write_json(
-                out_file=destdir / f"p2p-split-topology-{node_name}.json", content=p2p_topology
+                out_file=destdir / f"split-topology-{node_name}.json", content=topology_content
             )
 
 
@@ -454,10 +432,10 @@ class TestnetScripts(ScriptsTypes):
 
         start_script = destdir / "start-cluster"
         if not start_script.exists():
-            err = (
+            msg = (
                 f"Start script '{start_script}' not found in the copied cluster scripts directory."
             )
-            raise RuntimeError(err)
+            raise RuntimeError(msg)
 
         bootstrap_conf_dir = self._get_bootstrap_conf_dir(bootstrap_dir=destdir)
         destdir_bootstrap = destdir / self.BOOTSTRAP_CONF
