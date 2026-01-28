@@ -190,6 +190,12 @@ make update-node-bins repo=../cardano-node
 source .source.dev
 ```
 
+### ✅ Validate Dev Environment
+
+```sh
+make check-dev-env
+```
+
 ### 🧱 Start Development Testnet Cluster
 
 ```sh
@@ -198,20 +204,6 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 ```
 
 > Keys and configs are stored under `/var/tmp/cardonnay/state-cluster0`.
-
-### 🧰 Reinstall `cardano-clusterlib` in Editable Mode
-
-```sh
-make reinstall-editable repo=../cardano-clusterlib-py
-```
-
-> ⚠️ After each dependencies update, repeat the step above to retain dev mode.
-
-### ✅ Validate Environment
-
-```sh
-make check-dev-env
-```
 
 ### 🧪 Run Individual Tests
 
@@ -227,6 +219,14 @@ make lint
 ```
 
 > ℹ️ **Pro Tip:** Run `make init-lint` to initialize linters and activate Git hooks.
+
+### 🧰 Reinstall `cardano-clusterlib` in Editable Mode
+
+```sh
+make reinstall-editable repo=../cardano-clusterlib-py
+```
+
+> ⚠️ After each dependencies update, repeat the step above to retain dev mode.
 
 ### 📦 Update Poetry Lockfile
 
