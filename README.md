@@ -170,6 +170,8 @@ NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
 
 ## 💻 Local Development for Test Authors
 
+While the setup described in [Persistent Local Testnet for Repeated Testing](#-persistent-local-testnet-for-repeated-testing) is sufficient for most test development, test authors may require a more customizable environment, such as editable installs, different testnet variants, or multiple testnet cluster instances.
+
 > Install [Nix](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix) and [Poetry](https://python-poetry.org/docs/#installation) before proceeding.
 
 ### 🐍 Set Up Python Environment
@@ -197,12 +199,6 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 
 > Keys and configs are stored under `/var/tmp/cardonnay/state-cluster0`.
 
-### ✅ Validate Environment
-
-```sh
-make check-dev-env
-```
-
 ### 🧰 Reinstall `cardano-clusterlib` in Editable Mode
 
 ```sh
@@ -210,6 +206,12 @@ make reinstall-editable repo=../cardano-clusterlib-py
 ```
 
 > ⚠️ After each dependencies update, repeat the step above to retain dev mode.
+
+### ✅ Validate Environment
+
+```sh
+make check-dev-env
+```
 
 ### 🧪 Run Individual Tests
 
@@ -224,7 +226,11 @@ pytest -m smoke cardano_node_tests/tests/test_cli.py
 make lint
 ```
 
+> ℹ️ **Pro Tip:** Run `make init-lint` to initialize linters and activate Git hooks.
+
 ### 📦 Update Poetry Lockfile
+
+This step is required after modifying dependencies in `pyproject.toml`.
 
 ```sh
 make update-lockfile
@@ -240,7 +246,5 @@ make doc
 
 ## 🤝 Contributing
 
-* Run `pre-commit install` to activate Git hooks.
 * Follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
-* Use [Ruff](https://github.com/astral-sh/ruff) (via `pre-commit`) for formatting.
 * See [CONTRIBUTING.md](https://github.com/IntersectMBO/cardano-node-tests/blob/master/CONTRIBUTING.md) for full guidelines.

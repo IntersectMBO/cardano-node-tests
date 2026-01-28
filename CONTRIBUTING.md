@@ -55,9 +55,9 @@ While the above prerequisites must be satisfied prior to the pull request review
 
 ### Python style guide
 
-Run `pre-commit install` to set up git hook scripts that will check your changes before every commit. Alternatively, run `make lint` manually before pushing your changes.
+Run `make init-lint` to set up git hook scripts that will check your changes before every commit. Alternatively, run `make lint` manually before pushing your changes.
 
-Follow the Google Python style guide but note that formatting is handled automatically by Black (through `pre-commit` command).
+Follow the Google Python style guide but note that formatting is handled automatically by Ruff (through `pre-commit` command).
 
 ## Roles and Responsibilities
 
