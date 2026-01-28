@@ -1,7 +1,7 @@
 Nightly system tests pipelines
 ==============================
 
-These Cardano node system tests are run on a nightly basis. The tests are run on multiple instances of a local cluster.
+These Cardano node system tests are run on a nightly basis. The tests are run on multiple instances of a local testnet.
 The tests are run on the `master` branch of the `cardano-node` repository.
 
 Several pipelines run the nightly system tests. In each pipeline, different sets of tests are run.
@@ -23,23 +23,25 @@ Nightly results
 * `nightly <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly/>`__:  |nightly-badge|
    * network in Conway era
    * protocol version 10
-   * P2P network topology
    * Constitutional Committee has 5 members
-   * cluster starts directly in Conway era
+   * testnet starts directly in Conway era
 * `nightly-dbsync <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-dbsync/>`__:  |nightly-dbsync-badge|
    * network in Conway era
    * protocol version 10
-   * P2P network topology
    * Constitutional Committee has 5 members
-   * cluster starts directly in Conway era
+   * testnet starts directly in Conway era
    * DB Sync testing enabled
 * `nightly-cli <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-cli/>`__:  |nightly-cli-badge|
    * latest `cardano-cli` master
    * network in Conway era
    * protocol version 10
-   * P2P network topology
    * Constitutional Committee has 5 members
-   * cluster starts directly in Conway era
+   * testnet starts directly in Conway era
+* `nightly-pv11 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-pv11/>`__:  |nightly-pv11-badge|
+   * network in Conway era
+   * protocol version 11
+   * Constitutional Committee has 5 members
+   * testnet starts directly in Conway era
 
 Nightly upgrade testing
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -68,6 +70,9 @@ Nightly upgrade testing
 
 .. |nightly-cli-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-cli%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-cli/
+
+.. |nightly-pv11-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-pv11%2Fbadge.json
+   :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-pv11/
 
 .. |nightly-upgrade-step1-badge| image:: https://img.shields.io/endpoint?url=https%3A%2F%2Fcardano-tests-reports-3-74-115-22.nip.io%2Fcardano-node-tests-nightly-upgrade%2Fstep1%2Fbadge.json
    :target: https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step1/
