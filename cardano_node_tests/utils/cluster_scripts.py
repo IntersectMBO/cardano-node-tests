@@ -346,6 +346,7 @@ class LocalScripts(ScriptsTypes):
             all_except = ports_group[:]
             all_except.remove(node_rec.node)
             node_name = "bft1" if node_rec.num == 0 else f"pool{node_rec.num}"
+            # Bft1 and first three pools
             fixed_ports = all_except[:4]
 
             topology_content = self.custom_cardonnay_scripts._gen_p2p_topology(
