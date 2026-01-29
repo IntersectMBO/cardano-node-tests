@@ -34,9 +34,6 @@ LAST_POOL_NAME = f"pool{configuration.NUM_POOLS}"
     reason="runs only with same cluster and Tx era",
 )
 @pytest.mark.skipif(configuration.NUM_POOLS < 4, reason="`NUM_POOLS` must be at least 4")
-@pytest.mark.skipif(
-    configuration.MIXED_P2P, reason="Works only when all nodes have the same topology type"
-)
 class TestRollback:
     """Tests for rollbacks."""
 
@@ -96,10 +93,8 @@ class TestRollback:
         state_dir = cluster_nodes.get_cluster_env().state_dir
         topology_files = list(state_dir.glob("topology*.json"))
 
-        prefix = "split" if configuration.ENABLE_LEGACY else "p2p-split"
-
         for f in topology_files:
-            shutil.copy(split_topology_dir / f"{prefix}-{f.name}", f)
+            shutil.copy(split_topology_dir / f"split-{f.name}", f)
 
         cluster_nodes.restart_all_nodes()
 

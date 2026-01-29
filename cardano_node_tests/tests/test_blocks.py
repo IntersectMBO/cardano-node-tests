@@ -395,7 +395,6 @@ class TestCollectData:
         _save_state(cluster.g_query.get_epoch())
 
 
-@pytest.mark.skipif(configuration.ENABLE_LEGACY, reason="runs only on P2P enabled clusters")
 class TestDynamicBlockProd:
     """Tests for P2P dynamic block production."""
 

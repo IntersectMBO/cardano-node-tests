@@ -121,11 +121,9 @@ You can fine-tune test runs using these environment variables:
 | `CLUSTERS_COUNT`                | Number of clusters to launch (default: 9).          |
 | `CLUSTER_ERA`                   | Cluster era (default: `conway`).                    |
 | `COMMAND_ERA`                   | CLI command target era.                             |
-| `ENABLE_LEGACY`                 | Use legacy networking.                              |
 | `KEEP_CLUSTERS_RUNNING`         | Don't shut down clusters after tests.               |
 | `MARKEXPR`                      | Marker expression for pytest filtering.             |
 | `MAX_TESTS_PER_CLUSTER`         | Max tests per cluster (default: 8).                 |
-| `MIXED_P2P`                     | Use a mix of P2P and legacy networking.             |
 | `NUM_POOLS`                     | Number of stake pools (default: 3).                 |
 | `PORTS_BASE`                    | Starting port number for cluster services.          |
 | `SCHEDULING_LOG`                | Path to scheduler log output.                       |
@@ -151,7 +149,7 @@ You can fine-tune test runs using these environment variables:
 Run with 6 pools and mixed networking:
 
 ```sh
-NUM_POOLS=6 MIXED_P2P=1 ./.github/regression.sh
+NUM_POOLS=6 ./.github/regression.sh
 ```
 
 Run selective tests with filtering:

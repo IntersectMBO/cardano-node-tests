@@ -75,7 +75,6 @@ export SCHEDULING_LOG=scheduling.log
 : > "$SCHEDULING_LOG"
 
 export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
-unset ENABLE_LEGACY MIXED_P2P
 
 echo "::endgroup::"  # end group for "Script setup"
 

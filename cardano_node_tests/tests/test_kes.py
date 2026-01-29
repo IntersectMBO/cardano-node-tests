@@ -554,7 +554,6 @@ class TestKES:
                     if (
                         "forked blockchain" in str(exc)
                         and VERSIONS.transaction_era >= VERSIONS.ALONZO
-                        and not configuration.ENABLE_LEGACY
                     ):
                         pytest.xfail(str(exc))
                     raise
@@ -722,7 +721,6 @@ class TestKES:
                     if (
                         "forked blockchain" in str(exc)
                         and VERSIONS.transaction_era >= VERSIONS.ALONZO
-                        and not configuration.ENABLE_LEGACY
                     ):
                         pytest.xfail(str(exc))
                     raise

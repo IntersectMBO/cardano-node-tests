@@ -16,11 +16,6 @@ IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 # See `cat /proc/sys/net/ipv4/ip_local_port_range`.
 PORTS_BASE = int(os.environ.get("PORTS_BASE") or 23000)
 
-# Used also in startup scripts
-ENABLE_LEGACY = helpers.is_truthy_env_var("ENABLE_LEGACY")
-# Used also in startup scripts
-MIXED_P2P = helpers.is_truthy_env_var("MIXED_P2P")
-
 HAS_CC = not helpers.is_truthy_env_var("NO_CC")
 
 # Number of new blocks before the Tx is considered confirmed. Use default value if set to 0.
