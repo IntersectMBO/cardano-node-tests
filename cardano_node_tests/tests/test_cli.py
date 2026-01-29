@@ -536,7 +536,11 @@ class TestAddressBuild:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "Invalid key" in exc_value or "Syntax error in script" in exc_value, exc_value
+            assert (
+                "script value not found" in exc_value  # In cardano-cli >= 10.14.0.0
+                or "Invalid key" in exc_value
+                or "Syntax error in script" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
@@ -598,7 +602,8 @@ class TestAddressBuild:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert (
-                "Invalid key" in exc_value
+                "script value not found" in exc_value  # In cardano-cli >= 10.14.0.0
+                or "Invalid key" in exc_value
                 or "Syntax error in script" in exc_value
                 or "invalid address" in exc_value
             ), exc_value
