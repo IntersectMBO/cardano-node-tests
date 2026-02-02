@@ -644,7 +644,7 @@ def perform_predicates_check(
     )
 
 
-def get_subtests() -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
+def get_subtests() -> tp.Generator[tp.Callable]:  # noqa: C901
     """Get the guardrails scenarios.
 
     The scenarios are executed as subtests in the `test_guardrails` test.

@@ -237,7 +237,7 @@ def change_dir() -> None:
 
 
 @pytest.fixture(scope="session")
-def close_dbconn() -> tp.Generator[None, None, None]:
+def close_dbconn() -> tp.Generator[None]:
     """Close connection to db-sync database at the end of session."""
     yield
     dbsync_conn.close_all()
@@ -296,9 +296,7 @@ def _save_env_for_allure(pytest_config: Config) -> None:
 
 
 @pytest.fixture(scope="session")
-def testenv_setup_teardown(
-    worker_id: str, request: FixtureRequest
-) -> tp.Generator[None, None, None]:
+def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> tp.Generator[None]:
     """Setup and teardown test environment."""
     pytest_root_tmp = temptools.get_pytest_root_tmp()
     session_basetemp = temptools.get_basetemp()
@@ -396,7 +394,7 @@ def _raise_logs_error(errors: str) -> None:
 def cluster_manager(
     worker_id: str,
     request: FixtureRequest,
-) -> tp.Generator[cluster_management.ClusterManager, None, None]:
+) -> tp.Generator[cluster_management.ClusterManager]:
     """Return instance of `cluster_management.ClusterManager`."""
     # Hide from traceback to make logs errors more readable
     __tracebackhide__ = True
@@ -413,7 +411,7 @@ def cluster_manager(
 
 
 @pytest.fixture
-def cd_testfile_temp_dir(testfile_temp_dir: pl.Path) -> tp.Generator[pl.Path, None, None]:
+def cd_testfile_temp_dir(testfile_temp_dir: pl.Path) -> tp.Generator[pl.Path]:
     """Change to a temporary dir specific to a test file."""
     with helpers.change_cwd(testfile_temp_dir):
         yield testfile_temp_dir
@@ -422,7 +420,7 @@ def cd_testfile_temp_dir(testfile_temp_dir: pl.Path) -> tp.Generator[pl.Path, No
 @pytest.fixture
 def respin_on_large_db(
     cluster_manager: cluster_management.ClusterManager,
-) -> tp.Generator[None, None, None]:
+) -> tp.Generator[None]:
     """Respin a cluster instance running on CI when db-sync database size is over 256 MB."""
     yield
     if (
@@ -439,8 +437,8 @@ def respin_on_large_db(
 
 @pytest.fixture(autouse=True)
 def function_autouse(
-    cd_testfile_temp_dir: tp.Generator[pl.Path, None, None],
-    respin_on_large_db: tp.Generator[None, None, None],
+    cd_testfile_temp_dir: tp.Generator[pl.Path],
+    respin_on_large_db: tp.Generator[None],
 ) -> None:
     """Autouse function fixtures that are required for each test setup and teardown."""
 

@@ -79,7 +79,7 @@ def skip_on_no_env(
 @pytest.fixture
 def set_network_id_env(
     cluster: clusterlib.ClusterLib,
-) -> tp.Generator[None, None, None]:
+) -> tp.Generator[None]:
     """Set `CARDANO_NODE_NETWORK_ID` and prevent `cardano-cli` from using `--testnet-magic`."""
     magic_args = cluster.magic_args[:]
 

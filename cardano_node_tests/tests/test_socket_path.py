@@ -69,7 +69,7 @@ def _assert_expected_err(env_scenario: str, socket_scenario: str, err_msg: str) 
 def set_socket_path(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
-) -> tp.Generator[None, None, None]:
+) -> tp.Generator[None]:
     """Unset `CARDANO_NODE_SOCKET_PATH` and set path for `cardano-cli ... --socket-path`."""
     if os.environ.get("CARDANO_NODE_SOCKET_PATH"):
         del os.environ["CARDANO_NODE_SOCKET_PATH"]

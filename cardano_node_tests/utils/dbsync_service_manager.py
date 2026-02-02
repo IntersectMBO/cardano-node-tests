@@ -307,10 +307,15 @@ class DBSyncConfigBuilder:
         return self
 
     def build(self) -> dict[str, tp.Any]:
+        # pyrefly: ignore [redundant-cast]
         tx_out = tp.cast(TxOutConfig, self._config["tx_out"])
+        # pyrefly: ignore [redundant-cast]
         shelley = tp.cast(ShelleyConfig, self._config["shelley"])
+        # pyrefly: ignore [redundant-cast]
         multi_asset = tp.cast(MultiAssetConfig, self._config["multi_asset"])
+        # pyrefly: ignore [redundant-cast]
         metadata = tp.cast(MetadataConfig, self._config["metadata"])
+        # pyrefly: ignore [redundant-cast]
         plutus = tp.cast(PlutusConfig, self._config["plutus"])
 
         config: dict[str, tp.Any] = {

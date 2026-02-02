@@ -420,7 +420,7 @@ class TestNegativeMnemonic:
     """Tests with invalid arguments."""
 
     @pytest.fixture
-    def tmp_case_path(self) -> tp.Generator[pl.Path, None, None]:
+    def tmp_case_path(self) -> tp.Generator[pl.Path]:
         d = pl.Path(f"reject_mnemonics_{clusterlib.get_rand_str()}").resolve()
         d.mkdir(exist_ok=True)
         yield d

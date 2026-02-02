@@ -678,7 +678,7 @@ class SchemaVersion:
         return cls._stages
 
 
-def query_tx(*, txhash: str) -> tp.Generator[TxDBRow, None, None]:
+def query_tx(*, txhash: str) -> tp.Generator[TxDBRow]:
     """Query a transaction in db-sync."""
     query = (
         "SELECT"
@@ -718,7 +718,7 @@ def query_tx(*, txhash: str) -> tp.Generator[TxDBRow, None, None]:
             yield TxDBRow(*result)
 
 
-def query_tx_ins(*, txhash: str) -> tp.Generator[TxInDBRow, None, None]:
+def query_tx_ins(*, txhash: str) -> tp.Generator[TxInDBRow]:
     """Query transaction txins in db-sync."""
     query = (
         "SELECT"
@@ -741,7 +741,7 @@ def query_tx_ins(*, txhash: str) -> tp.Generator[TxInDBRow, None, None]:
             yield TxInDBRow(*result)
 
 
-def query_collateral_tx_ins(*, txhash: str) -> tp.Generator[TxInNoMADBRow, None, None]:
+def query_collateral_tx_ins(*, txhash: str) -> tp.Generator[TxInNoMADBRow]:
     """Query transaction collateral txins in db-sync."""
     query = (
         "SELECT"
@@ -762,7 +762,7 @@ def query_collateral_tx_ins(*, txhash: str) -> tp.Generator[TxInNoMADBRow, None,
             yield TxInNoMADBRow(*result)
 
 
-def query_reference_tx_ins(*, txhash: str) -> tp.Generator[TxInNoMADBRow, None, None]:
+def query_reference_tx_ins(*, txhash: str) -> tp.Generator[TxInNoMADBRow]:
     """Query transaction reference txins in db-sync."""
     query = (
         "SELECT "
@@ -783,7 +783,7 @@ def query_reference_tx_ins(*, txhash: str) -> tp.Generator[TxInNoMADBRow, None, 
             yield TxInNoMADBRow(*result)
 
 
-def query_collateral_tx_outs(*, txhash: str) -> tp.Generator[CollateralTxOutDBRow, None, None]:
+def query_collateral_tx_outs(*, txhash: str) -> tp.Generator[CollateralTxOutDBRow]:
     """Query transaction collateral txouts in db-sync."""
     query = (
         "SELECT "
@@ -800,7 +800,7 @@ def query_collateral_tx_outs(*, txhash: str) -> tp.Generator[CollateralTxOutDBRo
             yield CollateralTxOutDBRow(*result)
 
 
-def query_scripts(*, txhash: str) -> tp.Generator[ScriptDBRow, None, None]:
+def query_scripts(*, txhash: str) -> tp.Generator[ScriptDBRow]:
     """Query transaction scripts in db-sync."""
     query = (
         "SELECT"
@@ -815,7 +815,7 @@ def query_scripts(*, txhash: str) -> tp.Generator[ScriptDBRow, None, None]:
             yield ScriptDBRow(*result)
 
 
-def query_redeemers(*, txhash: str) -> tp.Generator[RedeemerDBRow, None, None]:
+def query_redeemers(*, txhash: str) -> tp.Generator[RedeemerDBRow]:
     """Query transaction redeemers in db-sync."""
     query = (
         "SELECT"
@@ -832,7 +832,7 @@ def query_redeemers(*, txhash: str) -> tp.Generator[RedeemerDBRow, None, None]:
             yield RedeemerDBRow(*result)
 
 
-def query_tx_metadata(*, txhash: str) -> tp.Generator[MetadataDBRow, None, None]:
+def query_tx_metadata(*, txhash: str) -> tp.Generator[MetadataDBRow]:
     """Query transaction metadata in db-sync."""
     query = (
         "SELECT"
@@ -848,7 +848,7 @@ def query_tx_metadata(*, txhash: str) -> tp.Generator[MetadataDBRow, None, None]
             yield MetadataDBRow(*result)
 
 
-def query_tx_reserve(*, txhash: str) -> tp.Generator[ADAStashDBRow, None, None]:
+def query_tx_reserve(*, txhash: str) -> tp.Generator[ADAStashDBRow]:
     """Query transaction reserve record in db-sync."""
     query = (
         "SELECT"
@@ -864,7 +864,7 @@ def query_tx_reserve(*, txhash: str) -> tp.Generator[ADAStashDBRow, None, None]:
             yield ADAStashDBRow(*result)
 
 
-def query_tx_treasury(*, txhash: str) -> tp.Generator[ADAStashDBRow, None, None]:
+def query_tx_treasury(*, txhash: str) -> tp.Generator[ADAStashDBRow]:
     """Query transaction treasury record in db-sync."""
     query = (
         "SELECT"
@@ -881,7 +881,7 @@ def query_tx_treasury(*, txhash: str) -> tp.Generator[ADAStashDBRow, None, None]
             yield ADAStashDBRow(*result)
 
 
-def query_tx_pot_transfers(*, txhash: str) -> tp.Generator[PotTransferDBRow, None, None]:
+def query_tx_pot_transfers(*, txhash: str) -> tp.Generator[PotTransferDBRow]:
     """Query transaction MIR certificate records in db-sync."""
     query = (
         "SELECT"
@@ -897,7 +897,7 @@ def query_tx_pot_transfers(*, txhash: str) -> tp.Generator[PotTransferDBRow, Non
             yield PotTransferDBRow(*result)
 
 
-def query_tx_stake_reg(*, txhash: str) -> tp.Generator[StakeAddrDBRow, None, None]:
+def query_tx_stake_reg(*, txhash: str) -> tp.Generator[StakeAddrDBRow]:
     """Query stake registration record in db-sync."""
     query = (
         "SELECT"
@@ -913,7 +913,7 @@ def query_tx_stake_reg(*, txhash: str) -> tp.Generator[StakeAddrDBRow, None, Non
             yield StakeAddrDBRow(*result)
 
 
-def query_tx_stake_dereg(*, txhash: str) -> tp.Generator[StakeAddrDBRow, None, None]:
+def query_tx_stake_dereg(*, txhash: str) -> tp.Generator[StakeAddrDBRow]:
     """Query stake deregistration record in db-sync."""
     query = (
         "SELECT"
@@ -929,7 +929,7 @@ def query_tx_stake_dereg(*, txhash: str) -> tp.Generator[StakeAddrDBRow, None, N
             yield StakeAddrDBRow(*result)
 
 
-def query_tx_stake_deleg(*, txhash: str) -> tp.Generator[StakeDelegDBRow, None, None]:
+def query_tx_stake_deleg(*, txhash: str) -> tp.Generator[StakeDelegDBRow]:
     """Query stake registration record in db-sync."""
     query = (
         "SELECT"
@@ -947,7 +947,7 @@ def query_tx_stake_deleg(*, txhash: str) -> tp.Generator[StakeDelegDBRow, None, 
             yield StakeDelegDBRow(*result)
 
 
-def query_tx_withdrawal(*, txhash: str) -> tp.Generator[WithdrawalDBRow, None, None]:
+def query_tx_withdrawal(*, txhash: str) -> tp.Generator[WithdrawalDBRow]:
     """Query reward withdrawal record in db-sync."""
     query = (
         "SELECT"
@@ -963,9 +963,7 @@ def query_tx_withdrawal(*, txhash: str) -> tp.Generator[WithdrawalDBRow, None, N
             yield WithdrawalDBRow(*result)
 
 
-def query_ada_pots(
-    *, epoch_from: int = 0, epoch_to: int = 99999999
-) -> tp.Generator[ADAPotsDBRow, None, None]:
+def query_ada_pots(*, epoch_from: int = 0, epoch_to: int = 99999999) -> tp.Generator[ADAPotsDBRow]:
     """Query ADA pots record in db-sync."""
     query = (
         "SELECT"
@@ -983,7 +981,7 @@ def query_ada_pots(
 
 def query_address_reward(
     *, address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> tp.Generator[RewardDBRow, None, None]:
+) -> tp.Generator[RewardDBRow]:
     """Query reward records for stake address in db-sync."""
     query = (
         "SELECT"
@@ -1002,7 +1000,7 @@ def query_address_reward(
 
 def query_address_reward_rest(
     *, address: str, epoch_from: int = 0, epoch_to: int = 99999999
-) -> tp.Generator[RewardDBRow, None, None]:
+) -> tp.Generator[RewardDBRow]:
     """Query instant reward records for stake address in db-sync."""
     query = (
         "SELECT"
@@ -1018,7 +1016,7 @@ def query_address_reward_rest(
             yield RewardDBRow(*result)
 
 
-def query_utxo(*, address: str) -> tp.Generator[UTxODBRow, None, None]:
+def query_utxo(*, address: str) -> tp.Generator[UTxODBRow]:
     """Query UTxOs for payment address in db-sync."""
     query = (
         "SELECT"
@@ -1039,7 +1037,7 @@ def query_utxo(*, address: str) -> tp.Generator[UTxODBRow, None, None]:
             yield UTxODBRow(*result)
 
 
-def query_pool_data(*, pool_id_bech32: str) -> tp.Generator[PoolDataDBRow, None, None]:
+def query_pool_data(*, pool_id_bech32: str) -> tp.Generator[PoolDataDBRow]:
     """Query pool data record in db-sync."""
     query = (
         "SELECT DISTINCT"
@@ -1072,9 +1070,7 @@ def query_pool_data(*, pool_id_bech32: str) -> tp.Generator[PoolDataDBRow, None,
             yield PoolDataDBRow(*result)
 
 
-def query_off_chain_pool_data(
-    *, pool_id_bech32: str
-) -> tp.Generator[PoolOffChainDataDBRow, None, None]:
+def query_off_chain_pool_data(*, pool_id_bech32: str) -> tp.Generator[PoolOffChainDataDBRow]:
     """Query `Off_Chain_Pool_Data` record in db-sync."""
     query = (
         "SELECT"
@@ -1092,7 +1088,7 @@ def query_off_chain_pool_data(
 
 def query_off_chain_pool_fetch_error(
     *, pool_id_bech32: str
-) -> tp.Generator[PoolOffChainFetchErrorDBRow, None, None]:
+) -> tp.Generator[PoolOffChainFetchErrorDBRow]:
     """Query `Off_Chain_Pool_Fetch_Error` record in db-sync."""
     query = (
         "SELECT"
@@ -1108,9 +1104,7 @@ def query_off_chain_pool_fetch_error(
             yield PoolOffChainFetchErrorDBRow(*result)
 
 
-def query_epoch_stake(
-    *, pool_id_bech32: str, epoch_number: int
-) -> tp.Generator[EpochStakeDBRow, None, None]:
+def query_epoch_stake(*, pool_id_bech32: str, epoch_number: int) -> tp.Generator[EpochStakeDBRow]:
     """Query epoch stake record for a pool in db-sync."""
     query = (
         "SELECT "
@@ -1160,7 +1154,7 @@ def query_epoch_param(*, epoch_no: int = 0) -> EpochParamDBRow:
 
 def query_blocks(
     *, pool_id_bech32: str = "", epoch_from: int = 0, epoch_to: int = 99999999
-) -> tp.Generator[BlockDBRow, None, None]:
+) -> tp.Generator[BlockDBRow]:
     """Query block records in db-sync."""
     if pool_id_bech32:
         pool_query = "(pool_hash.view = %s) AND"
@@ -1201,7 +1195,7 @@ def query_table_names() -> list[str]:
         return table_names
 
 
-def query_datum(*, datum_hash: str) -> tp.Generator[DatumDBRow, None, None]:
+def query_datum(*, datum_hash: str) -> tp.Generator[DatumDBRow]:
     """Query datum record in db-sync."""
     query = "SELECT id, hash, tx_id, value, bytes FROM datum WHERE hash = %s;"
 
@@ -1283,7 +1277,7 @@ def query_param_proposal(*, txhash: str = "") -> ParamProposalDBRow:
         return ParamProposalDBRow(*results)
 
 
-def query_extra_key_witness(*, txhash: str) -> tp.Generator[memoryview, None, None]:
+def query_extra_key_witness(*, txhash: str) -> tp.Generator[memoryview]:
     """Query extra key witness records in db-sync."""
     query = (
         "SELECT extra_key_witness.hash "
@@ -1297,9 +1291,7 @@ def query_extra_key_witness(*, txhash: str) -> tp.Generator[memoryview, None, No
             yield result[0]
 
 
-def query_epoch(
-    *, epoch_from: int = 0, epoch_to: int = 99999999
-) -> tp.Generator[EpochDBRow, None, None]:
+def query_epoch(*, epoch_from: int = 0, epoch_to: int = 99999999) -> tp.Generator[EpochDBRow]:
     """Query epoch records in db-sync."""
     query_vars = (epoch_from, epoch_to)
 
@@ -1315,9 +1307,7 @@ def query_epoch(
             yield EpochDBRow(*result)
 
 
-def query_committee_registration(
-    *, cold_key: str
-) -> tp.Generator[CommitteeRegistrationDBRow, None, None]:
+def query_committee_registration(*, cold_key: str) -> tp.Generator[CommitteeRegistrationDBRow]:
     """Query committee registration in db-sync."""
     query = (
         "SELECT cr.id, cr.tx_id, cr.cert_index, chc.raw, chh.raw "
@@ -1332,9 +1322,7 @@ def query_committee_registration(
             yield CommitteeRegistrationDBRow(*result)
 
 
-def query_committee_deregistration(
-    *, cold_key: str
-) -> tp.Generator[CommitteeDeregistrationDBRow, None, None]:
+def query_committee_deregistration(*, cold_key: str) -> tp.Generator[CommitteeDeregistrationDBRow]:
     """Query committee registration in db-sync."""
     query = (
         "SELECT cd.id, cd.tx_id, cd.cert_index, cd.voting_anchor_id, committee_hash.raw "
@@ -1350,7 +1338,7 @@ def query_committee_deregistration(
 
 def query_drep_registration(
     *, drep_hash: str, drep_deposit: int = 2000000
-) -> tp.Generator[DrepRegistrationDBRow, None, None]:
+) -> tp.Generator[DrepRegistrationDBRow]:
     """Query drep registration in db-sync."""
     query = (
         "SELECT"
@@ -1371,7 +1359,7 @@ def query_drep_registration(
 
 def query_gov_action_proposal(
     *, txhash: str = "", type: str = ""
-) -> tp.Generator[GovActionProposalDBRow, None, None]:
+) -> tp.Generator[GovActionProposalDBRow]:
     """Query gov_action_proposal table in db-sync.
 
     If type is provided txhash will be ignored.
@@ -1399,7 +1387,7 @@ def query_gov_action_proposal(
             yield GovActionProposalDBRow(*result)
 
 
-def query_voting_procedure(*, txhash: str) -> tp.Generator[VotingProcedureDBRow, None, None]:
+def query_voting_procedure(*, txhash: str) -> tp.Generator[VotingProcedureDBRow]:
     """Query voting_procedure table in db-sync."""
     query = (
         "SELECT"
@@ -1414,7 +1402,7 @@ def query_voting_procedure(*, txhash: str) -> tp.Generator[VotingProcedureDBRow,
             yield VotingProcedureDBRow(*result)
 
 
-def query_new_committee_info(*, txhash: str) -> tp.Generator[NewCommitteeInfoDBRow, None, None]:
+def query_new_committee_info(*, txhash: str) -> tp.Generator[NewCommitteeInfoDBRow]:
     """Query new committee proposed in db-sync."""
     query = (
         "SELECT"
@@ -1431,9 +1419,7 @@ def query_new_committee_info(*, txhash: str) -> tp.Generator[NewCommitteeInfoDBR
             yield NewCommitteeInfoDBRow(*result)
 
 
-def query_committee_members(
-    *, committee_id: int
-) -> tp.Generator[NewCommitteeMemberDBRow, None, None]:
+def query_committee_members(*, committee_id: int) -> tp.Generator[NewCommitteeMemberDBRow]:
     """Query committee members in db-sync."""
     query = (
         "SELECT"
@@ -1448,7 +1434,7 @@ def query_committee_members(
             yield NewCommitteeMemberDBRow(*result)
 
 
-def query_treasury_withdrawal(*, txhash: str) -> tp.Generator[TreasuryWithdrawalDBRow, None, None]:
+def query_treasury_withdrawal(*, txhash: str) -> tp.Generator[TreasuryWithdrawalDBRow]:
     """Query treasury_withdrawal table in db-sync."""
     query = (
         "SELECT"
@@ -1467,7 +1453,7 @@ def query_treasury_withdrawal(*, txhash: str) -> tp.Generator[TreasuryWithdrawal
             yield TreasuryWithdrawalDBRow(*result)
 
 
-def query_off_chain_vote_data(*, data_hash: str) -> tp.Generator[OffChainVoteDataDBRow, None, None]:
+def query_off_chain_vote_data(*, data_hash: str) -> tp.Generator[OffChainVoteDataDBRow]:
     """Query the off chain vote data in db-sync."""
     query = (
         "SELECT"
@@ -1495,7 +1481,7 @@ def query_off_chain_vote_data(*, data_hash: str) -> tp.Generator[OffChainVoteDat
 
 def query_off_chain_vote_fetch_error(
     *, voting_anchor_id: int
-) -> tp.Generator[OffChainVoteFetchErrorDBRow, None, None]:
+) -> tp.Generator[OffChainVoteFetchErrorDBRow]:
     """Query off_chain_vote_fetch_error table in db-sync."""
     query = (
         "SELECT"
@@ -1511,7 +1497,7 @@ def query_off_chain_vote_fetch_error(
 
 def query_off_chain_vote_drep_data(
     *, voting_anchor_id: int
-) -> tp.Generator[OffChainVoteDrepDataDBRow, None, None]:
+) -> tp.Generator[OffChainVoteDrepDataDBRow]:
     """Query off_chain_vote_drep_data table in db-sync."""
     query = (
         "SELECT"
@@ -1541,7 +1527,7 @@ def query_db_size() -> int:
         return int(result[0])
 
 
-def query_delegation_vote(*, txhash: str) -> tp.Generator[DelegationVoteDBRow, None, None]:
+def query_delegation_vote(*, txhash: str) -> tp.Generator[DelegationVoteDBRow]:
     """Query delegation_vote table in db-sync."""
     query = (
         "SELECT"
@@ -1558,7 +1544,7 @@ def query_delegation_vote(*, txhash: str) -> tp.Generator[DelegationVoteDBRow, N
             yield DelegationVoteDBRow(*result)
 
 
-def query_new_constitution(*, txhash: str) -> tp.Generator[NewConstitutionInfoDBRow, None, None]:
+def query_new_constitution(*, txhash: str) -> tp.Generator[NewConstitutionInfoDBRow]:
     """Query new constitution proposed in db-sync."""
     query = (
         "SELECT"
@@ -1575,9 +1561,7 @@ def query_new_constitution(*, txhash: str) -> tp.Generator[NewConstitutionInfoDB
             yield NewConstitutionInfoDBRow(*result)
 
 
-def query_drep_distr(
-    *, drep_hash: str, epoch_no: int
-) -> tp.Generator[DrepDistributionDBRow, None, None]:
+def query_drep_distr(*, drep_hash: str, epoch_no: int) -> tp.Generator[DrepDistributionDBRow]:
     """Query drep voting power in db-sync."""
     query = (
         "SELECT"
@@ -1674,7 +1658,7 @@ def query_rows_count(
         return result[0] or 0
 
 
-def query_epoch_state(*, epoch_no: int) -> tp.Generator[EpochStateDBRow, None, None]:
+def query_epoch_state(*, epoch_no: int) -> tp.Generator[EpochStateDBRow]:
     """Query epoch_state table in db-sync."""
     query = (
         "SELECT "

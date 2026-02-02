@@ -208,7 +208,7 @@ def dedup_tx_inputs(tx_inputs: TxInputGroup) -> TxInputGroup:
 
 def batch_tx_inputs(
     tx_inputs: TxInputGroup, *, batch_size: int = 100
-) -> tp.Generator[TxInputGroup, None, None]:
+) -> tp.Generator[TxInputGroup]:
     """Batch transaction inputs."""
     current_batch: TxInputGroup = []
     current_utxo_count = 0
@@ -318,24 +318,24 @@ def create_addr_record(*, addr_file: pl.Path) -> clusterlib.AddressRecord:
     return addr_record
 
 
-def find_addr_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
+def find_addr_files(location: pl.Path) -> tp.Iterator[pl.Path]:
     r"""Find all '\*.addr' files in given location and its subdirectories."""
     return location.glob("**/*.addr")
 
 
-def find_submitted_tx_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
+def find_submitted_tx_files(location: pl.Path) -> tp.Iterator[pl.Path]:
     r"""Find all '\*.submitted' files in given location and its subdirectories."""
     return location.glob("**/*.submitted")
 
 
-def find_cert_files(location: pl.Path) -> tp.Generator[pl.Path, None, None]:
+def find_cert_files(location: pl.Path) -> tp.Iterator[pl.Path]:
     r"""Find all '\*_drep_reg.cert' files in given location and its subdirectories."""
     return location.glob("**/*_drep_reg.cert")
 
 
 def filter_addr_files(
-    file_paths: tp.Generator[pl.Path, None, None],
-) -> tp.Generator[pl.Path, None, None]:
+    file_paths: tp.Iterator[pl.Path],
+) -> tp.Iterator[pl.Path]:
     r"""Skip the '\*_pycurrent' symlinks to pytest temp dirs and faucet address."""
     return (
         f
@@ -345,8 +345,8 @@ def filter_addr_files(
 
 
 def dedup_addresses(
-    file_paths: tp.Generator[pl.Path, None, None],
-) -> tp.Generator[pl.Path, None, None]:
+    file_paths: tp.Iterator[pl.Path],
+) -> tp.Iterator[pl.Path]:
     """Deduplicate addresses."""
     seen_addrs = set()
     for fpath in file_paths:

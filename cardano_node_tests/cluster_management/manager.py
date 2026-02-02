@@ -62,7 +62,7 @@ def _get_manager_fixture_line_str() -> str:
 
 
 @dataclasses.dataclass
-class FixtureCache(tp.Generic[T]):
+class FixtureCache[T]:
     """Cache for a fixture."""
 
     value: T | None

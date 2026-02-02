@@ -2,8 +2,6 @@
 #
 # Install cardano_node_tests and its dependencies into a virtual environment.
 
-PYTHON_VERSION="3.13"
-
 abort_install=0
 
 set -eu
@@ -47,18 +45,11 @@ if [ -n "${VIRTUAL_ENV:-""}" ]; then
   exit 0
 fi
 
-# use the same python version as in nix shell
-if ! command -v "python$PYTHON_VERSION" >/dev/null 2>&1; then
-  echo "Python $PYTHON_VERSION is not installed. Please install it first." >&2
-  abort_install=1
-fi
-
 if [ "$abort_install" -eq 1 ]; then
   exit 1
 fi
 
 filter_out_nix
-uv venv --python "python$PYTHON_VERSION"
 uv sync --group docs --group dev
 
 # shellcheck disable=SC2016

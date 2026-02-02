@@ -7,7 +7,7 @@ authors = [
     { name = "Sara Tomaz", email = "sara.tomaz@iohk.io" },
     { name = "Artur Wieczorek", email = "artur.wieczorek@iohk.io" },
 ]
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.13,<4.0"
 readme = "README.md"
 license = "Apache-2.0"
 keywords = [
@@ -103,7 +103,7 @@ ignore = ["ANN401", "B905", "D10", "D203", "D212", "D213", "D214", "D215", "D404
 force-single-line = true
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 show_error_context = true
 verbosity = 0
 ignore_missing_imports = true
@@ -114,14 +114,14 @@ warn_unused_configs = true
 warn_return_any = true
 
 [tool.pyrefly]
-python_version = "3.11.0"
+python_version = "3.13.0"
 project_includes = ["cardano_node_tests", "framework_tests"]
 replace_imports_with_any = ["allure.*", "hypothesis.*", "pytest.*", "pytest_subtests.*", "psycopg2.*", "requests.*"]
 ignore_errors_in_generated_code = true
 ignore_missing_source = true
 
 [tool.pyright]
-pythonVersion = "3.11"
+pythonVersion = "3.13"
 reportPrivateImportUsage = false
 
 [tool.pytest.ini_options]
