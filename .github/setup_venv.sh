@@ -17,9 +17,11 @@ fi
 # shellcheck disable=SC1090,SC1091
 . "$_VENV_DIR/bin/activate"
 
-# Filter out nix python packages from PYTHONPATH.
-# This avoids conflicts between nix-installed packages and poetry virtual environment packages.
-PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
+if [ -n "${IN_NIX_SHELL:-}" ]; then
+  # Filter out nix python packages from PYTHONPATH.
+  # This avoids conflicts between nix-installed packages and python virtual environment packages.
+  PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
+fi
 if [ -n "${PYTHONPATH:-}" ]; then
   export PYTHONPATH
 else
@@ -27,7 +29,7 @@ else
 fi
 
 if [ -z "$_REQS_INSTALLED" ]; then
-  POETRY_VIRTUALENVS_PATH="${WORKDIR:?}" poetry install -n
+  uv sync --active --no-dev
 fi
 
 unset _VENV_DIR _REQS_INSTALLED

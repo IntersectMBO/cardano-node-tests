@@ -31,14 +31,14 @@ reinstall-editable:
 test-env:
 	@./scripts/setup_test_env.sh conway
 
-# update poetry lockfile
+# update uv lockfile
 .PHONY: update-lockfile
 update-lockfile:
 	@exit_code=0; \
-	./scripts/poetry_update_lock.sh || exit_code=$$?; \
+	./scripts/uv_update_lock.sh || exit_code=$$?; \
 	if [ $$exit_code -ne 0 ] && [ $$exit_code -ne 10 ]; then \
-		echo "Poetry lockfile update failed. Retrying without cache..." >&2; \
-		./scripts/poetry_update_lock.sh --no-cache; \
+		echo "uv lockfile update failed. Retrying without cache..." >&2; \
+		./scripts/uv_update_lock.sh --refresh; \
 	else \
 		exit $$exit_code; \
 	fi

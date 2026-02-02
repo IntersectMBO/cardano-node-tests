@@ -5,7 +5,7 @@ on:
     branches: [ "master" ]
     paths:
       - 'flake.lock'
-      - 'poetry.lock'
+      - 'uv.lock'
       - '**.nix'
       - '.github/workflows/nix_smoke.yaml'
   workflow_dispatch:

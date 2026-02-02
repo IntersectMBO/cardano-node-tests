@@ -20,15 +20,15 @@ INSTANCE_NUM="${INSTANCE_NUM:-0}"
 
 _root_dir_cnt="$(readlink -m "${BASH_SOURCE[0]}/..")"
 
-# Activate poetry virtual environment
+# Activate python virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
-  # shellcheck disable=SC2046,SC1091
-  source $(poetry env info --path)/bin/activate
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
 fi
 
 if [ -n "${IN_NIX_SHELL:-}" ]; then
   # Filter out nix python packages from PYTHONPATH.
-  # This avoids conflicts between nix-installed packages and poetry virtual environment packages.
+  # This avoids conflicts between nix-installed packages and python virtual environment packages.
   PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
 fi
 if [ -n "${PYTHONPATH:-}" ]; then

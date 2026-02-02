@@ -78,10 +78,13 @@ docs = [
     "sphinxemoji (>=0.3.1,<0.4.0)",
 ]
 
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cardano_node_tests*"]
 
 [tool.ruff]
 line-length = 100
