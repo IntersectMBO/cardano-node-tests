@@ -82,11 +82,7 @@ def script_dreps_lg(
     cluster_manager: cluster_management.ClusterManager,
     cluster_lock_gov_script: governance_utils.GovClusterT,
     testfile_temp_dir: pl.Path,
-) -> tp.Generator[
-    tuple[list[governance_utils.DRepScriptRegistration], list[clusterlib.PoolUser]],
-    None,
-    None,
-]:
+) -> tp.Generator[tuple[list[governance_utils.DRepScriptRegistration], list[clusterlib.PoolUser]]]:
     """Create script DReps for "lock governance"."""
     __: tp.Any  # mypy workaround
     cluster, __ = cluster_lock_gov_script

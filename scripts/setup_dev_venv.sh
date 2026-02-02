@@ -2,16 +2,16 @@
 #
 # Install cardano_node_tests and its dependencies into a virtual environment.
 
-PYTHON_VERSION="3.11"
-
 abort_install=0
 
 set -eu
 
 filter_out_nix(){
-  # Filter out nix python packages from PYTHONPATH.
-  # This avoids conflicts between nix-installed packages and poetry virtual environment packages.
-  PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
+  if [ -n "${IN_NIX_SHELL:-}" ]; then
+    # Filter out nix python packages from PYTHONPATH.
+    # This avoids conflicts between nix-installed packages and python virtual environment packages.
+    PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
+  fi
   if [ -n "${PYTHONPATH:-}" ]; then
     export PYTHONPATH
   else
@@ -19,8 +19,8 @@ filter_out_nix(){
   fi
 }
 
-if ! command -v poetry >/dev/null 2>&1; then
-  echo "Poetry is not installed. Please install it first." >&2
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv is not installed. Please install it first." >&2
   abort_install=1
 fi
 if [ ! -d "cardano_node_tests" ]; then
@@ -41,14 +41,8 @@ if [ -n "${VIRTUAL_ENV:-""}" ]; then
   fi
 
   filter_out_nix
-  POETRY_VIRTUALENVS_PATH="$PWD" poetry install --with docs --with dev
+  uv sync --active --group docs --group dev
   exit 0
-fi
-
-# use the same python version as in nix shell
-if ! command -v "python$PYTHON_VERSION" >/dev/null 2>&1; then
-  echo "Python $PYTHON_VERSION is not installed. Please install it first." >&2
-  abort_install=1
 fi
 
 if [ "$abort_install" -eq 1 ]; then
@@ -56,8 +50,7 @@ if [ "$abort_install" -eq 1 ]; then
 fi
 
 filter_out_nix
-poetry env use "python$PYTHON_VERSION"
-poetry install --with docs --with dev
+uv sync --group docs --group dev
 
 # shellcheck disable=SC2016
-echo 'Run \`source "$(poetry env info --path)"/bin/activate\` to activate the virtual env.'
+echo 'Run `source .venv/bin/activate` to activate the virtual env.'

@@ -128,7 +128,7 @@ def check_dbsync_state(
 @pytest.fixture
 def db_sync_manager(
     cluster_singleton: clusterlib.ClusterLib,  # noqa: ARG001
-) -> tp.Generator[db_sync.DBSyncManager, None, None]:
+) -> tp.Generator[db_sync.DBSyncManager]:
     """Provide db-sync manager on a singleton cluster.
 
     Creates and returns a DBSyncManager instance with locked cluster resources
@@ -156,7 +156,7 @@ def db_sync_manager(
 class TestDBSyncConfig:
     """Tests for DB-Sync Config."""
 
-    def get_subtests(self) -> tp.Generator[tp.Callable, None, None]:
+    def get_subtests(self) -> tp.Generator[tp.Callable]:
         """Get the DB-Sync Config scenarios.
 
         The scenarios are executed as subtests in the `test_dbsync_config` test.

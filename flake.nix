@@ -2,7 +2,7 @@
   description = "Functional tests for cardano-node";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     cardano-node = {
       url = "github:IntersectMBO/cardano-node";
     };
@@ -17,8 +17,6 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           nodePkgs = cardano-node.packages.${system};
-          py3Pkgs = pkgs.python311Packages;
-          py3Full = pkgs.python311Full;
         in
         {
           devShells = rec {
@@ -30,9 +28,8 @@
             };
             testenv = pkgs.mkShell {
               nativeBuildInputs = base.nativeBuildInputs ++ postgres.nativeBuildInputs ++ [
-                pkgs.poetry
-                py3Full
-                py3Pkgs.virtualenv
+                pkgs.uv
+                pkgs.python313
               ];
             };
             dev = pkgs.mkShell {

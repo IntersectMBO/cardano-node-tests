@@ -170,7 +170,7 @@ NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
 
 While the setup described in [Persistent Local Testnet for Repeated Testing](#-persistent-local-testnet-for-repeated-testing) is sufficient for most test development, test authors may require a more customizable environment, such as editable installs, different testnet variants, or multiple testnet cluster instances.
 
-> Install [Nix](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix) and [Poetry](https://python-poetry.org/docs/#installation) before proceeding.
+> Install [Nix](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix) and [uv](https://docs.astral.sh/uv/getting-started/installation/) before proceeding.
 
 ### 🐍 Set Up Python Environment
 
@@ -226,7 +226,7 @@ make reinstall-editable repo=../cardano-clusterlib-py
 
 > ⚠️ After each dependencies update, repeat the step above to retain dev mode.
 
-### 📦 Update Poetry Lockfile
+### 📦 Update uv Lockfile
 
 This step is required after modifying dependencies in `pyproject.toml`.
 

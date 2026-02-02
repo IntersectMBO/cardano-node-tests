@@ -265,7 +265,7 @@ class TestCollectData:
         return addrs
 
     @pytest.fixture
-    def block_production_db(self) -> tp.Generator[sqlite3.Connection, None, None]:
+    def block_production_db(self) -> tp.Generator[sqlite3.Connection]:
         """Open block production db."""
         conn = sqlite3.connect(configuration.BLOCK_PRODUCTION_DB)
         yield conn

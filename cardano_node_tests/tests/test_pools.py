@@ -2675,7 +2675,7 @@ class TestPoolVoteDeleg:
 
         return pools_out
 
-    def get_subtests(self) -> tp.Generator[tp.Callable, None, None]:  # noqa: C901
+    def get_subtests(self) -> tp.Generator[tp.Callable]:  # noqa: C901
         """Get pool vote delegation scenarios.
 
         The scenarios are executed as subtests in the `test_pool_delegation` test.

@@ -5,8 +5,8 @@ if [ -n "${VIRTUAL_ENV:-""}" ]; then
   exit 1
 fi
 
-if ! command -v poetry >/dev/null 2>&1; then
-  echo "This script requires 'poetry' to be installed and available in PATH." >&2
+if ! command -v uv >/dev/null 2>&1; then
+  echo "This script requires 'uv' to be installed and available in PATH." >&2
   exit 1
 fi
 
@@ -53,7 +53,9 @@ elif [ "\${VIRTUAL_ENV:-}" != "$VIRTUAL_ENV" ]; then
   echo "ERROR: A different virtual environment is already activated." >&2
   return 1
 fi
-PYTHONPATH="\$(echo "\${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
+if [ -n "\${IN_NIX_SHELL:-}" ]; then
+  PYTHONPATH="\$(echo "\${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
+fi
 if [ -n "\${PYTHONPATH:-}" ]; then
   export PYTHONPATH
 else
