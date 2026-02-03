@@ -77,7 +77,7 @@ def environ(env: dict) -> tp.Iterator[None]:
 
 def is_truthy_env_var(var: str) -> bool:
     """Check if an environment variable is set to a truthy value."""
-    return (os.environ.get(var) or "").lower() in ("1", "true", "yes", "on", "enabled")
+    return (os.environ.get(var) or "").lower() in ("1", "true", "yes", "y", "on", "enabled")
 
 
 def run_command(

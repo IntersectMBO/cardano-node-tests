@@ -1,8 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -euo pipefail
+[ -n "${BASH_VERSION:-}" ] || {
+  echo "This script must be sourced from bash." >&2
+  return 1
+}
 
 _VENV_DIR="${_VENV_DIR:-"${WORKDIR:?}/.venv"}"
+_TOP_DIR="$(readlink -m "${BASH_SOURCE[0]}/../..")"
 
 if [ "${1:-""}" = "clean" ]; then
   rm -rf "$_VENV_DIR"
@@ -14,22 +18,16 @@ if [ ! -e "$_VENV_DIR" ]; then
   python3 -m venv "$_VENV_DIR" --prompt tests-venv
 fi
 
-# shellcheck disable=SC1090,SC1091
-. "$_VENV_DIR/bin/activate"
+# shellcheck disable=SC1091
+. "$_TOP_DIR/scripts/common.sh"
 
-if [ -n "${IN_NIX_SHELL:-}" ]; then
-  # Filter out nix python packages from PYTHONPATH.
-  # This avoids conflicts between nix-installed packages and python virtual environment packages.
-  PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
-fi
-if [ -n "${PYTHONPATH:-}" ]; then
-  export PYTHONPATH
-else
-  unset PYTHONPATH
-fi
+filter_out_nix
+
+# shellcheck disable=SC1091
+. "$_VENV_DIR/bin/activate"
 
 if [ -z "$_REQS_INSTALLED" ]; then
   uv sync --active --no-dev
 fi
 
-unset _VENV_DIR _REQS_INSTALLED
+unset _VENV_DIR _REQS_INSTALLED _TOP_DIR

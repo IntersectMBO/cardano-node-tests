@@ -13,7 +13,7 @@ get_coverage() {
   oldpwd="$PWD"
   cd "$tests_repo"
   retval=0
-  PYTHONPATH="$PWD:${PYTHONPATH:-""}" cardano_node_tests/dump_requirements_coverage.py \
+  PYTHONPATH="$PWD:${PYTHONPATH:-}" cardano_node_tests/dump_requirements_coverage.py \
     -a "$ARTIFACTS_DIR" -m "src_docs/requirements_mapping.json" -o "$1" || retval=1
   cd "$oldpwd"
   return "$retval"

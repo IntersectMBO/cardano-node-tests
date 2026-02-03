@@ -7,7 +7,7 @@ usage() { printf "Usage: %s /path/to/cardano-clusterlib-py\n" "${0}"; }
 
 if [ $# -ne 1 ]; then
   usage
-  exit 64
+  exit 2
 fi
 REPO_PATH="$(readlink -m "$1")"
 
@@ -24,16 +24,9 @@ if [ -z "${VIRTUAL_ENV:-}" ]; then
   exit 1
 fi
 
-if [ -n "${IN_NIX_SHELL:-}" ]; then
-  # Filter out nix python packages from PYTHONPATH.
-  # This avoids conflicts between nix-installed packages and python virtual environment packages.
-  PYTHONPATH="$(echo "${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
-fi
-if [ -n "${PYTHONPATH:-}" ]; then
-  export PYTHONPATH
-else
-  unset PYTHONPATH
-fi
+. "$TOP_DIR/scripts/common.sh"
+
+filter_out_nix
 
 # Double-check python is actually running inside a venv
 if ! python - <<'PY'

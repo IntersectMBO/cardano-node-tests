@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 if [ -n "${VIRTUAL_ENV:-""}" ]; then
   echo "This script should be run outside of any virtual environment." >&2
   exit 1
@@ -17,7 +19,7 @@ case "${1:-""}" in
     ;;
   *)
     echo "Usage: $0 {conway}"
-    exit 1
+    exit 2
     ;;
 esac
 
@@ -53,7 +55,7 @@ elif [ "\${VIRTUAL_ENV:-}" != "$VIRTUAL_ENV" ]; then
   echo "ERROR: A different virtual environment is already activated." >&2
   return 1
 fi
-if [ -n "\${IN_NIX_SHELL:-}" ]; then
+if [[ :"\${PYTHONPATH:-}": == */nix/store/* ]]; then
   PYTHONPATH="\$(echo "\${PYTHONPATH:-}" | tr ":" "\n" | grep -v "/nix/store/.*/site-packages" | tr "\n" ":" | sed 's/:*$//' || :)"
 fi
 if [ -n "\${PYTHONPATH:-}" ]; then
@@ -69,6 +71,7 @@ export FORBID_RESTART=1
 export NO_ARTIFACTS=1
 export CLUSTER_ERA="${CLUSTER_ERA:-}"
 export COMMAND_ERA="${COMMAND_ERA:-}"
+echo "Activated test environment for era: ${CLUSTER_ERA:-}"
 EoF
 
 # shellcheck disable=SC1091
