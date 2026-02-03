@@ -29,7 +29,7 @@ cd "$REPODIR"
 
 export WORKDIR="$REPODIR/run_workdir"
 
-# shellcheck disable=SC1090,SC1091
+# shellcheck disable=SC1091
 . .github/stop_cluster_instances.sh
 
 _cleanup() {
@@ -81,7 +81,7 @@ echo "::endgroup::"  # end group for "Script setup"
 echo "::group::Nix env setup step1"
 printf "start: %(%H:%M:%S)T\n" -1
 
-# shellcheck disable=SC1090,SC1091
+# shellcheck disable=SC1091
 . .github/source_cardano_node.sh
 
 # Prepare cardano-node for the base revision.
@@ -103,7 +103,7 @@ PATH_PREPEND_UPGRADE="$(cardano_bins_print_path_prepend "${UPGRADE_CLI_REVISION:
 
 # Prepare cardano-cli for the upgrade revision if UPGRADE_CLI_REVISION is set
 if [ -n "${UPGRADE_CLI_REVISION:-}" ]; then
-  # shellcheck disable=SC1090,SC1091
+  # shellcheck disable=SC1091
   . .github/source_cardano_cli.sh
   cardano_cli_build "$UPGRADE_CLI_REVISION" "_upgrade"
   PATH_PREPEND_UPGRADE="$(cardano_cli_print_path_prepend "_upgrade")${PATH_PREPEND_UPGRADE}"

@@ -19,10 +19,10 @@ cd "$REPODIR"
 export WORKDIR="$REPODIR/run_workdir"
 export PATH_PREPEND="${PWD}/.bin"
 
-# shellcheck disable=SC1090,SC1091
-. .github/common.sh
+# shellcheck disable=SC1091
+. scripts/common.sh
 
-# shellcheck disable=SC1090,SC1091
+# shellcheck disable=SC1091
 . .github/stop_cluster_instances.sh
 
 # stop all running cluster instances
@@ -93,7 +93,7 @@ case "${DBSYNC_REV:-}" in
     unset DBSYNC_REV
     ;;
   * )
-    # shellcheck disable=SC1090,SC1091
+    # shellcheck disable=SC1091
     . .github/source_dbsync.sh
     ;;
 esac
@@ -108,7 +108,7 @@ case "${PLUTUS_APPS_REV:="none"}" in
     unset PLUTUS_APPS_REV
     ;;
   * )
-    # shellcheck disable=SC1090,SC1091
+    # shellcheck disable=SC1091
     . .github/source_plutus_apps.sh
     ;;
 esac
@@ -121,7 +121,7 @@ case "${CARDANO_CLI_REV:-}" in
     unset CARDANO_CLI_REV
     ;;
   * )
-    # shellcheck disable=SC1090,SC1091
+    # shellcheck disable=SC1091
     . .github/source_cardano_cli.sh
     cardano_cli_build "$CARDANO_CLI_REV"
     PATH_PREPEND="$(cardano_cli_print_path_prepend "")${PATH_PREPEND}"
@@ -135,7 +135,7 @@ case "${NODE_REV:-}" in
     NODE_REV=master
     ;;
 esac
-# shellcheck disable=SC1090,SC1091
+# shellcheck disable=SC1091
 . .github/source_cardano_node.sh
 cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
 PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
@@ -264,7 +264,7 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   export PATH="$PATH_PREPEND":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   retval=0
-  . .github/run_tests.sh "${RUN_TARGET:-"tests"}" || retval="$?"
+  ./.github/run_tests.sh "${RUN_TARGET:-"tests"}" || retval="$?"
   df -h .
   echo "::endgroup::"  # end group for "Testrun"
 

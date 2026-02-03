@@ -21,8 +21,8 @@ export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
 rm -rf "${REPORTS_DIR:?}"
 mkdir -p "$REPORTS_DIR"
 
-# shellcheck disable=SC1090,SC1091
-. .github/common.sh
+# shellcheck disable=SC1091
+. scripts/common.sh
 
 #
 # STEP1 - start local cluster and run smoke tests for the first time

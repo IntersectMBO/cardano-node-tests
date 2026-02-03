@@ -58,8 +58,8 @@ lint:
 	pre-commit run -a --show-diff-on-failure --color=always
 
 # build sphinx documentation
-.PHONY: build_doc
-build_doc:
+.PHONY: build-doc
+build-doc:
 	mkdir -p src_docs/build
 	$(MAKE) -C src_docs clean
 	$(MAKE) -C src_docs html
