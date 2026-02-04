@@ -604,8 +604,14 @@ class TestReferenceScripts:
             script_file=script_file,
             amount=amount,
         )
-        assert reference_utxo.reference_script, "Reference script is missing"
         assert reference_utxo.amount == amount, "Incorrect amount transferred"
+        assert reference_utxo.reference_script, "Reference script is missing"
+        common.check_reference_script_policyid(
+            name_template=f"{temp_template}_check",
+            cluster_obj=cluster,
+            script_file=script_file,
+            script_data=reference_utxo.reference_script["script"],
+        )
 
         # Spend the Tx output with the reference script
         txouts = [clusterlib.TxOut(address=payment_addr.address, amount=-1)]
@@ -697,6 +703,12 @@ class TestReferenceScripts:
         )
         reference_script = clusterlib.filter_utxos(utxos=out_utxos_step1, utxo_ix=utxo_ix_offset)
         assert reference_script[0].reference_script, "No reference script UTxO"
+        common.check_reference_script_policyid(
+            name_template=f"{temp_template}_check",
+            cluster_obj=cluster,
+            script_file=plutus_op.script_file,
+            script_data=reference_script[0].reference_script["script"],
+        )
 
         #  Step 2: spend an UTxO and reference the script
 
@@ -1223,6 +1235,12 @@ class TestNegativeReferenceScripts:
         )
         assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
         assert reference_utxo.reference_script, "Reference script is missing"
+        common.check_reference_script_policyid(
+            name_template=f"{temp_template}_check",
+            cluster_obj=cluster,
+            script_file=plutus_op.script_file,
+            script_data=reference_utxo.reference_script["script"],
+        )
 
         #  Spend the "locked" UTxO
 

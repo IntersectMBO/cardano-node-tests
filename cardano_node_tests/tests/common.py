@@ -14,6 +14,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import pytest_utils
+from cardano_node_tests.utils import types as ttypes
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -620,3 +621,21 @@ def allow_unstable_error_messages() -> tp.Iterator[None]:
         yield
     except AssertionError:
         LOGGER.exception("AssertionError suppressed")
+
+
+def check_reference_script_policyid(
+    name_template: str,
+    cluster_obj: clusterlib.ClusterLib,
+    script_file: ttypes.FileType,
+    script_data: dict,
+) -> None:
+    """Check that the policy ID of a reference script file matches the original script policy ID."""
+    policyid_file = cluster_obj.g_transaction.get_policyid(script_file=script_file)
+    policyid_data = clusterlib_utils.get_script_data_policyid(
+        cluster_obj=cluster_obj,
+        script_name=name_template,
+        script_data=script_data,
+    )
+    assert policyid_file == policyid_data, (
+        f"Reference script hash mismatch: file '{policyid_file}' vs data '{policyid_data}'"
+    )

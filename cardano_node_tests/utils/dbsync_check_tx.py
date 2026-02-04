@@ -5,7 +5,6 @@ import functools
 import itertools
 import json
 import logging
-import pathlib as pl
 
 from cardano_clusterlib import clusterlib
 
@@ -56,14 +55,6 @@ def _get_scripts_hashes(
         shash_rec.append(r)
 
     return hashes_db
-
-
-def _get_script_data_hash(cluster_obj: clusterlib.ClusterLib, script_data: dict) -> str:
-    """Get hash of the script data."""
-    script_file = pl.Path(f"{helpers.get_timestamped_rand_str()}.script")
-    with open(script_file, "w", encoding="utf-8") as outfile:
-        json.dump(script_data, outfile)
-    return cluster_obj.g_transaction.get_policyid(script_file=script_file)
 
 
 def _db_redeemer_hashes(
@@ -492,7 +483,11 @@ def check_tx_reference_scripts(
     ]
 
     tx_hashes = {
-        _get_script_data_hash(cluster_obj=cluster_obj, script_data=r["script"])
+        clusterlib_utils.get_script_data_policyid(
+            cluster_obj=cluster_obj,
+            script_name=helpers.get_timestamped_rand_str(),
+            script_data=r["script"],
+        )
         for r in reference_scripts
     }
 

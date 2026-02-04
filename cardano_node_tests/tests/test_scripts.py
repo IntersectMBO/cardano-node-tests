@@ -2423,6 +2423,20 @@ class TestReferenceUTxO:
             amount=4_000_000,
         )
         assert reference_utxo.reference_script
+        has_issue_1332 = False
+        try:
+            common.check_reference_script_policyid(
+                name_template=f"{temp_template}_check",
+                cluster_obj=cluster,
+                script_file=multisig_script,
+                script_data=reference_utxo.reference_script["script"],
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if "Unsupported script language: SimpleScript" in str_exc:
+                has_issue_1332 = True
+            else:
+                raise
 
         # Create script address
         script_address = cluster.g_address.gen_payment_addr(
@@ -2499,7 +2513,8 @@ class TestReferenceUTxO:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_to)
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
+        if not has_issue_1332:
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
         # Check expected script type
         if (
@@ -2514,6 +2529,9 @@ class TestReferenceUTxO:
             script_type_str,
             "SimpleScript",
         )
+
+        if has_issue_1332:
+            issues.cli_1332.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -2579,6 +2597,20 @@ class TestReferenceUTxO:
             amount=5_000_000,
         )
         assert reference_utxo.reference_script
+        has_issue_1332 = False
+        try:
+            common.check_reference_script_policyid(
+                name_template=f"{temp_template}_check",
+                cluster_obj=cluster,
+                script_file=multisig_script,
+                script_data=reference_utxo.reference_script["script"],
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if "Unsupported script language: SimpleScript" in str_exc:
+                has_issue_1332 = True
+            else:
+                raise
 
         # Spend the reference UTxO
         txouts = [clusterlib.TxOut(address=payment_addr.address, amount=amount)]
@@ -2607,6 +2639,9 @@ class TestReferenceUTxO:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         # TODO: check reference script in db-sync (the `tx_out_spend`)
+
+        if has_issue_1332:
+            issues.cli_1332.finish_test()
 
 
 @pytest.mark.skipif(
