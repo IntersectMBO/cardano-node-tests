@@ -1623,3 +1623,13 @@ def get_protocol_version(
     """Get the protocol version major number."""
     pv = int(cluster_obj.g_query.get_protocol_params()["protocolVersion"]["major"])
     return pv
+
+
+def get_script_data_policyid(
+    *, cluster_obj: clusterlib.ClusterLib, script_name: str, script_data: dict
+) -> str:
+    """Get hash of the script data."""
+    script_file = pl.Path(f"{script_name}.script")
+    with open(script_file, "w", encoding="utf-8") as outfile:
+        json.dump(script_data, outfile)
+    return cluster_obj.g_transaction.get_policyid(script_file=script_file)

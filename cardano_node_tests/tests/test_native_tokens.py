@@ -2635,6 +2635,20 @@ class TestReferenceUTxO:
             amount=4_000_000,
         )
         assert reference_utxo.reference_script
+        has_issue_1332 = False
+        try:
+            common.check_reference_script_policyid(
+                name_template=f"{temp_template}_check",
+                cluster_obj=cluster,
+                script_file=script,
+                script_data=reference_utxo.reference_script["script"],
+            )
+        except clusterlib.CLIError as exc:
+            str_exc = str(exc)
+            if "Unsupported script language: SimpleScript" in str_exc:
+                has_issue_1332 = True
+            else:
+                raise
 
         # Build and sign a transaction
         tx_files = clusterlib.TxFiles(
@@ -2734,3 +2748,6 @@ class TestReferenceUTxO:
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_reference)
         # TODO: check reference script in db-sync (the `tx_raw_output`)
+
+        if has_issue_1332:
+            issues.cli_1332.finish_test()
