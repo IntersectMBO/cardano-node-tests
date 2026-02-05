@@ -24,8 +24,6 @@ LOGGER = logging.getLogger(__name__)
 
 GITHUB_URL = "https://github.com/IntersectMBO/cardano-node-tests"
 
-TCallable = tp.TypeVar("TCallable", bound=tp.Callable)
-
 
 @contextlib.contextmanager
 def change_cwd(dir_path: ttypes.FileType) -> tp.Iterator[ttypes.FileType]:
