@@ -1,6 +1,7 @@
 import contextlib
 import dataclasses
 import fnmatch
+import functools
 import io
 import itertools
 import logging
@@ -101,6 +102,27 @@ class RotableLog:
     logfile: pl.Path
     seek: int
     timestamp: float
+    inode: int
+
+
+def _retry_search[T](search_func: tp.Callable[[], T]) -> T:
+    """Re-try `search_func` if `FileNotFoundError` is raised.
+
+    Log files can get rotated while searching through them. In that case, we need to re-try
+    the whole search, as current findings are no longer valid.
+    """
+    attempts = 2
+    for t in range(1, attempts + 1):
+        try:
+            return search_func()
+        except FileNotFoundError:
+            if t >= attempts:
+                raise
+            # Let the file system settle after rotation before retrying. In practice, the rotation
+            # should be very quick, but this is to be safe and avoid flakiness in tests.
+            time.sleep(2)
+
+    raise RuntimeError  # Unreachable, here for linters instead of return
 
 
 def _get_rotated_logs(
@@ -117,7 +139,8 @@ def _get_rotated_logs(
     # Get list of logfiles modified after `timestamp`, sorted by their last modification time
     # from oldest to newest.
     _logfile_records = [
-        RotableLog(logfile=f, seek=0, timestamp=f.stat().st_mtime) for f in logfiles
+        RotableLog(logfile=f, seek=0, timestamp=(st := f.stat()).st_mtime, inode=st.st_ino)
+        for f in logfiles
     ]
     _logfile_records = [r for r in _logfile_records if r.timestamp > timestamp]
     logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp)
@@ -129,6 +152,14 @@ def _get_rotated_logs(
     logfile_records[0] = dataclasses.replace(logfile_records[0], seek=seek)
 
     return logfile_records
+
+
+def _validate_inode(log: RotableLog) -> None:
+    """Validate that the log file has not been rotated since the record was created."""
+    current_inode = log.logfile.stat().st_ino
+    if log.inode != current_inode:
+        msg = f"Log file {log.logfile} was rotated during search."
+        raise FileNotFoundError(msg)
 
 
 def _get_ignore_rules_lock_file(instance_num: int) -> pl.Path:
@@ -329,6 +360,7 @@ def _search_log_lines(  # noqa: C901
         start = _validated_start(seek=rec.seek, size=size)
 
         with path.open("rb", buffering=BUFFER_SIZE) as fb:
+            _validate_inode(rec)
             _resume_at_line_boundary(fb=fb, pos=start, size=size)
 
             look_back: deque[bytes] = deque(maxlen=look_back_lines)
@@ -444,35 +476,40 @@ def find_msgs_in_logs(
     # Compile as BYTES regex for speed; note: \w/\b are ASCII-only in bytes mode.
     regex_b = _compile_bytes_from_str(pat=regex)
 
-    lines_found: list[str] = []
+    def _search() -> list[str]:
+        lines_found: list[str] = []
 
-    for logfile_rec in _get_rotated_logs(
-        logfile=logfile,
-        seek=seek_offset,
-        timestamp=timestamp,
-    ):
-        path = logfile_rec.logfile
-        size = path.stat().st_size
-        start = _validated_start(seek=logfile_rec.seek, size=size)
+        for logfile_rec in _get_rotated_logs(
+            logfile=logfile,
+            seek=seek_offset,
+            timestamp=timestamp,
+        ):
+            path = logfile_rec.logfile
+            size = path.stat().st_size
+            start = _validated_start(seek=logfile_rec.seek, size=size)
 
-        with path.open("rb", buffering=BUFFER_SIZE) as fb:
-            _resume_at_line_boundary(fb=fb, pos=start, size=size)
+            with path.open("rb", buffering=BUFFER_SIZE) as fb:
+                _validate_inode(logfile_rec)
+                _resume_at_line_boundary(fb=fb, pos=start, size=size)
 
-            leftover = b""
-            while True:
-                chunk = fb.read(BUFFER_SIZE)
-                if not chunk:
-                    break
+                leftover = b""
+                while True:
+                    chunk = fb.read(BUFFER_SIZE)
+                    if not chunk:
+                        break
 
-                buf = leftover + chunk
-                lines_b, leftover = _split_complete_lines(buf=buf)
+                    buf = leftover + chunk
+                    lines_b, leftover = _split_complete_lines(buf=buf)
 
-                for line_b in lines_b:
-                    if regex_b.search(line_b):
-                        line = line_b.decode(encoding, errors="surrogateescape")
-                        lines_found.append(line)
-                        if only_first:
-                            return lines_found
+                    for line_b in lines_b:
+                        if regex_b.search(line_b):
+                            line = line_b.decode(encoding, errors="surrogateescape")
+                            lines_found.append(line)
+                            if only_first:
+                                return lines_found
+        return lines_found
+
+    lines_found = _retry_search(_search)
 
     return lines_found
 
@@ -494,6 +531,35 @@ def check_msgs_presence_in_logs(  # noqa: C901
     Returns:
         Error messages for missing entries.
     """
+
+    def _search(start_seek: int, logfile: str, regex_b: re.Pattern[bytes]) -> bool:
+        for rec in _get_rotated_logs(
+            logfile=pl.Path(logfile),
+            seek=start_seek,
+            timestamp=timestamp,
+        ):
+            path = rec.logfile
+            size = path.stat().st_size
+            pos = _validated_start(seek=rec.seek, size=size)
+
+            with path.open("rb", buffering=BUFFER_SIZE) as fb:
+                _validate_inode(rec)
+                _resume_at_line_boundary(fb=fb, pos=pos, size=size)
+
+                leftover = b""
+                while True:
+                    chunk = fb.read(BUFFER_SIZE)
+                    if not chunk:
+                        break
+
+                    buf = leftover + chunk
+                    lines_b, leftover = _split_complete_lines(buf=buf)
+
+                    for line_b in lines_b:
+                        if regex_b.search(line_b):
+                            return True
+        return False
+
     errors: list[str] = []
 
     for files_glob, regex in regex_pairs:
@@ -510,39 +576,9 @@ def check_msgs_presence_in_logs(  # noqa: C901
                 continue
 
             start_seek = seek_offsets.get(logfile) or 0
-            line_found = False
-
-            for rec in _get_rotated_logs(
-                logfile=pl.Path(logfile),
-                seek=start_seek,
-                timestamp=timestamp,
-            ):
-                path = rec.logfile
-                size = path.stat().st_size
-                pos = _validated_start(seek=rec.seek, size=size)
-
-                with path.open("rb", buffering=BUFFER_SIZE) as fb:
-                    _resume_at_line_boundary(fb=fb, pos=pos, size=size)
-
-                    leftover = b""
-                    while True:
-                        chunk = fb.read(BUFFER_SIZE)
-                        if not chunk:
-                            break
-
-                        buf = leftover + chunk
-                        lines_b, leftover = _split_complete_lines(buf=buf)
-
-                        for line_b in lines_b:
-                            if regex_b.search(line_b):
-                                line_found = True
-                                break
-                        if line_found:
-                            break
-
-                if line_found:
-                    break
-
+            line_found = _retry_search(
+                functools.partial(_search, start_seek=start_seek, logfile=logfile, regex_b=regex_b)
+            )
             if not line_found:
                 errors.append(f"No line matching `{regex}` found in '{logfile}'.")
 
@@ -623,6 +659,17 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
     cluster_env = cluster_nodes.get_cluster_env()
     lock_file = temptools.get_basetemp() / f"search_cluster_{cluster_env.instance_num}.lock"
 
+    def _search(
+        logfile: pl.Path, seek: int, timestamp: float, errors_ignored: str
+    ) -> list[tuple[pl.Path, str]]:
+        return _search_log_lines(
+            logfile=logfile,
+            rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+            errors_re=ERRORS_RE,
+            errors_ignored_re=re.compile(errors_ignored),
+            look_back_map=ERRORS_LOOK_BACK_MAP,
+        )
+
     with locking.FileLockIfXdist(lock_file):
         errors = []
         for logfile in cluster_env.state_dir.glob("*.std*"):
@@ -649,12 +696,14 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
 
             # Search for errors in the log file
             errors.extend(
-                _search_log_lines(
-                    logfile=logfile,
-                    rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
-                    errors_re=ERRORS_RE,
-                    errors_ignored_re=re.compile(errors_ignored),
-                    look_back_map=ERRORS_LOOK_BACK_MAP,
+                _retry_search(
+                    functools.partial(
+                        _search,
+                        logfile=logfile,
+                        seek=seek,
+                        timestamp=timestamp,
+                        errors_ignored=errors_ignored,
+                    )
                 )
             )
 
@@ -666,7 +715,6 @@ def search_framework_log() -> list[tuple[pl.Path, str]]:
     # It is not necessary to lock the `framework.log` file because there is one log file per worker.
     # Each worker is checking only its own log file.
     logfile = framework_log.get_framework_log_path()
-    errors = []
 
     # Get seek offset (from where to start searching) and timestamp of last search
     offset_file = _get_offset_file(logfile=logfile)
@@ -677,14 +725,15 @@ def search_framework_log() -> list[tuple[pl.Path, str]]:
         seek = 0
         timestamp = 0.0
 
-    # Search for errors in the log file
-    errors.extend(
-        _search_log_lines(
+    def _search() -> list[tuple[pl.Path, str]]:
+        return _search_log_lines(
             logfile=logfile,
             rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
             errors_re=ERRORS_RE,
         )
-    )
+
+    # Search for errors in the log file
+    errors = _retry_search(_search)
 
     return errors
 
@@ -706,12 +755,15 @@ def search_supervisord_logs() -> list[tuple[pl.Path, str]]:
             seek = 0
             timestamp = 0.0
 
+        def _search() -> list[tuple[pl.Path, str]]:
+            return _search_log_lines(
+                logfile=logfile,
+                rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+                errors_re=SUPERVISORD_ERRORS_RE,
+            )
+
         # Search for errors in the log file
-        errors = _search_log_lines(
-            logfile=logfile,
-            rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
-            errors_re=SUPERVISORD_ERRORS_RE,
-        )
+        errors = _retry_search(_search)
 
     return errors
 
