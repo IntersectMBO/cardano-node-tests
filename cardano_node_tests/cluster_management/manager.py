@@ -40,8 +40,6 @@ from cardano_node_tests.utils import types as ttypes
 
 LOGGER = logging.getLogger(__name__)
 
-T = tp.TypeVar("T")
-
 if configuration.CLUSTERS_COUNT > 1 and configuration.DEV_CLUSTER_RUNNING:
     msg = "Cannot run multiple cluster instances when 'DEV_CLUSTER_RUNNING' is set."
     raise RuntimeError(msg)
