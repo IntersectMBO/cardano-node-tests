@@ -404,6 +404,11 @@ class TestKES:
             regex="MuxBearerClosed|CounterOverIncrementedOCERT",
             ignore_file_id=cluster_manager.worker_id,
         )
+        logfiles.add_ignore_rule(
+            files_glob=f"{node_name}.stdout",
+            regex="TraceNoLedgerView",
+            ignore_file_id=cluster_manager.worker_id,
+        )
 
         # Generate new operational certificate with `--kes-period` in the future
         invalid_kes_period = cluster.g_query.get_kes_period() + 100
