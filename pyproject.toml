@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "allure-pytest (>=2.15.2,<3.0.0)",
-    "cardano-clusterlib (>=0.9.9,<0.10.0)",
+    "cardano-clusterlib (>=0.9.10,<0.10.0)",
     "cardonnay (>=0.2.15,<0.3.0)",
     "cbor2 (>=5.7.1,<6.0.0)",
     "filelock (>=3.20.0,<4.0.0)",

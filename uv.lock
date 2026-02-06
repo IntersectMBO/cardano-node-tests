@@ -78,14 +78,14 @@ wheels = [
 
 [[package]]
 name = "cardano-clusterlib"
-version = "0.9.9"
+version = "0.9.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/b6/251b64dea223271fb14f1169969a249fcb5985db41c7ebcb25c6df181250/cardano_clusterlib-0.9.9.tar.gz", hash = "sha256:272152d8e92868be4b681b370b83f2e41f66ab4f81931cad57ad5e87ca735ba7", size = 70515, upload-time = "2026-01-16T10:10:54.772Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/02/63e25317446082fe96b8cf223309a79ed3e4fa72cfb08bfe80611b41c790/cardano_clusterlib-0.9.10.tar.gz", hash = "sha256:488aa5b2adbee1aaf3fd807352a2ad239871b19abf9e1fcf3760074ddda22006", size = 70760, upload-time = "2026-02-06T16:17:40.114Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/fb/cfbac5f5fb8ef31735d69fa97b76684448f3fcf1876b7f8f70b87f9031dd/cardano_clusterlib-0.9.9-py3-none-any.whl", hash = "sha256:31acb65165ac8cb75f58876ebe7712f0dd74de91b02182338dabf9d19de1eed3", size = 71221, upload-time = "2026-01-16T10:10:52.85Z" },
+    { url = "https://files.pythonhosted.org/packages/31/45/2d6afad4446918a17814881796abbf86bb91e68473f7c203c7a5044c6264/cardano_clusterlib-0.9.10-py3-none-any.whl", hash = "sha256:493068f75f45feafd559a8ec2ddfe6fa0070792bed4f132bcca2e7047f0aed67", size = 71544, upload-time = "2026-02-06T16:17:38.816Z" },
 ]
 
 [[package]]
@@ -136,7 +136,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "allure-pytest", specifier = ">=2.15.2,<3.0.0" },
-    { name = "cardano-clusterlib", specifier = ">=0.9.9,<0.10.0" },
+    { name = "cardano-clusterlib", specifier = ">=0.9.10,<0.10.0" },
     { name = "cardonnay", specifier = ">=0.2.15,<0.3.0" },
     { name = "cbor2", specifier = ">=5.7.1,<6.0.0" },
     { name = "filelock", specifier = ">=3.20.0,<4.0.0" },
