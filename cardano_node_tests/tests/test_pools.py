@@ -2588,7 +2588,7 @@ class TestPoolVoteDeleg:
         delegation_cert_files = []
         for i in range(num_pools):
             rand_str = clusterlib.get_rand_str(4)
-            name_template = f"{temp_template}_{rand_str}"
+            name_template = f"{temp_template}_{rand_str}_{i}"
 
             # Create reward addresses
             reward_addr = cluster.g_stake_address.gen_stake_addr_and_keys(
