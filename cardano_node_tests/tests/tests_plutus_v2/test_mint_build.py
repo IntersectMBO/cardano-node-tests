@@ -243,6 +243,15 @@ class TestBuildMinting:
             plutus_costs=plutus_costs,
             expected_costs=[script_expected_fee["cost"]],
         )
+        ref_size = cluster.g_query.get_ref_script_size(utxo=reference_utxo)["refInputScriptSize"]
+        expected_sizes = {
+            "v2": 1893,
+            "v3": 6,
+        }
+        expected_size = expected_sizes[plutus_version]
+        assert ref_size == expected_size, (
+            f"Unexpected reference script size: expected {expected_size}, got {ref_size}"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS2ONWARDS_VERSION
