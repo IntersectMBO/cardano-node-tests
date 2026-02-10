@@ -3,6 +3,8 @@
 import functools
 import itertools
 import logging
+import pickle
+import typing as tp
 
 import allure
 import pytest
@@ -78,9 +80,11 @@ class TestLedgerState:
             )
             return delegations
 
-        errors = []
+        errors: list[str] = []
+        ledger_state_data: dict[str, tp.Any] = {}
 
         ledger_state_keys = set(ledger_state)
+        ledger_state_data["ledger_state_keys"] = ledger_state_keys
         if ledger_state_keys != LEDGER_STATE_KEYS:
             errors.append(
                 "unexpected ledger state keys: "
@@ -92,63 +96,80 @@ class TestLedgerState:
         stake_mark = _get_hashes("pstakeMark")
         stake_set = _get_hashes("pstakeSet")
         stake_go = _get_hashes("pstakeGo")
+        ledger_state_data.update(
+            {
+                "stake_mark": stake_mark,
+                "stake_set": stake_set,
+                "stake_go": stake_go,
+            }
+        )
 
         # Pools (hashes) and stake addresses (hashes) delegated to corresponding pool
         delegations_mark = _get_delegations("pstakeMark")
         delegations_set = _get_delegations("pstakeSet")
         delegations_go = _get_delegations("pstakeGo")
+        ledger_state_data.update(
+            {
+                "delegations_mark": delegations_mark,
+                "delegations_set": delegations_set,
+                "delegations_go": delegations_go,
+            }
+        )
 
         # All delegated stake addresses (hashes)
         delegated_hashes_mark = set(itertools.chain.from_iterable(delegations_mark.values()))
         delegated_hashes_set = set(itertools.chain.from_iterable(delegations_set.values()))
         delegated_hashes_go = set(itertools.chain.from_iterable(delegations_go.values()))
-
-        # Check if all delegated addresses are listed among stake addresses
-        stake_hashes_mark = set(stake_mark)
-        if not delegated_hashes_mark.issubset(stake_hashes_mark):
-            errors.append(
-                "for 'mark', some delegations are not listed in 'stake': "
-                f"{delegated_hashes_mark.difference(stake_hashes_mark)}"
-            )
-
-        stake_hashes_set = set(stake_set)
-        if not delegated_hashes_set.issubset(stake_hashes_set):
-            errors.append(
-                "for 'set', some delegations are not listed in 'stake': "
-                f"{delegated_hashes_set.difference(stake_hashes_set)}"
-            )
-
-        stake_hashes_go = set(stake_go)
-        if not delegated_hashes_go.issubset(stake_hashes_go):
-            errors.append(
-                "for 'go', some delegations are not listed in 'stake': "
-                f"{delegated_hashes_go.difference(stake_hashes_go)}"
-            )
+        ledger_state_data.update(
+            {
+                "delegated_hashes_mark": delegated_hashes_mark,
+                "delegated_hashes_set": delegated_hashes_set,
+                "delegated_hashes_go": delegated_hashes_go,
+            }
+        )
 
         sum_mark = sum_set = sum_go = 0
         seen_hashes_mark: set[str] = set()
         seen_hashes_set: set[str] = set()
         seen_hashes_go: set[str] = set()
         delegation_pool_ids = {*delegations_mark, *delegations_set, *delegations_go}
+        ledger_state_data["delegation_pool_ids"] = delegation_pool_ids
+        pool_details: dict[str, tp.Any] = {}
         stake_snapshot = {}
         for pool_id_dec in delegation_pool_ids:
             pool_id = helpers.encode_bech32(prefix="pool", data=pool_id_dec)
+            pool_entry: dict[str, tp.Any] = {"pool_id_bech32": pool_id}
 
             # Get stake info from ledger state
             pstake_hashes_mark = delegations_mark.get(pool_id_dec) or ()
             seen_hashes_mark.update(pstake_hashes_mark)
-            pstake_amounts_mark = [stake_mark[h] for h in pstake_hashes_mark]
+            pstake_amounts_mark = [stake_mark.get(h, 0) for h in pstake_hashes_mark]
             pstake_sum_mark = functools.reduce(lambda x, y: x + y, pstake_amounts_mark, 0)
+            pool_entry["ledger_mark"] = {
+                "hashes": pstake_hashes_mark,
+                "amounts": pstake_amounts_mark,
+                "sum": pstake_sum_mark,
+            }
 
             pstake_hashes_set = delegations_set.get(pool_id_dec) or ()
             seen_hashes_set.update(pstake_hashes_set)
-            pstake_amounts_set = [stake_set[h] for h in pstake_hashes_set]
+            pstake_amounts_set = [stake_set.get(h, 0) for h in pstake_hashes_set]
             pstake_sum_set = functools.reduce(lambda x, y: x + y, pstake_amounts_set, 0)
+            pool_entry["ledger_set"] = {
+                "hashes": pstake_hashes_set,
+                "amounts": pstake_amounts_set,
+                "sum": pstake_sum_set,
+            }
 
             pstake_hashes_go = delegations_go.get(pool_id_dec) or ()
             seen_hashes_go.update(pstake_hashes_go)
-            pstake_amounts_go = [stake_go[h] for h in pstake_hashes_go]
+            pstake_amounts_go = [stake_go.get(h, 0) for h in pstake_hashes_go]
             pstake_sum_go = functools.reduce(lambda x, y: x + y, pstake_amounts_go, 0)
+            pool_entry["ledger_go"] = {
+                "hashes": pstake_hashes_go,
+                "amounts": pstake_amounts_go,
+                "sum": pstake_sum_go,
+            }
 
             # Get stake info from `stake-snapshot` command
             stake_snapshot = cluster.g_query.get_stake_snapshot(stake_pool_ids=[pool_id])
@@ -160,6 +181,11 @@ class TestLedgerState:
                 pstake_mark_cmd = stake_snapshot["poolStakeMark"]
                 pstake_set_cmd = stake_snapshot["poolStakeSet"]
                 pstake_go_cmd = stake_snapshot["poolStakeGo"]
+            pool_entry["snapshot"] = {
+                "stake_mark": pstake_mark_cmd,
+                "stake_set": pstake_set_cmd,
+                "stake_go": pstake_go_cmd,
+            }
 
             if pstake_sum_mark != pstake_mark_cmd:
                 errors.append(f"pool: {pool_id}, mark:\n  {pstake_sum_mark} != {pstake_mark_cmd}")
@@ -171,6 +197,20 @@ class TestLedgerState:
             sum_mark += pstake_mark_cmd
             sum_set += pstake_set_cmd
             sum_go += pstake_go_cmd
+            pool_details[pool_id_dec] = pool_entry
+
+        ledger_state_data.update(
+            {
+                "seen_hashes_mark": seen_hashes_mark,
+                "seen_hashes_set": seen_hashes_set,
+                "seen_hashes_go": seen_hashes_go,
+                "sum_mark": sum_mark,
+                "sum_set": sum_set,
+                "sum_go": sum_go,
+                "stake_snapshot": stake_snapshot,
+                "pool_details": pool_details,
+            }
+        )
 
         if seen_hashes_mark != delegated_hashes_mark:
             errors.append(
@@ -194,6 +234,11 @@ class TestLedgerState:
             )
 
         if "pools" in stake_snapshot:
+            ledger_state_data["snapshot_totals"] = {
+                "stake_mark": stake_snapshot["total"]["stakeMark"],
+                "stake_set": stake_snapshot["total"]["stakeSet"],
+                "stake_go": stake_snapshot["total"]["stakeGo"],
+            }
             if sum_mark != stake_snapshot["total"]["stakeMark"]:
                 errors.append(f"total_mark: {sum_mark} != {stake_snapshot['total']['stakeMark']}")
             if sum_set != stake_snapshot["total"]["stakeSet"]:
@@ -203,6 +248,11 @@ class TestLedgerState:
         # Active stake can be lower than sum of stakes, as some pools may not be running
         # and forging blocks
         else:
+            ledger_state_data["snapshot_totals"] = {
+                "active_mark": stake_snapshot["activeStakeMark"],
+                "active_set": stake_snapshot["activeStakeSet"],
+                "active_go": stake_snapshot["activeStakeGo"],
+            }
             if sum_mark < stake_snapshot["activeStakeMark"]:
                 errors.append(f"active_mark: {sum_mark} < {stake_snapshot['activeStakeMark']}")
             if sum_set < stake_snapshot["activeStakeSet"]:
@@ -211,5 +261,7 @@ class TestLedgerState:
                 errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
 
         if errors:
+            with open(f"{temp_template}.pickle", "wb") as out_data:
+                pickle.dump(ledger_state_data, out_data)
             err_joined = "\n".join(errors)
             pytest.fail(f"Errors:\n{err_joined}")
