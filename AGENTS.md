@@ -28,22 +28,28 @@ Framework components are organized under:
 ### Coding Guidelines
 
 1. **Follow the Google Python Style Guide**
-2. **Use Type Hints** - All functions and methods need type hints (test return type `None` is omitted)
+2. **Use Type Hints** - All functions and methods need type hints (test return type `None` is omitted, use `import typing as tp`)
 3. **Use Docstrings** - All tests, public functions, methods, classes, and modules must have Google-style docstrings
-4. **Run Linters** (even for documentation-only changes):
+4. **Run Linters** when appropriate, even for documentation-only changes:
 
    ```sh
-   make lint
+   ./ai_run.sh make lint
    ```
 
 ---
 
 ## Running Tests
 
-See `agent_docs/running_tests.md` for instructions on running tests.
+Before running tests, you must first open `agent_docs/running_tests.md` and follow the instructions.
 
 ---
 
 ## Writing New Tests
 
-When writing new test from scratch, see `agent_docs/new_tests.md` for guidelines.
+Before writing new test from scratch, you must first open `agent_docs/new_tests.md` and follow the instructions.
+
+---
+
+## Commits
+
+Any time the user asks for a commit, you must first open `agent_docs/commits.md` and confirm compliance before committing.
