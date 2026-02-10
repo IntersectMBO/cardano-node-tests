@@ -83,6 +83,6 @@ class TestGovernanceGuardrails:
         common.get_test_id(cluster_with_constitution.cluster)
 
         for scenario in get_test_scenarios():
-            with subtests.test(scenario=scenario.__name__):
+            with subtests.test(scenario=getattr(scenario, "__name__", "")):
                 scenario(cluster_with_constitution)
 ```

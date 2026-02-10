@@ -51,7 +51,7 @@ def _fund_issuer(
                 address=issuer_addr.address,
                 amount=reference_amount,
                 reference_script_file=reference_script,
-                datum_hash_file=datum_file if datum_file else "",
+                datum_hash_file=datum_file or "",
             )
         ]
 

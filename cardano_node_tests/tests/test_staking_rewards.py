@@ -694,8 +694,11 @@ class TestRewards:
                 ledger_state=ledger_state,
             )
             es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
-            rs_record: dict[str, tp.Any] = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=ledger_state["possibleRewardUpdate"]["rs"]
+            rs_record = tp.cast(
+                dict[str, list[dict]],
+                clusterlib_utils.get_snapshot_rec(
+                    ledger_snapshot=ledger_state["possibleRewardUpdate"]["rs"]
+                ),
             )
             rs_records[this_epoch] = rs_record
 

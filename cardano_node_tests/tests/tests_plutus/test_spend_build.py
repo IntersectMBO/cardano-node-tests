@@ -1028,12 +1028,10 @@ class TestBuildLocking:
                 txins=script_utxos,
                 script_file=plutus_op.script_file,
                 collaterals=collateral_utxos,
-                datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
-                datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
-                redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
-                redeemer_cbor_file=plutus_op.redeemer_cbor_file
-                if plutus_op.redeemer_cbor_file
-                else "",
+                datum_file=plutus_op.datum_file or "",
+                datum_cbor_file=plutus_op.datum_cbor_file or "",
+                redeemer_file=plutus_op.redeemer_file or "",
+                redeemer_cbor_file=plutus_op.redeemer_cbor_file or "",
             )
         ]
         tx_files = clusterlib.TxFiles(

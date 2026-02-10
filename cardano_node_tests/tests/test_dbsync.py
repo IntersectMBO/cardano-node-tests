@@ -364,7 +364,7 @@ class TestDBSync:
 
         for b in dbsync_queries.query_blocks(epoch_from=epoch, epoch_to=epoch):
             blocks_data_blk_count += 1
-            blocks_data_tx_count += b.tx_count if b.tx_count else 0
+            blocks_data_tx_count += b.tx_count or 0
 
         epoch_data_blk_count = 0
         epoch_data_tx_count = 0

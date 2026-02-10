@@ -2796,5 +2796,5 @@ class TestPoolVoteDeleg:
         common.get_test_id(cluster)
 
         for subt in self.get_subtests():
-            with subtests.test(scenario=subt.__name__):
+            with subtests.test(scenario=getattr(subt, "__name__", "")):
                 subt(cluster=cluster, pools=pools)

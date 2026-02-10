@@ -32,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 INTERRUPTED_NAME = ".session_interrupted"
 
 # Make sure there's enough time to stop all cluster instances at the end of session
-workermanage.NodeManager.EXIT_TIMEOUT = 30  # type: ignore
+workermanage.NodeManager.EXIT_TIMEOUT = 30  # pyright: ignore[reportAttributeAccessIssue]
 
 # Use custom xdist scheduler
 pytest_plugins = ("cardano_node_tests.pytest_plugins.xdist_scheduler",)
