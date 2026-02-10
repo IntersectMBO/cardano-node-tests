@@ -29,7 +29,7 @@ pytestmark = [
 ]
 
 
-class TableCondition(str, enum.Enum):
+class TableCondition(enum.StrEnum):
     """Enum for table-level db-sync state conditions."""
 
     EMPTY = "empty"
@@ -38,7 +38,7 @@ class TableCondition(str, enum.Enum):
     NOT_EXISTS = "not_exists"
 
 
-class ColumnCondition(str, enum.Enum):
+class ColumnCondition(enum.StrEnum):
     """Enum for column-level db-sync condition checks."""
 
     ZERO = "column_condition:=0"
@@ -301,5 +301,5 @@ class TestDBSyncConfig:
         common.get_test_id(cluster)
 
         for subt in self.get_subtests():
-            with subtests.test(scenario=subt.__name__):
+            with subtests.test(scenario=getattr(subt, "__name__", "")):
                 subt(db_sync_manager)

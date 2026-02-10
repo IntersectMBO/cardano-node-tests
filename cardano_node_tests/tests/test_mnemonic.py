@@ -160,8 +160,8 @@ def wrong_count_files(draw: st.DrawFn) -> BadMnemonicCase:
     """Wrong number of words (not in {12, 15, 18, 21, 24})."""
     # Zero handled by empty_file elsewhere
     count = draw(st.integers(min_value=1, max_value=48).filter(lambda n: n not in _ALLOWED_COUNTS))
-    tokens = draw(word_sequence(count=count, ensure_invalid=False))
-    line = draw(join_with_weirdness(tokens=tokens))
+    tokens = draw(word_sequence(count=count, ensure_invalid=False))  # type: ignore[missing-argument]
+    line = draw(join_with_weirdness(tokens=tokens))  # type: ignore[missing-argument]
     content = draw(maybe_reencode(line))
     return BadMnemonicCase(
         name=f"wrong_count_{count}",
@@ -174,8 +174,8 @@ def wrong_count_files(draw: st.DrawFn) -> BadMnemonicCase:
 def unknown_word_files(draw: st.DrawFn) -> BadMnemonicCase:
     """Produce allowed word count, but at least one token is not a valid BIP39 word."""
     count = draw(st.sampled_from(sorted(_ALLOWED_COUNTS)))
-    tokens = draw(word_sequence(count=count, ensure_invalid=True))
-    line = draw(join_with_weirdness(tokens=tokens))
+    tokens = draw(word_sequence(count=count, ensure_invalid=True))  # type: ignore[missing-argument]
+    line = draw(join_with_weirdness(tokens=tokens))  # type: ignore[missing-argument]
     content = draw(maybe_reencode(line))
     return BadMnemonicCase(
         name=f"unknown_word_{count}",
@@ -188,9 +188,9 @@ def unknown_word_files(draw: st.DrawFn) -> BadMnemonicCase:
 def separator_mess_files(draw: st.DrawFn) -> BadMnemonicCase:
     """Only separators/newlines/tabs/comma issues (often two+ separators between words)."""
     count = draw(st.sampled_from(sorted(_ALLOWED_COUNTS)))
-    tokens = draw(word_sequence(count=count, ensure_invalid=False))
+    tokens = draw(word_sequence(count=count, ensure_invalid=False))  # type: ignore[missing-argument]
     # Force messy separators (multiple mixed separators)
-    weird_line = draw(join_with_weirdness(tokens=tokens))
+    weird_line = draw(join_with_weirdness(tokens=tokens))  # type: ignore[missing-argument]
     content = draw(maybe_reencode(weird_line))
     return BadMnemonicCase(
         name=f"separator_mess_{count}",
@@ -203,8 +203,8 @@ def separator_mess_files(draw: st.DrawFn) -> BadMnemonicCase:
 def encoding_garbage_files(draw: st.DrawFn) -> BadMnemonicCase:
     """Binary junk, odd encodings, NULs."""
     count = draw(st.sampled_from(sorted(_ALLOWED_COUNTS)))
-    tokens = draw(word_sequence(count=count, ensure_invalid=False))
-    line = draw(join_with_weirdness(tokens=tokens))
+    tokens = draw(word_sequence(count=count, ensure_invalid=False))  # type: ignore[missing-argument]
+    line = draw(join_with_weirdness(tokens=tokens))  # type: ignore[missing-argument]
     content = draw(maybe_reencode(line))
     # Strengthen likelihood of binary by maybe wrapping with extra random bytes:
     blob = draw(st.binary(min_size=0, max_size=32))
@@ -243,10 +243,10 @@ def symlink_loop_case() -> st.SearchStrategy[BadMnemonicCase]:
 
 # Master strategy: mix categories with reasonable weights
 invalid_mnemonic_files: st.SearchStrategy[BadMnemonicCase] = st.one_of(
-    wrong_count_files(),
-    unknown_word_files(),
-    separator_mess_files(),
-    encoding_garbage_files(),
+    wrong_count_files(),  # type: ignore[missing-argument]
+    unknown_word_files(),  # type: ignore[missing-argument]
+    separator_mess_files(),  # type: ignore[missing-argument]
+    encoding_garbage_files(),  # type: ignore[missing-argument]
     empty_file_case(),
     no_read_perm_case(),
     directory_case(),

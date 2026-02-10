@@ -61,7 +61,7 @@ def _build_reference_txin(
         clusterlib.TxOut(
             address=dst_addr.address,
             amount=amount,
-            datum_hash_file=datum_file if datum_file else "",
+            datum_hash_file=datum_file or "",
         )
     ]
     tx_files = clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file])

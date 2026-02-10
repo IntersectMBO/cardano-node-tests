@@ -69,8 +69,9 @@ class TestLedgerState:
         es_snapshot: dict = ledger_state["stateBefore"]["esSnapshots"]
 
         def _get_hashes(snapshot: str) -> dict[str, int]:
-            hashes: dict = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot[snapshot]["stake"]
+            hashes = tp.cast(
+                dict[str, int],
+                clusterlib_utils.get_snapshot_rec(ledger_snapshot=es_snapshot[snapshot]["stake"]),
             )
             return hashes
 

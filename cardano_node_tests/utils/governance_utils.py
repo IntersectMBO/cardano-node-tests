@@ -480,7 +480,7 @@ def check_action_view(  # noqa: C901
                 {"govActionIx": prev_action_ix, "txId": prev_action_txid}
                 if prev_action_txid
                 else None,
-                removed_members if removed_members else [],
+                removed_members or [],
                 added_members,
                 float(action_data.threshold),
             ],

@@ -5,6 +5,7 @@ import decimal
 import typing as tp
 
 import psycopg2
+import psycopg2.extensions
 import pydantic
 
 from cardano_node_tests.utils import cluster_nodes
@@ -1648,7 +1649,7 @@ def query_rows_count(
     with execute(query=query) as cur:
         try:
             result = cur.fetchone()
-        except psycopg2.errors.LockNotAvailable as e:
+        except psycopg2.errors.LockNotAvailable as e:  # type: ignore[possibly-missing-attribute]
             error_msg = f"Could not acquire lock on {table} within {lock_timeout}"
             raise RuntimeError(error_msg) from e
 

@@ -4,6 +4,7 @@ import logging
 import typing as tp
 
 import psycopg2
+import psycopg2.extensions
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration

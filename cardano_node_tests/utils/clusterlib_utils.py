@@ -1071,7 +1071,7 @@ def _get_ledger_state_cmd(*, cluster_obj: clusterlib.ClusterLib) -> str:
     if hasattr(cluster_obj, "cli_coverage"):
         custom_clusterlib.record_cli_coverage(
             cli_args=cardano_cli_args,
-            coverage_dict=cluster_obj.cli_coverage,  # pyright: ignore [reportAttributeAccessIssue]
+            coverage_dict=cluster_obj.cli_coverage,  # type: ignore[invalid-argument-type]
         )
 
     return ledger_state_cmd

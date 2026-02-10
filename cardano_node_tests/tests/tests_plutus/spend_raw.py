@@ -181,12 +181,12 @@ def _spend_locked_txin(  # noqa: C901
             script_file=plutus_op.script_file,
             collaterals=collateral_utxos,
             execution_units=(plutus_op.execution_cost.per_time, plutus_op.execution_cost.per_space),
-            datum_file=plutus_op.datum_file if plutus_op.datum_file else "",
-            datum_cbor_file=plutus_op.datum_cbor_file if plutus_op.datum_cbor_file else "",
-            datum_value=plutus_op.datum_value if plutus_op.datum_value else "",
-            redeemer_file=plutus_op.redeemer_file if plutus_op.redeemer_file else "",
-            redeemer_cbor_file=plutus_op.redeemer_cbor_file if plutus_op.redeemer_cbor_file else "",
-            redeemer_value=plutus_op.redeemer_value if plutus_op.redeemer_value else "",
+            datum_file=plutus_op.datum_file or "",
+            datum_cbor_file=plutus_op.datum_cbor_file or "",
+            datum_value=plutus_op.datum_value or "",
+            redeemer_file=plutus_op.redeemer_file or "",
+            redeemer_cbor_file=plutus_op.redeemer_cbor_file or "",
+            redeemer_value=plutus_op.redeemer_value or "",
         )
     ]
 

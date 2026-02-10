@@ -459,7 +459,7 @@ def services_status(
     service_names: list[str] | None = None, *, instance_num: int | None = None
 ) -> list[ServiceStatus]:
     """Return status info for list of services running on the running cluster (all by default)."""
-    service_names_arg = service_names if service_names else ["all"]
+    service_names_arg = service_names or ["all"]
 
     try:
         status_out = (

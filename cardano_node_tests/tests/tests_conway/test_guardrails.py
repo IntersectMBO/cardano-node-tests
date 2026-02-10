@@ -428,7 +428,7 @@ def check_min_value_proposals(
     if min_value == 0:
         # Handle the case for must not be negative
 
-        lower_limit = param.param_lower_limit if param.param_lower_limit else -(2**32)
+        lower_limit = param.param_lower_limit or -(2**32)
         # Note: Negative value is not allowed by the CLI before reaching the plutus script
         # so we can't test this case as guardrails from CLI it should be tested in the ledger level
         invalid_negative_proposal = [
@@ -565,10 +565,8 @@ def perform_predicates_check(
     """
     param_predicates = cluster_with_constitution.default_constitution[param.param_key]
 
-    type_upper_limit = (
-        param.param_upper_limit
-        if param.param_upper_limit
-        else get_upper_limit_according_to_type(param_predicates["type"])
+    type_upper_limit = param.param_upper_limit or get_upper_limit_according_to_type(
+        param_predicates["type"]
     )
 
     # For finding out valid range of values
@@ -1585,5 +1583,5 @@ class TestGovernanceGuardrails:
         common.get_test_id(cluster_with_constitution.cluster)
 
         for subt in get_subtests():
-            with subtests.test(scenario=subt.__name__):
+            with subtests.test(scenario=getattr(subt, "__name__", "")):
                 subt(cluster_with_constitution)
