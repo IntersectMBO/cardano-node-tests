@@ -6,6 +6,26 @@ on:
       env-path:
         required: true
         type: string
+      base_rev:
+        required: false
+        type: string
+        default: ""
+      base_tar_url:
+        required: false
+        type: string
+        default: ""
+      upgrade_rev:
+        required: false
+        type: string
+        default: ""
+      upgrade_cli_rev:
+        required: false
+        type: string
+        default: ""
+      byron_cluster:
+        required: false
+        type: boolean
+        default: false
     secrets:
       GH_TOKEN:
         required: true
@@ -39,7 +59,12 @@ jobs:
         run: |
           : > .github_ci_env
           echo "PY_COLORS=1" >> .github_ci_env
-          cat "${{ inputs.env-path }}" >> .github_ci_env
+          echo "BASE_REVISION=${{ inputs.base_rev }}" >> .github_ci_env
+          echo "BASE_TAR_URL=${{ inputs.base_tar_url }}" >> .github_ci_env
+          echo "UPGRADE_REVISION=${{ inputs.upgrade_rev }}" >> .github_ci_env
+          echo "UPGRADE_CLI_REVISION=${{ inputs.upgrade_cli_rev }}" >> .github_ci_env
+          echo "CI_BYRON_CLUSTER=${{ inputs.byron_cluster }}" >> .github_ci_env
+          if [ -e "${{ inputs.env-path }}" ]; then cat "${{ inputs.env-path }}" >> .github_ci_env; fi
       - name: Export env variables
         run: |
           cat .github_ci_env

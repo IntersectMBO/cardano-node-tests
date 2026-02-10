@@ -1,0 +1,37 @@
+name: 03 Upgrade tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_rev:
+        description: "cardano-node base revision"
+        default: 10.5.4
+      base_tar_url:
+        description: "cardano-node base tarball URL (optional)"
+        default: ""
+      upgrade_rev:
+        description: "cardano-node upgrade revision"
+        default: master
+      upgrade_cli_rev:
+        description: "cardano-cli upgrade revision (optional)"
+        default: ""
+      byron_cluster:
+        type: boolean
+        default: false
+        description: "Start cluster in Byron era"
+
+run-name: ${{ inputs.testrun_name && 'Run:' || ''}} ${{ inputs.testrun_name }} ${{ (inputs.testrun_name && inputs.skip_passed) && ':repeat:' || '' }}
+
+jobs:
+  regression_tests:
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      base_rev: ${{ inputs.base_rev }}
+      base_tar_url: ${{ inputs.base_tar_url }}
+      upgrade_rev: ${{ inputs.upgrade_rev }}
+      upgrade_cli_rev: ${{ inputs.upgrade_cli_rev }}
+      byron_cluster: ${{ inputs.byron_cluster }}
+      env-path: .github/env_upgrade
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
