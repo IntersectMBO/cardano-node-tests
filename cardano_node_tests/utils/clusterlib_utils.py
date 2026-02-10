@@ -805,7 +805,7 @@ def mint_or_burn_witness(
         )
 
     # Submit signed TX
-    assert tx_witnessed_file is not None  # for pyrefly
+    assert tx_witnessed_file is not None  # For type checking
     submit_utils.submit_tx(
         submit_method=submit_method,
         cluster_obj=cluster_obj,
@@ -918,7 +918,7 @@ def mint_or_burn_sign(
         )
 
     # Submit signed transaction
-    assert out_file_signed is not None  # for pyrefly
+    assert out_file_signed is not None  # For type checking
     submit_utils.submit_tx(
         submit_method=submit_method,
         cluster_obj=cluster_obj,

@@ -138,7 +138,6 @@ class TestDBSync:
         rec = None
         prev_rec = None
         errors: list[str] = []
-        # pyrefly: ignore  # bad-assignment
         for rec in dbsync_queries.query_blocks(epoch_from=epoch_from):
             if not prev_rec:
                 prev_rec = rec
