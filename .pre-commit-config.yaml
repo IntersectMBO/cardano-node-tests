@@ -13,15 +13,6 @@ repos:
     language_version: python3
   - id: debug-statements
     language_version: python3
-- repo: local
-  hooks:
-  - id: pyrefly
-    name: pyrefly
-    entry: pyrefly
-    args: [ check, --remove-unused-ignores ]
-    pass_filenames: false
-    language: system
-    types: [python]
 - repo: https://github.com/charliermarsh/ruff-pre-commit
   rev: v0.14.8
   hooks:

@@ -2209,7 +2209,7 @@ class TestIncrementalSigning:
                     tx_name=f"{temp_template}_from{idx}_r{r}",
                 )
 
-        assert tx_signed is not None  # for pyrefly
+        assert tx_signed is not None  # For type checking
         submit_utils.submit_tx(
             submit_method=submit_method,
             cluster_obj=cluster,
