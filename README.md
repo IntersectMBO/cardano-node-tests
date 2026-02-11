@@ -23,7 +23,8 @@ Run tests easily using GitHub Actions:
 1. Navigate to the `Actions` tab, then choose:
 
    * `01 Regression tests`, or
-   * `02 Regression tests with db-sync`
+   * `02 Regression tests with db-sync`, or
+   * `03 Upgrade tests`
 
 1. Click `Run workflow` to start testing.
 
@@ -35,13 +36,17 @@ Run tests easily using GitHub Actions:
 
 2. Clone this repository.
 
-3. Run the test suite:
+3. Run the regression test suite:
 
   ```sh
   ./.github/regression.sh
   ```
 
-> ℹ️ **NOTE:** Using `CI_BYRON_CLUSTER` will cause the local testnet cluster to progress from Byron ➝ Conway, which takes approximately 40 minutes.
+  Or run the upgrade test suite:
+
+  ```sh
+  ./.github/load-gh-env.sh .github/env_nightly_upgrade CI_BYRON_CLUSTER=false .github/node_upgrade.sh
+  ```
 
 ---
 
@@ -137,7 +142,7 @@ You can fine-tune test runs using these environment variables:
 | Variable           | Description                                       |
 | ------------------ | ------------------------------------------------- |
 | `CARDANO_CLI_REV`  | `cardano-cli` version.                            |
-| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow).           |
+| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow start).     |
 | `DBSYNC_REV`       | `cardano-db-sync` version.                        |
 | `NODE_REV`         | `cardano-node` version (default: `master`).       |
 | `PYTEST_ARGS`      | Extra options passed to pytest.                   |
