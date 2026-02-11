@@ -65,10 +65,10 @@ else
 fi
 export CARDANO_NODE_SOCKET_PATH="$WORKDIR/state-cluster0/bft1.socket"
 export TMPDIR="$WORKDIR/tmp"
-export DEV_CLUSTER_RUNNING=1
+export DEV_CLUSTER_RUNNING=true
+export FORBID_RESTART=true
+export NO_ARTIFACTS=true
 export CLUSTERS_COUNT=1
-export FORBID_RESTART=1
-export NO_ARTIFACTS=1
 export CLUSTER_ERA="${CLUSTER_ERA:-}"
 export COMMAND_ERA="${COMMAND_ERA:-}"
 echo "Activated test environment for era: ${CLUSTER_ERA:-}"
