@@ -4,6 +4,10 @@
 
 set -uo pipefail
 
+_TOP_DIR="$(readlink -m "${0%/*}"/..)"
+# shellcheck disable=SC1091
+. "$_TOP_DIR/scripts/common.sh"
+
 exit_code=0
 
 get_version() {
@@ -47,7 +51,7 @@ HAS_SUPERVISORD="$([ -n "$(command -v supervisord)" ]; process_result)" || exit_
 HAS_SUPERVISORCTL="$([ -n "$(command -v supervisorctl)" ]; process_result)" || exit_code=1
 
 IN_ROOT_DIR="$([ -d "cardano_node_tests" ]; process_result)" || exit_code=1
-DEV_CLUSTER="$([ -n "${DEV_CLUSTER_RUNNING:-}" ]; process_result)" || exit_code=1
+DEV_CLUSTER="$(is_truthy "${DEV_CLUSTER_RUNNING:-}"; process_result)" || exit_code=1
 SOCKET_PATH_SET="$([ -n "${CARDANO_NODE_SOCKET_PATH:-}" ]; process_result)" || exit_code=1
 USE_DBSYNC="$([ -n "${DBSYNC_SCHEMA_DIR:-}" ]; process_result "optional")" || exit_code=1
 

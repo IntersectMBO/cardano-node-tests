@@ -14,19 +14,19 @@
 #   COVERAGE_DIR: directory to save CLI coverage data into (default: .cli_coverage)
 #   REPORTS_DIR: directory to save Allure test reports into (default: .reports)
 #   MARKEXPR: pytest mark expression to filter tests, without the `-m` flag
-#   NO_ARTIFACTS: if set, do not save artifacts
+#   NO_ARTIFACTS: if set to true, do not save artifacts
 #   PYTEST_ARGS: additional args to pass to pytest
 #   CI_ARGS: additional args to pass to pytest (for CI runs)
 #   TEST_THREADS: number of pytest workers (defaults vary per target)
 #   DESELECT_FROM_FILE: path to file with tests to deselect
 #   CLUSTERS_COUNT: number of local testnet clusters to launch
-#   FORBID_RESTART: if set to 1, do not restart clusters between tests
+#   FORBID_RESTART: if set to true, do not restart clusters between tests
 #   SESSION_TIMEOUT: timeout for the test session (e.g. 3h for 3 hours)
 #
 # Notes:
 # - If PYTEST_ARGS is provided, we disable cleanup and the initial "skip all" pass.
 # - If DESELECT_FROM_FILE is provided, we disable the initial "skip all" pass.
-# - If NO_ARTIFACTS is unset, we save artifacts under ARTIFACTS_DIR.
+# - If NO_ARTIFACTS is not set, we save artifacts under ARTIFACTS_DIR.
 # - HTML/JUnit reports are generated only when PYTEST_ARGS is unset.
 
 set -Eeuo pipefail
@@ -37,6 +37,10 @@ ARTIFACTS_DIR="${ARTIFACTS_DIR:-.artifacts}"
 COVERAGE_DIR="${COVERAGE_DIR:-.cli_coverage}"
 REPORTS_DIR="${REPORTS_DIR:-.reports}"
 
+_TOP_DIR="$(readlink -m "${0%/*}/..")"
+# shellcheck disable=SC1091
+. "$_TOP_DIR/scripts/common.sh"
+
 # Helpers
 usage() {
   cat <<EOF
@@ -45,7 +49,7 @@ Usage: "$0" [tests|testpr|testnets]
 Targets:
   tests     Run all tests (default TEST_THREADS=20), DbSyncAbortOnPanic=1
   testpr    Run PR-level tests (default CLUSTERS_COUNT=5, TEST_THREADS=20, MARKEXPR="smoke")
-  testnets  Run tests that can run on public testnets (CLUSTERS_COUNT=1, FORBID_RESTART=1,
+  testnets  Run tests that can run on public testnets (CLUSTERS_COUNT=1, FORBID_RESTART=true,
             default TEST_THREADS=15, MARKEXPR="testnets")
 
 All targets respect the same env vars as the original Makefile.
@@ -99,7 +103,7 @@ compute_common_args() {
 
   # It may not be always necessary to save artifacts, e.g. when running tests on local cluster
   # on local machine.
-  if [[ -n "${NO_ARTIFACTS+x}" ]]; then
+  if is_truthy "${NO_ARTIFACTS:-}"; then
     ARTIFACTS_ARR=()
   else
     ARTIFACTS_ARR=( "--artifacts-base-dir=$ARTIFACTS_DIR" )
@@ -190,8 +194,8 @@ target_testpr() {
 }
 
 target_testnets() {
+  export FORBID_RESTART=true
   export CLUSTERS_COUNT=1
-  export FORBID_RESTART=1
   TEST_THREADS="${TEST_THREADS:-15}"
   SESSION_TIMEOUT="${SESSION_TIMEOUT:-20h}"
   ensure_markexpr_default "testnets"

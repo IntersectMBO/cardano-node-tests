@@ -20,20 +20,27 @@ INSTANCE_NUM="${INSTANCE_NUM:-0}"
 
 _root_dir_cnt="$(readlink -m "${BASH_SOURCE[0]}/..")"
 
-# shellcheck disable=SC1091
-source "$_root_dir_cnt/scripts/common.sh"
-
 # Activate python virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
   # shellcheck disable=SC1091
   source .venv/bin/activate
 fi
 
-filter_out_nix
+PYTHONPATH="$(
+  # shellcheck disable=SC1091
+  source "$_root_dir_cnt/scripts/common.sh"
+  filter_out_nix
+  echo "${PYTHONPATH:-}"
+)"
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH
+else
+  unset PYTHONPATH
+fi
 
 # Set Cardano Node socket path and other environment variables
 export CARDANO_NODE_SOCKET_PATH="/var/tmp/cardonnay/state-cluster${INSTANCE_NUM}/bft1.socket"
-export DEV_CLUSTER_RUNNING=1 CLUSTERS_COUNT=1 FORBID_RESTART=1 NO_ARTIFACTS=1
+export DEV_CLUSTER_RUNNING=true FORBID_RESTART=true NO_ARTIFACTS=true CLUSTERS_COUNT=1
 unset BOOTSTRAP_DIR
 
 mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
