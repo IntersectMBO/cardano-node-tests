@@ -3,7 +3,7 @@
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-> 📡 **System and end-to-end (E2E) tests for cardano-node.**
+> **System and end-to-end (E2E) tests for cardano-node.**
 
 📘 Check the [documentation site](https://tests.cardano.intersectmbo.org) for full usage guides, setup instructions, and details.
 
@@ -137,7 +137,7 @@ You can fine-tune test runs using these environment variables:
 | `MIXED_UTXO_BACKENDS`           | List of UTXO backends for mixed setup.              |
 | `ALLOW_UNSTABLE_ERROR_MESSAGES` | Allow tests to pass with unstable error messages.   |
 
-### ▶️ Additional for `regression.sh`
+### Additional for `regression.sh`
 
 | Variable           | Description                                       |
 | ------------------ | ------------------------------------------------- |
@@ -177,13 +177,13 @@ While the setup described in [Persistent Local Testnet for Repeated Testing](#-p
 
 > Install [Nix](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix) and [uv](https://docs.astral.sh/uv/getting-started/installation/) before proceeding.
 
-### 🐍 Set Up Python Environment
+### Set Up Python Environment
 
 ```sh
 make install
 ```
 
-### 🔧 Activate Dev Environment
+### Activate Dev Environment
 
 ```sh
 cd ../cardano-node
@@ -193,13 +193,13 @@ make update-node-bins repo=../cardano-node
 source .source.dev
 ```
 
-### ✅ Validate Dev Environment
+### Validate Dev Environment
 
 ```sh
 make check-dev-env
 ```
 
-### 🧱 Start Development Testnet Cluster
+### Start Development Testnet Cluster
 
 ```sh
 prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
@@ -208,14 +208,14 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 
 > Keys and configs are stored under `/var/tmp/cardonnay/state-cluster0`.
 
-### 🧪 Run Individual Tests
+### Run Individual Tests
 
 ```sh
 pytest -k "test_missing_tx_out or test_multiple_same_txins" cardano_node_tests
 pytest -m smoke cardano_node_tests/tests/test_cli.py
 ```
 
-### 🧹 Run Linters
+### Run Linters
 
 ```sh
 make lint
@@ -223,7 +223,7 @@ make lint
 
 > ℹ️ **Pro Tip:** Run `make init-lint` to initialize linters and activate Git hooks.
 
-### 🧰 Reinstall `cardano-clusterlib` in Editable Mode
+### Reinstall `cardano-clusterlib` in Editable Mode
 
 ```sh
 make reinstall-editable repo=../cardano-clusterlib-py
@@ -231,7 +231,7 @@ make reinstall-editable repo=../cardano-clusterlib-py
 
 > ⚠️ After each dependencies update, repeat the step above to retain dev mode.
 
-### 📦 Update uv Lockfile
+### Update uv Lockfile
 
 This step is required after modifying dependencies in `pyproject.toml`.
 
@@ -239,7 +239,7 @@ This step is required after modifying dependencies in `pyproject.toml`.
 make update-lockfile
 ```
 
-### 📚 Build and Deploy Documentation
+### Build and Deploy Documentation
 
 ```sh
 make doc
