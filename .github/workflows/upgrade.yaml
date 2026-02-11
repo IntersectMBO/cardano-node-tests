@@ -20,12 +20,10 @@ on:
         default: false
         description: "Start cluster in Byron era"
 
-run-name: ${{ inputs.testrun_name && 'Run:' || ''}} ${{ inputs.testrun_name }} ${{ (inputs.testrun_name && inputs.skip_passed) && ':repeat:' || '' }}
-
 jobs:
-  regression_tests:
+  upgrade_tests:
     # reusable workflow from local repo and same branch as this config
-    uses: ./.github/workflows/regression_reusable.yaml
+    uses: ./.github/workflows/upgrade_reusable.yaml
     with:
       base_rev: ${{ inputs.base_rev }}
       base_tar_url: ${{ inputs.base_tar_url }}
