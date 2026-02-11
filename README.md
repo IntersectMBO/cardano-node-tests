@@ -15,18 +15,18 @@ Run tests easily using GitHub Actions:
 
 1. **Fork** this repository.
 
-1. Enable GitHub Actions in your fork:
+2. Enable GitHub Actions in your fork:
 
    * Go to `Settings` ➝ `Actions` ➝ `General` ➝ `Actions permissions`
    * Check ✅ `Allow all actions and reusable workflows`
 
-1. Navigate to the `Actions` tab, then choose:
+3. Navigate to the `Actions` tab, then choose:
 
    * `01 Regression tests`, or
    * `02 Regression tests with db-sync`, or
    * `03 Upgrade tests`
 
-1. Click `Run workflow` to start testing.
+4. Click `Run workflow` to start testing.
 
 ---
 
