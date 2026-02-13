@@ -364,6 +364,8 @@ class TestnetScripts(ScriptsTypes):
         "config*.json",
         "genesis-*.json",
         "topology-*.json",
+        "checkpoints*.json",
+        "*snapshot*.json",
         "dbsync-config.*",
         "submit-api-config.*",
     )
