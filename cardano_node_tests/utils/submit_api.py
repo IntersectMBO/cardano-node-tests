@@ -1,6 +1,7 @@
 """Utilities for `cardano-submit-api` REST service."""
 
 import binascii
+import contextlib
 import dataclasses
 import json
 import logging
@@ -66,13 +67,16 @@ def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
         if i > 1:
             LOGGER.warning("Resubmitting transaction to submit-api.")
 
-        try:
+        response = None
+        with contextlib.suppress(requests.exceptions.ReadTimeout):
             response = http_client.get_session().post(
                 url, headers=headers, data=cbor_binary, timeout=60
             )
-        except requests.exceptions.ReadTimeout:
+
+        if response is not None and not response and "MempoolTxTooSlow" in response.text:
+            # Repeat the request as the transaction didn't make it to mempool
             pass
-        else:
+        elif response is not None:
             break
 
         time.sleep(random.random())
