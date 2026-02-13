@@ -29,7 +29,7 @@ Framework components are organized under:
 
 1. **Follow the Google Python Style Guide**
 2. **Use Type Hints** - All functions and methods need type hints (test return type `None` is omitted, use `import typing as tp`)
-3. **Use Docstrings** - All tests, public functions, methods, classes, and modules must have Google-style docstrings
+3. **Use Docstrings** - All tests, public functions, methods, classes, and modules must have Google-style docstrings. You must check that docstrings are still accurate after your code changes and update them if necessary.
 4. **Run Linters** when appropriate, even for documentation-only changes:
 
    ```sh
