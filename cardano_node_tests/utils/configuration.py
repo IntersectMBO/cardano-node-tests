@@ -64,7 +64,15 @@ CLUSTERS_COUNT = int(CLUSTERS_COUNT or (min(XDIST_WORKERS_COUNT, 9)) or 1)
 DEV_CLUSTER_RUNNING = helpers.is_truthy_env_var("DEV_CLUSTER_RUNNING")
 FORBID_RESTART = helpers.is_truthy_env_var("FORBID_RESTART")
 
-BOOTSTRAP_DIR = os.environ.get("BOOTSTRAP_DIR") or ""
+BOOTSTRAP_DIR: str | pl.Path = os.environ.get("BOOTSTRAP_DIR") or ""
+if BOOTSTRAP_DIR:
+    BOOTSTRAP_DIR = pl.Path(BOOTSTRAP_DIR).expanduser().resolve()
+    if not (BOOTSTRAP_DIR / "genesis-shelley.json").exists():
+        __msg = (
+            f"The `BOOTSTRAP_DIR` is set to '{BOOTSTRAP_DIR}'"
+            ", but the 'genesis-shelley.json' file is not found."
+        )
+        raise RuntimeError(__msg)
 
 NUM_POOLS = int(os.environ.get("NUM_POOLS") or 3)
 if not BOOTSTRAP_DIR and NUM_POOLS < 3:
