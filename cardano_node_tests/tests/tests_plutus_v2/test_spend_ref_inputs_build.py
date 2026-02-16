@@ -60,10 +60,10 @@ class TestReadonlyReferenceInputs:
     ):
         """Test use a reference input when unlock some funds.
 
-        * create the necessary Tx outputs
-        * use a reference input and spend the locked UTxO
-        * check that the reference input was not spent
-        * (optional) check transactions in db-sync
+        * Create the necessary Tx outputs
+        * Use a reference input and spend the locked UTxO
+        * Check that the reference input was not spent
+        * (optional) Check transactions in db-sync
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -178,10 +178,10 @@ class TestReadonlyReferenceInputs:
     ):
         """Test use a reference input that is also a regular input of the same transaction.
 
-        * create the necessary Tx outputs
-        * use a reference input that is also a regular input and spend the locked UTxO
-        * check that input was spent
-        * check "transaction view"
+        * Create the necessary Tx outputs
+        * Use a reference input that is also a regular input and spend the locked UTxO
+        * Check that input was spent
+        * Check "transaction view"
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -293,10 +293,10 @@ class TestReadonlyReferenceInputs:
     ):
         """Test 2 transactions using the same reference input in the same block.
 
-        * create the UTxO that will be used as readonly reference input
-        * create the transactions using the same readonly reference input
-        * submit both transactions
-        * check that the readonly reference input was not spent
+        * Create the UTxO that will be used as readonly reference input
+        * Create the transactions using the same readonly reference input
+        * Submit both transactions
+        * Check that the readonly reference input was not spent
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -371,9 +371,9 @@ class TestReadonlyReferenceInputs:
     ):
         """Test using a read-only reference input in non-Plutus transaction.
 
-        * use a reference input in normal non-Plutus transaction
-        * check that the reference input was not spent
-        * (optional) check transactions in db-sync
+        * Use a reference input in normal non-Plutus transaction
+        * Check that the reference input was not spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000

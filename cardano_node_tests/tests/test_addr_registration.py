@@ -68,12 +68,12 @@ class TestRegisterAddr:
     ):
         """Deregister a registered stake address.
 
-        * create stake address registration cert
-        * register and stake address
-        * create stake address deregistration cert
-        * deregister stake address
-        * check that the balance for source address was correctly updated
-        * (optional) check records in db-sync
+        * Create stake address registration cert
+        * Register and stake address
+        * Create stake address deregistration cert
+        * Deregister stake address
+        * Check that the balance for source address was correctly updated
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -171,12 +171,12 @@ class TestRegisterAddr:
     ):
         """Submit registration and deregistration certificates in single TX.
 
-        * create stake address registration cert
-        * create stake address deregistration cert
-        * register and deregister stake address in single TX
-        * check that the balance for source address was correctly updated and that key deposit
+        * Create stake address registration cert
+        * Create stake address deregistration cert
+        * Register and deregister stake address in single TX
+        * Check that the balance for source address was correctly updated and that key deposit
           was not needed
-        * (optional) check records in db-sync
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -253,13 +253,13 @@ class TestRegisterAddr:
     ):
         """Submit (de)registration certificates in single TX and check that the order matter.
 
-        * create stake address registration cert
-        * create stake address deregistration cert
-        * register, deregister, register, deregister and register stake address in single TX
-        * check that the address is registered
-        * check that the balance for source address was correctly updated and that key deposit
+        * Create stake address registration cert
+        * Create stake address deregistration cert
+        * Register, deregister, register, deregister and register stake address in single TX
+        * Check that the address is registered
+        * Check that the balance for source address was correctly updated and that key deposit
           was needed
-        * (optional) check records in db-sync
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -361,7 +361,7 @@ class TestRegisterAddr:
         * Create a Tx for the deregistration certificate
         * Incrementally sign the Tx and submit the deregistration certificate
         * Check that the address is no longer registered
-        * (optional) check records in db-sync
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = pool_users[0].payment

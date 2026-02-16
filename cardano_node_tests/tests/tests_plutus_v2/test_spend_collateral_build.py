@@ -136,9 +136,9 @@ class TestCollateralOutput:
     ):
         """Test failing script with combination of total and return collateral set.
 
-        * fund the script address and create a UTxO for collateral
-        * spend the locked UTxO
-        * check that the expected amount of collateral was spent
+        * Fund the script address and create a UTxO for collateral
+        * Spend the locked UTxO
+        * Check that the expected amount of collateral was spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -256,10 +256,10 @@ class TestCollateralOutput:
     ):
         """Test failing script using collaterals with tokens.
 
-        * create the token
-        * fund the script address and create a UTxO for collateral
-        * spend the locked UTxO
-        * check that the expected amount of collateral was spent
+        * Create the token
+        * Fund the script address and create a UTxO for collateral
+        * Spend the locked UTxO
+        * Check that the expected amount of collateral was spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]

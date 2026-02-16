@@ -1,9 +1,9 @@
 """Tests for native tokens.
 
-* minting
-* burning
-* locking
-* transactions
+* Minting
+* Burning
+* Locking
+* Transactions
 """
 
 import dataclasses
@@ -151,12 +151,12 @@ class TestMinting:
     ):
         """Test minting and burning of tokens, sign the transaction using witnesses.
 
-        * mint 2 tokens - one identified by policyid + asset name
+        * Mint 2 tokens - one identified by policyid + asset name
           and one identified by just policyid
-        * burn the minted tokens
-        * check fees in Lovelace
-        * check output of the `transaction view` command
-        * (optional) check transactions in db-sync
+        * Burn the minted tokens
+        * Check fees in Lovelace
+        * Check output of the `transaction view` command
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 201141
 
@@ -257,11 +257,11 @@ class TestMinting:
     ):
         """Test minting and burning of tokens, sign the transaction using skeys.
 
-        * mint 2 tokens - one identified by policyid + asset name
+        * Mint 2 tokens - one identified by policyid + asset name
           and one identified by just policyid
-        * burn the minted tokens
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Burn the minted tokens
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 188_821
 
@@ -350,16 +350,16 @@ class TestMinting:
     ):
         """Test minting of tokens using several different scripts in single transaction.
 
-        * create tokens issuers
-        * create a script for each issuer
-        * mint 2 tokens with each script - one identified by policyid + asset name
+        * Create tokens issuers
+        * Create a script for each issuer
+        * Mint 2 tokens with each script - one identified by policyid + asset name
           and one identified by just policyid. The minting is done in single transaction,
           the transaction is signed using skeys.
-        * check that the tokens were minted
-        * burn the minted tokens
-        * check that the tokens were burnt
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Check that the tokens were minted
+        * Burn the minted tokens
+        * Check that the tokens were burnt
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -476,12 +476,12 @@ class TestMinting:
 
         Sign transactions using skeys.
 
-        * create a script
+        * Create a script
         * 1st TX - mint first token
         * 2nd TX - mint second token, burn first token
         * 3rd TX - burn second token
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 188_821
 
@@ -590,11 +590,11 @@ class TestMinting:
 
         Sign transactions using skeys.
 
-        * create a script
-        * specify amount to mint and amount to burn in the same transaction
-        * check that the expected amount was minted (to_mint_amount - to_burn_amount)
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Create a script
+        * Specify amount to mint and amount to burn in the same transaction
+        * Check that the expected amount was minted (to_mint_amount - to_burn_amount)
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 188821
 
@@ -727,10 +727,10 @@ class TestMinting:
 
         Sign the TX using witnesses.
 
-        * mint several tokens using a single script
-        * burn the minted tokens
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Mint several tokens using a single script
+        * Burn the minted tokens
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         rand = clusterlib.get_rand_str(8)
         temp_template = f"{common.get_test_id(cluster)}_{rand}"
@@ -882,10 +882,10 @@ class TestMinting:
 
         Sign the TX using skeys.
 
-        * mint several tokens using a single script
-        * burn the minted tokens
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Mint several tokens using a single script
+        * Burn the minted tokens
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         rand = clusterlib.get_rand_str(8)
         temp_template = f"{common.get_test_id(cluster)}_{rand}"
@@ -1027,10 +1027,10 @@ class TestMinting:
     ):
         """Test minting and partial burning of tokens.
 
-        * mint a token
-        * burn part of the minted token, check the expected amount
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Mint a token
+        * Burn part of the minted token, check the expected amount
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 201_141
 
@@ -1128,10 +1128,10 @@ class TestMinting:
 
         Tests https://github.com/IntersectMBO/cardano-node/issues/2337
 
-        * mint a token that has non-ascii characters in its asset name
-        * burn the minted token
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Mint a token that has non-ascii characters in its asset name
+        * Burn the minted token
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 188_821
 
@@ -1219,15 +1219,15 @@ class TestPolicies:
         Test that tokens can be minted and burned when transaction validity interval satisfies
         the "after" slot constraint in the minting policy script.
 
-        * create multisig script with "after slot 100" time-locking constraint
-        * generate policy ID from script
-        * create 5 different native tokens under same policy
-        * mint tokens with invalid-before set to slot 100 (satisfies "after" constraint)
-        * check tokens were minted at expected address
-        * burn tokens with same time constraint
-        * check tokens were burned
-        * verify transaction fees are within expected range
-        * (optional) check transactions in db-sync
+        * Create multisig script with "after slot 100" time-locking constraint
+        * Generate policy ID from script
+        * Create 5 different native tokens under same policy
+        * Mint tokens with invalid-before set to slot 100 (satisfies "after" constraint)
+        * Check tokens were minted at expected address
+        * Burn tokens with same time constraint
+        * Check tokens were burned
+        * Verify transaction fees are within expected range
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 228_113
 
@@ -1325,15 +1325,15 @@ class TestPolicies:
         Test that tokens can be minted and burned when transaction validity interval satisfies
         the "before" slot constraint in the minting policy script.
 
-        * create multisig script with "before slot N" time-locking constraint (future slot)
-        * generate policy ID from script
-        * create 5 different native tokens under same policy
-        * mint tokens with invalid-hereafter before the threshold (satisfies "before" constraint)
-        * check tokens were minted at expected address
-        * burn tokens with same time constraint
-        * check tokens were burned
-        * verify transaction fees are within expected range
-        * (optional) check transactions in db-sync
+        * Create multisig script with "before slot N" time-locking constraint (future slot)
+        * Generate policy ID from script
+        * Create 5 different native tokens under same policy
+        * Mint tokens with invalid-hereafter before the threshold (satisfies "before" constraint)
+        * Check tokens were minted at expected address
+        * Burn tokens with same time constraint
+        * Check tokens were burned
+        * Verify transaction fees are within expected range
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 228_113
 
@@ -1428,14 +1428,14 @@ class TestPolicies:
         Test that minting fails when the time-locking policy "before" constraint cannot be
         satisfied because the threshold slot is in the past.
 
-        * create multisig script with "before slot N" where N is current slot - 1 (past)
-        * generate policy ID from script
-        * create 5 native tokens under this policy
-        * attempt to mint with invalid-hereafter matching the past slot
-        * verify minting fails with OutsideValidityIntervalUTxO error
-        * attempt to mint with invalid-hereafter after the past slot
-        * verify minting fails with ScriptWitnessNotValidatingUTXOW error
-        * check that tokens were not minted
+        * Create multisig script with "before slot N" where N is current slot - 1 (past)
+        * Generate policy ID from script
+        * Create 5 native tokens under this policy
+        * Attempt to mint with invalid-hereafter matching the past slot
+        * Verify minting fails with OutsideValidityIntervalUTxO error
+        * Attempt to mint with invalid-hereafter after the past slot
+        * Verify minting fails with ScriptWitnessNotValidatingUTXOW error
+        * Check that tokens were not minted
 
         Expect failure.
         """
@@ -1518,12 +1518,12 @@ class TestPolicies:
         Test that minting fails when the time-locking policy "before" constraint is violated
         because transaction invalid-hereafter is after the policy threshold.
 
-        * create multisig script with "before slot N" where N is far future (current + 10000)
-        * generate policy ID from script
-        * create 5 native tokens under this policy
-        * attempt to mint with invalid-hereafter after the threshold slot
-        * verify minting fails with ScriptWitnessNotValidatingUTXOW error (policy not satisfied)
-        * check that tokens were not minted
+        * Create multisig script with "before slot N" where N is far future (current + 10000)
+        * Generate policy ID from script
+        * Create 5 native tokens under this policy
+        * Attempt to mint with invalid-hereafter after the threshold slot
+        * Verify minting fails with ScriptWitnessNotValidatingUTXOW error (policy not satisfied)
+        * Check that tokens were not minted
 
         Expect failure.
         """
@@ -1593,14 +1593,14 @@ class TestPolicies:
         Test that tokens cannot be minted when the "after" slot constraint is in the future
         and transaction validity intervals don't satisfy or violate the policy. Expect failure.
 
-        * create multisig script with "after slot" constraint set to future slot (current + 10000)
-        * generate policy ID from script
-        * create 5 different native tokens under same policy
-        * attempt to mint with valid range (invalid-before at future slot, invalid-hereafter
+        * Create multisig script with "after slot" constraint set to future slot (current + 10000)
+        * Generate policy ID from script
+        * Create 5 different native tokens under same policy
+        * Attempt to mint with valid range (invalid-before at future slot, invalid-hereafter
           future slot + 100) - fails because slot is in the future (OutsideValidityIntervalUTxO)
-        * attempt to mint with invalid range (invalid-before 1, invalid-hereafter at future
+        * Attempt to mint with invalid range (invalid-before 1, invalid-hereafter at future
           slot) - fails because "after" constraint not met (ScriptWitnessNotValidatingUTXOW)
-        * verify tokens were not minted
+        * Verify tokens were not minted
         """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
@@ -1681,12 +1681,12 @@ class TestPolicies:
         Test that tokens cannot be minted when the "after" slot constraint references a past
         slot and the transaction validity interval violates the constraint. Expect failure.
 
-        * create multisig script with "after slot" constraint set to past slot (current - 1)
-        * generate policy ID from script
-        * create 5 different native tokens under same policy
-        * attempt to mint with invalid-before 1 and invalid-hereafter at past slot
-        * verify minting fails with ScriptWitnessNotValidatingUTXOW error
-        * verify tokens were not minted
+        * Create multisig script with "after slot" constraint set to past slot (current - 1)
+        * Generate policy ID from script
+        * Create 5 different native tokens under same policy
+        * Attempt to mint with invalid-before 1 and invalid-hereafter at past slot
+        * Verify minting fails with ScriptWitnessNotValidatingUTXOW error
+        * Verify tokens were not minted
         """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
@@ -1814,10 +1814,10 @@ class TestTransfer:
     ):
         """Test sending tokens to payment address.
 
-        * send tokens from 1 source address to 1 destination address
-        * check expected token balances for both source and destination addresses
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Send tokens from 1 source address to 1 destination address
+        * Check expected token balances for both source and destination addresses
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         xfail_issues = []
@@ -1965,10 +1965,10 @@ class TestTransfer:
     ):
         """Test sending multiple different tokens to payment addresses.
 
-        * send multiple different tokens from 1 source address to 2 destination addresses
-        * check expected token balances for both source and destination addresses for each token
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Send multiple different tokens from 1 source address to 2 destination addresses
+        * Check expected token balances for both source and destination addresses for each token
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000
@@ -2243,12 +2243,12 @@ class TestTransfer:
         Test that transactions fail when attempting to send more tokens than available or
         negative token amounts, depending on the transaction build method. Expect failure.
 
-        * create transaction output with invalid token amount (negative or exceeds balance)
-        * attempt to build/send transaction using parametrized build method
-        * check that transaction build/submission fails with appropriate error
-        * for build method: error about unbalanced assets or illegal value
-        * for build-raw method: error ValueNotConservedUTxO on submission
-        * for build-estimate method: error about unbalanced assets or illegal value
+        * Create transaction output with invalid token amount (negative or exceeds balance)
+        * Attempt to build/send transaction using parametrized build method
+        * Check that transaction build/submission fails with appropriate error
+        * For build method: error about unbalanced assets or illegal value
+        * For build-raw method: error ValueNotConservedUTxO on submission
+        * For build-estimate method: error about unbalanced assets or illegal value
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -2463,10 +2463,10 @@ class TestNegative:
         Test that token minting fails when the amount exceeds the maximum allowed value for
         native tokens. Uses Hypothesis property-based testing. Expect failure.
 
-        * create native token with amount above MAX_TOKEN_AMOUNT (generated by Hypothesis)
-        * get simple script and policy ID from fixture
-        * attempt to mint token with excessive amount
-        * check that minting fails with "the number exceeds the max bound" error
+        * Create native token with amount above MAX_TOKEN_AMOUNT (generated by Hypothesis)
+        * Get simple script and policy ID from fixture
+        * Attempt to mint token with excessive amount
+        * Check that minting fails with "the number exceeds the max bound" error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -2512,14 +2512,14 @@ class TestCLITxOutSyntax:
 
         Test it by minting one token and burning the same token in single transaction.
 
-        * create a script
-        * specify amount to mint and amount to burn in the same transaction
-        * assemble CLI arguments for `transaction build` and test syntax for multi-asset values
+        * Create a script
+        * Specify amount to mint and amount to burn in the same transaction
+        * Assemble CLI arguments for `transaction build` and test syntax for multi-asset values
           and txouts
-        * build Tx body using the assembled CLI arguments, sign and submit the Tx
-        * check that the expected amount was minted (to_mint_amount - to_burn_amount)
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Build Tx body using the assembled CLI arguments, sign and submit the Tx
+        * Check that the expected amount was minted (to_mint_amount - to_burn_amount)
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 187_105
 
@@ -2665,12 +2665,12 @@ class TestReferenceUTxO:
         Mint and burn token in the same transaction
         Sign transactions using skeys.
 
-        * create a Simple Script
-        * create a reference UTxO with the script
-        * specify amount to mint and amount to burn in the same transaction
-        * check that the expected amount was minted (to_mint_amount - to_burn_amount)
-        * check fees in Lovelace
-        * (optional) check transactions in db-sync
+        * Create a Simple Script
+        * Create a reference UTxO with the script
+        * Specify amount to mint and amount to burn in the same transaction
+        * Check that the expected amount was minted (to_mint_amount - to_burn_amount)
+        * Check fees in Lovelace
+        * (optional) Check transactions in db-sync
         """
         expected_fee = 188821
 

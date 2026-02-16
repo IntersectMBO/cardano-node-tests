@@ -1071,7 +1071,7 @@ class TestDelegDReps:
 
             - always-abstain
             - always-no-confidence
-            - custom DRep
+            - Custom DRep
 
         * Check that the stake address is registered
         """
@@ -1286,7 +1286,7 @@ class TestDelegDReps:
 
             - always-abstain
             - always-no-confidence
-            - custom DRep
+            - Custom DRep
 
         * Check that the stake address is registered and delegated
         """

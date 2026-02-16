@@ -132,10 +132,10 @@ class TestCommittee:
         Test that attempting to authorize a hot key without being a Constitutional Committee member
         is rejected by the ledger. Uses parametrized build and submit methods.
 
-        * generate CC member cold and hot key pairs
-        * create hot credential authorization certificate
-        * attempt to submit authorization certificate without being CC member
-        * check that transaction fails with ConwayCommitteeIsUnknown error
+        * Generate CC member cold and hot key pairs
+        * Create hot credential authorization certificate
+        * Attempt to submit authorization certificate without being CC member
+        * Check that transaction fails with ConwayCommitteeIsUnknown error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -445,9 +445,9 @@ class TestCommittee:
     ):
         """Test update committee action.
 
-        * add CC Members
-        * update committee threshold
-        * check that the proposed changes are correct in `query gov-state`
+        * Add CC Members
+        * Update committee threshold
+        * Check that the proposed changes are correct in `query gov-state`
         """
         temp_template = common.get_test_id(cluster)
         cc_size = 3
@@ -578,40 +578,40 @@ class TestCommittee:
     ):
         """Test adding and removing CC members.
 
-        * authorize hot keys of 3 new potential CC members
-        * create the first "update committee" action to add 2 of the 3 new potential CC members
+        * Authorize hot keys of 3 new potential CC members
+        * Create the first "update committee" action to add 2 of the 3 new potential CC members
 
-            - the first CC member is listed twice to test that it's not possible to add the same
+            - The first CC member is listed twice to test that it's not possible to add the same
               member multiple times
-            - the first CC member expires in 3 epochs, the second and third in 5 epochs
-            - vote to disapprove the action
-            - vote to approve the action
-            - check that CC members votes have no effect
-            - check that the action is ratified
-            - try to disapprove the ratified action, this shouldn't have any effect
-            - check that the action is enacted
-            - check that the new CC members were added
-            - check that it's not possible to vote on enacted action
+            - The first CC member expires in 3 epochs, the second and third in 5 epochs
+            - Vote to disapprove the action
+            - Vote to approve the action
+            - Check that CC members votes have no effect
+            - Check that the action is ratified
+            - Try to disapprove the ratified action, this shouldn't have any effect
+            - Check that the action is enacted
+            - Check that the new CC members were added
+            - Check that it's not possible to vote on enacted action
 
-        * check that the first CC member has expired as expected
-        * create the second "update committee" action to remove the second CC member
+        * Check that the first CC member has expired as expected
+        * Create the second "update committee" action to remove the second CC member
 
-            - propose the action at the same epoch as the first action
-            - use the first action as previous action
-            - vote to disapprove the action
-            - vote to approve the action in the same epoch as the first action was approved
-            - check that CC members votes have no effect
-            - check that the action is ratified
-            - try to disapprove the ratified action, this shouldn't have any effect
-            - check that the action is enacted one epoch after the first action, due to the
+            - Propose the action at the same epoch as the first action
+            - Use the first action as previous action
+            - Vote to disapprove the action
+            - Vote to approve the action in the same epoch as the first action was approved
+            - Check that CC members votes have no effect
+            - Check that the action is ratified
+            - Try to disapprove the ratified action, this shouldn't have any effect
+            - Check that the action is enacted one epoch after the first action, due to the
               ratification delay
-            - check that the second CC member was removed
-            - check that it's not possible to vote on enacted action
+            - Check that the second CC member was removed
+            - Check that it's not possible to vote on enacted action
 
-        * resign the third CC member
-        * check output of votes and action `view` commands
-        * check deposit is returned to user reward account after enactment
-        * (optional) check committee members in db-sync
+        * Resign the third CC member
+        * Check output of votes and action `view` commands
+        * Check deposit is returned to user reward account after enactment
+        * (optional) Check committee members in db-sync
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
@@ -1362,24 +1362,25 @@ class TestCommittee:
     ):
         """Test electing empty Constitutional Committee.
 
-        * create "protocol parameters update" action to set `committeeMinSize` to 0
+        * Create "protocol parameters update" action to set `committeeMinSize` to 0
 
-            - vote to approve the action
-            - check that the action is ratified
-            - check that the action is enacted
-            - check that the `committeeMinSize` pparam was set to 0
+            - Vote to approve the action
+            - Check that the action is ratified
+            - Check that the action is enacted
+            - Check that the `committeeMinSize` pparam was set to 0
 
-        * create an "update committee" action to remove all CC members
+        * Create an "update committee" action to remove all CC members
 
-            - vote to approve the action
-            - check that the action is ratified
-            - check that the action is enacted
-            - check that all CC members were removed
+            - Vote to approve the action
+            - Check that the action is ratified
+            - Check that the action is enacted
+            - Check that all CC members were removed
 
-        * create a "create constitution" action
-            - vote to approve the action without needing CC members votes
-            - check that the action is ratified
-            - check that the action is enacted
+        * Create a "create constitution" action
+
+            - Vote to approve the action without needing CC members votes
+            - Check that the action is ratified
+            - Check that the action is enacted
         """
         __: tp.Any  # mypy workaround
         cluster, governance_data = cluster_lock_governance
@@ -1724,11 +1725,11 @@ class TestCommittee:
 
         Even if the CC disapprove the action.
 
-        * set CC threshold to zero
-        * submit a "create constitution" action
-        * vote to disapprove the action by the CC and approve by the DReps
-        * check that the action is ratified
-        * check that the action is enacted
+        * Set CC threshold to zero
+        * Submit a "create constitution" action
+        * Vote to disapprove the action by the CC and approve by the DReps
+        * Check that the action is ratified
+        * Check that the action is enacted
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)

@@ -112,13 +112,13 @@ class TestPrometheus:
         Test Prometheus metrics endpoint to verify all expected metrics are exposed and
         no unexpected metrics are present.
 
-        * wait for epoch >= 4 to ensure stable metrics
-        * get Prometheus port for pool1 from cluster configuration
-        * fetch metrics from Prometheus HTTP endpoint (GET /metrics)
-        * parse metrics response text into individual metric names
-        * extract metric keys from response
-        * compare available metrics set with EXPECTED_METRICS set
-        * verify exact match (no missing or extra metrics)
+        * Wait for epoch >= 4 to ensure stable metrics
+        * Get Prometheus port for pool1 from cluster configuration
+        * Fetch metrics from Prometheus HTTP endpoint (GET /metrics)
+        * Parse metrics response text into individual metric names
+        * Extract metric keys from response
+        * Compare available metrics set with EXPECTED_METRICS set
+        * Verify exact match (no missing or extra metrics)
         """
         prometheus_port = (
             cluster_nodes.get_cluster_type()
@@ -147,12 +147,12 @@ class TestEKG:
         Test EKG (Event-driven Key-value) metrics endpoint to verify metrics conform to
         expected Pydantic model schema.
 
-        * wait for epoch >= 4 to ensure stable metrics
-        * get EKG port for pool1 from cluster configuration
-        * fetch metrics from EKG HTTP endpoint (GET / with Accept: application/json header)
-        * parse JSON response containing EKG metrics
-        * validate response against Pydantic Model schema
-        * check that all required fields are present and have correct types
+        * Wait for epoch >= 4 to ensure stable metrics
+        * Get EKG port for pool1 from cluster configuration
+        * Fetch metrics from EKG HTTP endpoint (GET / with Accept: application/json header)
+        * Parse JSON response containing EKG metrics
+        * Validate response against Pydantic Model schema
+        * Check that all required fields are present and have correct types
         """
         ekg_port = (
             cluster_nodes.get_cluster_type()

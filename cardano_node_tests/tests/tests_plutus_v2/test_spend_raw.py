@@ -61,11 +61,11 @@ class TestLockingV2:
     ):
         """Test combinations of inline datum and datum file + reference script and script file.
 
-        * create the necessary Tx outputs
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO
-        * check that the expected UTxOs were correctly spent
-        * (optional) check transactions in db-sync
+        * Create the necessary Tx outputs
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO
+        * Check that the expected UTxOs were correctly spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -187,10 +187,10 @@ class TestLockingV2:
     ):
         """Test that datum bytes in db-sync corresponds to original datum.
 
-        * create a Tx output with an inline datum at the script address
-        * double-check that the UTxO datum hash corresponds to the datum CBOR file
-        * check that datum from db-sync produces the original datum hash
-        * check that datum bytes in db-sync corresponds to the original datum
+        * Create a Tx output with an inline datum at the script address
+        * Double-check that the UTxO datum hash corresponds to the datum CBOR file
+        * Check that datum from db-sync produces the original datum hash
+        * Check that datum bytes in db-sync corresponds to the original datum
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000

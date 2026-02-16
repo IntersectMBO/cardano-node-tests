@@ -254,12 +254,12 @@ class TestLobsterChallenge:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund token issuer and create a UTxO for collateral
-        * mint the LobsterNFT token
-        * deploy the LobsterNFT token to address of lobster spending script
-        * generate random votes and determine the expected final value
-        * perform voting and check that the final value matches the expected value
-        * (optional) check transactions in db-sync
+        * Fund token issuer and create a UTxO for collateral
+        * Mint the LobsterNFT token
+        * Deploy the LobsterNFT token to address of lobster spending script
+        * Generate random votes and determine the expected final value
+        * Perform voting and check that the final value matches the expected value
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]

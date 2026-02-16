@@ -104,11 +104,11 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build-raw` command.
 
-        * calculate transaction fee
-        * get UTxO with highest amount from source address
-        * attempt to create transaction outputs that exceed inputs by 1 Lovelace
-        * include a change output with -1 Lovelace
-        * check that transaction building fails with appropriate error
+        * Calculate transaction fee
+        * Get UTxO with highest amount from source address
+        * Attempt to create transaction outputs that exceed inputs by 1 Lovelace
+        * Include a change output with -1 Lovelace
+        * Check that transaction building fails with appropriate error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -179,9 +179,9 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build` command.
 
-        * use UTxO with highest amount as sole input
-        * attempt to transfer amount exceeding UTxO balance by parametrized value (1 to MAX/2)
-        * check that transaction building fails with negative balance error
+        * Use UTxO with highest amount as sole input
+        * Attempt to transfer amount exceeding UTxO balance by parametrized value (1 to MAX/2)
+        * Check that transaction building fails with negative balance error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -231,12 +231,12 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build-raw` command.
 
-        * use UTxO with highest amount as sole input
-        * transfer full balance minus fee to destination address
-        * add incorrect change output with parametrized amount (2 ADA to MAX)
-        * build and sign the unbalanced transaction successfully
-        * attempt to submit the unbalanced transaction
-        * check that submission fails with ValueNotConservedUTxO error
+        * Use UTxO with highest amount as sole input
+        * Transfer full balance minus fee to destination address
+        * Add incorrect change output with parametrized amount (2 ADA to MAX)
+        * Build and sign the unbalanced transaction successfully
+        * Attempt to submit the unbalanced transaction
+        * Check that submission fails with ValueNotConservedUTxO error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -302,9 +302,9 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build-raw` command.
 
-        * use UTxO with highest amount as sole input
-        * attempt to create transaction output with amount > MAX_UINT64
-        * check that transaction building fails with out of bounds error
+        * Use UTxO with highest amount as sole input
+        * Attempt to create transaction output with amount > MAX_UINT64
+        * Check that transaction building fails with out of bounds error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         fee = 200_000
@@ -356,9 +356,9 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * use UTxO with highest amount as sole input
-        * attempt to create transaction output with amount below minimum UTxO (0 to ~1 ADA)
-        * check that transaction building fails with minimum UTxO threshold error
+        * Use UTxO with highest amount as sole input
+        * Attempt to create transaction output with amount below minimum UTxO (0 to ~1 ADA)
+        * Check that transaction building fails with minimum UTxO threshold error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -391,9 +391,9 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * use UTxO with highest amount as sole input
-        * attempt to create transaction output with negative amount (-MAX to -1)
-        * check that transaction building fails with negative quantity error
+        * Use UTxO with highest amount as sole input
+        * Attempt to create transaction output with negative amount (-MAX to -1)
+        * Check that transaction building fails with negative quantity error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -428,11 +428,11 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build-raw` command for building the transactions.
 
-        * use UTxO with highest amount as sole input
-        * build transaction with output amount below minimum UTxO (0 to ~1 ADA)
-        * sign the transaction successfully (no validation at build-raw stage)
-        * attempt to submit the transaction
-        * check that submission fails with OutputTooSmallUTxO error
+        * Use UTxO with highest amount as sole input
+        * Build transaction with output amount below minimum UTxO (0 to ~1 ADA)
+        * Sign the transaction successfully (no validation at build-raw stage)
+        * Attempt to submit the transaction
+        * Check that submission fails with OutputTooSmallUTxO error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -498,9 +498,9 @@ class TestUnbalanced:
 
         Uses `cardano-cli transaction build-raw` command for building the transactions.
 
-        * use UTxO with highest amount as sole input
-        * attempt to build transaction with negative output amount (-MAX to -1)
-        * check that transaction building fails with negative quantity error
+        * Use UTxO with highest amount as sole input
+        * Attempt to build transaction with negative output amount (-MAX to -1)
+        * Check that transaction building fails with negative quantity error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 

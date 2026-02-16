@@ -109,13 +109,13 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the token was minted and collateral UTxO was not spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the token was minted and collateral UTxO was not spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -249,10 +249,10 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the token was minted and collateral UTxO was not spent
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the token was minted and collateral UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -367,13 +367,13 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the token was minted and collateral UTxO was not spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the token was minted and collateral UTxO was not spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -526,14 +526,14 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collaterals
-        * check that the expected amount was transferred to token issuer's address
-        * mint the tokens using two different Plutus scripts
-        * check that the tokens were minted and collateral UTxOs were not spent
-        * check transaction view output
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collaterals
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the tokens using two different Plutus scripts
+        * Check that the tokens were minted and collateral UTxOs were not spent
+        * Check transaction view output
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -789,14 +789,14 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * generate a dummy redeemer and a dummy Tx
-        * derive the correct redeemer from the dummy Tx
-        * mint the token using the derived redeemer
-        * check that the token was minted and collateral UTxO was not spent
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Generate a dummy redeemer and a dummy Tx
+        * Derive the correct redeemer from the dummy Tx
+        * Mint the token using the derived redeemer
+        * Check that the token was minted and collateral UTxO was not spent
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -991,13 +991,13 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script with required signer
-        * check that the token was minted and collateral UTxO was not spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script with required signer
+        * Check that the token was minted and collateral UTxO was not spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1149,8 +1149,8 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * try to mint a token using a Plutus script when ttl is set far in the future
-        * check that minting failed because of 'PastHorizon' failure when ttl is too far
+        * Try to mint a token using a Plutus script when ttl is set far in the future
+        * Check that minting failed because of 'PastHorizon' failure when ttl is too far
           in the future
         """
         temp_template = common.get_test_id(cluster)
@@ -1267,11 +1267,11 @@ class TestCollateralOutput:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral and possibly reference script
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script and the same collateral UTxO listed twice
-        * check that the token was minted and collateral UTxO was not spent
-        * check that the return collateral amount is the expected
+        * Fund the token issuer and create a UTxO for collateral and possibly reference script
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script and the same collateral UTxO listed twice
+        * Check that the token was minted and collateral UTxO was not spent
+        * Check that the return collateral amount is the expected
         """
         temp_template = common.get_test_id(cluster)
 

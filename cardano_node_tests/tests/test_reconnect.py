@@ -256,16 +256,17 @@ class TestNodeReconnect:
         Test node reconnection after restart by validating Prometheus metrics indicating
         successful peer connections. Performs 200 restart iterations to ensure reliability.
 
-        * get Prometheus port for pool2 from cluster configuration
-        * for each iteration (up to 200 restarts):
-          - restart pool2 node with 5 second delay
-          - wait for node to sync with chain
-          - fetch Prometheus metrics from node HTTP endpoint
-          - parse metrics response into key-value pairs
-          - check inboundGovernor_hot metric > 1 (active inbound connections)
-          - check peerSelection_cold metric == 0 (no cold peers)
-          - retry up to 10 times with 5 second delays if assertions fail
-          - fail test if metrics don't match after 10 attempts
+        * Get Prometheus port for pool2 from cluster configuration
+        * For each iteration (up to 200 restarts):
+
+          - Restart pool2 node with 5 second delay
+          - Wait for node to sync with chain
+          - Fetch Prometheus metrics from node HTTP endpoint
+          - Parse metrics response into key-value pairs
+          - Check inboundGovernor_hot metric > 1 (active inbound connections)
+          - Check peerSelection_cold metric == 0 (no cold peers)
+          - Retry up to 10 times with 5 second delays if assertions fail
+          - Fail test if metrics don't match after 10 attempts
         """
         cluster = cluster_singleton
         common.get_test_id(cluster)

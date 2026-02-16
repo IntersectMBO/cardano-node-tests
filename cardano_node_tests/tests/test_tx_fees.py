@@ -75,9 +75,9 @@ class TestFee:
 
         Uses hypothesis property-based testing to generate negative fee values.
 
-        * create transaction from source address to destination address with 10 Lovelace
-        * attempt to send transaction with negative fee value
-        * check that transaction building fails with CLI error about fee parameter
+        * Create transaction from source address to destination address with 10 Lovelace
+        * Attempt to send transaction with negative fee value
+        * Check that transaction building fails with CLI error about fee parameter
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -115,10 +115,10 @@ class TestFee:
 
         Test with fee that is 0x, 1/1.1x, 1/1.5x, or 1/2x of the calculated fee.
 
-        * calculate expected fee for transaction sending 10 Lovelace
-        * create transaction with fee reduced by parametrized factor
-        * attempt to send transaction with insufficient fee
-        * check that transaction submission fails with FeeTooSmallUTxO error
+        * Calculate expected fee for transaction sending 10 Lovelace
+        * Create transaction with fee reduced by parametrized factor
+        * Attempt to send transaction with insufficient fee
+        * Check that transaction submission fails with FeeTooSmallUTxO error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -166,11 +166,11 @@ class TestFee:
 
         Test with exact fee, fee + 1,000, fee + 100,000, and fee + 1,000,000 Lovelace.
 
-        * calculate expected fee for transaction sending 2 ADA
-        * create transaction with fee equal to or higher than calculated fee
-        * send transaction and verify it succeeds
-        * check that actual fee matches specified fee
-        * check expected balances for both source and destination addresses
+        * Calculate expected fee for transaction sending 2 ADA
+        * Create transaction with fee equal to or higher than calculated fee
+        * Send transaction and verify it succeeds
+        * Check that actual fee matches specified fee
+        * Check expected balances for both source and destination addresses
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -336,12 +336,12 @@ class TestExpectedFees:
 
         Test with 1, 3, 5, or 10 pool owner addresses.
 
-        * create VRF key pair and cold key pair for the pool node
-        * generate stake address registration certificates for pool owners
-        * generate stake address delegation certificates delegating to the pool
-        * generate pool registration certificate with metadata
-        * calculate transaction fee for pool registration with specified number of owners
-        * verify fee matches expected value within acceptable interval
+        * Create VRF key pair and cold key pair for the pool node
+        * Generate stake address registration certificates for pool owners
+        * Generate stake address delegation certificates delegating to the pool
+        * Generate pool registration certificate with metadata
+        * Calculate transaction fee for pool registration with specified number of owners
+        * Verify fee matches expected value within acceptable interval
         """
         no_of_addr, expected_fee = addr_fee
         rand_str = clusterlib.get_rand_str(4)
@@ -402,11 +402,11 @@ class TestExpectedFees:
 
         Test with 1, 3, 5, or 10 pool owner addresses.
 
-        * create pool metadata and cold key pair for the pool
-        * select specified number of pool owners
-        * generate pool deregistration certificate for next epoch
-        * calculate transaction fee for pool deregistration with specified number of owners
-        * verify fee matches expected value within acceptable interval
+        * Create pool metadata and cold key pair for the pool
+        * Select specified number of pool owners
+        * Generate pool deregistration certificate for next epoch
+        * Calculate transaction fee for pool deregistration with specified number of owners
+        * Verify fee matches expected value within acceptable interval
         """
         no_of_addr, expected_fee = addr_fee
         rand_str = clusterlib.get_rand_str(4)
@@ -479,10 +479,10 @@ class TestExpectedFees:
 
         Test with 1, 3, 5, or 10 stake addresses.
 
-        * select specified number of pool users
-        * generate stake address registration certificates with deposit amounts
-        * calculate transaction fee for registering specified number of stake addresses
-        * verify fee matches expected value within acceptable interval
+        * Select specified number of pool users
+        * Generate stake address registration certificates with deposit amounts
+        * Calculate transaction fee for registering specified number of stake addresses
+        * Verify fee matches expected value within acceptable interval
         """
         no_of_addr, expected_fee = addr_fee
         temp_template = common.get_test_id(cluster)
@@ -528,10 +528,10 @@ class TestExpectedFees:
 
         Test with 1, 3, 5, or 10 stake addresses.
 
-        * select specified number of pool users
-        * generate stake address deregistration certificates with deposit refund amounts
-        * calculate transaction fee for deregistering specified number of stake addresses
-        * verify fee matches expected value within acceptable interval
+        * Select specified number of pool users
+        * Generate stake address deregistration certificates with deposit refund amounts
+        * Calculate transaction fee for deregistering specified number of stake addresses
+        * Verify fee matches expected value within acceptable interval
         """
         no_of_addr, expected_fee = addr_fee
         temp_template = common.get_test_id(cluster)
@@ -579,10 +579,10 @@ class TestExpectedFees:
 
         Test with amounts of 1, 100, 11,000, or 100,000 Lovelace.
 
-        * prepare transaction inputs from source address
-        * prepare transaction outputs to destination address with specified amount
-        * calculate transaction fee
-        * verify fee matches expected value within acceptable interval
+        * Prepare transaction inputs from source address
+        * Prepare transaction outputs to destination address with specified amount
+        * Calculate transaction fee
+        * Verify fee matches expected value within acceptable interval
         """
         temp_template = common.get_test_id(cluster)
 
@@ -608,10 +608,10 @@ class TestExpectedFees:
 
         Test with amounts of 1, 100, 11,000, or 100,000 Lovelace per destination.
 
-        * prepare transaction inputs from 1 source address
-        * prepare transaction outputs to 10 destination addresses with specified amount each
-        * calculate transaction fee
-        * verify fee matches expected value within acceptable interval
+        * Prepare transaction inputs from 1 source address
+        * Prepare transaction outputs to 10 destination addresses with specified amount each
+        * Calculate transaction fee
+        * Verify fee matches expected value within acceptable interval
         """
         temp_template = common.get_test_id(cluster)
 
@@ -637,10 +637,10 @@ class TestExpectedFees:
 
         Test with amounts of 1, 100, 11,000, or 100,000 Lovelace.
 
-        * prepare transaction inputs from 10 source addresses
-        * prepare transaction output to 1 destination address with specified amount
-        * calculate transaction fee
-        * verify fee matches expected value within acceptable interval
+        * Prepare transaction inputs from 10 source addresses
+        * Prepare transaction output to 1 destination address with specified amount
+        * Calculate transaction fee
+        * Verify fee matches expected value within acceptable interval
         """
         temp_template = common.get_test_id(cluster)
 
@@ -666,10 +666,10 @@ class TestExpectedFees:
 
         Test with amounts of 1, 100, 11,000, or 100,000 Lovelace per destination.
 
-        * prepare transaction inputs from 10 source addresses
-        * prepare transaction outputs to 10 destination addresses with specified amount each
-        * calculate transaction fee
-        * verify fee matches expected value within acceptable interval
+        * Prepare transaction inputs from 10 source addresses
+        * Prepare transaction outputs to 10 destination addresses with specified amount each
+        * Calculate transaction fee
+        * Verify fee matches expected value within acceptable interval
         """
         temp_template = common.get_test_id(cluster)
 
@@ -698,10 +698,10 @@ class TestExpectedFees:
 
         Test with amounts of 1, 100, 11,000, or 100,000 Lovelace per destination.
 
-        * prepare transaction inputs from 100 source addresses
-        * prepare transaction outputs to 100 destination addresses with specified amount each
-        * calculate transaction fee
-        * verify fee matches expected value within acceptable interval
+        * Prepare transaction inputs from 100 source addresses
+        * Prepare transaction outputs to 100 destination addresses with specified amount each
+        * Calculate transaction fee
+        * Verify fee matches expected value within acceptable interval
         """
         temp_template = common.get_test_id(cluster)
 

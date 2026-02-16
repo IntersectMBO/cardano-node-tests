@@ -109,12 +109,12 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral and reference script
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the token was minted and collateral UTxO was not spent
-        * check expected fees
-        * check expected Plutus cost
+        * Fund the token issuer and create a UTxO for collateral and reference script
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the token was minted and collateral UTxO was not spent
+        * Check expected fees
+        * Check expected Plutus cost
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -258,10 +258,10 @@ class TestBuildMinting:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral and reference script
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the token was minted and collateral UTxO was not spent
+        * Fund the token issuer and create a UTxO for collateral and reference script
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the token was minted and collateral UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -369,11 +369,11 @@ class TestBuildMinting:
         """
         Test visibility of reference inputs by a plutus script.
 
-        * create the necessary Tx outputs
-        * create the redeemer with the reference input
-        * mint the token and check that the plutus script have visibility of the reference input
-        * check that the token was minted
-        * check that the reference UTxO was not spent
+        * Create the necessary Tx outputs
+        * Create the redeemer with the reference input
+        * Mint the token and check that the plutus script have visibility of the reference input
+        * Check that the token was minted
+        * Check that the reference UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -514,11 +514,11 @@ class TestBuildMinting:
     ):
         """Test visibility of reference inputs by a plutus script.
 
-        * create needed Tx outputs
-        * create the redeemer with the script hash
-        * mint the token and check that the plutus script has visibility of the reference script
-        * check that the token was minted
-        * check that the reference UTxO was not spent
+        * Create needed Tx outputs
+        * Create the redeemer with the script hash
+        * Mint the token and check that the plutus script has visibility of the reference script
+        * Check that the token was minted
+        * Check that the reference UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -645,10 +645,10 @@ class TestBuildMinting:
         """
         Test visibility of inline datums on reference inputs by a plutus script.
 
-        * create the necessary Tx outputs
-        * mint the token and check that the plutus script have visibility of the inline datum
-        * check that the token was minted
-        * check that the reference UTxO was not spent
+        * Create the necessary Tx outputs
+        * Mint the token and check that the plutus script have visibility of the inline datum
+        * Check that the token was minted
+        * Check that the reference UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]

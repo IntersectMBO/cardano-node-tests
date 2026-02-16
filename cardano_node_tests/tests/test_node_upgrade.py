@@ -96,11 +96,13 @@ class TestSetup:
         Test setup to ignore expected errors in node logs after upgrading from pre-UTxO-HD
         releases. UTxO-HD was added in node 10.4.1.
 
-        * check if upgraded node version is < 10.5.0
-        * if upgrading from pre-UTxO-HD release (node < 10.5.0):
-          - add log ignore rule for ChainDB warning about invalid snapshot
-          - ignore "MetadataFileDoesNotExist" error in stdout logs
-        * this prevents false test failures from expected upgrade-related log messages
+        * Check if upgraded node version is < 10.5.0
+        * If upgrading from pre-UTxO-HD release (node < 10.5.0):
+
+          - Add log ignore rule for ChainDB warning about invalid snapshot
+          - Ignore "MetadataFileDoesNotExist" error in stdout logs
+
+        * This prevents false test failures from expected upgrade-related log messages
         """
         common.get_test_id(cluster_singleton)
 
@@ -129,12 +131,12 @@ class TestSetup:
         Test updating Plutus cost models after node upgrade. Runs only on step 2 of upgrade
         testing sequence.
 
-        * load cost model proposal from JSON file (PlutusV2 and PlutusV3 models)
-        * get default governance data (DReps, committee members, pools)
-        * submit cost model update governance action
-        * vote and ratify the cost model update
-        * wait for enactment
-        * verify updated cost models are active
+        * Load cost model proposal from JSON file (PlutusV2 and PlutusV3 models)
+        * Get default governance data (DReps, committee members, pools)
+        * Submit cost model update governance action
+        * Vote and ratify the cost model update
+        * Wait for enactment
+        * Verify updated cost models are active
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
@@ -164,17 +166,17 @@ class TestSetup:
         Test protocol version hard fork using governance action after node upgrade. Runs only
         on step 3 of upgrade testing sequence.
 
-        * get current protocol version and calculate target version (current + 1)
-        * skip if already at LAST_KNOWN_PROTOCOL_VERSION
-        * check that ExperimentalHardForksEnabled is true in node config
-        * get default governance data (DReps, committee members, pools)
-        * wait for any delayed ratification to complete
-        * create hardfork governance action with target protocol version
-        * submit hardfork action transaction
-        * vote on hardfork action (Constitutional Committee, DReps, SPOs)
-        * wait for ratification
-        * wait for enactment epoch
-        * verify protocol version changed to target version
+        * Get current protocol version and calculate target version (current + 1)
+        * Skip if already at LAST_KNOWN_PROTOCOL_VERSION
+        * Check that ExperimentalHardForksEnabled is true in node config
+        * Get default governance data (DReps, committee members, pools)
+        * Wait for any delayed ratification to complete
+        * Create hardfork governance action with target protocol version
+        * Submit hardfork action transaction
+        * Vote on hardfork action (Constitutional Committee, DReps, SPOs)
+        * Wait for ratification
+        * Wait for enactment epoch
+        * Verify protocol version changed to target version
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
@@ -344,14 +346,14 @@ class TestUpgrade:
         be submitted in next node version and/or next era. Runs on steps 1-2, creates
         transactions for steps 2-3.
 
-        * create simple transaction sending 2 ADA from source to destination address
-        * build transaction using parametrized method (build or build-raw)
-        * for build method: use fee buffer of 1000000 lovelace
-        * for build-raw method: calculate fee first, then build transaction
-        * sign transaction with source address signing key
-        * save either signed tx file or unsigned tx body file based on parametrization
-        * save to state directory for use in later upgrade testing steps
-        * verify saved file exists and has non-zero size
+        * Create simple transaction sending 2 ADA from source to destination address
+        * Build transaction using parametrized method (build or build-raw)
+        * For build method: use fee buffer of 1000000 lovelace
+        * For build-raw method: calculate fee first, then build transaction
+        * Sign transaction with source address signing key
+        * Save either signed tx file or unsigned tx body file based on parametrization
+        * Save to state directory for use in later upgrade testing steps
+        * Verify saved file exists and has non-zero size
         """
         temp_template = common.get_test_id(cluster)
         build_str = build_method
@@ -474,14 +476,14 @@ class TestUpgrade:
         Test cross-version/cross-era transaction compatibility by submitting transactions
         created in earlier upgrade steps. Runs on steps 2-3.
 
-        * locate transaction file created in previous step (from state directory)
-        * load signed tx file or unsigned tx body file based on parametrization
-        * if loading tx body: sign the transaction body with appropriate signing keys
-        * submit the transaction to the upgraded node
-        * wait for transaction to be included in a block
-        * verify transaction was successfully submitted and processed
-        * check expected balances after transaction submission
-        * demonstrates backward compatibility of transaction format across versions/eras
+        * Locate transaction file created in previous step (from state directory)
+        * Load signed tx file or unsigned tx body file based on parametrization
+        * If loading tx body: sign the transaction body with appropriate signing keys
+        * Submit the transaction to the upgraded node
+        * Wait for transaction to be included in a block
+        * Verify transaction was successfully submitted and processed
+        * Check expected balances after transaction submission
+        * Demonstrates backward compatibility of transaction format across versions/eras
         """
         temp_template = common.get_test_id(cluster)
         build_str = build_method

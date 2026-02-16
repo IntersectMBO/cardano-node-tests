@@ -271,22 +271,22 @@ class TestPParamUpdate:
     ):
         """Test enactment of protocol parameter update.
 
-        * submit multiple "protocol parameters update" action
+        * Submit multiple "protocol parameters update" action
 
-            - one action for each parameter group
-            - one action with multiple proposals from different groups
+            - One action for each parameter group
+            - One action with multiple proposals from different groups
 
-        * vote to disapprove the actions
-        * submit a "protocol parameters update" action that will be enacted
-        * check that SPOs cannot vote on a "protocol parameters update" action that doesn't
+        * Vote to disapprove the actions
+        * Submit a "protocol parameters update" action that will be enacted
+        * Check that SPOs cannot vote on a "protocol parameters update" action that doesn't
           change security parameters
-        * vote to approve the action
-        * check that the action is ratified
-        * try to disapprove the ratified action, this shouldn't have any effect
-        * check that the action is enacted
-        * check that only the ratified action that got accepted first to the chain gets enacted
-        * check that it's not possible to vote on enacted action
-        * check that all deposit required for actions is returned back for both expired
+        * Vote to approve the action
+        * Check that the action is ratified
+        * Try to disapprove the ratified action, this shouldn't have any effect
+        * Check that the action is enacted
+        * Check that only the ratified action that got accepted first to the chain gets enacted
+        * Check that it's not possible to vote on enacted action
+        * Check that all deposit required for actions is returned back for both expired
           and enacted actions
         """
         cluster, governance_data = cluster_lock_governance_plutus
@@ -1372,10 +1372,10 @@ class TestPParamUpdate:
         Test that creating a pparam update action with negative parameter value either fails
         with expected error or wraps to unexpected value (known CLI issue).
 
-        * create protocol parameter update proposal with negative maxBlockHeaderSize value
-        * attempt to create governance action using negative value (-3161913232)
-        * verify either CLI error is raised or value wraps to 2160 due to CLI issue 860
-        * check action contents if action creation succeeds
+        * Create protocol parameter update proposal with negative maxBlockHeaderSize value
+        * Attempt to create governance action using negative value (-3161913232)
+        * Verify either CLI error is raised or value wraps to 2160 due to CLI issue 860
+        * Check action contents if action creation succeeds
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1422,13 +1422,13 @@ class TestPParamData:
         Test that protocol parameters query returns all expected parameter groups and voting
         thresholds for Conway governance.
 
-        * execute `cardano-cli query protocol-parameters` command
-        * check presence of network group parameters (maxBlockBodySize, maxTxSize, etc.)
-        * check presence of economic group parameters (txFeePerByte, stakeAddressDeposit, etc.)
-        * check presence of technical group parameters (poolPledgeInfluence, costModels, etc.)
-        * check presence of governance group parameters (govActionDeposit, dRepDeposit, etc.)
-        * verify all DRep voting thresholds are present in dRepVotingThresholds
-        * verify all pool voting thresholds are present in poolVotingThresholds
+        * Execute `cardano-cli query protocol-parameters` command
+        * Check presence of network group parameters (maxBlockBodySize, maxTxSize, etc.)
+        * Check presence of economic group parameters (txFeePerByte, stakeAddressDeposit, etc.)
+        * Check presence of technical group parameters (poolPledgeInfluence, costModels, etc.)
+        * Check presence of governance group parameters (govActionDeposit, dRepDeposit, etc.)
+        * Verify all DRep voting thresholds are present in dRepVotingThresholds
+        * Verify all pool voting thresholds are present in poolVotingThresholds
         """
         common.get_test_id(cluster)
 

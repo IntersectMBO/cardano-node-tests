@@ -1,9 +1,9 @@
 """Tests for delegation of Plutus script stake address.
 
-* stake address registration
-* stake address delegation
-* rewards withdrawal
-* stake address deregistration
+* Stake address registration
+* Stake address delegation
+* Rewards withdrawal
+* Stake address deregistration
 """
 
 import logging
@@ -519,12 +519,12 @@ class TestRegisterAddr:
     ):
         """Register and deregister Plutus script stake address.
 
-        * submit registration certificate for a stake address
-        * check that the stake address was registered
-        * deregister the stake address
-        * check that the key deposit was returned and rewards withdrawn
-        * check that the stake address is no longer registered
-        * (optional) check records in db-sync
+        * Submit registration certificate for a stake address
+        * Check that the stake address was registered
+        * Deregister the stake address
+        * Check that the key deposit was returned and rewards withdrawn
+        * Check that the stake address is no longer registered
+        * (optional) Check records in db-sync
         """
         # The test checks the following issues:
         #  - cardano-cli 299: Cannot de-register Plutus script stake address
@@ -682,12 +682,12 @@ class TestDelegateAddr:
 
         The stake address registration and delegation happen in single transaction.
 
-        * submit registration certificate and delegate stake address to pool
-        * check that the stake address was delegated
-        * withdraw rewards to payment address and deregister stake address
-        * check that the key deposit was returned and rewards withdrawn
-        * check that the stake address is no longer delegated
-        * (optional) check records in db-sync
+        * Submit registration certificate and delegate stake address to pool
+        * Check that the stake address was delegated
+        * Withdraw rewards to payment address and deregister stake address
+        * Check that the key deposit was returned and rewards withdrawn
+        * Check that the stake address is no longer delegated
+        * (optional) Check records in db-sync
         """
         cluster, pool_id = cluster_lock_42stake
         temp_template = common.get_test_id(cluster)
@@ -905,13 +905,13 @@ class TestDelegateAddr:
 
         The stake address registration and delegation happen in two separate transactions.
 
-        * submit registration certificate for a stake address
-        * delegate stake address to pool
-        * check that the stake address was delegated
-        * withdraw rewards to payment address and deregister stake address
-        * check that the key deposit was returned and rewards withdrawn
-        * check that the stake address is no longer delegated
-        * (optional) check records in db-sync
+        * Submit registration certificate for a stake address
+        * Delegate stake address to pool
+        * Check that the stake address was delegated
+        * Withdraw rewards to payment address and deregister stake address
+        * Check that the key deposit was returned and rewards withdrawn
+        * Check that the stake address is no longer delegated
+        * (optional) Check records in db-sync
         """
         # The test checks the following issues:
         #  - cardano-cli 297: Cannot delegate Plutus script stake address

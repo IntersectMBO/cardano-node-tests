@@ -302,15 +302,15 @@ class TestDBSyncConfig:
         and data insertion behavior. Each subtest modifies the configuration, restarts DB-Sync,
         and validates the expected database state.
 
-        * test `tx_out` option (enable/disable modes with various settings)
-        * verify address, tx_in, tx_out, and ma_tx_out tables respond to tx_out configuration
-        * test `governance` option (enable/disable)
-        * verify all governance-related tables populate when enabled and clear when disabled
-        * test `tx_cbor` option (enable/disable)
-        * verify tx_cbor table populates when enabled and clears when disabled
-        * test `multi_asset` option (enable/disable)
-        * verify multi_asset table populates when enabled and clears when disabled
-        * restore original DB-Sync configuration after all subtests complete
+        * Test `tx_out` option (enable/disable modes with various settings)
+        * Verify address, tx_in, tx_out, and ma_tx_out tables respond to tx_out configuration
+        * Test `governance` option (enable/disable)
+        * Verify all governance-related tables populate when enabled and clear when disabled
+        * Test `tx_cbor` option (enable/disable)
+        * Verify tx_cbor table populates when enabled and clears when disabled
+        * Test `multi_asset` option (enable/disable)
+        * Verify multi_asset table populates when enabled and clears when disabled
+        * Restore original DB-Sync configuration after all subtests complete
         """
         cluster = cluster_singleton
         common.get_test_id(cluster)

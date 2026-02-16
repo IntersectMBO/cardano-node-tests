@@ -109,11 +109,11 @@ class TestMinting:
     ):
         """Test minting two tokens with a single Plutus script.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the tokens using a Plutus script
-        * check that the tokens were minted and collateral UTxO was not spent
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the tokens using a Plutus script
+        * Check that the tokens were minted and collateral UTxO was not spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -256,11 +256,11 @@ class TestMinting:
     ):
         """Test minting a token with a Plutus script.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script with required signer
-        * check that the token was minted and collateral UTxO was not spent
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script with required signer
+        * Check that the token was minted and collateral UTxO was not spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -387,11 +387,11 @@ class TestMinting:
     ):
         """Test minting a token with a time constraints Plutus script.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the token was minted and collateral UTxO was not spent
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the token was minted and collateral UTxO was not spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -513,12 +513,12 @@ class TestMinting:
     ):
         """Test minting two tokens with two different Plutus scripts.
 
-        * fund the token issuer and create a UTxO for collaterals
-        * check that the expected amount was transferred to token issuer's address
-        * mint the tokens using two different Plutus scripts
-        * check that the tokens were minted and collateral UTxOs were not spent
-        * check transaction view output
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collaterals
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the tokens using two different Plutus scripts
+        * Check that the tokens were minted and collateral UTxOs were not spent
+        * Check transaction view output
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -743,15 +743,15 @@ class TestMinting:
         identical minting policy (and corresponding redeemers) are ignored. So
         it only matters that the last redeemer matches the last token name.
 
-        * fund the token issuer and create a UTxO for collateral - funds for fees and collateral
+        * Fund the token issuer and create a UTxO for collateral - funds for fees and collateral
           are sufficient for just single minting script
-        * check that the expected amount was transferred to token issuer's address
-        * mint the tokens using two identical Plutus scripts and two redeemers, where the first
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the tokens using two identical Plutus scripts and two redeemers, where the first
           redeemer value is invalid
-        * check that the tokens were minted and collateral UTxOs were not spent, i.e. the first
+        * Check that the tokens were minted and collateral UTxOs were not spent, i.e. the first
           script and its redeemer were ignored
-        * check transaction view output
-        * (optional) check transactions in db-sync
+        * Check transaction view output
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -898,13 +898,13 @@ class TestMinting:
         that the last token name matches the redeemer, and redeemer for the
         first token is not needed.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the tokens using a redeemer value that doesn't match the name of the first token
-        * check that the tokens were minted and collateral UTxOs were not spent, i.e. redeemer for
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the tokens using a redeemer value that doesn't match the name of the first token
+        * Check that the tokens were minted and collateral UTxOs were not spent, i.e. redeemer for
           the first token was not needed
-        * check transaction view output
-        * (optional) check transactions in db-sync
+        * Check transaction view output
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -1048,13 +1048,13 @@ class TestMinting:
     ):
         """Test context equivalence while minting a token.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * generate a dummy redeemer and a dummy Tx
-        * derive the correct redeemer from the dummy Tx
-        * mint the token using the derived redeemer
-        * check that the token was minted and collateral UTxO was not spent
-        * (optional) check transactions in db-sync
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Generate a dummy redeemer and a dummy Tx
+        * Derive the correct redeemer from the dummy Tx
+        * Mint the token using the derived redeemer
+        * Check that the token was minted and collateral UTxO was not spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -1205,10 +1205,10 @@ class TestMinting:
     ):
         """Test minting a token with ttl far in the future.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint a token using a Plutus script when ttl is set far in the future
-        * check that minting failed because of 'PastHorizon' failure when ttl is too far
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint a token using a Plutus script when ttl is set far in the future
+        * Check that minting failed because of 'PastHorizon' failure when ttl is too far
           in the future
         """
         temp_template = common.get_test_id(cluster)
@@ -1350,10 +1350,10 @@ class TestCollateralOutput:
 
         Tests https://github.com/IntersectMBO/cardano-node/issues/4744
 
-        * fund the token issuer and create a UTxO for collateral and possibly reference script
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script and the same collateral UTxO listed twice
-        * check that the token was minted and collateral UTxO was not spent
+        * Fund the token issuer and create a UTxO for collateral and possibly reference script
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script and the same collateral UTxO listed twice
+        * Check that the token was minted and collateral UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
 

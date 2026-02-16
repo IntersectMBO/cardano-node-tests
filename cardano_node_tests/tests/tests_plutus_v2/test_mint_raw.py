@@ -100,10 +100,10 @@ class TestMinting:
     ):
         """Test minting two tokens with a single Plutus script.
 
-        * fund the token issuer and create a UTxO for collateral and possibly reference script
-        * check that the expected amount was transferred to token issuer's address
-        * mint the tokens using a Plutus script
-        * check that the tokens were minted and collateral UTxO was not spent
+        * Fund the token issuer and create a UTxO for collateral and possibly reference script
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the tokens using a Plutus script
+        * Check that the tokens were minted and collateral UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -235,10 +235,10 @@ class TestMinting:
     ):
         """Test visibility of datum hash on reference inputs by the plutus script.
 
-        * create needed Tx outputs
-        * mint token and check that plutus script have visibility of the datum hash
-        * check that the token was minted
-        * check that the reference UTxO was not spent
+        * Create needed Tx outputs
+        * Mint token and check that plutus script have visibility of the datum hash
+        * Check that the token was minted
+        * Check that the reference UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -386,10 +386,10 @@ class TestMinting:
     ):
         """Test builtins added to PlutusV2 from PlutusV3.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint the tokens using a Plutus script
-        * check that the tokens were minted and collateral UTxO was not spent
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint the tokens using a Plutus script
+        * Check that the tokens were minted and collateral UTxO was not spent
           -OR-
           check the expected failure
         """

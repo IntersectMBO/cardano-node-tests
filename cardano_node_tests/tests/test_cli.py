@@ -334,10 +334,10 @@ class TestCLI:
         Test that ledger peer snapshot command returns expected JSON structure with pool
         stake information.
 
-        * execute `cardano-cli query ledger-peer-snapshot` command
-        * verify response contains expected keys (bigLedgerPools, slotNo, version)
-        * check that bigLedgerPools is a list
-        * verify each pool entry contains relativeStake field if pools exist
+        * Execute `cardano-cli query ledger-peer-snapshot` command
+        * Verify response contains expected keys (bigLedgerPools, slotNo, version)
+        * Check that bigLedgerPools is a list
+        * Verify each pool entry contains relativeStake field if pools exist
         """
         common.get_test_id(cluster)
 
@@ -364,13 +364,13 @@ class TestAddressInfo:
 
         Test parametrized with static and dynamically generated payment addresses.
 
-        * use static payment address or generate new payment address (addr_gen parameter)
-        * execute `cardano-cli address info` command
-        * verify address field matches input address
-        * verify era is "shelley"
-        * verify encoding is "bech32"
-        * verify type is "payment"
-        * for static address, verify base16 encoding matches expected value
+        * Use static payment address or generate new payment address (addr_gen parameter)
+        * Execute `cardano-cli address info` command
+        * Verify address field matches input address
+        * Verify era is "shelley"
+        * Verify encoding is "bech32"
+        * Verify type is "payment"
+        * For static address, verify base16 encoding matches expected value
         """
         temp_template = common.get_test_id(cluster)
 
@@ -399,13 +399,13 @@ class TestAddressInfo:
 
         Test parametrized with static and dynamically generated stake addresses.
 
-        * use static stake address or generate new stake address (addr_gen parameter)
-        * execute `cardano-cli address info` command
-        * verify address field matches input address
-        * verify era is "shelley"
-        * verify encoding is "bech32"
-        * verify type is "stake"
-        * for static address, verify base16 encoding matches expected value
+        * Use static stake address or generate new stake address (addr_gen parameter)
+        * Execute `cardano-cli address info` command
+        * Verify address field matches input address
+        * Verify era is "shelley"
+        * Verify encoding is "bech32"
+        * Verify type is "stake"
+        * For static address, verify base16 encoding matches expected value
         """
         temp_template = common.get_test_id(cluster)
 
@@ -433,14 +433,14 @@ class TestAddressInfo:
 
         Test that address info correctly identifies script addresses.
 
-        * generate payment address and keys
-        * create multisig script using payment verification key
-        * generate script address from multisig script
-        * execute `cardano-cli address info` command for script address
-        * verify address field matches input address
-        * verify era is "shelley"
-        * verify encoding is "bech32"
-        * verify type is "payment" (script addresses have payment type)
+        * Generate payment address and keys
+        * Create multisig script using payment verification key
+        * Generate script address from multisig script
+        * Execute `cardano-cli address info` command for script address
+        * Verify address field matches input address
+        * Verify era is "shelley"
+        * Verify encoding is "bech32"
+        * Verify type is "payment" (script addresses have payment type)
         """
         temp_template = common.get_test_id(cluster)
 
@@ -478,11 +478,11 @@ class TestAddressInfo:
         Test that address info produces identical output when written to stdout via --out-file
         compared to default stdout output.
 
-        * execute `cardano-cli address info` without --out-file argument
-        * parse JSON output from stdout
-        * execute `cardano-cli address info --out-file /dev/stdout`
-        * parse JSON output from stdout with --out-file
-        * verify both outputs are identical
+        * Execute `cardano-cli address info` without --out-file argument
+        * Parse JSON output from stdout
+        * Execute `cardano-cli address info --out-file /dev/stdout`
+        * Parse JSON output from stdout with --out-file
+        * Verify both outputs are identical
         """
         common.get_test_id(cluster)
 
@@ -550,11 +550,11 @@ class TestAddressBuild:
         Test parametrized across payment credential types (vkey, vkey_file, script_file) and
         stake credential types (None, vkey, vkey_file, script_file, address).
 
-        * load golden payment and stake verification keys and script files
-        * build payment address using specified payment credential type (parameter)
-        * optionally include stake credential using specified type (parameter)
-        * verify generated address matches one of expected address formats
-        * check address type varies based on stake credential (payment-only or base address)
+        * Load golden payment and stake verification keys and script files
+        * Build payment address using specified payment credential type (parameter)
+        * Optionally include stake credential using specified type (parameter)
+        * Verify generated address matches one of expected address formats
+        * Check address type varies based on stake credential (payment-only or base address)
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -744,10 +744,10 @@ class TestAddressKeyHash:
 
         Test parametrized with vkey (bech32 string) and vkey_file (file path) input options.
 
-        * load golden payment verification key file
-        * convert to bech32 format if option is "vkey"
-        * execute `cardano-cli address key-hash` command with specified input option
-        * verify computed hash matches expected golden hash value
+        * Load golden payment verification key file
+        * Convert to bech32 format if option is "vkey"
+        * Execute `cardano-cli address key-hash` command with specified input option
+        * Verify computed hash matches expected golden hash value
         """
         common.get_test_id(cluster)
 
@@ -814,11 +814,11 @@ class TestKey:
 
         Test that non-extended key derivation produces valid key that is prefix of extended key.
 
-        * generate extended payment key pair
-        * extract extended verification key CBOR hex (excluding first 4 chars)
-        * execute `cardano-cli key non-extended-key` command with extended verification key file
-        * extract non-extended verification key CBOR hex
-        * verify extended key starts with non-extended key (non-extended is 32-byte prefix)
+        * Generate extended payment key pair
+        * Extract extended verification key CBOR hex (excluding first 4 chars)
+        * Execute `cardano-cli key non-extended-key` command with extended verification key file
+        * Extract non-extended verification key CBOR hex
+        * Verify extended key starts with non-extended key (non-extended is 32-byte prefix)
         """
         temp_template = common.get_test_id(cluster)
 
@@ -849,10 +849,10 @@ class TestKey:
 
         Test that stake non-extended key derivation works correctly with stake extended keys.
 
-        * load golden stake extended verification key file
-        * execute `cardano-cli key non-extended-key` command with stake extended key file
-        * verify command succeeds (or handle known issue node_4914 if error occurs)
-        * check that non-extended stake key is generated successfully
+        * Load golden stake extended verification key file
+        * Execute `cardano-cli key non-extended-key` command with stake extended key file
+        * Verify command succeeds (or handle known issue node_4914 if error occurs)
+        * Check that non-extended stake key is generated successfully
         """
         temp_template = common.get_test_id(cluster)
 
@@ -905,9 +905,9 @@ class TestQueryUTxO:
 
         Test that whole-utxo query returns complete UTxO set on local cluster without errors.
 
-        * execute `cardano-cli query utxo --whole-utxo` command
-        * verify command completes successfully
-        * check that entire UTxO set can be retrieved (may be large on mainnet)
+        * Execute `cardano-cli query utxo --whole-utxo` command
+        * Verify command completes successfully
+        * Check that entire UTxO set can be retrieved (may be large on mainnet)
         """
         common.get_test_id(cluster)
 
@@ -934,12 +934,12 @@ class TestQueryUTxO:
 
         Test that text-formatted UTxO output contains expected fields in correct order and format.
 
-        * create source and destination payment addresses
-        * fund source address with 14 ADA (2 + 2.5 + 10 for fees)
-        * send 2 ADA and 2.5 ADA to destination address in single transaction
-        * execute `cardano-cli query utxo --output-text` for destination address
-        * verify output contains expected columns (TxHash, TxIx, Amount)
-        * check transaction ID, indices (0, 1), amounts, and TxOutDatumNone match expectations
+        * Create source and destination payment addresses
+        * Fund source address with 14 ADA (2 + 2.5 + 10 for fees)
+        * Send 2 ADA and 2.5 ADA to destination address in single transaction
+        * Execute `cardano-cli query utxo --output-text` for destination address
+        * Verify output contains expected columns (TxHash, TxIx, Amount)
+        * Check transaction ID, indices (0, 1), amounts, and TxOutDatumNone match expectations
         """
         temp_template = common.get_test_id(cluster)
         amount1 = 2_000_000
@@ -1087,10 +1087,10 @@ class TestStakeAddressKeyHash:
 
         Test parametrized with vkey (bech32 string) and vkey_file (file path) input options.
 
-        * load golden stake verification key file
-        * convert to bech32 format if option is "vkey"
-        * execute `cardano-cli stake-address key-hash` command with specified input option
-        * verify computed hash matches expected golden hash value
+        * Load golden stake verification key file
+        * Convert to bech32 format if option is "vkey"
+        * Execute `cardano-cli stake-address key-hash` command with specified input option
+        * Verify computed hash matches expected golden hash value
         """
         common.get_test_id(cluster)
 
@@ -1342,10 +1342,10 @@ class TestAdvancedQueries:
 
         Test that ledger-state query returns expected JSON structure containing epoch information.
 
-        * execute `cardano-cli query ledger-state` command
-        * verify response contains expected "lastEpoch" field
-        * check that ledger state JSON can be parsed successfully
-        * handle known node issue 3859 for invalid numeric literals in JSON output
+        * Execute `cardano-cli query ledger-state` command
+        * Verify response contains expected "lastEpoch" field
+        * Check that ledger state JSON can be parsed successfully
+        * Handle known node issue 3859 for invalid numeric literals in JSON output
         """
         common.get_test_id(cluster)
 
@@ -1384,11 +1384,11 @@ class TestAdvancedQueries:
         Test parametrized to query single pool, multiple pools, or all pools.
         See also `TestLedgerState.test_stake_snapshot` for comprehensive ledger state validation.
 
-        * get stake pool IDs from cluster
-        * execute `cardano-cli query stake-snapshot` with specified pool filter (option parameter)
-        * verify response contains expected snapshot fields (stakeMark, stakeSet, stakeGo)
-        * check pool stake totals match expected values
-        * (optional) validate stake distribution against db-sync for single_pool option
+        * Get stake pool IDs from cluster
+        * Execute `cardano-cli query stake-snapshot` with specified pool filter (option parameter)
+        * Verify response contains expected snapshot fields (stakeMark, stakeSet, stakeGo)
+        * Check pool stake totals match expected values
+        * (optional) Validate stake distribution against db-sync for single_pool option
         """
         temp_template = common.get_test_id(cluster)
         self._check_stake_snapshot(
@@ -1406,10 +1406,10 @@ class TestAdvancedQueries:
 
         Test that pool-params query returns expected pool configuration fields.
 
-        * get first available pool ID from cluster
-        * execute `cardano-cli query pool-params` command for pool
-        * verify response contains expected "retiring" field
-        * check that pool parameters JSON can be parsed successfully
+        * Get first available pool ID from cluster
+        * Execute `cardano-cli query pool-params` command for pool
+        * Verify response contains expected "retiring" field
+        * Check that pool parameters JSON can be parsed successfully
         """
         common.get_test_id(cluster)
 
@@ -1436,8 +1436,8 @@ class TestAdvancedQueries:
     ):
         """Test 'query tx-mempool info'.
 
-        * check that the expected fields are returned
-        * check that the slot number returned is the last applied on the ledger plus one
+        * Check that the expected fields are returned
+        * Check that the slot number returned is the last applied on the ledger plus one
         """
         common.get_test_id(cluster)
 
@@ -1471,10 +1471,10 @@ class TestAdvancedQueries:
 
         Test that pool-state query returns expected pool runtime state fields.
 
-        * get first available pool ID from cluster
-        * execute `cardano-cli query pool-state` command for pool
-        * verify response contains expected "retiring" field
-        * check that pool state can be retrieved successfully
+        * Get first available pool ID from cluster
+        * Execute `cardano-cli query pool-state` command for pool
+        * Verify response contains expected "retiring" field
+        * Check that pool state can be retrieved successfully
         """
         common.get_test_id(cluster)
 
@@ -1497,11 +1497,11 @@ class TestPing:
 
         Test that cardano-cli ping command successfully connects to local node via TCP.
 
-        * get pool1 or relay1 port from cluster instance configuration
-        * execute `cardano-cli ping` command with --host localhost and --port
-        * send 5 ping requests with JSON output
-        * verify JSON response contains pongs array
-        * check that last pong has cookie value matching request count minus 1 (4)
+        * Get pool1 or relay1 port from cluster instance configuration
+        * Execute `cardano-cli ping` command with --host localhost and --port
+        * Send 5 ping requests with JSON output
+        * Verify JSON response contains pongs array
+        * Check that last pong has cookie value matching request count minus 1 (4)
         """
         common.get_test_id(cluster)
 
@@ -1550,12 +1550,12 @@ class TestPing:
 
         Test that cardano-cli ping command successfully connects to local node via Unix socket.
 
-        * add log ignore rule for expected MuxUnknownMiniProtocol errors (ping protocol)
-        * execute `cardano-cli ping` command with --unixsock and CARDANO_NODE_SOCKET_PATH
-        * send 5 ping requests with JSON output
-        * handle expected "Unix sockets only support queries" error on newer CLI versions
-        * verify JSON response contains pongs array
-        * check that last pong has cookie value matching request count minus 1 (4)
+        * Add log ignore rule for expected MuxUnknownMiniProtocol errors (ping protocol)
+        * Execute `cardano-cli ping` command with --unixsock and CARDANO_NODE_SOCKET_PATH
+        * Send 5 ping requests with JSON output
+        * Handle expected "Unix sockets only support queries" error on newer CLI versions
+        * Verify JSON response contains pongs array
+        * Check that last pong has cookie value matching request count minus 1 (4)
         """
         common.get_test_id(cluster)
         count = 5
@@ -1621,11 +1621,11 @@ class TestPing:
 
         Test that ping --tip flag returns current blockchain tip information.
 
-        * get pool1 or relay1 port from cluster instance configuration
-        * execute `cardano-cli ping --tip` command with --host and --port
-        * parse JSON output and extract slotNo from last tip entry
-        * query current tip using standard query tip command
-        * verify ping tip slotNo is within 100 slots of cluster tip
+        * Get pool1 or relay1 port from cluster instance configuration
+        * Execute `cardano-cli ping --tip` command with --host and --port
+        * Parse JSON output and extract slotNo from last tip entry
+        * Query current tip using standard query tip command
+        * Verify ping tip slotNo is within 100 slots of cluster tip
         """
         common.get_test_id(cluster)
 
@@ -1671,11 +1671,11 @@ class TestPing:
 
         Test that ping --query-versions returns protocol version information.
 
-        * get pool1 or relay1 port from cluster instance configuration
-        * execute `cardano-cli ping --query-versions` command with --host and --port
-        * handle expected UnknownVersionInRsp error when CLI and node versions mismatch
-        * verify output contains "NodeToNodeVersion" when versions match
-        * check for known issue network_5281 if versions match but error occurs
+        * Get pool1 or relay1 port from cluster instance configuration
+        * Execute `cardano-cli ping --query-versions` command with --host and --port
+        * Handle expected UnknownVersionInRsp error when CLI and node versions mismatch
+        * Verify output contains "NodeToNodeVersion" when versions match
+        * Check for known issue network_5281 if versions match but error occurs
         """
         common.get_test_id(cluster)
 
@@ -1734,11 +1734,11 @@ class TestQuerySlotNumber:
 
         Test that slot-number query correctly converts current UTC timestamp to slot number.
 
-        * get current UTC timestamp
-        * execute `cardano-cli query slot-number` command with timestamp
-        * wait for new block to ensure tip is up-to-date
-        * query current blockchain tip
-        * verify slot number is within valid range (not greater than total slots for epoch)
+        * Get current UTC timestamp
+        * Execute `cardano-cli query slot-number` command with timestamp
+        * Wait for new block to ensure tip is up-to-date
+        * Query current blockchain tip
+        * Verify slot number is within valid range (not greater than total slots for epoch)
         """
         common.get_test_id(cluster)
 

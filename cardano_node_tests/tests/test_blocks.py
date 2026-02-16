@@ -47,12 +47,12 @@ class TestLeadershipSchedule:
     ):
         """Check that blocks were forged according to leadership schedule.
 
-        * query leadership schedule for selected pool for current epoch or next epoch
-        * wait for epoch that comes after the queried epoch
-        * get info about forged blocks in queried epoch for the selected pool
-        * compare leadership schedule with blocks that were actually forged
-        * compare log records with ledger state dump
-        * (optional) check forged blocks in db-sync
+        * Query leadership schedule for selected pool for current epoch or next epoch
+        * Wait for epoch that comes after the queried epoch
+        * Get info about forged blocks in queried epoch for the selected pool
+        * Compare leadership schedule with blocks that were actually forged
+        * Compare log records with ledger state dump
+        * (optional) Check forged blocks in db-sync
         """
         cluster, pool_name = cluster_use_pool
         pool_short_name = f"{pool_name.replace('node-', '')}"
@@ -289,12 +289,12 @@ class TestCollectData:
     ):
         """Record number of blocks produced by each pool over multiple epochs.
 
-        * register and delegate a stake address to every pool
-        * collect block production data over multiple epochs
+        * Register and delegate a stake address to every pool
+        * Collect block production data over multiple epochs
 
-           - each epoch save ledger state
-           - each epoch save block production data to sqlite db
-           - transfer funds between multiple addresses to create activity
+           - Each epoch save ledger state
+           - Each epoch save block production data to sqlite db
+           - Transfer funds between multiple addresses to create activity
         """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(5)
@@ -467,10 +467,10 @@ class TestDynamicBlockProd:
     ):
         """Check dynamic block production.
 
-        * check that blocks are produced by both nodeX and nodeY pools
-        * reconfigure a nodeX to be non-producing backup node for nodeY pool
-        * terminate nodeY and send SIGHUP to nodeX so it starts producing blocks on behalf of nodeY
-        * check that nodeX has replaced nodeY and is producing blocks on its behalf
+        * Check that blocks are produced by both nodeX and nodeY pools
+        * Reconfigure a nodeX to be non-producing backup node for nodeY pool
+        * Terminate nodeY and send SIGHUP to nodeX so it starts producing blocks on behalf of nodeY
+        * Check that nodeX has replaced nodeY and is producing blocks on its behalf
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)

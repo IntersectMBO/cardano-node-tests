@@ -61,14 +61,14 @@ class TestNoConfidence:
     ):
         """Test enactment of no confidence action.
 
-        * create a "no confidence" action
-        * vote to disapprove the action
-        * vote to approve the action
-        * check that CC members votes have no effect
-        * check that the action is ratified
-        * try to disapprove the ratified action, this shouldn't have any effect
-        * check that the action is enacted
-        * check that it's not possible to vote on enacted action
+        * Create a "no confidence" action
+        * Vote to disapprove the action
+        * Vote to approve the action
+        * Check that CC members votes have no effect
+        * Check that the action is ratified
+        * Try to disapprove the ratified action, this shouldn't have any effect
+        * Check that the action is enacted
+        * Check that it's not possible to vote on enacted action
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
@@ -331,10 +331,10 @@ class TestNoConfidence:
 
         Only update-committee and no-confidence governance actions can be ratified.
 
-        * resign all CC Members but one
-        * try to ratify a "create constitution" action
-        * check that the action is not ratified
-        * reinstate the original CC members
+        * Resign all CC Members but one
+        * Try to ratify a "create constitution" action
+        * Check that the action is not ratified
+        * Reinstate the original CC members
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)

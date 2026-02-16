@@ -74,13 +74,13 @@ class TestProtocol:
 
         Test that protocol state query returns expected JSON structure with all required keys.
 
-        * execute `cardano-cli query protocol-state` command
-        * save raw output to file for debugging
-        * parse output as JSON
-        * check that output contains exactly the expected protocol state keys:
+        * Execute `cardano-cli query protocol-state` command
+        * Save raw output to file for debugging
+        * Parse output as JSON
+        * Check that output contains exactly the expected protocol state keys:
           candidateNonce, epochNonce, evolvingNonce, labNonce, lastEpochBlockNonce, lastSlot,
           oCertCounters
-        * verify no extra or missing keys in protocol state output
+        * Verify no extra or missing keys in protocol state output
         """
         temp_template = common.get_test_id(cluster)
 
@@ -107,10 +107,10 @@ class TestProtocol:
 
         Test that protocol state can be written to stdout and contains expected keys.
 
-        * execute `cardano-cli query protocol-state --out-file /dev/stdout` command
-        * parse stdout output as JSON
-        * check that output contains exactly the expected protocol state keys
-        * verify no extra or missing keys in protocol state output
+        * Execute `cardano-cli query protocol-state --out-file /dev/stdout` command
+        * Parse stdout output as JSON
+        * Check that output contains exactly the expected protocol state keys
+        * Verify no extra or missing keys in protocol state output
         """
         common.get_test_id(cluster)
         try:
@@ -131,12 +131,12 @@ class TestProtocol:
 
         Test that protocol parameters query returns expected JSON structure with all required keys.
 
-        * execute `cardano-cli query protocol-parameters` command
-        * check that output contains all expected Conway era protocol parameter keys including:
+        * Execute `cardano-cli query protocol-parameters` command
+        * Check that output contains all expected Conway era protocol parameter keys including:
           collateralPercentage, dRepDeposit, govActionDeposit, maxBlockBodySize, maxTxSize,
           minPoolCost, stakeAddressDeposit, stakePoolDeposit, txFeeFixed, txFeePerByte,
           utxoCostPerByte, and other protocol parameters
-        * verify no extra or missing keys in protocol parameters output
+        * Verify no extra or missing keys in protocol parameters output
         """
         common.get_test_id(cluster)
         protocol_params = cluster.g_query.get_protocol_params()

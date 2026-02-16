@@ -134,11 +134,11 @@ class TestLocking:
 
         Corresponds to Exercise 3 for Alonzo Blue.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO
+        * Check that the expected amount was spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000
@@ -191,13 +191,13 @@ class TestLocking:
     ):
         """Test context equivalence while spending a locked UTxO.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * generate a dummy redeemer and a dummy Tx
-        * derive the correct redeemer from the dummy Tx
-        * spend the locked UTxO using the derived redeemer
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Generate a dummy redeemer and a dummy Tx
+        * Derive the correct redeemer from the dummy Tx
+        * Spend the locked UTxO using the derived redeemer
+        * Check that the expected amount was spent
+        * (optional) Check transactions in db-sync
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -313,11 +313,11 @@ class TestLocking:
         Test both typed and untyped redeemer and datum.
         Test passing datum and redeemer to `cardano-cli` as value, json file and cbor file.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO
+        * Check that the expected amount was spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000
@@ -409,11 +409,11 @@ class TestLocking:
     ):
         """Test locking two Tx outputs with two different Plutus scripts in single Tx.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO
+        * Check that the expected amount was spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000
@@ -636,10 +636,10 @@ class TestLocking:
 
         Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * try to spend the locked UTxO
-        * check that the amount was not transferred, collateral UTxO was not spent
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Try to spend the locked UTxO
+        * Check that the amount was not transferred, collateral UTxO was not spent
           and the expected error was raised
         """
         __: tp.Any  # mypy workaround
@@ -698,10 +698,10 @@ class TestLocking:
 
         Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * try to spend the locked UTxO
-        * check that the amount was not transferred and collateral UTxO was spent
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Try to spend the locked UTxO
+        * Check that the amount was not transferred and collateral UTxO was spent
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000
@@ -752,12 +752,12 @@ class TestLocking:
     ):
         """Test locking a Tx output with native tokens and spending the locked UTxO.
 
-        * create a Tx output that contains native tokens with a datum hash at the script address
-        * check that expected amounts of Lovelace and native tokens were locked at the script
+        * Create a Tx output that contains native tokens with a datum hash at the script address
+        * Check that expected amounts of Lovelace and native tokens were locked at the script
           address
-        * spend the locked UTxO
-        * check that the expected amounts of Lovelace and native tokens were spent
-        * (optional) check transactions in db-sync
+        * Spend the locked UTxO
+        * Check that the expected amounts of Lovelace and native tokens were spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
@@ -815,12 +815,12 @@ class TestLocking:
     ):
         """Test spending part of funds (Lovelace and native tokens) on a locked UTxO.
 
-        * create a Tx output that contains native tokens with a datum hash at the script address
-        * check that expected amounts of Lovelace and native tokens were locked at the script
+        * Create a Tx output that contains native tokens with a datum hash at the script address
+        * Check that expected amounts of Lovelace and native tokens were locked at the script
           address
-        * spend the locked UTxO and create new locked UTxO with change
-        * check that the expected amounts of Lovelace and native tokens were spent
-        * (optional) check transactions in db-sync
+        * Spend the locked UTxO and create new locked UTxO with change
+        * Check that the expected amounts of Lovelace and native tokens were spent
+        * (optional) Check transactions in db-sync
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -912,14 +912,14 @@ class TestLocking:
         2. more collateral inputs than what is allowed
         3. no collateral input
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * create multiple UTxOs for collateral
-        * spend the locked UTxO
-        * check that the expected amount was spent when success is expected
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Create multiple UTxOs for collateral
+        * Spend the locked UTxO
+        * Check that the expected amount was spent when success is expected
         * OR check that the amount was not transferred and collateral UTxO was not spent
           when failure is expected
-        * (optional) check transactions in db-sync
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000

@@ -53,10 +53,10 @@ class TestConway:
         Test that create-genesis-key-delegation-certificate command is removed in Conway era
         governance model.
 
-        * attempt to execute `cardano-cli conway governance`
+        * Attempt to execute `cardano-cli conway governance`
           `create-genesis-key-delegation-certificate` command
-        * verify command fails with "Invalid argument" error
-        * confirm command is not available in Conway era CLI
+        * Verify command fails with "Invalid argument" error
+        * Confirm command is not available in Conway era CLI
         """
         common.get_test_id(cluster)
 
@@ -191,12 +191,12 @@ class TestConway:
         Test that query ratify-state command returns all expected fields for Conway governance
         ratification tracking.
 
-        * execute `cardano-cli query ratify-state` command
-        * check output contains enactedGovActions field (list of enacted actions)
-        * check output contains expiredGovActions field (list of expired actions)
-        * check output contains nextEnactState field (upcoming enactment state)
-        * check output contains ratificationDelayed field (ratification delay indicator)
-        * verify no expected fields are missing from output
+        * Execute `cardano-cli query ratify-state` command
+        * Check output contains enactedGovActions field (list of enacted actions)
+        * Check output contains expiredGovActions field (list of expired actions)
+        * Check output contains nextEnactState field (upcoming enactment state)
+        * Check output contains ratificationDelayed field (ratification delay indicator)
+        * Verify no expected fields are missing from output
         """
         ratify_state = cluster.g_query.get_ratify_state()
         expected_fields = {

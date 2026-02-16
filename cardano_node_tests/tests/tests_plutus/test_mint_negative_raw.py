@@ -106,11 +106,11 @@ class TestMintingNegative:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a Plutus script and a TX with signing key missing for
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint the token using a Plutus script and a TX with signing key missing for
           the required signer
-        * check that the minting failed because the required signers were not provided
+        * Check that the minting failed because the required signers were not provided
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -203,11 +203,11 @@ class TestMintingNegative:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a Plutus script when execution units are set to half
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint the token using a Plutus script when execution units are set to half
           of the expected values
-        * check that the minting failed because the budget was overspent
+        * Check that the minting failed because the budget was overspent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -302,10 +302,10 @@ class TestMintingNegative:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint a token using a Plutus script when fee is set lower than is the computed fee
-        * check that minting failed because the fee amount was too low
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint a token using a Plutus script when fee is set lower than is the computed fee
+        * Check that minting failed because the fee amount was too low
         """
         temp_template = common.get_test_id(cluster)
 
@@ -410,9 +410,9 @@ class TestMintingNegative:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * try to mint the token when execution units are set above the limits
-        * check that the minting failed because the execution units were too big
+        * Fund the token issuer and create a UTxO for collateral
+        * Try to mint the token when execution units are set above the limits
+        * Check that the minting failed because the execution units were too big
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -525,10 +525,10 @@ class TestMintingNegative:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a Plutus script and a TX without validity interval
-        * check that the minting failed
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint the token using a Plutus script and a TX without validity interval
+        * Check that the minting failed
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -630,10 +630,10 @@ class TestNegativeCollateral:
 
         Expect failure.
 
-        * fund the token issuer and create an UTxO for collateral with insufficient funds
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the minting failed because no valid collateral was provided
+        * Fund the token issuer and create an UTxO for collateral with insufficient funds
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the minting failed because no valid collateral was provided
         """
         temp_template = common.get_test_id(cluster)
 
@@ -732,10 +732,10 @@ class TestNegativeCollateral:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral with insufficient funds
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script
-        * check that the minting failed because a collateral with insufficient funds was provided
+        * Fund the token issuer and create a UTxO for collateral with insufficient funds
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script
+        * Check that the minting failed because a collateral with insufficient funds was provided
         """
         temp_template = common.get_test_id(cluster)
 

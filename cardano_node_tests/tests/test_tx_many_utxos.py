@@ -163,18 +163,18 @@ class TestManyUTXOs:
         Tests blockchain performance under stress with transactions containing hundreds of inputs
         (UTxOs) with varying amounts. Uses `cardano-cli transaction build-raw` command.
 
-        * use pre-funded source address with 100000+ UTxOs containing 1-10 ADA each
-        * use destination address with 100000+ UTxOs
-        * query and sort source UTxOs by amount
-        * select 350 UTxOs as transaction inputs (mix of small and large amounts)
-        * calculate transaction fee with selected inputs
-        * optimize input UTxO selection to minimize total funds while covering amount + fee
-        * build raw transaction with 350+ inputs sending 1.5/5/10 ADA to destination
-        * sign and submit transaction
-        * check that source address balance decreased by sent amount + fee
-        * check that destination address balance increased by sent amount
-        * (optional) check transaction records in db-sync
-        * repeat test for multiple amounts (1.5 ADA, 5 ADA, 10 ADA) using subtests
+        * Use pre-funded source address with 100000+ UTxOs containing 1-10 ADA each
+        * Use destination address with 100000+ UTxOs
+        * Query and sort source UTxOs by amount
+        * Select 350 UTxOs as transaction inputs (mix of small and large amounts)
+        * Calculate transaction fee with selected inputs
+        * Optimize input UTxO selection to minimize total funds while covering amount + fee
+        * Build raw transaction with 350+ inputs sending 1.5/5/10 ADA to destination
+        * Sign and submit transaction
+        * Check that source address balance decreased by sent amount + fee
+        * Check that destination address balance increased by sent amount
+        * (optional) Check transaction records in db-sync
+        * Repeat test for multiple amounts (1.5 ADA, 5 ADA, 10 ADA) using subtests
         """
         temp_template = common.get_test_id(cluster)
         big_funds_idx = -190

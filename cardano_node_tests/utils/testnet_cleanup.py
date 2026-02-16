@@ -1,9 +1,9 @@
 """Cleanup a testnet with the help of testing artifacts.
 
-* withdraw rewards
-* deregister stake addresses
-* retire DReps
-* return funds to faucet
+* Withdraw rewards
+* Deregister stake addresses
+* Retire DReps
+* Return funds to faucet
 """
 
 import concurrent.futures

@@ -314,13 +314,13 @@ class TestMnemonic:
         Test mnemonic generation and key derivation with various parameters using
         `generate-mnemonic` and `derive-from-mnemonic` commands.
 
-        * generate mnemonic of parametrized size (12, 15, 18, 21, or 24 words)
-        * output mnemonic to file or stdout based on parametrization
-        * check that generated mnemonic has expected word count
-        * derive key from mnemonic using parametrized key type (payment, stake, DRep, etc.)
-        * use parametrized output format (bech32, hex, text-envelope)
-        * use parametrized account number and key number (path_num: 0 or 2^31-1)
-        * verify derived key file exists
+        * Generate mnemonic of parametrized size (12, 15, 18, 21, or 24 words)
+        * Output mnemonic to file or stdout based on parametrization
+        * Check that generated mnemonic has expected word count
+        * Derive key from mnemonic using parametrized key type (payment, stake, DRep, etc.)
+        * Use parametrized output format (bech32, hex, text-envelope)
+        * Use parametrized account number and key number (path_num: 0 or 2^31-1)
+        * Verify derived key file exists
         """
         temp_template = common.get_test_id(cluster)
         mnemonic_file = pl.Path(f"{temp_template}_mnemonic")
@@ -366,13 +366,13 @@ class TestMnemonic:
         Test key derivation against known golden mnemonic files to ensure consistent
         key generation across different parameters.
 
-        * use golden mnemonic file of parametrized size (12, 15, 18, 21, or 24 words)
-        * derive key using parametrized key type (payment, stake, DRep, CC cold, CC hot)
-        * use parametrized output format (bech32, hex, text-envelope)
-        * use parametrized account number (path_num: 0 or 2^31-1)
-        * verify derived key file exists
-        * compare derived key against expected golden output file
-        * check that derived key matches expected value from golden file
+        * Use golden mnemonic file of parametrized size (12, 15, 18, 21, or 24 words)
+        * Derive key using parametrized key type (payment, stake, DRep, CC cold, CC hot)
+        * Use parametrized output format (bech32, hex, text-envelope)
+        * Use parametrized account number (path_num: 0 or 2^31-1)
+        * Verify derived key file exists
+        * Compare derived key against expected golden output file
+        * Check that derived key matches expected value from golden file
         """
         temp_template = common.get_test_id(cluster)
 
@@ -421,12 +421,12 @@ class TestMnemonic:
         of valid account numbers is supported. For payment/stake keys, pass the same value
         as key_number, otherwise omit key_number.
 
-        * use golden mnemonic file (24 words)
-        * derive key using parametrized key type
-        * use parametrized account_number (property-based test covering 0 to 2^31-1)
-        * for payment/stake keys, set key_number to same value as account_number
-        * for other key types (DRep, CC), omit key_number parameter
-        * verify derived key file exists
+        * Use golden mnemonic file (24 words)
+        * Derive key using parametrized key type
+        * Use parametrized account_number (property-based test covering 0 to 2^31-1)
+        * For payment/stake keys, set key_number to same value as account_number
+        * For other key types (DRep, CC), omit key_number parameter
+        * Verify derived key file exists
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         mnemonic_file = DATA_DIR / "gold_[0-bech32-payment-24]_mnemonic"
@@ -473,8 +473,8 @@ class TestNegativeMnemonic:
         Test that mnemonic generation fails when size is not one of the allowed values
         (12, 15, 18, 21, 24). Uses Hypothesis property-based testing. Expect failure.
 
-        * attempt to generate mnemonic with invalid size (any integer except 12,15,18,21,24)
-        * check that generation fails with "Invalid mnemonic size" error
+        * Attempt to generate mnemonic with invalid size (any integer except 12,15,18,21,24)
+        * Check that generation fails with "Invalid mnemonic size" error
         """
         common.get_test_id(cluster)
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -496,9 +496,9 @@ class TestNegativeMnemonic:
         Test key derivation failure with various invalid mnemonic file formats using
         Hypothesis property-based testing. Expect failure.
 
-        * generate malformed mnemonic file (invalid cases from Hypothesis strategy)
-        * attempt to derive key from malformed mnemonic file
-        * check that derivation fails with error about reading mnemonic file or
+        * Generate malformed mnemonic file (invalid cases from Hypothesis strategy)
+        * Attempt to derive key from malformed mnemonic file
+        * Check that derivation fails with error about reading mnemonic file or
           converting mnemonic into a key
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
@@ -547,10 +547,10 @@ class TestNegativeMnemonic:
         Test that key derivation fails when account_number or key_number is invalid
         (out of range or wrong type). Uses Hypothesis property-based testing. Expect failure.
 
-        * use golden mnemonic file (24 words)
-        * attempt to derive key using invalid account_number or key_number value
-        * invalid values: negative integers, integers >= 2^31, floats, strings, objects
-        * check that derivation fails with appropriate error (CLIError or ValueError/TypeError)
+        * Use golden mnemonic file (24 words)
+        * Attempt to derive key using invalid account_number or key_number value
+        * Invalid values: negative integers, integers >= 2^31, floats, strings, objects
+        * Check that derivation fails with appropriate error (CLIError or ValueError/TypeError)
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         mnemonic_file = DATA_DIR / "gold_[0-bech32-payment-24]_mnemonic"

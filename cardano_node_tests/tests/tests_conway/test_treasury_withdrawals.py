@@ -106,13 +106,13 @@ class TestTreasuryWithdrawals:
         Use `transaction build` for building the transactions.
         When available, use cardano-submit-api for votes submission.
 
-        * submit multiple "treasury withdrawal" actions
-        * check that SPOs cannot vote on a "treasury withdrawal" action
-        * vote to approve the actions
-        * check that the actions are ratified
-        * try to disapprove the ratified action, this shouldn't have any effect
-        * check that the action are enacted
-        * check that it's not possible to vote on enacted action
+        * Submit multiple "treasury withdrawal" actions
+        * Check that SPOs cannot vote on a "treasury withdrawal" action
+        * Vote to approve the actions
+        * Check that the actions are ratified
+        * Try to disapprove the ratified action, this shouldn't have any effect
+        * Check that the action are enacted
+        * Check that it's not possible to vote on enacted action
         """
         cluster, governance_data = cluster_use_governance_lock_treasury
         temp_template = common.get_test_id(cluster)
@@ -448,15 +448,15 @@ class TestTreasuryWithdrawals:
         Use `transaction build-raw` for building the transactions.
         When available, use cardano-submit-api for proposal submission.
 
-        * submit multiple "treasury withdrawal" actions
-        * vote in a way that the actions are not approved
+        * Submit multiple "treasury withdrawal" actions
+        * Vote in a way that the actions are not approved
 
-          - first action is approved by CC and disapproved by DReps
-          - second action is disapproved by CC and approved by DReps
-          - third action is disapproved by both CC and DReps
+          - First action is approved by CC and disapproved by DReps
+          - Second action is disapproved by CC and approved by DReps
+          - Third action is disapproved by both CC and DReps
 
-        * check that the actions are not ratified
-        * check that the actions expire and action deposits are returned
+        * Check that the actions are not ratified
+        * Check that the actions expire and action deposits are returned
         """
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)
@@ -764,9 +764,9 @@ class TestMIRCerts:
 
         Expect failure.
 
-        * try and fail to build the Tx using `transaction build`
-        * successfully build the Tx as Babbage Tx using `transaction build-raw`
-        * try and fail to submit the Babbage Tx
+        * Try and fail to build the Tx using `transaction build`
+        * Successfully build the Tx as Babbage Tx using `transaction build-raw`
+        * Try and fail to submit the Babbage Tx
         """
         # TODO: convert to use `compatible babbage governance create-mir-certificate`
         temp_template = common.get_test_id(cluster)

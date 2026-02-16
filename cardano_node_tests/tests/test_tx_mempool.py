@@ -44,13 +44,13 @@ class TestMempool:
 
         Test mempool query commands while transaction is pending in mempool.
 
-        * wait for existing transactions to be removed from mempool
-        * build and sign transaction from source address to destination address with 2 ADA
-        * submit transaction and re-submit to ensure it stays in mempool
-        * query UTxO while transaction is in mempool
-        * check that 'query tx-mempool next-tx' returns a TxId
-        * check that 'query tx-mempool exists <TxId>' finds the expected TxId
-        * verify slot numbers match between mempool query commands
+        * Wait for existing transactions to be removed from mempool
+        * Build and sign transaction from source address to destination address with 2 ADA
+        * Submit transaction and re-submit to ensure it stays in mempool
+        * Query UTxO while transaction is in mempool
+        * Check that 'query tx-mempool next-tx' returns a TxId
+        * Check that 'query tx-mempool exists <TxId>' finds the expected TxId
+        * Verify slot numbers match between mempool query commands
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)

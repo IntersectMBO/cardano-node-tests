@@ -119,9 +119,9 @@ class TestSECP256k1:
     ):
         """Test that it is possible to spend a locked UTxO by a script that uses a SECP function.
 
-        * create the necessary Tx outputs
-        * spend the locked UTxO
-        * check that script address UTxO was spent
+        * Create the necessary Tx outputs
+        * Spend the locked UTxO
+        * Check that script address UTxO was spent
         """
         amount = 2_000_000
 

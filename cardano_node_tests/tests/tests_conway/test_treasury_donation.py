@@ -83,8 +83,8 @@ class TestTreasuryDonation:
         The test doesn't check the actual treasury balance, only that the transaction can be
         built and submitted.
 
-        * send funds from 1 source address to to the treasury
-        * check expected balances
+        * Send funds from 1 source address to to the treasury
+        * Check expected balances
         """
         cluster = cluster_treasury
         temp_template = common.get_test_id(cluster)
@@ -133,9 +133,9 @@ class TestTreasuryDonation:
         The test is a singleton (the only test that can run on a testnet at a time) so that
         the pots are not modified by other tests.
 
-        * send funds from 1 source address to to the treasury
-        * check expected balances for both source addresses and treasury
-        * check transactions and ADA pots in db-sync
+        * Send funds from 1 source address to to the treasury
+        * Check expected balances for both source addresses and treasury
+        * Check transactions and ADA pots in db-sync
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)

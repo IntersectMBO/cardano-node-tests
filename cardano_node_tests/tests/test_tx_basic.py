@@ -155,9 +155,9 @@ class TestBasicTransactions:
     ):
         """Send funds to payment address.
 
-        * send funds from 1 source address to 1 destination address
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Send funds from 1 source address to 1 destination address
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -264,11 +264,11 @@ class TestBasicTransactions:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * try to build a Tx that transfers all available funds, and extract fee amount
+        * Try to build a Tx that transfers all available funds, and extract fee amount
           from the error message
-        * transfer all available funds minus fee from source address to destination address
-        * check that no change UTxO was created
-        * (optional) check transactions in db-sync
+        * Transfer all available funds minus fee from source address to destination address
+        * Check that no change UTxO was created
+        * (optional) Check transactions in db-sync
         """
         # The test checks the following issues:
         #  - https://github.com/IntersectMBO/cardano-node/issues/3041
@@ -357,11 +357,11 @@ class TestBasicTransactions:
     ):
         """Send ALL funds from one payment address to another.
 
-        * send all available funds from 1 source address to 1 destination address
-        * check expected balance for destination addresses
-        * check that balance for source address is 0 Lovelace
-        * check output of the `transaction view` command
-        * (optional) check transactions in db-sync
+        * Send all available funds from 1 source address to 1 destination address
+        * Check expected balance for destination addresses
+        * Check that balance for source address is 0 Lovelace
+        * Check output of the `transaction view` command
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -426,11 +426,11 @@ class TestBasicTransactions:
 
         Use the `transaction build-estimate` command.
 
-        * transfer some available funds from 1 source address to 1 destination address
-        * check expected balance for source addresses
-        * check expected balance for destination addresses
-        * check output of the `transaction view` command
-        * (optional) check transactions in db-sync
+        * Transfer some available funds from 1 source address to 1 destination address
+        * Check expected balance for source addresses
+        * Check expected balance for destination addresses
+        * Check output of the `transaction view` command
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -486,11 +486,11 @@ class TestBasicTransactions:
 
         Use the `transaction build-estimate` command.
 
-        * transfer all available funds from 1 source address to 1 destination address
-        * check expected balance for destination addresses
-        * check that balance for source address is 0 Lovelace
-        * check output of the `transaction view` command
-        * (optional) check transactions in db-sync
+        * Transfer all available funds from 1 source address to 1 destination address
+        * Check expected balance for destination addresses
+        * Check that balance for source address is 0 Lovelace
+        * Check output of the `transaction view` command
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -563,10 +563,10 @@ class TestBasicTransactions:
         even though it was not generated while running a specific cardano
         network.
 
-        * send funds from 1 source address to 1 destination address
-        * check expected balances for both source and destination addresses
-        * check min UTxO value
-        * (optional) check transactions in db-sync
+        * Send funds from 1 source address to 1 destination address
+        * Check expected balances for both source and destination addresses
+        * Check min UTxO value
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -621,13 +621,13 @@ class TestBasicTransactions:
 
         Transaction ID is a hash of transaction body and doesn't change for a signed TX.
 
-        * send funds from 1 source address to 1 destination address
-        * get txid from transaction body
-        * get txid from signed transaction
-        * check that txid from transaction body matches the txid from signed transaction
-        * check that txid has expected length
-        * check that the txid is listed in UTxO hashes for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Send funds from 1 source address to 1 destination address
+        * Get txid from transaction body
+        * Get txid from signed transaction
+        * Check that txid from transaction body matches the txid from signed transaction
+        * Check that txid has expected length
+        * Check that the txid is listed in UTxO hashes for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -677,11 +677,11 @@ class TestBasicTransactions:
         Check that it is possible to use unneeded signing key in addition to the necessary
         signing keys for signing the transaction.
 
-        * create transaction from source address to destination address with 2 ADA
-        * sign transaction with both required signing key and an extra unneeded signing key
-        * submit the transaction and verify it succeeds
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Create transaction from source address to destination address with 2 ADA
+        * Sign transaction with both required signing key and an extra unneeded signing key
+        * Submit the transaction and verify it succeeds
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -747,11 +747,11 @@ class TestBasicTransactions:
 
         Check that it is possible to specify the same signing key twice.
 
-        * create transaction from source address to destination address with 2 ADA
-        * sign transaction by specifying the same required signing key twice
-        * submit the transaction and verify it succeeds
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Create transaction from source address to destination address with 2 ADA
+        * Sign transaction by specifying the same required signing key twice
+        * Submit the transaction and verify it succeeds
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -817,9 +817,9 @@ class TestBasicTransactions:
     ):
         """Sign other file type than the one specified by command line option (Tx vs Tx body).
 
-        * specify Tx file and pass Tx body file
-        * specify Tx body file and pass Tx file
-        * (optional) check transactions in db-sync
+        * Specify Tx file and pass Tx body file
+        * Specify Tx body file and pass Tx file
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -886,10 +886,10 @@ class TestBasicTransactions:
     ):
         """Send transaction with just fee, no UTxO is produced.
 
-        * submit a transaction where all funds available on source address is used for fee
-        * check that no UTxOs are created by the transaction
-        * check that there are no funds left on source address
-        * (optional) check transactions in db-sync
+        * Submit a transaction where all funds available on source address is used for fee
+        * Check that no UTxOs are created by the transaction
+        * Check that there are no funds left on source address
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -934,9 +934,9 @@ class TestBasicTransactions:
 
         Uses `cardano-cli transaction build-raw` command.
 
-        * prepare transaction inputs with `--tx-in` from source address
-        * build transaction using `build-raw` without any `--tx-out` parameter
-        * verify that transaction can be built (no output validation at build-raw stage)
+        * Prepare transaction inputs with `--tx-in` from source address
+        * Build transaction using `build-raw` without any `--tx-out` parameter
+        * Verify that transaction can be built (no output validation at build-raw stage)
         """
         temp_template = common.get_test_id(cluster)
 
@@ -983,11 +983,11 @@ class TestBasicTransactions:
 
         Uses `cardano-cli transaction build-raw` command without specifying TTL.
 
-        * build transaction using `build-raw` without `--invalid-hereafter` parameter
-        * sign the transaction
-        * submit the transaction and verify it succeeds
-        * check expected balance for source address
-        * (optional) check transactions in db-sync
+        * Build transaction using `build-raw` without `--invalid-hereafter` parameter
+        * Sign the transaction
+        * Submit the transaction and verify it succeeds
+        * Check expected balance for source address
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
@@ -1054,12 +1054,12 @@ class TestBasicTransactions:
 
         Uses `cardano-cli transaction build-raw` command.
 
-        * prepare transaction with the same txin specified multiple times
-        * build transaction using `build-raw` with duplicate `--tx-in` parameters
-        * sign the transaction
-        * submit the transaction and verify it succeeds
-        * check expected balance for source address
-        * (optional) check transactions in db-sync
+        * Prepare transaction with the same txin specified multiple times
+        * Build transaction using `build-raw` with duplicate `--tx-in` parameters
+        * Sign the transaction
+        * Submit the transaction and verify it succeeds
+        * Check expected balance for source address
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
@@ -1178,11 +1178,11 @@ class TestBasicTransactions:
     ):
         """Create a UTxO with datum hash in a regular address and spend it.
 
-        * create a UTxO with a datum hash at the payment address
-        * check that the UTxO was created with the respective datum hash
-        * spend the UTxO (not providing the datum hash)
-        * check that the UTxO was spent
-        * (optional) check transactions in db-sync
+        * Create a UTxO with a datum hash at the payment address
+        * Check that the UTxO was created with the respective datum hash
+        * Spend the UTxO (not providing the datum hash)
+        * Check that the UTxO was spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -1246,11 +1246,11 @@ class TestBasicTransactions:
 
         Uses `cardano-cli transaction build-raw` command.
 
-        * create transaction from source address to destination address with 2 ADA
-        * set TTL to current slot + 10,000,000 slots (far in the future)
-        * build, sign and submit the transaction
-        * verify the transaction succeeds with far-future TTL
-        * (optional) check transactions in db-sync
+        * Create transaction from source address to destination address with 2 ADA
+        * Set TTL to current slot + 10,000,000 slots (far in the future)
+        * Build, sign and submit the transaction
+        * Verify the transaction succeeds with far-future TTL
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1315,8 +1315,8 @@ class TestBasicTransactions:
     ):
         """Test default Tx era.
 
-        * check that default Tx era is implicit as `latest`
-        * check that default Tx era can be specified explicitly by its name
+        * Check that default Tx era is implicit as `latest`
+        * Check that default Tx era can be specified explicitly by its name
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1481,9 +1481,9 @@ class TestMultiInOut:
     ):
         """Send 10 transactions to payment address.
 
-        * send funds from 1 source address to 1 destination address in 10 separate transactions
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Send funds from 1 source address to 1 destination address in 10 separate transactions
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         no_of_transactions = 10
@@ -1539,9 +1539,9 @@ class TestMultiInOut:
     ):
         """Test 1 transaction from 1 payment address to 10 payment addresses.
 
-        * send funds from 1 source address to 10 destination addresses
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Send funds from 1 source address to 10 destination addresses
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -1571,9 +1571,9 @@ class TestMultiInOut:
     ):
         """Test 1 transaction from 10 payment addresses to 1 payment address.
 
-        * send funds from 10 source addresses to 1 destination address
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Send funds from 10 source addresses to 1 destination address
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -1603,9 +1603,9 @@ class TestMultiInOut:
     ):
         """Test 1 transaction from 10 payment addresses to 10 payment addresses.
 
-        * send funds from 10 source addresses to 10 destination addresses
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Send funds from 10 source addresses to 10 destination addresses
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -1635,9 +1635,9 @@ class TestMultiInOut:
     ):
         """Test 1 transaction from 50 payment addresses to 100 payment addresses.
 
-        * send funds from 50 source addresses to 100 destination addresses
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Send funds from 50 source addresses to 100 destination addresses
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         self._from_to_transactions(
             cluster_obj=cluster,
@@ -1692,17 +1692,17 @@ class TestIncrementalSigning:
         Test with Tx body created by both `transaction build` and `transaction build-raw`.
         Test with Tx created by both `transaction sign` and `transaction assemble`.
 
-        * create a transaction
-        * sign the transaction incrementally with part of the signing keys
-        * sign the transaction incrementally with the rest of the signing keys, except of
+        * Create a transaction
+        * Sign the transaction incrementally with part of the signing keys
+        * Sign the transaction incrementally with the rest of the signing keys, except of
           the required one
-        * sign the transaction multiple times with the same skey to see that it doesn't affect
+        * Sign the transaction multiple times with the same skey to see that it doesn't affect
           the Tx fee
-        * check that the transaction cannot be submitted
-        * sign the transaction with the required signing key
-        * check that the transaction can be submitted
-        * check expected balances for both source and destination addresses
-        * (optional) check transactions in db-sync
+        * Check that the transaction cannot be submitted
+        * Sign the transaction with the required signing key
+        * Check that the transaction can be submitted
+        * Check expected balances for both source and destination addresses
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000

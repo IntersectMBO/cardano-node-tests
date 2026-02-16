@@ -54,9 +54,9 @@ class TestInlineDatum:
     def test_check_inline_datum_cost(self, cluster: clusterlib.ClusterLib):
         """Check that the min UTxO value with an inline datum depends on the size of the datum.
 
-        * calculate the min UTxO value with a small datum, using both inline and hash
-        * calculate the min UTxO value with a big datum, using both inline and hash
-        * check that the min UTxO value with an inline datum depends on datum size
+        * Calculate the min UTxO value with a small datum, using both inline and hash
+        * Calculate the min UTxO value with a big datum, using both inline and hash
+        * Check that the min UTxO value with an inline datum depends on datum size
         """
         temp_template = common.get_test_id(cluster)
 

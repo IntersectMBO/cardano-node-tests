@@ -62,10 +62,10 @@ class TestDatum:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create transaction output with datum hash on non-script payment address
-        * build and submit transaction
-        * query created UTxO and verify datum hash is present
-        * (optional) check transaction records in db-sync
+        * Create transaction output with datum hash on non-script payment address
+        * Build and submit transaction
+        * Query created UTxO and verify datum hash is present
+        * (optional) Check transaction records in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -117,10 +117,10 @@ class TestDatum:
 
         Uses `cardano-cli transaction build` command without protocol parameters file.
 
-        * create transaction with embedded datum using --tx-out-datum-embed-file flag
-        * build transaction without providing protocol parameters file
-        * sign and attempt to submit transaction
-        * check that transaction either succeeds or fails with PPViewHashesDontMatch error
+        * Create transaction with embedded datum using --tx-out-datum-embed-file flag
+        * Build transaction without providing protocol parameters file
+        * Sign and attempt to submit transaction
+        * Check that transaction either succeeds or fails with PPViewHashesDontMatch error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -212,9 +212,9 @@ class TestNegativeDatum:
 
         Expect failure, unless in era >= Conway.
 
-        * create a Tx output without a datum hash
-        * try to spend the UTxO like it was locked Plutus UTxO
-        * check that the expected error was raised
+        * Create a Tx output without a datum hash
+        * Try to spend the UTxO like it was locked Plutus UTxO
+        * Check that the expected error was raised
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -324,10 +324,10 @@ class TestNegativeDatum:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * generate random text string as invalid datum value
-        * create malformed datum file with invalid JSON format
-        * attempt to build transaction with invalid datum file
-        * check that transaction building fails with JSON object error
+        * Generate random text string as invalid datum value
+        * Create malformed datum file with invalid JSON format
+        * Attempt to build transaction with invalid datum file
+        * Check that transaction building fails with JSON object error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -368,9 +368,9 @@ class TestNegativeDatum:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * lock funds at script address with typed datum (datum 42 typed)
-        * attempt to spend locked UTxO using different datum format (datum 42 untyped)
-        * check that spending fails with "wrong datum" error (unless in era >= Conway)
+        * Lock funds at script address with typed datum (datum 42 typed)
+        * Attempt to spend locked UTxO using different datum format (datum 42 untyped)
+        * Check that spending fails with "wrong datum" error (unless in era >= Conway)
         * Expect failure, unless in era >= Conway.
         """
         temp_template = common.get_test_id(cluster)
@@ -440,10 +440,10 @@ class TestNegativeDatum:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create regular UTxO at payment address with datum hash (non-script address)
-        * create collateral UTxO
-        * attempt to spend regular UTxO with Plutus script witness and redeemer
-        * check that spending fails with script hash not known error
+        * Create regular UTxO at payment address with datum hash (non-script address)
+        * Create collateral UTxO
+        * Attempt to spend regular UTxO with Plutus script witness and redeemer
+        * Check that spending fails with script hash not known error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -543,10 +543,10 @@ class TestNegativeDatum:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * generate random binary datum value (minimum 65 bytes)
-        * create datum file with oversized binary data
-        * attempt to build transaction locking UTxO with oversized datum
-        * check that transaction building fails with size error (on node < 1.36.0)
+        * Generate random binary datum value (minimum 65 bytes)
+        * Create datum file with oversized binary data
+        * Attempt to build transaction locking UTxO with oversized datum
+        * Check that transaction building fails with size error (on node < 1.36.0)
         * Expect failure on node version < 1.36.0.
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"

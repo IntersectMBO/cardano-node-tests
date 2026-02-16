@@ -54,10 +54,10 @@ class TestNegativeCollateralOutput:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * mint the token using a Plutus script while limiting the usable collateral amount
-        * check that the minting failed because insufficient collateral amount was provided
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Mint the token using a Plutus script while limiting the usable collateral amount
+        * Check that the minting failed because insufficient collateral amount was provided
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]

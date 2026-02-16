@@ -44,22 +44,24 @@ class TestLedgerState:
         Test stake snapshot consistency by comparing ledger state data with stake-snapshot
         command output for all three stake snapshots (mark, set, go).
 
-        * wait for epoch interval (5 seconds into epoch) to ensure stable state
-        * get list of stake pool IDs from cluster
-        * skip if no pools available or too many pools (>200) on testnet
-        * query ledger state using `query ledger-state` command
-        * save ledger state to file for analysis
-        * extract stake snapshots (pstakeMark, pstakeSet, pstakeGo) from ledger state
-        * for each snapshot, extract stake address hashes and delegations to pools
-        * for each pool with delegations:
-          - calculate total stake from ledger state for each snapshot (mark, set, go)
-          - query stake snapshot using `query stake-snapshot` command
-          - compare ledger state totals with stake-snapshot command output
-          - verify stake amounts match between ledger state and stake-snapshot
-        * verify ledger state has expected top-level keys
-        * check that all delegated stake addresses are accounted for
-        * verify total active stake matches sum of individual pool stakes
-        * save all validation data to pickle file if errors found
+        * Wait for epoch interval (5 seconds into epoch) to ensure stable state
+        * Get list of stake pool IDs from cluster
+        * Skip if no pools available or too many pools (>200) on testnet
+        * Query ledger state using `query ledger-state` command
+        * Save ledger state to file for analysis
+        * Extract stake snapshots (pstakeMark, pstakeSet, pstakeGo) from ledger state
+        * For each snapshot, extract stake address hashes and delegations to pools
+        * For each pool with delegations:
+
+          - Calculate total stake from ledger state for each snapshot (mark, set, go)
+          - Query stake snapshot using `query stake-snapshot` command
+          - Compare ledger state totals with stake-snapshot command output
+          - Verify stake amounts match between ledger state and stake-snapshot
+
+        * Verify ledger state has expected top-level keys
+        * Check that all delegated stake addresses are accounted for
+        * Verify total active stake matches sum of individual pool stakes
+        * Save all validation data to pickle file if errors found
         """
         temp_template = common.get_test_id(cluster)
 

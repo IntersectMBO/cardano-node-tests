@@ -119,9 +119,9 @@ class TestDBSync:
 
         Test db-sync database schema by verifying all expected tables exist.
 
-        * query db-sync database for list of all table names
-        * check that DBSYNC_TABLES set is a subset of actual table names
-        * verify all expected core tables are present (block, tx, tx_out, etc.)
+        * Query db-sync database for list of all table names
+        * Check that DBSYNC_TABLES set is a subset of actual table names
+        * Verify all expected core tables are present (block, tx, tx_out, etc.)
         """
         common.get_test_id(cluster)
         assert self.DBSYNC_TABLES.issubset(dbsync_queries.query_table_names())
@@ -136,9 +136,10 @@ class TestDBSync:
         Test db-sync block table data integrity by validating field values and relationships
         across 50 epochs of block records.
 
-        * query current tip, block number, and epoch from cluster
-        * query block records from db-sync for last 50 epochs (epoch_from to current)
-        * for each consecutive block pair, validate:
+        * Query current tip, block number, and epoch from cluster
+        * Query block records from db-sync for last 50 epochs (epoch_from to current)
+        * For each consecutive block pair, validate:
+
           - id increases monotonically (rec.id > prev_rec.id)
           - epoch_no is non-negative and increases monotonically
           - epoch_no changes by at most 1 between consecutive blocks
@@ -146,8 +147,9 @@ class TestDBSync:
           - epoch_slot_no is non-negative and increases within same epoch
           - block_no increments by exactly 1 between consecutive blocks
           - previous_id points to previous record's id
-        * check that last block_no in db-sync is within 1 of node's block_no
-        * verify protocol version matches expected values
+
+        * Check that last block_no in db-sync is within 1 of node's block_no
+        * Verify protocol version matches expected values
         """
         common.get_test_id(cluster)
 
@@ -277,13 +279,13 @@ class TestDBSync:
         Test db-sync Plutus cost model records match protocol parameters. Runs only in
         eras > Alonzo where Plutus cost models are active.
 
-        * query current epoch number
-        * query cost models from db-sync for current epoch
-        * if cost models not available, wait for next epoch and retry
-        * query protocol parameters from node for comparison
-        * extract PlutusV1, PlutusV2, PlutusV3 cost models from protocol params
-        * compare db-sync cost model records with protocol parameter cost models
-        * verify cost model values match between db-sync and node
+        * Query current epoch number
+        * Query cost models from db-sync for current epoch
+        * If cost models not available, wait for next epoch and retry
+        * Query protocol parameters from node for comparison
+        * Extract PlutusV1, PlutusV2, PlutusV3 cost models from protocol params
+        * Compare db-sync cost model records with protocol parameter cost models
+        * Verify cost model values match between db-sync and node
         """
         common.get_test_id(cluster)
         curr_epoch = cluster.g_query.get_epoch()
@@ -326,9 +328,9 @@ class TestDBSync:
     ):
         """Check that db-sync reconnects to the node after the node is restarted.
 
-        * restart all nodes of the running cluster
-        * submit a transaction
-        * check that the transaction is present on dbsync
+        * Restart all nodes of the running cluster
+        * Submit a transaction
+        * Check that the transaction is present on dbsync
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
@@ -391,15 +393,15 @@ class TestDBSync:
         Test db-sync epoch table data consistency by comparing aggregated counts with
         block table data. Skip if running in epoch 0.
 
-        * query current epoch from cluster
-        * use previous epoch for validation (current - 1) if not in epoch 0
-        * skip test if in epoch 0
-        * query all blocks for the target epoch from block table
-        * count blocks and transactions from block table records
-        * query epoch summary from epoch table for same epoch
-        * count blocks and transactions from epoch table records
-        * verify block count matches between block table and epoch table
-        * verify transaction count matches between block table and epoch table
+        * Query current epoch from cluster
+        * Use previous epoch for validation (current - 1) if not in epoch 0
+        * Skip test if in epoch 0
+        * Query all blocks for the target epoch from block table
+        * Count blocks and transactions from block table records
+        * Query epoch summary from epoch table for same epoch
+        * Count blocks and transactions from epoch table records
+        * Verify block count matches between block table and epoch table
+        * Verify transaction count matches between block table and epoch table
         """
         common.get_test_id(cluster)
 
@@ -449,13 +451,13 @@ class TestDBSyncSnapshot:
         This test uses the S3 REST API to query the Cardano mainnet snapshot repository
         and verifies that the most recent snapshot is fresh.
 
-        * initialize DBSyncSnapshotService to access S3 snapshot repository
-        * query S3 API to find latest db-sync version available
-        * get latest snapshot file for that version from S3
-        * log snapshot details (name, last modified date, size in GB)
-        * calculate current UTC time and 5-days-ago threshold
-        * verify snapshot last_modified date is within 5 days
-        * fail if snapshot is older than 5 days with detailed age information
+        * Initialize DBSyncSnapshotService to access S3 snapshot repository
+        * Query S3 API to find latest db-sync version available
+        * Get latest snapshot file for that version from S3
+        * Log snapshot details (name, last modified date, size in GB)
+        * Calculate current UTC time and 5-days-ago threshold
+        * Verify snapshot last_modified date is within 5 days
+        * Fail if snapshot is older than 5 days with detailed age information
         """
         common.get_test_id(cluster_manager)
         db_sync_snapshots = dbsync_snapshot_service.DBSyncSnapshotService()

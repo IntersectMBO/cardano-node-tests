@@ -126,11 +126,11 @@ class TestMIRCerts:
         Test transferring funds between protocol pots using MIR certificate. Uses
         `cardano-cli transaction build-raw`. Expected to fail when Era < Alonzo.
 
-        * generate MIR certificate for transferring 10000000000000 lovelace to treasury
-        * submit transaction with MIR certificate signed by genesis delegate keys
-        * submit transaction at the beginning of an epoch
-        * check that source address balance is correct after fee deduction
-        * check `transaction view` command output
+        * Generate MIR certificate for transferring 10000000000000 lovelace to treasury
+        * Submit transaction with MIR certificate signed by genesis delegate keys
+        * Submit transaction at the beginning of an epoch
+        * Check that source address balance is correct after fee deduction
+        * Check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -208,12 +208,12 @@ class TestMIRCerts:
         Test transferring funds between protocol pots using MIR certificate.
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * generate MIR certificate for transferring 10000000000000 lovelace to treasury
-        * build transaction using `transaction build` with MIR certificate
-        * sign transaction with genesis delegate keys
-        * submit transaction at the beginning of an epoch
-        * check that source address balance is correct after fee deduction
-        * check `transaction view` command output
+        * Generate MIR certificate for transferring 10000000000000 lovelace to treasury
+        * Build transaction using `transaction build` with MIR certificate
+        * Sign transaction with genesis delegate keys
+        * Submit transaction at the beginning of an epoch
+        * Check that source address balance is correct after fee deduction
+        * Check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -296,11 +296,11 @@ class TestMIRCerts:
         Test transferring funds between protocol pots using MIR certificate. Uses
         `cardano-cli transaction build-raw`. Expected to fail when Era < Alonzo.
 
-        * generate MIR certificate for transferring 1000000000000 lovelace to reserves
-        * submit transaction with MIR certificate signed by genesis delegate keys
-        * submit transaction at the beginning of an epoch
-        * check that source address balance is correct after fee deduction
-        * check `transaction view` command output
+        * Generate MIR certificate for transferring 1000000000000 lovelace to reserves
+        * Submit transaction with MIR certificate signed by genesis delegate keys
+        * Submit transaction at the beginning of an epoch
+        * Check that source address balance is correct after fee deduction
+        * Check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -378,12 +378,12 @@ class TestMIRCerts:
         Test transferring funds between protocol pots using MIR certificate.
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * generate MIR certificate for transferring 1000000000000 lovelace to reserves
-        * build transaction using `transaction build` with MIR certificate
-        * sign transaction with genesis delegate keys
-        * submit transaction at the beginning of an epoch
-        * check that source address balance is correct after fee deduction
-        * check `transaction view` command output
+        * Generate MIR certificate for transferring 1000000000000 lovelace to reserves
+        * Build transaction using `transaction build` with MIR certificate
+        * Sign transaction with genesis delegate keys
+        * Submit transaction at the beginning of an epoch
+        * Check that source address balance is correct after fee deduction
+        * Check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -465,10 +465,10 @@ class TestMIRCerts:
     ):
         """Send funds from the reserves or treasury pot to stake address.
 
-        * generate an MIR certificate
-        * submit a TX with the MIR certificate
-        * check that the expected amount was added to the stake address reward account
-        * (optional) check transaction in db-sync
+        * Generate an MIR certificate
+        * Submit a TX with the MIR certificate
+        * Check that the expected amount was added to the stake address reward account
+        * (optional) Check transaction in db-sync
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -558,10 +558,10 @@ class TestMIRCerts:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * generate an MIR certificate
-        * submit a TX with the MIR certificate
-        * check that the expected amount was added to the stake address reward account
-        * (optional) check transaction in db-sync
+        * Generate an MIR certificate
+        * Submit a TX with the MIR certificate
+        * Check that the expected amount was added to the stake address reward account
+        * (optional) Check transaction in db-sync
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -652,12 +652,12 @@ class TestMIRCerts:
     ):
         """Send funds from the reserves and treasury pots to stake address.
 
-        * generate an MIR certificate for transferring from treasury
-        * generate an MIR certificate for transferring from reserves
-        * submit a TX with the treasury MIR certificate
-        * in the same epoch as the previous TX, submit a TX with the reserves MIR certificate
-        * check that the expected amount was added to the stake address reward account
-        * (optional) check transactions in db-sync
+        * Generate an MIR certificate for transferring from treasury
+        * Generate an MIR certificate for transferring from reserves
+        * Submit a TX with the treasury MIR certificate
+        * In the same epoch as the previous TX, submit a TX with the reserves MIR certificate
+        * Check that the expected amount was added to the stake address reward account
+        * (optional) Check transactions in db-sync
         """
         cluster = cluster_pots
         temp_template = common.get_test_id(cluster)
@@ -784,11 +784,11 @@ class TestMIRCerts:
     ):
         """Send funds from the reserves and treasury pots to multiple stake addresses in single TX.
 
-        * generate an MIR certificates for transferring from treasury for each stake address
-        * generate an MIR certificates for transferring from reserves for each stake address
-        * submit a TX with all the MIR certificates generated in previous steps
-        * check that the expected amount was added to all stake address reward accounts
-        * (optional) check transaction in db-sync
+        * Generate an MIR certificates for transferring from treasury for each stake address
+        * Generate an MIR certificates for transferring from reserves for each stake address
+        * Submit a TX with all the MIR certificates generated in previous steps
+        * Check that the expected amount was added to all stake address reward accounts
+        * (optional) Check transaction in db-sync
         """
         cluster = cluster_pots
         temp_template = common.get_test_id(cluster)
@@ -931,18 +931,18 @@ class TestMIRCerts:
     ):
         """Send funds from the reserves or treasury pot to unregistered stake address.
 
-        * generate an MIR certificate
-        * if a stake address should be known on blockchain:
+        * Generate an MIR certificate
+        * If a stake address should be known on blockchain:
 
-            - register the stake address
-            - if transferring funds from treasury, deregister the stake address
+            - Register the stake address
+            - If transferring funds from treasury, deregister the stake address
               BEFORE submitting the TX
 
-        * submit a TX with the MIR certificate
-        * if a stake address should be known on blockchain and if transferring funds from reserves,
+        * Submit a TX with the MIR certificate
+        * If a stake address should be known on blockchain and if transferring funds from reserves,
           deregister the stake address AFTER submitting the TX
-        * check that the amount was NOT added to the stake address reward account
-        * (optional) check transaction in db-sync
+        * Check that the amount was NOT added to the stake address reward account
+        * (optional) Check transaction in db-sync
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -1068,9 +1068,9 @@ class TestNegativeMIRCerts:
 
         Expect failure.
 
-        * generate an MIR certificate
-        * submit a TX with the MIR certificate
-        * check that submitting the transaction fails with an expected error
+        * Generate an MIR certificate
+        * Submit a TX with the MIR certificate
+        * Check that submitting the transaction fails with an expected error
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
