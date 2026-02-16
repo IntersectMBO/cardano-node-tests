@@ -84,7 +84,17 @@ class TestBasicSmash:
     def test_fetch_pool_metadata(
         self, locked_pool: dbsync_types.PoolDataRecord, smash: smash_utils.SmashClient
     ):
-        """Test fetching pool metadata from SMASH."""
+        """Test fetching pool metadata from SMASH.
+
+        Test retrieval of off-chain pool metadata from SMASH server and verify it matches
+        db-sync records.
+
+        * Get pool ID from locked pool fixture
+        * Query off-chain pool metadata from db-sync (retry with timeout for availability)
+        * Extract expected metadata fields (name, description, ticker, homepage)
+        * Fetch pool metadata from SMASH using pool ID and metadata hash
+        * Verify SMASH metadata matches db-sync metadata exactly
+        """
         pool_id = locked_pool.hash
 
         # Offchain metadata is inserted into database few minutes after start of a cluster
@@ -120,7 +130,20 @@ class TestBasicSmash:
         request: pytest.FixtureRequest,
         worker_id: str,
     ):
-        """Test delisting a pool from SMASH."""
+        """Test delisting a pool from SMASH.
+
+        Test pool delisting functionality and verify delisted pools cannot be queried.
+
+        * Get pool ID from locked pool fixture
+        * Register cleanup function to re-enlist pool after test
+        * Delist the pool using SMASH API
+        * Verify delist response contains correct pool ID
+        * Attempt to fetch metadata for delisted pool
+        * Check that fetch fails with HTTP 403 Forbidden and "Pool is delisted" message
+        * Add log ignore rule for expected "Delisted pool already exists!" error
+        * Attempt to re-delist already delisted pool
+        * Verify re-delist fails with HTTP 400 Bad Request and DbInsertError
+        """
         pool_id = locked_pool.hash
 
         # Define and register function that ensures pool is re-enlisted after test completion
@@ -171,7 +194,20 @@ class TestBasicSmash:
         locked_pool: dbsync_types.PoolDataRecord,
         smash: smash_utils.SmashClient,
     ):
-        """Test enlisting a pool in SMASH."""
+        """Test enlisting a pool in SMASH.
+
+        Test pool enlisting functionality after delisting and verify enlisted pools can be queried.
+
+        * Get pool ID from locked pool fixture
+        * Attempt to enlist already enlisted pool
+        * Verify enlist fails with HTTP 404 Not Found and "RecordDoesNotExist" error
+        * Delist the pool to prepare for enlist test
+        * Verify delisted pool cannot be queried (HTTP 403 Forbidden)
+        * Enlist the delisted pool
+        * Verify enlist response contains correct pool ID
+        * Fetch metadata for newly enlisted pool
+        * Verify metadata retrieval succeeds for enlisted pool
+        """
         pool_id = locked_pool.hash
         # Ensure enlisting an already enlisted pool returns an error
         try:
@@ -209,7 +245,17 @@ class TestBasicSmash:
         smash: smash_utils.SmashClient,
         request: pytest.FixtureRequest,
     ):
-        """Test reserving a ticker for a pool in SMASH."""
+        """Test reserving a ticker for a pool in SMASH.
+
+        Test ticker reservation functionality and verify duplicate reservations are rejected.
+
+        * Select random pool ID from cluster
+        * Register cleanup function to delete reserved tickers after test completion
+        * Reserve 3-character random ticker for the pool
+        * Verify reservation response contains correct ticker name
+        * Attempt to reserve already-taken ticker for same pool
+        * Verify re-reservation fails with HTTP 400 Bad Request and TickerAlreadyReserved error
+        """
         pool_id = random.choice(cluster.g_query.get_stake_pools())
 
         # Register cleanup function that removes ticker from database after test completion

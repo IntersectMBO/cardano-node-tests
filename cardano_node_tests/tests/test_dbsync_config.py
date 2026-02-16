@@ -296,7 +296,22 @@ class TestDBSyncConfig:
         db_sync_manager: db_sync.DBSyncManager,
         subtests: pytest_subtests.SubTests,
     ):
-        """Run db-sync config subtests."""
+        """Test DB-Sync configuration options using multiple subtests.
+
+        Verifies that different DB-Sync configuration settings correctly control table population
+        and data insertion behavior. Each subtest modifies the configuration, restarts DB-Sync,
+        and validates the expected database state.
+
+        * Test `tx_out` option (enable/disable modes with various settings)
+        * Verify address, tx_in, tx_out, and ma_tx_out tables respond to tx_out configuration
+        * Test `governance` option (enable/disable)
+        * Verify all governance-related tables populate when enabled and clear when disabled
+        * Test `tx_cbor` option (enable/disable)
+        * Verify tx_cbor table populates when enabled and clears when disabled
+        * Test `multi_asset` option (enable/disable)
+        * Verify multi_asset table populates when enabled and clears when disabled
+        * Restore original DB-Sync configuration after all subtests complete
+        """
         cluster = cluster_singleton
         common.get_test_id(cluster)
 

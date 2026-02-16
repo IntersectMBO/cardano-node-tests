@@ -56,13 +56,13 @@ class TestHardfork:
     ):
         """Test hardfork action.
 
-        * create a "hardfork" action
-        * vote to disapprove the action
-        * vote to approve the action
-        * check that the action is ratified
-        * try to disapprove the ratified action, this shouldn't have any effect
-        * check that the action is enacted
-        * check that it's not possible to vote on enacted action
+        * Create a "hardfork" action
+        * Vote to disapprove the action
+        * Vote to approve the action
+        * Check that the action is ratified
+        * Try to disapprove the ratified action, this shouldn't have any effect
+        * Check that the action is enacted
+        * Check that it's not possible to vote on enacted action
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)

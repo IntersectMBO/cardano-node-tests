@@ -98,9 +98,17 @@ class TestUnbalanced:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
     ):
-        """Try to build a transaction with a negative change.
+        """Try to build a transaction with a negative change amount.
 
-        Check that it is not possible to build such transaction.
+        Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * Calculate transaction fee
+        * Get UTxO with highest amount from source address
+        * Attempt to create transaction outputs that exceed inputs by 1 Lovelace
+        * Include a change output with -1 Lovelace
+        * Check that transaction building fails with appropriate error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -165,9 +173,15 @@ class TestUnbalanced:
         pbt_highest_utxo: clusterlib.UTXOData,
         transfer_add: int,
     ):
-        """Try to build a transaction with more funds than available `transaction build`.
+        """Try to build transaction transferring more funds than available (property-based test).
 
-        Check that it is not possible to build such transaction.
+        Expect failure.
+
+        Uses `cardano-cli transaction build` command.
+
+        * Use UTxO with highest amount as sole input
+        * Attempt to transfer amount exceeding UTxO balance by parametrized value (1 to MAX/2)
+        * Check that transaction building fails with negative balance error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -211,10 +225,18 @@ class TestUnbalanced:
         pbt_highest_utxo: clusterlib.UTXOData,
         change_amount: int,
     ):
-        """Build a transaction with unbalanced change (property-based test).
+        """Build transaction with unbalanced change amount (property-based test).
 
-        * build an unbalanced transaction
-        * check that it is not possible to submit such transaction
+        Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * Use UTxO with highest amount as sole input
+        * Transfer full balance minus fee to destination address
+        * Add incorrect change output with parametrized amount (2 ADA to MAX)
+        * Build and sign the unbalanced transaction successfully
+        * Attempt to submit the unbalanced transaction
+        * Check that submission fails with ValueNotConservedUTxO error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -274,7 +296,16 @@ class TestUnbalanced:
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
-        """Try to build a transaction with output Lovelace amount that is out of bounds."""
+        """Try to build transaction with Lovelace amount exceeding maximum (property-based test).
+
+        Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * Use UTxO with highest amount as sole input
+        * Attempt to create transaction output with amount > MAX_UINT64
+        * Check that transaction building fails with out of bounds error
+        """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         fee = 200_000
 
@@ -319,11 +350,15 @@ class TestUnbalanced:
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
-        """Try to build a transaction with amount bellow the minimum lovelace required.
+        """Try to build transaction with amount below minimum UTxO threshold (property-based test).
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Expect failure.
+        * Use UTxO with highest amount as sole input
+        * Attempt to create transaction output with amount below minimum UTxO (0 to ~1 ADA)
+        * Check that transaction building fails with minimum UTxO threshold error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -350,11 +385,15 @@ class TestUnbalanced:
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
-        """Try to build a transaction with negative Lovelace amount.
+        """Try to build transaction with negative Lovelace amount (property-based test).
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Expect failure.
+        * Use UTxO with highest amount as sole input
+        * Attempt to create transaction output with negative amount (-MAX to -1)
+        * Check that transaction building fails with negative quantity error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -383,11 +422,17 @@ class TestUnbalanced:
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
-        """Try to build a transaction with amount bellow the minimum lovelace required.
+        """Try to build and submit transaction with amount below minimum UTxO (property-based test).
+
+        Expect failure.
 
         Uses `cardano-cli transaction build-raw` command for building the transactions.
 
-        Expect failure.
+        * Use UTxO with highest amount as sole input
+        * Build transaction with output amount below minimum UTxO (0 to ~1 ADA)
+        * Sign the transaction successfully (no validation at build-raw stage)
+        * Attempt to submit the transaction
+        * Check that submission fails with OutputTooSmallUTxO error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -447,11 +492,15 @@ class TestUnbalanced:
         pbt_highest_utxo: clusterlib.UTXOData,
         amount: int,
     ):
-        """Try to build a transaction with negative Lovelace amount.
+        """Try to build transaction with negative Lovelace amount (property-based test).
+
+        Expect failure.
 
         Uses `cardano-cli transaction build-raw` command for building the transactions.
 
-        Expect failure.
+        * Use UTxO with highest amount as sole input
+        * Attempt to build transaction with negative output amount (-MAX to -1)
+        * Check that transaction building fails with negative quantity error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 

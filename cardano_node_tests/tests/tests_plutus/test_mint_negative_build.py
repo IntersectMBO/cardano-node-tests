@@ -101,11 +101,11 @@ class TestBuildMintingNegative:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a Plutus script and a TX with signing key missing for
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint the token using a Plutus script and a TX with signing key missing for
           the required signer
-        * check that the minting failed because the required signers were not provided
+        * Check that the minting failed because the required signers were not provided
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -198,9 +198,9 @@ class TestBuildMintingNegative:
 
         Expect failure.
 
-        * fund the token issuer and create a UTxO for collateral
-        * try to mint the token using a simple script passing a redeemer
-        * check that the minting failed because a Plutus script is expected
+        * Fund the token issuer and create a UTxO for collateral
+        * Try to mint the token using a simple script passing a redeemer
+        * Check that the minting failed because a Plutus script is expected
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -296,9 +296,24 @@ class TestBuildMintingNegative:
         fund_issuer_long_asset_name: FundTupleT,
         asset_name: str,
     ):
-        """Test minting a token and 'calculate-min-required-utxo' with a name longer than allowed.
+        """Test minting token with asset name exceeding maximum length and min-UTXO calculation.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate asset names longer than 32 bytes
+        (maximum allowed length for Cardano native token asset names).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded token issuer address with collateral UTxO
+        * Generate random asset name (minimum 33 characters)
+        * Encode asset name to hex and create minting policy
+        * Attempt to build transaction minting token with oversized asset name
+        * Check that transaction building fails with "bytestring should be no longer than 32
+          bytes" error
+        * Attempt to calculate minimum required UTXO for transaction output with oversized
+          asset name
+        * Check that min-UTXO calculation also fails with same error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -385,10 +400,10 @@ class TestBuildMintingNegative:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * fund the token issuer and create a UTxO for collateral
-        * check that the expected amount was transferred to token issuer's address
-        * try to mint the token using a Plutus script and a TX without validity interval
-        * check that the minting failed
+        * Fund the token issuer and create a UTxO for collateral
+        * Check that the expected amount was transferred to token issuer's address
+        * Try to mint the token using a Plutus script and a TX without validity interval
+        * Check that the minting failed
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]

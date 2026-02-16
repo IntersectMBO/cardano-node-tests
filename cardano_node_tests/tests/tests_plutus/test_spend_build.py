@@ -83,13 +83,13 @@ class TestBuildLocking:
 
         Corresponds to Exercise 3 for Alonzo Blue.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO
-        * check that the expected amount was spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO
+        * Check that the expected amount was spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -150,13 +150,13 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * generate a dummy redeemer and a dummy Tx
-        * derive the correct redeemer from the dummy Tx
-        * spend the locked UTxO using the derived redeemer
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Generate a dummy redeemer and a dummy Tx
+        * Derive the correct redeemer from the dummy Tx
+        * Spend the locked UTxO using the derived redeemer
+        * Check that the expected amount was spent
+        * (optional) Check transactions in db-sync
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -273,11 +273,11 @@ class TestBuildLocking:
         Test both typed and untyped redeemer and datum.
         Test passing datum and redeemer to `cardano-cli` as value, json file and cbor file.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO
+        * Check that the expected amount was spent
+        * (optional) Check transactions in db-sync
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -381,13 +381,13 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO
-        * check that the expected amount was spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO
+        * Check that the expected amount was spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         script_fund = 1_000_000
@@ -648,10 +648,10 @@ class TestBuildLocking:
 
         Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * try to spend the locked UTxO
-        * check that the expected error was raised
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Try to spend the locked UTxO
+        * Check that the expected error was raised
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -709,10 +709,10 @@ class TestBuildLocking:
 
         Test with "always fails" script that fails for all datum / redeemer values.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * try to spend the locked UTxO
-        * check that the amount was not transferred and collateral UTxO was spent
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Try to spend the locked UTxO
+        * Check that the amount was not transferred and collateral UTxO was spent
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -775,14 +775,14 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output that contains native tokens with a datum hash at the script address
-        * check that expected amounts of Lovelace and native tokens were locked at the script
+        * Create a Tx output that contains native tokens with a datum hash at the script address
+        * Check that expected amounts of Lovelace and native tokens were locked at the script
           address
-        * spend the locked UTxO
-        * check that the expected amounts of Lovelace and native tokens were spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Spend the locked UTxO
+        * Check that the expected amounts of Lovelace and native tokens were spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
@@ -854,14 +854,14 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output that contains native tokens with a datum hash at the script address
-        * check that expected amounts of Lovelace and native tokens were locked at the script
+        * Create a Tx output that contains native tokens with a datum hash at the script address
+        * Check that expected amounts of Lovelace and native tokens were locked at the script
           address
-        * spend the locked UTxO and create new locked UTxO with change
-        * check that the expected amounts of Lovelace and native tokens were spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Spend the locked UTxO and create new locked UTxO with change
+        * Check that the expected amounts of Lovelace and native tokens were spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -986,12 +986,12 @@ class TestBuildLocking:
 
         Tests bug https://github.com/IntersectMBO/cardano-db-sync/issues/750
 
-        * create a Tx output with a datum hash at the script address and a collateral UTxO
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO while using the collateral UTxO both as collateral and as
+        * Create a Tx output with a datum hash at the script address and a collateral UTxO
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO while using the collateral UTxO both as collateral and as
           normal Tx input
-        * check that the expected amount was spent
-        * (optional) check transactions in db-sync
+        * Check that the expected amount was spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000

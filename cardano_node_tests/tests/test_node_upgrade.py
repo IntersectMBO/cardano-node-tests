@@ -91,7 +91,19 @@ class TestSetup:
         cluster_singleton: clusterlib.ClusterLib,
         worker_id: str,
     ):
-        """Ignore selected errors in log right after node upgrade."""
+        """Ignore selected errors in log right after node upgrade.
+
+        Test setup to ignore expected errors in node logs after upgrading from pre-UTxO-HD
+        releases. UTxO-HD was added in node 10.4.1.
+
+        * Check if upgraded node version is < 10.5.0
+        * If upgrading from pre-UTxO-HD release (node < 10.5.0):
+
+          - Add log ignore rule for ChainDB warning about invalid snapshot
+          - Ignore "MetadataFileDoesNotExist" error in stdout logs
+
+        * This prevents false test failures from expected upgrade-related log messages
+        """
         common.get_test_id(cluster_singleton)
 
         # The error should be present only when upgrading pre UTxO-HD release.
@@ -114,7 +126,18 @@ class TestSetup:
         cluster_singleton: clusterlib.ClusterLib,
         pool_user_singleton: clusterlib.PoolUser,
     ):
-        """Test cost model update."""
+        """Test cost model update.
+
+        Test updating Plutus cost models after node upgrade. Runs only on step 2 of upgrade
+        testing sequence.
+
+        * Load cost model proposal from JSON file (PlutusV2 and PlutusV3 models)
+        * Get default governance data (DReps, committee members, pools)
+        * Submit cost model update governance action
+        * Vote and ratify the cost model update
+        * Wait for enactment
+        * Verify updated cost models are active
+        """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
@@ -138,7 +161,23 @@ class TestSetup:
         cluster_singleton: clusterlib.ClusterLib,
         pool_user_singleton: clusterlib.PoolUser,
     ):
-        """Test hard fork."""
+        """Test hard fork.
+
+        Test protocol version hard fork using governance action after node upgrade. Runs only
+        on step 3 of upgrade testing sequence.
+
+        * Get current protocol version and calculate target version (current + 1)
+        * Skip if already at LAST_KNOWN_PROTOCOL_VERSION
+        * Check that ExperimentalHardForksEnabled is true in node config
+        * Get default governance data (DReps, committee members, pools)
+        * Wait for any delayed ratification to complete
+        * Create hardfork governance action with target protocol version
+        * Submit hardfork action transaction
+        * Vote on hardfork action (Constitutional Committee, DReps, SPOs)
+        * Wait for ratification
+        * Wait for enactment epoch
+        * Verify protocol version changed to target version
+        """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
 
@@ -304,7 +343,17 @@ class TestUpgrade:
         """Prepare transactions that will be submitted in next steps of upgrade testing.
 
         For testing that transaction created by previous node version and/or in previous era can
-        be submitted in next node version and/or next era.
+        be submitted in next node version and/or next era. Runs on steps 1-2, creates
+        transactions for steps 2-3.
+
+        * Create simple transaction sending 2 ADA from source to destination address
+        * Build transaction using parametrized method (build or build-raw)
+        * For build method: use fee buffer of 1000000 lovelace
+        * For build-raw method: calculate fee first, then build transaction
+        * Sign transaction with source address signing key
+        * Save either signed tx file or unsigned tx body file based on parametrization
+        * Save to state directory for use in later upgrade testing steps
+        * Verify saved file exists and has non-zero size
         """
         temp_template = common.get_test_id(cluster)
         build_str = build_method
@@ -422,7 +471,20 @@ class TestUpgrade:
         from_step: int,
         file_type: str,
     ):
-        """Submit transaction that was created by previous node version and/or in previous era."""
+        """Submit transaction that was created by previous node version and/or in previous era.
+
+        Test cross-version/cross-era transaction compatibility by submitting transactions
+        created in earlier upgrade steps. Runs on steps 2-3.
+
+        * Locate transaction file created in previous step (from state directory)
+        * Load signed tx file or unsigned tx body file based on parametrization
+        * If loading tx body: sign the transaction body with appropriate signing keys
+        * Submit the transaction to the upgraded node
+        * Wait for transaction to be included in a block
+        * Verify transaction was successfully submitted and processed
+        * Check expected balances after transaction submission
+        * Demonstrates backward compatibility of transaction format across versions/eras
+        """
         temp_template = common.get_test_id(cluster)
         build_str = build_method
 

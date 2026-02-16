@@ -349,9 +349,15 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to send a transaction with ttl in the past.
+        """Try to send transaction with TTL (time-to-live) in the past.
 
         Expect failure.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+
+        * Set invalid_hereafter to current slot - 1 (already expired)
+        * Attempt to build or submit transaction with past TTL
+        * Check that transaction fails with ExpiredUTxO or OutsideValidityIntervalUTxO error
         """
         temp_template = common.get_test_id(cluster)
         self._submit_wrong_validity(
@@ -376,9 +382,17 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to send a transaction with negative `invalid_before` and check for int overflow.
+        """Try to send transaction with negative invalid_before causing integer overflow.
 
         Expect failure.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+        Negative values overflow to MAX_UINT64, which exceeds valid range.
+
+        * Set invalid_before to -5 (overflows to MAX_UINT64 - 5)
+        * Attempt to build or submit transaction with overflowed value
+        * Check that transaction fails or builds with clamped value
+        * Verify validity range in transaction view output
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -428,9 +442,17 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
+        """Try to send transaction with invalid_before exceeding MAX_UINT64 causing overflow.
 
-        Check for int overflow. Expect failure.
+        Expect failure.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+        Values > MAX_UINT64 overflow back to valid range.
+
+        * Set invalid_before to MAX_UINT64 + (MAX_INT64 + 5) which overflows
+        * Attempt to build or submit transaction with overflowed value
+        * Check that transaction fails or builds with clamped value
+        * Verify validity range in transaction view output
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -481,9 +503,16 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to send a transaction with `invalid_before` > `MAX_INT64`.
+        """Try to send transaction with invalid_before exceeding MAX_INT64.
 
         Expect failure.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+        Valid values must be <= MAX_INT64.
+
+        * Set invalid_before to MAX_INT64 + 5 (exceeds valid range)
+        * Attempt to build or submit transaction with too-high value
+        * Check that transaction fails with OutsideValidityIntervalUTxO error
         """
         __: tp.Any  # mypy workaround
         temp_template = common.get_test_id(cluster)
@@ -522,9 +551,16 @@ class TestNegative:
         before_value: int,
         build_method: str,
     ):
-        """Try to send a transaction with negative `invalid_before` and check for int overflow.
+        """Try to send transaction with negative invalid_before (property-based test).
 
         Expect failure.
+
+        Uses parametrized build method and hypothesis with values 1 to MAX_INT64.
+        Negative values cause integer overflow.
+
+        * Set invalid_before to negative of parametrized value
+        * Attempt to build or submit transaction with negative value
+        * Check that transaction fails or slot number is positive after overflow
         """
         temp_template = f"{common.get_test_id(cluster)}_{before_value}_{common.unique_time_str()}"
 
@@ -569,9 +605,16 @@ class TestNegative:
         before_value: int,
         build_method: str,
     ):
-        """Try to send a transaction with `invalid_before` > `MAX_UINT64`.
+        """Try to send transaction with invalid_before > MAX_UINT64 (property-based test).
 
-        Check for int overflow. Expect failure.
+        Expect failure.
+
+        Uses parametrized build method and hypothesis with values (MAX_INT64+1) to MAX_UINT64.
+        Values > MAX_UINT64 cause integer overflow.
+
+        * Set invalid_before to MAX_UINT64 + parametrized value (causes overflow)
+        * Attempt to build or submit transaction with overflowed value
+        * Check that transaction fails or verifies overflow behavior
         """
         temp_template = f"{common.get_test_id(cluster)}_{before_value}_{common.unique_time_str()}"
 
@@ -617,9 +660,17 @@ class TestNegative:
         before_value: int,
         build_method: str,
     ):
-        """Try to send a transaction with `invalid_before` > `MAX_INT64`.
+        """Try to send transaction with invalid_before > MAX_INT64 (property-based test).
 
         Expect failure.
+
+        Uses parametrized build method and hypothesis with values (MAX_INT64+1) to MAX_UINT64.
+        Valid values must be <= MAX_INT64.
+
+        * Set invalid_before to parametrized value exceeding MAX_INT64
+        * Attempt to build or submit transaction with too-high value
+        * Check that transaction fails with OutsideValidityIntervalUTxO error
+        * Verify slot number matches expected value
         """
         temp_template = f"{common.get_test_id(cluster)}_{before_value}_{common.unique_time_str()}"
 
@@ -645,9 +696,17 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to send an identical transaction twice.
+        """Try to submit an identical transaction twice.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * Build and sign transaction sending 2 ADA from source to destination address
+        * Submit transaction successfully the first time
+        * Check expected balances for both source and destination addresses
+        * Attempt to submit the exact same signed transaction again
+        * Check that re-submission fails with inputs already spent error
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -708,9 +767,16 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to submit a TX with wrong network magic.
+        """Try to submit transaction with incorrect network magic number.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * Build and sign transaction sending 2 ADA from source to destination address
+        * Add ignore rules for expected handshake errors in logs
+        * Attempt to submit transaction with network magic + 100
+        * Check that submission fails with HandshakeError
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -780,9 +846,16 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to send a transaction signed with wrong signing key.
+        """Try to send transaction signed with incorrect signing key.
 
         Expect failure.
+
+        Uses `cardano-cli transaction send` command.
+
+        * Prepare transaction from pool_users[0] to pool_users[1] with 1.5 ADA
+        * Sign transaction with pool_users[1] signing key instead of pool_users[0]
+        * Attempt to build and submit transaction with wrong signing key
+        * Check that transaction fails with MissingVKeyWitnessesUTXOW error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -811,9 +884,16 @@ class TestNegative:
         cluster_wrong_tx_era: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to send a transaction using TX era > network (cluster) era.
+        """Try to send transaction using TX era higher than network era.
 
         Expect failure.
+
+        Uses `cardano-cli transaction send` command with future era.
+
+        * Prepare transaction from pool_users[0] to pool_users[1] with 1.5 ADA
+        * Use cluster instance configured for era > current network era
+        * Attempt to submit transaction built for future era
+        * Check that transaction fails with era mismatch error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -845,9 +925,15 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to send funds from payment address to stake address.
+        """Try to send funds from payment address to stake (reward) address.
 
         Expect failure.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+
+        * Prepare transaction with stake address as destination (invalid)
+        * Attempt to build transaction with 1 ADA to stake address
+        * Check that transaction building fails with invalid address error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -870,9 +956,16 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to send funds from payment address to UTxO address.
+        """Try to send funds from payment address to UTxO hash (not an address).
 
         Expect failure.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+
+        * Get UTxO hash from payment address query
+        * Prepare transaction with UTxO hash as destination (invalid)
+        * Attempt to build transaction with 1 ADA to UTxO hash
+        * Check that transaction building fails with invalid address error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -899,9 +992,15 @@ class TestNegative:
         addr: str,
         build_method: str,
     ):
-        """Try to send funds from payment address to non-existent address (property-based test).
+        """Try to send funds to randomly generated invalid address (property-based test).
 
         Expect failure.
+
+        Uses parametrized build method and hypothesis to generate random 98-char addresses.
+
+        * Generate random address string with valid characters but invalid format
+        * Attempt to build transaction with 1 ADA to invalid address
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -927,9 +1026,15 @@ class TestNegative:
         addr: str,
         build_method: str,
     ):
-        """Try to send funds from payment address to address with invalid length.
+        """Try to send funds to address with invalid length (property-based test).
 
-        Expect failure. Property-based test.
+        Expect failure.
+
+        Uses parametrized build method and hypothesis to generate random 50-250 char addresses.
+
+        * Generate random address string with incorrect length
+        * Attempt to build transaction with 1 ADA to wrong-length address
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -957,9 +1062,15 @@ class TestNegative:
         addr: str,
         build_method: str,
     ):
-        """Try to send funds from payment address to address with invalid characters.
+        """Try to send funds to address with invalid characters (property-based test).
 
-        Expect failure. Property-based test.
+        Expect failure.
+
+        Uses parametrized build method and hypothesis to generate random 98-char strings.
+
+        * Generate random address string with invalid characters
+        * Attempt to build transaction with 1 ADA to address with bad characters
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -985,9 +1096,15 @@ class TestNegative:
         addr: str,
         build_method: str,
     ):
-        """Try to send funds from invalid address (property-based test).
+        """Try to send funds from randomly generated invalid address (property-based test).
 
         Expect failure.
+
+        Uses parametrized build method and hypothesis to generate random 98-char addresses.
+
+        * Generate random address string with valid characters but invalid format
+        * Attempt to build transaction from invalid source address to valid destination
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1016,6 +1133,12 @@ class TestNegative:
         """Try to send funds from address with invalid length (property-based test).
 
         Expect failure.
+
+        Uses parametrized build method and hypothesis to generate random 50-250 char addresses.
+
+        * Generate random address string with incorrect length
+        * Attempt to build transaction from wrong-length source address to valid destination
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1046,6 +1169,12 @@ class TestNegative:
         """Try to send funds from address with invalid characters (property-based test).
 
         Expect failure.
+
+        Uses parametrized build method and hypothesis to generate random 98-char strings.
+
+        * Generate random address string with invalid characters
+        * Attempt to build transaction from address with bad characters to valid destination
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1072,9 +1201,14 @@ class TestNegative:
     ):
         """Try to send funds using invalid change address (property-based test).
 
-        Uses `cardano-cli transaction build` command for building the transactions.
-
         Expect failure.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        Uses hypothesis to generate random 98-char addresses.
+
+        * Generate random address string with valid characters but invalid format
+        * Attempt to build transaction with invalid change address
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1099,9 +1233,14 @@ class TestNegative:
     ):
         """Try to send funds using change address with invalid characters (property-based test).
 
-        Uses `cardano-cli transaction build` command for building the transactions.
-
         Expect failure.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        Uses hypothesis to generate random 98-char strings.
+
+        * Generate random address string with invalid characters
+        * Attempt to build transaction with change address containing bad characters
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1124,9 +1263,14 @@ class TestNegative:
     ):
         """Try to send funds using change address with invalid length (property-based test).
 
-        Uses `cardano-cli transaction build` command for building the transactions.
-
         Expect failure.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        Uses hypothesis to generate random 50-250 char addresses.
+
+        * Generate random address string with incorrect length
+        * Attempt to build transaction with wrong-length change address
+        * Check that transaction building fails with invalid address error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1145,9 +1289,16 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to use nonexistent UTxO TxIx as an input.
+        """Try to use nonexistent UTxO transaction index (TxIx) as input.
 
         Expect failure.
+
+        Uses parametrized build method (build or build-raw, not build-estimate).
+
+        * Get valid UTxO from payment address
+        * Modify UTxO index to nonexistent value (5)
+        * Attempt to build or submit transaction using invalid UTxO index
+        * Check that transaction fails with empty UTxO or BadInputsUTxO error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1191,9 +1342,16 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Try to use nonexistent UTxO hash as an input.
+        """Try to use nonexistent UTxO hash as transaction input.
 
         Expect failure.
+
+        Uses parametrized build method (build or build-raw, not build-estimate).
+
+        * Get valid UTxO from payment address
+        * Modify last 4 characters of UTxO hash to create nonexistent hash
+        * Attempt to build or submit transaction using invalid UTxO hash
+        * Check that transaction fails with empty UTxO or BadInputsUTxO error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1241,9 +1399,15 @@ class TestNegative:
         utxo_hash: str,
         build_method: str,
     ):
-        """Try to use invalid UTxO hash as an input (property-based test).
+        """Try to use UTxO hash with invalid length as input (property-based test).
 
         Expect failure.
+
+        Uses parametrized build method and hypothesis to generate random 10-550 char hashes.
+
+        * Generate random UTxO hash string with incorrect length
+        * Attempt to build or submit transaction using wrong-length UTxO hash
+        * Check that transaction fails with deserialization or format error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1278,11 +1442,16 @@ class TestNegative:
         pool_users: list[clusterlib.PoolUser],
         utxo_hash: str,
     ):
-        """Try to use invalid UTxO hash as an input (property-based test).
-
-        Uses `cardano-cli transaction build` command for building the transactions.
+        """Try to use UTxO hash with invalid length as input (property-based test).
 
         Expect failure.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+        Uses hypothesis to generate random 10-550 char hashes.
+
+        * Generate random UTxO hash string with incorrect length
+        * Attempt to build transaction using wrong-length UTxO hash
+        * Check that transaction building fails with deserialization or format error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1313,9 +1482,15 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to build a transaction with a missing `--fee` parameter.
+        """Try to build transaction with missing `--fee` parameter.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * Prepare transaction inputs and outputs
+        * Attempt to build transaction using `build-raw` without --fee parameter
+        * Check that transaction building fails with missing fee error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1375,9 +1550,16 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to build a Shelley era TX with a missing `--ttl` (`--invalid-hereafter`) parameter.
+        """Try to build Shelley era transaction with missing `--ttl` parameter.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+        Only runs with Shelley TX era on node < 8.7.0.
+
+        * Prepare transaction inputs and outputs
+        * Attempt to build Shelley transaction without --invalid-hereafter parameter
+        * Check that transaction building fails with missing TTL error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1422,9 +1604,15 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to build a transaction with a missing `--tx-in` parameter.
+        """Try to build transaction with missing `--tx-in` parameter.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * Prepare transaction outputs only (no inputs)
+        * Attempt to build transaction using `build-raw` without --tx-in parameter
+        * Check that transaction building fails with missing tx-in error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1468,9 +1656,16 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to build a Shelley era TX with an `--invalid-before` argument.
+        """Try to build Shelley era transaction with unsupported `--invalid-before`.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+        Only runs with Shelley TX era (validity lower bound not supported).
+
+        * Prepare transaction from source to destination with 2 ADA
+        * Attempt to build transaction with invalid_before=10 (unsupported in Shelley)
+        * Check that transaction building fails with lower bound not supported error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1507,11 +1702,15 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to build a transaction with a missing `--tx-in` parameter.
+        """Try to build transaction with missing `--tx-in` parameter.
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Expect failure.
+        * Prepare transaction outputs only (no inputs)
+        * Attempt to build transaction using `build` without --tx-in parameter
+        * Check that transaction building fails with missing tx-in error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1553,11 +1752,15 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to build a transaction with a missing `--change-address` parameter.
+        """Try to build transaction with missing `--change-address` parameter.
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Expect failure.
+        * Prepare transaction inputs and outputs
+        * Attempt to build transaction using `build` without --change-address parameter
+        * Check that transaction building fails with missing change address error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1598,11 +1801,15 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
     ):
-        """Try to build a transaction with multiple `--change-address` parameters.
+        """Try to build transaction with multiple `--change-address` parameters.
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Expect failure.
+        * Prepare transaction inputs and outputs
+        * Attempt to build transaction with two different --change-address parameters
+        * Check that transaction building fails with invalid option error
         """
         temp_template = common.get_test_id(cluster)
 

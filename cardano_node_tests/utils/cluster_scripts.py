@@ -1,7 +1,7 @@
 """Functionality for cluster scripts (starting and stopping clusters).
 
-* copying scripts and their configuration, so it can be altered by tests
-* setup of scripts and their configuration for starting of multiple cluster instances
+* Copying scripts and their configuration, so it can be altered by tests
+* Setup of scripts and their configuration for starting of multiple cluster instances
 """
 
 import contextlib

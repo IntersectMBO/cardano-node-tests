@@ -58,10 +58,10 @@ class TestReferenceScripts:
     ):
         """Test locking two Tx output with a V2 reference script and spending it.
 
-        * create the Tx outputs with an inline datum at the script address
-        * create the Tx outputs with the reference scripts
-        * spend the locked UTxOs using the reference UTxOs
-        * check that the UTxOs were correctly spent
+        * Create the Tx outputs with an inline datum at the script address
+        * Create the Tx outputs with the reference scripts
+        * Spend the locked UTxOs using the reference UTxOs
+        * Check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -242,10 +242,10 @@ class TestReferenceScripts:
     ):
         """Test locking two Tx output with the same V2 reference script and spending it.
 
-        * create the Tx outputs with an inline datum at the script address
-        * create the Tx output with the reference script
-        * spend the locked UTxOs using the reference UTxO
-        * check that the UTxOs were correctly spent
+        * Create the Tx outputs with an inline datum at the script address
+        * Create the Tx output with the reference script
+        * Spend the locked UTxOs using the reference UTxO
+        * Check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -398,10 +398,10 @@ class TestReferenceScripts:
     ):
         """Test locking a Tx output with an attached V2 script and one using reference V2 script.
 
-        * create the Tx output with an attached script
-        * create the Tx output with the reference script
-        * spend the locked UTxOs
-        * check that the UTxOs were correctly spent
+        * Create the Tx output with an attached script
+        * Create the Tx output with the reference script
+        * Spend the locked UTxOs
+        * Check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -577,10 +577,10 @@ class TestReferenceScripts:
     ):
         """Test spending a UTxO that holds a reference script.
 
-        * create a Tx output with reference script (reference script UTxO)
-        * check that the expected amount was transferred
-        * spend the UTxO
-        * check that the UTxO was spent
+        * Create a Tx output with reference script (reference script UTxO)
+        * Check that the expected amount was transferred
+        * Spend the UTxO
+        * Check that the UTxO was spent
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -651,10 +651,10 @@ class TestReferenceScripts:
     ):
         """Test spend an UTxO and use a reference a script on the same transaction.
 
-        * create the reference script UTxO with the 'ALWAYS_FAILS' script to have confidence that
+        * Create the reference script UTxO with the 'ALWAYS_FAILS' script to have confidence that
           the script was not being executed
-        * spend a regular UTxO and reference the script at the same transaction
-        * check that the destination UTxO have the right balance
+        * Spend a regular UTxO and reference the script at the same transaction
+        * Check that the destination UTxO have the right balance
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1039,10 +1039,10 @@ class TestNegativeReferenceScripts:
     ):
         """Test locking a Tx output with an attached V1 script and one using reference V2 script.
 
-        * create the Tx output with an attached V1 script
-        * create the Tx output with the reference V2 script
-        * spend the locked UTxOs
-        * check that the UTxOs were correctly spent
+        * Create the Tx output with an attached V1 script
+        * Create the Tx output with the reference V2 script
+        * Spend the locked UTxOs
+        * Check that the UTxOs were correctly spent
         """
         temp_template = common.get_test_id(cluster)
 

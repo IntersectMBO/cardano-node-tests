@@ -64,10 +64,10 @@ class TestInfo:
     ):
         """Test voting on info action.
 
-        * submit an "info" action
-        * vote on the action
-        * check the votes
-        * check for deposit return
+        * Submit an "info" action
+        * Vote on the action
+        * Check the votes
+        * Check for deposit return
         """
         cluster, governance_data = cluster_use_governance
         temp_template = common.get_test_id(cluster)

@@ -48,7 +48,16 @@ class TestConway:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_genesis_cert_not_available(self, cluster: clusterlib.ClusterLib):
-        """Check that the `create-genesis-key-delegation-certificate` command is not available."""
+        """Verify genesis key delegation certificate command is not available in Conway era.
+
+        Test that create-genesis-key-delegation-certificate command is removed in Conway era
+        governance model.
+
+        * Attempt to execute `cardano-cli conway governance`
+          `create-genesis-key-delegation-certificate` command
+        * Verify command fails with "Invalid argument" error
+        * Confirm command is not available in Conway era CLI
+        """
         common.get_test_id(cluster)
 
         reqc.cip071.start(url=helpers.get_vcs_link())
@@ -177,7 +186,18 @@ class TestConway:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_ratify_state_fields(self, cluster: clusterlib.ClusterLib):
-        """Check that 'cardano-cli query ratify-state' output has the expected fields."""
+        """Query governance ratification state and verify expected output fields.
+
+        Test that query ratify-state command returns all expected fields for Conway governance
+        ratification tracking.
+
+        * Execute `cardano-cli query ratify-state` command
+        * Check output contains enactedGovActions field (list of enacted actions)
+        * Check output contains expiredGovActions field (list of expired actions)
+        * Check output contains nextEnactState field (upcoming enactment state)
+        * Check output contains ratificationDelayed field (ratification delay indicator)
+        * Verify no expected fields are missing from output
+        """
         ratify_state = cluster.g_query.get_ratify_state()
         expected_fields = {
             "enactedGovActions",

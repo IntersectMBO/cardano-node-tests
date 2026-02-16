@@ -55,13 +55,13 @@ class TestBuildLocking:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output without a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * spend the locked UTxO without providing a datum
-        * check that the expected amount was spent
-        * check expected fees
-        * check expected Plutus cost
-        * (optional) check transactions in db-sync
+        * Create a Tx output without a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Spend the locked UTxO without providing a datum
+        * Check that the expected amount was spent
+        * Check expected fees
+        * Check expected Plutus cost
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 

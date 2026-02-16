@@ -56,9 +56,9 @@ class TestCompatibility:
 
         Expect failure.
 
-        * try to spend the locked UTxO
-        * check that the expected error was raised
-        * (optional) check transactions in db-sync
+        * Try to spend the locked UTxO
+        * Check that the expected error was raised
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000
@@ -110,9 +110,9 @@ class TestCompatibility:
 
         Expect failure.
 
-        * try to spend the locked UTxO
-        * check that the expected error was raised
-        * (optional) check transactions in db-sync
+        * Try to spend the locked UTxO
+        * Check that the expected error was raised
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000

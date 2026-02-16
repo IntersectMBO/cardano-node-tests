@@ -116,7 +116,18 @@ class TestSocketPath:
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
-        """Test `query protocol-state`."""
+        """Query protocol state using --socket-path CLI argument.
+
+        Test that cardano-cli can query protocol state when socket path is specified via
+        --socket-path argument instead of CARDANO_NODE_SOCKET_PATH env variable.
+
+        * Unset CARDANO_NODE_SOCKET_PATH environment variable
+        * Set socket path via --socket-path CLI argument
+        * Optionally set wrong or remove socket path (env_scenario parameter)
+        * Execute `cardano-cli query protocol-state` command
+        * Check that protocol state contains lastSlot field
+        * Verify query succeeds with --socket-path argument
+        """
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -134,7 +145,18 @@ class TestSocketPath:
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
-        """Test `query stake-distribution`."""
+        """Query stake distribution using --socket-path CLI argument.
+
+        Test that cardano-cli can query stake distribution when socket path is specified via
+        --socket-path argument instead of CARDANO_NODE_SOCKET_PATH env variable.
+
+        * Unset CARDANO_NODE_SOCKET_PATH environment variable
+        * Set socket path via --socket-path CLI argument
+        * Optionally set wrong or remove socket path (env_scenario parameter)
+        * Execute `cardano-cli query stake-distribution` command
+        * Check that distribution contains pool IDs starting with "pool"
+        * Verify query succeeds with --socket-path argument
+        """
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -152,7 +174,18 @@ class TestSocketPath:
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
-        """Test `query protocol-parameters`."""
+        """Query protocol parameters using --socket-path CLI argument.
+
+        Test that cardano-cli can query protocol parameters when socket path is specified via
+        --socket-path argument instead of CARDANO_NODE_SOCKET_PATH env variable.
+
+        * Unset CARDANO_NODE_SOCKET_PATH environment variable
+        * Set socket path via --socket-path CLI argument
+        * Optionally set wrong or remove socket path (env_scenario parameter)
+        * Execute `cardano-cli query protocol-parameters` command
+        * Check that parameters contain protocolVersion field
+        * Verify query succeeds with --socket-path argument
+        """
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -170,7 +203,17 @@ class TestSocketPath:
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
-        """Test `query pool-state`."""
+        """Query pool state using --socket-path CLI argument.
+
+        Test that cardano-cli can query pool state when socket path is specified via
+        --socket-path argument instead of CARDANO_NODE_SOCKET_PATH env variable.
+
+        * Unset CARDANO_NODE_SOCKET_PATH environment variable
+        * Set socket path via --socket-path CLI argument
+        * Optionally set wrong or remove socket path (env_scenario parameter)
+        * Execute `cardano-cli query pool-state` command for specific pool ID
+        * Verify query succeeds with --socket-path argument
+        """
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -187,7 +230,17 @@ class TestSocketPath:
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
-        """Test `query stake-address-info`."""
+        """Query stake address info using --socket-path CLI argument.
+
+        Test that cardano-cli can query stake address info when socket path is specified via
+        --socket-path argument instead of CARDANO_NODE_SOCKET_PATH env variable.
+
+        * Unset CARDANO_NODE_SOCKET_PATH environment variable
+        * Set socket path via --socket-path CLI argument
+        * Optionally set wrong or remove socket path (env_scenario parameter)
+        * Execute `cardano-cli query stake-address-info` command for specific stake address
+        * Verify query succeeds with --socket-path argument
+        """
         common.get_test_id(cluster)
 
         _setup_scenarios(cluster_obj=cluster, env_scenario=env_scenario, socket_scenario="")
@@ -210,8 +263,8 @@ class TestSocketPath:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * send funds from 1 source address to 1 destination address
-        * check expected balances for both source and destination addresses
+        * Send funds from 1 source address to 1 destination address
+        * Check expected balances for both source and destination addresses
         """
         temp_template = common.get_test_id(cluster)
 
@@ -271,7 +324,17 @@ class TestNegativeSocketPath:
         env_scenario: str,
         socket_scenario: str,
     ):
-        """Test `query protocol-state`.
+        """Query protocol state with incorrect socket path configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_SOCKET_PATH env variable and/or
+        --socket-path argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_SOCKET_PATH to wrong path or remove it (env_scenario parameter)
+        * Set --socket-path to wrong path or remove it (socket_scenario parameter)
+        * Execute `cardano-cli query protocol-state` command
+        * Check that command fails with expected error message
+        * Verify error is "Network.Socket.connect" when socket path is wrong
+        * Verify error is "Missing: --socket-path SOCKET_PATH" when both missing
 
         Expect failure.
         """
@@ -297,7 +360,17 @@ class TestNegativeSocketPath:
         env_scenario: str,
         socket_scenario: str,
     ):
-        """Test `query stake-distribution`.
+        """Query stake distribution with incorrect socket path configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_SOCKET_PATH env variable and/or
+        --socket-path argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_SOCKET_PATH to wrong path or remove it (env_scenario parameter)
+        * Set --socket-path to wrong path or remove it (socket_scenario parameter)
+        * Execute `cardano-cli query stake-distribution` command
+        * Check that command fails with expected error message
+        * Verify error is "Network.Socket.connect" when socket path is wrong
+        * Verify error is "Missing: --socket-path SOCKET_PATH" when both missing
 
         Expect failure.
         """
@@ -323,7 +396,17 @@ class TestNegativeSocketPath:
         env_scenario: str,
         socket_scenario: str,
     ):
-        """Test `query protocol-parameters`.
+        """Query protocol parameters with incorrect socket path configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_SOCKET_PATH env variable and/or
+        --socket-path argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_SOCKET_PATH to wrong path or remove it (env_scenario parameter)
+        * Set --socket-path to wrong path or remove it (socket_scenario parameter)
+        * Execute `cardano-cli query protocol-parameters` command
+        * Check that command fails with expected error message
+        * Verify error is "Network.Socket.connect" when socket path is wrong
+        * Verify error is "Missing: --socket-path SOCKET_PATH" when both missing
 
         Expect failure.
         """
@@ -349,7 +432,17 @@ class TestNegativeSocketPath:
         env_scenario: str,
         socket_scenario: str,
     ):
-        """Test `query pool-state`.
+        """Query pool state with incorrect socket path configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_SOCKET_PATH env variable and/or
+        --socket-path argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_SOCKET_PATH to wrong path or remove it (env_scenario parameter)
+        * Set --socket-path to wrong path or remove it (socket_scenario parameter)
+        * Execute `cardano-cli query pool-state` command for specific pool ID
+        * Check that command fails with expected error message
+        * Verify error is "Network.Socket.connect" when socket path is wrong
+        * Verify error is "Missing: --socket-path SOCKET_PATH" when both missing
 
         Expect failure.
         """
@@ -375,7 +468,17 @@ class TestNegativeSocketPath:
         env_scenario: str,
         socket_scenario: str,
     ):
-        """Test `query stake-address-info`.
+        """Query stake address info with incorrect socket path configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_SOCKET_PATH env variable and/or
+        --socket-path argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_SOCKET_PATH to wrong path or remove it (env_scenario parameter)
+        * Set --socket-path to wrong path or remove it (socket_scenario parameter)
+        * Execute `cardano-cli query stake-address-info` command for specific stake address
+        * Check that command fails with expected error message
+        * Verify error is "Network.Socket.connect" when socket path is wrong
+        * Verify error is "Missing: --socket-path SOCKET_PATH" when both missing
 
         Expect failure.
         """
@@ -403,9 +506,20 @@ class TestNegativeSocketPath:
         env_scenario: str,
         socket_scenario: str,
     ):
-        """Send funds to payment address.
+        """Build transfer transaction with incorrect socket path configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_SOCKET_PATH env variable and/or
+        --socket-path argument are missing or contain wrong values.
 
         Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Create 2 payment addresses and fund first address
+        * Set CARDANO_NODE_SOCKET_PATH to wrong path or remove it (env_scenario parameter)
+        * Set --socket-path to wrong path or remove it (socket_scenario parameter)
+        * Attempt to build transaction sending 1.5 ADA from source to destination address
+        * Check that transaction build fails with expected error message
+        * Verify error is "Network.Socket.connect" when socket path is wrong
+        * Verify error is "Missing: --socket-path SOCKET_PATH" when both missing
 
         Expect failure.
         """

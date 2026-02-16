@@ -122,7 +122,17 @@ class TestNetworkIdEnv:
         set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `query protocol-state`."""
+        """Query protocol state using CARDANO_NODE_NETWORK_ID environment variable.
+
+        Test that cardano-cli can query protocol state when network is specified via
+        CARDANO_NODE_NETWORK_ID env variable instead of --testnet-magic argument.
+
+        * Set CARDANO_NODE_NETWORK_ID environment variable to network magic
+        * Remove --testnet-magic argument from cardano-cli commands
+        * Execute `cardano-cli query protocol-state` command
+        * Check that protocol state contains lastSlot field
+        * Verify query succeeds without --testnet-magic argument
+        """
         common.get_test_id(cluster)
         state = cluster.g_query.get_protocol_state()
         assert "lastSlot" in state
@@ -136,7 +146,17 @@ class TestNetworkIdEnv:
         set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `query stake-distribution`."""
+        """Query stake distribution using CARDANO_NODE_NETWORK_ID environment variable.
+
+        Test that cardano-cli can query stake distribution when network is specified via
+        CARDANO_NODE_NETWORK_ID env variable instead of --testnet-magic argument.
+
+        * Set CARDANO_NODE_NETWORK_ID environment variable to network magic
+        * Remove --testnet-magic argument from cardano-cli commands
+        * Execute `cardano-cli query stake-distribution` command
+        * Check that distribution contains pool IDs starting with "pool"
+        * Verify query succeeds without --testnet-magic argument
+        """
         common.get_test_id(cluster)
         distrib = cluster.g_query.get_stake_distribution()
         assert next(iter(distrib)).startswith("pool")
@@ -150,7 +170,17 @@ class TestNetworkIdEnv:
         set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `query protocol-parameters`."""
+        """Query protocol parameters using CARDANO_NODE_NETWORK_ID environment variable.
+
+        Test that cardano-cli can query protocol parameters when network is specified via
+        CARDANO_NODE_NETWORK_ID env variable instead of --testnet-magic argument.
+
+        * Set CARDANO_NODE_NETWORK_ID environment variable to network magic
+        * Remove --testnet-magic argument from cardano-cli commands
+        * Execute `cardano-cli query protocol-parameters` command
+        * Check that parameters contain protocolVersion field
+        * Verify query succeeds without --testnet-magic argument
+        """
         common.get_test_id(cluster)
         protocol_params = cluster.g_query.get_protocol_params()
         assert "protocolVersion" in protocol_params
@@ -164,7 +194,16 @@ class TestNetworkIdEnv:
         set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `query pool-state`."""
+        """Query pool state using CARDANO_NODE_NETWORK_ID environment variable.
+
+        Test that cardano-cli can query pool state when network is specified via
+        CARDANO_NODE_NETWORK_ID env variable instead of --testnet-magic argument.
+
+        * Set CARDANO_NODE_NETWORK_ID environment variable to network magic
+        * Remove --testnet-magic argument from cardano-cli commands
+        * Execute `cardano-cli query pool-state` command for specific pool ID
+        * Verify query succeeds without --testnet-magic argument
+        """
         common.get_test_id(cluster)
         cluster.g_query.get_pool_state(stake_pool_id=POOL_ID)
 
@@ -177,7 +216,16 @@ class TestNetworkIdEnv:
         set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `query stake-address-info`."""
+        """Query stake address info using CARDANO_NODE_NETWORK_ID environment variable.
+
+        Test that cardano-cli can query stake address info when network is specified via
+        CARDANO_NODE_NETWORK_ID env variable instead of --testnet-magic argument.
+
+        * Set CARDANO_NODE_NETWORK_ID environment variable to network magic
+        * Remove --testnet-magic argument from cardano-cli commands
+        * Execute `cardano-cli query stake-address-info` command for specific stake address
+        * Verify query succeeds without --testnet-magic argument
+        """
         common.get_test_id(cluster)
         cluster.g_query.get_stake_addr_info(stake_addr=STAKE_ADDR)
 
@@ -196,8 +244,8 @@ class TestNetworkIdEnv:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * send funds from 1 source address to 1 destination address
-        * check expected balances for both source and destination addresses
+        * Send funds from 1 source address to 1 destination address
+        * Check expected balances for both source and destination addresses
         """
         temp_template = common.get_test_id(cluster)
 
@@ -259,7 +307,17 @@ class TestNegativeNetworkIdEnv:
         env_scenario: str,
         arg_scenario: str,
     ):
-        """Test `query protocol-state`.
+        """Query protocol state with incorrect network configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_NETWORK_ID env variable and/or
+        --testnet-magic argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_NETWORK_ID to wrong value or remove it (env_scenario parameter)
+        * Set --testnet-magic to wrong value or remove it (arg_scenario parameter)
+        * Execute `cardano-cli query protocol-state` command
+        * Check that command fails with expected error message
+        * Verify error is HandshakeError when network magic mismatch
+        * Verify error is "Missing: (--mainnet | --testnet-magic NATURAL)" when both missing
 
         Expect failure.
         """
@@ -289,7 +347,17 @@ class TestNegativeNetworkIdEnv:
         env_scenario: str,
         arg_scenario: str,
     ):
-        """Test `query stake-distribution`.
+        """Query stake distribution with incorrect network configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_NETWORK_ID env variable and/or
+        --testnet-magic argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_NETWORK_ID to wrong value or remove it (env_scenario parameter)
+        * Set --testnet-magic to wrong value or remove it (arg_scenario parameter)
+        * Execute `cardano-cli query stake-distribution` command
+        * Check that command fails with expected error message
+        * Verify error is HandshakeError when network magic mismatch
+        * Verify error is "Missing: (--mainnet | --testnet-magic NATURAL)" when both missing
 
         Expect failure.
         """
@@ -318,7 +386,17 @@ class TestNegativeNetworkIdEnv:
         env_scenario: str,
         arg_scenario: str,
     ):
-        """Test `query protocol-parameters`.
+        """Query protocol parameters with incorrect network configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_NETWORK_ID env variable and/or
+        --testnet-magic argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_NETWORK_ID to wrong value or remove it (env_scenario parameter)
+        * Set --testnet-magic to wrong value or remove it (arg_scenario parameter)
+        * Execute `cardano-cli query protocol-parameters` command
+        * Check that command fails with expected error message
+        * Verify error is HandshakeError when network magic mismatch
+        * Verify error is "Missing: (--mainnet | --testnet-magic NATURAL)" when both missing
 
         Expect failure.
         """
@@ -347,7 +425,17 @@ class TestNegativeNetworkIdEnv:
         env_scenario: str,
         arg_scenario: str,
     ):
-        """Test `query pool-state`.
+        """Query pool state with incorrect network configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_NETWORK_ID env variable and/or
+        --testnet-magic argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_NETWORK_ID to wrong value or remove it (env_scenario parameter)
+        * Set --testnet-magic to wrong value or remove it (arg_scenario parameter)
+        * Execute `cardano-cli query pool-state` command for specific pool ID
+        * Check that command fails with expected error message
+        * Verify error is HandshakeError when network magic mismatch
+        * Verify error is "Missing: (--mainnet | --testnet-magic NATURAL)" when both missing
 
         Expect failure.
         """
@@ -376,7 +464,17 @@ class TestNegativeNetworkIdEnv:
         env_scenario: str,
         arg_scenario: str,
     ):
-        """Test `query stake-address-info`.
+        """Query stake address info with incorrect network configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_NETWORK_ID env variable and/or
+        --testnet-magic argument are missing or contain wrong values.
+
+        * Set CARDANO_NODE_NETWORK_ID to wrong value or remove it (env_scenario parameter)
+        * Set --testnet-magic to wrong value or remove it (arg_scenario parameter)
+        * Execute `cardano-cli query stake-address-info` command for specific stake address
+        * Check that command fails with expected error message
+        * Verify error is HandshakeError when network magic mismatch
+        * Verify error is "Missing: (--mainnet | --testnet-magic NATURAL)" when both missing
 
         Expect failure.
         """
@@ -407,9 +505,20 @@ class TestNegativeNetworkIdEnv:
         env_scenario: str,
         arg_scenario: str,
     ):
-        """Send funds to payment address.
+        """Build transfer transaction with incorrect network configuration.
+
+        Test parametrized scenarios where CARDANO_NODE_NETWORK_ID env variable and/or
+        --testnet-magic argument are missing or contain wrong values.
 
         Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Create 2 payment addresses and fund first address
+        * Set CARDANO_NODE_NETWORK_ID to wrong value or remove it (env_scenario parameter)
+        * Set --testnet-magic to wrong value or remove it (arg_scenario parameter)
+        * Attempt to build transaction sending 1.5 ADA from source to destination address
+        * Check that transaction build fails with expected error message
+        * Verify error is HandshakeError when network magic mismatch
+        * Verify error is "Missing: (--mainnet | --testnet-magic NATURAL)" when both missing
 
         Expect failure.
         """

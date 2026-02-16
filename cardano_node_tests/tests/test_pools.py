@@ -1,10 +1,10 @@
 """Tests for operations with stake pools.
 
-* pool registration
-* pool deregistration
-* pool update
-* pool metadata
-* pool reregistration
+* Pool registration
+* Pool deregistration
+* Pool update
+* Pool metadata
+* Pool reregistration
 """
 
 import dataclasses
@@ -712,7 +712,19 @@ class TestStakePool:
     ):
         """Create and register a stake pool with metadata.
 
-        Check that pool was registered and stake address delegated.
+        Uses parametrized build method (build or build-raw).
+
+        * Create pool metadata JSON file with name, description, ticker, homepage
+        * Generate pool metadata hash from metadata file
+        * Create 3 pool owner addresses
+        * Fund first pool owner address with 900 ADA
+        * Generate pool cold keys and VRF keys
+        * Create pool registration certificate with metadata URL and hash
+        * Submit registration certificate and delegate owner stake address to pool
+        * Check that pool was registered with correct parameters
+        * Check that stake address was delegated to pool
+        * Check `transaction view` command
+        * (optional) Check pool off-chain metadata in db-sync
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -779,7 +791,19 @@ class TestStakePool:
     ):
         """Create and register a stake pool with metadata file not available.
 
-        Check that pool was registered and stake address delegated.
+        Test that pool registration succeeds even when metadata URL points to nonexistent location.
+
+        * Create pool metadata JSON file with pool details
+        * Generate pool metadata hash from local file
+        * Specify invalid metadata URL (file not actually hosted there)
+        * Create pool owner address
+        * Fund pool owner address with 900 ADA
+        * Generate pool registration certificate with invalid metadata URL
+        * Submit registration certificate and delegate owner stake address
+        * Check that pool was registered despite invalid metadata URL
+        * Check that stake address was delegated
+        * (optional) Check db-sync records pool off-chain fetch error for invalid URL
+        * (optional) Check SMASH service records pool error for invalid metadata
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -862,7 +886,15 @@ class TestStakePool:
     ):
         """Create and register a stake pool (without metadata).
 
-        Check that pool was registered.
+        Uses parametrized build method (build or build-raw) and number of pool owners (1 or 3).
+
+        * Create parametrized number of pool owner addresses
+        * Fund first pool owner address with 900 ADA
+        * Generate pool cold keys and VRF keys
+        * Create pool registration certificate without metadata
+        * Submit registration certificate with pool deposit
+        * Check that pool was registered on chain with correct parameters
+        * Check that pool deposit was deducted from payment address
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -908,9 +940,19 @@ class TestStakePool:
     ):
         """Deregister stake pool.
 
-        * deregister stake pool
-        * check that the stake addresses are no longer delegated
-        * check that the pool deposit was returned to reward account
+        Uses parametrized build method (build or build-raw).
+
+        * Create pool with metadata and 3 pool owners
+        * Register and delegate stake addresses to the pool
+        * Wait for pool to be registered and receive first rewards
+        * Generate pool deregistration certificate for future epoch
+        * Submit deregistration certificate
+        * Wait for retirement epoch
+        * Check that the pool was deregistered and no longer appears in stake distribution
+        * Check that owner stake addresses are no longer delegated to the pool
+        * Check that the pool deposit was returned to reward account
+        * (optional) Check pool deregistration in db-sync
+        * (optional) Check SMASH service delisted the pool
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -1044,14 +1086,23 @@ class TestStakePool:
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
     ):
-        """Reregister stake pool.
+        """Reregister stake pool after deregistration.
 
-        * deregister stake pool
-        * check that the stake addresses are no longer delegated
-        * reregister the pool by resubmitting the pool registration certificate
-        * delegate stake address to pool again (the address is already registered)
-        * check that pool was correctly setup
-        * check that the stake addresses were delegated
+        Test that a deregistered pool can be re-registered by resubmitting the pool registration
+        certificate. The stake address that was already registered does not need to pay deposit
+        again.
+
+        * Create and register pool with metadata
+        * Delegate owner stake address to pool
+        * Wait for retirement epoch and check pool is deregistered
+        * Check that owner stake address is no longer delegated
+        * Check that pool deposit was returned to reward account
+        * Reregister the pool by resubmitting the original pool registration certificate
+        * Delegate stake address to pool again (address is already registered, no new deposit)
+        * Wait for pool to become active again
+        * Check that pool was correctly registered on chain
+        * Check that stake address was delegated to the pool
+        * (optional) Check pool re-registration in db-sync
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -1207,12 +1258,12 @@ class TestStakePool:
     ):
         """Reregister a stake pool that is in course of being retired.
 
-        * deregister stake pool in epoch + 2
-        * reregister the pool by resubmitting the pool registration certificate
-        * delegate stake address to pool again (the address is already registered)
-        * check that no additional pool deposit was used
-        * check that pool is still correctly setup
-        * check that the stake addresses is still delegated
+        * Deregister stake pool in epoch + 2
+        * Reregister the pool by resubmitting the pool registration certificate
+        * Delegate stake address to pool again (the address is already registered)
+        * Check that no additional pool deposit was used
+        * Check that pool is still correctly setup
+        * Check that the stake addresses is still delegated
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -1359,9 +1410,9 @@ class TestStakePool:
     ):
         """Update stake pool metadata.
 
-        * register pool
-        * update the pool metadata by resubmitting the pool registration certificate
-        * check that the pool metadata hash was correctly updated on chain
+        * Register pool
+        * Update the pool metadata by resubmitting the pool registration certificate
+        * Check that the pool metadata hash was correctly updated on chain
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -1500,9 +1551,9 @@ class TestStakePool:
     ):
         """Update stake pool parameters.
 
-        * register pool
-        * update the pool parameters by resubmitting the pool registration certificate
-        * check that the pool parameters were correctly updated on chain
+        * Register pool
+        * Update the pool parameters by resubmitting the pool registration certificate
+        * Check that the pool parameters were correctly updated on chain
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -1627,11 +1678,11 @@ class TestStakePool:
     ):
         """Create and register a stake pool with TX signed in multiple stages.
 
-        * create stake pool registration cert
-        * create witness file for each signing key
-        * sign TX using witness files
-        * create and register pool
-        * check that the pool was correctly registered on chain
+        * Create stake pool registration cert
+        * Create witness file for each signing key
+        * Sign TX using witness files
+        * Create and register pool
+        * Check that the pool was correctly registered on chain
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -1759,10 +1810,10 @@ class TestStakePool:
     ):
         """Send both pool registration and deregistration certificates in single TX.
 
-        * create pool registration cert
-        * create pool deregistration cert
-        * register and deregister stake pool in single TX
-        * check that the pool deposit was NOT returned to reward account as the reward address
+        * Create pool registration cert
+        * Create pool deregistration cert
+        * Register and deregister stake pool in single TX
+        * Check that the pool deposit was NOT returned to reward account as the reward address
           is not registered (deposit is lost)
         """
         rand_str = clusterlib.get_rand_str(4)

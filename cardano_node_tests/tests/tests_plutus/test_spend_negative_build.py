@@ -65,10 +65,10 @@ class TestNegative:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output with a datum hash at the script address
-        * try to spend the locked UTxO while using wrong Plutus script
-        * check that the expected error was raised
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Try to spend the locked UTxO while using wrong Plutus script
+        * Check that the expected error was raised
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -122,10 +122,10 @@ class TestNegative:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output with a datum hash at the script address
-        * try to spend the locked UTxO using while passing no Plutus script
-        * check that the expected error was raised
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Try to spend the locked UTxO using while passing no Plutus script
+        * Check that the expected error was raised
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -177,10 +177,10 @@ class TestNegative:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a collateral UTxO with native tokens
-        * try to spend the locked UTxO
-        * check that the expected error was raised
-        * (optional) check transactions in db-sync
+        * Create a collateral UTxO with native tokens
+        * Try to spend the locked UTxO
+        * Check that the expected error was raised
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         token_rand = clusterlib.get_rand_str(5)
@@ -255,11 +255,11 @@ class TestNegative:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * try to spend the locked UTxO while using the same UTxO as collateral
-        * check that the expected error was raised
-        * (optional) check transactions in db-sync
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Try to spend the locked UTxO while using the same UTxO as collateral
+        * Check that the expected error was raised
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -332,10 +332,10 @@ class TestNegative:
         Test negative scenarios where datum or redeemer value is different than expected.
         Expect failure.
 
-        * create a Tx output with a datum hash at the script address
-        * check that the expected amount was locked at the script address
-        * try to spend the locked UTxO
-        * check that the amount was not transferred and collateral UTxO was not spent
+        * Create a Tx output with a datum hash at the script address
+        * Check that the expected amount was locked at the script address
+        * Try to spend the locked UTxO
+        * Check that the amount was not transferred and collateral UTxO was not spent
         """
         temp_template = common.get_test_id(cluster)
 
@@ -400,9 +400,9 @@ class TestNegative:
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * create a Tx output with a datum hash at the script addresses
-        * try to spend the locked UTxOs
-        * check that the expected error was raised
+        * Create a Tx output with a datum hash at the script addresses
+        * Try to spend the locked UTxOs
+        * Check that the expected error was raised
         """
         temp_template = common.get_test_id(cluster)
         script_fund = 1_000_000
@@ -682,9 +682,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: int,
     ):
-        """Try to spend a locked UTxO with a wrong redeemer value that is in the valid range.
+        """Test spending locked UTxO with incorrect redeemer value within valid integer range.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate random integer redeemer values
+        (excluding 42) within the valid range. The guessing game script expects redeemer value 42.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random integer redeemer value (not 42) within valid range
+        * Create redeemer file with wrong value
+        * Attempt to spend locked UTxO with incorrect redeemer
+        * Check that transaction building fails with script evaluation error
         """
         hypothesis.assume(redeemer_value != 42)
 
@@ -747,9 +758,19 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: int,
     ):
-        """Try to spend a locked UTxO with a wrong redeemer value, above max value allowed.
+        """Test spending locked UTxO with redeemer value exceeding maximum allowed integer.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate integer values above MAX_UINT64
+        (maximum allowed value for Plutus integer types).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random integer redeemer value greater than MAX_UINT64
+        * Attempt to spend locked UTxO with out-of-range redeemer
+        * Check that transaction building fails with "Value out of range" or "Incorrect datum" error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -784,9 +805,19 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: int,
     ):
-        """Try to spend a locked UTxO with a wrong redeemer value, bellow min value allowed.
+        """Test spending locked UTxO with redeemer value below minimum allowed integer.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate integer values below MIN_INT_VAL
+        (minimum allowed value for Plutus integer types).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random integer redeemer value less than MIN_INT_VAL
+        * Attempt to spend locked UTxO with out-of-range redeemer
+        * Check that transaction building fails with "Value out of range" or "Incorrect datum" error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -820,9 +851,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: bytes,
     ):
-        """Try to spend a locked UTxO with a wrong redeemer type, try to use bytes.
+        """Test spending locked UTxO with redeemer of incorrect type (bytes instead of int).
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate random byte strings. The guessing game
+        script expects an integer redeemer value.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random byte string value (max 64 bytes)
+        * Create redeemer file with bytes type instead of expected int
+        * Attempt to spend locked UTxO with wrong type redeemer
+        * Check that transaction building fails with "Incorrect datum. Expected 42." error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -873,9 +915,21 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: bytes,
     ):
-        """Try to spend a locked UTxO using redeemer that is too big.
+        """Test spending locked UTxO with redeemer exceeding maximum byte size limit.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate byte strings larger than 64 bytes
+        (maximum allowed size for datum/redeemer byte strings).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random byte string value (minimum 65 bytes, exceeding limit)
+        * Create redeemer file with oversized bytes value
+        * Attempt to spend locked UTxO with too large redeemer
+        * Check that transaction building fails with "must consist of at most 64 bytes" or
+          "Incorrect datum" error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -929,10 +983,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: bytes,
     ):
-        """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
+        """Test building transaction with type mismatch in typed redeemer JSON schema.
 
-        Redeemer is in typed format and the value doesn't comply to JSON schema.
         Expect failure.
+
+        Property-based test using Hypothesis to generate byte strings and declare them as "int"
+        in typed JSON schema format (constructor with fields). Tests JSON schema validation.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random byte string value (max 64 bytes)
+        * Create typed redeemer with {"int": <bytes_hex>} declaring bytes value as int type
+        * Attempt to build transaction with schema-violating redeemer
+        * Check that transaction building fails with schema type mismatch error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -986,10 +1050,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: bytes,
     ):
-        """Try to build a Tx using byte string for redeemer when JSON schema specifies int.
+        """Test building transaction with type mismatch in untyped redeemer JSON schema.
 
-        Redeemer is in untyped format and the value doesn't comply to JSON schema.
         Expect failure.
+
+        Property-based test using Hypothesis to generate byte strings and declare them as "int"
+        in untyped JSON schema format (simple key-value). Tests JSON schema validation.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random byte string value (max 64 bytes)
+        * Create untyped redeemer with {"int": <bytes_hex>} declaring bytes value as int type
+        * Attempt to build transaction with schema-violating redeemer
+        * Check that transaction building fails with schema type mismatch error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1043,10 +1117,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: int,
     ):
-        """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
+        """Test building transaction with type mismatch declaring int as bytes in typed schema.
 
-        Redeemer is in typed format and the value doesn't comply to JSON schema.
         Expect failure.
+
+        Property-based test using Hypothesis to generate integer values and declare them as "bytes"
+        in typed JSON schema format (constructor with fields). Tests JSON schema validation.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random integer value
+        * Create typed redeemer with {"bytes": <int>} declaring int value as bytes type
+        * Attempt to build transaction with schema-violating redeemer
+        * Check that transaction building fails with schema type mismatch error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1100,10 +1184,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: int,
     ):
-        """Try to build a Tx using int value for redeemer when JSON schema specifies byte string.
+        """Test building transaction with type mismatch declaring int as bytes in untyped schema.
 
-        Redeemer is in untyped format and the value doesn't comply to JSON schema.
         Expect failure.
+
+        Property-based test using Hypothesis to generate integer values and declare them as "bytes"
+        in untyped JSON schema format (simple key-value). Tests JSON schema validation.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random integer value
+        * Create untyped redeemer with {"bytes": <int>} declaring int value as bytes type
+        * Attempt to build transaction with schema-violating redeemer
+        * Check that transaction building fails with schema type mismatch error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1157,9 +1251,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_value: str,
     ):
-        """Try to build a Tx using a redeemer value that is invalid JSON.
+        """Test building transaction with malformed JSON in redeemer file.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate random strings and create malformed
+        JSON structures. Tests JSON parsing validation.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random string value
+        * Create redeemer file with invalid JSON structure (double-encoded string)
+        * Attempt to build transaction with malformed redeemer JSON
+        * Check that transaction building fails with "JSON object expected" error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -1215,9 +1320,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_type: str,
     ):
-        """Try to build a Tx using a JSON typed schema that specifies an invalid type.
+        """Test building transaction with invalid field type name in typed JSON schema.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate invalid type names (not "int", "bytes",
+        "list", "map", or "string"). Tests JSON schema type validation for typed format.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random type name (excluding valid types)
+        * Create typed redeemer with invalid field type in constructor format
+        * Attempt to build transaction with invalid schema type
+        * Check that transaction building fails with "Expected a single field named" error
         """
         hypothesis.assume(redeemer_type != "int")
 
@@ -1285,9 +1401,20 @@ class TestNegativeRedeemer:
         plutus_version: str,
         redeemer_type: str,
     ):
-        """Try to build a Tx using a JSON untyped schema that specifies an invalid type.
+        """Test building transaction with invalid field type name in untyped JSON schema.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate invalid type names (not "int", "bytes",
+        "list", "map", or "string"). Tests JSON schema type validation for untyped format.
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * Use pre-funded script UTxO with datum 42 at guessing game script address
+        * Generate random type name (excluding valid types)
+        * Create untyped redeemer with invalid field type as key
+        * Attempt to build transaction with invalid schema type
+        * Check that transaction building fails with "Expected a single field named" error
         """
         hypothesis.assume(redeemer_type != "int")
 

@@ -68,12 +68,12 @@ class TestRegisterAddr:
     ):
         """Deregister a registered stake address.
 
-        * create stake address registration cert
-        * register and stake address
-        * create stake address deregistration cert
-        * deregister stake address
-        * check that the balance for source address was correctly updated
-        * (optional) check records in db-sync
+        * Create stake address registration cert
+        * Register and stake address
+        * Create stake address deregistration cert
+        * Deregister stake address
+        * Check that the balance for source address was correctly updated
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -171,12 +171,12 @@ class TestRegisterAddr:
     ):
         """Submit registration and deregistration certificates in single TX.
 
-        * create stake address registration cert
-        * create stake address deregistration cert
-        * register and deregister stake address in single TX
-        * check that the balance for source address was correctly updated and that key deposit
+        * Create stake address registration cert
+        * Create stake address deregistration cert
+        * Register and deregister stake address in single TX
+        * Check that the balance for source address was correctly updated and that key deposit
           was not needed
-        * (optional) check records in db-sync
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -253,13 +253,13 @@ class TestRegisterAddr:
     ):
         """Submit (de)registration certificates in single TX and check that the order matter.
 
-        * create stake address registration cert
-        * create stake address deregistration cert
-        * register, deregister, register, deregister and register stake address in single TX
-        * check that the address is registered
-        * check that the balance for source address was correctly updated and that key deposit
+        * Create stake address registration cert
+        * Create stake address deregistration cert
+        * Register, deregister, register, deregister and register stake address in single TX
+        * Check that the address is registered
+        * Check that the balance for source address was correctly updated and that key deposit
           was needed
-        * (optional) check records in db-sync
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -361,7 +361,7 @@ class TestRegisterAddr:
         * Create a Tx for the deregistration certificate
         * Incrementally sign the Tx and submit the deregistration certificate
         * Check that the address is no longer registered
-        * (optional) check records in db-sync
+        * (optional) Check records in db-sync
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = pool_users[0].payment
@@ -527,6 +527,10 @@ class TestNegative:
         """Try to generate stake address registration certificate using wrong stake vkey.
 
         Expect failure.
+
+        * Attempt to generate stake address registration certificate using payment vkey instead of
+          stake vkey
+        * Check that certificate generation fails with expected error about wrong key type
         """
         temp_template = common.get_test_id(cluster)
 
@@ -553,6 +557,10 @@ class TestNegative:
         """Try to register stake address using wrong payment skey.
 
         Expect failure.
+
+        * Create stake address registration certificate
+        * Attempt to submit registration transaction signed with wrong payment skey
+        * Check that transaction submission fails with MissingVKeyWitnessesUTXOW error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -591,7 +599,17 @@ class TestNegative:
         pool_users_disposable: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Deregister not registered stake address."""
+        """Deregister not registered stake address.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+
+        Expect failure.
+
+        * Create stake address but do not register it
+        * Generate stake address deregistration certificate for unregistered address
+        * Attempt to build/submit transaction to deregister unregistered stake address
+        * Check that transaction fails with StakeKeyNotRegisteredDELEG error
+        """
         temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]

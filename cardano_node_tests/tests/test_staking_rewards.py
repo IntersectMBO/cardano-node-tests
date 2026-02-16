@@ -262,9 +262,9 @@ class TestRewards:
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
-        * delegate to pool
-        * wait for rewards for pool owner and pool users for up to 4 epochs
-        * withdraw rewards to payment address
+        * Delegate to pool
+        * Wait for rewards for pool owner and pool users for up to 4 epochs
+        * Withdraw rewards to payment address
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
@@ -316,17 +316,17 @@ class TestRewards:
     ):
         """Check that the stake address and pool owner are receiving rewards.
 
-        * create two payment addresses that share single stake address
-        * register and delegate the stake address to pool
-        * create UTxOs with native tokens
-        * collect data for pool owner and pool users for 9 epochs
+        * Create two payment addresses that share single stake address
+        * Register and delegate the stake address to pool
+        * Create UTxOs with native tokens
+        * Collect data for pool owner and pool users for 9 epochs
 
-           - each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
-           - each epoch check received reward with reward in ledger state
+           - Each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
+           - Each epoch check received reward with reward in ledger state
 
-        * withdraw rewards to payment address
-        * burn native tokens
-        * (optional) check records in db-sync
+        * Withdraw rewards to payment address
+        * Burn native tokens
+        * (optional) Check records in db-sync
         """
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_use_pool_and_rewards
@@ -629,22 +629,22 @@ class TestRewards:
 
         The pool has a reward address that is different from pool owner's stake address.
 
-        * delegate reward address to the pool
-        * collect reward address data for 8 epochs and
+        * Delegate reward address to the pool
+        * Collect reward address data for 8 epochs and
 
-           - each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
-           - each epoch check received reward with reward in ledger state
-           - check that reward address receives rewards for its staked amount +
+           - Each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
+           - Each epoch check received reward with reward in ledger state
+           - Check that reward address receives rewards for its staked amount +
              the pool owner's pledge (and pool cost)
-           - send TXs with MIR certs that transfer funds from reserves and treasury
+           - Send TXs with MIR certs that transfer funds from reserves and treasury
              to pool reward address and check the reward was received as expected
 
-        * check records in db-sync
+        * Check records in db-sync
 
-           - transaction inputs, outputs, withdrawals, etc.
-           - reward amounts received each epoch
-           - expected pool id
-           - expected reward types
+           - Transaction inputs, outputs, withdrawals, etc.
+           - Reward amounts received each epoch
+           - Expected pool id
+           - Expected reward types
         """
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_and_pots
@@ -974,11 +974,11 @@ class TestRewards:
         that reason the reward amount received every epoch is gradually decreasing over the period
         of several epochs until it is finally 0.
 
-        * delegate stake address
-        * wait for first reward
-        * transfer all funds from payment address back to faucet, so no funds are staked
-        * keep withdrawing new rewards so reward balance is 0
-        * check that reward amount is decreasing epoch after epoch
+        * Delegate stake address
+        * Wait for first reward
+        * Transfer all funds from payment address back to faucet, so no funds are staked
+        * Keep withdrawing new rewards so reward balance is 0
+        * Check that reward amount is decreasing epoch after epoch
         """
         cluster, pool_name = cluster_use_pool_and_rewards
 
@@ -1083,18 +1083,18 @@ class TestRewards:
     ):
         """Check that one reward address used for two pools receives rewards for both of them.
 
-        * set pool2 reward address to the reward address of pool1 by resubmitting the pool
+        * Set pool2 reward address to the reward address of pool1 by resubmitting the pool
           registration certificate
-        * collect data for both pool1 and pool2 for several epochs and with the help of db-sync
+        * Collect data for both pool1 and pool2 for several epochs and with the help of db-sync
 
-           - check that the original reward address for pool2 is NOT receiving rewards
-           - check that the reward address for pool1 is now receiving rewards for both pools
+           - Check that the original reward address for pool2 is NOT receiving rewards
+           - Check that the reward address for pool1 is now receiving rewards for both pools
 
-        * check records in db-sync
+        * Check records in db-sync
 
-           - transaction inputs, outputs, withdrawals, etc.
-           - reward amounts received each epoch
-           - expected pool ids
+           - Transaction inputs, outputs, withdrawals, etc.
+           - Reward amounts received each epoch
+           - Expected pool ids
         """
         cluster, pool1_name, pool2_name = cluster_lock_two_pools
 
@@ -1337,17 +1337,17 @@ class TestRewards:
 
         The address is re-delegated and deregistred / re-registered multiple times.
 
-        * delegate stake address to pool
-        * in next epoch, re-delegate to another pool
-        * in next epoch, deregister stake address, immediately re-register and delegate to pool
-        * in next epoch, deregister stake address, wait for second half of an epoch, re-register
+        * Delegate stake address to pool
+        * In next epoch, re-delegate to another pool
+        * In next epoch, deregister stake address, immediately re-register and delegate to pool
+        * In next epoch, deregister stake address, wait for second half of an epoch, re-register
           and delegate to pool
-        * while doing the steps above, collect data for pool user for 8 epochs
+        * While doing the steps above, collect data for pool user for 8 epochs
 
-           - each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
-           - each epoch check received reward with reward in ledger state
+           - Each epoch check ledger state (expected data in `pstake*`, delegation, stake amount)
+           - Each epoch check received reward with reward in ledger state
 
-        * (optional) check records in db-sync
+        * (optional) Check records in db-sync
         """
         __: tp.Any  # mypy workaround
         cluster, pool1_name, pool2_name = cluster_use_two_pools_and_rewards

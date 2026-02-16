@@ -53,7 +53,16 @@ class TestDatum:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
     ):
-        """Test creating UTxO with datum on address with key credentials (non-script address)."""
+        """Test creating UTxO with datum on address with key credentials (non-script address).
+
+        Uses `cardano-cli transaction build-raw` command for building the transactions.
+
+        * Create transaction output with datum hash on non-script payment address
+        * Build raw transaction with calculated fee
+        * Sign and submit transaction
+        * Query created UTxO and verify datum hash is present
+        * (optional) Check transaction records in db-sync
+        """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
@@ -136,9 +145,9 @@ class TestNegativeDatum:
 
         Expect failure.
 
-        * create a Tx output without a datum hash
-        * try to spend the UTxO like it was locked Plutus UTxO
-        * check that the expected error was raised
+        * Create a Tx output without a datum hash
+        * Try to spend the UTxO like it was locked Plutus UTxO
+        * Check that the expected error was raised
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000
@@ -218,9 +227,19 @@ class TestNegativeDatum:
         datum_value: str,
         plutus_version: str,
     ):
-        """Test locking a Tx output with an invalid datum.
+        """Test locking a Tx output with an invalid datum (property-based test).
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate random text strings as invalid datum
+        values to test JSON parsing and validation.
+
+        Uses `cardano-cli transaction build-raw` command for building the transactions.
+
+        * Generate random text string as invalid datum value
+        * Create malformed datum file with invalid JSON format
+        * Attempt to build raw transaction with invalid datum file
+        * Check that transaction building fails with JSON object error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         amount = 2_000_000
@@ -264,6 +283,12 @@ class TestNegativeDatum:
         """Test locking a Tx output and try to spend it with a wrong datum.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command for building the transactions.
+
+        * Lock funds at script address with typed datum (datum 42 typed)
+        * Attempt to spend locked UTxO using different datum format (datum 42 untyped)
+        * Check that spending fails with supplementary datums error
         """
         temp_template = common.get_test_id(cluster)
         amount = 1_000_000
@@ -327,6 +352,13 @@ class TestNegativeDatum:
         """Try to spend a non-script UTxO with datum as if it was script locked UTxO.
 
         Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command for building the transactions.
+
+        * Create regular UTxO at payment address with datum hash (non-script address)
+        * Create collateral UTxO
+        * Attempt to spend regular UTxO with Plutus script witness and redeemer
+        * Check that spending fails with MissingScriptWitnessesUTXOW error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -420,9 +452,18 @@ class TestNegativeDatum:
         datum_value: bytes,
         plutus_version: str,
     ):
-        """Try to lock a UTxO with datum that is too big.
+        """Try to lock a UTxO with datum that is too big (property-based test).
 
-        Expect failure on node version < 1.36.0.
+        Property-based test using Hypothesis to generate random binary data >= 65 bytes to test
+        datum size limits (maximum datum size is 64 bytes).
+
+        Uses `cardano-cli transaction build-raw` command for building the transactions.
+
+        * Generate random binary datum value (minimum 65 bytes)
+        * Create datum file with oversized binary data
+        * Attempt to build raw transaction locking UTxO with oversized datum
+        * Check that transaction building fails with size error (on node < 1.36.0)
+        * Expect failure on node version < 1.36.0.
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         amount = 2_000_000

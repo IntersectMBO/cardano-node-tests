@@ -62,10 +62,10 @@ class TestBuildLocking:
     ):
         """Test combinations of inline datum and datum file + reference script and script file.
 
-        * create the necessary Tx outputs
-        * spend the locked UTxO
-        * check that the expected UTxOs were correctly spent
-        * (optional) check transactions in db-sync
+        * Create the necessary Tx outputs
+        * Spend the locked UTxO
+        * Check that the expected UTxOs were correctly spent
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         script_fund = 10_000_000
@@ -245,8 +245,8 @@ class TestBuildLocking:
     ):
         """Test minimum required UTxO in different scenarios with v2 functionalities.
 
-        * create the necessary Tx outputs
-        * check the min required UTxO
+        * Create the necessary Tx outputs
+        * Check the min required UTxO
         """
         test_scenario = request.node.callspec.id
         temp_template = common.get_test_id(cluster)

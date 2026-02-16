@@ -139,9 +139,9 @@ class TestSECP256k1:
     ):
         """Test that is possible to use the two SECP256k1 builtin functions.
 
-        * fund the token issuer
-        * mint the tokens using a Plutus script with a SECP256k1 function
-        * check that the token was minted
+        * Fund the token issuer
+        * Mint the tokens using a Plutus script with a SECP256k1 function
+        * Check that the token was minted
         """
         temp_template = common.get_test_id(cluster)
 

@@ -51,15 +51,15 @@ class TestNoRewards:
         When the pledge is higher than available funds, neither pool owners nor those who
         delegate to that pool receive rewards.
 
-        * delegate stake address
-        * wait for first reward
-        * increase the needed pledge amount - update the pool parameters by resubmitting the pool
+        * Delegate stake address
+        * Wait for first reward
+        * Increase the needed pledge amount - update the pool parameters by resubmitting the pool
           registration certificate - the funds are now lower than what is needed by the stake pool
-        * check that NO new rewards were received by those delegating to the pool
-        * check that pool owner is also NOT receiving rewards
-        * return the pool to the original state - restore pledge settings
-        * check that new rewards were received by those delegating to the pool
-        * check that pool owner is also receiving rewards
+        * Check that NO new rewards were received by those delegating to the pool
+        * Check that pool owner is also NOT receiving rewards
+        * Return the pool to the original state - restore pledge settings
+        * Check that new rewards were received by those delegating to the pool
+        * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool
 
@@ -216,14 +216,14 @@ class TestNoRewards:
         When the pledge is higher than available funds, neither pool owners nor those who
         delegate to that pool receive rewards.
 
-        * delegate stake address
-        * wait for first reward
-        * withdraw part of the pledge - the funds are lower than what is needed by the stake pool
-        * check that NO new rewards were received by those delegating to the pool
-        * check that pool owner is also NOT receiving rewards
-        * return the pool to the original state - restore pledge funds
-        * check that new rewards were received by those delegating to the pool
-        * check that pool owner is also receiving rewards
+        * Delegate stake address
+        * Wait for first reward
+        * Withdraw part of the pledge - the funds are lower than what is needed by the stake pool
+        * Check that NO new rewards were received by those delegating to the pool
+        * Check that pool owner is also NOT receiving rewards
+        * Return the pool to the original state - restore pledge funds
+        * Check that new rewards were received by those delegating to the pool
+        * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool
 
@@ -379,16 +379,16 @@ class TestNoRewards:
         When the owner's stake address is deregistered (i.e. owner's stake is lower than pledge),
         neither pool owners nor those who delegate to that pool receive rewards.
 
-        * delegate stake address
-        * wait for first reward
-        * deregister stake address - owner's stake is lower than pledge
-        * check that the key deposit was returned
-        * check that NO new rewards were received by those delegating to the pool
-        * check that pool owner is also NOT receiving rewards
-        * return the pool to the original state - reregister stake address and
+        * Delegate stake address
+        * Wait for first reward
+        * Deregister stake address - owner's stake is lower than pledge
+        * Check that the key deposit was returned
+        * Check that NO new rewards were received by those delegating to the pool
+        * Check that pool owner is also NOT receiving rewards
+        * Return the pool to the original state - reregister stake address and
           delegate it to the pool
-        * check that new rewards were received by those delegating to the pool
-        * check that pool owner is also receiving rewards
+        * Check that new rewards were received by those delegating to the pool
+        * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool_use_rewards
 
@@ -576,15 +576,15 @@ class TestNoRewards:
         The stake pool continues to operate normally and those who delegate to that pool receive
         rewards.
 
-        * delegate stake address
-        * wait for first reward
-        * withdraw pool rewards to payment address
-        * deregister the pool reward address
-        * check that the key deposit was returned
-        * check that pool owner is NOT receiving rewards
-        * check that new rewards are received by those delegating to the pool
-        * return the pool to the original state - reregister reward address
-        * check that pool owner is receiving rewards
+        * Delegate stake address
+        * Wait for first reward
+        * Withdraw pool rewards to payment address
+        * Deregister the pool reward address
+        * Check that the key deposit was returned
+        * Check that pool owner is NOT receiving rewards
+        * Check that new rewards are received by those delegating to the pool
+        * Return the pool to the original state - reregister reward address
+        * Check that pool owner is receiving rewards
         """
         cluster, pool_name = cluster_lock_pool_use_rewards
 
@@ -762,17 +762,17 @@ class TestNoRewards:
 
         The pool deposit is lost when reward address is deregistered before the pool is retired.
 
-        * wait for first reward for the pool
-        * withdraw pool rewards to payment address
-        * deregister the pool reward address
-        * check that the key deposit was returned
-        * check that pool owner is NOT receiving rewards
-        * deregister stake pool
-        * check that the pool deposit was NOT returned to reward or stake address
-        * return the pool to the original state - reregister the pool, register
+        * Wait for first reward for the pool
+        * Withdraw pool rewards to payment address
+        * Deregister the pool reward address
+        * Check that the key deposit was returned
+        * Check that pool owner is NOT receiving rewards
+        * Deregister stake pool
+        * Check that the pool deposit was NOT returned to reward or stake address
+        * Return the pool to the original state - reregister the pool, register
           the reward address, delegate the stake address to the pool
-        * check that pool deposit was needed
-        * check that pool owner is receiving rewards
+        * Check that pool deposit was needed
+        * Check that pool owner is receiving rewards
         """
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_use_rewards

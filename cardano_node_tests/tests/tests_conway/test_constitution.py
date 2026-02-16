@@ -322,15 +322,15 @@ class TestConstitution:
     ):
         """Test enactment of change of constitution.
 
-        * submit a "create constitution" action
-        * check that SPOs cannot vote on a "create constitution" action
-        * vote to disapprove the action
-        * vote to approve the action
-        * check that the action is ratified
-        * try to disapprove the ratified action, this shouldn't have any effect
-        * try and fail to withdraw the deposit from stake address that is not delegated to a DRep
-        * check that the action is enacted
-        * check that it's not possible to vote on enacted action
+        * Submit a "create constitution" action
+        * Check that SPOs cannot vote on a "create constitution" action
+        * Vote to disapprove the action
+        * Vote to approve the action
+        * Check that the action is ratified
+        * Try to disapprove the ratified action, this shouldn't have any effect
+        * Try and fail to withdraw the deposit from stake address that is not delegated to a DRep
+        * Check that the action is enacted
+        * Check that it's not possible to vote on enacted action
         """
         __: tp.Any  # mypy workaround
         cluster, __ = cluster_lock_gov_script

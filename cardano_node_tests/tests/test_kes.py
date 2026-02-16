@@ -143,15 +143,15 @@ class TestKES:
     ):
         """Test expired KES.
 
-        * start local cluster instance configured with short KES period and low number of key
+        * Start local cluster instance configured with short KES period and low number of key
           evolutions, so KES expires soon on all pools
-        * refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
+        * Refresh opcert on 2 of the 3 pools, so KES doesn't expire on those 2 pools and
           the pools keep forging blocks
-        * wait for KES expiration on the selected pool
-        * check that the pool with expired KES didn't forge blocks in an epoch that followed after
+        * Wait for KES expiration on the selected pool
+        * Check that the pool with expired KES didn't forge blocks in an epoch that followed after
           KES expiration
-        * check KES period info command with an operational certificate with an expired KES
-        * check KES period info command with operational certificates with a valid KES
+        * Check KES period info command with an operational certificate with an expired KES
+        * Check KES period info command with operational certificates with a valid KES
         """
         cluster = cluster_kes
         temp_template = common.get_test_id(cluster)
@@ -356,18 +356,18 @@ class TestKES:
     ):
         """Start a stake pool with an operational certificate created with invalid `--kes-period`.
 
-        * generate new operational certificate with `--kes-period` in the future
-        * restart the node with the new operational certificate
-        * check that the pool is not forging any blocks
-        * if network era > Alonzo
+        * Generate new operational certificate with `--kes-period` in the future
+        * Restart the node with the new operational certificate
+        * Check that the pool is not forging any blocks
+        * If network era > Alonzo
 
-            - generate new operational certificate with valid `--kes-period`, but counter value +2
+            - Generate new operational certificate with valid `--kes-period`, but counter value +2
               from last used operational certificate
-            - restart the node
-            - check that the pool is not forging any blocks
+            - Restart the node
+            - Check that the pool is not forging any blocks
 
-        * generate new operational certificate with valid `--kes-period` and restart the node
-        * check that the pool is forging blocks again
+        * Generate new operational certificate with valid `--kes-period` and restart the node
+        * Check that the pool is forging blocks again
         """
         __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
@@ -610,15 +610,15 @@ class TestKES:
     ):
         """Update a valid operational certificate with another valid operational certificate.
 
-        * generate new operational certificate with valid `--kes-period`
-        * copy new operational certificate to the node
-        * stop the node so the corresponding pool is not forging new blocks
-        * check `kes-period-info` while the pool is not forging blocks
-        * start the node with the new operational certificate
-        * check that the pool is forging blocks again
-        * check that metrics reported by `kes-period-info` got updated once the pool started
+        * Generate new operational certificate with valid `--kes-period`
+        * Copy new operational certificate to the node
+        * Stop the node so the corresponding pool is not forging new blocks
+        * Check `kes-period-info` while the pool is not forging blocks
+        * Start the node with the new operational certificate
+        * Check that the pool is forging blocks again
+        * Check that metrics reported by `kes-period-info` got updated once the pool started
           forging blocks again
-        * check `kes-period-info` with the old (replaced) operational certificate
+        * Check `kes-period-info` with the old (replaced) operational certificate
         """
         __: tp.Any  # mypy workaround
         kes_period_info_errors_list = []
@@ -784,7 +784,13 @@ class TestKES:
     ):
         """Try to generate new operational certificate without specifying the `--kes-period`.
 
-        Expect failure.
+        Test that operational certificate generation fails when required `--kes-period` argument
+        is not provided. Expect failure.
+
+        * Get pool KES verification key, cold signing key, and counter file from pool2
+        * Attempt to execute `cardano-cli node issue-op-cert` without --kes-period argument
+        * Check that command fails with "Missing: --kes-period NATURAL" error
+        * Verify operational certificate file was not created
         """
         pool_name = cluster_management.Resources.POOL2
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -823,7 +829,12 @@ class TestKES:
     ):
         """Try to generate new operational certificate with a negative value for `--kes-period`.
 
-        Expect failure.
+        Test that operational certificate generation fails when --kes-period is set to a
+        negative value. Expect failure.
+
+        * Get pool KES verification key, cold signing key, and counter file from pool2
+        * Attempt to generate operational certificate with --kes-period set to -100
+        * Check that generation fails with "KES_PERIOD must not be less than 0" error
         """
         common.get_test_id(cluster)
 

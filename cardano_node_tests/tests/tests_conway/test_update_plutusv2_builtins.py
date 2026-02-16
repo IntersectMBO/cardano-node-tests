@@ -80,9 +80,9 @@ class TestUpdateBuiltIns:
         Checks behavior with PlutusV2 script that uses built-ins added from PlutusV3.
         So far the new built-ins are enabled only in PV10, and are expected to fail in PV9.
 
-        * check that Plutus script fails as expected in PV9
-        * update the PlutusV2 cost model
-        * check again that the Plutus script fails as expected in PV9
+        * Check that Plutus script fails as expected in PV9
+        * Update the PlutusV2 cost model
+        * Check again that the Plutus script fails as expected in PV9
         """
         cluster, governance_data = cluster_lock_governance_plutus
         temp_template = common.get_test_id(cluster)

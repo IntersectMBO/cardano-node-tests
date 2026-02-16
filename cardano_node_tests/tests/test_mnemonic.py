@@ -309,7 +309,19 @@ class TestMnemonic:
         out_format: clusterlib.OutputFormat,
         path_num: int,
     ):
-        """Test `generate-mnemonic` and `derive-from-mnemonic`."""
+        """Test generating mnemonic and deriving keys from mnemonic.
+
+        Test mnemonic generation and key derivation with various parameters using
+        `generate-mnemonic` and `derive-from-mnemonic` commands.
+
+        * Generate mnemonic of parametrized size (12, 15, 18, 21, or 24 words)
+        * Output mnemonic to file or stdout based on parametrization
+        * Check that generated mnemonic has expected word count
+        * Derive key from mnemonic using parametrized key type (payment, stake, DRep, etc.)
+        * Use parametrized output format (bech32, hex, text-envelope)
+        * Use parametrized account number and key number (path_num: 0 or 2^31-1)
+        * Verify derived key file exists
+        """
         temp_template = common.get_test_id(cluster)
         mnemonic_file = pl.Path(f"{temp_template}_mnemonic")
 
@@ -349,7 +361,19 @@ class TestMnemonic:
         out_format: clusterlib.OutputFormat,
         path_num: int,
     ):
-        """Test `derive-from-mnemonic` using golden files."""
+        """Test deriving keys from mnemonic using golden files.
+
+        Test key derivation against known golden mnemonic files to ensure consistent
+        key generation across different parameters.
+
+        * Use golden mnemonic file of parametrized size (12, 15, 18, 21, or 24 words)
+        * Derive key using parametrized key type (payment, stake, DRep, CC cold, CC hot)
+        * Use parametrized output format (bech32, hex, text-envelope)
+        * Use parametrized account number (path_num: 0 or 2^31-1)
+        * Verify derived key file exists
+        * Compare derived key against expected golden output file
+        * Check that derived key matches expected value from golden file
+        """
         temp_template = common.get_test_id(cluster)
 
         stem = (
@@ -393,7 +417,16 @@ class TestMnemonic:
     ) -> None:
         """Test that `derive-from-mnemonic` accepts any valid account_number in [0, 2^31-1].
 
-        For payment/stake keys, pass the same value as key_number, otherwise omit key_number.
+        Test key derivation with boundary values for account_number to ensure full range
+        of valid account numbers is supported. For payment/stake keys, pass the same value
+        as key_number, otherwise omit key_number.
+
+        * Use golden mnemonic file (24 words)
+        * Derive key using parametrized key type
+        * Use parametrized account_number (property-based test covering 0 to 2^31-1)
+        * For payment/stake keys, set key_number to same value as account_number
+        * For other key types (DRep, CC), omit key_number parameter
+        * Verify derived key file exists
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         mnemonic_file = DATA_DIR / "gold_[0-bech32-payment-24]_mnemonic"
@@ -435,7 +468,14 @@ class TestNegativeMnemonic:
         cluster: clusterlib.ClusterLib,
         size: int,
     ):
-        """Test generating a mnemonic with an invalid size."""
+        """Test generating a mnemonic with an invalid size.
+
+        Test that mnemonic generation fails when size is not one of the allowed values
+        (12, 15, 18, 21, 24). Uses Hypothesis property-based testing. Expect failure.
+
+        * Attempt to generate mnemonic with invalid size (any integer except 12,15,18,21,24)
+        * Check that generation fails with "Invalid mnemonic size" error
+        """
         common.get_test_id(cluster)
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_key.gen_mnemonic(size=size)  # type: ignore
@@ -451,7 +491,16 @@ class TestNegativeMnemonic:
         bad_case: BadMnemonicCase,
         tmp_case_path: pl.Path,
     ) -> None:
-        """Test that the CLI wrapper rejects malformed mnemonic files."""
+        """Test that the CLI wrapper rejects malformed mnemonic files.
+
+        Test key derivation failure with various invalid mnemonic file formats using
+        Hypothesis property-based testing. Expect failure.
+
+        * Generate malformed mnemonic file (invalid cases from Hypothesis strategy)
+        * Attempt to derive key from malformed mnemonic file
+        * Check that derivation fails with error about reading mnemonic file or
+          converting mnemonic into a key
+        """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         target = _materialize_case(tmp_dir=tmp_case_path, case=bad_case)
 
@@ -493,7 +542,16 @@ class TestNegativeMnemonic:
         key_type: clusterlib.KeyType,
         bad_value: object,
     ) -> None:
-        """Property: derive_from_mnemonic rejects out-of-range or non-int account/key numbers."""
+        """Property: derive_from_mnemonic rejects out-of-range or non-int account/key numbers.
+
+        Test that key derivation fails when account_number or key_number is invalid
+        (out of range or wrong type). Uses Hypothesis property-based testing. Expect failure.
+
+        * Use golden mnemonic file (24 words)
+        * Attempt to derive key using invalid account_number or key_number value
+        * Invalid values: negative integers, integers >= 2^31, floats, strings, objects
+        * Check that derivation fails with appropriate error (CLIError or ValueError/TypeError)
+        """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
         mnemonic_file = DATA_DIR / "gold_[0-bech32-payment-24]_mnemonic"
 

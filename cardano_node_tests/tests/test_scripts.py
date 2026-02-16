@@ -1,9 +1,9 @@
 """Tests for multisig transactions and scripts.
 
-* multisig
-* time locking
-* auxiliary scripts
-* reference UTxO
+* Multisig
+* Time locking
+* Auxiliary scripts
+* Reference UTxO
 """
 
 import json
@@ -201,9 +201,15 @@ class TestBasic:
     def test_script_addr_length(
         self, cluster: clusterlib.ClusterLib, payment_addrs: list[clusterlib.AddressRecord]
     ):
-        """Check that script address length is the same as length of other addresses.
+        """Verify that multisig script address has correct length.
 
-        There was an issue that script address was 32 bytes instead of 28 bytes.
+        Test that script address length matches standard address length (28 bytes encoded).
+        Regression test for issue where script addresses were incorrectly 32 bytes.
+
+        * Create payment verification keys for multiple addresses
+        * Create multisig script using "all" script type with payment vkeys
+        * Generate payment address from multisig script
+        * Verify script address length equals standard payment address length
         """
         temp_template = common.get_test_id(cluster)
 
@@ -237,7 +243,19 @@ class TestBasic:
         submit_method: str,
         build_method: str,
     ):
-        """Send funds to and from script address using the *all* script."""
+        """Send funds to and from multisig script address using "all" script type.
+
+        Test that transactions can lock funds at script address and spend them when all required
+        signatures are provided. Uses parametrized build and submit methods.
+
+        * Create multisig script requiring all payment verification keys to sign
+        * Generate script address from multisig script
+        * Send 2 ADA to script address from payment address
+        * Check funds locked at script address
+        * Spend funds from script address by providing all required signatures
+        * Check funds transferred to destination address
+        * (optional) Check transactions in db-sync
+        """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
 
@@ -300,9 +318,19 @@ class TestBasic:
         submit_method: str,
         build_method: str,
     ):
-        """Use stake keys to witness a Tx (instead of payment keys).
+        """Send funds to and from multisig script address using stake keys for witnessing.
 
-        Send funds to and from script address using the *all* script.
+        Test that transactions can use stake key signatures (instead of payment keys) to witness
+        spending from multisig script address. Uses parametrized build and submit methods.
+
+        * Generate stake key pairs for multisig script witnesses
+        * Create multisig script using stake verification keys with "all" script type
+        * Generate payment script address from multisig script
+        * Send 2 ADA to script address from payment address
+        * Check funds locked at script address
+        * Spend funds from script address by providing stake key signatures
+        * Check funds transferred to destination address
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -373,9 +401,9 @@ class TestBasic:
     ):
         """Send funds using the *any* script.
 
-        * send funds to script address
-        * send funds from script address using single witness
-        * send funds from script address using multiple witnesses
+        * Send funds to script address
+        * Send funds from script address using single witness
+        * Send funds from script address using multiple witnesses
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -485,7 +513,20 @@ class TestBasic:
         submit_method: str,
         build_method: str,
     ):
-        """Send funds to and from script address using the *atLeast* script."""
+        """Send funds to and from multisig script address using "atLeast" script type.
+
+        Test that transactions can lock funds at script address and spend them when minimum
+        required number of signatures is provided. Uses parametrized build and submit methods.
+
+        * Create multisig script requiring at least M of N payment verification keys
+        * Generate script address from multisig script
+        * Send 2 ADA to script address from payment address
+        * Check funds locked at script address
+        * Spend funds from script address multiple times using different combinations of
+          signatures (always meeting minimum required)
+        * Check funds transferred to destination address
+        * (optional) Check transactions in db-sync
+        """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
         repeat = 3
@@ -2552,9 +2593,9 @@ class TestReferenceUTxO:
     ):
         """Test spending a UTxO that holds a reference script.
 
-        * create a Tx output with reference script (reference script UTxO)
-        * spend the reference UTxO
-        * check that the UTxO was spent
+        * Create a Tx output with reference script (reference script UTxO)
+        * Spend the reference UTxO
+        * Check that the UTxO was spent
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000

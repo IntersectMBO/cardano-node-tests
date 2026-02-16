@@ -217,14 +217,14 @@ class TestPoolSaturation:
         rewards, but the rewards are proportionally lower than those received from stake pool
         that is not oversaturated.
 
-        * register and delegate stake address in "init epoch", for all available pools
-        * in "init epoch" + 2, saturate all available pools (block distribution remains balanced
+        * Register and delegate stake address in "init epoch", for all available pools
+        * In "init epoch" + 2, saturate all available pools (block distribution remains balanced
           among pools)
-        * in "init epoch" + 4, oversaturate one pool
-        * in "init epoch" + 6, for all available pools, withdraw rewards and transfer funds
+        * In "init epoch" + 4, oversaturate one pool
+        * In "init epoch" + 6, for all available pools, withdraw rewards and transfer funds
           from delegated addresses so pools are no longer (over)saturated
-        * while doing the steps above, collect rewards data for 10 epochs
-        * compare proportionality of rewards in epochs where pools were non-saturated,
+        * While doing the steps above, collect rewards data for 10 epochs
+        * Compare proportionality of rewards in epochs where pools were non-saturated,
           saturated and oversaturated
         """
         cluster = cluster_lock_pools
