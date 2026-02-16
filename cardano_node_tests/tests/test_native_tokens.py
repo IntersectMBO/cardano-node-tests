@@ -1214,7 +1214,21 @@ class TestPolicies:
         issuers_addrs: list[clusterlib.AddressRecord],
         build_method: str,
     ):
-        """Test minting and burning of tokens after a given slot, check fees in Lovelace."""
+        """Mint and burn native tokens with time-locking policy requiring slot after threshold.
+
+        Test that tokens can be minted and burned when transaction validity interval satisfies
+        the "after" slot constraint in the minting policy script.
+
+        * create multisig script with "after slot 100" time-locking constraint
+        * generate policy ID from script
+        * create 5 different native tokens under same policy
+        * mint tokens with invalid-before set to slot 100 (satisfies "after" constraint)
+        * check tokens were minted at expected address
+        * burn tokens with same time constraint
+        * check tokens were burned
+        * verify transaction fees are within expected range
+        * (optional) check transactions in db-sync
+        """
         expected_fee = 228_113
 
         temp_template = common.get_test_id(cluster)
@@ -1306,7 +1320,21 @@ class TestPolicies:
         issuers_addrs: list[clusterlib.AddressRecord],
         build_method: str,
     ):
-        """Test minting and burning of tokens before a given slot, check fees in Lovelace."""
+        """Mint and burn native tokens with time-locking policy requiring slot before threshold.
+
+        Test that tokens can be minted and burned when transaction validity interval satisfies
+        the "before" slot constraint in the minting policy script.
+
+        * create multisig script with "before slot N" time-locking constraint (future slot)
+        * generate policy ID from script
+        * create 5 different native tokens under same policy
+        * mint tokens with invalid-hereafter before the threshold (satisfies "before" constraint)
+        * check tokens were minted at expected address
+        * burn tokens with same time constraint
+        * check tokens were burned
+        * verify transaction fees are within expected range
+        * (optional) check transactions in db-sync
+        """
         expected_fee = 228_113
 
         temp_template = common.get_test_id(cluster)
@@ -1395,7 +1423,22 @@ class TestPolicies:
     def test_policy_before_past(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
-        """Test that it's NOT possible to mint tokens when the "before" slot is in the past."""
+        """Attempt to mint tokens when "before" slot constraint is already in the past.
+
+        Test that minting fails when the time-locking policy "before" constraint cannot be
+        satisfied because the threshold slot is in the past.
+
+        * create multisig script with "before slot N" where N is current slot - 1 (past)
+        * generate policy ID from script
+        * create 5 native tokens under this policy
+        * attempt to mint with invalid-hereafter matching the past slot
+        * verify minting fails with OutsideValidityIntervalUTxO error
+        * attempt to mint with invalid-hereafter after the past slot
+        * verify minting fails with ScriptWitnessNotValidatingUTXOW error
+        * check that tokens were not minted
+
+        Expect failure.
+        """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
         amount = 5
@@ -1470,9 +1513,19 @@ class TestPolicies:
     def test_policy_before_future(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
-        """Test that it's NOT possible to mint tokens when the policy is not met.
+        """Attempt to mint tokens when transaction validity violates "before" policy constraint.
 
-        The "before" slot is in the future and the given range is invalid.
+        Test that minting fails when the time-locking policy "before" constraint is violated
+        because transaction invalid-hereafter is after the policy threshold.
+
+        * create multisig script with "before slot N" where N is far future (current + 10000)
+        * generate policy ID from script
+        * create 5 native tokens under this policy
+        * attempt to mint with invalid-hereafter after the threshold slot
+        * verify minting fails with ScriptWitnessNotValidatingUTXOW error (policy not satisfied)
+        * check that tokens were not minted
+
+        Expect failure.
         """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
@@ -1535,9 +1588,19 @@ class TestPolicies:
     def test_policy_after_future(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
-        """Test that it's NOT possible to mint tokens when the policy is not met.
+        """Test minting tokens with time-locking policy requiring future slot.
 
-        The "after" slot is in the future and the given range is invalid.
+        Test that tokens cannot be minted when the "after" slot constraint is in the future
+        and transaction validity intervals don't satisfy or violate the policy. Expect failure.
+
+        * create multisig script with "after slot" constraint set to future slot (current + 10000)
+        * generate policy ID from script
+        * create 5 different native tokens under same policy
+        * attempt to mint with valid range (invalid-before at future slot, invalid-hereafter
+          future slot + 100) - fails because slot is in the future (OutsideValidityIntervalUTxO)
+        * attempt to mint with invalid range (invalid-before 1, invalid-hereafter at future
+          slot) - fails because "after" constraint not met (ScriptWitnessNotValidatingUTXOW)
+        * verify tokens were not minted
         """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
@@ -1613,9 +1676,17 @@ class TestPolicies:
     def test_policy_after_past(
         self, cluster: clusterlib.ClusterLib, issuers_addrs: list[clusterlib.AddressRecord]
     ):
-        """Test that it's NOT possible to mint tokens when the policy is not met.
+        """Test minting tokens with time-locking policy requiring already-passed slot.
 
-        The "after" slot is in the past.
+        Test that tokens cannot be minted when the "after" slot constraint references a past
+        slot and the transaction validity interval violates the constraint. Expect failure.
+
+        * create multisig script with "after slot" constraint set to past slot (current - 1)
+        * generate policy ID from script
+        * create 5 different native tokens under same policy
+        * attempt to mint with invalid-before 1 and invalid-hereafter at past slot
+        * verify minting fails with ScriptWitnessNotValidatingUTXOW error
+        * verify tokens were not minted
         """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(4)
@@ -2167,7 +2238,18 @@ class TestTransfer:
         build_method: str,
         token_amount: int,
     ):
-        """Test sending an invalid amount of tokens to payment address."""
+        """Test sending an invalid amount of tokens to payment address.
+
+        Test that transactions fail when attempting to send more tokens than available or
+        negative token amounts, depending on the transaction build method. Expect failure.
+
+        * create transaction output with invalid token amount (negative or exceeds balance)
+        * attempt to build/send transaction using parametrized build method
+        * check that transaction build/submission fails with appropriate error
+        * for build method: error about unbalanced assets or illegal value
+        * for build-raw method: error ValueNotConservedUTxO on submission
+        * for build-estimate method: error about unbalanced assets or illegal value
+        """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         src_address = new_token.token_mint_addr.address
@@ -2376,7 +2458,16 @@ class TestNegative:
         simple_script_policyid: tuple[pl.Path, str],
         token_amount: int,
     ):
-        """Test minting a token amount above the maximum allowed."""
+        """Test minting a token amount above the maximum allowed.
+
+        Test that token minting fails when the amount exceeds the maximum allowed value for
+        native tokens. Uses Hypothesis property-based testing. Expect failure.
+
+        * create native token with amount above MAX_TOKEN_AMOUNT (generated by Hypothesis)
+        * get simple script and policy ID from fixture
+        * attempt to mint token with excessive amount
+        * check that minting fails with "the number exceeds the max bound" error
+        """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         asset_name_enc = temp_template.encode("utf-8").hex()

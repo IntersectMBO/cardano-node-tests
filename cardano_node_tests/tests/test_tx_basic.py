@@ -672,10 +672,16 @@ class TestBasicTransactions:
         payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
-        """Send a transaction with extra signing key.
+        """Send a transaction with an extra unnecessary signing key.
 
         Check that it is possible to use unneeded signing key in addition to the necessary
         signing keys for signing the transaction.
+
+        * create transaction from source address to destination address with 2 ADA
+        * sign transaction with both required signing key and an extra unneeded signing key
+        * submit the transaction and verify it succeeds
+        * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -740,6 +746,12 @@ class TestBasicTransactions:
         """Send a transaction with duplicate signing key.
 
         Check that it is possible to specify the same signing key twice.
+
+        * create transaction from source address to destination address with 2 ADA
+        * sign transaction by specifying the same required signing key twice
+        * submit the transaction and verify it succeeds
+        * check expected balances for both source and destination addresses
+        * (optional) check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
@@ -918,7 +930,14 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
     ):
-        """Build a transaction with a missing `--tx-out` parameter."""
+        """Build a transaction with a missing `--tx-out` parameter.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * prepare transaction inputs with `--tx-in` from source address
+        * build transaction using `build-raw` without any `--tx-out` parameter
+        * verify that transaction can be built (no output validation at build-raw stage)
+        """
         temp_template = common.get_test_id(cluster)
 
         tx_raw_output = tx_common.get_raw_tx_values(
@@ -960,7 +979,16 @@ class TestBasicTransactions:
         payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
-        """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter."""
+        """Submit a transaction with a missing `--ttl` (`--invalid-hereafter`) parameter.
+
+        Uses `cardano-cli transaction build-raw` command without specifying TTL.
+
+        * build transaction using `build-raw` without `--invalid-hereafter` parameter
+        * sign the transaction
+        * submit the transaction and verify it succeeds
+        * check expected balance for source address
+        * (optional) check transactions in db-sync
+        """
         temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
 
@@ -1022,7 +1050,17 @@ class TestBasicTransactions:
         payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
-        """Try to build a transaction with multiple identical txins."""
+        """Build and submit a transaction with multiple identical txins.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * prepare transaction with the same txin specified multiple times
+        * build transaction using `build-raw` with duplicate `--tx-in` parameters
+        * sign the transaction
+        * submit the transaction and verify it succeeds
+        * check expected balance for source address
+        * (optional) check transactions in db-sync
+        """
         temp_template = common.get_test_id(cluster)
         src_address = payment_addrs[0].address
 
@@ -1204,7 +1242,16 @@ class TestBasicTransactions:
         payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
-        """Send a transaction with ttl far in the future."""
+        """Send a transaction with ttl (time-to-live) far in the future.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * create transaction from source address to destination address with 2 ADA
+        * set TTL to current slot + 10,000,000 slots (far in the future)
+        * build, sign and submit the transaction
+        * verify the transaction succeeds with far-future TTL
+        * (optional) check transactions in db-sync
+        """
         temp_template = common.get_test_id(cluster)
 
         src_addr = payment_addrs[0]

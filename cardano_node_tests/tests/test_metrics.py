@@ -107,7 +107,19 @@ class TestPrometheus:
         self,
         wait_epochs,  # noqa: ARG002
     ):
-        """Test that list of available metrics == list of expected metrics."""
+        """Test that list of available Prometheus metrics equals list of expected metrics.
+
+        Test Prometheus metrics endpoint to verify all expected metrics are exposed and
+        no unexpected metrics are present.
+
+        * wait for epoch >= 4 to ensure stable metrics
+        * get Prometheus port for pool1 from cluster configuration
+        * fetch metrics from Prometheus HTTP endpoint (GET /metrics)
+        * parse metrics response text into individual metric names
+        * extract metric keys from response
+        * compare available metrics set with EXPECTED_METRICS set
+        * verify exact match (no missing or extra metrics)
+        """
         prometheus_port = (
             cluster_nodes.get_cluster_type()
             .cluster_scripts.get_instance_ports(instance_num=cluster_nodes.get_instance_num())
@@ -130,7 +142,18 @@ class TestEKG:
         self,
         wait_epochs,  # noqa: ARG002
     ):
-        """Test that available EKG metrics matches the expected schema."""
+        """Test that available EKG metrics matches the expected schema.
+
+        Test EKG (Event-driven Key-value) metrics endpoint to verify metrics conform to
+        expected Pydantic model schema.
+
+        * wait for epoch >= 4 to ensure stable metrics
+        * get EKG port for pool1 from cluster configuration
+        * fetch metrics from EKG HTTP endpoint (GET / with Accept: application/json header)
+        * parse JSON response containing EKG metrics
+        * validate response against Pydantic Model schema
+        * check that all required fields are present and have correct types
+        """
         ekg_port = (
             cluster_nodes.get_cluster_type()
             .cluster_scripts.get_instance_ports(instance_num=cluster_nodes.get_instance_num())

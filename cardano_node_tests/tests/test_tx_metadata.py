@@ -51,9 +51,16 @@ class TestMetadata:
     def test_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with wrong format of metadata JSON.
+        """Try to build transaction with incorrectly formatted metadata JSON.
 
-        The metadata file is a valid JSON, but not in a format that is expected.
+        Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+        The metadata file is valid JSON but not in expected format (map at top level).
+
+        * prepare transaction files with wrongly formatted metadata JSON
+        * attempt to build transaction using `build-raw`
+        * check that transaction building fails with metadata format error
         """
         common.get_test_id(cluster)
 
@@ -80,11 +87,16 @@ class TestMetadata:
     def test_build_tx_wrong_json_metadata_format(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with wrong format of metadata JSON.
+        """Try to build transaction with incorrectly formatted metadata JSON.
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
+        The metadata file is valid JSON but not in expected format (map at top level).
 
-        The metadata file is a valid JSON, but not in a format that is expected.
+        * prepare transaction files with wrongly formatted metadata JSON
+        * attempt to build transaction using `build`
+        * check that transaction building fails with metadata format error
         """
         common.get_test_id(cluster)
 
@@ -110,9 +122,16 @@ class TestMetadata:
     def test_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with invalid metadata JSON.
+        """Try to build transaction with invalid (malformed) metadata JSON.
 
-        The metadata file is an invalid JSON.
+        Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+        The metadata file contains invalid JSON syntax.
+
+        * prepare transaction files with invalid JSON metadata file
+        * attempt to build transaction using `build-raw`
+        * check that transaction building fails with JSON parse error
         """
         common.get_test_id(cluster)
 
@@ -143,11 +162,16 @@ class TestMetadata:
     def test_build_tx_invalid_json_metadata(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with invalid metadata JSON.
+        """Try to build transaction with invalid (malformed) metadata JSON.
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
+        The metadata file contains invalid JSON syntax.
 
-        The metadata file is an invalid JSON.
+        * prepare transaction files with invalid JSON metadata file
+        * attempt to build transaction using `build`
+        * check that transaction building fails with JSON parse error
         """
         common.get_test_id(cluster)
 
@@ -178,7 +202,16 @@ class TestMetadata:
     def test_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with metadata JSON longer than 64 bytes."""
+        """Try to build transaction with metadata JSON string exceeding 64 bytes.
+
+        Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+
+        * prepare transaction files with metadata JSON containing string > 64 UTF-8 bytes
+        * attempt to build transaction using `build-raw`
+        * check that transaction building fails with string length error
+        """
         common.get_test_id(cluster)
 
         tx_files = clusterlib.TxFiles(
@@ -206,9 +239,15 @@ class TestMetadata:
     def test_build_tx_too_long_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Try to build a transaction with metadata JSON longer than 64 bytes.
+        """Try to build transaction with metadata JSON string exceeding 64 bytes.
+
+        Expect failure.
 
         Uses `cardano-cli transaction build` command for building the transactions.
+
+        * prepare transaction files with metadata JSON containing string > 64 UTF-8 bytes
+        * attempt to build transaction using `build`
+        * check that transaction building fails with string length error
         """
         common.get_test_id(cluster)
 
@@ -238,10 +277,16 @@ class TestMetadata:
     def test_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with metadata JSON.
+        """Send transaction with metadata JSON and verify metadata preservation.
 
-        * check that the metadata in TX body matches the original metadata
-        * (optional) check transactions in db-sync
+        Uses `cardano-cli transaction build-raw` command.
+
+        * prepare transaction files with metadata JSON file
+        * send transaction from payment address with metadata attached
+        * load metadata from transaction body CBOR
+        * compare transaction body metadata with original JSON file
+        * check that metadata in TX body matches the original metadata exactly
+        * (optional) check transactions and metadata in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -281,12 +326,16 @@ class TestMetadata:
     def test_build_tx_metadata_json(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with metadata JSON.
+        """Send transaction with metadata JSON and verify metadata preservation.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        * check that the metadata in TX body matches the original metadata
-        * (optional) check transactions in db-sync
+        * prepare transaction files with metadata JSON file
+        * build, sign and submit transaction from payment address with metadata
+        * load metadata from transaction body CBOR
+        * compare transaction body metadata with original JSON file
+        * check that metadata in TX body matches the original metadata exactly
+        * (optional) check transactions and metadata in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -333,9 +382,16 @@ class TestMetadata:
     def test_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with metadata CBOR.
+        """Send transaction with metadata CBOR and verify metadata preservation.
 
-        Check that the metadata in TX body matches the original metadata.
+        Uses `cardano-cli transaction build-raw` command.
+
+        * prepare transaction files with metadata CBOR file
+        * send transaction from payment address with CBOR metadata attached
+        * load metadata from transaction body CBOR
+        * compare transaction body metadata with original CBOR file
+        * check that metadata in TX body matches the original metadata exactly
+        * (optional) check transactions and metadata in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -373,11 +429,16 @@ class TestMetadata:
     def test_build_tx_metadata_cbor(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with metadata CBOR.
+        """Send transaction with metadata CBOR and verify metadata preservation.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Check that the metadata in TX body matches the original metadata.
+        * prepare transaction files with metadata CBOR file
+        * build, sign and submit transaction from payment address with CBOR metadata
+        * load metadata from transaction body CBOR
+        * compare transaction body metadata with original CBOR file
+        * check that metadata in TX body matches the original metadata exactly
+        * (optional) check transactions and metadata in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -424,9 +485,17 @@ class TestMetadata:
     def test_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with both metadata JSON and CBOR.
+        """Send transaction with both metadata JSON and CBOR formats combined.
 
-        Check that the metadata in TX body matches the original metadata.
+        Uses `cardano-cli transaction build-raw` command.
+
+        * prepare transaction files with both JSON and CBOR metadata files
+        * send transaction from payment address with both metadata types attached
+        * load metadata from transaction body CBOR
+        * merge expected metadata from both JSON and CBOR files
+        * check that combined metadata in TX body matches merged original metadata
+        * verify transaction view command output matches metadata
+        * (optional) check transactions and metadata in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -476,11 +545,17 @@ class TestMetadata:
     def test_build_tx_metadata_both(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with both metadata JSON and CBOR.
+        """Send transaction with both metadata JSON and CBOR formats combined.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
-        Check that the metadata in TX body matches the original metadata.
+        * prepare transaction files with both JSON and CBOR metadata files
+        * build, sign and submit transaction with both metadata types attached
+        * load metadata from transaction body CBOR
+        * merge expected metadata from both JSON and CBOR files
+        * check that combined metadata in TX body matches merged original metadata
+        * verify transaction view command output matches metadata
+        * (optional) check transactions and metadata in db-sync
         """
         temp_template = common.get_test_id(cluster)
 
@@ -537,10 +612,17 @@ class TestMetadata:
     def test_tx_duplicate_metadata_keys(
         self, cluster: clusterlib.ClusterLib, payment_addr: clusterlib.AddressRecord
     ):
-        """Send transaction with multiple metadata JSON files and with duplicate keys.
+        """Send transaction with multiple metadata JSON files containing duplicate keys.
 
-        * check that the metadata in TX body matches the original metadata
-        * check that in case of duplicate keys the first occurrence is used
+        Uses `cardano-cli transaction build-raw` command.
+
+        * prepare transaction files with multiple JSON metadata files having duplicate keys
+        * send transaction from payment address with all metadata files attached
+        * load metadata from transaction body CBOR
+        * merge expected metadata from input files (first occurrence wins for duplicates)
+        * check that metadata in TX body matches merged metadata with correct precedence
+        * verify that for duplicate keys the first occurrence is used
+        * (optional) check transactions and metadata in db-sync
         """
         temp_template = common.get_test_id(cluster)
 

@@ -136,7 +136,19 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     def test_epoch_length(self, cluster_epoch_length: clusterlib.ClusterLib):
-        """Test the *epochLength* configuration."""
+        """Test the *epochLength* configuration.
+
+        Test that custom epochLength parameter is correctly applied and epoch boundaries are
+        respected.
+
+        * modify genesis spec to set epochLength to 1500 slots
+        * start cluster with modified configuration
+        * check that cluster slot length is 0.2 seconds (default)
+        * check that cluster epoch length is 1500 slots
+        * wait until end of current epoch
+        * check that epoch number increments correctly at epoch boundary
+        * verify slot count resets to 0 at epoch boundary
+        """
         cluster = cluster_epoch_length
         common.get_test_id(cluster)
 
@@ -146,7 +158,19 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
-        """Test the *slotLength* configuration."""
+        """Test the *slotLength* configuration.
+
+        Test that custom slotLength parameter is correctly applied and epoch boundaries are
+        respected.
+
+        * modify genesis spec to set slotLength to 0.3 seconds
+        * start cluster with modified configuration
+        * check that cluster slot length is 0.3 seconds
+        * check that cluster epoch length is 1000 slots (default)
+        * wait until end of current epoch
+        * check that epoch number increments correctly at epoch boundary
+        * verify slot count resets to 0 at epoch boundary
+        """
         cluster = cluster_slot_length
         common.get_test_id(cluster)
 

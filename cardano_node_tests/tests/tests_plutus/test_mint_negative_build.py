@@ -296,9 +296,24 @@ class TestBuildMintingNegative:
         fund_issuer_long_asset_name: FundTupleT,
         asset_name: str,
     ):
-        """Test minting a token and 'calculate-min-required-utxo' with a name longer than allowed.
+        """Test minting token with asset name exceeding maximum length and min-UTXO calculation.
 
         Expect failure.
+
+        Property-based test using Hypothesis to generate asset names longer than 32 bytes
+        (maximum allowed length for Cardano native token asset names).
+
+        Uses `cardano-cli transaction build` command for building the transactions.
+
+        * use pre-funded token issuer address with collateral UTxO
+        * generate random asset name (minimum 33 characters)
+        * encode asset name to hex and create minting policy
+        * attempt to build transaction minting token with oversized asset name
+        * check that transaction building fails with "bytestring should be no longer than 32
+          bytes" error
+        * attempt to calculate minimum required UTXO for transaction output with oversized
+          asset name
+        * check that min-UTXO calculation also fails with same error
         """
         temp_template = common.get_test_id(cluster)
 

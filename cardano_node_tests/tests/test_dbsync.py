@@ -115,7 +115,14 @@ class TestDBSync:
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_table_names(self, cluster: clusterlib.ClusterLib):
-        """Check that all the expected tables are present in db-sync."""
+        """Check that all the expected tables are present in db-sync.
+
+        Test db-sync database schema by verifying all expected tables exist.
+
+        * query db-sync database for list of all table names
+        * check that DBSYNC_TABLES set is a subset of actual table names
+        * verify all expected core tables are present (block, tx, tx_out, etc.)
+        """
         common.get_test_id(cluster)
         assert self.DBSYNC_TABLES.issubset(dbsync_queries.query_table_names())
 
@@ -124,7 +131,24 @@ class TestDBSync:
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_blocks(self, cluster: clusterlib.ClusterLib):  # noqa: C901
-        """Check expected values in the `block` table in db-sync."""
+        """Check expected values in the `block` table in db-sync.
+
+        Test db-sync block table data integrity by validating field values and relationships
+        across 50 epochs of block records.
+
+        * query current tip, block number, and epoch from cluster
+        * query block records from db-sync for last 50 epochs (epoch_from to current)
+        * for each consecutive block pair, validate:
+          - id increases monotonically (rec.id > prev_rec.id)
+          - epoch_no is non-negative and increases monotonically
+          - epoch_no changes by at most 1 between consecutive blocks
+          - slot_no is non-negative and increases monotonically
+          - epoch_slot_no is non-negative and increases within same epoch
+          - block_no increments by exactly 1 between consecutive blocks
+          - previous_id points to previous record's id
+        * check that last block_no in db-sync is within 1 of node's block_no
+        * verify protocol version matches expected values
+        """
         common.get_test_id(cluster)
 
         tip = cluster.g_query.get_tip()
@@ -248,7 +272,19 @@ class TestDBSync:
     )
     @pytest.mark.testnets
     def test_cost_model(self, cluster: clusterlib.ClusterLib):
-        """Check expected values in the `cost_model` table in db-sync."""
+        """Check expected values in the `cost_model` table in db-sync.
+
+        Test db-sync Plutus cost model records match protocol parameters. Runs only in
+        eras > Alonzo where Plutus cost models are active.
+
+        * query current epoch number
+        * query cost models from db-sync for current epoch
+        * if cost models not available, wait for next epoch and retry
+        * query protocol parameters from node for comparison
+        * extract PlutusV1, PlutusV2, PlutusV3 cost models from protocol params
+        * compare db-sync cost model records with protocol parameter cost models
+        * verify cost model values match between db-sync and node
+        """
         common.get_test_id(cluster)
         curr_epoch = cluster.g_query.get_epoch()
 
@@ -350,7 +386,21 @@ class TestDBSync:
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_epoch(self, cluster: clusterlib.ClusterLib):
-        """Check expected values in the `epoch` table in db-sync."""
+        """Check expected values in the `epoch` table in db-sync.
+
+        Test db-sync epoch table data consistency by comparing aggregated counts with
+        block table data. Skip if running in epoch 0.
+
+        * query current epoch from cluster
+        * use previous epoch for validation (current - 1) if not in epoch 0
+        * skip test if in epoch 0
+        * query all blocks for the target epoch from block table
+        * count blocks and transactions from block table records
+        * query epoch summary from epoch table for same epoch
+        * count blocks and transactions from epoch table records
+        * verify block count matches between block table and epoch table
+        * verify transaction count matches between block table and epoch table
+        """
         common.get_test_id(cluster)
 
         current_epoch = cluster.g_query.get_epoch()
@@ -398,6 +448,14 @@ class TestDBSyncSnapshot:
 
         This test uses the S3 REST API to query the Cardano mainnet snapshot repository
         and verifies that the most recent snapshot is fresh.
+
+        * initialize DBSyncSnapshotService to access S3 snapshot repository
+        * query S3 API to find latest db-sync version available
+        * get latest snapshot file for that version from S3
+        * log snapshot details (name, last modified date, size in GB)
+        * calculate current UTC time and 5-days-ago threshold
+        * verify snapshot last_modified date is within 5 days
+        * fail if snapshot is older than 5 days with detailed age information
         """
         common.get_test_id(cluster_manager)
         db_sync_snapshots = dbsync_snapshot_service.DBSyncSnapshotService()

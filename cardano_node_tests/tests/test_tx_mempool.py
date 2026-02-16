@@ -40,10 +40,17 @@ class TestMempool:
         cluster_singleton: clusterlib.ClusterLib,
         payment_addrs_locked: list[clusterlib.AddressRecord],
     ):
-        """Test that is possible to query txin of a transaction that is still in mempool.
+        """Query txin of a transaction that is still in mempool.
 
-        * check if 'query tx-mempool next-tx' is returning a TxId
-        * check if 'query tx-mempool exists <TxId>' found the expected TxId
+        Test mempool query commands while transaction is pending in mempool.
+
+        * wait for existing transactions to be removed from mempool
+        * build and sign transaction from source address to destination address with 2 ADA
+        * submit transaction and re-submit to ensure it stays in mempool
+        * query UTxO while transaction is in mempool
+        * check that 'query tx-mempool next-tx' returns a TxId
+        * check that 'query tx-mempool exists <TxId>' finds the expected TxId
+        * verify slot numbers match between mempool query commands
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)

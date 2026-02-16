@@ -123,7 +123,14 @@ class TestMIRCerts:
     ):
         """Send funds from the reserves pot to the treasury pot.
 
-        Expected to fail when Era < Alonzo.
+        Test transferring funds between protocol pots using MIR certificate. Uses
+        `cardano-cli transaction build-raw`. Expected to fail when Era < Alonzo.
+
+        * generate MIR certificate for transferring 10000000000000 lovelace to treasury
+        * submit transaction with MIR certificate signed by genesis delegate keys
+        * submit transaction at the beginning of an epoch
+        * check that source address balance is correct after fee deduction
+        * check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -198,7 +205,15 @@ class TestMIRCerts:
     ):
         """Send funds from the reserves pot to the treasury pot.
 
+        Test transferring funds between protocol pots using MIR certificate.
         Uses `cardano-cli transaction build` command for building the transactions.
+
+        * generate MIR certificate for transferring 10000000000000 lovelace to treasury
+        * build transaction using `transaction build` with MIR certificate
+        * sign transaction with genesis delegate keys
+        * submit transaction at the beginning of an epoch
+        * check that source address balance is correct after fee deduction
+        * check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -278,7 +293,14 @@ class TestMIRCerts:
     ):
         """Send funds from the treasury pot to the reserves pot.
 
-        Expected to fail when Era < Alonzo.
+        Test transferring funds between protocol pots using MIR certificate. Uses
+        `cardano-cli transaction build-raw`. Expected to fail when Era < Alonzo.
+
+        * generate MIR certificate for transferring 1000000000000 lovelace to reserves
+        * submit transaction with MIR certificate signed by genesis delegate keys
+        * submit transaction at the beginning of an epoch
+        * check that source address balance is correct after fee deduction
+        * check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots
@@ -353,7 +375,15 @@ class TestMIRCerts:
     ):
         """Send funds from the treasury pot to the reserves pot.
 
+        Test transferring funds between protocol pots using MIR certificate.
         Uses `cardano-cli transaction build` command for building the transactions.
+
+        * generate MIR certificate for transferring 1000000000000 lovelace to reserves
+        * build transaction using `transaction build` with MIR certificate
+        * sign transaction with genesis delegate keys
+        * submit transaction at the beginning of an epoch
+        * check that source address balance is correct after fee deduction
+        * check `transaction view` command output
         """
         temp_template = common.get_test_id(cluster_pots)
         cluster = cluster_pots

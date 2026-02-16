@@ -106,11 +106,18 @@ class TestTxChaining:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test transactions chaining.
+        """Test transaction chaining with 1000 dependent transactions in mempool.
 
         Submit Txs one by one without waiting for them to appear on ledger and use output of one
-        Tx as input for the next Tx. As a result, Txs are using inputs that doesn't exist on ledger
-        yet. Node needs to lookup the Tx in mempool and correctly chain the dependent transactons.
+        Tx as input for the next Tx. As a result, Txs are using inputs that don't exist on ledger
+        yet. Node needs to lookup the Tx in mempool and correctly chain the dependent transactions.
+
+        * Create payment address with 205 ADA
+        * Generate 1000 signed transactions where each uses output of previous transaction
+        * Submit all transactions to mempool without waiting for ledger confirmation
+        * Verify node can chain dependent transactions through mempool lookups
+        * Check balances after all transactions are processed
+        * (optional) Check transactions in db-sync
         """
         temp_template = common.get_test_id(cluster)
 

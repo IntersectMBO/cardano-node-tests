@@ -784,7 +784,13 @@ class TestKES:
     ):
         """Try to generate new operational certificate without specifying the `--kes-period`.
 
-        Expect failure.
+        Test that operational certificate generation fails when required `--kes-period` argument
+        is not provided. Expect failure.
+
+        * get pool KES verification key, cold signing key, and counter file from pool2
+        * attempt to execute `cardano-cli node issue-op-cert` without --kes-period argument
+        * check that command fails with "Missing: --kes-period NATURAL" error
+        * verify operational certificate file was not created
         """
         pool_name = cluster_management.Resources.POOL2
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -823,7 +829,12 @@ class TestKES:
     ):
         """Try to generate new operational certificate with a negative value for `--kes-period`.
 
-        Expect failure.
+        Test that operational certificate generation fails when --kes-period is set to a
+        negative value. Expect failure.
+
+        * get pool KES verification key, cold signing key, and counter file from pool2
+        * attempt to generate operational certificate with --kes-period set to -100
+        * check that generation fails with "KES_PERIOD must not be less than 0" error
         """
         common.get_test_id(cluster)
 

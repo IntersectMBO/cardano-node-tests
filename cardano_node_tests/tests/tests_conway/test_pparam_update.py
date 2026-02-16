@@ -1367,7 +1367,16 @@ class TestPParamUpdate:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test creation of pparam update with negative value."""
+        """Create protocol parameter update action with negative value.
+
+        Test that creating a pparam update action with negative parameter value either fails
+        with expected error or wraps to unexpected value (known CLI issue).
+
+        * create protocol parameter update proposal with negative maxBlockHeaderSize value
+        * attempt to create governance action using negative value (-3161913232)
+        * verify either CLI error is raised or value wraps to 2160 due to CLI issue 860
+        * check action contents if action creation succeeds
+        """
         temp_template = common.get_test_id(cluster)
 
         proposal = clusterlib_utils.UpdateProposal(
@@ -1408,7 +1417,19 @@ class TestPParamData:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test presence of expected protocol parameters keys."""
+        """Verify all expected Conway era protocol parameter keys are present.
+
+        Test that protocol parameters query returns all expected parameter groups and voting
+        thresholds for Conway governance.
+
+        * execute `cardano-cli query protocol-parameters` command
+        * check presence of network group parameters (maxBlockBodySize, maxTxSize, etc.)
+        * check presence of economic group parameters (txFeePerByte, stakeAddressDeposit, etc.)
+        * check presence of technical group parameters (poolPledgeInfluence, costModels, etc.)
+        * check presence of governance group parameters (govActionDeposit, dRepDeposit, etc.)
+        * verify all DRep voting thresholds are present in dRepVotingThresholds
+        * verify all pool voting thresholds are present in poolVotingThresholds
+        """
         common.get_test_id(cluster)
 
         _url = helpers.get_vcs_link()

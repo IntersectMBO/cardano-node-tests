@@ -527,6 +527,10 @@ class TestNegative:
         """Try to generate stake address registration certificate using wrong stake vkey.
 
         Expect failure.
+
+        * Attempt to generate stake address registration certificate using payment vkey instead of
+          stake vkey
+        * Check that certificate generation fails with expected error about wrong key type
         """
         temp_template = common.get_test_id(cluster)
 
@@ -553,6 +557,10 @@ class TestNegative:
         """Try to register stake address using wrong payment skey.
 
         Expect failure.
+
+        * Create stake address registration certificate
+        * Attempt to submit registration transaction signed with wrong payment skey
+        * Check that transaction submission fails with MissingVKeyWitnessesUTXOW error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -591,7 +599,17 @@ class TestNegative:
         pool_users_disposable: list[clusterlib.PoolUser],
         build_method: str,
     ):
-        """Deregister not registered stake address."""
+        """Deregister not registered stake address.
+
+        Uses parametrized build method (build, build-raw, or build-estimate).
+
+        Expect failure.
+
+        * Create stake address but do not register it
+        * Generate stake address deregistration certificate for unregistered address
+        * Attempt to build/submit transaction to deregister unregistered stake address
+        * Check that transaction fails with StakeKeyNotRegisteredDELEG error
+        """
         temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]

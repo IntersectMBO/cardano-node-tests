@@ -712,7 +712,19 @@ class TestStakePool:
     ):
         """Create and register a stake pool with metadata.
 
-        Check that pool was registered and stake address delegated.
+        Uses parametrized build method (build or build-raw).
+
+        * create pool metadata JSON file with name, description, ticker, homepage
+        * generate pool metadata hash from metadata file
+        * create 3 pool owner addresses
+        * fund first pool owner address with 900 ADA
+        * generate pool cold keys and VRF keys
+        * create pool registration certificate with metadata URL and hash
+        * submit registration certificate and delegate owner stake address to pool
+        * check that pool was registered with correct parameters
+        * check that stake address was delegated to pool
+        * check `transaction view` command
+        * (optional) check pool off-chain metadata in db-sync
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -779,7 +791,19 @@ class TestStakePool:
     ):
         """Create and register a stake pool with metadata file not available.
 
-        Check that pool was registered and stake address delegated.
+        Test that pool registration succeeds even when metadata URL points to nonexistent location.
+
+        * create pool metadata JSON file with pool details
+        * generate pool metadata hash from local file
+        * specify invalid metadata URL (file not actually hosted there)
+        * create pool owner address
+        * fund pool owner address with 900 ADA
+        * generate pool registration certificate with invalid metadata URL
+        * submit registration certificate and delegate owner stake address
+        * check that pool was registered despite invalid metadata URL
+        * check that stake address was delegated
+        * (optional) check db-sync records pool off-chain fetch error for invalid URL
+        * (optional) check SMASH service records pool error for invalid metadata
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -862,7 +886,15 @@ class TestStakePool:
     ):
         """Create and register a stake pool (without metadata).
 
-        Check that pool was registered.
+        Uses parametrized build method (build or build-raw) and number of pool owners (1 or 3).
+
+        * create parametrized number of pool owner addresses
+        * fund first pool owner address with 900 ADA
+        * generate pool cold keys and VRF keys
+        * create pool registration certificate without metadata
+        * submit registration certificate with pool deposit
+        * check that pool was registered on chain with correct parameters
+        * check that pool deposit was deducted from payment address
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -908,9 +940,19 @@ class TestStakePool:
     ):
         """Deregister stake pool.
 
-        * deregister stake pool
-        * check that the stake addresses are no longer delegated
+        Uses parametrized build method (build or build-raw).
+
+        * create pool with metadata and 3 pool owners
+        * register and delegate stake addresses to the pool
+        * wait for pool to be registered and receive first rewards
+        * generate pool deregistration certificate for future epoch
+        * submit deregistration certificate
+        * wait for retirement epoch
+        * check that the pool was deregistered and no longer appears in stake distribution
+        * check that owner stake addresses are no longer delegated to the pool
         * check that the pool deposit was returned to reward account
+        * (optional) check pool deregistration in db-sync
+        * (optional) check SMASH service delisted the pool
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
@@ -1044,14 +1086,23 @@ class TestStakePool:
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
     ):
-        """Reregister stake pool.
+        """Reregister stake pool after deregistration.
 
-        * deregister stake pool
-        * check that the stake addresses are no longer delegated
-        * reregister the pool by resubmitting the pool registration certificate
-        * delegate stake address to pool again (the address is already registered)
-        * check that pool was correctly setup
-        * check that the stake addresses were delegated
+        Test that a deregistered pool can be re-registered by resubmitting the pool registration
+        certificate. The stake address that was already registered does not need to pay deposit
+        again.
+
+        * create and register pool with metadata
+        * delegate owner stake address to pool
+        * wait for retirement epoch and check pool is deregistered
+        * check that owner stake address is no longer delegated
+        * check that pool deposit was returned to reward account
+        * reregister the pool by resubmitting the original pool registration certificate
+        * delegate stake address to pool again (address is already registered, no new deposit)
+        * wait for pool to become active again
+        * check that pool was correctly registered on chain
+        * check that stake address was delegated to the pool
+        * (optional) check pool re-registration in db-sync
         """
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"

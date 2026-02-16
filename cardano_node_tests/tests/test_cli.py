@@ -45,7 +45,15 @@ class TestCLI:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_protocol_mode(self, cluster: clusterlib.ClusterLib):
-        """Check the default protocol mode - command works even without specifying protocol mode."""
+        """Check the default protocol mode - command works even without specifying protocol mode.
+
+        Test that cardano-cli query commands work without explicitly specifying the protocol mode.
+
+        * Execute `cardano-cli query utxo` command without --cardano-mode or --byron-mode flag
+        * Use static testnet address for query
+        * Verify command executes successfully without protocol mode argument
+        * Check that default protocol mode is automatically applied
+        """
         common.get_test_id(cluster)
 
         cluster.cli(
@@ -81,7 +89,16 @@ class TestCLI:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_toplevel_queries(self, cluster: clusterlib.ClusterLib, command: str):
-        """Check that various queries are available in top level."""
+        """Verify that query commands are accessible from top level cardano-cli.
+
+        Test parametrized across multiple query commands to ensure they are available in top-level
+        command structure rather than requiring era-specific paths.
+
+        * Execute `cardano-cli query <command>` without era prefix
+        * Verify command is recognized (may fail with usage error if args missing)
+        * Check that command does not produce "Invalid argument 'query'" error
+        * Verify usage message contains expected command name
+        """
         common.get_test_id(cluster)
 
         try:
@@ -100,7 +117,16 @@ class TestCLI:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_calculate_min_fee(self, cluster: clusterlib.ClusterLib):
-        """Check the `calculate-min-fee` command."""
+        """Calculate minimum transaction fee using cardano-cli.
+
+        Test that transaction calculate-min-fee command returns reasonable fee value in Lovelace.
+
+        * Create protocol parameters file
+        * Execute `cardano-cli transaction calculate-min-fee` command
+        * Provide transaction body file, witness count, input/output counts
+        * Check that calculated fee is below maximum expected threshold (172000 Lovelace)
+        * Verify output format includes fee value and "Lovelace" unit
+        """
         common.get_test_id(cluster)
         max_fee = 172_000
         cluster.create_pparams_file()
@@ -140,7 +166,16 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_txid_with_process_substitution(self, cluster: clusterlib.ClusterLib):
-        """Check that it is possible to pass Tx file using process substitution."""
+        """Extract transaction ID from transaction file using process substitution.
+
+        Test that cardano-cli accepts transaction file content via bash process substitution
+        instead of file path.
+
+        * Load transaction file content into bash variable
+        * Execute `cardano-cli transaction txid` with process substitution <(echo content)
+        * Verify command accepts process substitution syntax
+        * Check that transaction ID is extracted successfully
+        """
         common.get_test_id(cluster)
 
         cmd = (
@@ -160,7 +195,16 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_sign_tx_with_process_substitution(self, cluster: clusterlib.ClusterLib):
-        """Check that it is possible to pass skey file using process substitution."""
+        """Sign transaction using signing key file via process substitution.
+
+        Test that cardano-cli accepts signing key file content via bash process substitution
+        instead of file path.
+
+        * Load signing key file content into bash variable
+        * Execute `cardano-cli transaction sign` with process substitution for --signing-key-file
+        * Verify command accepts process substitution syntax for key file
+        * Check that transaction is signed successfully
+        """
         temp_template = common.get_test_id(cluster)
 
         cmd = (
@@ -175,7 +219,17 @@ class TestCLI:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
-        """Check that the output of `transaction view` is as expected."""
+        """View transaction body and signed transaction in JSON format.
+
+        Test that transaction view command produces expected JSON output for both transaction
+        body and signed transaction files.
+
+        * Execute `cardano-cli transaction view --tx-body-file` command
+        * Check output includes redeemers and datums fields
+        * Compare transaction body JSON output with golden file
+        * Execute `cardano-cli transaction view --tx-file` command for signed transaction
+        * Compare signed transaction JSON output with golden file
+        """
         common.get_test_id(cluster)
 
         tx_body = cluster.g_transaction.view_tx(tx_body_file=self.TX_BODY_FILE)
@@ -202,7 +256,18 @@ class TestCLI:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_query_tip(self, cluster: clusterlib.ClusterLib):
-        """Test `query tip`."""
+        """Query blockchain tip and validate output fields.
+
+        Test that query tip command returns expected fields with correct values and constraints.
+
+        * Execute `cardano-cli query tip` command
+        * Check that output contains expected fields (block, epoch, era, hash, slot, syncProgress)
+        * Check for optional fields slotInEpoch and slotsToEpochEnd (node 1.36.0+)
+        * Verify slotInEpoch is never greater than epoch length
+        * Verify slotsToEpochEnd matches difference between epoch length and slotInEpoch
+        * Verify slot number is within valid range for current epoch
+        * Verify era matches expected cluster era name
+        """
         common.get_test_id(cluster)
 
         tip_out = cluster.g_query.get_tip()
@@ -264,10 +329,15 @@ class TestCLI:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_ledger_peer_snapshot(self, cluster: clusterlib.ClusterLib):
-        """Test `cardano-cli query ledger-peer-snapshot`.
+        """Query ledger peer snapshot and validate structure.
 
-        * ensure the command runs successfully
-        * ensure minimal expected keys exist
+        Test that ledger peer snapshot command returns expected JSON structure with pool
+        stake information.
+
+        * execute `cardano-cli query ledger-peer-snapshot` command
+        * verify response contains expected keys (bigLedgerPools, slotNo, version)
+        * check that bigLedgerPools is a list
+        * verify each pool entry contains relativeStake field if pools exist
         """
         common.get_test_id(cluster)
 
@@ -290,7 +360,18 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     @pytest.mark.smoke
     def test_address_info_payment(self, cluster: clusterlib.ClusterLib, addr_gen: str):
-        """Check payment address info."""
+        """Retrieve and verify payment address information.
+
+        Test parametrized with static and dynamically generated payment addresses.
+
+        * use static payment address or generate new payment address (addr_gen parameter)
+        * execute `cardano-cli address info` command
+        * verify address field matches input address
+        * verify era is "shelley"
+        * verify encoding is "bech32"
+        * verify type is "payment"
+        * for static address, verify base16 encoding matches expected value
+        """
         temp_template = common.get_test_id(cluster)
 
         if addr_gen == "static":
@@ -314,7 +395,18 @@ class TestAddressInfo:
     @pytest.mark.parametrize("addr_gen", ("static", "dynamic"))
     @pytest.mark.smoke
     def test_address_info_stake(self, cluster: clusterlib.ClusterLib, addr_gen: str):
-        """Check stake address info."""
+        """Retrieve and verify stake address information.
+
+        Test parametrized with static and dynamically generated stake addresses.
+
+        * use static stake address or generate new stake address (addr_gen parameter)
+        * execute `cardano-cli address info` command
+        * verify address field matches input address
+        * verify era is "shelley"
+        * verify encoding is "bech32"
+        * verify type is "stake"
+        * for static address, verify base16 encoding matches expected value
+        """
         temp_template = common.get_test_id(cluster)
 
         if addr_gen == "static":
@@ -337,7 +429,19 @@ class TestAddressInfo:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_address_info_script(self, cluster: clusterlib.ClusterLib):
-        """Check script address info."""
+        """Retrieve and verify script address information.
+
+        Test that address info correctly identifies script addresses.
+
+        * generate payment address and keys
+        * create multisig script using payment verification key
+        * generate script address from multisig script
+        * execute `cardano-cli address info` command for script address
+        * verify address field matches input address
+        * verify era is "shelley"
+        * verify encoding is "bech32"
+        * verify type is "payment" (script addresses have payment type)
+        """
         temp_template = common.get_test_id(cluster)
 
         # Create payment address
@@ -369,7 +473,17 @@ class TestAddressInfo:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_address_info_payment_with_outfile(self, cluster: clusterlib.ClusterLib):
-        """Compare payment address info with and without outfile provided."""
+        """Compare payment address info with and without outfile provided.
+
+        Test that address info produces identical output when written to stdout via --out-file
+        compared to default stdout output.
+
+        * execute `cardano-cli address info` without --out-file argument
+        * parse JSON output from stdout
+        * execute `cardano-cli address info --out-file /dev/stdout`
+        * parse JSON output from stdout with --out-file
+        * verify both outputs are identical
+        """
         common.get_test_id(cluster)
 
         # Just a static address to preform the test
@@ -431,7 +545,17 @@ class TestAddressBuild:
         payment: str,
         stake: str,
     ):
-        """Check `address build` with all valid input options."""
+        """Build payment addresses with different input combinations.
+
+        Test parametrized across payment credential types (vkey, vkey_file, script_file) and
+        stake credential types (None, vkey, vkey_file, script_file, address).
+
+        * load golden payment and stake verification keys and script files
+        * build payment address using specified payment credential type (parameter)
+        * optionally include stake credential using specified type (parameter)
+        * verify generated address matches one of expected address formats
+        * check address type varies based on stake credential (payment-only or base address)
+        """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         payment_vkey_file = DATA_DIR / "golden_payment.vkey"
@@ -616,7 +740,15 @@ class TestAddressKeyHash:
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
     @pytest.mark.smoke
     def test_valid_verification_key(self, cluster: clusterlib.ClusterLib, option: str):
-        """Check `address key-hash` with valid verification key."""
+        """Compute payment verification key hash from valid key.
+
+        Test parametrized with vkey (bech32 string) and vkey_file (file path) input options.
+
+        * load golden payment verification key file
+        * convert to bech32 format if option is "vkey"
+        * execute `cardano-cli address key-hash` command with specified input option
+        * verify computed hash matches expected golden hash value
+        """
         common.get_test_id(cluster)
 
         vkey_file = DATA_DIR / "golden_payment.vkey"
@@ -678,7 +810,16 @@ class TestKey:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_non_extended_key_valid(self, cluster: clusterlib.ClusterLib):
-        """Check that the non-extended verification key is according the verification key."""
+        """Derive non-extended verification key from extended verification key.
+
+        Test that non-extended key derivation produces valid key that is prefix of extended key.
+
+        * generate extended payment key pair
+        * extract extended verification key CBOR hex (excluding first 4 chars)
+        * execute `cardano-cli key non-extended-key` command with extended verification key file
+        * extract non-extended verification key CBOR hex
+        * verify extended key starts with non-extended key (non-extended is 32-byte prefix)
+        """
         temp_template = common.get_test_id(cluster)
 
         # Get an extended verification key
@@ -704,7 +845,15 @@ class TestKey:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_stake_non_extended_key(self, cluster: clusterlib.ClusterLib):
-        """Get a stake non-extended-key from a stake extended key."""
+        """Derive stake non-extended key from stake extended key.
+
+        Test that stake non-extended key derivation works correctly with stake extended keys.
+
+        * load golden stake extended verification key file
+        * execute `cardano-cli key non-extended-key` command with stake extended key file
+        * verify command succeeds (or handle known issue node_4914 if error occurs)
+        * check that non-extended stake key is generated successfully
+        """
         temp_template = common.get_test_id(cluster)
 
         stake_extended_key_file = DATA_DIR / "stake.evkey"
@@ -752,7 +901,14 @@ class TestQueryUTxO:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_whole_utxo(self, cluster: clusterlib.ClusterLib):
-        """Check that it is possible to return the whole UTxO on local cluster."""
+        """Query entire UTxO set from blockchain.
+
+        Test that whole-utxo query returns complete UTxO set on local cluster without errors.
+
+        * execute `cardano-cli query utxo --whole-utxo` command
+        * verify command completes successfully
+        * check that entire UTxO set can be retrieved (may be large on mainnet)
+        """
         common.get_test_id(cluster)
 
         cluster.cli(
@@ -774,7 +930,17 @@ class TestQueryUTxO:
     def test_pretty_utxo(
         self, cluster_manager: cluster_management.ClusterManager, cluster: clusterlib.ClusterLib
     ):
-        """Check that pretty printed `query utxo` output looks as expected."""
+        """Verify pretty-printed UTxO query output format.
+
+        Test that text-formatted UTxO output contains expected fields in correct order and format.
+
+        * create source and destination payment addresses
+        * fund source address with 14 ADA (2 + 2.5 + 10 for fees)
+        * send 2 ADA and 2.5 ADA to destination address in single transaction
+        * execute `cardano-cli query utxo --output-text` for destination address
+        * verify output contains expected columns (TxHash, TxIx, Amount)
+        * check transaction ID, indices (0, 1), amounts, and TxOutDatumNone match expectations
+        """
         temp_template = common.get_test_id(cluster)
         amount1 = 2_000_000
         amount2 = 2_500_000
@@ -917,7 +1083,15 @@ class TestStakeAddressKeyHash:
     @pytest.mark.parametrize("option", ("vkey", "vkey_file"))
     @pytest.mark.smoke
     def test_valid_verification_key(self, cluster: clusterlib.ClusterLib, option: str):
-        """Check `stake-address key-hash` with valid verification key."""
+        """Compute stake verification key hash from valid key.
+
+        Test parametrized with vkey (bech32 string) and vkey_file (file path) input options.
+
+        * load golden stake verification key file
+        * convert to bech32 format if option is "vkey"
+        * execute `cardano-cli stake-address key-hash` command with specified input option
+        * verify computed hash matches expected golden hash value
+        """
         common.get_test_id(cluster)
 
         vkey_file = DATA_DIR / "golden_stake.vkey"
@@ -1164,7 +1338,15 @@ class TestAdvancedQueries:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     def test_ledger_state(self, cluster: clusterlib.ClusterLib):
-        """Test `query ledger-state`."""
+        """Query ledger state and validate structure.
+
+        Test that ledger-state query returns expected JSON structure containing epoch information.
+
+        * execute `cardano-cli query ledger-state` command
+        * verify response contains expected "lastEpoch" field
+        * check that ledger state JSON can be parsed successfully
+        * handle known node issue 3859 for invalid numeric literals in JSON output
+        """
         common.get_test_id(cluster)
 
         try:
@@ -1197,9 +1379,16 @@ class TestAdvancedQueries:
         cluster: clusterlib.ClusterLib,
         option: str,
     ):
-        """Test `query stake-snapshot`.
+        """Query stake snapshot for pools and validate structure.
 
-        See also `TestLedgerState.test_stake_snapshot` for more scenarios.
+        Test parametrized to query single pool, multiple pools, or all pools.
+        See also `TestLedgerState.test_stake_snapshot` for comprehensive ledger state validation.
+
+        * get stake pool IDs from cluster
+        * execute `cardano-cli query stake-snapshot` with specified pool filter (option parameter)
+        * verify response contains expected snapshot fields (stakeMark, stakeSet, stakeGo)
+        * check pool stake totals match expected values
+        * (optional) validate stake distribution against db-sync for single_pool option
         """
         temp_template = common.get_test_id(cluster)
         self._check_stake_snapshot(
@@ -1213,7 +1402,15 @@ class TestAdvancedQueries:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: list[str]):
-        """Test `query pool-params`."""
+        """Query pool parameters and validate structure.
+
+        Test that pool-params query returns expected pool configuration fields.
+
+        * get first available pool ID from cluster
+        * execute `cardano-cli query pool-params` command for pool
+        * verify response contains expected "retiring" field
+        * check that pool parameters JSON can be parsed successfully
+        """
         common.get_test_id(cluster)
 
         try:
@@ -1270,7 +1467,15 @@ class TestAdvancedQueries:
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: list[str]):
-        """Test `query pool-state`."""
+        """Query pool state and validate structure.
+
+        Test that pool-state query returns expected pool runtime state fields.
+
+        * get first available pool ID from cluster
+        * execute `cardano-cli query pool-state` command for pool
+        * verify response contains expected "retiring" field
+        * check that pool state can be retrieved successfully
+        """
         common.get_test_id(cluster)
 
         pool_params = cluster.g_query.get_pool_state(stake_pool_id=pool_ids[0])
@@ -1288,7 +1493,16 @@ class TestPing:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `cardano-cli ping` on local node using host and port."""
+        """Ping local node using TCP host and port.
+
+        Test that cardano-cli ping command successfully connects to local node via TCP.
+
+        * get pool1 or relay1 port from cluster instance configuration
+        * execute `cardano-cli ping` command with --host localhost and --port
+        * send 5 ping requests with JSON output
+        * verify JSON response contains pongs array
+        * check that last pong has cookie value matching request count minus 1 (4)
+        """
         common.get_test_id(cluster)
 
         count = 5
@@ -1332,7 +1546,17 @@ class TestPing:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `cardano-cli ping` on local node using unix socket."""
+        """Ping local node using Unix domain socket.
+
+        Test that cardano-cli ping command successfully connects to local node via Unix socket.
+
+        * add log ignore rule for expected MuxUnknownMiniProtocol errors (ping protocol)
+        * execute `cardano-cli ping` command with --unixsock and CARDANO_NODE_SOCKET_PATH
+        * send 5 ping requests with JSON output
+        * handle expected "Unix sockets only support queries" error on newer CLI versions
+        * verify JSON response contains pongs array
+        * check that last pong has cookie value matching request count minus 1 (4)
+        """
         common.get_test_id(cluster)
         count = 5
         ignore_file_id = "ping_unix_socket"
@@ -1393,7 +1617,16 @@ class TestPing:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test querying tip using `cardano-cli ping` on local node using host and port."""
+        """Query blockchain tip using cardano-cli ping command.
+
+        Test that ping --tip flag returns current blockchain tip information.
+
+        * get pool1 or relay1 port from cluster instance configuration
+        * execute `cardano-cli ping --tip` command with --host and --port
+        * parse JSON output and extract slotNo from last tip entry
+        * query current tip using standard query tip command
+        * verify ping tip slotNo is within 100 slots of cluster tip
+        """
         common.get_test_id(cluster)
 
         instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
@@ -1434,7 +1667,16 @@ class TestPing:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test querying versions using `cardano-cli ping` on local node using host and port."""
+        """Query node-to-node protocol version using cardano-cli ping.
+
+        Test that ping --query-versions returns protocol version information.
+
+        * get pool1 or relay1 port from cluster instance configuration
+        * execute `cardano-cli ping --query-versions` command with --host and --port
+        * handle expected UnknownVersionInRsp error when CLI and node versions mismatch
+        * verify output contains "NodeToNodeVersion" when versions match
+        * check for known issue network_5281 if versions match but error occurs
+        """
         common.get_test_id(cluster)
 
         instance_ports = cluster_nodes.get_cluster_type().cluster_scripts.get_instance_ports(
@@ -1488,7 +1730,16 @@ class TestQuerySlotNumber:
         self,
         cluster: clusterlib.ClusterLib,
     ):
-        """Test `query slot-number`."""
+        """Convert UTC timestamp to slot number.
+
+        Test that slot-number query correctly converts current UTC timestamp to slot number.
+
+        * get current UTC timestamp
+        * execute `cardano-cli query slot-number` command with timestamp
+        * wait for new block to ensure tip is up-to-date
+        * query current blockchain tip
+        * verify slot number is within valid range (not greater than total slots for epoch)
+        """
         common.get_test_id(cluster)
 
         timestamp = datetime.datetime.now(datetime.UTC)

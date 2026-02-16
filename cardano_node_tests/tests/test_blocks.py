@@ -212,6 +212,14 @@ class TestLeadershipSchedule:
         """Try to query leadership schedule for next epoch when stake distribution is unstable.
 
         Expect failure.
+
+        Test that querying leadership schedule fails when stake distribution is not yet stable for
+        next epoch. Stable stake distribution is only available in last 300 slots of current epoch.
+
+        * Wait for epoch interval where stake distribution for next epoch is unstable (before last
+          300 slots of current epoch)
+        * Attempt to query leadership schedule for next epoch using pool VRF and cold keys
+        * Check that query fails with error message about unstable stake distribution
         """
         common.get_test_id(cluster)
 

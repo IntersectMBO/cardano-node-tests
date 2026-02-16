@@ -125,9 +125,17 @@ class TestCommittee:
         build_method: str,
         submit_method: str,
     ):
-        """Try to submit a Hot Credential Authorization certificate without being a CC member.
+        """Try to submit Hot Credential Authorization certificate without CC membership.
 
         Expect failure.
+
+        Test that attempting to authorize a hot key without being a Constitutional Committee member
+        is rejected by the ledger. Uses parametrized build and submit methods.
+
+        * generate CC member cold and hot key pairs
+        * create hot credential authorization certificate
+        * attempt to submit authorization certificate without being CC member
+        * check that transaction fails with ConwayCommitteeIsUnknown error
         """
         temp_template = common.get_test_id(cluster)
 

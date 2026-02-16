@@ -144,8 +144,14 @@ class TestDelegateAddr:
     ):
         """Submit registration certificate and delegate to pool using pool id.
 
-        * register stake address and delegate it to pool
-        * check that the stake address was delegated
+        Uses parametrized build method (build or build-raw).
+
+        * create payment and stake address
+        * fund payment address
+        * generate stake address registration and delegation certificates using pool id
+        * submit registration and delegation certificates in single transaction
+        * check that the stake address was delegated to the expected pool
+        * check that the stake address is active and registered
         * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool
@@ -187,8 +193,15 @@ class TestDelegateAddr:
     ):
         """Submit registration certificate and delegate to pool using cold vkey.
 
-        * register stake address and delegate it to pool
-        * check that the stake address was delegated
+        Uses parametrized build method (build or build-raw). Delegates using pool cold vkey file
+        instead of pool id.
+
+        * create payment and stake address
+        * fund payment address
+        * generate stake address registration and delegation certificates using pool cold vkey
+        * submit registration and delegation certificates in single transaction
+        * check that the stake address was delegated to the expected pool
+        * check that the stake address is active and registered
         * (optional) check records in db-sync
         """
         cluster, pool_name = cluster_use_pool
@@ -229,11 +242,20 @@ class TestDelegateAddr:
     ):
         """Delegate multiple stake addresses that share the same payment keys to multiple pools.
 
-        * Create 1 payment vkey/skey key pair
-        * Create 4 stake vkey/skey key pairs
-        * Create 1 payment addresses for each combination of payment_vkey/stake_vkey
-        * Delegate the stake addresses to 2 different pools
-        * Check that the stake addresses received rewards
+        Test that multiple stake addresses using the same payment key can be delegated to different
+        pools and all receive rewards independently.
+
+        * create 1 payment vkey/skey key pair
+        * create 4 stake vkey/skey key pairs
+        * create 4 payment addresses for each combination of payment_vkey/stake_vkey
+        * fund the payment addresses
+        * generate stake address registration certificates for all 4 stake addresses
+        * generate delegation certificates for the stake addresses (alternating between 2 pools)
+        * submit registration and delegation certificates in single transaction
+        * check that all stake addresses are delegated to their respective pools
+        * check that the balance for source address was correctly updated
+        * wait 4 epochs for first rewards
+        * check that all stake addresses received rewards from their respective pools
         """
         cluster, pool1_id, pool2_id = cluster_and_two_pools
         temp_template = common.get_test_id(cluster)
@@ -551,21 +573,24 @@ class TestDelegateAddr:
         cluster_manager: cluster_management.ClusterManager,
         cluster_and_pool_and_rewards: tuple[clusterlib.ClusterLib, str],
     ):
-        """Deregister a delegated stake address.
+        """Delegate and deregister multisig stake address.
 
-        * Create a multisig script to be used as stake credentials
-        * Create stake address registration and delegation certs
-        * Create a Tx for the registration and delegation certificates
-        * Incrementally sign the Tx and submit the registration certificate
-        * Check that the address is registered and delegated to a pool
-        * Create stake address deregistration cert
-        * Create a Tx for the deregistration certificate
-        * Incrementally sign the Tx and submit the deregistration certificate
-        * Attempt to deregister the stake address - deregistration is expected to fail
-          because there are rewards in the stake address
-        * Withdraw rewards to payment address and deregister stake address
-        * Check that the key deposit was returned and rewards withdrawn
-        * Check that the stake address is no longer delegated
+        Test delegation and deregistration of a stake address that uses a multisig script as
+        stake credentials. All required signers must sign the transactions.
+
+        * create 5 stake key pairs
+        * create multisig script requiring all signatures (all type)
+        * create payment address using multisig script as stake credentials
+        * create script stake address using multisig script
+        * fund payment address
+        * generate stake address registration and delegation certificates
+        * sign and submit registration and delegation transaction with all required signatures
+        * check that the stake address is registered and delegated to pool
+        * wait 4 epochs for first reward
+        * attempt to deregister stake address with rewards - expect failure
+        * withdraw rewards to payment address and deregister stake address
+        * check that the key deposit was returned and rewards withdrawn
+        * check that the stake address is no longer delegated
         * (optional) check records in db-sync
         """
         cluster, pool_id = cluster_and_pool_and_rewards
@@ -1010,6 +1035,10 @@ class TestNegative:
         """Try to generate stake address delegation certificate using wrong stake vkey.
 
         Expect failure.
+
+        * attempt to generate stake address delegation certificate using payment vkey instead of
+          stake vkey
+        * check that certificate generation fails with expected error
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
@@ -1041,6 +1070,11 @@ class TestNegative:
         """Try to delegate stake address using wrong payment skey.
 
         Expect failure.
+
+        * create and register stake address
+        * generate stake address delegation certificate
+        * attempt to submit delegation transaction signed with wrong payment skey
+        * check that transaction submission fails with MissingVKeyWitnessesUTXOW error
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
@@ -1094,6 +1128,14 @@ class TestNegative:
         """Try to delegate unknown stake address.
 
         Expect failure.
+
+        Uses parametrized build method (build or build-raw).
+
+        * create stake address but do not register it
+        * generate stake address delegation certificate for unregistered address
+        * attempt to submit delegation transaction for unknown stake address
+        * check that transaction fails with StakeDelegationImpossibleDELEG or
+          StakeKeyNotRegisteredDELEG error
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
@@ -1146,6 +1188,15 @@ class TestNegative:
         """Try to delegate deregistered stake address.
 
         Expect failure.
+
+        Uses parametrized build method (build or build-raw).
+
+        * create and register stake address
+        * deregister the stake address
+        * generate stake address delegation certificate for deregistered address
+        * attempt to submit delegation transaction for deregistered stake address
+        * check that transaction fails with StakeDelegationImpossibleDELEG or
+          StakeKeyNotRegisteredDELEG error
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
@@ -1215,6 +1266,13 @@ class TestNegative:
         """Try to delegate stake address to unregistered pool.
 
         Expect failure.
+
+        * create and register stake address
+        * generate pool cold keys and certificate but do not register the pool
+        * generate stake address delegation certificate using unregistered pool cold vkey
+        * attempt to submit delegation transaction to unregistered pool
+        * check that transaction fails with DelegateeNotRegisteredDELEG or
+          DelegateeStakePoolNotRegisteredDELEG error
         """
         temp_template = common.get_test_id(cluster)
 
