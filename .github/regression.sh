@@ -187,7 +187,7 @@ _cleanup_testnet_on_interrupt() {
 }
 
 # shellcheck disable=SC2329
-_last_cleanup() {
+_int_cleanup() {
   # Redefine the ERR trap to avoid interfering with cleanup
   # shellcheck disable=SC2064
   trap "$_err_string" ERR
@@ -201,8 +201,22 @@ _last_cleanup() {
 
   trap - SIGINT
 }
-# last cleanup on Ctrl+C or error
-trap '_last_cleanup; exit 130' SIGINT
+# cleanup on Ctrl+C
+trap '_int_cleanup; exit 130' SIGINT
+
+# shellcheck disable=SC2329
+_last_cleanup() {
+  # Redefine the ERR trap to avoid interfering with cleanup
+  # shellcheck disable=SC2064
+  trap "$_err_string" ERR
+  # Ignore further interrupts during cleanup
+  trap '' SIGINT
+
+  _cleanup
+
+  trap - SIGINT
+}
+# last cleanup on error
 # shellcheck disable=SC2064
 trap "${_err_string}; _last_cleanup" ERR
 
