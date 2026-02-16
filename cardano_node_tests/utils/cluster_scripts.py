@@ -536,9 +536,12 @@ class TestnetScripts(ScriptsTypes):
             if not configuration.BOOTSTRAP_DIR:
                 msg = "The 'BOOTSTRAP_DIR' env variable is not set."
                 raise RuntimeError(msg)
-            bootstrap_conf_dir = pl.Path(configuration.BOOTSTRAP_DIR).expanduser().resolve()
+            bootstrap_conf_dir = pl.Path(configuration.BOOTSTRAP_DIR)
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
-            msg = "The 'BOOTSTRAP_DIR' doesn't contain all the needed files."
+            msg = (
+                f"The 'BOOTSTRAP_DIR' is set to '{bootstrap_conf_dir}'"
+                ", but doesn't contain all the needed files."
+            )
             raise RuntimeError(msg)
         return bootstrap_conf_dir
 
@@ -569,6 +572,6 @@ class TestnetScripts(ScriptsTypes):
         return cardonnay_local.InstanceFiles(
             start_script=destdir / "start-cluster",
             stop_script=destdir / "stop-cluster",
-            start_script_args=[configuration.BOOTSTRAP_DIR],
+            start_script_args=[str(configuration.BOOTSTRAP_DIR)],
             dir=destdir,
         )
