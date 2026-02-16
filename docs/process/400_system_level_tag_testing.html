@@ -1,0 +1,732 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System-Level Tag Testing Overview &mdash; cardano-node-tests  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/copyright.css?v=45fba407" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/tables.css?v=78ac1f1e" />
+
+  
+    <link rel="shortcut icon" href="https://user-images.githubusercontent.com/2352619/223086153-522289f3-9902-4f63-ad7b-a7d9c5789db0.png"/>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How Tos" href="../how-tos.html" />
+    <link rel="prev" title="Plutus System-Level Testing Overview" href="400_plutus.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            cardano-node-tests
+              <img src="../_static/Cardano-Crypto-Logo-128.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">cardano-node-tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-with-github-actions">🚀 Running Tests with GitHub Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-locally-with-nix">🛠️ Running Tests Locally with Nix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-individual-tests-with-custom-binaries">🧪 Running Individual Tests with Custom Binaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#persistent-local-testnet-for-repeated-testing">🔁 Persistent Local Testnet for Repeated Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#test-configuration-variables">⚙️ Test Configuration Variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#additional-for-regression-sh">Additional for <code class="docutils literal notranslate"><span class="pre">regression.sh</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#usage-examples">💡 Usage Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#local-development-for-test-authors">💻 Local Development for Test Authors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#set-up-python-environment">Set Up Python Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#activate-dev-environment">Activate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#validate-dev-environment">Validate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#start-development-testnet-cluster">Start Development Testnet Cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#run-individual-tests">Run Individual Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#run-linters">Run Linters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#reinstall-cardano-clusterlib-in-editable-mode">Reinstall <code class="docutils literal notranslate"><span class="pre">cardano-clusterlib</span></code> in Editable Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#update-uv-lockfile">Update uv Lockfile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#build-and-deploy-documentation">Build and Deploy Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#contributing">🤝 Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_results.html">Test Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/nightly_system_tests.html">Nightly system tests pipelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#test-statuses">Test statuses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-results">Nightly results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-upgrade-testing">Nightly upgrade testing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/sync_tests.html">Sync Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/sync_tests.html#sync-test-results-by-cardano-node-version">Sync Test Results by Cardano Node Version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/tag_tests.html">Tag Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_6_2.html">10.6.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_2.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_6_1.html">10.6.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_1.html#new-issues">New issues</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_5_1.html">10.5.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_4_1.html">10.4.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_3_1.html">10.3.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_2_1.html">10.2.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_1_2.html">10.1.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_1_1.html">10.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_9_0_0.html">9.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_11_0.html">8.11.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_3.html">8.9.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_1.html">8.9.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_0.html">8.9.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_8_0.html">8.8.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_3.html">8.7.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_2.html">8.7.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html">8.6.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_1_1.html">8.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_0_0.html">8.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_7.html">1.35.7</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_6.html">1.35.6</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_5.html">1.35.5</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html">1.35.4-rc1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#secp256k1-iog-test-tracking">SECP256k1 IOG Test Tracking</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_3.html">1.35.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#relevant-existing-issues">Relevant existing issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/chang_user_stories.html">Chang HF User Stories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html">System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cli-user-stories">CLI User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cip1694-user-stories">CIP1694 User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#governance-guardrails-user-stories">Governance guardrails User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#internal-test-cases">Internal Test Cases</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#db-sync-conway-related-tables">DB Sync - Conway related tables</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html">PlutusV3 System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html#smart-contract-user-stories">Smart Contract User Stories</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_plans.html">Test Plans</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test-plans/100_conway_governance.html">Governance testing in Conway</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#committee">Committee</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#dreps">DReps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#actions-voting-ratification-and-enactment">Actions, Voting, Ratification and Enactment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#spos">SPOs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#transactions">Transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../process.html">Process</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="100_test_types.html">Types and levels of tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="100_test_types.html#node-system-tests">Node system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="100_test_types.html#node-nightly-cli-tests">Node nightly CLI tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="100_test_types.html#node-cli-tests-on-demand">Node CLI tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="100_test_types.html#node-sync-tests">Node sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="100_test_types.html#db-sync-system-tests">DB Sync system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="100_test_types.html#db-sync-nightly-tests">DB Sync nightly tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="100_test_types.html#db-sync-feature-tests-on-demand">DB Sync feature tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="100_test_types.html#db-sync-sync-tests">DB Sync sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="100_test_types.html#exploratory-testing">Exploratory testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="200_quality_control_strategy.html">Quality control strategy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="200_quality_control_strategy.html#scope-and-objectives">Scope and objectives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="200_quality_control_strategy.html#key-principles">Key principles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="200_quality_control_strategy.html#quality-control-approach">Quality control approach</a></li>
+<li class="toctree-l3"><a class="reference internal" href="200_quality_control_strategy.html#quality-control-methodology">Quality control methodology</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="200_quality_control_strategy.html#active-quality-control">Active quality control</a></li>
+<li class="toctree-l4"><a class="reference internal" href="200_quality_control_strategy.html#passive-quality-control">Passive quality control</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="300_uat_strategy.html">User acceptance test strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="400_plutus.html">Plutus System-Level Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="400_plutus.html#summary">Summary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="400_plutus.html#scope">Scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="400_plutus.html#not-in-scope">Not in scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="400_plutus.html#automation">Automation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="400_plutus.html#antaeus">Antaeus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="400_plutus.html#cardano-node-tests">Cardano-node-tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="400_plutus.html#exploratory-testing">Exploratory Testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">System-Level Tag Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what-we-do">What (We do)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#where-results">Where (Results)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-we-do-it">How (We do it)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-long-does-it-take">How long does it take?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../how-tos.html">How Tos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html">Testing MIR certificate submission with a local cluster</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#creating-key-pairs">Creating key pairs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#payment-key-pair">Payment key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#stake-key-pair">Stake key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#payment-address">Payment address</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#stake-address">Stake address</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#transferring-funds-from-the-faucet-address-to-our-own-shelley-address-payment-addr">Transferring funds from the ‘faucet’ address to our own Shelley address <code class="docutils literal notranslate"><span class="pre">payment.addr</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#build-tx">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#sign-tx">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#submit-tx">Submit tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#check-funds-on-the-payment-addr">Check funds on the payment.addr</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#creating-a-stake-registration-certificate">Creating a stake registration certificate</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#submitting-the-certificate-with-a-transaction">Submitting the certificate with a transaction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#our-stake-address-has-id-13-and-is-registered">Our stake address has id=13 and is registered</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#deregistering-an-empty-stake-address">Deregistering an ‘empty’ stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#creating-a-deregistration-certificate">Creating a deregistration certificate</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#generating-mir-cert-to-send-funds-from-reserves-to-unregistered-stake-address">Generating MIR cert to send funds from reserves to unregistered stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#id4">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#id5">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#id6">Submit tx</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#state-of-tables-after-mir-cert-tx-submission">State of tables after MIR cert tx submission</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#logs">Logs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../how-tos/350_mir_cert_test_example_manual_steps.html#stdout-log">stdout.log</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../how-tos/380_stake_credential_history_tool.html">Stake credential history tool</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/380_stake_credential_history_tool.html#documentation">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/380_stake_credential_history_tool.html#example-of-usage">Example of usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../how-tos/500_smash_faq.html">SMASH FAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html">SMASH - tests and debugging examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#checking-smash-status">Checking SMASH status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#fetching-of-the-metadata">Fetching of the metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#delisting-pools">Delisting pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#reserving-a-ticker">Reserving a ticker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#whitelisting">Whitelisting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#checking-pool-rejection-errors">Checking pool rejection errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#pool-unregistrations">Pool unregistrations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#fetch-policies-from-another-smash-service">Fetch policies from another SMASH service</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../how-tos/520_smash_tests_and_debugging_examples.html#an-example-of-debugging-an-issue-with-a-pool">An example of debugging an issue with a pool</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/contributing.html">Contributing to the Cardano node tests repository</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#how-can-i-contribute">How can I contribute?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#reporting-an-issue">Reporting an issue</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#how-do-i-submit-a-good-issue-report">How do I submit a (good) issue report?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#your-first-code-contribution">Your first code contribution</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#pull-requests">Pull requests</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#id1">Style guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#git-commit-messages">Git commit messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#python-style-guide">Python style guide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#roles-and-responsibilities">Roles and Responsibilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">Source Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cardano_node_tests.html">cardano_node_tests package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.cluster_management.html">cardano_node_tests.cluster_management package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.pytest_plugins.html">cardano_node_tests.pytest_plugins package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.tests.html">cardano_node_tests.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.utils.html">cardano_node_tests.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.block_production_graph">cardano_node_tests.block_production_graph module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_blocks_per_backend"><code class="docutils literal notranslate"><span class="pre">get_blocks_per_backend()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_latest_run_id"><code class="docutils literal notranslate"><span class="pre">get_latest_run_id()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.parse_args"><code class="docutils literal notranslate"><span class="pre">parse_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.plot_backend_blocks"><code class="docutils literal notranslate"><span class="pre">plot_backend_blocks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.cardano_cli_coverage">cardano_node_tests.cardano_cli_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.cli"><code class="docutils literal notranslate"><span class="pre">cli()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_available_commands"><code class="docutils literal notranslate"><span class="pre">get_available_commands()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_badge_icon"><code class="docutils literal notranslate"><span class="pre">get_badge_icon()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_coverage"><code class="docutils literal notranslate"><span class="pre">get_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_log_coverage"><code class="docutils literal notranslate"><span class="pre">get_log_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_report"><code class="docutils literal notranslate"><span class="pre">get_report()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.merge_coverage"><code class="docutils literal notranslate"><span class="pre">merge_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.parse_cmd_output"><code class="docutils literal notranslate"><span class="pre">parse_cmd_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.sanitize_coverage"><code class="docutils literal notranslate"><span class="pre">sanitize_coverage()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.chang_us_coverage">cardano_node_tests.chang_us_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.defragment_utxos">cardano_node_tests.defragment_utxos module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.defragment_utxos.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.defragment_utxos.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.dump_requirements_coverage">cardano_node_tests.dump_requirements_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.prepare_cluster_scripts">cardano_node_tests.prepare_cluster_scripts module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.prepare_scripts_files"><code class="docutils literal notranslate"><span class="pre">prepare_scripts_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.split_topology">cardano_node_tests.split_topology module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.split_topology.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.split_topology.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup">cardano_node_tests.testnet_cleanup module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup_info">cardano_node_tests.testnet_cleanup_info module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">cardano-node-tests</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../process.html">Process</a></li>
+      <li class="breadcrumb-item active">System-Level Tag Testing Overview</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/IntersectMBO/cardano-node-tests/blob/master/src_docs/source/process/400_system_level_tag_testing.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="system-level-tag-testing-overview">
+<h1>System-Level Tag Testing Overview<a class="headerlink" href="#system-level-tag-testing-overview" title="Link to this heading"></a></h1>
+<section id="what-we-do">
+<h2>What (We do)<a class="headerlink" href="#what-we-do" title="Link to this heading"></a></h2>
+<p>For every tag of the Cardano-node, we execute a comprehensive
+system-level test cycle. This includes:</p>
+<ul class="simple">
+<li><p>E2E CLI tests on a local cluster setup</p></li>
+<li><p>E2E CLI tests in real environments (like preview, preprod, and
+similar)</p></li>
+<li><p>Sync tests starting from both a clean state and an existing one (for
+upgrade situations) on the Cardano Mainnet.</p></li>
+</ul>
+</section>
+<section id="where-results">
+<h2>Where (Results)<a class="headerlink" href="#where-results" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>On our ‘cardano-node-tests’ page, under the ‘Test Results/Tag
+Testing’ section, we create a distinct section for every new tag
+we’re verifying.</p></li>
+</ul>
+</section>
+<section id="how-we-do-it">
+<h2>How (We do it)<a class="headerlink" href="#how-we-do-it" title="Link to this heading"></a></h2>
+<p>To minimize the likelihood of overlooking any details, we utilize a
+checklist/template that lists all the necessary steps to be taken.</p>
+<p>The list is broken down into the following sections:</p>
+<ul class="simple">
+<li><p><strong>Changelogs</strong></p>
+<ul>
+<li><p>This section includes links to the changelogs for the specific
+component related to that particular tag.</p></li>
+</ul>
+</li>
+<li><p><strong>Regression Testing on a Local Cluster</strong></p>
+<ul>
+<li><p>This comprises a set of automated test combinations designed to
+ensure there are no regressions with the new tag.</p></li>
+<li><p><strong>Note</strong>: Given the vast array of functionality combinations (such
+as P2P or legacy topologies, various cluster and transaction eras,
+etc.), we aim to mitigate risks by focusing on the most likely
+combinations.</p></li>
+<li><p>For each of these combinations, we execute all automated tests
+pertinent to those distinct scenarios.</p></li>
+</ul>
+</li>
+<li><p><strong>Additional Automated Testing</strong></p>
+<ul>
+<li><p><strong>Upgrade Testing</strong></p>
+<ul>
+<li><p>This simulates real-life situations where wallets or nodes are
+stopped, updated to the newer version, and then restarted.</p></li>
+<li><p>The procedure starts a local cluster using the most recently
+released version, runs sanity, stops the nodes, upgrades the
+cluster nodes to the designated tag version, reboots the local
+cluster, and reruns all the tests.</p></li>
+</ul>
+</li>
+<li><p><strong>Rollback Testing</strong></p>
+<ul>
+<li><p>Testing effects of rollback on Cardano applications by breaking the consensus,
+submitting conflicting transactions, and then restoring consensus.</p></li>
+</ul>
+</li>
+<li><p><strong>Block Production Testing with Mix Topology Settings (Legacy and P2P)</strong></p>
+<ul>
+<li><p>These tests confirm that stake pools with comparable delegated
+values but operating under different topology types (legacy or
+P2P) produce roughly the same number of blocks.</p></li>
+</ul>
+</li>
+<li><p><strong>Sanity Review of the Submit-API</strong></p>
+<ul>
+<li><p>These tests ensure that the submit-api component remains
+compatible and functional with the indicated cardano-node tag
+version.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><strong>Release Testing Checklist</strong></p>
+<ul>
+<li><p>Based on our past experiences, we’ve outlined a series of steps
+related to our actual testnets that must be completed to guarantee
+the desired quality of the tag.</p></li>
+</ul>
+</li>
+<li><p><strong>New Functionalities in This Tag</strong></p>
+<ul>
+<li><p>In this section, we present the new end-user features for the
+current tag, as derived from the changelogs. It also showcases the
+progress of validating these functionalities during the
+system-level testing phase.</p></li>
+</ul>
+</li>
+<li><p><strong>Known Issues</strong></p>
+<ul>
+<li><p>This section details a list of issues that are already known for
+this tag, specifically impacting the functionalities introduced in
+the present tag.</p></li>
+</ul>
+</li>
+<li><p><strong>Newly Identified Issues</strong></p>
+<ul>
+<li><p>Here, we list all issues uncovered during the system-level testing
+of the current tag, focusing solely on new issues rather than
+regressions.</p></li>
+</ul>
+</li>
+<li><p><strong>Breaking Changes</strong></p>
+<ul>
+<li><p>In this section, we list all the breaking changes present in the
+current tag when compared with the last released version.</p></li>
+</ul>
+</li>
+</ul>
+<p><strong>NOTE</strong>: When the release happens to be a hard fork, we add some extra
+steps in our testing process:</p>
+<ul class="simple">
+<li><p><strong>Regression Testing on a Local Cluster</strong></p>
+<ul>
+<li><p>We are ensuring that all exiting to work in both eras by running
+all the automated tests both before and after the hard fork</p></li>
+</ul>
+</li>
+<li><p><strong>Upgrade Testing</strong></p>
+<ul>
+<li><p>These tests would have an extra step for executing the hard fork</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="how-long-does-it-take">
+<h2>How long does it take?<a class="headerlink" href="#how-long-does-it-take" title="Link to this heading"></a></h2>
+<p>Most of our system-level automated tests on a local cluster are
+completed in under 2 hours. However, certain extended tests, which
+involve operations and observations over more epochs, take a bit more
+time.</p>
+<p>The CLI tests are consistently refined for concurrent execution. The
+tests are run in parallel across 5 distinct clusters. All tests are
+triggered automatically on GitHub Actions.</p>
+<p>The synchronization tests, which perform a full sync on Mainnet, usually
+take between 1 to 2 days to run.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="400_plutus.html" class="btn btn-neutral float-left" title="Plutus System-Level Testing Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../how-tos.html" class="btn btn-neutral float-right" title="How Tos" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

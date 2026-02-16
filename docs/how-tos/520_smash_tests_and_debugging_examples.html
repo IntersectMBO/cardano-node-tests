@@ -1,0 +1,1344 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMASH - tests and debugging examples &mdash; cardano-node-tests  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/copyright.css?v=45fba407" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/tables.css?v=78ac1f1e" />
+
+  
+    <link rel="shortcut icon" href="https://user-images.githubusercontent.com/2352619/223086153-522289f3-9902-4f63-ad7b-a7d9c5789db0.png"/>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Contributing to the Cardano node tests repository" href="../contribute/contributing.html" />
+    <link rel="prev" title="SMASH FAQ" href="500_smash_faq.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            cardano-node-tests
+              <img src="../_static/Cardano-Crypto-Logo-128.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">cardano-node-tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-with-github-actions">🚀 Running Tests with GitHub Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-locally-with-nix">🛠️ Running Tests Locally with Nix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-individual-tests-with-custom-binaries">🧪 Running Individual Tests with Custom Binaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#persistent-local-testnet-for-repeated-testing">🔁 Persistent Local Testnet for Repeated Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#test-configuration-variables">⚙️ Test Configuration Variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#additional-for-regression-sh">Additional for <code class="docutils literal notranslate"><span class="pre">regression.sh</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#usage-examples">💡 Usage Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#local-development-for-test-authors">💻 Local Development for Test Authors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#set-up-python-environment">Set Up Python Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#activate-dev-environment">Activate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#validate-dev-environment">Validate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#start-development-testnet-cluster">Start Development Testnet Cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#run-individual-tests">Run Individual Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#run-linters">Run Linters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#reinstall-cardano-clusterlib-in-editable-mode">Reinstall <code class="docutils literal notranslate"><span class="pre">cardano-clusterlib</span></code> in Editable Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#update-uv-lockfile">Update uv Lockfile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#build-and-deploy-documentation">Build and Deploy Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#contributing">🤝 Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_results.html">Test Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/nightly_system_tests.html">Nightly system tests pipelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#test-statuses">Test statuses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-results">Nightly results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-upgrade-testing">Nightly upgrade testing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/sync_tests.html">Sync Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/sync_tests.html#sync-test-results-by-cardano-node-version">Sync Test Results by Cardano Node Version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/tag_tests.html">Tag Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_6_2.html">10.6.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_2.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_6_1.html">10.6.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_1.html#new-issues">New issues</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_5_1.html">10.5.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_4_1.html">10.4.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_3_1.html">10.3.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_2_1.html">10.2.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_1_2.html">10.1.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_1_1.html">10.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_9_0_0.html">9.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_11_0.html">8.11.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_3.html">8.9.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_1.html">8.9.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_0.html">8.9.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_8_0.html">8.8.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_3.html">8.7.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_2.html">8.7.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html">8.6.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_1_1.html">8.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_0_0.html">8.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_7.html">1.35.7</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_6.html">1.35.6</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_5.html">1.35.5</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html">1.35.4-rc1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#secp256k1-iog-test-tracking">SECP256k1 IOG Test Tracking</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_3.html">1.35.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#relevant-existing-issues">Relevant existing issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/chang_user_stories.html">Chang HF User Stories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html">System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cli-user-stories">CLI User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cip1694-user-stories">CIP1694 User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#governance-guardrails-user-stories">Governance guardrails User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#internal-test-cases">Internal Test Cases</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#db-sync-conway-related-tables">DB Sync - Conway related tables</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html">PlutusV3 System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html#smart-contract-user-stories">Smart Contract User Stories</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_plans.html">Test Plans</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test-plans/100_conway_governance.html">Governance testing in Conway</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#committee">Committee</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#dreps">DReps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#actions-voting-ratification-and-enactment">Actions, Voting, Ratification and Enactment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#spos">SPOs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#transactions">Transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../process.html">Process</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../process/100_test_types.html">Types and levels of tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#node-system-tests">Node system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-nightly-cli-tests">Node nightly CLI tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-cli-tests-on-demand">Node CLI tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-sync-tests">Node sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#db-sync-system-tests">DB Sync system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-nightly-tests">DB Sync nightly tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-feature-tests-on-demand">DB Sync feature tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-sync-tests">DB Sync sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#exploratory-testing">Exploratory testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/200_quality_control_strategy.html">Quality control strategy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#scope-and-objectives">Scope and objectives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#key-principles">Key principles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#quality-control-approach">Quality control approach</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#quality-control-methodology">Quality control methodology</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/200_quality_control_strategy.html#active-quality-control">Active quality control</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/200_quality_control_strategy.html#passive-quality-control">Passive quality control</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/300_uat_strategy.html">User acceptance test strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../process/400_plutus.html">Plutus System-Level Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#summary">Summary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#scope">Scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#not-in-scope">Not in scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#automation">Automation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/400_plutus.html#antaeus">Antaeus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/400_plutus.html#cardano-node-tests">Cardano-node-tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#exploratory-testing">Exploratory Testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/400_system_level_tag_testing.html">System-Level Tag Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#what-we-do">What (We do)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#where-results">Where (Results)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#how-we-do-it">How (We do it)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#how-long-does-it-take">How long does it take?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../how-tos.html">How Tos</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html">Testing MIR certificate submission with a local cluster</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#creating-key-pairs">Creating key pairs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#payment-key-pair">Payment key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#stake-key-pair">Stake key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#payment-address">Payment address</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#stake-address">Stake address</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#transferring-funds-from-the-faucet-address-to-our-own-shelley-address-payment-addr">Transferring funds from the ‘faucet’ address to our own Shelley address <code class="docutils literal notranslate"><span class="pre">payment.addr</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#build-tx">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#sign-tx">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#submit-tx">Submit tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#check-funds-on-the-payment-addr">Check funds on the payment.addr</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#creating-a-stake-registration-certificate">Creating a stake registration certificate</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#submitting-the-certificate-with-a-transaction">Submitting the certificate with a transaction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#our-stake-address-has-id-13-and-is-registered">Our stake address has id=13 and is registered</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#deregistering-an-empty-stake-address">Deregistering an ‘empty’ stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#creating-a-deregistration-certificate">Creating a deregistration certificate</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#generating-mir-cert-to-send-funds-from-reserves-to-unregistered-stake-address">Generating MIR cert to send funds from reserves to unregistered stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#id4">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#id5">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#id6">Submit tx</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#state-of-tables-after-mir-cert-tx-submission">State of tables after MIR cert tx submission</a></li>
+<li class="toctree-l3"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#logs">Logs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="350_mir_cert_test_example_manual_steps.html#stdout-log">stdout.log</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="380_stake_credential_history_tool.html">Stake credential history tool</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="380_stake_credential_history_tool.html#documentation">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="380_stake_credential_history_tool.html#example-of-usage">Example of usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="500_smash_faq.html">SMASH FAQ</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SMASH - tests and debugging examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#checking-smash-status">Checking SMASH status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fetching-of-the-metadata">Fetching of the metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#delisting-pools">Delisting pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reserving-a-ticker">Reserving a ticker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#whitelisting">Whitelisting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#checking-pool-rejection-errors">Checking pool rejection errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pool-unregistrations">Pool unregistrations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fetch-policies-from-another-smash-service">Fetch policies from another SMASH service</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#an-example-of-debugging-an-issue-with-a-pool">An example of debugging an issue with a pool</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/contributing.html">Contributing to the Cardano node tests repository</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#how-can-i-contribute">How can I contribute?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#reporting-an-issue">Reporting an issue</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#how-do-i-submit-a-good-issue-report">How do I submit a (good) issue report?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#your-first-code-contribution">Your first code contribution</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#pull-requests">Pull requests</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#id1">Style guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#git-commit-messages">Git commit messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#python-style-guide">Python style guide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#roles-and-responsibilities">Roles and Responsibilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">Source Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cardano_node_tests.html">cardano_node_tests package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.cluster_management.html">cardano_node_tests.cluster_management package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.pytest_plugins.html">cardano_node_tests.pytest_plugins package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.tests.html">cardano_node_tests.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.utils.html">cardano_node_tests.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.block_production_graph">cardano_node_tests.block_production_graph module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_blocks_per_backend"><code class="docutils literal notranslate"><span class="pre">get_blocks_per_backend()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_latest_run_id"><code class="docutils literal notranslate"><span class="pre">get_latest_run_id()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.parse_args"><code class="docutils literal notranslate"><span class="pre">parse_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.plot_backend_blocks"><code class="docutils literal notranslate"><span class="pre">plot_backend_blocks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.cardano_cli_coverage">cardano_node_tests.cardano_cli_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.cli"><code class="docutils literal notranslate"><span class="pre">cli()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_available_commands"><code class="docutils literal notranslate"><span class="pre">get_available_commands()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_badge_icon"><code class="docutils literal notranslate"><span class="pre">get_badge_icon()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_coverage"><code class="docutils literal notranslate"><span class="pre">get_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_log_coverage"><code class="docutils literal notranslate"><span class="pre">get_log_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_report"><code class="docutils literal notranslate"><span class="pre">get_report()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.merge_coverage"><code class="docutils literal notranslate"><span class="pre">merge_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.parse_cmd_output"><code class="docutils literal notranslate"><span class="pre">parse_cmd_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.sanitize_coverage"><code class="docutils literal notranslate"><span class="pre">sanitize_coverage()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.chang_us_coverage">cardano_node_tests.chang_us_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.defragment_utxos">cardano_node_tests.defragment_utxos module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.defragment_utxos.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.defragment_utxos.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.dump_requirements_coverage">cardano_node_tests.dump_requirements_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.prepare_cluster_scripts">cardano_node_tests.prepare_cluster_scripts module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.prepare_scripts_files"><code class="docutils literal notranslate"><span class="pre">prepare_scripts_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.split_topology">cardano_node_tests.split_topology module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.split_topology.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.split_topology.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup">cardano_node_tests.testnet_cleanup module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup_info">cardano_node_tests.testnet_cleanup_info module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">cardano-node-tests</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../how-tos.html">How Tos</a></li>
+      <li class="breadcrumb-item active">SMASH - tests and debugging examples</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/IntersectMBO/cardano-node-tests/blob/master/src_docs/source/how-tos/520_smash_tests_and_debugging_examples.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="smash-tests-and-debugging-examples">
+<h1>SMASH - tests and debugging examples<a class="headerlink" href="#smash-tests-and-debugging-examples" title="Link to this heading"></a></h1>
+<p>These examples come from the <code class="docutils literal notranslate"><span class="pre">testnet</span></code> network.</p>
+<p><strong>SMASH</strong> can be built with:</p>
+<p><code class="docutils literal notranslate"><span class="pre">cabal</span> <span class="pre">build</span> <span class="pre">cardano-smash-server</span></code></p>
+<p>Find and copy the executable to your $PATH:</p>
+<p><code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">$(find</span> <span class="pre">.</span> <span class="pre">-name</span> <span class="pre">cardano-smash-server</span> <span class="pre">-executable</span> <span class="pre">-type</span> <span class="pre">f)</span> <span class="pre">~/.local/bin</span></code></p>
+<p>Prepare an <code class="docutils literal notranslate"><span class="pre">admins.txt</span></code> file which should have this format:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>username, password
+</pre></div>
+</div>
+<p>and start <strong>SMASH</strong>:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">PGPASSFILE</span><span class="o">=</span>config/pgpass-mainnet<span class="w"> </span>cardano-smash-server<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--config<span class="w"> </span>config/mainnet-config.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--port<span class="w"> </span><span class="m">3100</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--admins<span class="w"> </span>admins.txt
+</pre></div>
+</div>
+<section id="checking-smash-status">
+<h2>Checking SMASH status<a class="headerlink" href="#checking-smash-status" title="Link to this heading"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>GET<span class="w"> </span>http://localhost:3100/api/v1/status
+
+<span class="o">{</span><span class="s2">&quot;status&quot;</span>:<span class="s2">&quot;OK&quot;</span>,<span class="s2">&quot;version&quot;</span>:<span class="s2">&quot;12.0.0&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+</section>
+<section id="fetching-of-the-metadata">
+<h2>Fetching of the metadata<a class="headerlink" href="#fetching-of-the-metadata" title="Link to this heading"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>GET<span class="w"> </span>http://localhost:3100/api/v1/metadata/a5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41/d98a03b8aa962d80511d62566df2af415afd9bd03d53cbb0ad457a53d3491f74
+
+<span class="o">{</span><span class="s2">&quot;name&quot;</span>:<span class="w"> </span><span class="s2">&quot;MKS Stake Pool&quot;</span>,<span class="w"> </span><span class="s2">&quot;ticker&quot;</span>:<span class="w"> </span><span class="s2">&quot;MKS&quot;</span>,<span class="w"> </span><span class="s2">&quot;homepage&quot;</span>:<span class="w"> </span><span class="s2">&quot;http://23.234.197.69&quot;</span>,<span class="w"> </span><span class="s2">&quot;description&quot;</span>:<span class="w"> </span><span class="s2">&quot;testnet stake pool&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+</section>
+<section id="delisting-pools">
+<h2>Delisting pools<a class="headerlink" href="#delisting-pools" title="Link to this heading"></a></h2>
+<ol class="loweralpha simple">
+<li><p>Delisting a pool for the first time:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>-u<span class="w"> </span>username:password<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>PATCH<span class="w"> </span>--data<span class="w"> </span><span class="s1">&#39;{&quot;poolId&quot;:&quot;a5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41&quot;}&#39;</span><span class="w"> </span>http://localhost:3100/api/v1/delist
+
+<span class="o">{</span><span class="s2">&quot;poolId&quot;</span>:<span class="s2">&quot;a5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="2">
+<li><p>Delisting an already delisted pool results in:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>-u<span class="w"> </span>username:password<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>PATCH<span class="w"> </span>--data<span class="w"> </span><span class="s1">&#39;{&quot;poolId&quot;:&quot;a5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41&quot;}&#39;</span><span class="w"> </span>http://localhost:3100/api/v1/delist
+
+<span class="o">{</span><span class="s2">&quot;code&quot;</span>:<span class="s2">&quot;DbInsertError&quot;</span>,<span class="s2">&quot;description&quot;</span>:<span class="s2">&quot;Delisted pool already exists!&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">delisted_pool</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_raw</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>xa5a3ce765f5162548181a44d1ff8c8f8c50018cca59acc0b70a85a41</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="reserving-a-ticker">
+<h2>Reserving a ticker<a class="headerlink" href="#reserving-a-ticker" title="Link to this heading"></a></h2>
+<ol class="loweralpha simple">
+<li><p>Insert a new ticker for a pool:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>-u<span class="w"> </span>username:password<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>POST<span class="w"> </span>--data<span class="w"> </span><span class="s1">&#39;{&quot;poolId&quot;:&quot;1c443cd9c14c85e6b541be0c2bd98c9f11be25185a15636c33c4cd8f&quot;}&#39;</span><span class="w"> </span>http://localhost:3100/api/v1/tickers/ART
+
+<span class="o">{</span><span class="s2">&quot;name&quot;</span>:<span class="s2">&quot;ART&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="2">
+<li><p>Insert an already reserved ticker for a different pool:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>-u<span class="w"> </span>username:password<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>POST<span class="w"> </span>--data<span class="w"> </span><span class="s1">&#39;{&quot;poolId&quot;:&quot;1c443cd9c14c85e6b541be0c2bd98c9f11cd25185a15636c44c4cd3f&quot;}&#39;</span><span class="w"> </span>http://localhost:3100/api/v1/tickers/ART
+
+<span class="o">{</span><span class="s2">&quot;code&quot;</span>:<span class="s2">&quot;TickerAlreadyReserved&quot;</span>,<span class="s2">&quot;description&quot;</span>:<span class="s2">&quot;Ticker name ART is already reserved&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[smash-server:Info:6] [2021-11-23 12:06:29.94 UTC] SMASH listening on port 3100
+[smash-server:Warning:27] [2021-11-23 12:59:18.14 UTC] TickerAlreadyReserved (TickerName &quot;ART&quot;)
+</pre></div>
+</div>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">reserved_pool_ticker</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>name</p></th>
+<th class="head"><p>pool_hash</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>ART</p></td>
+<td><p>x1c443cd9c14c85e6b541be0c2bd98c9f11be25185a15636c33c4cd8f</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="whitelisting">
+<h2>Whitelisting<a class="headerlink" href="#whitelisting" title="Link to this heading"></a></h2>
+<ol class="loweralpha simple">
+<li><p>Query some pool:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>-v<span class="w"> </span>http://localhost:3100/api/v1/metadata/81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27/8e123d238a44a91bab56ebd631020bede5a381d8487a46d1f2ebbdc52e3b3eba<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+
+<span class="o">{</span>
+<span class="w">  </span><span class="s2">&quot;name&quot;</span>:<span class="w"> </span><span class="s2">&quot;OZZIE&quot;</span>,
+<span class="w">  </span><span class="s2">&quot;ticker&quot;</span>:<span class="w"> </span><span class="s2">&quot;OZZIE&quot;</span>,
+<span class="w">  </span><span class="s2">&quot;homepage&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://ozzieoffsec.github.io/pool&quot;</span>,
+<span class="w">  </span><span class="s2">&quot;description&quot;</span>:<span class="w"> </span><span class="s2">&quot;We love Turtles&quot;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="2">
+<li><p>Delist it:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>-u<span class="w"> </span>username:password<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>PATCH<span class="w"> </span>--data<span class="w"> </span><span class="s1">&#39;{&quot;poolId&quot;:&quot;81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27&quot;}&#39;</span><span class="w"> </span>http://localhost:3100/api/v1/delist
+
+<span class="o">{</span><span class="s2">&quot;poolId&quot;</span>:<span class="s2">&quot;81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">delisted_pool</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_raw</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>x81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27</p></td>
+</tr>
+</tbody>
+</table>
+<ol class="loweralpha simple" start="2">
+<li><p>Query pool after it was delisted ==&gt; no results</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>-v<span class="w"> </span>http://localhost:3100/api/v1/metadata/81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27/8e123d238a44a91bab56ebd631020bede5a381d8487a46d1f2ebbdc52e3b3eba<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+
+Pool<span class="w"> </span>81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27<span class="w"> </span>is<span class="w"> </span>delisted
+
+<span class="o">[</span>smash-server:Warning:40<span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="m">2021</span>-11-25<span class="w"> </span><span class="m">10</span>:02:36.40<span class="w"> </span>UTC<span class="o">]</span><span class="w"> </span>Pool<span class="w"> </span>81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27<span class="w"> </span>is<span class="w"> </span>delisted
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="3">
+<li><p>Whitelist pool:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-u<span class="w"> </span>username:password<span class="w"> </span>-X<span class="w"> </span>PATCH<span class="w"> </span>-v<span class="w"> </span>http://localhost:3100/api/v1/enlist<span class="w"> </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;poolId&quot;: &quot;81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27&quot;}&#39;</span>
+
+<span class="o">{</span><span class="s2">&quot;poolId&quot;</span>:<span class="s2">&quot;81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27&quot;</span><span class="o">}</span>
+</pre></div>
+</div>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">delisted_pool</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_raw</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>(0 rows)</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ol class="loweralpha simple" start="4">
+<li><p>Query pool again:</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>-v<span class="w"> </span>http://localhost:3100/api/v1/metadata/81e84003f3d2f65315b479dc3cdbe4aa8c8595a3d76818e284b29f27/8e123d238a44a91bab56ebd631020bede5a381d8487a46d1f2ebbdc52e3b3eba<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+
+<span class="o">{</span>
+<span class="w">  </span><span class="s2">&quot;name&quot;</span>:<span class="w"> </span><span class="s2">&quot;OZZIE&quot;</span>,
+<span class="w">  </span><span class="s2">&quot;ticker&quot;</span>:<span class="w"> </span><span class="s2">&quot;OZZIE&quot;</span>,
+<span class="w">  </span><span class="s2">&quot;homepage&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://ozzieoffsec.github.io/pool&quot;</span>,
+<span class="w">  </span><span class="s2">&quot;description&quot;</span>:<span class="w"> </span><span class="s2">&quot;We love Turtles&quot;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</section>
+<section id="checking-pool-rejection-errors">
+<h2>Checking pool rejection errors<a class="headerlink" href="#checking-pool-rejection-errors" title="Link to this heading"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>http://localhost:3100/api/v1/errors/be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853?fromDate<span class="o">=</span><span class="m">13</span>.10.2020
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1635334386.697757s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;27.10.2021. 11:33:06&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1635334094.642995s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;HTTP Response from for https://LLCJ.com resulted in : 509&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;4001829c25b4af556d1a473dec4874a621899cf6a84c60156ec2411727f1a169&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;27.10.2021. 11:28:14&quot;</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="pool-unregistrations">
+<h2>Pool unregistrations<a class="headerlink" href="#pool-unregistrations" title="Link to this heading"></a></h2>
+<p>You can check what pools have unregistered with:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>http://localhost:3100/api/v1/retired<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;002c501d063cf552144e58ea9a85c8d156b3d7c7a498e52a50cf546c&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;00cd5fd9cbf0b9535f804f59da4666859afa38e5ca7729a3172efe36&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0192e6835f8613b1a47084d800ee3d2a0931a334e5e63dd80c447c15&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;01c2103a18e1dc55be3e83f7291266bba53a5b76c6c42f1969ee5193&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;other pools listed ...&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="fetch-policies-from-another-smash-service">
+<h2>Fetch policies from another SMASH service<a class="headerlink" href="#fetch-policies-from-another-smash-service" title="Link to this heading"></a></h2>
+<p>Fetch policies from another SMASH service:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>mainnet</dt><dd><p><a class="reference external" href="https://smash.cardano-mainnet.iohk.io">https://smash.cardano-mainnet.iohk.io</a></p>
+</dd>
+</dl>
+</li>
+<li><p>testnet
+<a class="reference external" href="https://smash.cardano-testnet.iohkdev.io">https://smash.cardano-testnet.iohkdev.io</a></p></li>
+<li><p>shelley-qa
+<a class="reference external" href="https://smash.shelley-qa.dev.cardano.org">https://smash.shelley-qa.dev.cardano.org</a></p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-u<span class="w"> </span>username:password<span class="w"> </span>--verbose<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>POST<span class="w"> </span>--data<span class="w"> </span><span class="s1">&#39;{&quot;smashURL&quot;: &quot;https://smash.cardano-mainnet.iohk.io&quot;}&#39;</span><span class="w"> </span>http://localhost:3100/api/v1/policies<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;uniqueTickers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">  </span><span class="nt">&quot;smashURL&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;smashURL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://smash.cardano-mainnet.iohk.io&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;healthStatus&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OK&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.6.1&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;delistedPools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ce2e5bbae0caa514670d63cfdad3123a5d32cf7c37df87add5a0f75f&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2b830258888a09e846b63474c642ad4e18aecd08dafb1f2a4d653e80&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;027a08f49ad5ece08e3a1575fb9cd8e8d7cf3b7815807a20b1a715f1&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;4eb1fac09251f8af19ad6b7e06b71cbad09dbe896b481e4670fe565d&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bf44d3187cbdd8874dca1f714a6107beea642753228490bc02c8e038&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;00429f0a3e8c48d644a9b45babd09b86c367efe745a35b31f10e859f&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8bc067247b8a85500d40d7bb78afd4de6a5fed2cfcc82c9b9c2fa8a2&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;e7e18f2050fa307fc9405f1d517760e894f8fbdf41a9b1b280571b38&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;27f4e3c309659f824026893b811dd6e70332881867cb2cba4974191c&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;c73186434c6fc6676bd67304d34518fc6fd7d5eaddaf78641b1e7dcf&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2064da38531dad327135edd98003032cefa059c4c8c50c2b0440c63d&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;d9df218f8099261e019bdd304b9a40228070ce61272af835ea13d161&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;d7d56e1703630780176cf944a77b7829b4ba97888fa9a32468011985&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;82e5cb6e4b443c36b087e6218a5629291585d35083ce2cb625506e1f&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0e76c44520b9d7f2e211eccd82de49350288368802c7aaa72a13c3fa&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;d471e981d54a7f60496f9239d2d706db7a71df8517025f478c112e3e&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;f537b3a5ac2ecdc854a535a15f7732632375a0bf2af17dccbe5b422d&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;033fa1cdc17193fa3d549e795591999621e749fd7ef48f7380468d14&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>and let’s compare SMASH reply with database state:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>smash_imported_policies.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.delistedPools | length&#39;</span>
+<span class="m">18</span>
+</pre></div>
+</div>
+<p>VS</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">delisted_pool</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_raw</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>382</p></td>
+<td><p>xce2e5bbae0caa514670d63cfdad3123a5d32cf7c37df87add5a0f75f</p></td>
+</tr>
+<tr class="row-odd"><td><p>383</p></td>
+<td><p>x2b830258888a09e846b63474c642ad4e18aecd08dafb1f2a4d653e80</p></td>
+</tr>
+<tr class="row-even"><td><p>384</p></td>
+<td><p>x027a08f49ad5ece08e3a1575fb9cd8e8d7cf3b7815807a20b1a715f1</p></td>
+</tr>
+<tr class="row-odd"><td><p>385</p></td>
+<td><p>x4eb1fac09251f8af19ad6b7e06b71cbad09dbe896b481e4670fe565d</p></td>
+</tr>
+<tr class="row-even"><td><p>386</p></td>
+<td><p>xbf44d3187cbdd8874dca1f714a6107beea642753228490bc02c8e038</p></td>
+</tr>
+<tr class="row-odd"><td><p>387</p></td>
+<td><p>x00429f0a3e8c48d644a9b45babd09b86c367efe745a35b31f10e859f</p></td>
+</tr>
+<tr class="row-even"><td><p>388</p></td>
+<td><p>x8bc067247b8a85500d40d7bb78afd4de6a5fed2cfcc82c9b9c2fa8a2</p></td>
+</tr>
+<tr class="row-odd"><td><p>389</p></td>
+<td><p>xe7e18f2050fa307fc9405f1d517760e894f8fbdf41a9b1b280571b38</p></td>
+</tr>
+<tr class="row-even"><td><p>390</p></td>
+<td><p>x27f4e3c309659f824026893b811dd6e70332881867cb2cba4974191c</p></td>
+</tr>
+<tr class="row-odd"><td><p>391</p></td>
+<td><p>xc73186434c6fc6676bd67304d34518fc6fd7d5eaddaf78641b1e7dcf</p></td>
+</tr>
+<tr class="row-even"><td><p>392</p></td>
+<td><p>x2064da38531dad327135edd98003032cefa059c4c8c50c2b0440c63d</p></td>
+</tr>
+<tr class="row-odd"><td><p>393</p></td>
+<td><p>xd9df218f8099261e019bdd304b9a40228070ce61272af835ea13d161</p></td>
+</tr>
+<tr class="row-even"><td><p>394</p></td>
+<td><p>xd7d56e1703630780176cf944a77b7829b4ba97888fa9a32468011985</p></td>
+</tr>
+<tr class="row-odd"><td><p>395</p></td>
+<td><p>x82e5cb6e4b443c36b087e6218a5629291585d35083ce2cb625506e1f</p></td>
+</tr>
+<tr class="row-even"><td><p>396</p></td>
+<td><p>x0e76c44520b9d7f2e211eccd82de49350288368802c7aaa72a13c3fa</p></td>
+</tr>
+<tr class="row-odd"><td><p>397</p></td>
+<td><p>xd471e981d54a7f60496f9239d2d706db7a71df8517025f478c112e3e</p></td>
+</tr>
+<tr class="row-even"><td><p>398</p></td>
+<td><p>xf537b3a5ac2ecdc854a535a15f7732632375a0bf2af17dccbe5b422d</p></td>
+</tr>
+<tr class="row-odd"><td><p>399</p></td>
+<td><p>x033fa1cdc17193fa3d549e795591999621e749fd7ef48f7380468d14</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="an-example-of-debugging-an-issue-with-a-pool">
+<h2>An example of debugging an issue with a pool<a class="headerlink" href="#an-example-of-debugging-an-issue-with-a-pool" title="Link to this heading"></a></h2>
+<p>Here is an example of unusual behavior of a pool on <code class="docutils literal notranslate"><span class="pre">testnet</span></code> that could not be seen in any tool that tracks pools and at the same time, it could not be found in retired pools.</p>
+<p>We have a pool <code class="docutils literal notranslate"><span class="pre">pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla</span></code> that can’t be found in <a class="reference external" href="https://buildkite.com/input-output-hk/daedalus/builds?branch=release%2F4.5.2">Daedalus</a> (version for <code class="docutils literal notranslate"><span class="pre">testnet</span></code>) nor on <a class="reference external" href="https://pooltool.io/">https://pooltool.io/</a> (which is a web tool for listing pool details on both <code class="docutils literal notranslate"><span class="pre">mainnet</span></code> and <code class="docutils literal notranslate"><span class="pre">testnet</span></code>) and it is also not listed in the <strong>pool_retire</strong> table:</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pool_hash</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">view</span><span class="o">=</span><span class="s1">&#39;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla&#39;</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_raw</p></th>
+<th class="head"><p>view</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>103</p></td>
+<td><p>xbe329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853</p></td>
+<td><p>pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>pool_retire</strong>:</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pool_retire</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">hash_id</span><span class="o">=</span><span class="mi">103</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>announced_tx_id</p></th>
+<th class="head"><p>retiring_epoch</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>(0 rows)</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Let’s check the last update for this pool</p>
+<p><strong>pool_update</strong>:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>vrf_key_hash</p></th>
+<th class="head"><p>pledge</p></th>
+<th class="head"><p>reward_addr</p></th>
+<th class="head"><p>active_epoch_no</p></th>
+<th class="head"><p>meta_id</p></th>
+<th class="head"><p>margin</p></th>
+<th class="head"><p>fixed_cost</p></th>
+<th class="head"><p>registered_tx_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>103</p></td>
+<td><p>103</p></td>
+<td><p>0</p></td>
+<td><p>xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6</p></td>
+<td><p>100000000</p></td>
+<td><p>xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68</p></td>
+<td><p>85</p></td>
+<td><p>101</p></td>
+<td><p>0.04</p></td>
+<td><p>340000000</p></td>
+<td><p>25037</p></td>
+</tr>
+<tr class="row-odd"><td><p>118</p></td>
+<td><p>103</p></td>
+<td><p>0</p></td>
+<td><p>xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6</p></td>
+<td><p>250000000</p></td>
+<td><p>xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68</p></td>
+<td><p>87</p></td>
+<td><p>116</p></td>
+<td><p>0.01</p></td>
+<td><p>340000000</p></td>
+<td><p>34587</p></td>
+</tr>
+<tr class="row-even"><td><p>292</p></td>
+<td><p>103</p></td>
+<td><p>0</p></td>
+<td><p>xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6</p></td>
+<td><p>250000000</p></td>
+<td><p>xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68</p></td>
+<td><p>90</p></td>
+<td><p>290</p></td>
+<td><p>0.04</p></td>
+<td><p>430000000</p></td>
+<td><p>55996</p></td>
+</tr>
+<tr class="row-odd"><td><p>303</p></td>
+<td><p>103</p></td>
+<td><p>0</p></td>
+<td><p>xfdbcad682e1462b1a107fb204316e73b4791aba0691410bdb5a6c219a0a16fe6</p></td>
+<td><p>3495862056</p></td>
+<td><p>xe0d6de2014f77443a986d2ae9144fbcdcf08da0ddea1c0ce0f7e311d68</p></td>
+<td><p>91</p></td>
+<td><p>301</p></td>
+<td><p>0.0095</p></td>
+<td><p>340000000</p></td>
+<td><p>56543</p></td>
+</tr>
+</tbody>
+</table>
+<p>(4 rows)</p>
+<p>and metadata associated with it</p>
+<p><strong>pool_metadata_ref</strong>:</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pool_metadata_ref</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">pool_id</span><span class="o">=</span><span class="mi">103</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>pool_id</p></th>
+<th class="head"><p>url</p></th>
+<th class="head"><p>hash</p></th>
+<th class="head"><p>registered_tx_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>301</p></td>
+<td><p>103</p></td>
+<td><p><a class="reference external" href="https://git.io/JTUAD">https://git.io/JTUAD</a></p></td>
+<td><p>xf2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395</p></td>
+<td><p>56543</p></td>
+</tr>
+<tr class="row-odd"><td><p>101</p></td>
+<td><p>103</p></td>
+<td><p><a class="reference external" href="https://git.io/JU8gA">https://git.io/JU8gA</a></p></td>
+<td><p>x314699218763d2d0c1c2cc75d4405de67709a888f01a4ca4d2b0f290e285c6e1</p></td>
+<td><p>25037</p></td>
+</tr>
+<tr class="row-even"><td><p>290</p></td>
+<td><p>103</p></td>
+<td><p><a class="reference external" href="https://git.io/JUNOy">https://git.io/JUNOy</a></p></td>
+<td><p>x94be57c392f721154c96bafbf9ebd80fe369b35ec8f177b292329ee21db25cbf</p></td>
+<td><p>55996</p></td>
+</tr>
+<tr class="row-odd"><td><p>116</p></td>
+<td><p>103</p></td>
+<td><p><a class="reference external" href="https://LLCJ.com">https://LLCJ.com</a></p></td>
+<td><p>x4001829c25b4af556d1a473dec4874a621899cf6a84c60156ec2411727f1a169</p></td>
+<td><p>34587</p></td>
+</tr>
+</tbody>
+</table>
+<p>So our pool is not visible in tools like wallet and it is also not present in <strong>pool_retire</strong> table.
+Private pools are not listed by those tools however last records from <strong>pool_update</strong> table listed above show that this is not a private pool because it has a <code class="docutils literal notranslate"><span class="pre">margin</span> <span class="pre">&lt;</span> <span class="pre">100%</span></code>.</p>
+<p>Let’s check the pool relay:</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pool_relay</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">update_id</span><span class="o">=</span><span class="mi">303</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>update_id</p></th>
+<th class="head"><p>ipv4</p></th>
+<th class="head"><p>ipv6</p></th>
+<th class="head"><p>dns_name</p></th>
+<th class="head"><p>dns_srv_name</p></th>
+<th class="head"><p>port</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1426</p></td>
+<td><p>303</p></td>
+<td><p>72.184.59.65</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td><p>3001</p></td>
+</tr>
+</tbody>
+</table>
+<p>and try to ping it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>ping<span class="w"> </span><span class="m">72</span>.184.59.65
+PING<span class="w"> </span><span class="m">72</span>.184.59.65<span class="w"> </span><span class="o">(</span><span class="m">72</span>.184.59.65<span class="o">)</span><span class="w"> </span><span class="m">56</span><span class="o">(</span><span class="m">84</span><span class="o">)</span><span class="w"> </span>bytes<span class="w"> </span>of<span class="w"> </span>data.
+<span class="m">64</span><span class="w"> </span>bytes<span class="w"> </span>from<span class="w"> </span><span class="m">72</span>.184.59.65:<span class="w"> </span><span class="nv">icmp_seq</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">ttl</span><span class="o">=</span><span class="m">47</span><span class="w"> </span><span class="nv">time</span><span class="o">=</span><span class="m">177</span><span class="w"> </span>ms
+<span class="m">64</span><span class="w"> </span>bytes<span class="w"> </span>from<span class="w"> </span><span class="m">72</span>.184.59.65:<span class="w"> </span><span class="nv">icmp_seq</span><span class="o">=</span><span class="m">2</span><span class="w"> </span><span class="nv">ttl</span><span class="o">=</span><span class="m">47</span><span class="w"> </span><span class="nv">time</span><span class="o">=</span><span class="m">184</span><span class="w"> </span>ms
+</pre></div>
+</div>
+<p>We can see that it is up.</p>
+<p>Now let’s check the ledger state and see if the record for our pool is still present there:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>stake-distribution<span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">1097911063</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla
+pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla<span class="w">   </span><span class="m">1</span>.611e-7
+</pre></div>
+</div>
+<p>It is.</p>
+<p>Querying <strong>SMASH</strong> using <code class="docutils literal notranslate"><span class="pre">pool_hash=be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853</span></code> and metadata hash from <code class="docutils literal notranslate"><span class="pre">pool_metadata_ref</span></code> for last <code class="docutils literal notranslate"><span class="pre">id=301</span></code> which is: <code class="docutils literal notranslate"><span class="pre">f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395</span></code> returns:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>--verbose<span class="w"> </span>--header<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span>--request<span class="w"> </span>GET<span class="w"> </span>http://localhost:3100/api/v1/metadata/be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853/f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395
+
+<span class="o">{</span><span class="s2">&quot;code&quot;</span>:<span class="s2">&quot;DbLookupPoolMetadataHash&quot;</span>,<span class="s2">&quot;description&quot;</span>:<span class="s2">&quot;The metadata with hash PoolMetadataHash \&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395\&quot; for pool PoolId \&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853\&quot; is missing from the DB.&quot;</span><span class="o">}</span>
+
+<span class="o">[</span>smash-server:Warning:124<span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="m">2021</span>-11-24<span class="w"> </span><span class="m">12</span>:48:43.03<span class="w"> </span>UTC<span class="o">]</span><span class="w"> </span>DbLookupPoolMetadataHash<span class="w"> </span><span class="o">(</span>PoolId<span class="w"> </span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="o">)</span><span class="w"> </span><span class="o">(</span>PoolMetadataHash<span class="w"> </span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>Let’s check errors for that pool:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>http://localhost:3100/api/v1/errors/pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">14</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;Hash mismatch from when fetching metadata from https://git.io/JTUAD. Expected f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 but got 75848f572990cbc72a9efd62ed5aa0178e16d5164c6dcfbb040dcec47f13d8f4.&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">},</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;utcTime&quot;</span><span class="p">:</span><span class="s2">&quot;1637316510.524683s&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolId&quot;</span><span class="p">:</span><span class="s2">&quot;be329bbf0ee0f53d19f3b2808611779a49c7df43f330a8035eb9f853&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retryCount&quot;</span><span class="p">:</span><span class="mi">6</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cause&quot;</span><span class="p">:</span><span class="s2">&quot;URL parse error from for pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla resulted in : InvalidUrlException \&quot;pool1hcefh0cwur6n6x0nk2qgvythnfyu0h6r7vc2sq67h8u9x8z2cla\&quot; \&quot;Invalid URL\&quot;&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;poolHash&quot;</span><span class="p">:</span><span class="s2">&quot;f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="s2">&quot;19.11.2021. 10:08:30&quot;</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>For hash <code class="docutils literal notranslate"><span class="pre">f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395</span></code>, the URL from <strong>pool_metadata_ref</strong> is:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>pool_id</p></th>
+<th class="head"><p>url</p></th>
+<th class="head"><p>hash</p></th>
+<th class="head"><p>registered_tx_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>301</p></td>
+<td><p>103</p></td>
+<td><p><a class="reference external" href="https://git.io/JTUAD">https://git.io/JTUAD</a></p></td>
+<td><p>xf2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395</p></td>
+<td><p>56543</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">https://git.io/JTUAD</span></code> opens correctly a GH page with the following JSON:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Lpool&quot;</span><span class="p">,</span>
+<span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;L pool is cool&quot;</span><span class="p">,</span>
+<span class="nt">&quot;ticker&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;LPO&quot;</span><span class="p">,</span>
+<span class="nt">&quot;homepage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://git.io/JUNOy&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>It seems that for this pool, 4 metadata references have been registered (from <strong>pool_metadata_ref</strong> table), but 3 of them failed and only one succeeded.</p>
+<p>The <strong>pool_offline_data</strong> table shows different metadata - the one that matches the record with <code class="docutils literal notranslate"><span class="pre">id=290</span></code> in <strong>pool_metadata_ref</strong>
+(homepage <a class="reference external" href="https://llcj.com/">https://llcj.com/</a> differs from JSON presented above <a class="reference external" href="https://git.io/JUNOy">https://git.io/JUNOy</a>)</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">pool_id</span><span class="p">,</span><span class="w"> </span><span class="n">json</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pool_offline_data</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">pool_id</span><span class="o">=</span><span class="mi">103</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>pool_id</p></th>
+<th class="head"><p>json</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>138</p></td>
+<td><p>103</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{&quot;name&quot;:</span> <span class="pre">&quot;Lpool&quot;,</span> <span class="pre">&quot;ticker&quot;:</span> <span class="pre">&quot;LPO&quot;,</span> <span class="pre">&quot;homepage&quot;:</span> <span class="pre">&quot;https://LLCJ.com&quot;,</span> <span class="pre">&quot;description&quot;:</span> <span class="pre">&quot;L</span> <span class="pre">pool</span> <span class="pre">is</span> <span class="pre">cool&quot;}</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>but this is not the last entry in <strong>pool_metadata_ref</strong> which has <code class="docutils literal notranslate"><span class="pre">id=301</span></code> and  <code class="docutils literal notranslate"><span class="pre">homepage=https://git.io/JTUAD</span></code>.</p>
+<p>The reason for this problem is mentioned in one of the error messages returned by <strong>SMASH</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&quot;cause&quot;:&quot;Hash mismatch from when fetching metadata from https://git.io/JTUAD. Expected f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395 but got 75848f572990cbc72a9efd62ed5aa0178e16d5164c6dcfbb040dcec47f13d8f4.&quot;
+</pre></div>
+</div>
+<p>If we download the metadata file and check its hash:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>https://git.io/JTUAD
+cardano-cli<span class="w"> </span>stake-pool<span class="w"> </span>metadata-hash<span class="w"> </span>--pool-metadata-file<span class="w"> </span>JTUAD
+75848f572990cbc72a9efd62ed5aa0178e16d5164c6dcfbb040dcec47f13d8f4
+</pre></div>
+</div>
+<p>we can see in fact that its hash is different from what was expected.</p>
+<p>It looks like someone decided to update the last successful metadata for the pool (<code class="docutils literal notranslate"><span class="pre">id=290</span></code> in <strong>pool_metadata_ref</strong>) but declared a wrong hash for a new metadata file and now the pool can’t be correctly listed by <strong>SMASH</strong>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="500_smash_faq.html" class="btn btn-neutral float-left" title="SMASH FAQ" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../contribute/contributing.html" class="btn btn-neutral float-right" title="Contributing to the Cardano node tests repository" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

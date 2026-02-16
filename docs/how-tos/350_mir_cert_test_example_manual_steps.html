@@ -1,0 +1,1154 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testing MIR certificate submission with a local cluster &mdash; cardano-node-tests  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/copyright.css?v=45fba407" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/tables.css?v=78ac1f1e" />
+
+  
+    <link rel="shortcut icon" href="https://user-images.githubusercontent.com/2352619/223086153-522289f3-9902-4f63-ad7b-a7d9c5789db0.png"/>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Stake credential history tool" href="380_stake_credential_history_tool.html" />
+    <link rel="prev" title="How Tos" href="../how-tos.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            cardano-node-tests
+              <img src="../_static/Cardano-Crypto-Logo-128.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">cardano-node-tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-with-github-actions">🚀 Running Tests with GitHub Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-tests-locally-with-nix">🛠️ Running Tests Locally with Nix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#running-individual-tests-with-custom-binaries">🧪 Running Individual Tests with Custom Binaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#persistent-local-testnet-for-repeated-testing">🔁 Persistent Local Testnet for Repeated Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#test-configuration-variables">⚙️ Test Configuration Variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#additional-for-regression-sh">Additional for <code class="docutils literal notranslate"><span class="pre">regression.sh</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#usage-examples">💡 Usage Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#local-development-for-test-authors">💻 Local Development for Test Authors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#set-up-python-environment">Set Up Python Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#activate-dev-environment">Activate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#validate-dev-environment">Validate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#start-development-testnet-cluster">Start Development Testnet Cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#run-individual-tests">Run Individual Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#run-linters">Run Linters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#reinstall-cardano-clusterlib-in-editable-mode">Reinstall <code class="docutils literal notranslate"><span class="pre">cardano-clusterlib</span></code> in Editable Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#update-uv-lockfile">Update uv Lockfile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../readme.html#build-and-deploy-documentation">Build and Deploy Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../readme.html#contributing">🤝 Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_results.html">Test Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/nightly_system_tests.html">Nightly system tests pipelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#test-statuses">Test statuses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-results">Nightly results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/nightly_system_tests.html#nightly-upgrade-testing">Nightly upgrade testing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/sync_tests.html">Sync Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/sync_tests.html#sync-test-results-by-cardano-node-version">Sync Test Results by Cardano Node Version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/tag_tests.html">Tag Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_6_2.html">10.6.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_2.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_6_1.html">10.6.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_6_1.html#new-issues">New issues</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_5_1.html">10.5.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_5_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_4_1.html">10.4.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_4_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_3_1.html">10.3.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_3_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_2_1.html">10.2.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_2_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_1_2.html">10.1.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_10_1_1.html">10.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_10_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_9_0_0.html">9.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_9_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_11_0.html">8.11.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_11_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_3.html">8.9.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_1.html">8.9.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_9_0.html">8.9.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_9_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_8_0.html">8.8.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_8_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_3.html">8.7.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_7_2.html">8.7.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_7_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html">8.6.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_6_0_pre.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_1_1.html">8.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_8_0_0.html">8.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_8_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_7.html">1.35.7</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_7.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_6.html">1.35.6</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_6.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_5.html">1.35.5</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_5.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html">1.35.4-rc1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#secp256k1-iog-test-tracking">SECP256k1 IOG Test Tracking</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_4_rc1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/node/tag_1_35_3.html">1.35.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/node/tag_1_35_3.html#relevant-existing-issues">Relevant existing issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../test_results/chang_user_stories.html">Chang HF User Stories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html">System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cli-user-stories">CLI User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#cip1694-user-stories">CIP1694 User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#governance-guardrails-user-stories">Governance guardrails User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#internal-test-cases">Internal Test Cases</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/chang_user_stories_system_tests.html#db-sync-conway-related-tables">DB Sync - Conway related tables</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html">PlutusV3 System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../test_results/requirements/plutusV3_user_stories_system_tests.html#smart-contract-user-stories">Smart Contract User Stories</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../test_plans.html">Test Plans</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../test-plans/100_conway_governance.html">Governance testing in Conway</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#committee">Committee</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#dreps">DReps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#actions-voting-ratification-and-enactment">Actions, Voting, Ratification and Enactment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#spos">SPOs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../test-plans/100_conway_governance.html#transactions">Transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../process.html">Process</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../process/100_test_types.html">Types and levels of tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#node-system-tests">Node system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-nightly-cli-tests">Node nightly CLI tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-cli-tests-on-demand">Node CLI tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#node-sync-tests">Node sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#db-sync-system-tests">DB Sync system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-nightly-tests">DB Sync nightly tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-feature-tests-on-demand">DB Sync feature tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/100_test_types.html#db-sync-sync-tests">DB Sync sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/100_test_types.html#exploratory-testing">Exploratory testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/200_quality_control_strategy.html">Quality control strategy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#scope-and-objectives">Scope and objectives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#key-principles">Key principles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#quality-control-approach">Quality control approach</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/200_quality_control_strategy.html#quality-control-methodology">Quality control methodology</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/200_quality_control_strategy.html#active-quality-control">Active quality control</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/200_quality_control_strategy.html#passive-quality-control">Passive quality control</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/300_uat_strategy.html">User acceptance test strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../process/400_plutus.html">Plutus System-Level Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#summary">Summary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#scope">Scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#not-in-scope">Not in scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#automation">Automation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../process/400_plutus.html#antaeus">Antaeus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../process/400_plutus.html#cardano-node-tests">Cardano-node-tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_plutus.html#exploratory-testing">Exploratory Testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../process/400_system_level_tag_testing.html">System-Level Tag Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#what-we-do">What (We do)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#where-results">Where (Results)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#how-we-do-it">How (We do it)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../process/400_system_level_tag_testing.html#how-long-does-it-take">How long does it take?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../how-tos.html">How Tos</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Testing MIR certificate submission with a local cluster</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#creating-key-pairs">Creating key pairs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#payment-key-pair">Payment key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#stake-key-pair">Stake key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#payment-address">Payment address</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#stake-address">Stake address</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#transferring-funds-from-the-faucet-address-to-our-own-shelley-address-payment-addr">Transferring funds from the ‘faucet’ address to our own Shelley address <code class="docutils literal notranslate"><span class="pre">payment.addr</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#build-tx">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sign-tx">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#submit-tx">Submit tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#check-funds-on-the-payment-addr">Check funds on the payment.addr</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-a-stake-registration-certificate">Creating a stake registration certificate</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#submitting-the-certificate-with-a-transaction">Submitting the certificate with a transaction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#our-stake-address-has-id-13-and-is-registered">Our stake address has id=13 and is registered</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#deregistering-an-empty-stake-address">Deregistering an ‘empty’ stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#creating-a-deregistration-certificate">Creating a deregistration certificate</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#generating-mir-cert-to-send-funds-from-reserves-to-unregistered-stake-address">Generating MIR cert to send funds from reserves to unregistered stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Submit tx</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#state-of-tables-after-mir-cert-tx-submission">State of tables after MIR cert tx submission</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#logs">Logs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#stdout-log">stdout.log</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="380_stake_credential_history_tool.html">Stake credential history tool</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="380_stake_credential_history_tool.html#documentation">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="380_stake_credential_history_tool.html#example-of-usage">Example of usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="500_smash_faq.html">SMASH FAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html">SMASH - tests and debugging examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#checking-smash-status">Checking SMASH status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#fetching-of-the-metadata">Fetching of the metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#delisting-pools">Delisting pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#reserving-a-ticker">Reserving a ticker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#whitelisting">Whitelisting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#checking-pool-rejection-errors">Checking pool rejection errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#pool-unregistrations">Pool unregistrations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#fetch-policies-from-another-smash-service">Fetch policies from another SMASH service</a></li>
+<li class="toctree-l3"><a class="reference internal" href="520_smash_tests_and_debugging_examples.html#an-example-of-debugging-an-issue-with-a-pool">An example of debugging an issue with a pool</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/contributing.html">Contributing to the Cardano node tests repository</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#how-can-i-contribute">How can I contribute?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#reporting-an-issue">Reporting an issue</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#how-do-i-submit-a-good-issue-report">How do I submit a (good) issue report?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#your-first-code-contribution">Your first code contribution</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../contribute/contributing.html#pull-requests">Pull requests</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#id1">Style guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#git-commit-messages">Git commit messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../contribute/contributing.html#python-style-guide">Python style guide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../contribute/contributing.html#roles-and-responsibilities">Roles and Responsibilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">Source Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cardano_node_tests.html">cardano_node_tests package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.cluster_management.html">cardano_node_tests.cluster_management package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.pytest_plugins.html">cardano_node_tests.pytest_plugins package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.tests.html">cardano_node_tests.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.utils.html">cardano_node_tests.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.block_production_graph">cardano_node_tests.block_production_graph module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_blocks_per_backend"><code class="docutils literal notranslate"><span class="pre">get_blocks_per_backend()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_latest_run_id"><code class="docutils literal notranslate"><span class="pre">get_latest_run_id()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.parse_args"><code class="docutils literal notranslate"><span class="pre">parse_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.block_production_graph.plot_backend_blocks"><code class="docutils literal notranslate"><span class="pre">plot_backend_blocks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.cardano_cli_coverage">cardano_node_tests.cardano_cli_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.cli"><code class="docutils literal notranslate"><span class="pre">cli()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_available_commands"><code class="docutils literal notranslate"><span class="pre">get_available_commands()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_badge_icon"><code class="docutils literal notranslate"><span class="pre">get_badge_icon()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_coverage"><code class="docutils literal notranslate"><span class="pre">get_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_log_coverage"><code class="docutils literal notranslate"><span class="pre">get_log_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_report"><code class="docutils literal notranslate"><span class="pre">get_report()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.merge_coverage"><code class="docutils literal notranslate"><span class="pre">merge_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.parse_cmd_output"><code class="docutils literal notranslate"><span class="pre">parse_cmd_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.sanitize_coverage"><code class="docutils literal notranslate"><span class="pre">sanitize_coverage()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.chang_us_coverage">cardano_node_tests.chang_us_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.defragment_utxos">cardano_node_tests.defragment_utxos module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.defragment_utxos.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.defragment_utxos.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.dump_requirements_coverage">cardano_node_tests.dump_requirements_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.prepare_cluster_scripts">cardano_node_tests.prepare_cluster_scripts module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.prepare_scripts_files"><code class="docutils literal notranslate"><span class="pre">prepare_scripts_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.split_topology">cardano_node_tests.split_topology module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.split_topology.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.split_topology.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup">cardano_node_tests.testnet_cleanup module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup_info">cardano_node_tests.testnet_cleanup_info module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cardano_node_tests.html#module-cardano_node_tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">cardano-node-tests</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../how-tos.html">How Tos</a></li>
+      <li class="breadcrumb-item active">Testing MIR certificate submission with a local cluster</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/IntersectMBO/cardano-node-tests/blob/master/src_docs/source/how-tos/350_mir_cert_test_example_manual_steps.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="testing-mir-certificate-submission-with-a-local-cluster">
+<h1>Testing MIR certificate submission with a local cluster<a class="headerlink" href="#testing-mir-certificate-submission-with-a-local-cluster" title="Link to this heading"></a></h1>
+<p>Some node network operations require access to genesis keys, and this requires proper access to the
+machines where those nodes are running. To run these tests more quickly and more safely (in the worst case, the test can only break your local cluster, which you can easily respin), <code class="docutils literal notranslate"><span class="pre">local-cluster</span></code> is exactly what you need.</p>
+<p>Below is an example of running a manual test for checking the MIR certificate transfer to a stake address that was registered and then deregistered before the MIR certificate transaction was submitted. This is a practical example of interacting with <code class="docutils literal notranslate"><span class="pre">local-cluster</span></code> - <code class="docutils literal notranslate"><span class="pre">cardano-node</span></code> and <code class="docutils literal notranslate"><span class="pre">db-sync</span></code>, which also shows how easily you can use <code class="docutils literal notranslate"><span class="pre">local-cluster</span></code> for examining Cardano features.</p>
+<p>This assumes that you have a running local cluster.
+Instructions on how to start a local cluster can be found here:
+<a class="reference external" href="https://tests.cardano.intersectmbo.org/how-tos/300_running_local_cluster.html">https://tests.cardano.intersectmbo.org/how-tos/300_running_local_cluster.html</a></p>
+<section id="creating-key-pairs">
+<h2>Creating key pairs<a class="headerlink" href="#creating-key-pairs" title="Link to this heading"></a></h2>
+<section id="payment-key-pair">
+<h3>Payment key pair<a class="headerlink" href="#payment-key-pair" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>address<span class="w"> </span>key-gen<span class="w"> </span><span class="se">\</span>
+--verification-key-file<span class="w"> </span>payment.vkey<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>payment.skey
+</pre></div>
+</div>
+</section>
+<section id="stake-key-pair">
+<h3>Stake key pair<a class="headerlink" href="#stake-key-pair" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>stake-address<span class="w"> </span>key-gen<span class="w"> </span><span class="se">\</span>
+--verification-key-file<span class="w"> </span>stake.vkey<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>stake.skey
+</pre></div>
+</div>
+</section>
+<section id="payment-address">
+<h3>Payment address<a class="headerlink" href="#payment-address" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>address<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
+--payment-verification-key-file<span class="w"> </span>payment.vkey<span class="w"> </span><span class="se">\</span>
+--stake-verification-key-file<span class="w"> </span>stake.vkey<span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>payment.addr<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span>
+</pre></div>
+</div>
+</section>
+<section id="stake-address">
+<h3>Stake address<a class="headerlink" href="#stake-address" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>stake-address<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
+--stake-verification-key-file<span class="w"> </span>stake.vkey<span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>stake.addr<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span>
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>payment.addr
+addr_test1qz57qp78v2udppvyxxxhsl959m8dc32axlplf2sxexz79kp87k8wm2uh9g2js0y942lkvu9lgu3eg93lqv5mn9jm66wsv55af7
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cat<span class="w"> </span>stake.addr
+stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns
+</pre></div>
+</div>
+</section>
+</section>
+<section id="transferring-funds-from-the-faucet-address-to-our-own-shelley-address-payment-addr">
+<h2>Transferring funds from the ‘faucet’ address to our own Shelley address <code class="docutils literal notranslate"><span class="pre">payment.addr</span></code><a class="headerlink" href="#transferring-funds-from-the-faucet-address-to-our-own-shelley-address-payment-addr" title="Link to this heading"></a></h2>
+<p>First query an address that holds funds:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>utxo<span class="w"> </span>--address<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>/home/artur/Projects/cardano-node/state-cluster0/byron/address-000-converted<span class="k">)</span><span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="w">                           </span>TxHash<span class="w">                                 </span>TxIx<span class="w">        </span>Amount
+--------------------------------------------------------------------------------------
+3409ede3ea6665b175c5a56e41187f9e62b4f02901b1437a935b90ad60042249<span class="w">     </span><span class="m">0</span><span class="w">        </span><span class="m">35996998496920237</span><span class="w"> </span>lovelace<span class="w"> </span>+<span class="w"> </span>TxOutDatumHashNone
+</pre></div>
+</div>
+<p>We will assume an arbitrary fee = 1 ADA
+and send 2 mln ADA from the ‘faucet’ address (address-000-converted) to payment.addr:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>expr<span class="w"> </span><span class="m">35996998496920237</span><span class="w"> </span>-<span class="w"> </span><span class="m">2000000000000</span><span class="w"> </span>-<span class="w"> </span><span class="m">1000000</span>
+<span class="m">35994998495920237</span>
+</pre></div>
+</div>
+<section id="build-tx">
+<h3>Build tx<a class="headerlink" href="#build-tx" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>build-raw<span class="w"> </span><span class="se">\</span>
+--tx-in<span class="w"> </span>3409ede3ea6665b175c5a56e41187f9e62b4f02901b1437a935b90ad60042249#0<span class="w"> </span><span class="se">\</span>
+--tx-out<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>~/Projects/payment.addr<span class="k">)</span>+2000000000000<span class="w"> </span><span class="se">\</span>
+--tx-out<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>/home/artur/Projects/cardano-node/state-cluster0/byron/address-000-converted<span class="k">)</span>+35994998495920237<span class="w"> </span><span class="se">\</span>
+--fee<span class="w"> </span><span class="m">1000000</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx.raw
+</pre></div>
+</div>
+</section>
+<section id="sign-tx">
+<h3>Sign tx<a class="headerlink" href="#sign-tx" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>sign<span class="w"> </span><span class="se">\</span>
+--tx-body-file<span class="w"> </span>tx.raw<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>/home/artur/Projects/cardano-node/state-cluster0/byron/payment-keys.000-converted.skey<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx.signed
+</pre></div>
+</div>
+</section>
+<section id="submit-tx">
+<h3>Submit tx<a class="headerlink" href="#submit-tx" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>submit<span class="w"> </span>--tx-file<span class="w"> </span>tx.signed<span class="w">  </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+Transaction<span class="w"> </span>successfully<span class="w"> </span>submitted.
+</pre></div>
+</div>
+</section>
+<section id="check-funds-on-the-payment-addr">
+<h3>Check funds on the payment.addr<a class="headerlink" href="#check-funds-on-the-payment-addr" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>utxo<span class="w"> </span>--address<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>/home/artur/Projects/payment.addr<span class="k">)</span><span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="w">                           </span>TxHash<span class="w">                                 </span>TxIx<span class="w">        </span>Amount
+--------------------------------------------------------------------------------------
+ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e<span class="w">     </span><span class="m">0</span><span class="w">        </span><span class="m">2000000000000</span><span class="w"> </span>lovelace<span class="w"> </span>+<span class="w"> </span>TxOutDatumHashNone
+</pre></div>
+</div>
+</section>
+</section>
+<section id="creating-a-stake-registration-certificate">
+<h2>Creating a stake registration certificate<a class="headerlink" href="#creating-a-stake-registration-certificate" title="Link to this heading"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>stake-address<span class="w"> </span>registration-certificate<span class="w"> </span><span class="se">\</span>
+--stake-verification-key-file<span class="w"> </span>stake.vkey<span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>stake.cert
+</pre></div>
+</div>
+<p>There is a deposit required for <code class="docutils literal notranslate"><span class="pre">stake</span> <span class="pre">address</span></code>. Let’s check its value:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>protocol-parameters<span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>Deposit
+<span class="w">    </span><span class="s2">&quot;stakePoolDeposit&quot;</span>:<span class="w"> </span><span class="m">500000000</span>,
+<span class="w">    </span><span class="s2">&quot;stakeAddressDeposit&quot;</span>:<span class="w"> </span><span class="m">400000</span>,
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">genesis.json</span></code> with value for deposits can be found: cardano-node/state-cluster0/shelley/genesis.json</p>
+<p>Query the UTXO of the address that pays for the transaction and deposit:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>utxo<span class="w"> </span>--address<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>/home/artur/Projects/payment.addr<span class="k">)</span><span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="w">                           </span>TxHash<span class="w">                                 </span>TxIx<span class="w">        </span>Amount
+--------------------------------------------------------------------------------------
+ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e<span class="w">     </span><span class="m">0</span><span class="w">        </span><span class="m">2000000000000</span><span class="w"> </span>lovelace<span class="w"> </span>+<span class="w"> </span>TxOutDatumHashNone
+</pre></div>
+</div>
+<p>Calculate the change to send back to the payment address after including the deposit:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">fee</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="nv">ADA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1000000</span><span class="w"> </span>lovelaces
+Stake<span class="w"> </span>Address<span class="w"> </span><span class="nv">Deposit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">400000</span><span class="w"> </span>lovelaces
+
+expr<span class="w"> </span><span class="m">2000000000000</span><span class="w"> </span>-<span class="w"> </span><span class="m">1000000</span><span class="w"> </span>-<span class="w"> </span><span class="m">400000</span>
+<span class="m">1999994000000</span>
+</pre></div>
+</div>
+<section id="submitting-the-certificate-with-a-transaction">
+<h3>Submitting the certificate with a transaction<a class="headerlink" href="#submitting-the-certificate-with-a-transaction" title="Link to this heading"></a></h3>
+<section id="id1">
+<h4>Build tx<a class="headerlink" href="#id1" title="Link to this heading"></a></h4>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>build-raw<span class="w"> </span><span class="se">\</span>
+--tx-in<span class="w"> </span>ece90464d725625a1d7d5f484b24199f067d6bddb3df9b05a67c6cc8dba6944e#0<span class="w"> </span><span class="se">\</span>
+--tx-out<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>payment.addr<span class="k">)</span>+1999998600000<span class="w"> </span><span class="se">\</span>
+--fee<span class="w"> </span><span class="m">1000000</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx002.raw<span class="w"> </span><span class="se">\</span>
+--certificate-file<span class="w"> </span>stake.cert
+</pre></div>
+</div>
+</section>
+<section id="sign-it">
+<h4>Sign it<a class="headerlink" href="#sign-it" title="Link to this heading"></a></h4>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>sign<span class="w"> </span><span class="se">\</span>
+--tx-body-file<span class="w"> </span>tx002.raw<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>payment.skey<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>stake.skey<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx002.signed
+</pre></div>
+</div>
+</section>
+<section id="and-submit-it">
+<h4>And submit it<a class="headerlink" href="#and-submit-it" title="Link to this heading"></a></h4>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>submit<span class="w"> </span><span class="se">\</span>
+--tx-file<span class="w"> </span>tx002.signed<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="our-stake-address-has-id-13-and-is-registered">
+<h3>Our stake address has id=13 and is registered<a class="headerlink" href="#our-stake-address-has-id-13-and-is-registered" title="Link to this heading"></a></h3>
+<p>See the table below:
+The stake address is <code class="docutils literal notranslate"><span class="pre">stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns</span></code>.</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stake_address</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>hash_raw</p></th>
+<th class="head"><p>view</p></th>
+<th class="head"><p>registered_tx_id</p></th>
+<th class="head"><p>script_hash</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>5</p></td>
+<td><p>xe0568028c22bdf100e83979696540db02ec6a4eb1f1c8e9d5b91b77487</p></td>
+<td><p>stake_test1uptgq2xz9003qr5rj7tfv4qdkqhvdf8truwga82mjxmhfpcxv3p46</p></td>
+<td><p>5</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>xe0e50e564992e494d163c310af81d858168286e6acdff5bf15d887ed19</p></td>
+<td><p>stake_test1urjsu4jfjtjff5trcvg2lqwctqtg9phx4n0lt0c4mzr76xgfd5c7u</p></td>
+<td><p>5</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>8</p></td>
+<td><p>xe0c4e0c1c243bcb0ff38e835d8e35f29c1f7d277587d602d713cf1933e</p></td>
+<td><p>stake_test1urzwpswzgw7tplecaq6a3c6l98ql05nhtp7kqtt38ncex0stcmuyj</p></td>
+<td><p>5</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>xe054ddf4c30186b9154afe55b42ba175d903794ecd66b785c68bd2e7c1</p></td>
+<td><p>stake_test1up2dmaxrqxrtj922le2mg2apwhvsx72we4nt0pwx30fw0sg607vyz</p></td>
+<td><p>5</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>11</p></td>
+<td><p>xe01c60761146bc394d9fb4e47f9ffbd3fd53256ca52b88dc040f6be406</p></td>
+<td><p>stake_test1uqwxqas3g67rjnvlknj8l8lm6074xftv554c3hqypa47gpstqfku4</p></td>
+<td><p>5</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>xe07940665a5f25116ac467b1d0fdc514b86cad61786c59d1a52fcce9da</p></td>
+<td><p>stake_test1upu5qej6tuj3z6kyv7caplw9zjuxettp0pk9n5d99lxwnksl99hux</p></td>
+<td><p>5</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>13</p></td>
+<td><p>xe027f58eedab972a15283c85aabf6670bf472394163f0329b9965bd69d</p></td>
+<td><p>stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns</p></td>
+<td><p>9</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stake_registration</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>addr_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>tx_id</p></th>
+<th class="head"><p>epoch_no</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>5</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>5</p></td>
+<td><p>1</p></td>
+<td><p>5</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>2</p></td>
+<td><p>4</p></td>
+<td><p>5</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p>8</p></td>
+<td><p>5</p></td>
+<td><p>5</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>5</p></td>
+<td><p>3</p></td>
+<td><p>8</p></td>
+<td><p>5</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p>6</p></td>
+<td><p>11</p></td>
+<td><p>9</p></td>
+<td><p>5</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>7</p></td>
+<td><p>13</p></td>
+<td><p>0</p></td>
+<td><p>10</p></td>
+<td><p>34</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="deregistering-an-empty-stake-address">
+<h2>Deregistering an ‘empty’ stake address<a class="headerlink" href="#deregistering-an-empty-stake-address" title="Link to this heading"></a></h2>
+<blockquote>
+<div><p>This address has no rewards because its stake was not delegated.</p>
+</div></blockquote>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>stake-address-info<span class="w"> </span>--address<span class="w"> </span>stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns<span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;address&quot;</span>:<span class="w"> </span><span class="s2">&quot;stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;rewardAccountBalance&quot;</span>:<span class="w"> </span><span class="m">0</span>,
+<span class="w">        </span><span class="s2">&quot;delegation&quot;</span>:<span class="w"> </span>null
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+<section id="creating-a-deregistration-certificate">
+<h3>Creating a deregistration certificate<a class="headerlink" href="#creating-a-deregistration-certificate" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>stake-address<span class="w"> </span>deregistration-certificate<span class="w"> </span><span class="se">\</span>
+--stake-verification-key-file<span class="w"> </span>stake.vkey<span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>deregistration.cert
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>utxo<span class="w"> </span>--address<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>payment.addr<span class="k">)</span><span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="w">                           </span>TxHash<span class="w">                                 </span>TxIx<span class="w">        </span>Amount
+--------------------------------------------------------------------------------------
+a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541<span class="w">     </span><span class="m">0</span><span class="w">        </span><span class="m">1999998600000</span><span class="w"> </span>lovelace<span class="w"> </span>+<span class="w"> </span>TxOutDatumHashNone
+</pre></div>
+</div>
+<section id="adding-400000-from-a-key-deposit-that-will-be-returned">
+<h4>Adding +400000 from a key deposit that will be returned<a class="headerlink" href="#adding-400000-from-a-key-deposit-that-will-be-returned" title="Link to this heading"></a></h4>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>expr<span class="w"> </span><span class="m">1999998600000</span><span class="w"> </span>+<span class="w"> </span><span class="m">400000</span><span class="w"> </span>-<span class="w"> </span><span class="m">1000000</span>
+<span class="m">1999998000000</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h4>Build tx<a class="headerlink" href="#id2" title="Link to this heading"></a></h4>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>build-raw<span class="w"> </span><span class="se">\</span>
+--tx-in<span class="w"> </span>a4c141cfae907aa1c4b418f65f384a6d860d52786b412481bc63733acfab1541#0<span class="w"> </span><span class="se">\</span>
+--tx-out<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>payment.addr<span class="k">)</span>+1999998000000<span class="w"> </span><span class="se">\</span>
+--fee<span class="w"> </span><span class="m">1000000</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx-deregister-stake-addr.raw<span class="w"> </span><span class="se">\</span>
+--certificate-file<span class="w"> </span>deregistration.cert
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h4>Sign tx<a class="headerlink" href="#id3" title="Link to this heading"></a></h4>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>sign<span class="w"> </span><span class="se">\</span>
+--tx-body-file<span class="w"> </span>tx-deregister-stake-addr.raw<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>payment.skey<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>stake.skey<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx-deregister-stake-addr.signed
+</pre></div>
+</div>
+</section>
+<section id="submit-txderegistration-event-was-registered-in-db-sync">
+<h4>Submit txDeregistration event was registered in <code class="docutils literal notranslate"><span class="pre">db-sync</span></code><a class="headerlink" href="#submit-txderegistration-event-was-registered-in-db-sync" title="Link to this heading"></a></h4>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stake_deregistration</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>addr_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>tx_id</p></th>
+<th class="head"><p>epoch_no</p></th>
+<th class="head"><p>redeemer_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>13</p></td>
+<td><p>0</p></td>
+<td><p>11</p></td>
+<td><p>39</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESERVES</strong> and <strong>TREASURY</strong> table state before MIR cert submission:</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">reserve</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>addr_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>amount</p></th>
+<th class="head"><p>tx_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>(0 rows)</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">treasury</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>addr_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>amount</p></th>
+<th class="head"><p>tx_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>(0 rows)</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+<section id="generating-mir-cert-to-send-funds-from-reserves-to-unregistered-stake-address">
+<h2>Generating MIR cert to send funds from reserves to unregistered stake address<a class="headerlink" href="#generating-mir-cert-to-send-funds-from-reserves-to-unregistered-stake-address" title="Link to this heading"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>governance<span class="w"> </span>create-mir-certificate<span class="w"> </span><span class="se">\</span>
+--stake-address<span class="w"> </span>stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns<span class="w"> </span><span class="se">\</span>
+--reserves<span class="w"> </span><span class="se">\</span>
+--reward<span class="w"> </span><span class="m">500000000000</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>mir_reserves_500K_to_unregistered_stake_addr.cert
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>query<span class="w"> </span>utxo<span class="w"> </span>--address<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>payment.addr<span class="k">)</span><span class="w"> </span>--testnet-magic<span class="w"> </span><span class="m">42</span>
+<span class="w">                            </span>TxHash<span class="w">                               </span><span class="p">|</span><span class="w"> </span>TxIx<span class="w"> </span><span class="p">|</span><span class="w">    </span>Amount
+<span class="w"> </span>-----------------------------------------------------------------------------------
+<span class="w"> </span>277cab33552f06331af9dbf0d05635464a769dab05335511df7c7d4d70f41b61<span class="w">  </span><span class="m">0</span><span class="w">      </span><span class="m">1999998000000</span><span class="w"> </span>lovelace<span class="w"> </span>+<span class="w"> </span>TxOutDatumHashNone
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>expr<span class="w"> </span><span class="m">1999998000000</span><span class="w"> </span>-<span class="w"> </span><span class="m">1000000</span>
+<span class="m">1999997000000</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3>Build tx<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>build-raw<span class="w"> </span><span class="se">\</span>
+--tx-in<span class="w"> </span>277cab33552f06331af9dbf0d05635464a769dab05335511df7c7d4d70f41b61#0<span class="w"> </span><span class="se">\</span>
+--tx-out<span class="w"> </span><span class="k">$(</span>cat<span class="w"> </span>payment.addr<span class="k">)</span>+1999997000000<span class="w"> </span><span class="se">\</span>
+--fee<span class="w"> </span><span class="m">1000000</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx-mir-cert.raw<span class="w"> </span><span class="se">\</span>
+--certificate-file<span class="w"> </span>mir_reserves_500K_to_unregistered_stake_addr.cert
+</pre></div>
+</div>
+</section>
+<section id="id5">
+<h3>Sign tx<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>sign<span class="w"> </span><span class="se">\</span>
+--tx-body-file<span class="w"> </span>tx-mir-cert.raw<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>payment.skey<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>/home/artur/Projects/cardano-node/state-cluster0/shelley/delegate-keys/delegate1.skey<span class="w"> </span><span class="se">\</span>
+--signing-key-file<span class="w"> </span>/home/artur/Projects/cardano-node/state-cluster0/shelley/genesis-keys/genesis1.skey<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+--out-file<span class="w"> </span>tx-mir-cert.signed
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3>Submit tx<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cardano-cli<span class="w"> </span>transaction<span class="w"> </span>submit<span class="w"> </span><span class="se">\</span>
+--tx-file<span class="w"> </span>tx-mir-cert.signed<span class="w"> </span><span class="se">\</span>
+--testnet-magic<span class="w"> </span><span class="m">42</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="state-of-tables-after-mir-cert-tx-submission">
+<h2>State of tables after MIR cert tx submission<a class="headerlink" href="#state-of-tables-after-mir-cert-tx-submission" title="Link to this heading"></a></h2>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">reserve</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>addr_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>amount</p></th>
+<th class="head"><p>tx_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>13</p></td>
+<td><p>0</p></td>
+<td><p>500000000000</p></td>
+<td><p>12</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">treasury</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>addr_id</p></th>
+<th class="head"><p>cert_index</p></th>
+<th class="head"><p>amount</p></th>
+<th class="head"><p>tx_id</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>(0 rows)</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="logs">
+<h2>Logs<a class="headerlink" href="#logs" title="Link to this heading"></a></h2>
+<p>We can see that currently there are some issues:</p>
+<section id="stdout-log">
+<h3>stdout.log<a class="headerlink" href="#stdout-log" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>db-sync-node:Info:784<span class="o">][</span><span class="m">2021</span>-10-08<span class="w"> </span><span class="m">12</span>:45:33.21<span class="w"> </span>UTC<span class="o">]</span><span class="w"> </span>Starting<span class="w"> </span>epoch<span class="w"> </span><span class="m">58</span>
+<span class="o">[</span>db-sync-node:Info:784<span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="m">2021</span>-10-08<span class="w"> </span><span class="m">12</span>:45:33.21<span class="w"> </span>UTC<span class="o">]</span><span class="w"> </span>Handling<span class="w"> </span><span class="m">3</span><span class="w"> </span>stakes<span class="w"> </span><span class="k">for</span><span class="w"> </span>epoch<span class="w"> </span><span class="m">58</span><span class="w"> </span>slot<span class="w"> </span><span class="m">58011</span>,<span class="w"> </span><span class="nb">hash</span><span class="w"> </span>f8175c985699105a67afdc7dae17b325fd1cafd3794500e95722fafecc375ce5
+<span class="o">[</span>db-sync-node:Warning:784<span class="o">]</span><span class="o">[</span>0m<span class="w"> </span><span class="o">[</span><span class="m">2021</span>-10-08<span class="w"> </span><span class="m">12</span>:45:33.21<span class="w"> </span>UTC<span class="o">]</span><span class="w"> </span>validateEpochRewards:<span class="w"> </span>rewards<span class="w"> </span>spendable<span class="w"> </span><span class="k">in</span><span class="w"> </span>epoch<span class="w"> </span><span class="m">58</span><span class="w"> </span>expected<span class="w"> </span>total<span class="w"> </span>of<span class="w"> </span><span class="m">1065</span>.150011<span class="w"> </span>ADA<span class="w"> </span>but<span class="w"> </span>got<span class="w"> </span><span class="m">501065</span>.150011<span class="w"> </span>ADA
+</pre></div>
+</div>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">epoch_reward_total_received</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">DESC</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>earned_epoch</p></th>
+<th class="head"><p>amount</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>57</p></td>
+<td><p>56</p></td>
+<td><p>501065150011</p></td>
+</tr>
+<tr class="row-odd"><td><p>56</p></td>
+<td><p>55</p></td>
+<td><p>1196962304</p></td>
+</tr>
+<tr class="row-even"><td><p>55</p></td>
+<td><p>54</p></td>
+<td><p>1197126868</p></td>
+</tr>
+<tr class="row-odd"><td><p>54</p></td>
+<td><p>53</p></td>
+<td><p>1197291461</p></td>
+</tr>
+<tr class="row-even"><td><p>53</p></td>
+<td><p>52</p></td>
+<td><p>1197456077</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">select</span><span class="w"> </span><span class="n">reward</span><span class="p">.</span><span class="n">earned_epoch</span><span class="p">,</span><span class="w"> </span><span class="n">pool_hash</span><span class="p">.</span><span class="k">view</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">delegated_pool</span><span class="p">,</span><span class="w"> </span><span class="n">reward</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">lovelace</span>
+<span class="w">    </span><span class="k">from</span><span class="w"> </span><span class="n">reward</span><span class="w"> </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">stake_address</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">reward</span><span class="p">.</span><span class="n">addr_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stake_address</span><span class="p">.</span><span class="n">id</span>
+<span class="w">    </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">pool_hash</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">reward</span><span class="p">.</span><span class="n">pool_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pool_hash</span><span class="p">.</span><span class="n">id</span>
+<span class="w">    </span><span class="k">where</span><span class="w"> </span><span class="n">stake_address</span><span class="p">.</span><span class="k">view</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;stake_test1uqnltrhd4wtj59fg8jz640mxwzl5wgu5zclsx2dejedad8gmxw2ns&#39;</span>
+<span class="w">    </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">earned_epoch</span><span class="w"> </span><span class="k">asc</span><span class="w"> </span><span class="p">;</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">(NOTHING)</span></code></p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../how-tos.html" class="btn btn-neutral float-left" title="How Tos" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="380_stake_credential_history_tool.html" class="btn btn-neutral float-right" title="Stake credential history tool" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

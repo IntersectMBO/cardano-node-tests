@@ -1,0 +1,743 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cardano_node_tests.tests.tests_plutus_v3 package &mdash; cardano-node-tests  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/copyright.css?v=45fba407" />
+      <link rel="stylesheet" type="text/css" href="_static/css/tables.css?v=78ac1f1e" />
+
+  
+    <link rel="shortcut icon" href="https://user-images.githubusercontent.com/2352619/223086153-522289f3-9902-4f63-ad7b-a7d9c5789db0.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="cardano_node_tests.utils package" href="cardano_node_tests.utils.html" />
+    <link rel="prev" title="cardano_node_tests.tests.tests_plutus_v2 package" href="cardano_node_tests.tests.tests_plutus_v2.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            cardano-node-tests
+              <img src="_static/Cardano-Crypto-Logo-128.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="readme.html">cardano-node-tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#running-tests-with-github-actions">🚀 Running Tests with GitHub Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#running-tests-locally-with-nix">🛠️ Running Tests Locally with Nix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#running-individual-tests-with-custom-binaries">🧪 Running Individual Tests with Custom Binaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#persistent-local-testnet-for-repeated-testing">🔁 Persistent Local Testnet for Repeated Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#test-configuration-variables">⚙️ Test Configuration Variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#additional-for-regression-sh">Additional for <code class="docutils literal notranslate"><span class="pre">regression.sh</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#usage-examples">💡 Usage Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#local-development-for-test-authors">💻 Local Development for Test Authors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#set-up-python-environment">Set Up Python Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#activate-dev-environment">Activate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#validate-dev-environment">Validate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#start-development-testnet-cluster">Start Development Testnet Cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#run-individual-tests">Run Individual Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#run-linters">Run Linters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#reinstall-cardano-clusterlib-in-editable-mode">Reinstall <code class="docutils literal notranslate"><span class="pre">cardano-clusterlib</span></code> in Editable Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#update-uv-lockfile">Update uv Lockfile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="readme.html#build-and-deploy-documentation">Build and Deploy Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#contributing">🤝 Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="test_results.html">Test Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="test_results/nightly_system_tests.html">Nightly system tests pipelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="test_results/nightly_system_tests.html#test-statuses">Test statuses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/nightly_system_tests.html#nightly-results">Nightly results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/nightly_system_tests.html#nightly-upgrade-testing">Nightly upgrade testing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="test_results/sync_tests.html">Sync Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="test_results/sync_tests.html#sync-test-results-by-cardano-node-version">Sync Test Results by Cardano Node Version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="test_results/tag_tests.html">Tag Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_6_2.html">10.6.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_6_2.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_6_1.html">10.6.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_6_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_6_1.html#new-issues">New issues</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_5_1.html">10.5.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_5_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_5_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_5_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_5_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_5_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_4_1.html">10.4.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_4_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_4_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_4_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_4_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_4_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_3_1.html">10.3.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_3_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_3_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_3_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_3_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_3_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_2_1.html">10.2.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_2_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_2_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_2_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_2_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_2_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_1_2.html">10.1.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_10_1_1.html">10.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_10_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_9_0_0.html">9.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_9_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_9_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_9_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_9_0_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_9_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_9_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_11_0.html">8.11.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_11_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_11_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_11_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_11_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_11_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_11_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_9_3.html">8.9.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_9_1.html">8.9.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_9_0.html">8.9.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_9_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_8_0.html">8.8.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_8_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_8_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_8_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_8_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_8_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_8_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_7_3.html">8.7.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_7_2.html">8.7.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_2.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_7_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html">8.6.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_6_0_pre.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_1_1.html">8.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_1_1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_1_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_8_0_0.html">8.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_0_0.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_8_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_1_35_7.html">1.35.7</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_7.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_7.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_7.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_7.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_7.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_7.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_7.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_1_35_6.html">1.35.6</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_6.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_6.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_6.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_6.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_6.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_6.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_6.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_1_35_5.html">1.35.5</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_5.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_5.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_5.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_5.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_5.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_5.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html">1.35.4-rc1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html#secp256k1-iog-test-tracking">SECP256k1 IOG Test Tracking</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_4_rc1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/node/tag_1_35_3.html">1.35.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_3.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_3.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/node/tag_1_35_3.html#relevant-existing-issues">Relevant existing issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="test_results/chang_user_stories.html">Chang HF User Stories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="test_results/requirements/chang_user_stories_system_tests.html">System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/requirements/chang_user_stories_system_tests.html#cli-user-stories">CLI User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/requirements/chang_user_stories_system_tests.html#cip1694-user-stories">CIP1694 User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/requirements/chang_user_stories_system_tests.html#governance-guardrails-user-stories">Governance guardrails User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/requirements/chang_user_stories_system_tests.html#internal-test-cases">Internal Test Cases</a></li>
+<li class="toctree-l4"><a class="reference internal" href="test_results/requirements/chang_user_stories_system_tests.html#db-sync-conway-related-tables">DB Sync - Conway related tables</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="test_results/requirements/plutusV3_user_stories_system_tests.html">PlutusV3 System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="test_results/requirements/plutusV3_user_stories_system_tests.html#smart-contract-user-stories">Smart Contract User Stories</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="test_plans.html">Test Plans</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="test-plans/100_conway_governance.html">Governance testing in Conway</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="test-plans/100_conway_governance.html#committee">Committee</a></li>
+<li class="toctree-l3"><a class="reference internal" href="test-plans/100_conway_governance.html#dreps">DReps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="test-plans/100_conway_governance.html#actions-voting-ratification-and-enactment">Actions, Voting, Ratification and Enactment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="test-plans/100_conway_governance.html#spos">SPOs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="test-plans/100_conway_governance.html#transactions">Transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Process</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="process/100_test_types.html">Types and levels of tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="process/100_test_types.html#node-system-tests">Node system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="process/100_test_types.html#node-nightly-cli-tests">Node nightly CLI tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="process/100_test_types.html#node-cli-tests-on-demand">Node CLI tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="process/100_test_types.html#node-sync-tests">Node sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="process/100_test_types.html#db-sync-system-tests">DB Sync system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="process/100_test_types.html#db-sync-nightly-tests">DB Sync nightly tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="process/100_test_types.html#db-sync-feature-tests-on-demand">DB Sync feature tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="process/100_test_types.html#db-sync-sync-tests">DB Sync sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="process/100_test_types.html#exploratory-testing">Exploratory testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="process/200_quality_control_strategy.html">Quality control strategy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="process/200_quality_control_strategy.html#scope-and-objectives">Scope and objectives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/200_quality_control_strategy.html#key-principles">Key principles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/200_quality_control_strategy.html#quality-control-approach">Quality control approach</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/200_quality_control_strategy.html#quality-control-methodology">Quality control methodology</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="process/200_quality_control_strategy.html#active-quality-control">Active quality control</a></li>
+<li class="toctree-l4"><a class="reference internal" href="process/200_quality_control_strategy.html#passive-quality-control">Passive quality control</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="process/300_uat_strategy.html">User acceptance test strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="process/400_plutus.html">Plutus System-Level Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="process/400_plutus.html#summary">Summary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/400_plutus.html#scope">Scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/400_plutus.html#not-in-scope">Not in scope</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/400_plutus.html#automation">Automation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="process/400_plutus.html#antaeus">Antaeus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="process/400_plutus.html#cardano-node-tests">Cardano-node-tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="process/400_plutus.html#exploratory-testing">Exploratory Testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="process/400_system_level_tag_testing.html">System-Level Tag Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="process/400_system_level_tag_testing.html#what-we-do">What (We do)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/400_system_level_tag_testing.html#where-results">Where (Results)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/400_system_level_tag_testing.html#how-we-do-it">How (We do it)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="process/400_system_level_tag_testing.html#how-long-does-it-take">How long does it take?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="how-tos.html">How Tos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html">Testing MIR certificate submission with a local cluster</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#creating-key-pairs">Creating key pairs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#payment-key-pair">Payment key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#stake-key-pair">Stake key pair</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#payment-address">Payment address</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#stake-address">Stake address</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#transferring-funds-from-the-faucet-address-to-our-own-shelley-address-payment-addr">Transferring funds from the ‘faucet’ address to our own Shelley address <code class="docutils literal notranslate"><span class="pre">payment.addr</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#build-tx">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#sign-tx">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#submit-tx">Submit tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#check-funds-on-the-payment-addr">Check funds on the payment.addr</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#creating-a-stake-registration-certificate">Creating a stake registration certificate</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#submitting-the-certificate-with-a-transaction">Submitting the certificate with a transaction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#our-stake-address-has-id-13-and-is-registered">Our stake address has id=13 and is registered</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#deregistering-an-empty-stake-address">Deregistering an ‘empty’ stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#creating-a-deregistration-certificate">Creating a deregistration certificate</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#generating-mir-cert-to-send-funds-from-reserves-to-unregistered-stake-address">Generating MIR cert to send funds from reserves to unregistered stake address</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#id4">Build tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#id5">Sign tx</a></li>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#id6">Submit tx</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#state-of-tables-after-mir-cert-tx-submission">State of tables after MIR cert tx submission</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#logs">Logs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="how-tos/350_mir_cert_test_example_manual_steps.html#stdout-log">stdout.log</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="how-tos/380_stake_credential_history_tool.html">Stake credential history tool</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/380_stake_credential_history_tool.html#documentation">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/380_stake_credential_history_tool.html#example-of-usage">Example of usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="how-tos/500_smash_faq.html">SMASH FAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html">SMASH - tests and debugging examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#checking-smash-status">Checking SMASH status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#fetching-of-the-metadata">Fetching of the metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#delisting-pools">Delisting pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#reserving-a-ticker">Reserving a ticker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#whitelisting">Whitelisting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#checking-pool-rejection-errors">Checking pool rejection errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#pool-unregistrations">Pool unregistrations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#fetch-policies-from-another-smash-service">Fetch policies from another SMASH service</a></li>
+<li class="toctree-l3"><a class="reference internal" href="how-tos/520_smash_tests_and_debugging_examples.html#an-example-of-debugging-an-issue-with-a-pool">An example of debugging an issue with a pool</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contribute/contributing.html">Contributing to the Cardano node tests repository</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contribute/contributing.html#how-can-i-contribute">How can I contribute?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contribute/contributing.html#reporting-an-issue">Reporting an issue</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="contribute/contributing.html#how-do-i-submit-a-good-issue-report">How do I submit a (good) issue report?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/contributing.html#your-first-code-contribution">Your first code contribution</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="contribute/contributing.html#pull-requests">Pull requests</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contribute/contributing.html#id1">Style guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contribute/contributing.html#git-commit-messages">Git commit messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/contributing.html#python-style-guide">Python style guide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contribute/contributing.html#roles-and-responsibilities">Roles and Responsibilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Source Documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="cardano_node_tests.html">cardano_node_tests package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="cardano_node_tests.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.cluster_management.html">cardano_node_tests.cluster_management package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.pytest_plugins.html">cardano_node_tests.pytest_plugins package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="cardano_node_tests.tests.html">cardano_node_tests.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.utils.html">cardano_node_tests.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.block_production_graph">cardano_node_tests.block_production_graph module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.block_production_graph.get_blocks_per_backend"><code class="docutils literal notranslate"><span class="pre">get_blocks_per_backend()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.block_production_graph.get_latest_run_id"><code class="docutils literal notranslate"><span class="pre">get_latest_run_id()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.block_production_graph.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.block_production_graph.parse_args"><code class="docutils literal notranslate"><span class="pre">parse_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.block_production_graph.plot_backend_blocks"><code class="docutils literal notranslate"><span class="pre">plot_backend_blocks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.cardano_cli_coverage">cardano_node_tests.cardano_cli_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.cli"><code class="docutils literal notranslate"><span class="pre">cli()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_available_commands"><code class="docutils literal notranslate"><span class="pre">get_available_commands()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_badge_icon"><code class="docutils literal notranslate"><span class="pre">get_badge_icon()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_coverage"><code class="docutils literal notranslate"><span class="pre">get_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_log_coverage"><code class="docutils literal notranslate"><span class="pre">get_log_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_report"><code class="docutils literal notranslate"><span class="pre">get_report()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.merge_coverage"><code class="docutils literal notranslate"><span class="pre">merge_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.parse_cmd_output"><code class="docutils literal notranslate"><span class="pre">parse_cmd_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.sanitize_coverage"><code class="docutils literal notranslate"><span class="pre">sanitize_coverage()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.chang_us_coverage">cardano_node_tests.chang_us_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.chang_us_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.chang_us_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.defragment_utxos">cardano_node_tests.defragment_utxos module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.defragment_utxos.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.defragment_utxos.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.dump_requirements_coverage">cardano_node_tests.dump_requirements_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.prepare_cluster_scripts">cardano_node_tests.prepare_cluster_scripts module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.prepare_scripts_files"><code class="docutils literal notranslate"><span class="pre">prepare_scripts_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.split_topology">cardano_node_tests.split_topology module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.split_topology.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.split_topology.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup">cardano_node_tests.testnet_cleanup module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.testnet_cleanup.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.testnet_cleanup.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup_info">cardano_node_tests.testnet_cleanup_info module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cardano_node_tests.html#module-cardano_node_tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cardano-node-tests</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">Source Documentation</a></li>
+          <li class="breadcrumb-item"><a href="cardano_node_tests.html">cardano_node_tests package</a></li>
+          <li class="breadcrumb-item"><a href="cardano_node_tests.tests.html">cardano_node_tests.tests package</a></li>
+      <li class="breadcrumb-item active">cardano_node_tests.tests.tests_plutus_v3 package</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/IntersectMBO/cardano-node-tests/blob/master/src_docs/source/cardano_node_tests.tests.tests_plutus_v3.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="cardano-node-tests-tests-tests-plutus-v3-package">
+<h1>cardano_node_tests.tests.tests_plutus_v3 package<a class="headerlink" href="#cardano-node-tests-tests-tests-plutus-v3-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-cardano_node_tests.tests.tests_plutus_v3.conftest">
+<span id="cardano-node-tests-tests-tests-plutus-v3-conftest-module"></span><h2>cardano_node_tests.tests.tests_plutus_v3.conftest module<a class="headerlink" href="#module-cardano_node_tests.tests.tests_plutus_v3.conftest" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.conftest.cluster">
+<span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.conftest.</span></span><span class="sig-name descname"><span class="pre">cluster</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.cluster_management.html#cardano_node_tests.cluster_management.manager.ClusterManager" title="cardano_node_tests.cluster_management.manager.ClusterManager"><span class="pre">ClusterManager</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ClusterLib</span></span></span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/conftest.py#L11-L16"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.conftest.cluster" title="Link to this definition"></a></dt>
+<dd><p>Return instance of <cite>clusterlib.ClusterLib</cite>.</p>
+</dd></dl>
+
+</section>
+<section id="module-cardano_node_tests.tests.tests_plutus_v3.test_mint_build">
+<span id="cardano-node-tests-tests-tests-plutus-v3-test-mint-build-module"></span><h2>cardano_node_tests.tests.tests_plutus_v3.test_mint_build module<a class="headerlink" href="#module-cardano_node_tests.tests.tests_plutus_v3.test_mint_build" title="Link to this heading"></a></h2>
+<p>Tests for minting with Plutus using <cite>transaction build</cite>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_mint_build.</span></span><span class="sig-name descname"><span class="pre">Outcomes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py#L43-L46"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes.ERROR">
+<span class="sig-name descname"><span class="pre">ERROR</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'error'</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes.ERROR" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes.OVERSPEND">
+<span class="sig-name descname"><span class="pre">OVERSPEND</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'overspend'</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes.OVERSPEND" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes.SUCCESS">
+<span class="sig-name descname"><span class="pre">SUCCESS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'success'</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes.SUCCESS" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_mint_build.</span></span><span class="sig-name descname"><span class="pre">TestPlutusV3Builtins</span></span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py#L244-L394"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Tests for new batches of Plutus Core built-in functions.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch5_fail_scripts">
+<span class="sig-name descname"><span class="pre">batch5_fail_scripts</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">(PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_1.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_2.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_4.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_5.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_6.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_7.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_8.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_9.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_10.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_11.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_12.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_13.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReadBitPolicyScriptV3_14.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReplicateBytePolicyScriptV3_1.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReplicateBytePolicyScriptV3_2.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReplicateBytePolicyScriptV3_3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReplicateBytePolicyScriptV3_4.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReplicateBytePolicyScriptV3_5.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingReplicateBytePolicyScriptV3_6.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_1.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_2.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_4.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_5.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_6.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_7.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_8.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_9.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_10.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_11.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_12.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_13.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_14.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_15.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_16.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_17.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_18.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/failingWriteBitsPolicyScriptV3_19.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)))</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch5_fail_scripts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch5_overspend_scripts">
+<span class="sig-name descname"><span class="pre">batch5_overspend_scripts</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch5_overspend_scripts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch5_success_scripts">
+<span class="sig-name descname"><span class="pre">batch5_success_scripts</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">(PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingRipemd_160Policy.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=6598460,</span> <span class="pre">per_space=14710,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingAndByteStringPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=19269680,</span> <span class="pre">per_space=102266,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingOrByteStringPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=19269680,</span> <span class="pre">per_space=102266,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingXorByteStringPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=19269680,</span> <span class="pre">per_space=102266,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingComplementByteStringPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=5863431,</span> <span class="pre">per_space=30027,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingCountSetBitsPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=9211420,</span> <span class="pre">per_space=45324,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingFindFirstSetBitPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=8071583,</span> <span class="pre">per_space=40221,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingReadBitPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=15272720,</span> <span class="pre">per_space=82724,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingReplicateBytePolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=4549650,</span> <span class="pre">per_space=22946,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingRotateByteStringPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=22778618,</span> <span class="pre">per_space=109004,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingShiftByteStringPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=17922844,</span> <span class="pre">per_space=85787,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/succeedingWriteBitsPolicyScriptV3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=90646820,</span> <span class="pre">per_space=462457,</span> <span class="pre">fixed_cost=777777)))</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch5_success_scripts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch6_fail_scripts">
+<span class="sig-name descname"><span class="pre">batch6_fail_scripts</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">(PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseBoolUnhappyMoreBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseBoolUnhappyNoBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseIntegerUnhappyNoBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseIntegerUnhappyNoMatchNegative_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseIntegerUnhappyNoMatchOver_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseListUnhappyMoreBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseListUnhappyNoBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseListUnhappyNoMatchNil_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/casePairUnhappyMoreBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/casePairUnhappyNoBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseUnitUnhappyMoreBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseUnitUnhappyNoBranches_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_1.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_10.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_11.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_12.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_13.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_14.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_15.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_16.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_17.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_18.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_2.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_4.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_5.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_6.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_7.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_8.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/failingExpModIntegerScript_V3_110_9.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)))</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch6_fail_scripts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch6_overspend_scripts">
+<span class="sig-name descname"><span class="pre">batch6_overspend_scripts</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">(PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/expensiveDropListPolicyScript_V3_110_1.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/expensiveDropListPolicyScript_V3_110_2.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/expensiveDropListPolicyScript_V3_110_3.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/expensiveDropListPolicyScript_V3_110_4.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/expensiveDropListPolicyScript_V3_110_5.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)))</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch6_overspend_scripts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch6_success_scripts">
+<span class="sig-name descname"><span class="pre">batch6_success_scripts</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">(PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseBoolHappy_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseIntegerHappy_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseListHappy_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/casePairHappy_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/caseUnitHappy_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/succeedingDropListPolicyScript_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/succeedingExpModIntegerExponentOnePolicyScript_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/succeedingExpModIntegerInversePolicyScript_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/succeedingExpModIntegerPolicyScript_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/succeedingIndexArrayPolicyScript_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/succeedingLengthOfArrayPolicyScript_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)),</span> <span class="pre">PlutusScriptData(script_file=PosixPath('/home/martink/Source/repos/cardano-node-tests/cardano_node_tests/tests/data/plutus/v3/batch6/1.1.0/succeedingListToArrayPolicyScript_V3_110.plutus'),</span> <span class="pre">script_type='plutus_v3',</span> <span class="pre">execution_cost=ExecutionCost(per_time=1000000,</span> <span class="pre">per_space=100000,</span> <span class="pre">fixed_cost=777777)))</span></em><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.batch6_success_scripts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.test_plutusv3_builtins">
+<span class="sig-name descname"><span class="pre">test_plutusv3_builtins</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.cluster_management.html#cardano_node_tests.cluster_management.manager.ClusterManager" title="cardano_node_tests.cluster_management.manager.ClusterManager"><span class="pre">ClusterManager</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_plutus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ClusterLib</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtests</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SubTests</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py#L258-L394"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.TestPlutusV3Builtins.test_plutusv3_builtins" title="Link to this definition"></a></dt>
+<dd><p>Test minting with the new batches of Plutus Core built-in functions.</p>
+<ul class="simple">
+<li><p>Query initial protocol parameters</p></li>
+<li><p>Run tests with the old cost model, if applicable</p></li>
+<li><p>Update cost model to include new built-in functions</p></li>
+<li><p>Run tests with the updated cost model</p></li>
+</ul>
+<p>Expect correct behavior (errors or success) depending on whether the cost model
+includes the new built-in functions or not, and whether the protocol version supports them.</p>
+<p>All batches are tested in a single test as each batch needs cost model update, and it would
+not be practical to update cost model multiple times in separate tests.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.cluster_plutus">
+<span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_mint_build.</span></span><span class="sig-name descname"><span class="pre">cluster_plutus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.cluster_management.html#cardano_node_tests.cluster_management.manager.ClusterManager" title="cardano_node_tests.cluster_management.manager.ClusterManager"><span class="pre">ClusterManager</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ClusterLib</span></span></span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py#L49-L62"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.cluster_plutus" title="Link to this definition"></a></dt>
+<dd><p>Mark whole governance and Plutus as “locked”.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.run_plutusv3_builtins_test">
+<span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_mint_build.</span></span><span class="sig-name descname"><span class="pre">run_plutusv3_builtins_test</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.cluster_management.html#cardano_node_tests.cluster_management.manager.ClusterManager" title="cardano_node_tests.cluster_management.manager.ClusterManager"><span class="pre">ClusterManager</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ClusterLib</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp_template</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">success_scripts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="cardano_node_tests.tests.html#cardano_node_tests.tests.plutus_common.PlutusScriptData" title="cardano_node_tests.tests.plutus_common.PlutusScriptData"><span class="pre">PlutusScriptData</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_scripts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="cardano_node_tests.tests.html#cardano_node_tests.tests.plutus_common.PlutusScriptData" title="cardano_node_tests.tests.plutus_common.PlutusScriptData"><span class="pre">PlutusScriptData</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overspend_scripts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="cardano_node_tests.tests.html#cardano_node_tests.tests.plutus_common.PlutusScriptData" title="cardano_node_tests.tests.plutus_common.PlutusScriptData"><span class="pre">PlutusScriptData</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_cost_model_ok</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_prot_version_ok</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtests</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SubTests</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py#L210-L241"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.run_plutusv3_builtins_test" title="Link to this definition"></a></dt>
+<dd><p>Run minting tests with the tested Plutus Core built-in functions.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.run_scenario">
+<span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_mint_build.</span></span><span class="sig-name descname"><span class="pre">run_scenario</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.cluster_management.html#cardano_node_tests.cluster_management.manager.ClusterManager" title="cardano_node_tests.cluster_management.manager.ClusterManager"><span class="pre">ClusterManager</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ClusterLib</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp_template</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plutus_v_record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.tests.html#cardano_node_tests.tests.plutus_common.PlutusScriptData" title="cardano_node_tests.tests.plutus_common.PlutusScriptData"><span class="pre">PlutusScriptData</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">outcome</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes" title="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.Outcomes"><span class="pre">Outcomes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_cost_model_ok</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_prot_version_ok</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py#L107-L207"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.run_scenario" title="Link to this definition"></a></dt>
+<dd><p>Run an e2e test for a Plutus builtin.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_mint_build.update_cost_model">
+<span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_mint_build.</span></span><span class="sig-name descname"><span class="pre">update_cost_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ClusterLib</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.cluster_management.html#cardano_node_tests.cluster_management.manager.ClusterManager" title="cardano_node_tests.cluster_management.manager.ClusterManager"><span class="pre">ClusterManager</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp_template</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prot_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cost_model_len</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_mint_build.py#L65-L104"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_mint_build.update_cost_model" title="Link to this definition"></a></dt>
+<dd><p>Update cost model to include values for new Plutus Core built-in functions.</p>
+</dd></dl>
+
+</section>
+<section id="module-cardano_node_tests.tests.tests_plutus_v3.test_spend_build">
+<span id="cardano-node-tests-tests-tests-plutus-v3-test-spend-build-module"></span><h2>cardano_node_tests.tests.tests_plutus_v3.test_spend_build module<a class="headerlink" href="#module-cardano_node_tests.tests.tests_plutus_v3.test_spend_build" title="Link to this heading"></a></h2>
+<p>Tests for spending with Plutus using <cite>transaction build</cite>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_spend_build.TestBuildLocking">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_spend_build.</span></span><span class="sig-name descname"><span class="pre">TestBuildLocking</span></span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_spend_build.py#L40-L105"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_spend_build.TestBuildLocking" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Tests for Tx output locking using Plutus smart contracts and <cite>transaction build</cite>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_spend_build.TestBuildLocking.test_txout_locking_no_datum">
+<span class="sig-name descname"><span class="pre">test_txout_locking_no_datum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ClusterLib</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payment_addrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">AddressRecord</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_spend_build.py#L43-L105"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_spend_build.TestBuildLocking.test_txout_locking_no_datum" title="Link to this definition"></a></dt>
+<dd><p>Test locking a Tx output with a Plutus script and spending the locked UTxO.</p>
+<p>No datum is provided. Datum for spending scripts is optional in PlutusV3.</p>
+<p>Uses <cite>cardano-cli transaction build</cite> command for building the transactions.</p>
+<ul class="simple">
+<li><p>Create a Tx output without a datum hash at the script address</p></li>
+<li><p>Check that the expected amount was locked at the script address</p></li>
+<li><p>Spend the locked UTxO without providing a datum</p></li>
+<li><p>Check that the expected amount was spent</p></li>
+<li><p>Check expected fees</p></li>
+<li><p>Check expected Plutus cost</p></li>
+<li><p>(optional) Check transactions in db-sync</p></li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cardano_node_tests.tests.tests_plutus_v3.test_spend_build.payment_addrs">
+<span class="sig-prename descclassname"><span class="pre">cardano_node_tests.tests.tests_plutus_v3.test_spend_build.</span></span><span class="sig-name descname"><span class="pre">payment_addrs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cardano_node_tests.cluster_management.html#cardano_node_tests.cluster_management.manager.ClusterManager" title="cardano_node_tests.cluster_management.manager.ClusterManager"><span class="pre">ClusterManager</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ClusterLib</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">AddressRecord</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/IntersectMBO/cardano-node-tests/blob/995b8b3c74d05ff9e246306d99926a34d8845703/cardano_node_tests/tests/tests_plutus_v3/test_spend_build.py#L23-L37"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cardano_node_tests.tests.tests_plutus_v3.test_spend_build.payment_addrs" title="Link to this definition"></a></dt>
+<dd><p>Create new payment addresses.</p>
+</dd></dl>
+
+</section>
+<section id="module-cardano_node_tests.tests.tests_plutus_v3">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-cardano_node_tests.tests.tests_plutus_v3" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cardano_node_tests.tests.tests_plutus_v2.html" class="btn btn-neutral float-left" title="cardano_node_tests.tests.tests_plutus_v2 package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="cardano_node_tests.utils.html" class="btn btn-neutral float-right" title="cardano_node_tests.utils package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
