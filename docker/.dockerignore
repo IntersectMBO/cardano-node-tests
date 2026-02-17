@@ -1,0 +1,67 @@
+# Ignore unnecessary files during Docker build
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing artifacts
+run_workdir/
+.artifacts/
+.cli_coverage/
+.reports/
+allure-results/
+allure-results.tar.xz
+testrun-report.*
+*.log
+*.json.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Nix
+result
+result-*
+
+# Documentation
+docs/_build/
+*.md
+
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
+
+# Scripts output
+scripts/destination/
+scripts/destination_working/
+
+# Coverage
+.coverage
+htmlcov/
+cli_coverage.json
+requirements_coverage.json
+
+# CI specific
+.bin/
