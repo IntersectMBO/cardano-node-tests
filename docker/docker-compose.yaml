@@ -1,0 +1,30 @@
+# Docker Compose for Antithesis/Moog test submission.
+#
+# Submit to Moog:
+#   moog requester create-test \
+#     --platform github --username <you> \
+#     --repository IntersectMBO/cardano-node-tests \
+#     --directory ./docker \
+#     --commit <hash> --try 1 --duration 2
+#
+# Validate locally before submitting:
+#   docker compose -f docker/docker-compose.yaml config
+#   docker compose -f docker/docker-compose.yaml up --build
+
+services:
+  driver:
+    image: ghcr.io/intersectmbo/cardano-node-tests-antithesis:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["/work/.github/regression.sh"]
+    environment:
+      - NODE_REV=${NODE_REV:-master}
+      - CARDANO_CLI_REV=${CARDANO_CLI_REV:-}
+      - DBSYNC_REV=${DBSYNC_REV:-}
+      - RUN_TARGET=${RUN_TARGET:-tests}
+      - MARKEXPR=${MARKEXPR:-}
+      - CLUSTERS_COUNT=${CLUSTERS_COUNT:-}
+      - CLUSTER_ERA=${CLUSTER_ERA:-}
+      - PROTOCOL_VERSION=${PROTOCOL_VERSION:-}
+      - UTXO_BACKEND=${UTXO_BACKEND:-}
