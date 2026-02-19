@@ -129,6 +129,22 @@ case "${CARDANO_CLI_REV:-}" in
     ;;
 esac
 
+# setup acropolis (disabled by default)
+case "${ACROPOLIS_REV:-}" in
+  "" )
+    ;;
+  "none" )
+    unset ACROPOLIS_REV
+    ;;
+  * )
+    # shellcheck disable=SC1090,SC1091
+    . .github/source_acropolis.sh
+    acropolis_build "$ACROPOLIS_REV"
+    PATH_PREPEND="$(acropolis_print_path_prepend "")${PATH_PREPEND}"
+    export PATH_PREPEND
+    ;;
+esac
+
 # setup cardano-node binaries
 case "${NODE_REV:-}" in
   "" | "none" )
