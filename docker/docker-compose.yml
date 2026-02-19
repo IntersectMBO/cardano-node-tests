@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  cardano-node-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: cardano-node-tests:latest
+    container_name: cardano-node-tests
+    volumes:
+      # Mount source code for development
+      - ..:/work:rw
+      # Persist test artifacts
+      - test-artifacts:/work/.artifacts
+      # Persist workdir for debugging
+      - test-workdir:/work/run_workdir
+    environment:
+      # Test configuration
+      - MARKEXPR=${MARKEXPR:-}
+      - CLUSTERS_COUNT=${CLUSTERS_COUNT:-}
+      - TEST_THREADS=${TEST_THREADS:-}
+      - TESTNET_VARIANT=${TESTNET_VARIANT:-}
+      - CLUSTER_ERA=${CLUSTER_ERA:-}
+      - PROTOCOL_VERSION=${PROTOCOL_VERSION:-}
+      - UTXO_BACKEND=${UTXO_BACKEND:-}
+      - NODE_REV=${NODE_REV:-master}
+      - CARDANO_CLI_REV=${CARDANO_CLI_REV:-}
+      - DBSYNC_REV=${DBSYNC_REV:-}
+      - RUN_TARGET=${RUN_TARGET:-tests}
+      - KEEP_CLUSTERS_RUNNING=${KEEP_CLUSTERS_RUNNING:-0}
+    stdin_open: true
+    tty: true
+    # Interactive shell - run tests manually inside container
+    command: /bin/bash
+
+  # Interactive development container
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: cardano-node-tests:latest
+    container_name: cardano-node-tests-dev
+    volumes:
+      - ..:/work:rw
+      - test-artifacts:/work/.artifacts
+      - test-workdir:/work/run_workdir
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    entrypoint: []
+
+volumes:
+  test-artifacts:
+  test-workdir:
