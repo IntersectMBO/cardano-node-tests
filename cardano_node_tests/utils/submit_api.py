@@ -62,10 +62,11 @@ def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     with open(cbor_file, "rb") as in_fp:
         cbor_binary = in_fp.read()
 
-    i = 0
-    for i in range(1, 6):
-        if i > 1:
-            LOGGER.warning("Resubmitting transaction to submit-api.")
+    r = 0
+    attempts = 6
+    for r in range(1, attempts + 1):
+        if r > 1:
+            LOGGER.warning(f"Resubmitting transaction to submit-api. Attempt {r}/{attempts}.")
 
         response = None
         with contextlib.suppress(requests.exceptions.ReadTimeout):
@@ -81,7 +82,7 @@ def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
 
         time.sleep(random.random())
     else:
-        err = f"Failed to submit the tx after {i} attempts."
+        err = f"Failed to submit the tx after {attempts} attempts."
         raise SubmitApiError(err)
 
     return response
@@ -131,16 +132,17 @@ def submit_tx(
     """
     txid = ""
     err = None
-    for r in range(20):
-        err = None
-
-        if r == 0:
+    attempts = 20
+    for r in range(1, attempts + 1):
+        if r == 1:
             txid = submit_tx_bare(tx_file=tx_file).txid
         else:
             if not txid:
                 msg = "The TxId is not known."
                 raise SubmitApiError(msg)
-            LOGGER.warning(f"Resubmitting transaction '{txid}' (from '{tx_file}').")
+            LOGGER.warning(
+                f"Resubmitting transaction '{txid}' (from '{tx_file}'). Attempt {r}/{attempts}."
+            )
             try:
                 submit_tx_bare(tx_file=tx_file)
             except SubmitApiError as exc:
@@ -169,10 +171,16 @@ def submit_tx(
         if err is not None:
             # Submitting the TX raised an exception as if the input was already
             # spent, but it was either not the case, or the TX is still in mempool.
-            msg = f"Failed to resubmit the transaction '{txid}' (from '{tx_file}')."
+            msg = (
+                f"Failed to resubmit the transaction '{txid}' "
+                f"after {attempts} attempts (from '{tx_file}')."
+            )
             raise SubmitApiError(msg) from err
 
-        msg = f"Transaction '{txid}' didn't make it to the chain (from '{tx_file}')."
+        msg = (
+            f"Transaction '{txid}' didn't make it to the chain "
+            f"after {attempts} attempts (from '{tx_file}')."
+        )
         raise SubmitApiError(msg)
 
     # Create a `.submitted` status file when the Tx was successfully submitted
