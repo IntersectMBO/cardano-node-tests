@@ -2,23 +2,26 @@
 
 # An environment setup script for cardano-node-tests local development.
 #
-# Create a `.source` script in the root of the repository.
-# Source this file from the .source script. You can also include additional environment
-# variables such as DBSYNC_SCHEMA_DIR and GITHUB_TOKEN in that file, or change INSTANCE_NUM.
-#
 # This script is idempotent and can be sourced multiple times without side effects. Let's keep
 # it that way!
+#
+# Optional: Define additional environment variables in .env.sh
+# (e.g. DBSYNC_SCHEMA_DIR, GITHUB_TOKEN).
 
 [ -n "${BASH_VERSION:-}" ] || {
   echo "This script must be sourced from bash." >&2
   return 1
 }
 
-# export DBSYNC_SCHEMA_DIR="$HOME/Source/repos/cardano-db-sync/schema"
-# export GITHUB_TOKEN=ghp_....
-INSTANCE_NUM="${INSTANCE_NUM:-0}"
-
 _root_dir_cnt="$(readlink -m "${BASH_SOURCE[0]}/..")"
+
+# Source additional environment variables from .env.sh
+if [ -e "$_root_dir_cnt/.env.sh" ]; then
+  # shellcheck disable=SC1091
+  source "$_root_dir_cnt/.env.sh"
+fi
+
+INSTANCE_NUM="${INSTANCE_NUM:-0}"
 
 # Activate python virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
