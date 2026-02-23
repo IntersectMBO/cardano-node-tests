@@ -26,7 +26,7 @@ INSTANCE_NUM="${INSTANCE_NUM:-0}"
 # Activate python virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
   # shellcheck disable=SC1091
-  source .venv/bin/activate
+  source "$_root_dir_cnt/.venv/bin/activate"
 fi
 
 PYTHONPATH="$(

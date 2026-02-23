@@ -16,14 +16,19 @@ cd "$TOP_DIR" >/dev/null
 
 # Activate python virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
+  if [ ! -e "$TOP_DIR/.venv/bin/activate" ]; then
+    err "Virtual environment not found at: $TOP_DIR/.venv"
+    exit 1
+  fi
   # shellcheck disable=SC1091
-  . .venv/bin/activate
+  . "$TOP_DIR/.venv/bin/activate"
 fi
 if [ -z "${VIRTUAL_ENV:-}" ]; then
   err "Failed to activate virtual environment."
   exit 1
 fi
 
+# shellcheck disable=SC1091
 . "$TOP_DIR/scripts/common.sh"
 
 filter_out_nix
