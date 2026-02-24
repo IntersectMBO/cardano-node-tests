@@ -99,10 +99,15 @@ class ClusterGetter:
         self.pytest_tmp_dir = temptools.get_pytest_root_tmp()
         self.cluster_lock = common.get_cluster_lock_file()
 
-        # Soft timeout (seconds): applies when no cluster is selected.
-        self.grace_period_soft = 3600
-        # Hard timeout (seconds): always applies, regardless of cluster selection.
-        self.grace_period_hard = 7200
+        if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:
+            # Soft timeout (seconds): applies when no cluster is selected.
+            self.grace_period_soft = 3600
+            # Hard timeout (seconds): always applies, regardless of cluster selection.
+            self.grace_period_hard = 7200
+        else:
+            self.grace_period_soft = 28800
+            self.grace_period_hard = 30000
+
         # Time window (seconds) before deadline when stricter dead cluster checks apply.
         self.strict_check_window = 1200
         # Maximum allowed fraction of dead clusters during strict check window.
