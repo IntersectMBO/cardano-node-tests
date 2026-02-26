@@ -119,6 +119,7 @@ elif [ "$1" = "step2" ]; then
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step2/state-cluster0/bft1.socket" \
+    ENABLE_EXPERIMENTAL=true \
     DRY_RUN=true \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
@@ -349,7 +350,7 @@ elif [ "$1" = "step3" ]; then
   err_retval=0
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors || err_retval="$?"
 
-  # Hard fork to PV10.
+  # Hard fork
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 6
 
   # Run smoke tests
