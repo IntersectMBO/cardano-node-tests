@@ -20,3 +20,8 @@ cardano_node_tests/utils/dbsync_*  @mkoura @saratomaz @ArturWieczorek
 
 .buildkite/db_sync_*               @ArturWieczorek
 .buildkite/node_sync_*             @ArturWieczorek
+
+
+# MOOG/Antithesis
+
+antithesis: @saratomaz
