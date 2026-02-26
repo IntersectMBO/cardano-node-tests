@@ -75,6 +75,7 @@ class ClusterLib(clusterlib.ClusterLib):
             command_era=command_era,
         )
         self.cli_coverage: dict[str, tp.Any] = {}
+        self._cli_command = "cardano-cli"
 
     @property
     def g_transaction(self) -> transaction_group.TransactionGroup:
@@ -102,12 +103,12 @@ class ClusterLib(clusterlib.ClusterLib):
 
         cli_args_strs_all = [str(arg) for arg in cli_args]
         if add_default_args:
-            cli_args_strs_all.insert(0, "cardano-cli")
+            cli_args_strs_all.insert(0, self._cli_command)
             cli_args_strs_all.insert(1, self.command_era)
 
         record_cli_coverage(cli_args=cli_args_strs_all, coverage_dict=self.cli_coverage)
 
-        return super().cli(cli_args=cli_args, timeout=timeout, add_default_args=add_default_args)
+        return super().cli(cli_args=cli_args_strs_all, timeout=timeout, add_default_args=False)
 
 
 class TransactionGroup(transaction_group.TransactionGroup):
