@@ -42,7 +42,7 @@ else
 fi
 
 # Set Cardano Node socket path and other environment variables
-export CARDANO_NODE_SOCKET_PATH="/var/tmp/cardonnay/state-cluster${INSTANCE_NUM}/bft1.socket"
+export CARDANO_NODE_SOCKET_PATH="/var/tmp/cardonnay-of-${USER}/state-cluster${INSTANCE_NUM}/bft1.socket"
 export DEV_CLUSTER_RUNNING=true FORBID_RESTART=true NO_ARTIFACTS=true CLUSTERS_COUNT=1
 unset BOOTSTRAP_DIR
 

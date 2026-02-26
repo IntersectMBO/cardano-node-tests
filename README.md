@@ -206,7 +206,7 @@ prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
 ./dev_workdir/conway_fast/start-cluster
 ```
 
-> Keys and configs are stored under `/var/tmp/cardonnay/state-cluster0`.
+> Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
 
 ### Run Individual Tests
 
