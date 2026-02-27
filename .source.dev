@@ -72,7 +72,7 @@ fi
 if [ "$INSTANCE_NUM" = 0 ] \
   && [ -e "$_root_dir_cnt/.bin" ] \
   && [[ ":$PATH:" != *":$_root_dir_cnt/.bin:"* ]]; then
-  PREPEND_PATH="$_root_dir_cnt/.bin:${PREPEND_PATH:+:$PREPEND_PATH}"
+  PREPEND_PATH="$_root_dir_cnt/.bin${PREPEND_PATH:+:$PREPEND_PATH}"
 fi
 
 if [ -n "$PREPEND_PATH" ]; then
