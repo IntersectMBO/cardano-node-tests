@@ -366,7 +366,7 @@ def run_supervisorctl(
         socket_path = pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
         state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
         state_dir = socket_path.parent.parent / state_cluster_dirname
-    script = state_dir / "supervisorctl"
+    script = state_dir / "supervisorctl_local"
     return helpers.run_command([str(script), *args], ignore_fail=ignore_fail)
 
 

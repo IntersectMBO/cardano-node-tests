@@ -190,22 +190,22 @@ elif [ "$1" = "step2" ]; then
 
   # Restart local cluster nodes with binaries from new cluster-node version.
   # It is necessary to restart supervisord with new environment.
-  "$STATE_CLUSTER/supervisorctl" stop all
+  "$STATE_CLUSTER/supervisorctl_local" stop all
   sleep 5
   "$STATE_CLUSTER/stop-cluster"
   sleep 3
   "$STATE_CLUSTER/supervisord_start" || exit 6
   sleep 5
-  "$STATE_CLUSTER/supervisorctl" start all
+  "$STATE_CLUSTER/supervisorctl_local" start all
   sleep 5
-  "$STATE_CLUSTER/supervisorctl" status
+  "$STATE_CLUSTER/supervisorctl_local" status
 
   # print path to cardano-node binaries
   echo "pool1 node binary:"
-  pool1_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool1)"
+  pool1_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool1)"
   readlink -m "/proc/$pool1_pid/exe"
   echo "pool3 node binary:"
-  pool3_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool3)"
+  pool3_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool3)"
   readlink -m "/proc/$pool3_pid/exe"
 
   # check that nodes are running
@@ -313,16 +313,16 @@ elif [ "$1" = "step3" ]; then
   cp -f "$STATE_CLUSTER/cardano-node-pool3.orig" "$STATE_CLUSTER/cardano-node-pool3"
 
   # restart all nodes
-  "$STATE_CLUSTER/supervisorctl" restart nodes:
+  "$STATE_CLUSTER/supervisorctl_local" restart nodes:
   sleep 10
-  "$STATE_CLUSTER/supervisorctl" status
+  "$STATE_CLUSTER/supervisorctl_local" status
 
   # print path to cardano-node binaries
   echo "pool1 node binary:"
-  pool1_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool1)"
+  pool1_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool1)"
   readlink -m "/proc/$pool1_pid/exe"
   echo "pool3 node binary:"
-  pool3_pid="$("$STATE_CLUSTER/supervisorctl" pid nodes:pool3)"
+  pool3_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool3)"
   readlink -m "/proc/$pool3_pid/exe"
 
   # check that nodes are running
