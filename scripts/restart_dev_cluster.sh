@@ -30,9 +30,9 @@ sleep 2
 "$STATE_CLUSTER/supervisord_start"
 sleep 2
 
-"$STATE_CLUSTER/supervisorctl" start all
+"$STATE_CLUSTER/supervisorctl_local" start all
 sleep 1
 
 echo
 echo "Dev cluster restarted; current status:"
-"$STATE_CLUSTER/supervisorctl" status all
+"$STATE_CLUSTER/supervisorctl_local" status all
