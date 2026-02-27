@@ -78,13 +78,13 @@ jobs:
           ./.github/node_upgrade.sh
           echo "::endgroup::"
       - name: ↟ Upload testing artifacts on failure
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: testing-artifacts
           path: testing_artifacts.tar.xz
       - name: ↟ Upload Allure results for step1
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         # When using `always()`, you lose ability to manually cancel the workflow.
         # Use `success() || failure()` instead.
         if: success() || failure()
@@ -92,19 +92,19 @@ jobs:
           name: allure-results-step1
           path: allure-results-step1.tar.xz
       - name: ↟ Upload Allure results for step2
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: allure-results-step2
           path: allure-results-step2.tar.xz
       - name: ↟ Upload Allure results for step3
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: allure-results-step3
           path: allure-results-step3.tar.xz
       - name: ↟ Upload HTML reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: testrun-reports
@@ -113,7 +113,7 @@ jobs:
             testrun-report-step2.html
             testrun-report-step3.html
       - name: ↟ Upload testrun files
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: testrun-files
@@ -121,7 +121,7 @@ jobs:
             scheduling.log
             errors_all.log
       - name: ↟ Upload CLI coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: cli-coverage
