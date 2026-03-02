@@ -2466,7 +2466,7 @@ class TestReferenceUTxO:
         assert reference_utxo.reference_script
         has_issue_1332 = False
         try:
-            common.check_reference_script_policyid(
+            clusterlib_utils.check_reference_script_policyid(
                 name_template=f"{temp_template}_check",
                 cluster_obj=cluster,
                 script_file=multisig_script,
@@ -2640,7 +2640,7 @@ class TestReferenceUTxO:
         assert reference_utxo.reference_script
         has_issue_1332 = False
         try:
-            common.check_reference_script_policyid(
+            clusterlib_utils.check_reference_script_policyid(
                 name_template=f"{temp_template}_check",
                 cluster_obj=cluster,
                 script_file=multisig_script,
