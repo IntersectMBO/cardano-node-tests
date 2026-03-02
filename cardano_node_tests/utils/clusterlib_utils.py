@@ -1633,3 +1633,21 @@ def get_script_data_policyid(
     with open(script_file, "w", encoding="utf-8") as outfile:
         json.dump(script_data, outfile)
     return cluster_obj.g_transaction.get_policyid(script_file=script_file)
+
+
+def check_reference_script_policyid(
+    name_template: str,
+    cluster_obj: clusterlib.ClusterLib,
+    script_file: cl_types.FileType,
+    script_data: dict,
+) -> None:
+    """Check that the policy ID of a reference script file matches the original script policy ID."""
+    policyid_file = cluster_obj.g_transaction.get_policyid(script_file=script_file)
+    policyid_data = get_script_data_policyid(
+        cluster_obj=cluster_obj,
+        script_name=name_template,
+        script_data=script_data,
+    )
+    if policyid_file != policyid_data:
+        msg = f"Reference script hash mismatch: file '{policyid_file}' vs data '{policyid_data}'"
+        raise AssertionError(msg)

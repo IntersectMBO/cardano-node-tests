@@ -542,7 +542,7 @@ class TestReferenceScripts:
         )
         assert reference_utxo.amount == amount, "Incorrect amount transferred"
         assert reference_utxo.reference_script, "Reference script is missing"
-        common.check_reference_script_policyid(
+        clusterlib_utils.check_reference_script_policyid(
             name_template=f"{temp_template}_check",
             cluster_obj=cluster,
             script_file=script_file,
@@ -621,7 +621,7 @@ class TestReferenceScripts:
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_step1.out_file)
         reference_script = cluster.g_query.get_utxo(txin=f"{txid}#0")
         assert reference_script[0].reference_script, "No reference script UTxO"
-        common.check_reference_script_policyid(
+        clusterlib_utils.check_reference_script_policyid(
             name_template=f"{temp_template}_check",
             cluster_obj=cluster,
             script_file=plutus_op.script_file,
@@ -682,7 +682,7 @@ class TestReferenceScripts:
 
         assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
         assert reference_utxo.reference_script, "Reference script is missing"
-        common.check_reference_script_policyid(
+        clusterlib_utils.check_reference_script_policyid(
             name_template=f"{temp_template}_check",
             cluster_obj=cluster,
             script_file=script_file,
@@ -1200,7 +1200,7 @@ class TestNegativeReferenceScripts:
         )
         assert reference_utxo.address == byron_addr.address, "Incorrect address for reference UTxO"
         assert reference_utxo.reference_script, "Reference script is missing"
-        common.check_reference_script_policyid(
+        clusterlib_utils.check_reference_script_policyid(
             name_template=f"{temp_template}_check",
             cluster_obj=cluster,
             script_file=plutus_op.script_file,
