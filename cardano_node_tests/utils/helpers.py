@@ -287,7 +287,7 @@ def is_in_interval(num1: float, num2: float, *, frac: float = 0.1) -> bool:
 def tool_has(command: str) -> bool:
     """Check if a tool has a subcommand or argument available.
 
-    E.g. `tool_has_arg("create-script-context --plutus-v1")`
+    E.g. `tool_has("cardano-cli legacy governance")`
     """
     err_str = ""
     try:

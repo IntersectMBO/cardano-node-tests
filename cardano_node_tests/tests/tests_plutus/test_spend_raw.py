@@ -1,10 +1,8 @@
 """Tests for spending with Plutus using `transaction build-raw`."""
 
-import dataclasses
 import itertools
 import logging
 import pathlib as pl
-import shutil
 import time
 import typing as tp
 
@@ -174,114 +172,6 @@ class TestLocking:
 
         if utxo_err:
             pytest.fail(utxo_err)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        not shutil.which("create-script-context"),
-        reason="cannot find `create-script-context` on the PATH",
-    )
-    @common.SKIPIF_MISMATCHED_ERAS
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    @pytest.mark.dbsync
-    def test_context_equivalence(
-        self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-    ):
-        """Test context equivalence while spending a locked UTxO.
-
-        * Create a Tx output with a datum hash at the script address
-        * Check that the expected amount was locked at the script address
-        * Generate a dummy redeemer and a dummy Tx
-        * Derive the correct redeemer from the dummy Tx
-        * Spend the locked UTxO using the derived redeemer
-        * Check that the expected amount was spent
-        * (optional) Check transactions in db-sync
-        """
-        __: tp.Any  # mypy workaround
-        temp_template = common.get_test_id(cluster)
-        amount = 1_000_000
-        deposit_amount = cluster.g_query.get_address_deposit()
-
-        # Create stake address registration cert
-        stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
-            addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
-            stake_vkey_file=pool_users[0].stake.vkey_file,
-        )
-
-        tx_files = clusterlib.TxFiles(certificate_files=[stake_addr_reg_cert_file])
-
-        # Generate a dummy redeemer in order to create a txbody from which
-        # we can generate a tx and then derive the correct redeemer
-        redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
-        clusterlib_utils.create_script_context(
-            cluster_obj=cluster, plutus_version=1, redeemer_file=redeemer_file_dummy
-        )
-
-        plutus_op_dummy = plutus_common.PlutusOp(
-            script_file=plutus_common.CONTEXT_EQUIVALENCE_PLUTUS_V1,
-            datum_file=plutus_common.DATUM_42_TYPED,
-            redeemer_file=redeemer_file_dummy,
-            execution_cost=plutus_common.CONTEXT_EQUIVALENCE_COST,
-        )
-
-        # Fund the script address
-        script_utxos, collateral_utxos, __ = spend_raw._fund_script(
-            temp_template=temp_template,
-            cluster_obj=cluster,
-            payment_addr=pool_users[0].payment,
-            dst_addr=pool_users[1].payment,
-            plutus_op=plutus_op_dummy,
-            amount=amount,
-        )
-
-        invalid_hereafter = cluster.g_query.get_slot_no() + 200
-
-        __, tx_output_dummy = spend_raw._spend_locked_txin(
-            temp_template=f"{temp_template}_dummy",
-            cluster_obj=cluster,
-            payment_addr=pool_users[0].payment,
-            dst_addr=pool_users[1].payment,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            plutus_op=plutus_op_dummy,
-            amount=amount,
-            deposit_amount=deposit_amount,
-            tx_files=tx_files,
-            invalid_before=1,
-            invalid_hereafter=invalid_hereafter,
-            script_valid=False,
-            submit_tx=False,
-        )
-        assert tx_output_dummy
-
-        # Generate the "real" redeemer
-        redeemer_file = pl.Path(f"{temp_template}_script_context.redeemer")
-
-        plutus_common.create_script_context_w_blockers(
-            cluster_obj=cluster,
-            plutus_version=1,
-            redeemer_file=redeemer_file,
-            tx_file=tx_output_dummy.out_file,
-        )
-
-        plutus_op = dataclasses.replace(plutus_op_dummy, redeemer_file=redeemer_file)
-
-        spend_raw._spend_locked_txin(
-            temp_template=temp_template,
-            cluster_obj=cluster,
-            payment_addr=pool_users[0].payment,
-            dst_addr=pool_users[1].payment,
-            script_utxos=script_utxos,
-            collateral_utxos=collateral_utxos,
-            plutus_op=plutus_op,
-            amount=amount,
-            tx_files=tx_files,
-            invalid_before=1,
-            invalid_hereafter=invalid_hereafter,
-        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("embed_datum", (True, False), ids=("embedded_datum", "datum"))
