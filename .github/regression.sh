@@ -98,21 +98,6 @@ case "${DBSYNC_REV:-}" in
     ;;
 esac
 
-# Setup plutus-apps (disabled by default).
-# The "plutus-apps" repo is needed for the `create-script-context` tool, which is used by the
-# Plutus tests that are testing script context.
-# TODO: The `create-script-context` tool is broken for a very long time, hence disabled.
-# See https://github.com/IntersectMBO/plutus-apps/issues/1107
-case "${PLUTUS_APPS_REV:="none"}" in
-  "none" )
-    unset PLUTUS_APPS_REV
-    ;;
-  * )
-    # shellcheck disable=SC1091
-    . .github/source_plutus_apps.sh
-    ;;
-esac
-
 # setup cardano-cli (use the built-in version by default)
 case "${CARDANO_CLI_REV:-}" in
   "" )

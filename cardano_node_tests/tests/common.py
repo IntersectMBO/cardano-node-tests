@@ -48,11 +48,6 @@ SKIPIF_BUILD_EST_1199 = pytest.mark.skipif(
     reason="`build-estimate` fails to balance tx with no txouts",
 )
 
-SKIPIF_MISMATCHED_ERAS = pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.cluster_era,
-    reason="transaction era must be the same as node era",
-)
-
 SKIPIF_WRONG_ERA = pytest.mark.skipif(
     not (
         VERSIONS.cluster_era >= VERSIONS.DEFAULT_CLUSTER_ERA

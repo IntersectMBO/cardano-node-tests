@@ -1305,41 +1305,6 @@ def datum_hash_from_txout(*, cluster_obj: clusterlib.ClusterLib, txout: clusterl
     return datum_hash
 
 
-def create_script_context(
-    *,
-    cluster_obj: clusterlib.ClusterLib,
-    plutus_version: int,
-    redeemer_file: pl.Path,
-    tx_file: pl.Path | None = None,
-) -> None:
-    """Run the `create-script-context` command (available in plutus-apps)."""
-    if plutus_version == 1:
-        version_arg = "--plutus-v1"
-    elif plutus_version == 2:
-        version_arg = "--plutus-v2"
-    else:
-        msg = f"Unknown plutus version: {plutus_version}"
-        raise ValueError(msg)
-
-    if tx_file:
-        cmd_args = [
-            "create-script-context",
-            "--generate-tx",
-            str(tx_file),
-            version_arg,
-            *cluster_obj.magic_args,
-            "--out-file",
-            str(redeemer_file),
-        ]
-    else:
-        cmd_args = ["create-script-context", version_arg, "--out-file", str(redeemer_file)]
-
-    helpers.run_command(cmd_args)
-    if not redeemer_file.exists():
-        err = f"Expected file not created: {redeemer_file}"
-        raise FileNotFoundError(err)
-
-
 def cli_has(command: str) -> bool:
     """Check if a cardano-cli subcommand or argument is available.
 
