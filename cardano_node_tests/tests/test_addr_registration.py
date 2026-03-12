@@ -6,6 +6,7 @@ import pathlib as pl
 import allure
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -813,3 +814,54 @@ class TestNegative:
         else:
             err = f"Invalid issue: {issue}"
             raise ValueError(err)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_legacy_stake_addr_registration_rejected_in_conway(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
+        era: str,
+    ):
+        """Reject legacy stake address registration in Conway.
+
+        * Generate a stake address registration certificate using the compatible CLI
+          for a legacy era.
+        * Attempt to submit the legacy certificate in a Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        era_api = getattr(cluster.g_compatible, era)
+        legacy_stake_reg_cert = era_api.stake_address.gen_registration_cert(
+            name=f"{temp_template}_{era}",
+            stake_vkey_file=pool_users_disposable[0].stake.vkey_file,
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[legacy_stake_reg_cert],
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                pool_users_disposable[0].stake.skey_file,
+            ],
+        )
+
+        err_str = ""
+        try:
+            cluster.g_transaction.send_tx(
+                src_address=pool_users[0].payment.address,
+                tx_name=f"{temp_template}_{era}_legacy_stake_reg",
+                tx_files=tx_files,
+            )
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
+
+        if not err_str and VERSIONS.cli >= version.parse("10.14.0.0"):
+            issues.cli_1347.finish_test()
+
+        assert err_str, "Expected transaction submission to fail, but it succeeded"
+
+        with common.allow_unstable_error_messages():
+            assert "TextEnvelope type error" in err_str, err_str
