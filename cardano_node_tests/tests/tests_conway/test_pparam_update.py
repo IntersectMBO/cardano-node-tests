@@ -1462,7 +1462,7 @@ class TestLegacyProposals:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
+    @common.PARAM_COMPAT_ERAS
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,
