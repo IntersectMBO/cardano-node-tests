@@ -212,7 +212,7 @@ class TestConway:
 
 class TestNegativeLegacyGovernance:
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
+    @common.PARAM_COMPAT_ERAS
     @pytest.mark.smoke
     def test_mixed_legacy_govaction_and_conway_vote_cert_fails(
         self,

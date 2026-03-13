@@ -2610,7 +2610,7 @@ class TestNegative:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
+    @common.PARAM_COMPAT_ERAS
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_pool_registration_rejected_in_conway(
