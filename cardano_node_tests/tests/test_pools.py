@@ -20,6 +20,7 @@ import pytest
 import pytest_subtests
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -2047,7 +2048,8 @@ class TestNegative:
             num=2,
             fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
-            amount=600_000_000,
+            amount=900_000_000,
+            min_amount=600_000_000,
         )
         return created_users
 
@@ -2606,6 +2608,89 @@ class TestNegative:
                 or "option --metadata-url: The provided string must have at most 64 characters"
                 in exc_value
             )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize("era", ("shelley", "allegra", "mary", "alonzo", "babbage"))
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_legacy_pool_registration_rejected_in_conway(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: list[clusterlib.PoolUser],
+        testfile_temp_dir: pl.Path,
+        era: str,
+        request: FixtureRequest,
+    ):
+        """Reject legacy stake pool registration in Conway.
+
+        * Generate a stake pool registration certificate using the compatible CLI
+          for a legacy era.
+        * Attempt to submit the legacy certificate in a Conway-era transaction.
+        * Expect the transaction submission to fail with a TextEnvelope type error.
+        """
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+
+        node_vrf = cluster.g_node.gen_vrf_key_pair(f"{temp_template}_{era}_vrf")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(f"{temp_template}_{era}_cold")
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=5,
+            pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
+            pool_margin=0.01,
+        )
+
+        era_api = getattr(cluster.g_compatible, era)
+        legacy_pool_reg_cert = era_api.stake_pool.gen_registration_cert(
+            name=f"{temp_template}_{era}",
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[legacy_pool_reg_cert],
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                pool_users[0].stake.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        err_str = ""
+        try:
+            cluster.g_transaction.send_tx(
+                src_address=pool_users[0].payment.address,
+                tx_name=f"{temp_template}_{era}_legacy_pool_reg",
+                tx_files=tx_files,
+            )
+        except clusterlib.CLIError as exc:
+            err_str = str(exc)
+
+        # Deregister stake pool in case it was unexpectedly registered
+        def _deregister():
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            with helpers.change_cwd(testfile_temp_dir):
+                cluster.g_stake_pool.deregister_stake_pool(
+                    pool_owners=pool_users,
+                    cold_key_pair=node_cold,
+                    epoch=cluster.g_query.get_epoch() + depoch,
+                    pool_name=pool_data.pool_name,
+                    tx_name=f"{temp_template}_cleanup",
+                )
+
+        if not err_str:
+            request.addfinalizer(_deregister)
+
+        if not err_str and VERSIONS.cli >= version.parse("10.14.0.0"):
+            issues.cli_1347.finish_test()
+
+        assert err_str, "Expected transaction submission to fail, but it succeeded"
+
+        with common.allow_unstable_error_messages():
+            assert "TextEnvelope type error" in err_str, err_str
 
 
 @pytest.mark.skipif(
