@@ -115,6 +115,13 @@ warn_return_any = true
 pythonVersion = "3.13"
 reportPrivateImportUsage = false
 
+[tool.pyrefly]
+python_version = "3.13.0"
+project_includes = ["cardano_node_tests", "framework_tests"]
+replace_imports_with_any = ["allure.*", "hypothesis.*", "pytest.*", "pytest_subtests.*", "psycopg2.*", "requests.*"]
+ignore_errors_in_generated_code = true
+ignore_missing_source = true
+
 [tool.pytest.ini_options]
 log_cli = true
 log_level = "INFO"
