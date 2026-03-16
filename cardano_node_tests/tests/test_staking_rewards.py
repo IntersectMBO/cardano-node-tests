@@ -1035,7 +1035,7 @@ class TestRewards:
             f"Incorrect balance for source address `{delegation_out.pool_user.payment.address}`"
         )
 
-        rewards_rec = []
+        rewards_rec: list[int] = []
 
         # Keep withdrawing new rewards so reward balance is 0
         def _withdraw():

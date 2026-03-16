@@ -64,7 +64,7 @@ class TestBuildMinting:
         fixture_cache: cluster_management.FixtureCache[PHorizonFundsT | None]
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value is not None:
-                return fixture_cache.value
+                return fixture_cache.value  # type: ignore[no-any-return]
 
             temp_template = common.get_test_id(cluster)
             payment_addr = payment_addrs[0]

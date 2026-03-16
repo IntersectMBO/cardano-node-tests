@@ -707,7 +707,7 @@ class TestPParamUpdate:
                 prev_action_rec=prev_action_rec,
             )
 
-        proposed_pparams_errors = []
+        proposed_pparams_errors: list[str] = []
 
         def _check_proposed_pparams(
             update_proposals: list[clusterlib_utils.UpdateProposal], protocol_params: dict

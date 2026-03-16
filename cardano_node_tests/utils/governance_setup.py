@@ -132,7 +132,7 @@ def create_vote_stake(
 
 
 def load_committee(*, cluster_obj: clusterlib.ClusterLib) -> list[governance_utils.CCKeyMember]:
-    genesis_cc_members = cluster_obj.conway_genesis.get("committee", {}).get("members") or {}
+    genesis_cc_members: dict = cluster_obj.conway_genesis.get("committee", {}).get("members") or {}
     if not genesis_cc_members:
         return []
 
@@ -292,7 +292,7 @@ def get_default_governance(
     fixture_cache: cluster_management.FixtureCache[governance_utils.GovernanceRecords | None]
     with cluster_manager.cache_fixture(key=gov_data_checksum) as fixture_cache:
         if fixture_cache.value is not None:
-            return fixture_cache.value
+            return fixture_cache.value  # type: ignore[no-any-return]
 
         if governance_data is None:
             with open(gov_data_store, "rb") as in_data:

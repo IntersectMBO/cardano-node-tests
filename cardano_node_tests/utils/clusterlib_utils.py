@@ -547,11 +547,11 @@ def load_registered_pool_data(
         pool_id = helpers.decode_bech32(pool_id)
 
     pool_state: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
-    metadata = helpers.get_pool_param("spsMetadata", pool_params=pool_state) or {}
+    metadata: dict = helpers.get_pool_param("spsMetadata", pool_params=pool_state) or {}
 
     # TODO: extend to handle more relays records
-    relays_list = helpers.get_pool_param("spsRelays", pool_params=pool_state) or []
-    relay = relays_list[0] if relays_list else {}
+    relays_list: list = helpers.get_pool_param("spsRelays", pool_params=pool_state) or []
+    relay: dict = relays_list[0] if relays_list else {}
     relay = relay.get("single host address") or {}
 
     pool_data = clusterlib.PoolData(
@@ -605,7 +605,7 @@ def check_pool_data(  # noqa: C901
         )
 
     if pool_creation_data.pool_metadata_url and pool_creation_data.pool_metadata_hash:
-        metadata = _get_param("spsMetadata") or {}
+        metadata: dict = _get_param("spsMetadata") or {}
 
         metadata_hash = metadata.get("hash")
         if metadata_hash != pool_creation_data.pool_metadata_hash:

@@ -192,7 +192,7 @@ def _check_inline_datums(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict)
 
 def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: dict) -> None:
     """Check return collateral in tx_view."""
-    collateral_inputs = tx_loaded.get("collateral inputs") or []
+    collateral_inputs: list = tx_loaded.get("collateral inputs") or []
     if not collateral_inputs:
         return
 
@@ -210,7 +210,7 @@ def _check_return_collateral(tx_raw_output: clusterlib.TxRawOutput, tx_loaded: d
     if tx_raw_output.total_collateral_amount and not tx_raw_output.return_collateral_txouts:
         return
 
-    return_collateral = tx_loaded.get("return collateral") or {}
+    return_collateral: dict = tx_loaded.get("return collateral") or {}
     assert return_collateral, "No return collateral in tx view"
 
     assert "lovelace" in return_collateral.get("amount", {}), (
@@ -256,7 +256,7 @@ def check_tx_view(  # noqa: C901
         raise AssertionError(msg)
 
     # Check outputs
-    tx_loaded_outputs = tx_loaded.get("outputs") or []
+    tx_loaded_outputs: list = tx_loaded.get("outputs") or []
     loaded_txouts: set[tuple[str, int, str]] = set()
     for txout in tx_loaded_outputs:
         address = txout["address"]
@@ -280,7 +280,7 @@ def check_tx_view(  # noqa: C901
         raise AssertionError(msg)
 
     # Check validity intervals
-    validity_range = tx_loaded.get("validity range") or {}
+    validity_range: dict = tx_loaded.get("validity range") or {}
 
     loaded_invalid_before = validity_range.get("lower bound")
     if tx_raw_output.invalid_before != loaded_invalid_before:
