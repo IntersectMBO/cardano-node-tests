@@ -116,7 +116,7 @@ def _check_block_production(
     )
 
     # Check if the pool is forging any blocks
-    blocks_made = ledger_state["blocksCurrent"] or {}
+    blocks_made: dict = ledger_state["blocksCurrent"] or {}
     is_forging = pool_id_dec in blocks_made
 
     return epoch, is_forging

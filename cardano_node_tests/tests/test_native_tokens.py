@@ -1779,7 +1779,7 @@ class TestTransfer:
         fixture_cache: cluster_management.FixtureCache[clusterlib_utils.NativeTokenRec | None]
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value is not None:
-                return fixture_cache.value
+                return fixture_cache.value  # type: ignore[no-any-return]
 
             rand = clusterlib.get_rand_str(4)
             temp_template = f"test_tx_new_token_ci{cluster_manager.cluster_instance_num}_{rand}"

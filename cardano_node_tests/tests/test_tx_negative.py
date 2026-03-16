@@ -330,7 +330,7 @@ class TestNegative:
         """Get validity range from a transaction body."""
         tx_loaded = tx_view.load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_body_file)
 
-        validity_range = tx_loaded.get("validity range") or {}
+        validity_range: dict = tx_loaded.get("validity range") or {}
 
         loaded_invalid_before = validity_range.get("lower bound")
         loaded_invalid_hereafter = validity_range.get("upper bound") or validity_range.get(

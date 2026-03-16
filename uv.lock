@@ -120,7 +120,6 @@ dev = [
     { name = "mypy" },
     { name = "pandas" },
     { name = "pre-commit" },
-    { name = "pyright" },
     { name = "seaborn" },
     { name = "types-pyyaml" },
     { name = "types-requests" },
@@ -161,7 +160,6 @@ dev = [
     { name = "mypy", specifier = ">=1.19.0,<2.0.0" },
     { name = "pandas", specifier = ">=2.3.3,<3.0.0" },
     { name = "pre-commit", specifier = ">=4.5.0,<5.0.0" },
-    { name = "pyright", specifier = ">=1.1.406,<1.1.407" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14.0" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250915,<7.0.0.0" },
     { name = "types-requests", specifier = ">=2.32.4.20250913,<3.0.0.0" },
@@ -1288,19 +1286,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f2/a5/181488fc2b9d093e3972d2a472855aae8a03f000592dbfce716a512b3359/pyparsing-3.2.5.tar.gz", hash = "sha256:2df8d5b7b2802ef88e8d016a2eb9c7aeaa923529cd251ed0fe4608275d4105b6", size = 1099274, upload-time = "2025-09-21T04:11:06.277Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/10/5e/1aa9a93198c6b64513c9d7752de7422c06402de6600a8767da1524f9570b/pyparsing-3.2.5-py3-none-any.whl", hash = "sha256:e38a4f02064cf41fe6593d328d0512495ad1f3d8a91c4f73fc401b3079a59a5e", size = 113890, upload-time = "2025-09-21T04:11:04.117Z" },
-]
-
-[[package]]
-name = "pyright"
-version = "1.1.406"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "nodeenv" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/16/6b4fbdd1fef59a0292cbb99f790b44983e390321eccbc5921b4d161da5d1/pyright-1.1.406.tar.gz", hash = "sha256:c4872bc58c9643dac09e8a2e74d472c62036910b3bd37a32813989ef7576ea2c", size = 4113151, upload-time = "2025-10-02T01:04:45.488Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/a2/e309afbb459f50507103793aaef85ca4348b66814c86bc73908bdeb66d12/pyright-1.1.406-py3-none-any.whl", hash = "sha256:1d81fb43c2407bf566e97e57abb01c811973fdb21b2df8df59f870f688bdca71", size = 5980982, upload-time = "2025-10-02T01:04:43.137Z" },
 ]
 
 [[package]]

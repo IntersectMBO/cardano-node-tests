@@ -199,12 +199,12 @@ def get_vote_str(*, vote: clusterlib.Votes) -> str:
 
 def check_drep_delegation(*, deleg_state: dict, drep_id: str, stake_addr_hash: str) -> None:
     dstate = deleg_state["dstate"]
-    drep_records = dstate.get("accounts") or {}  # In cardano-node >= 10.6.0
+    drep_records: dict = dstate.get("accounts") or {}  # In cardano-node >= 10.6.0
     if not drep_records:
         drep_records = dstate.get("unified", {}).get("credentials") or {}
 
     stake_addr_key = f"keyHash-{stake_addr_hash}"
-    stake_addr_val = drep_records.get(stake_addr_key) or {}
+    stake_addr_val: dict = drep_records.get(stake_addr_key) or {}
 
     cred_name = get_drep_cred_name(drep_id=drep_id)
     expected_drep = f"drep-{cred_name}"
@@ -225,11 +225,11 @@ def check_drep_stake_distribution(
 def get_prev_action(
     *, action_type: PrevGovActionIds, gov_state: dict[str, tp.Any]
 ) -> PrevActionRec:
-    prev_action_rec = (
+    prev_action_rec: dict = (
         gov_state["nextRatifyState"]["nextEnactState"]["prevGovActionIds"][action_type.value] or {}
     )
     txid = prev_action_rec.get("txId") or ""
-    _ix = prev_action_rec.get("govActionIx", None)
+    _ix = prev_action_rec.get("govActionIx")
     ix = -1 if _ix is None else _ix
     return PrevActionRec(txid=txid, ix=ix)
 

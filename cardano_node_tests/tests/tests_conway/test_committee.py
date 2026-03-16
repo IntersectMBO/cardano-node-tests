@@ -1150,7 +1150,9 @@ class TestCommittee:
 
         xfail_ledger_4001_msgs = set()
         for _cc_member_key in (cc_member1_key, cc_member2_key, cc_member3_key):
-            rat_add_member_rec = rat_add_committee_state["committee"].get(_cc_member_key) or {}
+            rat_add_member_rec: dict = (
+                rat_add_committee_state["committee"].get(_cc_member_key) or {}
+            )
             if rat_add_member_rec:
                 assert rat_add_member_rec["hotCredsAuthStatus"]["tag"] != "MemberAuthorized", (
                     "CC Member is still authorized"
@@ -1516,7 +1518,7 @@ class TestCommittee:
         vote_zero_cc_epoch = cluster.g_query.get_epoch()
 
         def _check_zero_cc_state(state: dict):
-            pparams = state.get("curPParams") or state.get("currentPParams") or {}
+            pparams: dict = state.get("curPParams") or state.get("currentPParams") or {}
             clusterlib_utils.check_updated_params(
                 update_proposals=zero_cc_proposal.proposals, protocol_params=pparams
             )

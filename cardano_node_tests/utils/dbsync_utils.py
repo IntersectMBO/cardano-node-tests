@@ -669,7 +669,7 @@ def check_pool_data(  # noqa: C901
             f"Expected: {sps_cost} vs Returned: {db_pool_data.fixed_cost}"
         )
 
-    metadata = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
+    metadata: dict = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
 
     metadata_hash = metadata.get("hash") or ""
     if metadata_hash != db_pool_data.metadata_hash:
@@ -751,7 +751,7 @@ def check_pool_off_chain_data(
         msg = f"no off chain data for pool {pool_id}"
         raise DbSyncNoResponseError(msg)
 
-    metadata = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
+    metadata: dict = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
     metadata_hash = metadata.get("hash") or ""
     db_metadata_hash = db_pool_off_chain_data[0].hash.hex()
 
@@ -775,7 +775,7 @@ def check_pool_off_chain_fetch_error(
         raise DbSyncNoResponseError(msg)
 
     fetch_error_str = db_pool_off_chain_fetch_error[0].fetch_error or ""
-    metadata = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
+    metadata: dict = helpers.get_pool_param("spsMetadata", pool_params=ledger_pool_data) or {}
     metadata_url = metadata.get("url") or ""
 
     assert (

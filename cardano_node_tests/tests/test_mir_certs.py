@@ -85,7 +85,7 @@ def registered_users(
     fixture_cache: cluster_management.FixtureCache[list[clusterlib.PoolUser] | None]
     with cluster_manager.cache_fixture() as fixture_cache:
         if fixture_cache.value is not None:
-            return fixture_cache.value
+            return fixture_cache.value  # type: ignore[no-any-return]
         fixture_cache.value = registered
 
     for i, pool_user in enumerate(registered):
