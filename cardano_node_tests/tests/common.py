@@ -22,6 +22,8 @@ LOGGER = logging.getLogger(__name__)
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
 
+COMPAT_ERAS = ("shelley", "allegra", "mary", "alonzo", "babbage")
+
 ADDR_ALPHABET = string.ascii_lowercase + string.digits
 
 ORDER5_BYRON = (
@@ -155,6 +157,8 @@ PARAM_PLUTUS2ONWARDS_VERSION = pytest.mark.parametrize(
     ),
     ids=("plutus_v2", "plutus_v3"),
 )
+
+PARAM_COMPAT_ERAS = pytest.mark.parametrize("era", COMPAT_ERAS)
 
 
 # Intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)
