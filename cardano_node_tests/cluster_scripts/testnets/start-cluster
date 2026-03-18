@@ -72,7 +72,7 @@ ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.jso
 ln -rs "$STATE_CLUSTER/genesis-alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.json"
 ln -rs "$STATE_CLUSTER/genesis-conway.json" "$STATE_CLUSTER/shelley/genesis.conway.json"
 
-NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
 
 # edit port numbers in configuration
 RELAY1_EKG="%%EKG_PORT_RELAY1%%"
@@ -229,7 +229,7 @@ if [ -n "${DBSYNC_SCHEMA_DIR:-""}" ]; then
 
   echo "Waiting to make sure db-sync is synced"
   for _ in {1..600}; do
-    node_block="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq '.block')"
+    node_block="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.block')"
     sleep 5
     dbsync_block="$("$SCRIPT_DIR/dbsync_block_no.sh")"
     if [ "$node_block" -le "$dbsync_block" ]; then
