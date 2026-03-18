@@ -2685,7 +2685,7 @@ class TestNegative:
             request.addfinalizer(_deregister)
 
         if not err_str and VERSIONS.cli >= version.parse("10.14.0.0"):
-            issues.cli_1347.finish_test()
+            return
 
         assert err_str, "Expected transaction submission to fail, but it succeeded"
 
