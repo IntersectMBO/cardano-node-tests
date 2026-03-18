@@ -121,12 +121,6 @@ cli_1332 = blockers.GH(
     fixed_in="10.15.0.1",  # Fixed in release after 10.15.0.1
     message="Cannot get policyid for SimpleScript reference script.",
 )
-cli_1347 = blockers.GH(
-    issue=1347,
-    repo="IntersectMBO/cardano-cli",
-    fixed_in="10.15.0.1",  # Fixed in some release after 10.15.0.1
-    message="Compat stake reg cert accepted without deposit amount.",
-)
 
 consensus_973 = blockers.GH(
     issue=973,
