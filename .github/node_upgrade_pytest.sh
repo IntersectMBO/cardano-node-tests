@@ -235,6 +235,17 @@ elif [ "$1" = "step2" ]; then
   # Update Plutus cost models.
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 6
 
+  # generate ledger peer snapshot using old node version
+  cardano-cli query ledger-peer-snapshot \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --socket-path "$STATE_CLUSTER/pool3.socket" \
+    --output-json \
+    --out-file "$STATE_CLUSTER/peer-snapshot-base.json"
+  if [ ! -e "$STATE_CLUSTER/peer-snapshot-base.json" ]; then
+    echo "Failed to get peer snapshot from pool3" >&2
+    exit 6
+  fi
+
   # run smoke tests
   printf "STEP2 tests: %(%H:%M:%S)T\n" -1
   retval=0
@@ -307,6 +318,36 @@ elif [ "$1" = "step3" ]; then
       | .ConwayGenesisHash = $conway_hash
       | .DijkstraGenesisHash = $dijkstra_hash' \
       "$conf" > "$STATE_CLUSTER/$fname"
+  done
+
+  # generate ledger peer snapshot using new node version
+  cardano-cli query ledger-peer-snapshot \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --socket-path "$STATE_CLUSTER/pool1.socket" \
+    --output-json \
+    --out-file "$STATE_CLUSTER/peer-snapshot-upgrade.json"
+  if [ ! -e "$STATE_CLUSTER/peer-snapshot-upgrade.json" ]; then
+    echo "Failed to get peer snapshot from pool1" >&2
+    exit 6
+  fi
+
+  # use the base version snapshot for pool1 and upgrade version snapshot for pool3
+  jq \
+    '.localRoots[] += {"trustable": true}
+    | .peerSnapshotFile = "peer-snapshot-base.json"' \
+    "$STATE_CLUSTER/topology-pool1.json" > "$STATE_CLUSTER/topology-pool1.tmp.json"
+  mv -f "$STATE_CLUSTER/topology-pool1.tmp.json" "$STATE_CLUSTER/topology-pool1.json"
+  jq \
+    '.localRoots[] += {"trustable": true}
+    | .peerSnapshotFile = "peer-snapshot-upgrade.json"' \
+    "$STATE_CLUSTER/topology-pool3.json" > "$STATE_CLUSTER/topology-pool3.tmp.json"
+  mv -f "$STATE_CLUSTER/topology-pool3.tmp.json" "$STATE_CLUSTER/topology-pool3.json"
+
+  # set `GenesisMode` for nodes that will use the ledger peer snapshot
+  for pool in pool1 pool3; do
+    jq '.ConsensusMode = "GenesisMode"' \
+      "$STATE_CLUSTER/config-${pool}.json" > "$STATE_CLUSTER/config-${pool}.tmp.json"
+    mv -f "$STATE_CLUSTER/config-${pool}.tmp.json" "$STATE_CLUSTER/config-${pool}.json"
   done
 
   # use the upgraded cardano-node binary for pool3
