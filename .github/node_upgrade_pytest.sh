@@ -111,7 +111,7 @@ elif [ "$1" = "step2" ]; then
 
   export UPGRADE_TESTS_STEP=2
 
-  NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
 
   # add binaries saved in step1 to the PATH
@@ -139,11 +139,11 @@ elif [ "$1" = "step2" ]; then
   fi
 
   # use the original Byron, Shelley and Dijkstra genesis files
-  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  BYRON_GENESIS_HASH="$(jq -r '.ByronGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  SHELLEY_GENESIS_HASH="$(jq -r '.ShelleyGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
   # hashes of the original alonzo and conway genesis files
-  CONWAY_GENESIS_STEP1_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  ALONZO_GENESIS_STEP1_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  CONWAY_GENESIS_STEP1_HASH="$(jq -r '.ConwayGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  ALONZO_GENESIS_STEP1_HASH="$(jq -r '.AlonzoGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
   # hashes of genesis files that were potentially replaced
   ALONZO_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
     "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
@@ -174,14 +174,14 @@ elif [ "$1" = "step2" ]; then
       --arg alonzo_file "$selected_alonzo_file" \
       --arg alonzo_hash "$selected_alonzo_hash" \
       --arg conway_file "$selected_conway_file" \
-      --arg conway_hash "$selected_conway_hash" \
-      '.ByronGenesisHash = $byron_hash
+      --arg conway_hash "$selected_conway_hash" '
+      .ByronGenesisHash = $byron_hash
       | .ShelleyGenesisHash = $shelley_hash
       | .AlonzoGenesisFile = $alonzo_file
       | .AlonzoGenesisHash = $alonzo_hash
       | .ConwayGenesisFile = $conway_file
-      | .ConwayGenesisHash = $conway_hash' \
-      "$conf" > "$STATE_CLUSTER/$fname"
+      | .ConwayGenesisHash = $conway_hash
+      ' "$conf" > "$STATE_CLUSTER/$fname"
   done
 
   # run the pool3 with the original cardano-node binary
@@ -281,7 +281,7 @@ elif [ "$1" = "step3" ]; then
 
   export UPGRADE_TESTS_STEP=3
 
-  NETWORK_MAGIC="$(jq '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
 
   # re-generate config and topology files
@@ -294,11 +294,11 @@ elif [ "$1" = "step3" ]; then
   cp -f "$WORKDIR"/dry_config_step3/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
   # Copy newly generated config files to the cluster state dir, but use the original genesis files
-  BYRON_GENESIS_HASH="$(jq -r ".ByronGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  SHELLEY_GENESIS_HASH="$(jq -r ".ShelleyGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  ALONZO_GENESIS_HASH="$(jq -r ".AlonzoGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  CONWAY_GENESIS_HASH="$(jq -r ".ConwayGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
-  DIJKSTRA_GENESIS_HASH="$(jq -r ".DijkstraGenesisHash" "$STATE_CLUSTER/config-bft1.json")"
+  BYRON_GENESIS_HASH="$(jq -r '.ByronGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  SHELLEY_GENESIS_HASH="$(jq -r '.ShelleyGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  ALONZO_GENESIS_HASH="$(jq -r '.AlonzoGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  CONWAY_GENESIS_HASH="$(jq -r '.ConwayGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  DIJKSTRA_GENESIS_HASH="$(jq -r '.DijkstraGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
   if [ -z "$DIJKSTRA_GENESIS_HASH" ] || [ "$DIJKSTRA_GENESIS_HASH" = "null" ]; then
     cp -f "$WORKDIR/dry_config_step3/state-cluster0/shelley/genesis.dijkstra.json" "$STATE_CLUSTER/shelley"
     DIJKSTRA_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
@@ -311,13 +311,13 @@ elif [ "$1" = "step3" ]; then
       --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
       --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
       --arg conway_hash "$CONWAY_GENESIS_HASH" \
-      --arg dijkstra_hash "$DIJKSTRA_GENESIS_HASH" \
-      '.ByronGenesisHash = $byron_hash
+      --arg dijkstra_hash "$DIJKSTRA_GENESIS_HASH" '
+      .ByronGenesisHash = $byron_hash
       | .ShelleyGenesisHash = $shelley_hash
       | .AlonzoGenesisHash = $alonzo_hash
       | .ConwayGenesisHash = $conway_hash
-      | .DijkstraGenesisHash = $dijkstra_hash' \
-      "$conf" > "$STATE_CLUSTER/$fname"
+      | .DijkstraGenesisHash = $dijkstra_hash
+      ' "$conf" > "$STATE_CLUSTER/$fname"
   done
 
   # generate ledger peer snapshot using new node version
@@ -332,15 +332,15 @@ elif [ "$1" = "step3" ]; then
   fi
 
   # use the base version snapshot for pool1 and upgrade version snapshot for pool3
-  jq \
-    '.localRoots[] += {"trustable": true}
-    | .peerSnapshotFile = "peer-snapshot-base.json"' \
-    "$STATE_CLUSTER/topology-pool1.json" > "$STATE_CLUSTER/topology-pool1.tmp.json"
+  jq '
+    .localRoots[] += {"trustable": true}
+    | .peerSnapshotFile = "peer-snapshot-base.json"
+    ' "$STATE_CLUSTER/topology-pool1.json" > "$STATE_CLUSTER/topology-pool1.tmp.json"
   mv -f "$STATE_CLUSTER/topology-pool1.tmp.json" "$STATE_CLUSTER/topology-pool1.json"
-  jq \
-    '.localRoots[] += {"trustable": true}
-    | .peerSnapshotFile = "peer-snapshot-upgrade.json"' \
-    "$STATE_CLUSTER/topology-pool3.json" > "$STATE_CLUSTER/topology-pool3.tmp.json"
+  jq '
+    .localRoots[] += {"trustable": true}
+    | .peerSnapshotFile = "peer-snapshot-upgrade.json"
+    ' "$STATE_CLUSTER/topology-pool3.json" > "$STATE_CLUSTER/topology-pool3.tmp.json"
   mv -f "$STATE_CLUSTER/topology-pool3.tmp.json" "$STATE_CLUSTER/topology-pool3.json"
 
   # set `GenesisMode` for nodes that will use the ledger peer snapshot
