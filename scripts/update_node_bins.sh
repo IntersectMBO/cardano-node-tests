@@ -10,7 +10,7 @@ set -euo pipefail
 usage() { printf "Usage: %s /path/to/cardano-node-repo\n" "${0}"; }
 
 if [ $# -ne 1 ]; then
-  usage
+  usage >&2
   exit 2
 fi
 REPO_PATH="$(readlink -m "$1")"
