@@ -520,7 +520,8 @@ class TestDelegateAddr:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert (
-                "StakeKeyNonZeroAccountBalanceDELEG" in exc_value
+                "StakeKeyHasNonZeroAccountBalanceDELEG" in exc_value  # In cardano-node 10.7.0+
+                or "StakeKeyNonZeroAccountBalanceDELEG" in exc_value
                 or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in exc_value
             ), exc_value
 
@@ -695,7 +696,8 @@ class TestDelegateAddr:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert (
-                "StakeKeyNonZeroAccountBalanceDELEG" in exc_value
+                "StakeKeyHasNonZeroAccountBalanceDELEG" in exc_value  # In cardano-node 10.7.0+
+                or "StakeKeyNonZeroAccountBalanceDELEG" in exc_value
                 or "StakeKeyHasNonZeroRewardAccountBalanceDELEG" in exc_value
             ), exc_value
 

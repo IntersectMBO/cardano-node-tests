@@ -94,13 +94,17 @@ class TestLedgerState:
         def _get_hashes(snapshot: str) -> dict[str, int]:
             hashes = tp.cast(
                 dict[str, int],
-                clusterlib_utils.get_snapshot_rec(ledger_snapshot=es_snapshot[snapshot]["stake"]),
+                clusterlib_utils.get_snapshot_rec(
+                    ledger_snapshot=clusterlib_utils.get_stake_rec(
+                        stake_snapshot=es_snapshot[snapshot]
+                    )
+                ),
             )
             return hashes
 
         def _get_delegations(snapshot: str) -> dict[str, list[str]]:
             delegations: dict = clusterlib_utils.get_snapshot_delegations(
-                ledger_snapshot=es_snapshot[snapshot]["delegations"]
+                ledger_snapshot=es_snapshot[snapshot]
             )
             return delegations
 
