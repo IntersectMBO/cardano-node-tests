@@ -221,7 +221,7 @@ main() {
     testpr)   shift; target_testpr   "$@";;
     testnets) shift; target_testnets "$@";;
     -h|--help) usage;;
-    *) echo "Unknown target: $cmd" >&2; usage; exit 2;;
+    *) echo "Unknown target: $cmd" >&2; usage >&2; exit 2;;
   esac
 }
 
