@@ -3,16 +3,16 @@
 set -euo pipefail
 
 err() { printf "Error: %s\n" "$*" >&2; }
-usage() { printf "Usage: %s /path/to/cardano-clusterlib-py\n" "${0}"; }
+usage() { printf "Usage: %s /path/to/package_root\n" "${0}"; }
 
 if [ $# -ne 1 ]; then
-  usage
+  usage >&2
   exit 2
 fi
 REPO_PATH="$(readlink -m "$1")"
 
 TOP_DIR="$(readlink -m "${0%/*}/..")"
-cd "$TOP_DIR" >/dev/null
+cd "$TOP_DIR"
 
 # Activate python virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
@@ -43,30 +43,16 @@ then
   exit 1
 fi
 
-# Check that cardano-clusterlib is installed
-if ! uv pip show cardano-clusterlib >/dev/null 2>&1; then
-  err "Package 'cardano-clusterlib' is not installed in this environment."
-  exit 1
-fi
-
 # Validate repo path
 if [ ! -d "$REPO_PATH" ]; then
   err "Repo path not found: $REPO_PATH"
   exit 1
 fi
-if [[ ! -f "$REPO_PATH/pyproject.toml" && ! -f "$REPO_PATH/cardano_clusterlib" ]]; then
-  err "Given path doesn't look like the cardano-clusterlib-py repo."
+if [[ ! -f "$REPO_PATH/pyproject.toml" && ! -f "$REPO_PATH/setup.cfg" && ! -f "$REPO_PATH/setup.py" ]]; then
+  err "Given path doesn't look like python package."
   exit 1
 fi
 
-echo "Uninstalling 'cardano-clusterlib' from current environment..."
-uv pip uninstall cardano-clusterlib
-
 echo "Installing editable from: $REPO_PATH"
-cd "$REPO_PATH" >/dev/null
+cd "$REPO_PATH"
 uv pip install -e . --config-setting editable_mode=compat
-
-echo
-echo "Verifying editable install (should point into your repo, not site-packages):"
-cd "$TOP_DIR" >/dev/null
-python -c 'from cardano_clusterlib import clusterlib_klass; print(clusterlib_klass.__file__)'
