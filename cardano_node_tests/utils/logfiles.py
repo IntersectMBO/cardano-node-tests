@@ -27,8 +27,12 @@ ERRORS_RE = re.compile("error|fail", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 ERRORS_IGNORED = [
+    # Legacy iohk-monitoring format: "cardano.node.ChainDB:Info: ..."
     r"cardano\.node\.[^:]+:Debug:",
     r"cardano\.node\.[^:]+:Info:",
+    # New TraceDispatcher format: "[host:Namespace](Info,11) ..."
+    r"\]\(Debug,\d+\)",
+    r"\]\(Info,\d+\)",
     "db-sync-node:Info:",
     r"TxSubmitApi\.[^\]]*\]\(Info,",
     "cardano-tx-submit:Info:",

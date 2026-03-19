@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(readlink -m "${0%/*}")"
+exec "${SCRIPT_DIR}/common-start-fast" "$@"
