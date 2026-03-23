@@ -189,6 +189,13 @@
             "scRotation": null
         }
     ],
+    "EnableP2P": true,
+    "MaxConcurrencyBulkSync": 2,
+    "MaxConcurrencyDeadline": 4,
+    "TargetNumberOfRootPeers": 100,
+    "TargetNumberOfKnownPeers": 100,
+    "TargetNumberOfEstablishedPeers": 50,
+    "TargetNumberOfActivePeers": 20,
     "TestShelleyHardForkAtEpoch": 0,
     "TestAllegraHardForkAtEpoch": 0,
     "TestMaryHardForkAtEpoch": 0,

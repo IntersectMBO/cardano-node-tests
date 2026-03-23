@@ -4,10 +4,11 @@
     "control_env": {
         "DBSYNC_SCHEMA_DIR": "will start and configure db-sync if the value is path to db-sync schema directory",
         "SMASH": "if set, will start and configure smash",
-        "ENABLE_LEGACY": "if set, local cluster will use legacy networking",
-        "MIXED_P2P": "if set, local cluster will use P2P for some nodes and legacy topology for others",
-        "UTXO_BACKEND": "'mem' or 'disk', default is 'mem' (or legacy) if unset",
+        "ENABLE_EXPERIMENTAL": "if set, experimental features will be enabled in the local cluster",
+        "UTXO_BACKEND": "'mem', 'disk', 'disklmdb' or `empty`, default is `empty` (mem without configuration) if unset",
         "NO_CC": "if set, will not create committee",
-        "DRY_RUN": "if set, will not start the cluster"
+        "DRY_RUN": "if set, will not start the cluster",
+        "PROTOCOL_VERSION": "if set, will use the specified protocol version (e.g., 11 for latest Conway, etc.)",
+        "USE_GENESIS_MODE": "if set, will switch to using GenesisMode and peer snapshot file"
     }
 }

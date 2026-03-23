@@ -107,5 +107,15 @@
       "scName": "stdout",
       "scRotation": null
     }
-  ]
+  ],
+  "TraceOptions": {
+    "": {
+      "backends" : [
+        "EKGBackend",
+        "Stdout HumanFormatColoured"
+      ],
+      "detail": "DNormal",
+      "severity": "Info"
+    }
+  }
 }

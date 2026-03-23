@@ -21,8 +21,8 @@
             "severity": "Info"
         }
     },
-    "UseTraceDispatcher": true,
     "TraceOptionResourceFrequency": 5000,
+    "UseTraceDispatcher": true,
     "TraceBlockFetchClient": false,
     "TraceBlockFetchDecisions": false,
     "TraceBlockFetchProtocol": false,
@@ -63,6 +63,13 @@
     "TracingVerbosity": "NormalVerbosity",
     "TurnOnLogMetrics": true,
     "TurnOnLogging": true,
+    "EnableP2P": true,
+    "MaxConcurrencyBulkSync": 2,
+    "MaxConcurrencyDeadline": 4,
+    "TargetNumberOfRootPeers": 100,
+    "TargetNumberOfKnownPeers": 100,
+    "TargetNumberOfEstablishedPeers": 50,
+    "TargetNumberOfActivePeers": 20,
     "defaultBackends": [
         "KatipBK"
     ],
