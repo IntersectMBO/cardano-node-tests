@@ -116,7 +116,7 @@ def merge_reqs(*reqs: dict[str, dict]) -> dict:
         for gname, greqs in report.items():
             merged_group = merged.get(gname) or {}
             for req_id, req_data in greqs.items():
-                merged_rec = merged_group.get(req_id) or {}
+                merged_rec: dict = merged_group.get(req_id) or {}
                 merged_status_key = merged_rec.get("status") or "uncovered"
 
                 merged_status_val = Statuses[merged_status_key].value
@@ -137,7 +137,7 @@ def get_mapped_req(*, mapping: pl.Path, executed_req: dict) -> dict:  # noqa: C9
     errors: dict[str, set[str]] = {}
     for group, reqs in requirements_mapping.items():
         reqs_set = set(reqs.keys())
-        executed_group = executed_req.get(group) or {}
+        executed_group: dict = executed_req.get(group) or {}
         if not executed_group:
             executed_req[group] = executed_group
 

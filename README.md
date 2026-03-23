@@ -148,6 +148,7 @@ You can fine-tune test runs using these environment variables:
 | `PYTEST_ARGS`      | Extra options passed to pytest.                   |
 | `TEST_THREADS`     | Number of pytest workers (default: `20`).         |
 | `PROTOCOL_VERSION` | Cardano protocol version to use (default: `10`).  |
+| `USE_GENESIS_MODE` | Switch to using `GenesisMode` (default: `false`). |
 
 ### 💡 Usage Examples
 

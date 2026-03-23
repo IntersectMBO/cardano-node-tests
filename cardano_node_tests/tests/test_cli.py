@@ -335,16 +335,22 @@ class TestCLI:
         stake information.
 
         * Execute `cardano-cli query ledger-peer-snapshot` command
-        * Verify response contains expected keys (bigLedgerPools, slotNo, version)
+        * Verify response contains expected keys
         * Check that bigLedgerPools is a list
         * Verify each pool entry contains relativeStake field if pools exist
         """
         common.get_test_id(cluster)
 
         peer_snapshot = cluster.g_query.get_ledger_peer_snapshot()
+        snapshot_keys = set(peer_snapshot)
 
-        expected_keys = {"bigLedgerPools", "slotNo", "version"}
-        missing_keys = expected_keys - set(peer_snapshot)
+        if "Point" in snapshot_keys:
+            # In cardano-node 10.7.0+
+            expected_keys = {"Point", "NetworkMagic", "NodeToClientVersion", "bigLedgerPools"}
+        else:
+            expected_keys = {"bigLedgerPools", "slotNo", "version"}
+
+        missing_keys = expected_keys - snapshot_keys
         assert not missing_keys
 
         pools = peer_snapshot.get("bigLedgerPools", [])

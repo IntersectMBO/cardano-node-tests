@@ -462,13 +462,19 @@ class TestRewards:
                 )
 
             pstake_mark = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeMark"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeMark"]
+                )
             )
             pstake_set = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeSet"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeSet"]
+                )
             )
             pstake_go = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeGo"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeGo"]
+                )
             )
 
             if this_epoch == init_epoch + 1:
@@ -716,13 +722,19 @@ class TestRewards:
                 )
 
             pstake_mark = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeMark"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeMark"]
+                )
             )
             pstake_set = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeSet"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeSet"]
+                )
             )
             pstake_go = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeGo"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeGo"]
+                )
             )
 
             if this_epoch == init_epoch + 1:
@@ -1035,7 +1047,7 @@ class TestRewards:
             f"Incorrect balance for source address `{delegation_out.pool_user.payment.address}`"
         )
 
-        rewards_rec = []
+        rewards_rec: list[int] = []
 
         # Keep withdrawing new rewards so reward balance is 0
         def _withdraw():
@@ -1423,13 +1435,19 @@ class TestRewards:
                 )
 
             pstake_mark = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeMark"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeMark"]
+                )
             )
             pstake_set = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeSet"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeSet"]
+                )
             )
             pstake_go = clusterlib_utils.get_snapshot_rec(
-                ledger_snapshot=es_snapshot["pstakeGo"]["stake"]
+                ledger_snapshot=clusterlib_utils.get_stake_rec(
+                    stake_snapshot=es_snapshot["pstakeGo"]
+                )
             )
 
             if this_epoch == init_epoch + 1:

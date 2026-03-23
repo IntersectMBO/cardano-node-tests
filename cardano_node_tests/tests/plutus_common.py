@@ -6,7 +6,6 @@ import pytest
 from cardano_clusterlib import clusterlib
 from packaging import version
 
-from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -27,7 +26,6 @@ ALWAYS_SUCCEEDS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-succeeds-spending.plutus"
 ALWAYS_FAILS_PLUTUS_V1 = SCRIPTS_V1_DIR / "always-fails.plutus"
 GUESSING_GAME_PLUTUS_V1 = SCRIPTS_V1_DIR / "custom-guess-42-datum-42.plutus"
 GUESSING_GAME_UNTYPED_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-datum-42-txin.plutus"
-CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "context-equivalence-test.plutus"
 
 ALWAYS_SUCCEEDS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-succeeds-spending.plutus"
 ALWAYS_FAILS_PLUTUS_V2 = SCRIPTS_V2_DIR / "always-fails.plutus"
@@ -42,7 +40,6 @@ ALWAYS_FAILS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysFailsPolicyScriptV3.plutus"
 
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
-MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1 = SCRIPTS_V1_DIR / "minting-context-equivalence-test.plutus"
 MINTING_WITNESS_REDEEMER_PLUTUS_V1 = SCRIPTS_V1_DIR / "witness-redeemer.plutus"
 MINTING_TOKENNAME_PLUTUS_V1 = SCRIPTS_V1_DIR / "mint-tokenname.plutus"
 
@@ -96,8 +93,6 @@ ALWAYS_FAILS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=
 ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=368_100, per_space=1_700, fixed_cost=125)
 GUESSING_GAME_COST = ExecutionCost(per_time=282_016_214, per_space=1_034_516, fixed_cost=80_025)
 GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1_016)
-# TODO: fix once context equivalence tests can run again
-CONTEXT_EQUIVALENCE_COST = ExecutionCost(per_time=100_000_000, per_space=1_000_00, fixed_cost=947)
 
 ALWAYS_FAILS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
@@ -121,10 +116,6 @@ ALWAYS_SUCCEEDS_V3_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_co
 MINTING_COST = ExecutionCost(per_time=259_868_784, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
     per_time=277_239_670, per_space=1_044_064, fixed_cost=80_232
-)
-# TODO: fix once context equivalence tests can run again
-MINTING_CONTEXT_EQUIVALENCE_COST = ExecutionCost(
-    per_time=358_849_733, per_space=978_434, fixed_cost=82_329
 )
 MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
     per_time=261_056_789, per_space=1_013_630, fixed_cost=75_278
@@ -895,34 +886,3 @@ def xfail_on_secp_error(cluster_obj: clusterlib.ClusterLib, algorithm: str, err_
 
     if before_pv8 and (is_forbidden or is_overspending):
         pytest.xfail("The SECP256k1 builtin functions are not allowed before protocol version 8")
-
-
-def create_script_context_w_blockers(
-    cluster_obj: clusterlib.ClusterLib,
-    plutus_version: int,
-    redeemer_file: pl.Path,
-    tx_file: pl.Path | None = None,
-) -> None:
-    """Run the `create-script-context` command (available in plutus-apps).
-
-    This variant of the `create_script_context` function catches known errors and fails the test
-    with a blocker issue.
-    """
-    try:
-        clusterlib_utils.create_script_context(
-            cluster_obj=cluster_obj,
-            plutus_version=plutus_version,
-            redeemer_file=redeemer_file,
-            tx_file=tx_file,
-        )
-    except RuntimeError as err:
-        str_err = str(err)
-        if "Unwitnessed Tx ConwayEra" in str_err:
-            pytest.xfail("create-script-context: unsupported 'Unwitnessed Tx ConwayEra'")
-        if "DeserialiseFailure" in str_err:
-            issues.plutus_apps_583.finish_test()
-        if "TextEnvelopeTypeError" in str_err:
-            issues.plutus_apps_1078.finish_test()
-        if "PlutusScriptV1 custom redeemer not wired up" in str_err:
-            issues.plutus_apps_1107.finish_test()
-        raise

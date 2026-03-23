@@ -22,6 +22,8 @@ LOGGER = logging.getLogger(__name__)
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
 
+COMPAT_ERAS = ("shelley", "allegra", "mary", "alonzo", "babbage")
+
 ADDR_ALPHABET = string.ascii_lowercase + string.digits
 
 ORDER5_BYRON = (
@@ -46,11 +48,6 @@ SKIPIF_BUILD_UNUSABLE = pytest.mark.skipif(
 SKIPIF_BUILD_EST_1199 = pytest.mark.skipif(
     True,  # We don't want to execute `issues.cli_1199.is_blocked()` during import time
     reason="`build-estimate` fails to balance tx with no txouts",
-)
-
-SKIPIF_MISMATCHED_ERAS = pytest.mark.skipif(
-    VERSIONS.transaction_era != VERSIONS.cluster_era,
-    reason="transaction era must be the same as node era",
 )
 
 SKIPIF_WRONG_ERA = pytest.mark.skipif(
@@ -160,6 +157,8 @@ PARAM_PLUTUS2ONWARDS_VERSION = pytest.mark.parametrize(
     ),
     ids=("plutus_v2", "plutus_v3"),
 )
+
+PARAM_COMPAT_ERAS = pytest.mark.parametrize("era", COMPAT_ERAS)
 
 
 # Intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)

@@ -529,11 +529,11 @@ def wait_for_rewards(*, cluster_obj: clusterlib.ClusterLib) -> None:
 def get_chain_account_state(*, ledger_state: dict) -> ChainAccount:
     """Get chain account state from ledger state dict."""
     state_before = ledger_state["stateBefore"]
-    account_state = (
-        state_before.get("esChainAccountState")  # In cardano-node >= 10.6.0
-        or state_before.get("esAccountState")
-    )
-    if account_state is None:
+    if "esChainAccountState" in state_before:
+        account_state = state_before["esChainAccountState"]  # In cardano-node >= 10.6.0
+    elif "esAccountState" in state_before:
+        account_state = state_before["esAccountState"]
+    else:
         err = "Neither 'esChainAccountState' nor 'esAccountState' found in ledger state"
         raise KeyError(err)
     return ChainAccount(reserves=account_state["reserves"], treasury=account_state["treasury"])
@@ -547,11 +547,11 @@ def load_registered_pool_data(
         pool_id = helpers.decode_bech32(pool_id)
 
     pool_state: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
-    metadata = helpers.get_pool_param("spsMetadata", pool_params=pool_state) or {}
+    metadata: dict = helpers.get_pool_param("spsMetadata", pool_params=pool_state) or {}
 
     # TODO: extend to handle more relays records
-    relays_list = helpers.get_pool_param("spsRelays", pool_params=pool_state) or []
-    relay = relays_list[0] if relays_list else {}
+    relays_list: list = helpers.get_pool_param("spsRelays", pool_params=pool_state) or []
+    relay: dict = relays_list[0] if relays_list else {}
     relay = relay.get("single host address") or {}
 
     pool_data = clusterlib.PoolData(
@@ -605,7 +605,7 @@ def check_pool_data(  # noqa: C901
         )
 
     if pool_creation_data.pool_metadata_url and pool_creation_data.pool_metadata_hash:
-        metadata = _get_param("spsMetadata") or {}
+        metadata: dict = _get_param("spsMetadata") or {}
 
         metadata_hash = metadata.get("hash")
         if metadata_hash != pool_creation_data.pool_metadata_hash:
@@ -1305,41 +1305,6 @@ def datum_hash_from_txout(*, cluster_obj: clusterlib.ClusterLib, txout: clusterl
     return datum_hash
 
 
-def create_script_context(
-    *,
-    cluster_obj: clusterlib.ClusterLib,
-    plutus_version: int,
-    redeemer_file: pl.Path,
-    tx_file: pl.Path | None = None,
-) -> None:
-    """Run the `create-script-context` command (available in plutus-apps)."""
-    if plutus_version == 1:
-        version_arg = "--plutus-v1"
-    elif plutus_version == 2:
-        version_arg = "--plutus-v2"
-    else:
-        msg = f"Unknown plutus version: {plutus_version}"
-        raise ValueError(msg)
-
-    if tx_file:
-        cmd_args = [
-            "create-script-context",
-            "--generate-tx",
-            str(tx_file),
-            version_arg,
-            *cluster_obj.magic_args,
-            "--out-file",
-            str(redeemer_file),
-        ]
-    else:
-        cmd_args = ["create-script-context", version_arg, "--out-file", str(redeemer_file)]
-
-    helpers.run_command(cmd_args)
-    if not redeemer_file.exists():
-        err = f"Expected file not created: {redeemer_file}"
-        raise FileNotFoundError(err)
-
-
 def cli_has(command: str) -> bool:
     """Check if a cardano-cli subcommand or argument is available.
 
@@ -1494,32 +1459,80 @@ def get_snapshot_rec(*, ledger_snapshot: dict) -> dict[str, int | list]:
     """Get uniform record for ledger state snapshot."""
     hashes: dict[str, int | list] = {}
 
-    for rk, r_value in ledger_snapshot.items():
-        # In node 8.4+ the format is not list of dicts, but a dict like
+    for rk, rv in ledger_snapshot.items():
+        # In node 10.7+ the format is a dict like
+        # "keyHash-7d75e921437e5a19963fc340b08d614dca2d3fe980d321a9682ee4f4": {
+        #     "swdDelegation": "78e6546ed6cc1ecc4bf7fdc726dc6e1a7913f176ca03bf05dca5771e",
+        #     "swdStake": 3480000000000
+        # }
+        # In node 8.4+ the format is a dict like
         # {'keyHash-12d36d11cd0e570dde3c87360d4fb6074a1925e08a1a55513d7f7641': 1500000,
         #  'scriptHash-9c8e9da7f81e3ca90485f32ebefc98137c8ac260a072a00c4aaf142d': 17998926079, ...}
+        # In older node version, the format is a list of dicts.
         r_hash = rk.split("-")[1]
+        r_amount = rv["swdStake"] if isinstance(rv, dict) and "swdStake" in rv else rv
+
         if r_hash in hashes:
-            hashes[r_hash] += r_value
+            hashes[r_hash] += r_amount
         else:
-            hashes[r_hash] = r_value
+            hashes[r_hash] = r_amount
 
     return hashes
+
+
+def get_stake_rec(*, stake_snapshot: dict) -> dict:
+    """Get uniform record for stake key snapshot."""
+    stake_rec: dict
+    if "activeStake" in stake_snapshot:
+        stake_rec = stake_snapshot["activeStake"]  # In cardano-node 10.7.0+
+    elif "stake" in stake_snapshot:
+        stake_rec = stake_snapshot["stake"]
+    else:
+        err = "Neither 'activeStake' nor 'stake' found in stake snapshot"
+        raise KeyError(err)
+    return stake_rec
 
 
 def get_snapshot_delegations(*, ledger_snapshot: dict) -> dict[str, list[str]]:
     """Get delegations data from ledger state snapshot."""
     delegations: dict[str, list[str]] = {}
 
-    for rk, r_pool_id in ledger_snapshot.items():
-        # In node 8.4+ the format is not list of dicts, but dict like
-        # {'keyHash-12d36d11cd0e570dde3c87360d4fb6074a1925e08a1a55513d7f7641': POOL_ID,
-        #  'scriptHash-9c8e9da7f81e3ca90485f32ebefc98137c8ac260a072a00c4aaf142d: POOL_ID, ...}
-        r_hash = rk.split("-")[1]
-        if r_pool_id in delegations:
-            delegations[r_pool_id].append(r_hash)
-        else:
-            delegations[r_pool_id] = [r_hash]
+    if "activeStake" in ledger_snapshot:
+        deleg_rec = ledger_snapshot["activeStake"]
+
+        for rk, rv in deleg_rec.items():
+            # In node 10.7+ the format is a dict like
+            # "keyHash-7d75e921437e5a19963fc340b08d614dca2d3fe980d321a9682ee4f4": {
+            #     "swdDelegation": "78e6546ed6cc1ecc4bf7fdc726dc6e1a7913f176ca03bf05dca5771e",
+            #     "swdStake": 3480000000000
+            # }
+            r_hash = rk.split("-")[1]
+            r_pool_id = rv["swdDelegation"]
+
+            if r_pool_id in delegations:
+                delegations[r_pool_id].append(r_hash)
+            else:
+                delegations[r_pool_id] = [r_hash]
+
+    elif "delegations" in ledger_snapshot:
+        deleg_rec = ledger_snapshot["delegations"]
+
+        for rk, rv in deleg_rec.items():
+            # In node 8.4+ the format is a dict like
+            # {'keyHash-12d36d11cd0e570dde3c87360d4fb6074a1925e08a1a55513d7f7641': POOL_ID,
+            #  'scriptHash-9c8e9da7f81e3ca90485f32ebefc98137c8ac260a072a00c4aaf142d: POOL_ID, ...}
+            # In older node version, the format is a list of dicts.
+            r_hash = rk.split("-")[1]
+            r_pool_id = rv
+
+            if r_pool_id in delegations:
+                delegations[r_pool_id].append(r_hash)
+            else:
+                delegations[r_pool_id] = [r_hash]
+
+    else:
+        err = "Neither 'stakePoolsSnapShot' nor 'delegations' found in ledger snapshot"
+        raise KeyError(err)
 
     return delegations
 

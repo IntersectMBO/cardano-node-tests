@@ -101,7 +101,7 @@ def get_custom_drep(
     fixture_cache: cluster_management.FixtureCache[governance_utils.DRepRegistration | None]
     with cluster_manager.cache_fixture(key=caching_key) as fixture_cache:
         if fixture_cache.value is not None:
-            return fixture_cache.value
+            return fixture_cache.value  # type: ignore[no-any-return]
 
         reg_drep = create_drep(
             name_template=name_template,

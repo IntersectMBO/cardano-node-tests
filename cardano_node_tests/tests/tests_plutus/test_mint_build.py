@@ -1,10 +1,8 @@
 """Tests for minting with Plutus using `transaction build`."""
 
-import dataclasses
 import datetime
 import logging
 import pathlib as pl
-import shutil
 
 import allure
 import pytest
@@ -66,7 +64,7 @@ class TestBuildMinting:
         fixture_cache: cluster_management.FixtureCache[PHorizonFundsT | None]
         with cluster_manager.cache_fixture() as fixture_cache:
             if fixture_cache.value is not None:
-                return fixture_cache.value
+                return fixture_cache.value  # type: ignore[no-any-return]
 
             temp_template = common.get_test_id(cluster)
             payment_addr = payment_addrs[0]
@@ -768,196 +766,6 @@ class TestBuildMinting:
         # Check transactions in db-sync
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step2)
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.skipif(
-        not shutil.which("create-script-context"),
-        reason="cannot find `create-script-context` on the PATH",
-    )
-    @common.SKIPIF_MISMATCHED_ERAS
-    @submit_utils.PARAM_SUBMIT_METHOD
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    @pytest.mark.dbsync
-    def test_minting_context_equivalence(
-        self,
-        cluster: clusterlib.ClusterLib,
-        payment_addrs: list[clusterlib.AddressRecord],
-        submit_method: str,
-    ):
-        """Test context equivalence while minting a token.
-
-        Uses `cardano-cli transaction build` command for building the transactions.
-
-        * Fund the token issuer and create a UTxO for collateral
-        * Check that the expected amount was transferred to token issuer's address
-        * Generate a dummy redeemer and a dummy Tx
-        * Derive the correct redeemer from the dummy Tx
-        * Mint the token using the derived redeemer
-        * Check that the token was minted and collateral UTxO was not spent
-        * Check expected Plutus cost
-        * (optional) Check transactions in db-sync
-        """
-        temp_template = common.get_test_id(cluster)
-        payment_addr = payment_addrs[0]
-        issuer_addr = payment_addrs[1]
-
-        lovelace_amount = 2_000_000
-        token_amount = 5
-        script_fund = 10_000_000
-
-        minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST,
-            protocol_params=cluster.g_query.get_protocol_params(),
-        )
-
-        issuer_init_balance = cluster.g_query.get_address_balance(issuer_addr.address)
-
-        # Step 1: fund the token issuer
-
-        mint_utxos, collateral_utxos, tx_output_step1 = mint_build._fund_issuer(
-            cluster_obj=cluster,
-            temp_template=temp_template,
-            payment_addr=payment_addr,
-            issuer_addr=issuer_addr,
-            minting_cost=minting_cost,
-            amount=script_fund,
-            submit_method=submit_method,
-        )
-
-        # Step 2: mint the "qacoin"
-
-        invalid_hereafter = cluster.g_query.get_slot_no() + 200
-
-        policyid = cluster.g_transaction.get_policyid(
-            plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1
-        )
-        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
-        token = f"{policyid}.{asset_name}"
-        mint_txouts = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
-        ]
-
-        tx_files_step2 = clusterlib.TxFiles(
-            signing_key_files=[issuer_addr.skey_file, plutus_common.SIGNING_KEY_GOLDEN],
-        )
-        txouts_step2 = [
-            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
-            *mint_txouts,
-        ]
-
-        # Generate a dummy redeemer in order to create a txbody from which
-        # we can generate a tx and then derive the correct redeemer
-        redeemer_file_dummy = pl.Path(f"{temp_template}_dummy_script_context.redeemer")
-        clusterlib_utils.create_script_context(
-            cluster_obj=cluster, plutus_version=1, redeemer_file=redeemer_file_dummy
-        )
-
-        plutus_mint_data_dummy = [
-            clusterlib.Mint(
-                txouts=mint_txouts,
-                script_file=plutus_common.MINTING_CONTEXT_EQUIVALENCE_PLUTUS_V1,
-                collaterals=collateral_utxos,
-                redeemer_file=redeemer_file_dummy,
-            )
-        ]
-
-        tx_output_dummy = cluster.g_transaction.build_tx(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_dummy",
-            tx_files=tx_files_step2,
-            txins=mint_utxos,
-            txouts=txouts_step2,
-            mint=plutus_mint_data_dummy,
-            required_signers=[plutus_common.SIGNING_KEY_GOLDEN],
-            invalid_before=1,
-            invalid_hereafter=invalid_hereafter,
-            script_valid=False,
-        )
-        assert tx_output_dummy
-
-        # Generate the "real" redeemer
-        redeemer_file = pl.Path(f"{temp_template}_script_context.redeemer")
-
-        plutus_common.create_script_context_w_blockers(
-            cluster_obj=cluster,
-            plutus_version=1,
-            redeemer_file=redeemer_file,
-            tx_file=tx_output_dummy.out_file,
-        )
-
-        plutus_mint_data = [
-            dataclasses.replace(plutus_mint_data_dummy[0], redeemer_file=redeemer_file)
-        ]
-
-        tx_output_step2 = cluster.g_transaction.build_tx(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
-            tx_files=tx_files_step2,
-            txins=mint_utxos,
-            txouts=txouts_step2,
-            mint=plutus_mint_data,
-            required_signers=[plutus_common.SIGNING_KEY_GOLDEN],
-            invalid_before=1,
-            invalid_hereafter=invalid_hereafter,
-        )
-
-        # Calculate cost of Plutus script
-        plutus_costs_step2 = cluster.g_transaction.calculate_plutus_script_cost(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
-            tx_files=tx_files_step2,
-            txins=mint_utxos,
-            txouts=txouts_step2,
-            mint=plutus_mint_data,
-            required_signers=[plutus_common.SIGNING_KEY_GOLDEN],
-            invalid_before=1,
-            invalid_hereafter=invalid_hereafter,
-        )
-
-        tx_signed_step2 = cluster.g_transaction.sign_tx(
-            tx_body_file=tx_output_step2.out_file,
-            signing_key_files=tx_files_step2.signing_key_files,
-            tx_name=f"{temp_template}_step2",
-        )
-
-        submit_utils.submit_tx(
-            submit_method=submit_method,
-            cluster_obj=cluster,
-            tx_file=tx_signed_step2,
-            txins=mint_utxos,
-        )
-
-        assert (
-            cluster.g_query.get_address_balance(issuer_addr.address)
-            == issuer_init_balance + minting_cost.collateral + lovelace_amount
-        ), f"Incorrect balance for token issuer address `{issuer_addr.address}`"
-
-        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
-        token_utxo = clusterlib.filter_utxos(
-            utxos=out_utxos, address=issuer_addr.address, coin=token
-        )
-        assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
-
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
-
-        plutus_common.check_plutus_costs(
-            plutus_costs=plutus_costs_step2,
-            expected_costs=[plutus_common.MINTING_CONTEXT_EQUIVALENCE_COST],
-        )
-
-        # Check tx_view
-        tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output_step2)
-
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_step1)
-        tx_db_record_step2 = dbsync_utils.check_tx(
-            cluster_obj=cluster, tx_raw_output=tx_output_step2
-        )
-        # Compare cost of Plutus script with data from db-sync
-        if tx_db_record_step2:
-            dbsync_utils.check_plutus_costs(
-                redeemer_records=tx_db_record_step2.redeemers, cost_records=plutus_costs_step2
-            )
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD

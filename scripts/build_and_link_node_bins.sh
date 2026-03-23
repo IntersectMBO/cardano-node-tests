@@ -18,7 +18,7 @@ usage() {
 }
 
 if [ $# -ne 3 ]; then
-  usage
+  usage >&2
   exit 2
 fi
 
