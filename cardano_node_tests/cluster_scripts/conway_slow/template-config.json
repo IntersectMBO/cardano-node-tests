@@ -15,6 +15,7 @@
         "": {
             "backends": [
                 "EKGBackend",
+                "PrometheusSimple %%PROMETHEUS_PORT%%",
                 "Stdout HumanFormatUncoloured"
             ],
             "detail": "DNormal",
