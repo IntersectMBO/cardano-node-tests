@@ -115,16 +115,25 @@ case "${CARDANO_CLI_REV:-}" in
 esac
 
 # setup cardano-node binaries
-case "${NODE_REV:-}" in
-  "" | "none" )
-    NODE_REV=master
-    ;;
-esac
-# shellcheck disable=SC1091
-. .github/source_cardano_node.sh
-cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
-PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
-export PATH_PREPEND
+if [ -n "${CARDANO_PREBUILT_DIR:-}" ]; then
+  # Pre-built binaries were baked into the image (e.g. for Antithesis).
+  # Skip all nix builds and point PATH_PREPEND at the pre-built directories.
+  _d="${CARDANO_PREBUILT_DIR}"
+  PATH_PREPEND="${_d}/cardano-node/bin:${_d}/cardano-submit-api/bin:${_d}/cardano-cli/bin:${_d}/bech32/bin:${PATH_PREPEND}"
+  export PATH_PREPEND
+  unset _d
+else
+  case "${NODE_REV:-}" in
+    "" | "none" )
+      NODE_REV=master
+      ;;
+  esac
+  # shellcheck disable=SC1091
+  . .github/source_cardano_node.sh
+  cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
+  PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
+  export PATH_PREPEND
+fi
 
 # optimize nix store if running in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
@@ -254,7 +263,14 @@ nix develop --accept-flake-config .#testenv --command bash -c '
 
   echo "::group::Python venv setup"
   printf "start: %(%H:%M:%S)T\n" -1
-  . .github/setup_venv.sh clean
+  # When _VENV_DIR points to a pre-built venv (e.g. baked into the image for
+  # Antithesis), skip the `clean` flag so the existing venv is reused as-is
+  # without re-downloading packages.
+  if [ -n "${_VENV_DIR:-}" ] && [ -e "${_VENV_DIR}" ]; then
+    . .github/setup_venv.sh
+  else
+    . .github/setup_venv.sh clean
+  fi
   echo "::endgroup::"  # end group for "Python venv setup"
 
   echo "::group::🧪 Testrun"
