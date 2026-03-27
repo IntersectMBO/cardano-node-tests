@@ -1727,7 +1727,7 @@ class TestNegativeWithdrawal:
                 src_address=pool_owner.payment.address,
                 tx_name=f"{temp_template}_withdrawal",
                 tx_files=tx_files,
-                fee=0,  # set fee too low to make 100% sure the transaction can't be accepted
+                fee=0,  # Set fee too low to make 100% sure the transaction can't be accepted
                 withdrawals=[clusterlib.TxOut(address=pool_reward.stake.address, amount=amount)],
             )
             msg = "The Tx submit succeeded unexpectedly."
@@ -1735,8 +1735,9 @@ class TestNegativeWithdrawal:
         except clusterlib.CLIError as exc:
             err_str = str(exc)
             if (
-                "WithdrawalsNotInRewardsDELEGS" not in err_str
-                and "WithdrawalsNotInRewardsCERTS" not in err_str  # in node >= 8.8.0
+                "ConwayIncompleteWithdrawals" in err_str  # In cardano-node >= 10.7.0 and PV11
+                and "WithdrawalsNotInRewardsCERTS" not in err_str  # In cardano-node >= 8.8.0
+                and "WithdrawalsNotInRewardsDELEGS" not in err_str
             ):
                 reward_balance = cluster.g_query.get_stake_addr_info(
                     stake_addr=pool_reward.stake.address
