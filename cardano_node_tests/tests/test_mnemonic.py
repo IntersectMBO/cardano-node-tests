@@ -516,7 +516,7 @@ class TestNegativeMnemonic:
             assert (
                 "Error reading mnemonic file" in exc_value
                 or "Error converting the mnemonic into a key" in exc_value
-            )
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("key_type", KEY_TYPES, ids=KEY_TYPE_IDS)
