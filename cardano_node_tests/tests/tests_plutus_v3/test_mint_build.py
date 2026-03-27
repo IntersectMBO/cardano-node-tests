@@ -79,7 +79,7 @@ def update_cost_model(
     elif prot_version == BATCH6_PROT_VERSION:
         if cost_model_len >= BATCH6_COST_MODEL_LEN:
             return
-        cost_proposal_file = DATA_DIR / "cost_models_list_185_330_v2_v3.json"
+        cost_proposal_file = DATA_DIR / "cost_models_list_332_350_v2_v3.json"
     else:
         LOGGER.warning(
             "Unsupported protocol version %s for updating cost model, skipping update.",
