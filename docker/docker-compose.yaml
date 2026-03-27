@@ -1,13 +1,15 @@
-# Docker Compose for Antithesis/Moog test submission.
+# Docker Compose for Antithesis test submission.
 #
-# Submit to Moog:
-#   moog requester create-test \
-#     --platform github --username <you> \
-#     --repository IntersectMBO/cardano-node-tests \
-#     --directory ./docker \
-#     --commit <hash> --try 1 --duration 2
+# The driver image must be pre-built with all cardano binaries and the Python
+# venv baked in (see docker/Dockerfile).  No internet access is available at
+# runtime inside the Antithesis environment.
 #
-# Validate locally before submitting:
+# Push images to the Antithesis registry before submitting:
+#   docker push us-central1-docker.pkg.dev/<tenant>/antithesis/cardano-node-tests:latest
+#   docker push us-central1-docker.pkg.dev/<tenant>/antithesis/config:latest
+#
+# Validate locally (requires internet — use an isolated netns to simulate
+# the Antithesis environment):
 #   docker compose -f docker/docker-compose.yaml config
 #   docker compose -f docker/docker-compose.yaml up --build
 
@@ -17,9 +19,11 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    command: ["/work/.github/regression.sh"]
+    # antithesis_run.sh sets nix offline, exports pre-built paths, emits
+    # setup_complete, then hands off to regression.sh.
+    command: ["/work/docker/antithesis_run.sh"]
     environment:
-      - NODE_REV=${NODE_REV:-master}
+      # NODE_REV is baked into the image at build time; do not override here.
       - CARDANO_CLI_REV=${CARDANO_CLI_REV:-}
       - DBSYNC_REV=${DBSYNC_REV:-}
       - RUN_TARGET=${RUN_TARGET:-tests}
