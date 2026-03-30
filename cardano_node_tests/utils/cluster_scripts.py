@@ -203,13 +203,6 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
 
         self._gen_topology_files(destdir=destdir, addr=addr, nodes=instance_ports.node_ports)
 
-        supervisor_conf_file = destdir / "supervisor.conf"
-        supervisor_conf_content = self._gen_supervisor_conf(
-            instance_num=instance_num, instance_ports=instance_ports
-        )
-        supervisor_conf_file.unlink(missing_ok=True)
-        supervisor_conf_file.write_text(f"{supervisor_conf_content}\n", encoding="utf-8")
-
 
 class ScriptsTypes:
     """Generic cluster scripts."""
