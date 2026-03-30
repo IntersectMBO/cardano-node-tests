@@ -38,6 +38,7 @@
                 nodePkgs.cardano-node
                 nodePkgs.cardano-submit-api
                 nodePkgs.bech32
+                nodePkgs.tx-generator
                 pkgs.bashInteractive
               ];
             };

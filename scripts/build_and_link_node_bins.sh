@@ -48,6 +48,8 @@ echo "👉  Building submit-api binaries in repo: $REPO_PATH"
 nix build .#cardano-submit-api -o "$BUILD_OUTPUT_DIR/submit-api"
 echo "👉  Building bech32 binaries in repo: $REPO_PATH"
 nix build .#bech32 -o "$BUILD_OUTPUT_DIR/bech32"
+echo "👉  Building tx-generator binaries in repo: $REPO_PATH"
+nix build .#tx-generator -o "$BUILD_OUTPUT_DIR/tx-generator"
 
 # Create symlinks
 echo "👉  Updating symlinks to built binaries in: $BIN_DIR"
@@ -57,7 +59,9 @@ rm -f "$BIN_DIR"/cardano-node
 rm -f "$BIN_DIR"/cardano-cli
 rm -f "$BIN_DIR"/cardano-submit-api
 rm -f "$BIN_DIR"/bech32
+rm -f "$BIN_DIR"/tx-generator
 ln -s "$BUILD_OUTPUT_DIR/node/bin/cardano-node" "$BIN_DIR/cardano-node"
 ln -s "$BUILD_OUTPUT_DIR/cli/bin/cardano-cli" "$BIN_DIR/cardano-cli"
 ln -s "$BUILD_OUTPUT_DIR/submit-api/bin/cardano-submit-api" "$BIN_DIR/cardano-submit-api"
 ln -s "$BUILD_OUTPUT_DIR/bech32/bin/bech32" "$BIN_DIR/bech32"
+ln -s "$BUILD_OUTPUT_DIR/tx-generator/bin/tx-generator" "$BIN_DIR/tx-generator"

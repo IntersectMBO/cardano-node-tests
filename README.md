@@ -135,6 +135,7 @@ You can fine-tune test runs using these environment variables:
 | `TESTNET_VARIANT`               | Name of the testnet variant to use.                 |
 | `UTXO_BACKEND`                  | Backend type: `mem`, `disk`, `disklmdb` or `empty`. |
 | `MIXED_UTXO_BACKENDS`           | List of UTXO backends for mixed setup.              |
+| `ENABLE_TX_GENERATOR`           | Enable tx-generator (default: `false`).             |
 | `ALLOW_UNSTABLE_ERROR_MESSAGES` | Allow tests to pass with unstable error messages.   |
 
 ### Additional for `regression.sh`

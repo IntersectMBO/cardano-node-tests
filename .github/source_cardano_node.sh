@@ -31,6 +31,7 @@ cardano_bins_build_all() {
   _cardano_bins_build_one "cardano-node" "cardano-node" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_build_one "cardano-submit-api" "cardano-submit-api" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_build_one "bech32" "bech32" || { cd "$origpwd" || true; return 1; }
+  _cardano_bins_build_one "tx-generator" "tx-generator" || { cd "$origpwd" || true; return 1; }
 
   if [ -z "$cli_rev" ]; then
     _cardano_bins_build_one "cardano-cli" "cardano-cli" || { cd "$origpwd" || true; return 1; }
@@ -61,6 +62,7 @@ cardano_bins_print_path_prepend() {
   _cardano_bins_add_bin_dir "cardano-node" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_add_bin_dir "cardano-submit-api" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_add_bin_dir "bech32" || { cd "$origpwd" || true; return 1; }
+  _cardano_bins_add_bin_dir "tx-generator" || { cd "$origpwd" || true; return 1; }
 
   if [ -z "$cli_rev" ]; then
     _cardano_bins_add_bin_dir "cardano-cli" || { cd "$origpwd" || true; return 1; }
