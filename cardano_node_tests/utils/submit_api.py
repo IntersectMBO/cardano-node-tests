@@ -80,7 +80,8 @@ def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
         elif response is not None:
             break
 
-        time.sleep(random.random())
+        if r < attempts:
+            time.sleep(random.uniform(0, r))
     else:
         err = f"Failed to submit the tx after {attempts} attempts."
         raise SubmitApiError(err)
