@@ -1735,7 +1735,7 @@ class TestNegativeWithdrawal:
         except clusterlib.CLIError as exc:
             err_str = str(exc)
             if (
-                "ConwayIncompleteWithdrawals" in err_str  # In cardano-node >= 10.7.0 and PV11
+                "ConwayIncompleteWithdrawals" not in err_str  # In cardano-node >= 10.7.0 and PV11
                 and "WithdrawalsNotInRewardsCERTS" not in err_str  # In cardano-node >= 8.8.0
                 and "WithdrawalsNotInRewardsDELEGS" not in err_str
             ):
