@@ -311,8 +311,12 @@ class TestRegisterAddr:
             )
         except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
             str_exc = str(exc)
-            if "(ValueNotConservedUTxO" in str_exc and VERSIONS.transaction_era >= VERSIONS.CONWAY:
-                issues.api_484.finish_test()
+            if "(ValueNotConservedUTxO" in str_exc:
+                if VERSIONS.transaction_era == VERSIONS.CONWAY:
+                    # The ledger issue 4566 will not be fixed in Conway
+                    issues.ledger_4566.finish_test(force_blocked=True)
+                if VERSIONS.transaction_era > VERSIONS.CONWAY:
+                    issues.ledger_4566.finish_test()
             if build_method == clusterlib_utils.BuildMethods.BUILD_EST and (
                 "The transaction balance is negative" in str_exc
                 or "does not balance in its use of assets" in str_exc
@@ -322,8 +326,12 @@ class TestRegisterAddr:
 
         # Check that the stake address is registered
         stake_addr_info = cluster.g_query.get_stake_addr_info(user_registered.stake.address)
-        if not stake_addr_info and VERSIONS.transaction_era >= VERSIONS.CONWAY:
-            issues.api_484.finish_test()
+        if not stake_addr_info:
+            if VERSIONS.transaction_era == VERSIONS.CONWAY:
+                # The ledger issue 4566 will not be fixed in Conway
+                issues.ledger_4566.finish_test(force_blocked=True)
+            if VERSIONS.transaction_era > VERSIONS.CONWAY:
+                issues.ledger_4566.finish_test()
         assert stake_addr_info, f"Stake address is not registered: {user_registered.stake.address}"
 
         # Check that the balance for source address was correctly updated and that key deposit

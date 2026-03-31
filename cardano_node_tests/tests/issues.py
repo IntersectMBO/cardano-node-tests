@@ -5,12 +5,6 @@ api_269 = blockers.GH(
     repo="IntersectMBO/cardano-api",
     message="Broken `nextEpochEligibleLeadershipSlots`.",
 )
-api_484 = blockers.GH(
-    issue=484,
-    repo="IntersectMBO/cardano-api",
-    fixed_in="10.7.0",  # Unknown yet, will be fixed/changed sometime in the future
-    message="Repeated certificates stripped from Conway transaction.",
-)
 api_829 = blockers.GH(
     issue=829,
     repo="IntersectMBO/cardano-api",
@@ -190,6 +184,11 @@ ledger_4349 = blockers.GH(
     repo="IntersectMBO/cardano-ledger",
     fixed_in="8.12.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="Inconsistent listing of DRep expiry.",
+)
+ledger_4566 = blockers.GH(
+    issue=4566,
+    repo="IntersectMBO/cardano-ledger",
+    message="Repeated certificates stripped from Conway transaction.",
 )
 ledger_4772 = blockers.GH(
     issue=4772,
