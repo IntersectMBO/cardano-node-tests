@@ -82,12 +82,12 @@ class GH:
         """Check if an issue is blocked."""
         return self._issue_blocked_in_version(VERSIONS.node)
 
-    def finish_test(self) -> None:
+    def finish_test(self, force_blocked: bool = False) -> None:
         """Fail or Xfail test with GitHub issue reference."""
         reason = f"{self.gh_issue}: {self.message}"
         log_message = f"{self.gh_issue.url} => {self.message}"
 
-        if self.is_blocked():
+        if force_blocked or self.is_blocked():
             LOGGER.warning(f"XFAIL: {log_message}")
             pytest.xfail(reason)
         else:
