@@ -30,13 +30,37 @@ Run tests easily using GitHub Actions:
 
 ---
 
-## 🛠️ Running Tests Locally with Nix
+## 🐳 Running Tests in a Container
+
+The `runner/runc.sh` script builds a container image and runs tests inside it using **podman** or **docker** (whichever is installed).
+
+**Auto-detection:** if the host has `/nix`, it is bind-mounted into an Alpine container. Otherwise a NixOS container with Nix pre-installed is used.
+
+```sh
+./runner/runc.sh NODE_REV="10.7.0" UTXO_BACKEND=disk ./.github/regression.sh
+```
+
+Run a specific test:
+
+```sh
+./runner/runc.sh NODE_REV="10.7.0" TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k test_minting_one_token" ./.github/regression.sh
+```
+
+It is also possible to select a specific Linux distro and version for the container (Ubuntu, Debian, Linux Mint, or NixOS), for example:
+
+```sh
+./runner/runc.sh --ubuntu-container=24.04 NODE_REV="10.7.0" ./.github/regression.sh
+```
+
+> ℹ️ Run `./runner/runc.sh` without arguments to see all available options.
+
+---
+
+## 🛠️ Running Tests with Nix
 
 1. Install and configure Nix using the [official guide](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix).
 
-2. Clone this repository.
-
-3. Run the regression test suite:
+2. Run the regression test suite:
 
   ```sh
   ./.github/regression.sh
