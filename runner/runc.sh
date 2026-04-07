@@ -8,6 +8,7 @@
 # Usage:
 #   ./runc.sh [--nixos-container[=VERSION]] [--ubuntu-container[=VERSION]]
 #            [--debian-container[=VERSION]] [--mint-container[=VERSION]]
+#            [--extra-mount=HOST_PATH:CONTAINER_PATH]
 #            '<command>'
 #
 # Options:
@@ -20,6 +21,9 @@
 #                                 VERSION is the image tag, e.g. 'bookworm'.
 #   --mint-container[=VERSION]    Use a Linux Mint container (requires host
 #                                 /nix).  VERSION is the image tag.
+#   --extra-mount=HOST_PATH:CONTAINER_PATH  Bind-mount an additional path from
+#                                 the host into the container.  Can be specified
+#                                 multiple times to mount multiple paths.
 # See:
 # * NixOS: <https://hub.docker.com/r/nixos/nix/tags>
 # * Ubuntu: <https://hub.docker.com/_/ubuntu/tags>
@@ -42,8 +46,9 @@ else
   exit 1
 fi
 
-CONTAINER_TYPE=""     # empty = auto-detect; nixos, ubuntu, debian, mint
+CONTAINER_TYPE=""     # empty = auto-detect
 CONTAINER_VERSION="latest"
+EXTRA_MOUNTS=()
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -55,6 +60,8 @@ while [ $# -gt 0 ]; do
     --debian-container=*) CONTAINER_TYPE="debian"; CONTAINER_VERSION="${1#*=}"; shift ;;
     --mint-container)     CONTAINER_TYPE="mint";   shift ;;
     --mint-container=*)   CONTAINER_TYPE="mint";   CONTAINER_VERSION="${1#*=}"; shift ;;
+    --extra-mount=*)      EXTRA_MOUNTS+=("-v" "${1#*=}"); shift ;;
+    --) shift; break ;;
     *) break ;;
   esac
 done
@@ -74,7 +81,6 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # When running from a git worktree, .git is a file referencing the main repo's
 # .git directory.  The path it points to won't exist inside the container unless
 # we also mount the main .git directory at the same absolute path.
-EXTRA_MOUNTS=()
 if [ -f "$REPO_DIR/.git" ]; then
   GITDIR="$(sed -n 's/^gitdir: //p' "$REPO_DIR/.git" | head -n 1)"
   if [ -n "$GITDIR" ]; then
