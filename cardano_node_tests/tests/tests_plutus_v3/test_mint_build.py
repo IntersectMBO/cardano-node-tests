@@ -172,6 +172,21 @@ def run_scenario(
         *mint_txouts,
     ]
 
+    def _dump_cost() -> None:
+        try:  # noqa: SIM105
+            cluster_obj.g_transaction.calculate_plutus_script_cost(
+                src_address=payment_addr.address,
+                tx_name=plutus_v_record.script_file.name,
+                tx_files=tx_files_step2,
+                txins=mint_utxos,
+                txouts=txouts_step2,
+                mint=plutus_mint_data,
+            )
+        except clusterlib.CLIError:
+            pass
+
+    _dump_cost()
+
     try:
         tx_output_step2 = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster_obj,
