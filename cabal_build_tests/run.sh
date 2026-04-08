@@ -60,6 +60,7 @@ $container_manager build . \
   || exit 1
 
 $container_manager run \
+  --rm \
   --security-opt label=disable \
   -it \
   -e GIT_OBJECT="$GIT_OBJECT" \
