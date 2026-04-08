@@ -279,7 +279,7 @@ nix develop --accept-flake-config .#testenv --command bash -c '
 
 # Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
 # After any key is pressed, resume this script and stop all running cluster instances.
-if [ "${KEEP_CLUSTERS_RUNNING:-}" = 1 ]; then
+if is_truthy "${KEEP_CLUSTERS_RUNNING:-}"; then
   echo
   echo "KEEP_CLUSTERS_RUNNING is set, leaving clusters running until any key is pressed."
   echo "Press any key to continue..."
