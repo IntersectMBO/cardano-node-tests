@@ -69,7 +69,7 @@ jobs:
       byron_cluster: ${{ inputs.byron_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}
-      env-path: .github/env_regression
+      env-path: runner/env_regression
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}

@@ -30,7 +30,7 @@ cd "$REPODIR"
 export WORKDIR="$REPODIR/run_workdir"
 
 # shellcheck disable=SC1091
-. .github/stop_cluster_instances.sh
+. runner/stop_cluster_instances.sh
 
 _cleanup() {
   # stop all running cluster instances
@@ -82,7 +82,7 @@ echo "::group::Nix env setup step1"
 printf "start: %(%H:%M:%S)T\n" -1
 
 # shellcheck disable=SC1091
-. .github/source_cardano_node.sh
+. runner/source_cardano_node.sh
 
 # Prepare cardano-node for the base revision.
 # If BASE_TAR_URL is set, instead of using nix, download and extract binaries for base revision
@@ -104,7 +104,7 @@ PATH_PREPEND_UPGRADE="$(cardano_bins_print_path_prepend "${UPGRADE_CLI_REVISION:
 # Prepare cardano-cli for the upgrade revision if UPGRADE_CLI_REVISION is set
 if [ -n "${UPGRADE_CLI_REVISION:-}" ]; then
   # shellcheck disable=SC1091
-  . .github/source_cardano_cli.sh
+  . runner/source_cardano_cli.sh
   cardano_cli_build "$UPGRADE_CLI_REVISION" "_upgrade"
   PATH_PREPEND_UPGRADE="$(cardano_cli_print_path_prepend "_upgrade")${PATH_PREPEND_UPGRADE}"
 fi
@@ -125,7 +125,7 @@ nix develop --accept-flake-config .#testenv --command bash -c '
 
   echo "::group::Python venv setup step1"
   printf "start: %(%H:%M:%S)T\n" -1
-  . .github/setup_venv.sh clean
+  . runner/setup_venv.sh clean
   export PATH="${PATH_PREPEND_BASE}${PATH}"
   echo "::endgroup::"  # end group for "Python venv setup step1"
 
@@ -134,14 +134,14 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   df -h .
   # prepare scripts for stating cluster instance, start cluster instance, run smoke tests
   retval=0
-  ./.github/node_upgrade_pytest.sh step1 || retval="$?"
+  ./runner/node_upgrade_pytest.sh step1 || retval="$?"
   # retval 0 == all tests passed; 1 == some tests failed; > 1 == some runtime error and we do not want to continue
   [ "$retval" -le 1 ] || exit "$retval"
   echo "::endgroup::"  # end group for "Testrun Step1"
 
   echo "::group::Python venv setup steps 2 & 3"
   printf "start: %(%H:%M:%S)T\n" -1
-  . .github/setup_venv.sh clean
+  . runner/setup_venv.sh clean
   export PATH="${PATH_PREPEND_UPGRADE}${PATH}"
   echo "::endgroup::"  # end group for "Python venv setup steps 2 & 3"
 
@@ -150,7 +150,7 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   df -h .
   # update cluster nodes, run smoke tests
   retval=0
-  ./.github/node_upgrade_pytest.sh step2 || retval="$?"
+  ./runner/node_upgrade_pytest.sh step2 || retval="$?"
   [ "$retval" -le 1 ] || exit "$retval"
   echo "::endgroup::"  # end group for "Testrun Step2"
 
@@ -159,13 +159,13 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   df -h .
   # update the rest of cluster nodes, run smoke tests
   retval=0
-  ./.github/node_upgrade_pytest.sh step3 || retval="$?"
+  ./runner/node_upgrade_pytest.sh step3 || retval="$?"
   echo "::endgroup::"  # end group for "Testrun Step3"
 
   echo "::group::Teardown cluster & collect artifacts"
   printf "start: %(%H:%M:%S)T\n" -1
   df -h .
-  ./.github/node_upgrade_pytest.sh finish || :
+  ./runner/node_upgrade_pytest.sh finish || :
   exit $retval
 ' || retval="$?"
 
@@ -175,14 +175,14 @@ if [ ! -e "$WORKDIR/.nix_setup" ]; then
 fi
 
 # grep testing artifacts for errors
-./.github/grep_errors.sh
+./runner/grep_errors.sh
 
 _last_cleanup
 
 # prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
   # save testing artifacts
-  ./.github/save_artifacts.sh
+  ./runner/save_artifacts.sh
 fi
 
 exit "$retval"

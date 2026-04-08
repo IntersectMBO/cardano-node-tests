@@ -113,7 +113,7 @@ jobs:
         run: |
           # env
           echo "::group::Script setup"
-          .github/regression.sh
+          runner/regression.sh
           echo "::endgroup::"
       - name: Report test results
         if: (success() || failure()) && inputs.testrun_name

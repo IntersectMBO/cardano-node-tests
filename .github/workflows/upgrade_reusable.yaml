@@ -75,7 +75,7 @@ jobs:
         run: |
           # env
           echo "::group::Script setup"
-          ./.github/node_upgrade.sh
+          ./runner/node_upgrade.sh
           echo "::endgroup::"
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7

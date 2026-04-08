@@ -70,5 +70,5 @@ the synced data from the bootstrap directory.
 * Run the tests:
 
     ```sh
-    NODE_REV=10.5.1 BOOTSTRAP_DIR=~/path/to/preview_bootstrap ./.github/regression.sh
+    NODE_REV=10.5.1 BOOTSTRAP_DIR=~/path/to/preview_bootstrap ./runner/regression.sh
     ```

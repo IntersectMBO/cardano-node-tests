@@ -47,7 +47,7 @@ Nightly upgrade testing
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 * `Step 1 <https://cardano-tests-reports-3-74-115-22.nip.io/cardano-node-tests-nightly-upgrade/step1/>`__:  |nightly-upgrade-step1-badge|
-   * use the `latest cardano-node release <https://github.com/IntersectMBO/cardano-node-tests/blob/master/.github/env_nightly_upgrade>`__ for Mainnet
+   * use the `latest cardano-node release <https://github.com/IntersectMBO/cardano-node-tests/blob/master/runner/env_nightly_upgrade>`__ for Mainnet
    * Conway protocol version 10
    * Constitutional Committee has 5 members
    * smoke tests

@@ -19,10 +19,10 @@ export NUM_POOLS="${NUM_POOLS:-"10"}" CLUSTERS_COUNT=1 TEST_THREADS=0
 
 if [ -n "${INTERACTIVE:-""}" ]; then
   export ROLLBACK_PAUSE=1 TESTNET_VARIANT="mainnet_fast" PYTEST_ARGS="-s -k test_consensus_reached"
-  "$TOP_DIR/.github/regression.sh"
+  "$TOP_DIR/runner/regression.sh"
 else
   export TESTNET_VARIANT="conway_fast" PYTEST_ARGS="-k test_permanent_fork"
-  "$TOP_DIR/.github/regression.sh" || exit "$?"
+  "$TOP_DIR/runner/regression.sh" || exit "$?"
   export TESTNET_VARIANT="mainnet_fast" PYTEST_ARGS="-k test_consensus_reached"
-  "$TOP_DIR/.github/regression.sh"
+  "$TOP_DIR/runner/regression.sh"
 fi

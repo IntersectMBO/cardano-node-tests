@@ -7,7 +7,7 @@
 # the container at image-build time (single-user, no-daemon install).
 #
 # Usage (via runc.sh):
-#   ./runc.sh 'NODE_REV="10.7.0" MARKEXPR="testnets" ./.github/regression.sh'
+#   ./runc.sh 'NODE_REV="10.7.0" MARKEXPR="testnets" ./runner/regression.sh'
 
 set -eu
 

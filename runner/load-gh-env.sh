@@ -8,7 +8,7 @@
 # - COMMAND [ARGS...]: The command to execute with the loaded environment variables.
 #
 # Example:
-#  .github/load-gh-env.sh .github/env_nightly_dbsync MARKEXPR=dbsync .github/regression.sh
+#  runner/load-gh-env.sh runner/env_nightly_dbsync MARKEXPR=dbsync runner/regression.sh
 
 set -euo pipefail
 
