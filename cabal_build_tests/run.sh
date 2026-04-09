@@ -54,6 +54,7 @@ echo "Using base image: $BASE_IMAGE"
 echo "Building image: $TAG"
 
 $container_manager build . \
+  --pull \
   -f Dockerfile \
   --build-arg BASE_IMAGE="$BASE_IMAGE" \
   -t "$TAG" \
