@@ -28,5 +28,5 @@ jobs:
         run: |
           # env
           echo "::group::Script setup"
-          PY_COLORS=1 TEST_THREADS=0 PYTEST_ARGS="-k test_cli.py --skipall" ./.github/regression.sh
+          PY_COLORS=1 TEST_THREADS=0 PYTEST_ARGS="-k test_cli.py --skipall" ./runner/regression.sh
           echo "::endgroup::"

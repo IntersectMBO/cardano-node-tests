@@ -11,7 +11,7 @@ jobs:
     # reusable workflow from local repo and same branch as this config
     uses: ./.github/workflows/regression_reusable.yaml
     with:
-      env-path: .github/env_nightly_cli
+      env-path: runner/env_nightly_cli
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}

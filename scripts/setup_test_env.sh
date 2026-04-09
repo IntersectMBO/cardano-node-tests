@@ -37,7 +37,7 @@ rm -rf "${WORKDIR:?}"
 mkdir -p "${WORKDIR}/tmp"
 
 # shellcheck disable=SC1091
-. "$REPODIR/.github/setup_venv.sh"
+. "$REPODIR/runner/setup_venv.sh"
 
 cat > "$WORKDIR/activate" <<EoF
 if ! command -v cardano-node >/dev/null 2>&1; then

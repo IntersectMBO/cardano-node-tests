@@ -37,19 +37,19 @@ The `runner/runc.sh` script builds a container image and runs tests inside it us
 **Auto-detection:** if the host has `/nix`, it is bind-mounted into an Alpine container. Otherwise a NixOS container with Nix pre-installed is used.
 
 ```sh
-./runner/runc.sh NODE_REV="10.7.0" UTXO_BACKEND=disk ./.github/regression.sh
+./runner/runc.sh NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
 ```
 
 Run a specific test:
 
 ```sh
-./runner/runc.sh NODE_REV="10.7.0" TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k test_minting_one_token" ./.github/regression.sh
+./runner/runc.sh NODE_REV="10.7.0" TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k test_minting_one_token" ./runner/regression.sh
 ```
 
 It is also possible to select a specific Linux distro and version for the container (Ubuntu, Debian, Linux Mint, or NixOS), for example:
 
 ```sh
-./runner/runc.sh --ubuntu-container=24.04 NODE_REV="10.7.0" ./.github/regression.sh
+./runner/runc.sh --ubuntu-container=24.04 NODE_REV="10.7.0" ./runner/regression.sh
 ```
 
 > ℹ️ Run `./runner/runc.sh` without arguments to see all available options.
@@ -63,13 +63,13 @@ It is also possible to select a specific Linux distro and version for the contai
 2. Run the regression test suite:
 
   ```sh
-  ./.github/regression.sh
+  ./runner/regression.sh
   ```
 
   Or run the upgrade test suite:
 
   ```sh
-  ./.github/load-gh-env.sh .github/env_nightly_upgrade CI_BYRON_CLUSTER=false .github/node_upgrade.sh
+  ./runner/load-gh-env.sh runner/env_nightly_upgrade CI_BYRON_CLUSTER=false runner/node_upgrade.sh
   ```
 
 ---
@@ -81,7 +81,7 @@ It is also possible to select a specific Linux distro and version for the contai
 2. Run a specific test:
 
   ```sh
-  TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./.github/regression.sh
+  TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./runner/regression.sh
   ```
 
 3. Clean up by removing binaries from `.bin` after tests complete.
@@ -89,7 +89,7 @@ It is also possible to select a specific Linux distro and version for the contai
 > ℹ️ **Pro Tip:** Enable full CLI command logging:
 
   ```sh
-  PYTEST_ARGS="... --log-level=debug" ./.github/regression.sh
+  PYTEST_ARGS="... --log-level=debug" ./runner/regression.sh
   ```
 
 ---
@@ -180,19 +180,19 @@ You can fine-tune test runs using these environment variables:
 Run with 6 pools and mixed networking:
 
 ```sh
-NUM_POOLS=6 ./.github/regression.sh
+NUM_POOLS=6 ./runner/regression.sh
 ```
 
 Run selective tests with filtering:
 
 ```sh
-TEST_THREADS=15 PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./.github/regression.sh
+TEST_THREADS=15 PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'" MARKEXPR="not long" ./runner/regression.sh
 ```
 
 Run on preview testnet with specific node revision:
 
 ```sh
-NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./.github/regression.sh
+NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./runner/regression.sh
 ```
 
 ---

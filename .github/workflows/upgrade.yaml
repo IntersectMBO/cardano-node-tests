@@ -30,6 +30,6 @@ jobs:
       upgrade_rev: ${{ inputs.upgrade_rev }}
       upgrade_cli_rev: ${{ inputs.upgrade_cli_rev }}
       byron_cluster: ${{ inputs.byron_cluster }}
-      env-path: .github/env_upgrade
+      env-path: runner/env_upgrade
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

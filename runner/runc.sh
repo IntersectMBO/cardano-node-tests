@@ -31,9 +31,9 @@
 # * Mint: <https://hub.docker.com/u/linuxmintd>
 #
 # Examples:
-#   ./runc.sh NODE_REV="10.7.0" UTXO_BACKEND=disk ./.github/regression.sh
-#   ./runc.sh --nixos-container NODE_REV="10.7.0" UTXO_BACKEND=disk ./.github/regression.sh
-#   ./runc.sh --ubuntu-container=24.04 NODE_REV="10.7.0" UTXO_BACKEND=disk ./.github/regression.sh
+#   ./runc.sh NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
+#   ./runc.sh --nixos-container NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
+#   ./runc.sh --ubuntu-container=24.04 NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
 
 set -Eeuo pipefail
 
@@ -71,7 +71,7 @@ CMD="$*"
 # Validate required arguments
 if [ -z "$CMD" ]; then
   echo "Error: No command provided." >&2
-  echo "Usage: $0 [--nixos-container[=VERSION] | --ubuntu-container[=VERSION] | --debian-container[=VERSION] | --mint-container[=VERSION]] '<command>'" >&2
+  echo "Usage: $0 [--nixos-container[=VERSION] | --ubuntu-container[=VERSION] | --debian-container[=VERSION] | --mint-container[=VERSION] | --extra-mount=HOST_PATH:CONTAINER_PATH] '<command>'" >&2
   exit 1
 fi
 

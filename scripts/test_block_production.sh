@@ -28,4 +28,4 @@ export BLOCK_PRODUCTION_EPOCHS="${BLOCK_PRODUCTION_EPOCHS:-"100"}"
 
 export MIXED_UTXO_BACKENDS="mem disk" SESSION_TIMEOUT=10h CLUSTERS_COUNT=1 TEST_THREADS=0 PYTEST_ARGS="-k test_block_production"
 
-"$TOP_DIR/.github/regression.sh"
+"$TOP_DIR/runner/regression.sh"

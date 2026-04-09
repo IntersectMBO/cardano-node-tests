@@ -23,7 +23,7 @@ export PATH_PREPEND="${PWD}/.bin"
 . scripts/common.sh
 
 # shellcheck disable=SC1091
-. .github/stop_cluster_instances.sh
+. runner/stop_cluster_instances.sh
 
 # stop all running cluster instances
 stop_instances "$WORKDIR"
@@ -94,7 +94,7 @@ case "${DBSYNC_REV:-}" in
     ;;
   * )
     # shellcheck disable=SC1091
-    . .github/source_dbsync.sh
+    . runner/source_dbsync.sh
     ;;
 esac
 
@@ -107,7 +107,7 @@ case "${CARDANO_CLI_REV:-}" in
     ;;
   * )
     # shellcheck disable=SC1091
-    . .github/source_cardano_cli.sh
+    . runner/source_cardano_cli.sh
     cardano_cli_build "$CARDANO_CLI_REV"
     PATH_PREPEND="$(cardano_cli_print_path_prepend "")${PATH_PREPEND}"
     export PATH_PREPEND
@@ -121,7 +121,7 @@ case "${NODE_REV:-}" in
     ;;
 esac
 # shellcheck disable=SC1091
-. .github/source_cardano_node.sh
+. runner/source_cardano_node.sh
 cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
 PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
 export PATH_PREPEND
@@ -159,7 +159,7 @@ _cleanup_testnet_on_interrupt() {
 
   # shellcheck disable=SC2016
   nix develop --accept-flake-config .#testenv --command bash -c '
-    . .github/setup_venv.sh
+    . runner/setup_venv.sh
     export PATH="$PATH_PREPEND":"$PATH"
     export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
     cleanup_dir="${_PYTEST_CURRENT}/../cleanup-${_PYTEST_CURRENT##*/}-script"
@@ -254,7 +254,7 @@ nix develop --accept-flake-config .#testenv --command bash -c '
 
   echo "::group::Python venv setup"
   printf "start: %(%H:%M:%S)T\n" -1
-  . .github/setup_venv.sh clean
+  . runner/setup_venv.sh clean
   echo "::endgroup::"  # end group for "Python venv setup"
 
   echo "::group::🧪 Testrun"
@@ -263,19 +263,19 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   export PATH="$PATH_PREPEND":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
   retval=0
-  ./.github/run_tests.sh "${RUN_TARGET:-"tests"}" || retval="$?"
+  ./runner/run_tests.sh "${RUN_TARGET:-"tests"}" || retval="$?"
   df -h .
   echo "::endgroup::"  # end group for "Testrun"
 
   echo "::group::Collect artifacts & teardown cluster"
   printf "start: %(%H:%M:%S)T\n" -1
-  ./.github/cli_coverage.sh || :
-  ./.github/reqs_coverage.sh || :
+  ./runner/cli_coverage.sh || :
+  ./runner/reqs_coverage.sh || :
   exit "$retval"
 ' || retval="$?"
 
 # grep testing artifacts for errors
-./.github/grep_errors.sh
+./runner/grep_errors.sh
 
 # Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
 # After any key is pressed, resume this script and stop all running cluster instances.
@@ -297,10 +297,10 @@ if [ -n "${GITHUB_ACTIONS:-}" ]; then
   fi
 
   # create results archive
-  ./.github/create_results.sh || :
+  ./runner/create_results.sh || :
 
   # save testing artifacts
-  ./.github/save_artifacts.sh || :
+  ./runner/save_artifacts.sh || :
 fi
 
 exit "$retval"

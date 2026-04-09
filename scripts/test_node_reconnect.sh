@@ -14,4 +14,4 @@ export \
   TESTNET_VARIANT="mainnet_fast" \
   PYTEST_ARGS="-s -k TestNodeReconnect"
 
-"$TOP_DIR/.github/regression.sh"
+"$TOP_DIR/runner/regression.sh"
