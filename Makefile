@@ -1,5 +1,7 @@
 .DEFAULT_GOAL := help
 
+TESTNET_VARIANT ?= conway_fast
+
 .PHONY: install
 install: ## Install cardano_node_tests and its dependencies into a virtual environment
 	./scripts/setup_dev_venv.sh
@@ -25,11 +27,16 @@ reinstall-editable: ## Reinstall python package in editable mode from a given gi
 	@./scripts/reinstall_editable.sh "$(repo)"
 
 .PHONY: test-env
-test-env: ## Set up test environment
-	@./scripts/setup_test_env.sh conway
+test-env: ## Set up test environment (variant: TESTNET_VARIANT=conway_fast)
+	@./scripts/setup_test_env.sh $(TESTNET_VARIANT:%_fast=%)
 
-.PHONY: update-lockfile
-update-lockfile: ## Update uv lockfile
+# update flake.lock
+.PHONY: update-flake-lock
+update-flake-lock: ## Update flake.lock
+	nix flake update --accept-flake-config
+
+.PHONY: update-uv-lock
+update-uv-lock: ## Update uv lockfile
 	@exit_code=0; \
 	./scripts/uv_update_lock.sh || exit_code=$$?; \
 	if [ $$exit_code -ne 0 ] && [ $$exit_code -ne 10 ]; then \
@@ -60,6 +67,31 @@ build-doc: ## Build sphinx documentation
 .PHONY: doc
 doc: ## Build and deploy sphinx documentation
 	./scripts/deploy_doc.sh
+
+# prepare cluster scripts for the given variant
+.PHONY: prepare-cluster-scripts
+prepare-cluster-scripts: ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=conway_fast)
+	prepare-cluster-scripts -c -d dev_workdir/$(TESTNET_VARIANT) -t $(TESTNET_VARIANT)
+
+# start the local testnet cluster
+.PHONY: start-cluster
+start-cluster: ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/start-cluster" ]; then \
+		echo "Error: dev_workdir/$(TESTNET_VARIANT)/start-cluster not found." >&2; \
+		echo "Run 'make prepare-cluster-scripts' first." >&2; \
+		exit 1; \
+	fi
+	./dev_workdir/$(TESTNET_VARIANT)/start-cluster
+
+# stop the local testnet cluster
+.PHONY: stop-cluster
+stop-cluster: ## Stop local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/stop-cluster" ]; then \
+		echo "Error: dev_workdir/$(TESTNET_VARIANT)/stop-cluster not found." >&2; \
+		echo "Run 'make prepare-cluster-scripts' first." >&2; \
+		exit 1; \
+	fi
+	./dev_workdir/$(TESTNET_VARIANT)/stop-cluster
 
 .PHONY: help
 help: ## Show this help message

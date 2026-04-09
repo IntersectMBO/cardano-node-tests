@@ -69,7 +69,7 @@ It is also possible to select a specific Linux distro and version for the contai
   Or run the upgrade test suite:
 
   ```sh
-  ./runner/load-gh-env.sh runner/env_nightly_upgrade CI_BYRON_CLUSTER=false runner/node_upgrade.sh
+  ./runner/load-gh-env.sh runner/env_nightly_upgrade CI_BYRON_CLUSTER=false ./runner/node_upgrade.sh
   ```
 
 ---
@@ -120,7 +120,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 4. Launch the local testnet cluster:
 
   ```sh
-  ./dev_workdir/conway_fast/start-cluster
+  make start-cluster
   ```
 
 5. Run your tests:
@@ -133,7 +133,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 6. Stop the testnet cluster:
 
   ```sh
-  ./dev_workdir/conway_fast/stop-cluster
+  make stop-cluster
   ```
 
 > ℹ️ **Pro Tip:** Next time, you can omit step 2 if the environment is already set up.
@@ -228,10 +228,11 @@ make check-dev-env
 ### Start Development Testnet Cluster
 
 ```sh
-prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
-./dev_workdir/conway_fast/start-cluster
+make prepare-cluster-scripts
+make start-cluster
 ```
 
+> The default cluster variant is `conway_fast`. Override with `CLUSTER_VARIANT=<variant>`, e.g. `make prepare-cluster-scripts CLUSTER_VARIANT=conway_slow`.
 > Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
 
 ### Run Individual Tests
@@ -262,7 +263,7 @@ make reinstall-editable repo=../cardano-clusterlib-py
 This step is required after modifying dependencies in `pyproject.toml`.
 
 ```sh
-make update-lockfile
+make update-uv-lock
 ```
 
 ### Build and Deploy Documentation
