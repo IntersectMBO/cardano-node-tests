@@ -58,6 +58,8 @@ _cleanup
 rm -rf "${WORKDIR:?}"
 mkdir -p "$WORKDIR"
 
+export PYTHONPYCACHEPREFIX="${WORKDIR}/__pycache__"
+
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
