@@ -443,7 +443,8 @@ class TestNegative:
             dst_addr=payment_addrs[1],
             plutus_op=plutus_op,
             amount=amount,
-            collateral_fraction_offset=0.9,
+            # Will use the minimal default collateral amount
+            collateral_fraction_offset=0.0,
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:

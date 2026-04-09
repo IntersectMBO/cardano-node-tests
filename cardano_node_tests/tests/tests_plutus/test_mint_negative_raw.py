@@ -752,7 +752,10 @@ class TestNegativeCollateral:
         execution_cost = dataclasses.replace(plutus_v_record.execution_cost, fixed_cost=2_000_000)
 
         minting_cost = plutus_common.compute_cost(
-            execution_cost=execution_cost, protocol_params=cluster.g_query.get_protocol_params()
+            execution_cost=execution_cost,
+            protocol_params=cluster.g_query.get_protocol_params(),
+            # Will use the minimal default collateral amount
+            collateral_fraction_offset=0.0,
         )
 
         # Step 1: fund the token issuer
