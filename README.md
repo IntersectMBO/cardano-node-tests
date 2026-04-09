@@ -30,47 +30,39 @@ Run tests easily using GitHub Actions:
 
 ---
 
-## 🐳 Running Tests in a Container
+## 🖥️ Running Tests Locally
 
-The `runner/runc.sh` script builds a container image and runs tests inside it using **podman** or **docker** (whichever is installed).
-
-**Auto-detection:** if the host has `/nix`, it is bind-mounted into an Alpine container. Otherwise a NixOS container with Nix pre-installed is used.
+The preferred way is via `runner/runc.sh`, which builds a container image and runs tests inside it using **podman** or **docker**. If the host has `/nix`, it is bind-mounted into an Alpine container; otherwise a self-contained NixOS container is used — **no local Nix installation required**.
 
 ```sh
-./runner/runc.sh NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
+./runner/runc.sh ./runner/regression.sh
 ```
 
 Run a specific test:
 
 ```sh
-./runner/runc.sh NODE_REV="10.7.0" TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k test_minting_one_token" ./runner/regression.sh
+./runner/runc.sh -- TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k test_minting_one_token" ./runner/regression.sh
 ```
 
-It is also possible to select a specific Linux distro and version for the container (Ubuntu, Debian, Linux Mint, or NixOS), for example:
+A specific Linux distro can be selected (Ubuntu, Debian, Linux Mint, or NixOS):
 
 ```sh
-./runner/runc.sh --ubuntu-container=24.04 NODE_REV="10.7.0" ./runner/regression.sh
+./runner/runc.sh --ubuntu-container=24.04 -- ./runner/regression.sh
 ```
 
 > ℹ️ Run `./runner/runc.sh` without arguments to see all available options.
 
----
+Alternatively, with Nix available on the host, tests can be run directly:
 
-## 🛠️ Running Tests with Nix
+```sh
+./runner/regression.sh
+```
 
-1. Install and configure Nix using the [official guide](https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix).
+Or run the upgrade test suite:
 
-2. Run the regression test suite:
-
-  ```sh
-  ./runner/regression.sh
-  ```
-
-  Or run the upgrade test suite:
-
-  ```sh
-  ./runner/load-gh-env.sh runner/env_nightly_upgrade CI_BYRON_CLUSTER=false runner/node_upgrade.sh
-  ```
+```sh
+./runner/load-gh-env.sh runner/env_nightly_upgrade CI_BYRON_CLUSTER=false ./runner/node_upgrade.sh
+```
 
 ---
 
@@ -81,7 +73,7 @@ It is also possible to select a specific Linux distro and version for the contai
 2. Run a specific test:
 
   ```sh
-  TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./runner/regression.sh
+  ./runner/runc.sh -- TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./runner/regression.sh
   ```
 
 3. Clean up by removing binaries from `.bin` after tests complete.
@@ -120,7 +112,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 4. Launch the local testnet cluster:
 
   ```sh
-  ./dev_workdir/conway_fast/start-cluster
+  make start-cluster
   ```
 
 5. Run your tests:
@@ -133,7 +125,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 6. Stop the testnet cluster:
 
   ```sh
-  ./dev_workdir/conway_fast/stop-cluster
+  make stop-cluster
   ```
 
 > ℹ️ **Pro Tip:** Next time, you can omit step 2 if the environment is already set up.
@@ -192,8 +184,10 @@ TEST_THREADS=15 PYTEST_ARGS="-k 'test_stake_pool_low_cost or test_reward_amount'
 Run on preview testnet with specific node revision:
 
 ```sh
-NODE_REV=10.5.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./runner/regression.sh
+NODE_REV=10.6.3 BOOTSTRAP_DIR=~/tmp/preview_config/ ./runner/regression.sh
 ```
+
+> ℹ️ **Pro Tip:** All the examples above can be prefixed with `./runner/runc.sh --` to run inside the containerized environment.
 
 ---
 
@@ -228,10 +222,11 @@ make check-dev-env
 ### Start Development Testnet Cluster
 
 ```sh
-prepare-cluster-scripts -c -d dev_workdir/conway_fast -t conway_fast
-./dev_workdir/conway_fast/start-cluster
+make prepare-cluster-scripts
+make start-cluster
 ```
 
+> The default cluster variant is `conway_fast`. Override with `TESTNET_VARIANT=<variant>`, e.g. `make prepare-cluster-scripts TESTNET_VARIANT=conway_slow`.
 > Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
 
 ### Run Individual Tests
@@ -262,7 +257,7 @@ make reinstall-editable repo=../cardano-clusterlib-py
 This step is required after modifying dependencies in `pyproject.toml`.
 
 ```sh
-make update-lockfile
+make update-uv-lock
 ```
 
 ### Build and Deploy Documentation

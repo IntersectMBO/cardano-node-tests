@@ -17,7 +17,7 @@ case "$cmd" in
   make)
     subcmd=${2-}
     case "$subcmd" in
-      update-lockfile | lint)
+      update-uv-lock | lint)
         # shellcheck disable=SC1091
         source .source || source .source.dev
         ;;

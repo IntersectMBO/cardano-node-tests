@@ -1,39 +1,42 @@
-# install cardano_node_tests and its dependencies into a virtual environment
+.DEFAULT_GOAL := help
+
+TESTNET_VARIANT ?= conway_fast
+
 .PHONY: install
-install:
+install: ## Install cardano_node_tests and its dependencies into a virtual environment
 	./scripts/setup_dev_venv.sh
 
-# check if development environment is set up correctly
 .PHONY: check-dev-env
-check-dev-env:
+check-dev-env: ## Check if development environment is set up correctly
 	@./scripts/check_dev_env.sh
 
-# update cardano-node binaries from a given git repository
 .PHONY: update-node-bins
-update-node-bins:
+update-node-bins: ## Update cardano-node binaries from a given git repository (usage: make update-node-bins repo=/path/to/cardano-node-repo)
 	@if [ -z "$(repo)" ]; then \
 		echo "Usage: make update-node-bins repo=/path/to/cardano-node-repo" >&2; \
 		exit 1; \
 	fi
 	@./scripts/update_node_bins.sh "$(repo)"
 
-# reinstall python package in editable mode from a given git repository
 .PHONY: reinstall-editable
-reinstall-editable:
+reinstall-editable: ## Reinstall python package in editable mode from a given git repository (usage: make reinstall-editable repo=/path/to/package_root)
 	@if [ -z "$(repo)" ]; then \
 		echo "Usage: make reinstall-editable repo=/path/to/package_root" >&2; \
 		exit 1; \
 	fi
 	@./scripts/reinstall_editable.sh "$(repo)"
 
-# set up test environment
 .PHONY: test-env
-test-env:
-	@./scripts/setup_test_env.sh conway
+test-env: ## Set up test environment (variant: TESTNET_VARIANT=conway_fast)
+	@./scripts/setup_test_env.sh $(TESTNET_VARIANT:%_fast=%)
 
-# update uv lockfile
-.PHONY: update-lockfile
-update-lockfile:
+# update flake.lock
+.PHONY: update-flake-lock
+update-flake-lock: ## Update flake.lock
+	nix flake update --accept-flake-config
+
+.PHONY: update-uv-lock
+update-uv-lock: ## Update uv lockfile
 	@exit_code=0; \
 	./scripts/uv_update_lock.sh || exit_code=$$?; \
 	if [ $$exit_code -ne 0 ] && [ $$exit_code -ne 10 ]; then \
@@ -43,28 +46,55 @@ update-lockfile:
 		exit $$exit_code; \
 	fi
 
-# initialize linters
 .PHONY: init-lint
-init-lint:
+init-lint: ## Initialize linters
 	pre-commit clean
 	pre-commit gc
 	find . -path '*/.mypy_cache/*' -delete
 	pre-commit uninstall
 	pre-commit install --install-hooks
 
-# run linters
 .PHONY: lint
-lint:
+lint: ## Run linters
 	pre-commit run -a --show-diff-on-failure --color=always
 
-# build sphinx documentation
 .PHONY: build-doc
-build-doc:
+build-doc: ## Build sphinx documentation
 	mkdir -p src_docs/build
 	$(MAKE) -C src_docs clean
 	$(MAKE) -C src_docs html
 
-# build and deploy sphinx documentation
 .PHONY: doc
-doc:
+doc: ## Build and deploy sphinx documentation
 	./scripts/deploy_doc.sh
+
+# prepare cluster scripts for the given variant
+.PHONY: prepare-cluster-scripts
+prepare-cluster-scripts: ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=conway_fast)
+	prepare-cluster-scripts -c -d dev_workdir/$(TESTNET_VARIANT) -t $(TESTNET_VARIANT)
+
+# start the local testnet cluster
+.PHONY: start-cluster
+start-cluster: ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/start-cluster" ]; then \
+		echo "Error: dev_workdir/$(TESTNET_VARIANT)/start-cluster not found." >&2; \
+		echo "Run 'make prepare-cluster-scripts' first." >&2; \
+		exit 1; \
+	fi
+	./dev_workdir/$(TESTNET_VARIANT)/start-cluster
+
+# stop the local testnet cluster
+.PHONY: stop-cluster
+stop-cluster: ## Stop local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/stop-cluster" ]; then \
+		echo "Error: dev_workdir/$(TESTNET_VARIANT)/stop-cluster not found." >&2; \
+		echo "Run 'make prepare-cluster-scripts' first." >&2; \
+		exit 1; \
+	fi
+	./dev_workdir/$(TESTNET_VARIANT)/stop-cluster
+
+.PHONY: help
+help: ## Show this help message
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} \
+		/^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 }' \
+		$(MAKEFILE_LIST)
