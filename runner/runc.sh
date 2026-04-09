@@ -191,6 +191,7 @@ echo "Command:           $CMD"
 echo
 
 $container_manager build "$SCRIPT_DIR" \
+  --pull \
   -f "$SCRIPT_DIR/Dockerfile" \
   --build-arg BASE_IMAGE="$BASE_IMAGE" \
   -t "$TAG" \
