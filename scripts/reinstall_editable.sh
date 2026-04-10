@@ -9,9 +9,9 @@ if [ $# -ne 1 ]; then
   usage >&2
   exit 2
 fi
-REPO_PATH="$(readlink -m "$1")"
+REPO_PATH="$(readlink -f "$1")"
 
-TOP_DIR="$(readlink -m "${0%/*}/..")"
+TOP_DIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 cd "$TOP_DIR"
 
 # Activate python virtual environment

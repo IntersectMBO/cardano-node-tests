@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-tests_repo="$(readlink -m "${0%/*}/..")"
+tests_repo="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine test repo dir, exiting." >&2; exit 1; }
 
 get_coverage() {
   if [ "$(echo "$tests_repo"/.cli_coverage/*)" = "$tests_repo/.cli_coverage/*" ] || ! command -v cardano-cli >/dev/null 2>&1; then

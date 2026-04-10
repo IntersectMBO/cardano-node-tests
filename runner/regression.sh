@@ -13,7 +13,7 @@ df -h .
 
 retval=0
 
-REPODIR="$(readlink -m "${0%/*}/..")"
+REPODIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine repo dir, exiting." >&2; exit 1; }
 cd "$REPODIR"
 
 export WORKDIR="$REPODIR/run_workdir"
@@ -151,7 +151,7 @@ _cleanup_testnet_on_interrupt() {
 
   _PYTEST_CURRENT="$(find "$WORKDIR" -type l -name pytest-current)"
   [ -z "$_PYTEST_CURRENT" ] && return
-  _PYTEST_CURRENT="$(readlink -m "$_PYTEST_CURRENT")"
+  _PYTEST_CURRENT="$(readlink -f "$_PYTEST_CURRENT")"
   export _PYTEST_CURRENT
 
   echo "::endgroup::" # end group for the group that was interrupted

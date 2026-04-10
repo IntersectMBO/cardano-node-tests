@@ -133,9 +133,9 @@ if is_truthy "${SMASH:-}" && [ ! -e "${WORKDIR}/smash-server/bin/cardano-smash-s
 fi
 
 # Add `cardano-db-sync` and `cardano-smash-server` to PATH_PREPEND
-PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m "${WORKDIR}/db-sync-node/bin")"
+PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -f "${WORKDIR}/db-sync-node/bin")"
 if [ -e smash-server/bin/cardano-smash-server ]; then
-  PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -m "${WORKDIR}/smash-server/bin")"
+  PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -f "${WORKDIR}/smash-server/bin")"
 fi
 export PATH_PREPEND
 

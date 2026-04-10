@@ -24,7 +24,7 @@ case "${1:-""}" in
 esac
 
 ORIG_PWD="$PWD"
-REPODIR="$(readlink -m "${0%/*}/..")"
+REPODIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine repo dir, exiting." >&2; exit 1; }
 export WORKDIR="$REPODIR/dev_workdir"
 
 if [ "$ORIG_PWD" = "$WORKDIR" ]; then

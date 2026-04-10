@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-TOP_DIR="$(readlink -m "${0%/*}/..")"
+TOP_DIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 
 export NUM_POOLS="${NUM_POOLS:-"10"}" CLUSTERS_COUNT=1 TEST_THREADS=0
 

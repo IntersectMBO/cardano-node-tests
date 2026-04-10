@@ -4,7 +4,7 @@ set -euo pipefail
 
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
 
-tests_repo="$(readlink -m "${0%/*}/..")"
+tests_repo="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine tests repo dir, exiting." >&2; exit 1; }
 
 get_coverage() {
   if [ ! -e "$ARTIFACTS_DIR" ]; then

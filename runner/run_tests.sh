@@ -37,7 +37,7 @@ ARTIFACTS_DIR="${ARTIFACTS_DIR:-.artifacts}"
 COVERAGE_DIR="${COVERAGE_DIR:-.cli_coverage}"
 REPORTS_DIR="${REPORTS_DIR:-.reports}"
 
-_TOP_DIR="$(readlink -m "${0%/*}/..")"
+_TOP_DIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 # shellcheck disable=SC1091
 . "$_TOP_DIR/scripts/common.sh"
 

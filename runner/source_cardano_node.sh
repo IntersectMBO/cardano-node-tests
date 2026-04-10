@@ -55,7 +55,7 @@ cardano_bins_print_path_prepend() {
     local out="${out_prefix}-build${node_bindir_postfix}"
     local bin_dir
 
-    bin_dir="$(readlink -m "${out}/bin")" || return 1
+    bin_dir="$(readlink -f "${out}/bin")" || return 1
     node_path_prepend="${node_path_prepend:+"${node_path_prepend}:"}${bin_dir}"
   }
 
