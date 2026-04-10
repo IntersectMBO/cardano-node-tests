@@ -1,7 +1,6 @@
 """Utilities for `cardano-submit-api` REST service."""
 
 import binascii
-import contextlib
 import dataclasses
 import json
 import logging
@@ -68,20 +67,16 @@ def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
         if r > 1:
             LOGGER.warning(f"Resubmitting transaction to submit-api. Attempt {r}/{attempts}.")
 
-        response = None
-        with contextlib.suppress(requests.exceptions.ReadTimeout):
-            response = http_client.get_session().post(
-                url, headers=headers, data=cbor_binary, timeout=60
-            )
+        response = http_client.get_session().post(
+            url, headers=headers, data=cbor_binary, timeout=300
+        )
 
-        if response is not None and not response and "MempoolTxTooSlow" in response.text:
-            # Repeat the request as the transaction didn't make it to mempool
-            pass
-        elif response is not None:
-            break
+        if not response and "MempoolTxTooSlow" in response.text:
+            if r < attempts:
+                time.sleep(random.uniform(0, r))
+            continue
 
-        if r < attempts:
-            time.sleep(random.uniform(0, r))
+        break
     else:
         err = f"Failed to submit the tx after {attempts} attempts."
         raise SubmitApiError(err)
@@ -132,20 +127,21 @@ def submit_tx(
         wait_blocks: A number of new blocks to wait for (default = 2).
     """
     txid = ""
-    err = None
+    err: Exception | None = None
     attempts = 20
     for r in range(1, attempts + 1):
         if r == 1:
-            txid = submit_tx_bare(tx_file=tx_file).txid
+            try:
+                txid = submit_tx_bare(tx_file=tx_file).txid
+            except requests.exceptions.ReadTimeout as exc:
+                err = exc
         else:
-            if not txid:
-                msg = "The TxId is not known."
-                raise SubmitApiError(msg)
             LOGGER.warning(
                 f"Resubmitting transaction '{txid}' (from '{tx_file}'). Attempt {r}/{attempts}."
             )
             try:
                 submit_tx_bare(tx_file=tx_file)
+                err = None
             except SubmitApiError as exc:
                 # Check if resubmitting failed because an input UTxO was already spent
                 exc_str = str(exc)
@@ -157,6 +153,12 @@ def submit_tx(
                     raise
                 err = exc
                 # If here, the TX is likely still in mempool and we need to wait
+            except requests.exceptions.ReadTimeout as exc:
+                # If here, the TX might have been successfully submitted, but
+                # the timeout occurred before we got response.
+                err = exc
+
+        txid = txid or cluster_obj.g_transaction.get_txid(tx_file=tx_file)
 
         cluster_obj.wait_for_new_block(wait_blocks)
 
