@@ -222,12 +222,13 @@ make check-dev-env
 ### Start Development Testnet Cluster
 
 ```sh
-make prepare-cluster-scripts
+make cluster-scripts
 make start-cluster
 ```
 
-> The default cluster variant is `conway_fast`. Override with `TESTNET_VARIANT=<variant>`, e.g. `make prepare-cluster-scripts TESTNET_VARIANT=conway_slow`.
-> Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
+The default cluster variant is `conway_fast`. Override with `TESTNET_VARIANT=<variant>`, e.g. `make cluster-scripts TESTNET_VARIANT=conway_slow`.
+
+Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
 
 ### Run Individual Tests
 

@@ -69,8 +69,8 @@ doc: ## Build and deploy sphinx documentation
 	./scripts/deploy_doc.sh
 
 # prepare cluster scripts for the given variant
-.PHONY: prepare-cluster-scripts
-prepare-cluster-scripts: ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=conway_fast)
+.PHONY: cluster-scripts
+cluster-scripts: ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=conway_fast)
 	prepare-cluster-scripts -c -d dev_workdir/$(TESTNET_VARIANT) -t $(TESTNET_VARIANT)
 
 # start the local testnet cluster
@@ -78,7 +78,7 @@ prepare-cluster-scripts: ## Prepare local testnet cluster scripts (variant: TEST
 start-cluster: ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
 	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/start-cluster" ]; then \
 		echo "Error: dev_workdir/$(TESTNET_VARIANT)/start-cluster not found." >&2; \
-		echo "Run 'make prepare-cluster-scripts' first." >&2; \
+		echo "Run 'make cluster-scripts' first." >&2; \
 		exit 1; \
 	fi
 	./dev_workdir/$(TESTNET_VARIANT)/start-cluster
@@ -88,7 +88,7 @@ start-cluster: ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_f
 stop-cluster: ## Stop local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
 	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/stop-cluster" ]; then \
 		echo "Error: dev_workdir/$(TESTNET_VARIANT)/stop-cluster not found." >&2; \
-		echo "Run 'make prepare-cluster-scripts' first." >&2; \
+		echo "Run 'make cluster-scripts' first." >&2; \
 		exit 1; \
 	fi
 	./dev_workdir/$(TESTNET_VARIANT)/stop-cluster
