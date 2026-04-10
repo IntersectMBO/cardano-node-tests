@@ -99,7 +99,7 @@ class ClusterLib(clusterlib.ClusterLib):
         """
         # Set a default timeout. This is a change of behavior compared to the base class!
         if timeout is None:
-            timeout = 120
+            timeout = 300
 
         cli_args_strs_all = [str(arg) for arg in cli_args]
         if add_default_args:
