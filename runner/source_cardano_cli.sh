@@ -34,7 +34,7 @@ cardano_cli_print_path_prepend() {
 
   local out="cardano-cli-build${node_bindir_postfix}"
   local bin_dir
-  bin_dir="$(readlink -m "${out}/bin")" || { cd "$origpwd" || true; return 1; }
+  bin_dir="$(readlink -f "${out}/bin")" || { cd "$origpwd" || true; return 1; }
 
   cd "$origpwd" || return 1
   echo "${bin_dir:+"${bin_dir}:"}"

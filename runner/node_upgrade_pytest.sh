@@ -203,10 +203,10 @@ elif [ "$1" = "step2" ]; then
   # print path to cardano-node binaries
   echo "pool1 node binary:"
   pool1_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool1)"
-  readlink -m "/proc/$pool1_pid/exe"
+  readlink -f "/proc/$pool1_pid/exe"
   echo "pool3 node binary:"
   pool3_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool3)"
-  readlink -m "/proc/$pool3_pid/exe"
+  readlink -f "/proc/$pool3_pid/exe"
 
   # check that nodes are running
   if [ "$pool1_pid" = 0 ] || [ "$pool3_pid" = 0 ]; then
@@ -361,10 +361,10 @@ elif [ "$1" = "step3" ]; then
   # print path to cardano-node binaries
   echo "pool1 node binary:"
   pool1_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool1)"
-  readlink -m "/proc/$pool1_pid/exe"
+  readlink -f "/proc/$pool1_pid/exe"
   echo "pool3 node binary:"
   pool3_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool3)"
-  readlink -m "/proc/$pool3_pid/exe"
+  readlink -f "/proc/$pool3_pid/exe"
 
   # check that nodes are running
   if [ "$pool1_pid" = 0 ] || [ "$pool3_pid" = 0 ]; then
