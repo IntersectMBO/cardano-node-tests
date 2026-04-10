@@ -48,6 +48,7 @@ fi
 
 CONTAINER_TYPE=""     # empty = auto-detect
 CONTAINER_VERSION="latest"
+MINT_VERSION="22.3"
 EXTRA_MOUNTS=()
 
 while [ $# -gt 0 ]; do
@@ -59,7 +60,7 @@ while [ $# -gt 0 ]; do
     --debian-container)   CONTAINER_TYPE="debian"; shift ;;
     --debian-container=*) CONTAINER_TYPE="debian"; CONTAINER_VERSION="${1#*=}"; shift ;;
     --mint-container)     CONTAINER_TYPE="mint";   shift ;;
-    --mint-container=*)   CONTAINER_TYPE="mint";   CONTAINER_VERSION="${1#*=}"; shift ;;
+    --mint-container=*)   CONTAINER_TYPE="mint";   MINT_VERSION="${1#*=}";      shift ;;
     --extra-mount=*)      EXTRA_MOUNTS+=("-v" "${1#*=}"); shift ;;
     --) shift; break ;;
     *) break ;;
@@ -162,7 +163,7 @@ case "$CONTAINER_TYPE" in
     case "$CONTAINER_TYPE" in
       ubuntu) BASE_IMAGE="docker.io/library/ubuntu:${CONTAINER_VERSION}" ;;
       debian) BASE_IMAGE="docker.io/library/debian:${CONTAINER_VERSION}" ;;
-      mint)   BASE_IMAGE="docker.io/linuxmintd/mint${CONTAINER_VERSION}-amd64:latest" ;;
+      mint)   BASE_IMAGE="docker.io/linuxmintd/mint${MINT_VERSION}-amd64:latest" ;;
     esac
     echo "Host /nix found; mounting into ${CONTAINER_TYPE} container."
     ;;
