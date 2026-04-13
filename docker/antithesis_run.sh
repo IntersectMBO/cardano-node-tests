@@ -45,5 +45,15 @@ unset _output_dir
 # 4. Hand off to regression.sh.  The shebang in that script will invoke
 #    `nix develop .#base` which now resolves entirely from the local nix
 #    store (offline = true).
+#
+#    Do not exec directly: Antithesis treats any non-zero container exit
+#    code (other than 137/143) as an error property violation.  Test
+#    failures are expected and communicated via SDK assertions, not the
+#    process exit code.  Always exit 0 so the container is not flagged.
 # ---------------------------------------------------------------------------
-exec /work/.github/regression.sh
+set +e
+/work/.github/regression.sh
+_rc=$?
+set -e
+echo "regression.sh finished with exit code ${_rc}"
+exit 0
