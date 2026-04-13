@@ -15,7 +15,7 @@ if [ $# -ne 1 ]; then
 fi
 REPO_PATH="$(readlink -f "$1")"
 
-TOP_DIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 BUILD_OUTPUT_DIR="$REPO_PATH/.nix_tests_bins"
 BIN_DIR="$TOP_DIR/.bin_node"
 

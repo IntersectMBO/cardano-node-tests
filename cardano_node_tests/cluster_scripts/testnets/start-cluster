@@ -4,7 +4,7 @@ set -Eeuo pipefail
 trap 'echo "Error at line $LINENO"' ERR
 
 TESTNET_DIR="${1:?"Testnet dir needed"}"
-SCRIPT_DIR="$(cd "${0%/*}" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
 STATE_CLUSTER="${SOCKET_PATH%/*}"
 # Fail if PWD is STATE_CLUSTER, as STATE_CLUSTER will be deleted
@@ -143,7 +143,7 @@ cat > "$STATE_CLUSTER/supervisord_start" <<EoF
 
 set -uo pipefail
 
-SCRIPT_DIR="\$(cd "\${0%/*}" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
+SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
 
 cd "\$SCRIPT_DIR/.."
 
@@ -155,7 +155,7 @@ cat > "$STATE_CLUSTER/stop-cluster" <<EoF
 
 set -uo pipefail
 
-SCRIPT_DIR="\$(cd "\${0%/*}" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
+SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
 PID_FILE="\$SCRIPT_DIR/supervisord.pid"
 SUPERVISORD_SOCKET_PATH="${SUPERVISORD_SOCKET_PATH}"
 
