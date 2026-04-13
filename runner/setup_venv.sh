@@ -6,7 +6,7 @@
 }
 
 _VENV_DIR="${_VENV_DIR:-"${WORKDIR:?}/.venv"}"
-_TOP_DIR="$(cd "${BASH_SOURCE[0]%/*}/.." && pwd)" || { echo "Cannot determine top dir, returning." >&2; return 1; }
+_TOP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || { echo "Cannot determine top dir, returning." >&2; return 1; }
 
 if [ "${1:-""}" = "clean" ]; then
   rm -rf "$_VENV_DIR"

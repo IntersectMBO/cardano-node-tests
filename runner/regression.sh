@@ -13,7 +13,7 @@ df -h .
 
 retval=0
 
-REPODIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine repo dir, exiting." >&2; exit 1; }
+REPODIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine repo dir, exiting." >&2; exit 1; }
 cd "$REPODIR"
 
 export WORKDIR="$REPODIR/run_workdir"

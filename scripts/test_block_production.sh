@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-TOP_DIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 
 # The database file will be created if missing
 if [ -z "${BLOCK_PRODUCTION_DB:-}" ]; then

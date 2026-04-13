@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-tests_repo="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine tests repo dir, exiting." >&2; exit 1; }
+tests_repo="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine tests repo dir, exiting." >&2; exit 1; }
 reports_dir="$tests_repo/.reports"
 if [ "$(echo "$reports_dir"/*.json)" = "$reports_dir/*.json" ]; then
   echo "No reports found in $reports_dir" >&2

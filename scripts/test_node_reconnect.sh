@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-TOP_DIR="$(cd "${0%/*}/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 
 export \
   CLUSTERS_COUNT=1 \

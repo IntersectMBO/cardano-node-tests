@@ -13,7 +13,7 @@
   return 1
 }
 
-_root_dir_cnt="$(cd "${BASH_SOURCE[0]%/*}" && pwd)" || { echo "Cannot determine root dir, returning." >&2; return 1; }
+_root_dir_cnt="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || { echo "Cannot determine root dir, returning." >&2; return 1; }
 
 # Source additional environment variables from .env.sh
 if [ -e "$_root_dir_cnt/.env.sh" ]; then
