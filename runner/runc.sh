@@ -117,7 +117,13 @@ if [ -d "$BIN_DIR" ] && ls -A "$BIN_DIR" 2>/dev/null | grep -q .; then
     # fully-resolved path is under /nix.
     if [ -L "$f" ]; then
       direct=$(readlink "$f")
-      [[ "$direct" == /nix/* ]] && continue
+      if [[ "$direct" == /nix/* ]]; then
+        if [ "$CONTAINER_TYPE" = "nixos" ]; then
+          # NixOS container has its own /nix store; host /nix paths will not exist inside it.
+          bad+=("$(basename "$f") -> $direct (symlink to host /nix path; will not work in NixOS container with separate /nix store)")
+        fi
+        continue
+      fi
       bad+=("$(basename "$f") -> $direct (symlink does not point directly into /nix)")
       continue
     fi
@@ -138,7 +144,7 @@ if [ -d "$BIN_DIR" ] && ls -A "$BIN_DIR" 2>/dev/null | grep -q .; then
   if [ ${#bad[@]} -gt 0 ]; then
     echo "Error: the following .bin/ entries will not work inside the container:" >&2
     for b in "${bad[@]}"; do echo "  $b" >&2; done
-    echo "Only Nix-store symlinks (/nix/...) and statically-linked binaries are supported." >&2
+    echo "Only symlinks into the container's own /nix store and statically-linked binaries are supported." >&2
     exit 1
   fi
 fi
