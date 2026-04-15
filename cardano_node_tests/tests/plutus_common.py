@@ -450,13 +450,25 @@ if VERSIONS.node >= version.parse("10.7.0"):
         ("succeedingG1MultiScalarMulPolicyScript1_V3_110.plutus", 9183574944, 437274, 687367),
         ("succeedingG1MultiScalarMulPolicyScript2_V3_110.plutus", 9915620336, 477870, 742490),
         (
-            "succeedingG2MultiScalarMulPolicyScript1_V3_110.plutus",
+            "succeedingG2MultiScalarMulPolicyScript1a_V3_110.plutus",
             UNKNOWN_PER_TIME,
             UNKNOWN_PER_SPACE,
             UNKNOWN_FIXED_COST,
         ),
         (
-            "succeedingG2MultiScalarMulPolicyScript2_V3_110.plutus",
+            "succeedingG2MultiScalarMulPolicyScript1b_V3_110.plutus",
+            UNKNOWN_PER_TIME,
+            UNKNOWN_PER_SPACE,
+            UNKNOWN_FIXED_COST,
+        ),
+        (
+            "succeedingG2MultiScalarMulPolicyScript2a_V3_110.plutus",
+            UNKNOWN_PER_TIME,
+            UNKNOWN_PER_SPACE,
+            UNKNOWN_FIXED_COST,
+        ),
+        (
+            "succeedingG2MultiScalarMulPolicyScript2b_V3_110.plutus",
             UNKNOWN_PER_TIME,
             UNKNOWN_PER_SPACE,
             UNKNOWN_FIXED_COST,
