@@ -17,6 +17,7 @@ PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
 SCRIPTS_V3_DIR = PLUTUS_DIR / "v3"
+SCRIPTS_V3_BATCH6_100_DIR = SCRIPTS_V3_DIR / "batch6" / "1.0.0"
 SCRIPTS_V3_BATCH6_110_DIR = SCRIPTS_V3_DIR / "batch6" / "1.1.0"
 
 SEPC256K1_ECDSA_DIR = PLUTUS_DIR / "sepc256k1_ecdsa"
@@ -297,17 +298,17 @@ UNDETERMINED_COST = ExecutionCost(
 
 # Tuples of (script_name, per_time, per_space, fixed_cost) for each succeeding bitwise script.
 SUCCEEDING_BITWISE_SCRIPTS_V3 = (
-    ("succeedingAndByteStringPolicyScriptV3.plutus", 19269680, 102266, UNKNOWN_FIXED_COST),
-    ("succeedingOrByteStringPolicyScriptV3.plutus", 19269680, 102266, UNKNOWN_FIXED_COST),
-    ("succeedingXorByteStringPolicyScriptV3.plutus", 19269680, 102266, UNKNOWN_FIXED_COST),
-    ("succeedingComplementByteStringPolicyScriptV3.plutus", 5863431, 30027, UNKNOWN_FIXED_COST),
-    ("succeedingCountSetBitsPolicyScriptV3.plutus", 9211420, 45324, UNKNOWN_FIXED_COST),
-    ("succeedingFindFirstSetBitPolicyScriptV3.plutus", 8071583, 40221, UNKNOWN_FIXED_COST),
-    ("succeedingReadBitPolicyScriptV3.plutus", 15272720, 82724, UNKNOWN_FIXED_COST),
-    ("succeedingReplicateBytePolicyScriptV3.plutus", 4549650, 22946, UNKNOWN_FIXED_COST),
-    ("succeedingRotateByteStringPolicyScriptV3.plutus", 22778618, 109004, UNKNOWN_FIXED_COST),
-    ("succeedingShiftByteStringPolicyScriptV3.plutus", 17922844, 85787, UNKNOWN_FIXED_COST),
-    ("succeedingWriteBitsPolicyScriptV3.plutus", 90646820, 462457, UNKNOWN_FIXED_COST),
+    ("succeedingAndByteStringPolicyScriptV3.plutus", 19260610, 102266, 7290),
+    ("succeedingOrByteStringPolicyScriptV3.plutus", 19260610, 102266, 7290),
+    ("succeedingXorByteStringPolicyScriptV3.plutus", 19260610, 102266, 7290),
+    ("succeedingComplementByteStringPolicyScriptV3.plutus", 5860345, 30027, 2156),
+    ("succeedingCountSetBitsPolicyScriptV3.plutus", 9211420, 45324, 3280),
+    ("succeedingFindFirstSetBitPolicyScriptV3.plutus", 8071583, 40221, 2903),
+    ("succeedingReadBitPolicyScriptV3.plutus", 15272720, 82724, 5875),
+    ("succeedingReplicateBytePolicyScriptV3.plutus", 4585827, 22946, 1655),
+    ("succeedingRotateByteStringPolicyScriptV3.plutus", 22767760, 109004, 7932),
+    ("succeedingShiftByteStringPolicyScriptV3.plutus", 17914625, 85787, 6242),
+    ("succeedingWriteBitsPolicyScriptV3.plutus", 90629019, 462457, 33219),
 )
 
 SUCCEEDING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
@@ -378,7 +379,7 @@ MINTING_RIPEMD_160_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingRipemd_160Policy.plut
 MINTING_RIPEMD_160_V3 = PlutusScriptData(
     script_file=MINTING_RIPEMD_160_PLUTUS_V3,
     script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-    execution_cost=ExecutionCost(per_time=6598460, per_space=14710, fixed_cost=UNKNOWN_FIXED_COST),
+    execution_cost=ExecutionCost(per_time=6597196, per_space=14710, fixed_cost=1325),
 )
 
 SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
@@ -449,108 +450,127 @@ if VERSIONS.node >= version.parse("10.7.0"):
         *SUCCEEDING_BATCH6_SCRIPTS_V3,
         ("succeedingG1MultiScalarMulPolicyScript1_V3_110.plutus", 9183574944, 437274, 687367),
         ("succeedingG1MultiScalarMulPolicyScript2_V3_110.plutus", 9915620336, 477870, 742490),
-        (
-            "succeedingG2MultiScalarMulPolicyScript1a_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
-        ),
-        (
-            "succeedingG2MultiScalarMulPolicyScript1b_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
-        ),
-        (
-            "succeedingG2MultiScalarMulPolicyScript2a_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
-        ),
-        (
-            "succeedingG2MultiScalarMulPolicyScript2b_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
-        ),
+        ("succeedingG2MultiScalarMulPolicyScript1a_V3_110.plutus", 9008519498, 199418, 661021),
+        ("succeedingG2MultiScalarMulPolicyScript1b_V3_110.plutus", 7170645678, 250628, 531465),
+        ("succeedingG2MultiScalarMulPolicyScript2a_V3_110.plutus", 8521851043, 193470, 625589),
+        ("succeedingG2MultiScalarMulPolicyScript2b_V3_110.plutus", 9372322810, 304876, 693336),
+        ("succeedingDeleteExistingCoinPolicyScript_V3_100.plutus", 2272287, 6579, 544),
         ("succeedingDeleteExistingCoinPolicyScript_V3_110.plutus", 2176287, 5979, 502),
+        ("succeedingDeleteMissingCoinPolicyScript_V3_100.plutus", 2291175, 6579, 545),
         ("succeedingDeleteMissingCoinPolicyScript_V3_110.plutus", 2195175, 5979, 504),
-        (
-            "succeedingInsertExistingCoinPolicyScript_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
-        ),
+        ("succeedingInsertExistingCoinPolicyScript_V3_100.plutus", 2291175, 6579, 545),
+        ("succeedingInsertExistingCoinPolicyScript_V3_110.plutus", 2195175, 5979, 504),
+        ("succeedingInsertNewCoinPolicyScript_V3_100.plutus", 1769425, 5692, 457),
         ("succeedingInsertNewCoinPolicyScript_V3_110.plutus", 1673425, 5092, 415),
+        ("succeedingLookupMissingCoinPolicyScript_V3_100.plutus", 1265613, 4847, 371),
         ("succeedingLookupMissingCoinPolicyScript_V3_110.plutus", 1169613, 4247, 330),
+        ("succeedingScaleValueNegativePolicyScript_V3_100.plutus", 3973637, 7417, 715),
+        ("succeedingScaleValueNegativePolicyScript_V3_110.plutus", 3877637, 6817, 673),
+        ("succeedingScaleValuePositivePolicyScript_V3_100.plutus", 3973637, 7417, 715),
+        ("succeedingScaleValuePositivePolicyScript_V3_110.plutus", 3877637, 6817, 673),
+        ("succeedingScaleValueZeroPolicyScript_V3_100.plutus", 2846094, 6228, 565),
+        ("succeedingScaleValueZeroPolicyScript_V3_110.plutus", 2750094, 5628, 524),
+        ("succeedingUnionValueAssociativePolicyScript_V3_100.plutus", 7288077, 11023, 1162),
+        ("succeedingUnionValueAssociativePolicyScript_V3_110.plutus", 7192077, 10423, 1120),
         (
-            "succeedingScaleValueNegativePolicyScript_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
+            "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_100.plutus",
+            5989072,
+            10893,
+            1061,
         ),
-        ("succeedingScaleValuePositivePolicyScript_V3_110.plutus", 3839117, 7971, 737),
-        ("succeedingScaleValueZeroPolicyScript_V3_110.plutus", 3245681, 6826, 628),
-        ("succeedingUnionValueAssociativePolicyScript_V3_110.plutus", 6282854, 11189, 1099),
         (
             "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_110.plutus",
-            5806552,
-            11147,
-            1062,
+            5893072,
+            10293,
+            1019,
         ),
-        (
-            "succeedingUnionValueCommutativePolicyScript_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
-        ),
-        (
-            "succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_110.plutus",
-            UNKNOWN_PER_TIME,
-            UNKNOWN_PER_SPACE,
-            UNKNOWN_FIXED_COST,
-        ),
-        ("succeedingUnionValueEmptyIdentityPolicyScript_V3_110.plutus", 5410294, 10487, 996),
-        ("succeedingUnionValueInversablePolicyScript_V3_110.plutus", 3856300, 8004, 740),
+        ("succeedingUnionValueCommutativePolicyScript_V3_100.plutus", 4964712, 8860, 870),
+        ("succeedingUnionValueCommutativePolicyScript_V3_110.plutus", 4868712, 8260, 828),
+        ("succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_100.plutus", 4615604, 8816, 842),
+        ("succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_110.plutus", 4519604, 8216, 800),
+        ("succeedingUnionValueEmptyIdentityPolicyScript_V3_100.plutus", 5679334, 9379, 951),
+        ("succeedingUnionValueEmptyIdentityPolicyScript_V3_110.plutus", 5583334, 8779, 910),
+        ("succeedingUnionValueInversablePolicyScript_V3_100.plutus", 3456713, 7406, 677),
+        ("succeedingUnionValueInversablePolicyScript_V3_110.plutus", 3360713, 6806, 636),
+        ("succeedingValueContainsDisjointPolicyScript_V3_100.plutus", 2611834, 6536, 566),
         ("succeedingValueContainsDisjointPolicyScript_V3_110.plutus", 2515834, 5936, 524),
+        ("succeedingValueContainsEmptyPolicyScript_V3_100.plutus", 3522852, 7880, 709),
         ("succeedingValueContainsEmptyPolicyScript_V3_110.plutus", 3426852, 7280, 668),
+        ("succeedingValueContainsIsSubValuePolicyScript_V3_100.plutus", 3087582, 7123, 634),
         ("succeedingValueContainsIsSubValuePolicyScript_V3_110.plutus", 2991582, 6523, 593),
+        ("succeedingValueContainsReflexivePolicyScript_V3_100.plutus", 2078910, 5391, 461),
         ("succeedingValueContainsReflexivePolicyScript_V3_110.plutus", 1982910, 4791, 420),
+        ("succeedingValueContainsRightExtraKeyPolicyScript_V3_100.plutus", 3637590, 8010, 725),
         ("succeedingValueContainsRightExtraKeyPolicyScript_V3_110.plutus", 3541590, 7410, 683),
+        ("succeedingValueContainsRightHigherAmountPolicyScript_V3_100.plutus", 2563834, 6236, 545),
         ("succeedingValueContainsRightHigherAmountPolicyScript_V3_110.plutus", 2467834, 5636, 504),
-        ("succeedingValueDataRoundTripPolicyScript_V3_110.plutus", 3547465, 6873, 653),
+        ("succeedingValueDataRoundTripPolicyScript_V3_100.plutus", 3610826, 6095, 613),
+        ("succeedingValueDataRoundTripPolicyScript_V3_110.plutus", 3514826, 5495, 571),
+        (
+            "succeedingValueContainsIsSubValueSmallerAmountPolicyScript_V3_100.plutus",
+            3087582,
+            7123,
+            634,
+        ),
+        (
+            "succeedingValueContainsIsSubValueSmallerAmountPolicyScript_V3_110.plutus",
+            2991582,
+            6523,
+            593,
+        ),
     )
     FAILING_BATCH6_SCRIPT_FILES_V3 = (  # type: ignore[assignment]
         *FAILING_BATCH6_SCRIPT_FILES_V3,
+        "failingInsertInvalidCurrencySymbolPolicyScript_V3_100.plutus",
         "failingInsertInvalidCurrencySymbolPolicyScript_V3_110.plutus",
+        "failingInsertInvalidTokenNamePolicyScript_V3_100.plutus",
         "failingInsertInvalidTokenNamePolicyScript_V3_110.plutus",
+        "failingInsertOverflowQuantityPolicyScript_V3_100.plutus",
         "failingInsertOverflowQuantityPolicyScript_V3_110.plutus",
+        "failingInsertUnderflowQuantityPolicyScript_V3_100.plutus",
         "failingInsertUnderflowQuantityPolicyScript_V3_110.plutus",
+        "failingScaleValueOverflowPolicyScript_V3_100.plutus",
         "failingScaleValueOverflowPolicyScript_V3_110.plutus",
+        "failingScaleValueUnderflowPolicyScript_V3_100.plutus",
         "failingScaleValueUnderflowPolicyScript_V3_110.plutus",
-        "failingUnionValueOverflowPolicyScript_V3_110.plutus",
-        "failingUnionValueUnderflowPolicyScript_V3_110.plutus",
+        "failingUnValueDataInvalidDataPolicyScript_V3_100.plutus",
         "failingUnValueDataInvalidDataPolicyScript_V3_110.plutus",
+        "failingUnionValueOverflowPolicyScript_V3_100.plutus",
+        "failingUnionValueOverflowPolicyScript_V3_110.plutus",
+        "failingUnionValueUnderflowPolicyScript_V3_100.plutus",
+        "failingUnionValueUnderflowPolicyScript_V3_110.plutus",
+        "failingValueContainsLeftNegativePolicyScript_V3_100.plutus",
         "failingValueContainsLeftNegativePolicyScript_V3_110.plutus",
+        "failingValueContainsRightNegativePolicyScript_V3_100.plutus",
         "failingValueContainsRightNegativePolicyScript_V3_110.plutus",
     )
 
-SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V3_BATCH6_110_DIR / script_name,
+
+def _get_script_data_succ(r: tuple) -> PlutusScriptData:
+    script_name, per_time, per_space, fixed_cost = r
+    sdir = SCRIPTS_V3_BATCH6_100_DIR if "_100.plutus" in script_name else SCRIPTS_V3_BATCH6_110_DIR
+    return PlutusScriptData(
+        script_file=sdir / script_name,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=ExecutionCost(per_time=per_time, per_space=per_space, fixed_cost=fixed_cost),
     )
-    for script_name, per_time, per_space, fixed_cost in SUCCEEDING_BATCH6_SCRIPTS_V3
-)
 
-FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V3_BATCH6_110_DIR / n,
+
+def _get_script_data_fail(script_name: str) -> PlutusScriptData:
+    sdir = SCRIPTS_V3_BATCH6_100_DIR if "_100.plutus" in script_name else SCRIPTS_V3_BATCH6_110_DIR
+    return PlutusScriptData(
+        script_file=sdir / script_name,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=UNDETERMINED_COST,
     )
-    for n in FAILING_BATCH6_SCRIPT_FILES_V3
+
+
+SUCCEEDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    _get_script_data_succ(r) for r in SUCCEEDING_BATCH6_SCRIPTS_V3
+)
+
+FAILING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
+    _get_script_data_fail(r) for r in FAILING_BATCH6_SCRIPT_FILES_V3
 )
 
 OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
