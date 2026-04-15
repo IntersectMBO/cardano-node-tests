@@ -27,11 +27,13 @@ ERRORS_RE = re.compile("error|fail", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
 
 ERRORS_IGNORED = [
-    r"cardano\.node\.[^:]+:Debug:",
-    r"cardano\.node\.[^:]+:Info:",
-    "db-sync-node:Info:",
-    r"TxSubmitApi\.[^\]]*\]\(Info,",
-    "cardano-tx-submit:Info:",
+    # New tracing system
+    r"\]\(Debug,",
+    r"\]\(Info,",
+    # Old tracing system
+    ":Debug:",
+    ":Info:",
+    # Allowed errors
     "Event: LedgerUpdate",
     "trace.*ErrorPolicy",
     "ErrorPolicySuspendConsumer",
