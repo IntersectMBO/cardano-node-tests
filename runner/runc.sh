@@ -151,7 +151,6 @@ fi
 
 # Select base image, tag, and runtime options based on the container type.
 NIX_MOUNTS=()
-EXTRA_SEC=()
 
 case "$CONTAINER_TYPE" in
   nixos)
@@ -180,9 +179,6 @@ case "$CONTAINER_TYPE" in
       BASE_IMAGE="docker.io/library/alpine:${CONTAINER_VERSION}"
       TAG="cardano-tests-alpine"
       NIX_MOUNTS+=("-v" "/nix:/nix")
-      # Alpine's OCI image has no io_uring allowlist in its seccomp profile;
-      # unconfined is needed so GHC's RTS can call io_uring_setup.
-      EXTRA_SEC+=("--security-opt" "seccomp=unconfined")
     else
       echo "Host /nix not found; NixOS container will be used."
       BASE_IMAGE="docker.io/nixos/nix:${CONTAINER_VERSION}"
@@ -204,10 +200,11 @@ $container_manager build "$SCRIPT_DIR" \
   -t "$TAG" \
   || exit 1
 
+# `seccomp=unconfined` is needed so GHC's RTS can call io_uring_setup
 $container_manager run \
   --rm \
   --security-opt label=disable \
-  "${EXTRA_SEC[@]}" \
+  --security-opt seccomp=unconfined \
   -it \
   "${NIX_MOUNTS[@]}" \
   -v "$REPO_DIR":"$REPO_DIR" \
