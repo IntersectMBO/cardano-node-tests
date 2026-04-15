@@ -49,6 +49,10 @@ while [[ $# -gt 0 && "$1" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do
   export "$key"="$value"
 done
 
+if [[ "${1:-}" == "--" ]]; then
+  shift
+fi
+
 # 3) Remaining args are the command to exec
 if [[ $# -eq 0 ]]; then
   echo "No command specified to execute." >&2
