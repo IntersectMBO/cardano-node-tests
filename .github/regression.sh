@@ -75,7 +75,8 @@ elif is_truthy "${CI_BYRON_CLUSTER:-}"; then
   export TESTNET_VARIANT="${CLUSTER_ERA:-conway}_slow"
 fi
 
-export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
+CARDANO_NODE_SOCKET_PATH_CI="${CARDANO_NODE_SOCKET_PATH_CI:-$WORKDIR/state-cluster0/bft1.socket}"
+export CARDANO_NODE_SOCKET_PATH_CI
 
 # assume we run tests on testnet when `BOOTSTRAP_DIR` is set
 if [ -n "${BOOTSTRAP_DIR:-}" ]; then
