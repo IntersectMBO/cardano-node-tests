@@ -13,6 +13,10 @@
 #   docker compose -f docker/docker-compose.yaml config
 #   docker compose -f docker/docker-compose.yaml up --build
 
+networks:
+  antithesis-net:
+    driver: bridge
+
 services:
   driver:
     image: ghcr.io/saratomaz/cardano-node-tests-antithesis:latest
@@ -22,6 +26,8 @@ services:
     # antithesis_run.sh sets nix offline, exports pre-built paths, emits
     # setup_complete, then hands off to regression.sh.
     command: ["/work/docker/antithesis_run.sh"]
+    networks:
+      - antithesis-net
     environment:
       # NODE_REV is baked into the image at build time; do not override here.
       - CARDANO_CLI_REV=${CARDANO_CLI_REV:-}
