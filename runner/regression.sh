@@ -77,6 +77,10 @@ elif is_truthy "${CI_BYRON_CLUSTER:-}"; then
   export TESTNET_VARIANT="${CLUSTER_ERA:-conway}_slow"
 fi
 
+if [ "${CI_CONSENSUS_MODE:-}" = "Genesis" ]; then
+  export USE_GENESIS_MODE=true
+fi
+
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
 # assume we run tests on testnet when `BOOTSTRAP_DIR` is set
