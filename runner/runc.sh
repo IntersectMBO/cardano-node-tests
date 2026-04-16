@@ -1,58 +1,60 @@
 #!/usr/bin/env bash
 # Build a container image and run tests inside it.
+# Run with -h/--help for usage details.
 #
-# If the host has /nix, it is bind-mounted into the container (Alpine by
-# default, or a specific distro via --*-container).  Otherwise the NixOS
-# container image is used, which has Nix pre-installed.
-#
-# Usage:
-#   ./runc.sh [--nixos-container[=VERSION]] [--ubuntu-container[=VERSION]]
-#            [--debian-container[=VERSION]] [--mint-container[=VERSION]]
-#            [--extra-mount=HOST_PATH:CONTAINER_PATH]
-#            '<command>'
-#
-# Options:
-#   --nixos-container[=VERSION]   Force use of a NixOS container (/nix
-#                                 pre-installed inside it, host /nix not
-#                                 required).  VERSION defaults to 'latest'.
-#   --ubuntu-container[=VERSION]  Use an Ubuntu container (requires host /nix).
-#                                 VERSION is the image tag, e.g. '24.04'.
-#   --debian-container[=VERSION]  Use a Debian container (requires host /nix).
-#                                 VERSION is the image tag, e.g. 'bookworm'.
-#   --mint-container[=VERSION]    Use a Linux Mint container (requires host
-#                                 /nix).  VERSION is the image tag.
-#   --extra-mount=HOST_PATH:CONTAINER_PATH  Bind-mount an additional path from
-#                                 the host into the container.  Can be specified
-#                                 multiple times to mount multiple paths.
 # See:
 # * NixOS: <https://hub.docker.com/r/nixos/nix/tags>
 # * Ubuntu: <https://hub.docker.com/_/ubuntu/tags>
 # * Debian: <https://hub.docker.com/_/debian/tags>
 # * Mint: <https://hub.docker.com/u/linuxmintd>
-#
-# Examples:
-#   ./runc.sh NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
-#   ./runc.sh --nixos-container NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
-#   ./runc.sh --ubuntu-container=24.04 NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
 
 set -Eeuo pipefail
-
-if command -v podman > /dev/null; then
-  container_manager="podman"
-elif command -v docker > /dev/null; then
-  container_manager="docker"
-else
-  echo "Neither podman nor docker are installed. Please install one of them and try again." >&2
-  exit 1
-fi
 
 CONTAINER_TYPE=""     # empty = auto-detect
 CONTAINER_VERSION="latest"
 MINT_VERSION="22.3"
 EXTRA_MOUNTS=()
 
+usage() {
+  local script_name
+  script_name="$(basename "$0")"
+
+  cat <<USAGE
+Usage: $script_name [OPTIONS] [--] command [args...]
+
+Build a container image and run tests inside it.
+
+The command and its arguments are concatenated into a single string and
+executed inside the container via 'bash -c', so shell features like
+variable expansion, pipes, and redirections are available.  Be mindful
+of quoting: the entire command string is interpreted by the shell.
+
+Options:
+  -h, --help                        Show this help message and exit.
+  --nixos-container[=VERSION]       Force use of a NixOS container (/nix
+                                    pre-installed inside it, host /nix not
+                                    required).  VERSION defaults to 'latest'.
+  --ubuntu-container[=VERSION]      Use an Ubuntu container (requires host /nix).
+                                    VERSION is the image tag, e.g. '24.04'.
+  --debian-container[=VERSION]      Use a Debian container (requires host /nix).
+                                    VERSION is the image tag, e.g. 'bookworm'.
+  --mint-container[=VERSION]        Use a Linux Mint container (requires host
+                                    /nix).  VERSION is the Mint version.
+  --extra-mount=HOST_PATH:CONTAINER_PATH
+                                    Bind-mount an additional path from the host
+                                    into the container.  Can be specified
+                                    multiple times.
+
+Examples:
+  $script_name NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
+  $script_name --nixos-container NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
+  $script_name --ubuntu-container=24.04 NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
+USAGE
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
+    -h|--help)            usage; exit 0 ;;
     --nixos-container)    CONTAINER_TYPE="nixos";  shift ;;
     --nixos-container=*)  CONTAINER_TYPE="nixos";  CONTAINER_VERSION="${1#*=}"; shift ;;
     --ubuntu-container)   CONTAINER_TYPE="ubuntu"; shift ;;
@@ -63,16 +65,25 @@ while [ $# -gt 0 ]; do
     --mint-container=*)   CONTAINER_TYPE="mint";   MINT_VERSION="${1#*=}";      shift ;;
     --extra-mount=*)      EXTRA_MOUNTS+=("-v" "${1#*=}"); shift ;;
     --) shift; break ;;
+    -*) echo "Error: Unknown option '$1'. Use -h for help." >&2; exit 2 ;;
     *) break ;;
   esac
 done
 
 CMD="$*"
 
-# Validate required arguments
 if [ -z "$CMD" ]; then
   echo "Error: No command provided." >&2
-  echo "Usage: $0 [--nixos-container[=VERSION] | --ubuntu-container[=VERSION] | --debian-container[=VERSION] | --mint-container[=VERSION] | --extra-mount=HOST_PATH:CONTAINER_PATH] '<command>'" >&2
+  usage >&2
+  exit 2
+fi
+
+if command -v podman > /dev/null; then
+  container_manager="podman"
+elif command -v docker > /dev/null; then
+  container_manager="docker"
+else
+  echo "Neither podman nor docker are installed. Please install one of them and try again." >&2
   exit 1
 fi
 
@@ -200,12 +211,18 @@ $container_manager build "$SCRIPT_DIR" \
   -t "$TAG" \
   || exit 1
 
+TTY_FLAG=()
+if [ -t 0 ] && [ -t 1 ]; then
+  TTY_FLAG=("-t")
+fi
+
 # `seccomp=unconfined` is needed so GHC's RTS can call io_uring_setup
 $container_manager run \
   --rm \
   --security-opt label=disable \
   --security-opt seccomp=unconfined \
-  -it \
+  -i \
+  "${TTY_FLAG[@]}" \
   "${NIX_MOUNTS[@]}" \
   -v "$REPO_DIR":"$REPO_DIR" \
   "${EXTRA_MOUNTS[@]}" \
