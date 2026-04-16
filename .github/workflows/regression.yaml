@@ -37,6 +37,13 @@ on:
         - disk
         - disklmdb
         default: ""
+      consensus_mode:
+        type: choice
+        description: "Consensus mode"
+        options:
+        - Praos
+        - Genesis
+        default: "Praos"
       allow_unstable_error_msgs:
         type: boolean
         default: false
@@ -65,6 +72,7 @@ jobs:
       cluster_era: ${{ inputs.cluster_era }}
       markexpr: ${{ inputs.markexpr }}
       utxo_backend: ${{ inputs.utxo_backend }}
+      consensus_mode: ${{ inputs.consensus_mode }}
       allow_unstable_error_msgs: ${{ inputs.allow_unstable_error_msgs }}
       byron_cluster: ${{ inputs.byron_cluster }}
       testrun_name: ${{ inputs.testrun_name }}

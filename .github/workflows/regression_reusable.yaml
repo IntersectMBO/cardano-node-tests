@@ -31,6 +31,10 @@ on:
         required: false
         type: string
         default: ""
+      consensus_mode:
+        required: false
+        type: string
+        default: ""
       allow_unstable_error_msgs:
         required: false
         type: boolean
@@ -91,6 +95,7 @@ jobs:
           echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
           echo "UTXO_BACKEND=${{ inputs.utxo_backend }}" >> .github_ci_env
           echo "ALLOW_UNSTABLE_ERROR_MESSAGES=${{ inputs.allow_unstable_error_msgs }}" >> .github_ci_env
+          echo "CI_CONSENSUS_MODE=${{ inputs.consensus_mode }}" >> .github_ci_env
           echo "CI_BYRON_CLUSTER=${{ inputs.byron_cluster }}" >> .github_ci_env
           echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
           echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env
