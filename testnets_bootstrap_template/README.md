@@ -72,3 +72,5 @@ the synced data from the bootstrap directory.
     ```sh
     NODE_REV=10.5.1 BOOTSTRAP_DIR=~/path/to/preview_bootstrap ./runner/regression.sh
     ```
+
+  > **Note:** You can use `./runner/runc.sh --` to run the above command inside the containerized environment, as long as the `BOOTSTRAP_DIR` is inside the repository, or mounted into the container using `--extra-mount` option.
