@@ -1,7 +1,18 @@
 # Docker Compose for Antithesis test submission.
 #
-# The driver image must be pre-built with all cardano binaries and the Python
-# venv baked in (see docker/Dockerfile).  No internet access is available at
+# Two services share a cluster-state volume:
+#
+#   node   — starts the cardano-node cluster (system under test).
+#            Serves a health check on port 8090 so the driver can detect
+#            when the cluster is ready.  The traffic between driver and node
+#            over the antithesis-net bridge satisfies the Antithesis
+#            "Containers joined the Antithesis network" property.
+#
+#   driver — waits for the node health check, then runs the pytest test
+#            suite against the pre-running cluster via DEV_CLUSTER_RUNNING=1.
+#
+# Both images must be pre-built with all cardano binaries and the Python venv
+# baked in (see docker/Dockerfile).  No internet access is available at
 # runtime inside the Antithesis environment.
 #
 # Push images to the Antithesis registry before submitting:
@@ -17,24 +28,59 @@ networks:
   antithesis-net:
     driver: bridge
 
+volumes:
+  cluster-state:
+
 services:
+  node:
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["/work/docker/node_run.sh"]
+    networks:
+      - antithesis-net
+    volumes:
+      - cluster-state:/cluster-state
+    environment:
+      - CLUSTER_STATE_DIR=/cluster-state
+      - TESTNET_VARIANT=${TESTNET_VARIANT:-conway_fast}
+    healthcheck:
+      test:
+        - "CMD"
+        - "/opt/tests-venv/bin/python3"
+        - "-c"
+        - "import urllib.request; exit(0 if urllib.request.urlopen('http://localhost:8090/', timeout=5).read() == b'ready' else 1)"
+      interval: 15s
+      timeout: 6s
+      retries: 60
+      start_period: 60s
+
   driver:
     image: ghcr.io/saratomaz/cardano-node-tests-antithesis:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    # antithesis_run.sh sets nix offline, exports pre-built paths, emits
-    # setup_complete, then hands off to regression.sh.
+    # antithesis_run.sh sets nix offline, waits for the node health check,
+    # exports DEV_CLUSTER_RUNNING=1, emits setup_complete, then hands off
+    # to regression.sh.
     command: ["/work/docker/antithesis_run.sh"]
     networks:
       - antithesis-net
+    depends_on:
+      - node
+    volumes:
+      - cluster-state:/cluster-state
     environment:
+      - CLUSTER_STATE_DIR=/cluster-state
+      - NODE_HOST=node
+      - NODE_PORT=8090
       # NODE_REV is baked into the image at build time; do not override here.
       - CARDANO_CLI_REV=${CARDANO_CLI_REV:-}
       - DBSYNC_REV=${DBSYNC_REV:-}
       - RUN_TARGET=${RUN_TARGET:-tests}
       - MARKEXPR=${MARKEXPR:-}
-      - CLUSTERS_COUNT=${CLUSTERS_COUNT:-}
+      - CLUSTERS_COUNT=${CLUSTERS_COUNT:-1}
       - CLUSTER_ERA=${CLUSTER_ERA:-}
       - PROTOCOL_VERSION=${PROTOCOL_VERSION:-}
       - UTXO_BACKEND=${UTXO_BACKEND:-}

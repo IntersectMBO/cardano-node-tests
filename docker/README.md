@@ -28,7 +28,11 @@ dependencies are baked into the image at build time:
 - `Dockerfile.config` — builds the Antithesis config image (`FROM scratch`)
   containing only `docker-compose.yaml`.
 
-- `docker-compose.yaml` — single `driver` service.
+- `docker-compose.yaml` — two services: `node` (cardano-node cluster) and
+  `driver` (pytest).  Both share a `cluster-state` Docker volume so the
+  driver accesses the node sockets without going over the network.  An HTTP
+  health check on port 8090 provides cross-container traffic that satisfies
+  the Antithesis "Containers joined the Antithesis network" property.
 
 ## Workflow
 

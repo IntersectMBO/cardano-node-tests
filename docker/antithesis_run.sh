@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
-# Antithesis entrypoint for cardano-node-tests.
+# Antithesis driver container entrypoint.
 #
 # Runs the full test suite without any network access by:
 #   1. Forcing nix into offline mode (all store paths were pre-built into
 #      the image by docker/Dockerfile).
 #   2. Pointing regression.sh at the pre-built cardano binaries and Python
 #      venv so it skips all download / build steps.
-#   3. Emitting the Antithesis `setup_complete` lifecycle signal before
-#      starting pytest.
+#   3. When NODE_HOST is set (multi-container mode): waiting for the node
+#      container's health check on port 8090 before running tests, and
+#      setting DEV_CLUSTER_RUNNING=1 so pytest uses the pre-running cluster
+#      instead of starting its own.
+#   4. Emitting the Antithesis setup_complete lifecycle signal.
+#   5. Handing off to regression.sh.
+#
+# Multi-container environment variables (set in docker-compose):
+#   NODE_HOST          Hostname of the node container (default: unset).
+#   NODE_PORT          Health check port on the node container (default: 8090).
+#   CLUSTER_STATE_DIR  Mount point of the shared cluster-state volume
+#                      (default: /cluster-state).
 #
 # This file is installed at:
 #   /opt/antithesis/test/v1/quickstart/singleton_driver_regression.sh
-# and is also usable directly as the docker-compose `command`.
+# and is also usable directly as the docker-compose command.
 
 set -Eeuo pipefail
 
@@ -29,20 +39,67 @@ echo "offline = true" >> /etc/nix/nix.conf
 export CARDANO_PREBUILT_DIR=/opt/cardano
 export _VENV_DIR=/opt/tests-venv
 
-# ---------------------------------------------------------------------------
-# 3. Emit the Antithesis setup_complete signal.
-#    Written as JSONL to $ANTITHESIS_OUTPUT_DIR/sdk.jsonl.
-#    Antithesis begins fault injection / test orchestration after receiving
-#    this message.
-# ---------------------------------------------------------------------------
 _output_dir="${ANTITHESIS_OUTPUT_DIR:-/tmp/antithesis}"
 mkdir -p "$_output_dir"
+
+# ---------------------------------------------------------------------------
+# 3. Multi-container mode: wait for the node container and configure the
+#    driver to use the pre-running cluster.
+#
+#    When NODE_HOST is set the driver polls the node's HTTP health endpoint
+#    (port 8090) until it responds "ready".  This HTTP traffic is what makes
+#    both containers visible on the Antithesis network bridge.
+#
+#    DEV_CLUSTER_RUNNING=1 tells pytest to skip cluster startup/shutdown and
+#    use the cluster already started by the node container.
+#    CARDANO_NODE_SOCKET_PATH_CI is pre-set to the shared volume socket path
+#    so regression.sh does not override it with its default workdir path.
+# ---------------------------------------------------------------------------
+if [ -n "${NODE_HOST:-}" ]; then
+    _node_port="${NODE_PORT:-8090}"
+    echo "Waiting for ${NODE_HOST}:${_node_port} to report ready..."
+
+    _ready=0
+    for _i in $(seq 1 120); do
+        # Use the venv's Python directly — python3 is not in PATH outside a nix shell.
+    _resp="$("${_VENV_DIR}/bin/python3" -c "
+import urllib.request, sys
+try:
+    r = urllib.request.urlopen('http://${NODE_HOST}:${_node_port}/', timeout=5)
+    sys.stdout.write(r.read().decode())
+except Exception:
+    pass
+" 2>/dev/null || true)"
+        if [ "$_resp" = "ready" ]; then
+            _ready=1
+            break
+        fi
+        echo "  attempt ${_i}/120: node reports '${_resp:-no response}', retrying in 5s..."
+        sleep 5
+    done
+
+    if [ "$_ready" -ne 1 ]; then
+        echo "ERROR: node container did not become ready within 10 minutes" >&2
+        exit 1
+    fi
+    echo "Node is ready."
+
+    CLUSTER_STATE_DIR="${CLUSTER_STATE_DIR:-/cluster-state}"
+    export DEV_CLUSTER_RUNNING=1
+    export CLUSTERS_COUNT="${CLUSTERS_COUNT:-1}"
+    # Pre-set so regression.sh does not overwrite with its default workdir path.
+    export CARDANO_NODE_SOCKET_PATH_CI="${CLUSTER_STATE_DIR}/state-cluster0/bft1.socket"
+fi
+
+# ---------------------------------------------------------------------------
+# 4. Emit the Antithesis setup_complete signal.
+# ---------------------------------------------------------------------------
 printf '{"antithesis_setup": {"status": "complete", "details": {"info": ["cardano-node-tests driver ready, node_rev=%s"]}}}\n' \
     "${BAKED_NODE_REV:-unknown}" >> "$_output_dir/sdk.jsonl"
 unset _output_dir
 
 # ---------------------------------------------------------------------------
-# 4. Hand off to regression.sh.  The shebang in that script will invoke
+# 5. Hand off to regression.sh.  The shebang in that script will invoke
 #    `nix develop .#base` which now resolves entirely from the local nix
 #    store (offline = true).
 #

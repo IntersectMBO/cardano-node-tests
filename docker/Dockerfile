@@ -67,9 +67,10 @@ RUN nix develop --accept-flake-config .#testenv --command \
 # paths are cached and the regression.sh shebang resolves offline.
 RUN nix develop --accept-flake-config .#base --command true
 
-# Create the Antithesis test driver directory and install the entry-point.
+# Create the Antithesis test driver directory and install the entry-points.
 # singleton_driver_* files are run once per test run by Antithesis.
 RUN mkdir -p /opt/antithesis/test/v1/quickstart && \
     cp /work/docker/antithesis_run.sh \
        /opt/antithesis/test/v1/quickstart/singleton_driver_regression.sh && \
-    chmod +x /opt/antithesis/test/v1/quickstart/singleton_driver_regression.sh
+    chmod +x /opt/antithesis/test/v1/quickstart/singleton_driver_regression.sh && \
+    chmod +x /work/docker/node_run.sh

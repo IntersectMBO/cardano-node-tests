@@ -90,7 +90,8 @@ if [ "${CI_CONSENSUS_MODE:-}" = "Genesis" ]; then
   export USE_GENESIS_MODE=true
 fi
 
-export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
+CARDANO_NODE_SOCKET_PATH_CI="${CARDANO_NODE_SOCKET_PATH_CI:-$WORKDIR/state-cluster0/bft1.socket}"
+export CARDANO_NODE_SOCKET_PATH_CI
 
 # assume we run tests on testnet when `BOOTSTRAP_DIR` is set
 if [ -n "${BOOTSTRAP_DIR:-}" ]; then
