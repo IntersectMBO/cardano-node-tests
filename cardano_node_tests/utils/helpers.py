@@ -360,3 +360,25 @@ def get_pool_param(key: str, *, pool_params: dict) -> tp.Any:
         val = pool_params.get(old_key)
 
     return val
+
+
+def check_cardano_node_socket_path() -> None:
+    """Check that `CARDANO_NODE_SOCKET_PATH` value is valid for use by testing framework."""
+    socket_env = os.environ.get("CARDANO_NODE_SOCKET_PATH")
+    if not socket_env:
+        msg = "The `CARDANO_NODE_SOCKET_PATH` env variable is not set."
+        raise ValueError(msg)
+
+    socket_path = pl.Path(socket_env).expanduser().resolve()
+    parts = socket_path.parts
+    if (
+        len(parts) < 2
+        or not parts[-2].startswith("state-cluster")
+        or parts[-1]
+        not in (
+            "bft1.socket",
+            "relay1.socket",
+        )
+    ):
+        msg = "The `CARDANO_NODE_SOCKET_PATH` value is not valid for use by testing framework."
+        raise ValueError(msg)
