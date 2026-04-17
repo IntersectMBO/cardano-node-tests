@@ -236,7 +236,7 @@ elif [ "$1" = "step2" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_update_cost_models || exit 6
 
   # generate ledger peer snapshot using old node version
-  cardano-cli query ledger-peer-snapshot \
+  cardano-cli-step1 query ledger-peer-snapshot \
     --testnet-magic "$NETWORK_MAGIC" \
     --socket-path "$STATE_CLUSTER/pool3.socket" \
     --output-json \
