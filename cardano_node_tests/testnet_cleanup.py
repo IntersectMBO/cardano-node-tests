@@ -58,9 +58,9 @@ def main() -> int:
             "Both address and skey file must be provided, or neither of them should be provided."
         )
         return 1
-    if not (args.address or os.environ.get("BOOTSTRAP_DIR")):
+    if not (args.address or testnet_cleanup.is_framework_testnet()):
         LOGGER.error(
-            "The address must be provided, or `BOOTSTRAP_DIR` environment variable must be set."
+            "The address and skey file must be provided when running with non-framework testnet."
         )
         return 1
 

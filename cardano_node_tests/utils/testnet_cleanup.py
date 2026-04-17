@@ -307,8 +307,8 @@ def create_addr_record(*, addr_file: pl.Path) -> clusterlib.AddressRecord:
     skey_file = basedir / f"{f_name}.skey"
 
     if not (vkey_file.exists() and skey_file.exists()):
-        msg = f"{addr_file}: keys not available"
-        raise ValueError(msg)
+        err = f"{addr_file}: keys not available"
+        raise ValueError(err)
 
     addr_record = clusterlib.AddressRecord(
         address=clusterlib.read_address_from_file(addr_file),
@@ -505,6 +505,15 @@ def cleanup_certs(
     )
 
 
+def is_framework_testnet() -> bool:
+    """Determine if the testnet is a testnet started by the testing framework."""
+    try:
+        helpers.check_cardano_node_socket_path()
+    except ValueError:
+        return False
+    return True
+
+
 def _get_faucet_payment_rec(
     *, address: str = "", skey_file: clusterlib.FileType = ""
 ) -> clusterlib.AddressRecord:
@@ -523,11 +532,17 @@ def _get_faucet_payment_rec(
             vkey_file=pl.Path("/nonexistent"),  # We don't need this for faucet
             skey_file=pl.Path(skey_file),
         )
-    else:
+    elif is_framework_testnet():
         # Try to infer the faucet address and keys from cluster env
         cluster_env = cluster_nodes.get_cluster_env()
         faucet_addr_file = cluster_env.state_dir / "shelley" / "faucet.addr"
+        if not faucet_addr_file.exists():
+            err = f"Faucet address file not found at '{faucet_addr_file}'."
+            raise FileNotFoundError(err)
         faucet_payment = create_addr_record(addr_file=faucet_addr_file)
+    else:
+        err = "Faucet address and keys need to be provided for non-framework testnets."
+        raise RuntimeError(err)
 
     return faucet_payment
 
