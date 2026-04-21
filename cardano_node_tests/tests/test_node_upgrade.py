@@ -93,16 +93,7 @@ class TestSetup:
     ):
         """Ignore selected errors in log right after node upgrade.
 
-        Test setup to ignore expected errors in node logs after upgrading from pre-UTxO-HD
-        releases. UTxO-HD was added in node 10.4.1.
-
-        * Check if upgraded node version is < 10.5.0
-        * If upgrading from pre-UTxO-HD release (node < 10.5.0):
-
-          - Add log ignore rule for ChainDB warning about invalid snapshot
-          - Ignore "MetadataFileDoesNotExist" error in stdout logs
-
-        * This prevents false test failures from expected upgrade-related log messages
+        This prevents false test failures from expected upgrade-related log messages.
         """
         common.get_test_id(cluster_singleton)
 
@@ -115,6 +106,17 @@ class TestSetup:
             logfiles.add_ignore_rule(
                 files_glob="*.stdout",
                 regex="ChainDB:Warning:.* Invalid snapshot DiskSnapshot .*MetadataFileDoesNotExist",
+                ignore_file_id=worker_id,
+            )
+        # The error should be present only when upgrading pre LSM release.
+        # The LSM was added in 10.7.0, so when we are upgrading from 10.7.0+ release to
+        # 10.8.0+ release, the error should not be there.
+        # Here we are comparing the version of "upgraded" release, not the version we are upgrading
+        # from.
+        if VERSIONS.node < version.parse("10.8.0"):
+            logfiles.add_ignore_rule(
+                files_glob="*.stdout",
+                regex="tablesCodecVersion",
                 ignore_file_id=worker_id,
             )
 
