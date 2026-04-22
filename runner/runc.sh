@@ -78,6 +78,15 @@ if [ $# -eq 0 ]; then
   exit 2
 fi
 
+if [ -z "$CONTAINER_TYPE" ]; then
+  # Auto-detect: Alpine with bind-mounted /nix when available, NixOS otherwise.
+  if [ -d "/nix" ]; then
+    CONTAINER_TYPE="alpine"
+  else
+    CONTAINER_TYPE="nixos"
+  fi
+fi
+
 if command -v podman > /dev/null; then
   container_manager="podman"
 elif command -v docker > /dev/null; then
@@ -188,6 +197,12 @@ select_image() {
       TAG="cardano-tests-nixos"
       echo "NixOS container selected; /nix will be created inside the container."
       ;;
+    alpine)
+      echo "Host /nix found; mounting into Alpine container."
+      BASE_IMAGE="docker.io/library/alpine:${container_version}"
+      TAG="cardano-tests-alpine"
+      NIX_MOUNTS+=("-v" "/nix:/nix")
+      ;;
     ubuntu|debian|mint)
       if [ ! -d "/nix" ]; then
         echo "Error: Host /nix not found; --${container_type}-container requires /nix on the host." >&2
@@ -202,21 +217,8 @@ select_image() {
       esac
       echo "Host /nix found; mounting into ${container_type} container."
       ;;
-    "")
-      # Auto-detect: Alpine with bind-mounted /nix when available, NixOS otherwise.
-      if [ -d "/nix" ]; then
-        echo "Host /nix found; mounting into Alpine container."
-        BASE_IMAGE="docker.io/library/alpine:${container_version}"
-        TAG="cardano-tests-alpine"
-        NIX_MOUNTS+=("-v" "/nix:/nix")
-      else
-        echo "Host /nix not found; NixOS container will be used."
-        BASE_IMAGE="docker.io/nixos/nix:${container_version}"
-        TAG="cardano-tests-nixos"
-      fi
-      ;;
     *)
-      echo "Error: Unknown container type '${container_type}'. Expected one of: nixos, ubuntu, debian, mint, or empty for auto-detect." >&2
+      echo "Error: Unknown container type '${container_type}'. Expected one of: nixos, alpine, ubuntu, debian, or mint." >&2
       return 1
       ;;
   esac
