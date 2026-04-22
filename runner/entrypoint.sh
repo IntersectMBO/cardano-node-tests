@@ -6,8 +6,11 @@
 # Works whether /nix is bind-mounted from the host or nix was installed inside
 # the container at image-build time (single-user, no-daemon install).
 #
+# The command is run via env(1), so leading NAME=value arguments become
+# environment variables for the command itself.
+#
 # Usage (via runc.sh):
-#   ./runc.sh 'NODE_REV="10.7.0" MARKEXPR="testnets" ./runner/regression.sh'
+#   ./runc.sh -- NODE_REV=10.7.0 MARKEXPR='not long' ./runner/regression.sh
 
 set -eu
 
@@ -44,6 +47,8 @@ fi
 
 cd "${REPO_DIR:?REPO_DIR is not set}" || exit 1
 
-# Execute the command passed as arguments, interpreted by bash so that inline
-# env-var assignments (e.g. NODE_REV="10.7.0" ./script.sh) are handled correctly.
-exec bash -c "$*"
+# Use env(1) so leading NAME=value arguments are applied as environment
+# variables for the command, matching the behaviour of a plain shell command
+# line without needing bash -c (which would require the caller to pre-quote
+# everything into a single string).
+exec env -- "$@"
