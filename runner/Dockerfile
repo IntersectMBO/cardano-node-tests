@@ -8,7 +8,7 @@ FROM ${BASE_IMAGE}
 #   #!/usr/bin/env -S nix develop --accept-flake-config .#base -c bash
 # Busybox env does not support -S and would fail with "unrecognized option".
 RUN if command -v apk > /dev/null 2>&1; then \
-        apk add --no-cache bash coreutils; \
+        apk add --no-cache bash coreutils shadow; \
     fi
 
 # Install ca-certificates on Debian-based images.
