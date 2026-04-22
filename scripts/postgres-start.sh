@@ -1,5 +1,4 @@
-#! /usr/bin/env -S nix develop --accept-flake-config .#postgres -i -k PGHOST -k PGPORT -k PGUSER -c bash
-# shellcheck shell=bash
+#!/usr/bin/env bash
 
 set -Eeuo pipefail
 trap 'echo "Error at line $LINENO"' ERR

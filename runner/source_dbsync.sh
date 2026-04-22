@@ -18,7 +18,7 @@ stop_postgres() {
   local psql_pid
   psql_pid="$(<"$psql_pid_file")"
   for _ in {1..5}; do
-    if ! kill "$psql_pid"; then
+    if ! kill "$psql_pid" 2>/dev/null; then
       break
     fi
     sleep 1
@@ -153,8 +153,26 @@ export PGHOST=localhost
 export PGUSER=postgres
 export PGPORT=5432
 
-# start and setup postgres
-./scripts/postgres-start.sh "$WORKDIR/postgres" -k
+# Start and setup postgres
+if [ "$UID" -eq 0 ]; then
+  # If running as root, which is the case for containers, create a postgres user because postgres cannot run as root
+  if ! id -u postgres >/dev/null 2>&1; then
+    useradd -m -s /bin/sh postgres
+  fi
+
+  mkdir -p "$WORKDIR/postgres"
+  chown postgres:postgres "$WORKDIR/postgres"
+  # shellcheck disable=SC2016
+  REPODIR="$REPODIR" WORKDIR="$WORKDIR" SU="$(command -v su)" nix develop \
+    --accept-flake-config .#postgres -i -k PGHOST -k PGPORT -k PGUSER -k REPODIR -k WORKDIR -k SU --command bash -c '
+    "$SU" postgres -c "PATH=\"$PATH\" \"$REPODIR/scripts/postgres-start.sh\" \"$WORKDIR/postgres\" -k"
+  ' || {
+    echo "Failed to start postgres as postgres user, line $LINENO in sourced db-sync setup" >&2  # assert
+    exit 1
+  }
+else
+  ./scripts/postgres-start-nix.sh "$WORKDIR/postgres" -k
+fi
 
 cd "$_origpwd" || exit 1
 unset _origpwd

@@ -40,14 +40,14 @@ Running db-sync
 * If you **do not** already have a database and snapshot for the given testnet, start Postgres with a clean database:
 
     ```sh
-    /path/to/cardano-node-tests-repo/scripts/postgres-start.sh ~/tmp/postgres-for-testnet/ -k
+    /path/to/cardano-node-tests-repo/scripts/postgres-start-nix.sh ~/tmp/postgres-for-testnet/ -k
     ./postgres-setup.sh
     ```
 
 * If you **do** already have a database and snapshot, start Postgres using the existing data:
 
     ```sh
-    /path/to/cardano-node-tests-repo/scripts/postgres-start.sh ~/tmp/postgres-for-testnet/
+    /path/to/cardano-node-tests-repo/scripts/postgres-start-nix.sh ~/tmp/postgres-for-testnet/
     ```
 
 * Start db-sync **only after the node is fully synced**:
