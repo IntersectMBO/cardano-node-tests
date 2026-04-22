@@ -715,12 +715,18 @@ def check_pool_data(  # noqa: C901
             f"Expected: {sps_margin} vs Returned: {db_pool_data.margin}"
         )
 
-    sps_reward_account = helpers.get_pool_param("spsRewardAccount", pool_params=ledger_pool_data)
-    ledger_reward_credential = sps_reward_account["credential"]
-    # The "KeyHash" is present in cardano-node >= 8.4.0
-    ledger_reward_address = ledger_reward_credential.get("keyHash") or ledger_reward_credential.get(
-        "key hash"
-    )
+    if "spsAccountId" in ledger_pool_data:
+        # The `spsAccountId` is present in cardano-node >= 10.7.0
+        ledger_reward_address = (ledger_pool_data.get("spsAccountId") or {}).get("keyHash")
+    else:
+        sps_reward_account = helpers.get_pool_param(
+            "spsRewardAccount", pool_params=ledger_pool_data
+        )
+        ledger_reward_credential = sps_reward_account["credential"]
+        # The "KeyHash" is present in cardano-node >= 8.4.0
+        ledger_reward_address = ledger_reward_credential.get(
+            "keyHash"
+        ) or ledger_reward_credential.get("key hash")
     if ledger_reward_address != db_pool_data.reward_addr:
         errors_list.append(
             "'reward address' value is different than expected; "
