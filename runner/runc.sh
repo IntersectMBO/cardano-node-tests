@@ -24,10 +24,12 @@ Usage: $script_name [OPTIONS] [--] command [args...]
 
 Build a container image and run tests inside it.
 
-The command and its arguments are concatenated into a single string and
-executed inside the container via 'bash -c', so shell features like
-variable expansion, pipes, and redirections are available.  Be mindful
-of quoting: the entire command string is interpreted by the shell.
+The command and its arguments are passed through to the container as
+argv (via env(1), so leading NAME=value tokens are applied as
+environment variables for the command).  No extra shell escaping is
+required.  If you need shell features like pipes, redirections, or
+variable expansion, wrap the command explicitly, e.g.
+'-- bash -c "cmd1 | cmd2"'.
 
 Options:
   -h, --help                        Show this help message and exit.
@@ -70,9 +72,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-CMD="$*"
-
-if [ -z "$CMD" ]; then
+if [ $# -eq 0 ]; then
   echo "Error: No command provided." >&2
   usage >&2
   exit 2
@@ -201,7 +201,7 @@ esac
 echo "Using base image:  $BASE_IMAGE"
 echo "Building image:    $TAG"
 echo "Repository:        $REPO_DIR"
-echo "Command:           $CMD"
+echo "Command:           $*"
 echo
 
 $container_manager build "$SCRIPT_DIR" \
@@ -228,4 +228,4 @@ $container_manager run \
   "${EXTRA_MOUNTS[@]}" \
   -e REPO_DIR="$REPO_DIR" \
   "$TAG" \
-  "$CMD"
+  "$@"
