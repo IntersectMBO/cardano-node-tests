@@ -4,7 +4,8 @@
 # successful installation.
 #
 # Based on instructions from
-# <https://developers.cardano.org/docs/get-started/infrastructure/node/installing-cardano-node/#building-via-cabal>
+# <https://github.com/cardano-foundation/developer-portal/blob/staging/docs/get-started/infrastructure/node/installing-cardano-node.md#building-via-cabal>
+# (<https://developers.cardano.org/docs/get-started/infrastructure/node/installing-cardano-node/#building-via-cabal>)
 #
 # Please note: sudo is not used because user is root
 # Please note: 'source ~/.bashrc' cmd is not used because Docker runs this script as subscript
@@ -73,11 +74,11 @@ ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo "$TZ" > /etc/timezone
 echo "Install dependencies"
 if [[ "$distro" == "fedora" ]]; then
   yum update -y
-  yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
+  yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf liburing-devel snappy-devel protobuf-compiler -y
   yum install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
 elif [[ "$distro" == "ubuntu" ]]; then
   apt-get update -y
-  apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libncurses-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libtool autoconf liblmdb-dev -y
+  apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libncurses-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libtool autoconf liblmdb-dev libsnappy-dev protobuf-compiler liburing-dev -y
 fi
 
 # Version of iohk-nix
