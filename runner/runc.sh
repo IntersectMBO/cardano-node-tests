@@ -93,31 +93,43 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # When running from a git worktree, .git is a file referencing the main repo's
 # .git directory.  The path it points to won't exist inside the container unless
 # we also mount the main .git directory at the same absolute path.
-if [ -f "$REPO_DIR/.git" ]; then
-  GITDIR="$(sed -n 's/^gitdir: //p' "$REPO_DIR/.git" | head -n 1)"
-  if [ -n "$GITDIR" ]; then
-    if [[ "$GITDIR" != /* ]]; then
-      GITDIR="$REPO_DIR/$GITDIR"
-    fi
-    # Strip the trailing /worktrees/<name> to get the main .git dir
-    MAIN_GIT_DIR="${GITDIR%%/worktrees/*}"
-    if [ -d "$MAIN_GIT_DIR" ]; then
-      echo "Git worktree detected; mounting main .git: $MAIN_GIT_DIR"
-      EXTRA_MOUNTS+=("-v" "$MAIN_GIT_DIR:$MAIN_GIT_DIR")
-    fi
+# Appends to the global EXTRA_MOUNTS array when a main .git dir must be mounted.
+add_worktree_git_mount() {
+  local repo_dir="$1"
+  local gitdir main_git_dir
+
+  [ -f "$repo_dir/.git" ] || return 0
+  gitdir="$(sed -n 's/^gitdir: //p' "$repo_dir/.git" | head -n 1)"
+  [ -n "$gitdir" ] || return 0
+  if [[ "$gitdir" != /* ]]; then
+    gitdir="$repo_dir/$gitdir"
   fi
-fi
+  # Strip the trailing /worktrees/<name> to get the main .git dir
+  main_git_dir="${gitdir%%/worktrees/*}"
+  [ -d "$main_git_dir" ] || return 0
+  echo "Git worktree detected; mounting main .git: $main_git_dir"
+  EXTRA_MOUNTS+=("-v" "$main_git_dir:$main_git_dir")
+}
+
+add_worktree_git_mount "$REPO_DIR"
 
 # Validate .bin contents for container compatibility.
 # Nix-store symlinks work because /nix is always available in the container.
 # Statically-linked ELF binaries work anywhere.
 # Anything else (symlinks outside /nix, dynamically-linked system binaries,
 # broken symlinks) will silently fail inside the container.
-BIN_DIR="$REPO_DIR/.bin"
-# shellcheck disable=SC2010
-if [ -d "$BIN_DIR" ] && ls -A "$BIN_DIR" 2>/dev/null | grep -q .; then
-  bad=()
-  for f in "$BIN_DIR"/*; do
+validate_bin_dir() {
+  local bin_dir="$1"
+  local container_type="$2"
+  local bad=()
+  local f direct real b
+
+  # shellcheck disable=SC2010
+  if [ ! -d "$bin_dir" ] || ! ls -A "$bin_dir" 2>/dev/null | grep -q .; then
+    return 0
+  fi
+
+  for f in "$bin_dir"/*; do
     # Broken symlink or non-existent
     if [ ! -e "$f" ]; then
       bad+=("$(basename "$f") (broken symlink)")
@@ -129,7 +141,7 @@ if [ -d "$BIN_DIR" ] && ls -A "$BIN_DIR" 2>/dev/null | grep -q .; then
     if [ -L "$f" ]; then
       direct=$(readlink "$f")
       if [[ "$direct" == /nix/* ]]; then
-        if [ "$CONTAINER_TYPE" = "nixos" ]; then
+        if [ "$container_type" = "nixos" ]; then
           # NixOS container has its own /nix store; host /nix paths will not exist inside it.
           bad+=("$(basename "$f") -> $direct (symlink to host /nix path; will not work in NixOS container with separate /nix store)")
         fi
@@ -152,51 +164,66 @@ if [ -d "$BIN_DIR" ] && ls -A "$BIN_DIR" 2>/dev/null | grep -q .; then
       bad+=("$(basename "$f") -> $real (not a Nix-store path; dynamic deps outside /nix)")
     fi
   done
+
   if [ ${#bad[@]} -gt 0 ]; then
     echo "Error: the following .bin/ entries will not work inside the container:" >&2
     for b in "${bad[@]}"; do echo "  $b" >&2; done
     echo "Only symlinks into the container's own /nix store and statically-linked binaries are supported." >&2
-    exit 1
+    return 1
   fi
-fi
+}
+
+validate_bin_dir "$REPO_DIR/.bin" "$CONTAINER_TYPE" || exit 1
 
 # Select base image, tag, and runtime options based on the container type.
-NIX_MOUNTS=()
+# Sets globals BASE_IMAGE, TAG, and appends to NIX_MOUNTS.
+select_image() {
+  local container_type="$1"
+  local container_version="$2"
+  local mint_version="$3"
 
-case "$CONTAINER_TYPE" in
-  nixos)
-    BASE_IMAGE="docker.io/nixos/nix:${CONTAINER_VERSION}"
-    TAG="cardano-tests-nixos"
-    echo "NixOS container selected; /nix will be created inside the container."
-    ;;
-  ubuntu|debian|mint)
-    if [ ! -d "/nix" ]; then
-      echo "Error: Host /nix not found; --${CONTAINER_TYPE}-container requires /nix on the host." >&2
-      exit 1
-    fi
-    NIX_MOUNTS+=("-v" "/nix:/nix")
-    TAG="cardano-tests-${CONTAINER_TYPE}"
-    case "$CONTAINER_TYPE" in
-      ubuntu) BASE_IMAGE="docker.io/library/ubuntu:${CONTAINER_VERSION}" ;;
-      debian) BASE_IMAGE="docker.io/library/debian:${CONTAINER_VERSION}" ;;
-      mint)   BASE_IMAGE="docker.io/linuxmintd/mint${MINT_VERSION}-amd64:latest" ;;
-    esac
-    echo "Host /nix found; mounting into ${CONTAINER_TYPE} container."
-    ;;
-  "")
-    # Auto-detect: Alpine with bind-mounted /nix when available, NixOS otherwise.
-    if [ -d "/nix" ]; then
-      echo "Host /nix found; mounting into Alpine container."
-      BASE_IMAGE="docker.io/library/alpine:${CONTAINER_VERSION}"
-      TAG="cardano-tests-alpine"
-      NIX_MOUNTS+=("-v" "/nix:/nix")
-    else
-      echo "Host /nix not found; NixOS container will be used."
-      BASE_IMAGE="docker.io/nixos/nix:${CONTAINER_VERSION}"
+  case "$container_type" in
+    nixos)
+      BASE_IMAGE="docker.io/nixos/nix:${container_version}"
       TAG="cardano-tests-nixos"
-    fi
-    ;;
-esac
+      echo "NixOS container selected; /nix will be created inside the container."
+      ;;
+    ubuntu|debian|mint)
+      if [ ! -d "/nix" ]; then
+        echo "Error: Host /nix not found; --${container_type}-container requires /nix on the host." >&2
+        return 1
+      fi
+      NIX_MOUNTS+=("-v" "/nix:/nix")
+      TAG="cardano-tests-${container_type}"
+      case "$container_type" in
+        ubuntu) BASE_IMAGE="docker.io/library/ubuntu:${container_version}" ;;
+        debian) BASE_IMAGE="docker.io/library/debian:${container_version}" ;;
+        mint)   BASE_IMAGE="docker.io/linuxmintd/mint${mint_version}-amd64:latest" ;;
+      esac
+      echo "Host /nix found; mounting into ${container_type} container."
+      ;;
+    "")
+      # Auto-detect: Alpine with bind-mounted /nix when available, NixOS otherwise.
+      if [ -d "/nix" ]; then
+        echo "Host /nix found; mounting into Alpine container."
+        BASE_IMAGE="docker.io/library/alpine:${container_version}"
+        TAG="cardano-tests-alpine"
+        NIX_MOUNTS+=("-v" "/nix:/nix")
+      else
+        echo "Host /nix not found; NixOS container will be used."
+        BASE_IMAGE="docker.io/nixos/nix:${container_version}"
+        TAG="cardano-tests-nixos"
+      fi
+      ;;
+    *)
+      echo "Error: Unknown container type '${container_type}'. Expected one of: nixos, ubuntu, debian, mint, or empty for auto-detect." >&2
+      return 1
+      ;;
+  esac
+}
+
+NIX_MOUNTS=()
+select_image "$CONTAINER_TYPE" "$CONTAINER_VERSION" "$MINT_VERSION" || exit 1
 
 echo "Using base image:  $BASE_IMAGE"
 echo "Building image:    $TAG"
