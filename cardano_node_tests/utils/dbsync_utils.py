@@ -18,6 +18,8 @@ from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
 
+_MISSING: tp.Final = object()
+
 
 class DbSyncNoResponseError(Exception):
     """Raised when no response is returned from db-sync."""
@@ -933,12 +935,12 @@ def _check_param_proposal(
     failures = []
 
     for param_name, protocol_value in params_map.items():
-        if protocol_value:
-            db_value = getattr(param_proposal_db, param_name)
-            if db_value and (db_value != protocol_value):
-                failures.append(
-                    f"Param value for {param_name}: {db_value}. Expected: {protocol_value}"
-                )
+        if protocol_value is None:
+            continue
+        db_value = getattr(param_proposal_db, param_name, _MISSING)
+        if db_value is _MISSING or db_value == protocol_value:
+            continue
+        failures.append(f"Param value for {param_name}: {db_value}. Expected: {protocol_value}")
     return failures
 
 
