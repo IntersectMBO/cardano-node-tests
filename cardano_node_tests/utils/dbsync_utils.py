@@ -935,8 +935,6 @@ def _check_param_proposal(
     failures = []
 
     for param_name, protocol_value in params_map.items():
-        if protocol_value is None:
-            continue
         db_value = getattr(param_proposal_db, param_name, _MISSING)
         if db_value is _MISSING or db_value == protocol_value:
             continue
