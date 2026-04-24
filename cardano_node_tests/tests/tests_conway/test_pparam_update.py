@@ -4,6 +4,7 @@ import fractions
 import logging
 import pathlib as pl
 import random
+import re
 
 import allure
 import pytest
@@ -1357,9 +1358,35 @@ class TestPParamUpdate:
         except AssertionError as exc:
             db_errors_final.append(f"db-sync proposal refunds error: {exc}")
 
-        if db_errors_final:
-            raise AssertionError("\n".join(db_errors_final))
+        def _is_dbsync_2105(dbe: str) -> bool:
+            header = re.search(
+                r"Unexpected parameter proposal values in db-sync:\n(.*)", dbe, re.DOTALL
+            )
+            if not header:
+                return False
+            names = []
+            for line in header.group(1).strip().splitlines():
+                name_match = re.match(r"Param value for (\w+):", line)
+                if not name_match:
+                    return False
+                names.append(name_match.group(1))
+            return set(names) == {"min_pool_cost", "coins_per_utxo_size"}
+
+        matched_2105 = []
+        remaining_errors = []
+        for dbe in db_errors_final:
+            if _is_dbsync_2105(dbe):
+                matched_2105.append(dbe)
+            else:
+                remaining_errors.append(dbe)
+
+        if remaining_errors:
+            annotated = [f"{m} (db-sync issue #2105)" for m in matched_2105]
+            raise AssertionError("\n".join(remaining_errors + annotated))
         [r.success() for r in (reqc.cip080, reqc.cip081, reqc.cip082, reqc.cip083)]
+
+        if matched_2105:
+            issues.dbsync_2105.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke

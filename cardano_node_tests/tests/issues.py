@@ -139,6 +139,12 @@ dbsync_1825 = blockers.GH(
     repo="IntersectMBO/cardano-db-sync",
     message="Wrong PlutusV2 script cost when the same script is used twice.",
 )
+dbsync_2105 = blockers.GH(
+    issue=2105,
+    repo="IntersectMBO/cardano-db-sync",
+    fixed_in="13.7.0.3",
+    message="Swapped min_pool_cost / coins_per_utxo_size.",
+)
 
 ledger_3731 = blockers.GH(
     issue=3731,
