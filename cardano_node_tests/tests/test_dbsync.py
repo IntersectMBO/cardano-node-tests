@@ -259,9 +259,12 @@ class TestDBSync:
             )
             raise AssertionError(msg)
 
-        # If cardano-node knows about Babbage and network is in Alonzo or higher era, check that
-        # the highest known protocol major version matches the expected value
-        if rec and not (rec.proto_major == 8 and rec.proto_minor == 0):
+        # Check that the highest known protocol major version matches the expected value
+        protocol_version = cluster.g_query.get_protocol_params()["protocolVersion"]
+        if rec and not (
+            rec.proto_major == protocol_version["major"]
+            and rec.proto_minor == protocol_version["minor"]
+        ):
             pytest.xfail(
                 f"protocol major version: {rec.proto_major}; "
                 f"protocol minor version: {rec.proto_minor}"
