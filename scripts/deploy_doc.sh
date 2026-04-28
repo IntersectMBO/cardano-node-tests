@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+cd "$TOP_DIR"
+
 DOC_SRC="src_docs"
 
 unset GITHUB_TOKEN
@@ -12,11 +15,11 @@ if [ ! -d "$DOC_SRC" ]; then
     exit 1
 fi
 
-# check that virtual env is activated
-if [ -z "${VIRTUAL_ENV:-""}" ]; then
-  echo "A python virtual env is not activated in this shell." >&2
-  exit 1
-fi
+# shellcheck disable=SC1091
+. "$TOP_DIR/scripts/common.sh"
+
+# check that correct virtual env is activated
+assert_correct_venv "$TOP_DIR"
 
 # check that current branch is "master"
 cur_branch="$(git rev-parse --abbrev-ref HEAD)"
