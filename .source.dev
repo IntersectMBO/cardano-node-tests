@@ -29,6 +29,16 @@ if [ -z "${VIRTUAL_ENV:-}" ]; then
   source "$_root_dir_cnt/.venv/bin/activate"
 fi
 
+# Check that correct virtual env is activated (compare canonicalized paths)
+_expected_venv="$(readlink -f -- "$_root_dir_cnt/.venv" 2>/dev/null || echo "$_root_dir_cnt/.venv")"
+_actual_venv="$(readlink -f -- "${VIRTUAL_ENV:-}" 2>/dev/null || echo "${VIRTUAL_ENV:-}")"
+if [ "$_actual_venv" != "$_expected_venv" ]; then
+  echo "Wrong virtual env activated: VIRTUAL_ENV='${VIRTUAL_ENV:-}', expected '$_root_dir_cnt/.venv'." >&2
+  unset _expected_venv _actual_venv
+  return 1
+fi
+unset _expected_venv _actual_venv
+
 PYTHONPATH="$(
   # shellcheck disable=SC1091
   source "$_root_dir_cnt/scripts/common.sh"

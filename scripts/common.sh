@@ -14,6 +14,28 @@ is_truthy() {
   esac
 }
 
+is_venv_active() {
+  [ -n "${VIRTUAL_ENV:-}" ]
+}
+
+# Verify that VIRTUAL_ENV is activated and points to .venv inside the given top dir.
+# Compares canonicalized paths to tolerate symlinks and trailing slashes.
+# Usage: assert_correct_venv <top_dir>
+assert_correct_venv() {
+  local top_dir="$1"
+  local expected actual
+  if ! is_venv_active; then
+    echo "Error: no virtual env is activated; expected '$top_dir/.venv'." >&2
+    return 1
+  fi
+  expected="$(readlink -f -- "$top_dir/.venv" 2>/dev/null || echo "$top_dir/.venv")"
+  actual="$(readlink -f -- "$VIRTUAL_ENV" 2>/dev/null || echo "$VIRTUAL_ENV")"
+  if [ "$actual" != "$expected" ]; then
+    echo "Error: wrong virtual env activated: VIRTUAL_ENV='$VIRTUAL_ENV', expected '$top_dir/.venv'." >&2
+    return 1
+  fi
+}
+
 filter_out_nix(){
   if [[ :"${PYTHONPATH:-}": == */nix/store/* ]]; then
     # Filter out nix python packages from PYTHONPATH.

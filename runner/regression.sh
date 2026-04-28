@@ -22,6 +22,11 @@ export PATH_PREPEND="${PWD}/.bin"
 # shellcheck disable=SC1091
 . scripts/common.sh
 
+if is_venv_active; then
+  echo "This script should be run outside of any virtual environment." >&2
+  exit 1
+fi
+
 # shellcheck disable=SC1091
 . runner/stop_cluster_instances.sh
 

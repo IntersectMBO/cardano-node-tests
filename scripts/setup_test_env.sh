@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-if [ -n "${VIRTUAL_ENV:-""}" ]; then
+if [ -n "${VIRTUAL_ENV:-}" ]; then
   echo "This script should be run outside of any virtual environment." >&2
   exit 1
 fi
@@ -12,7 +12,7 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 1
 fi
 
-case "${1:-""}" in
+case "${1:-}" in
   "conway")
     CLUSTER_ERA=conway
     COMMAND_ERA=conway

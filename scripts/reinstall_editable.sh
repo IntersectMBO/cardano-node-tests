@@ -14,8 +14,11 @@ REPO_PATH="$(readlink -f "$1")"
 TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 cd "$TOP_DIR"
 
+# shellcheck disable=SC1091
+. "$TOP_DIR/scripts/common.sh"
+
 # Activate python virtual environment
-if [ -z "${VIRTUAL_ENV:-}" ]; then
+if ! is_venv_active; then
   if [ ! -e "$TOP_DIR/.venv/bin/activate" ]; then
     err "Virtual environment not found at: $TOP_DIR/.venv"
     exit 1
@@ -23,13 +26,9 @@ if [ -z "${VIRTUAL_ENV:-}" ]; then
   # shellcheck disable=SC1091
   . "$TOP_DIR/.venv/bin/activate"
 fi
-if [ -z "${VIRTUAL_ENV:-}" ]; then
-  err "Failed to activate virtual environment."
-  exit 1
-fi
 
-# shellcheck disable=SC1091
-. "$TOP_DIR/scripts/common.sh"
+# check that correct virtual env is activated
+assert_correct_venv "$TOP_DIR"
 
 filter_out_nix
 

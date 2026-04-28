@@ -1,7 +1,37 @@
 .DEFAULT_GOAL := help
 
-VENV := .venv
 TESTNET_VARIANT ?= conway_fast
+VENV := .venv
+
+.PHONY: .check-venv-exists
+.check-venv-exists:
+	@if [ ! -d "$(VENV)" ]; then \
+		echo "Error: Virtual environment not found. Please run 'make install' first." >&2; \
+		exit 1; \
+	fi
+
+.PHONY: .check-venv-activated
+.check-venv-activated:
+	@venv_abs="$$(readlink -f -- "$(CURDIR)/$(VENV)" 2>/dev/null || echo "$(CURDIR)/$(VENV)")"; \
+		actual="$$(readlink -f -- "$${VIRTUAL_ENV:-}" 2>/dev/null || echo "$${VIRTUAL_ENV:-}")"; \
+		if [ -z "$${VIRTUAL_ENV:-}" ]; then \
+			echo "Error: Virtual environment not activated. Please run 'source $(VENV)/bin/activate' first." >&2; \
+			exit 1; \
+		elif [ "$$actual" != "$$venv_abs" ]; then \
+			echo "Error: Wrong virtual environment is activated. Please run 'source $(VENV)/bin/activate'." >&2; \
+			echo "Expected: $$venv_abs" >&2; \
+			echo "Actual:   $$actual" >&2; \
+			exit 1; \
+		fi
+
+.PHONY: .check-venv-not-activated
+.check-venv-not-activated:
+	@venv_abs="$$(readlink -f -- "$(CURDIR)/$(VENV)" 2>/dev/null || echo "$(CURDIR)/$(VENV)")"; \
+		actual="$$(readlink -f -- "$${VIRTUAL_ENV:-}" 2>/dev/null || echo "$${VIRTUAL_ENV:-}")"; \
+		if [ -n "$${VIRTUAL_ENV:-}" ] && [ "$$actual" = "$$venv_abs" ]; then \
+			echo "Error: Project virtual environment is currently activated. Please deactivate it first." >&2; \
+			exit 1; \
+		fi
 
 ## ---------------------------------------------------------------------------
 ## Setup
@@ -37,12 +67,12 @@ test-env: ## Set up test environment (variant: TESTNET_VARIANT=conway_fast)
 
 # prepare cluster scripts for the given variant
 .PHONY: cluster-scripts
-cluster-scripts: ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=conway_fast)
-	$(VENV)/bin/prepare-cluster-scripts -c -d dev_workdir/$(TESTNET_VARIANT) -t $(TESTNET_VARIANT)
+cluster-scripts: .check-venv-activated ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=conway_fast)
+	prepare-cluster-scripts -c -d dev_workdir/$(TESTNET_VARIANT) -t $(TESTNET_VARIANT)
 
 # start the local testnet cluster
 .PHONY: start-cluster
-start-cluster: ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+start-cluster: .check-venv-activated ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
 	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/start-cluster" ]; then \
 		echo "Error: dev_workdir/$(TESTNET_VARIANT)/start-cluster not found." >&2; \
 		echo "Run 'make cluster-scripts' first." >&2; \
@@ -52,7 +82,7 @@ start-cluster: ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_f
 
 # stop the local testnet cluster
 .PHONY: stop-cluster
-stop-cluster: ## Stop local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+stop-cluster: .check-venv-activated ## Stop local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
 	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/stop-cluster" ]; then \
 		echo "Error: dev_workdir/$(TESTNET_VARIANT)/stop-cluster not found." >&2; \
 		echo "Run 'make cluster-scripts' first." >&2; \
@@ -65,7 +95,7 @@ stop-cluster: ## Stop local testnet cluster (variant: TESTNET_VARIANT=conway_fas
 ## ---------------------------------------------------------------------------
 
 .PHONY: init-lint
-init-lint: ## Initialize linters
+init-lint: .check-venv-exists ## Initialize linters
 	$(VENV)/bin/pre-commit clean
 	$(VENV)/bin/pre-commit gc
 	find . -path '*/.mypy_cache/*' -delete
@@ -73,11 +103,11 @@ init-lint: ## Initialize linters
 	$(VENV)/bin/pre-commit install --install-hooks
 
 .PHONY: lint
-lint: ## Run linters
+lint: .check-venv-exists ## Run linters
 	$(VENV)/bin/pre-commit run -a --show-diff-on-failure --color=always
 
 .PHONY: fmt
-fmt: ## Format code with ruff
+fmt: .check-venv-exists ## Format code with ruff
 	$(VENV)/bin/pre-commit run ruff-check -a
 	$(VENV)/bin/pre-commit run ruff-format -a
 
@@ -86,7 +116,7 @@ fmt: ## Format code with ruff
 ## ---------------------------------------------------------------------------
 
 .PHONY: build-doc
-build-doc: ## Build sphinx documentation
+build-doc: .check-venv-activated ## Build sphinx documentation
 	mkdir -p src_docs/build
 	$(MAKE) -C src_docs clean
 	$(MAKE) -C src_docs html
@@ -124,7 +154,7 @@ clean: ## Clean build artifacts and caches
 	find . -name '*.pyc' -not -path './$(VENV)/*' -delete
 
 .PHONY: clean-all
-clean-all: clean ## Clean all build artifacts, caches, and virtual environment
+clean-all: .check-venv-not-activated clean ## Clean all build artifacts, caches, and virtual environment
 	@echo "Removing virtual environment: $(VENV)"
 	rm -rf -- "$(VENV)"
 
@@ -136,7 +166,7 @@ clean-all: clean ## Clean all build artifacts, caches, and virtual environment
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} \
 		/^## [A-Z][a-zA-Z]*$$/ { section = substr($$0, 4); next } \
-		/^[a-zA-Z_-]+:.*?##/ { \
+		/^[a-zA-Z_-]+:.*##/ { \
 			if (section != last_section) { \
 				printf "\n\033[1m%s\033[0m\n", section; \
 				last_section = section; \
