@@ -34,6 +34,7 @@ ERRORS_IGNORED = [
     ":Debug:",
     ":Info:",
     # Allowed errors
+    "BenchTxSubDebug",
     "Event: LedgerUpdate",
     "trace.*ErrorPolicy",
     "ErrorPolicySuspendConsumer",
