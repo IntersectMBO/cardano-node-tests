@@ -80,7 +80,9 @@ except Exception:
 
     if [ "$_ready" -ne 1 ]; then
         echo "ERROR: node container did not become ready within 10 minutes" >&2
-        exit 1
+        printf '{"antithesis_assert": {"type": "always", "condition": false, "display_name": "Node became ready", "message": "Node container did not become ready within 10 minutes", "details": {"node_host": "%s", "node_port": "%s"}, "location": {"function": "antithesis_run.sh", "file": "antithesis_run.sh", "begin_line": 1, "begin_column": 1, "class": ""}}}\n' \
+            "${NODE_HOST:-}" "${_node_port:-8090}" >> "${ANTITHESIS_OUTPUT_DIR:-/tmp/antithesis}/sdk.jsonl"
+        exit 0
     fi
     echo "Node is ready."
 
