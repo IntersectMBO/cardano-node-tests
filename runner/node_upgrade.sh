@@ -37,6 +37,9 @@ if is_venv_active; then
   exit 1
 fi
 
+# Refuse to start if another testrun is already using this workdir.
+acquire_workdir_lock "$WORKDIR" || exit 1
+
 # shellcheck disable=SC1091
 . runner/stop_cluster_instances.sh
 
