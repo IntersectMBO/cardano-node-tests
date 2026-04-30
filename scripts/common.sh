@@ -79,3 +79,21 @@ filter_out_nix(){
     unset PYTHONPATH
   fi
 }
+
+get_node_version() {
+  local version _
+  read -r _ version _ < <(cardano-node --version 2>/dev/null)
+  [ -n "$version" ] || return 1
+  printf '%s\n' "$version"
+}
+
+version_parse() {
+  # Limitation: minor and patch must be < 1000, else they overflow into the next field.
+  local v="${1:?"Missing version"}"
+  local major minor patch
+  IFS=. read -r major minor patch <<< "$v"
+  major="${major%%[!0-9]*}"
+  minor="${minor%%[!0-9]*}"
+  patch="${patch%%[!0-9]*}"
+  printf '%d\n' "$((10#${major:-0} * 1000000 + 10#${minor:-0} * 1000 + 10#${patch:-0}))"
+}
