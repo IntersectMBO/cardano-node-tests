@@ -208,6 +208,11 @@ ledger_5365 = blockers.GH(
     fixed_in="10.6.0.0",
     message="queryPoolState returns current pool params instead of the future ones.",
 )
+ledger_5788 = blockers.GH(
+    issue=5788,
+    repo="IntersectMBO/cardano-ledger",
+    message="queryStakeSnapshots returns 1 for empty snapshots instead of 0.",
+)
 
 network_5281 = blockers.GH(
     issue=5281,
