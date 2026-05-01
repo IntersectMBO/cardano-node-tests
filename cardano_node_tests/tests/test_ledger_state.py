@@ -289,6 +289,11 @@ class TestLedgerState:
                 errors.append(f"active_go: {sum_go} < {stake_snapshot['activeStakeGo']}")
 
         if errors:
+            unknown_errs = [e for e in errors if e not in {"total_set: 0 != 1", "total_go: 0 != 1"}]
+            if not unknown_errs:
+                issues.ledger_5788.finish_test()
+
+        if errors:
             with open(f"{temp_template}.pickle", "wb") as out_data:
                 pickle.dump(ledger_state_data, out_data)
             err_joined = "\n".join(errors)
