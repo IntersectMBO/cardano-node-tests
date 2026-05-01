@@ -1329,10 +1329,17 @@ class TestAdvancedQueries:
             err_joined = "\n".join(errors)
             pytest.fail(f"Errors:\n{err_joined}")
         elif total_stake_errors:
-            err_joined = "\n".join(total_stake_errors)
-            node_4895 = issues.node_4895.copy()
-            node_4895.message = f"Unexpected values for total stake:\n{err_joined}"
-            node_4895.finish_test()
+            unknown_errs = [
+                e for e in total_stake_errors if e not in {"active_set: 0 < 1", "active_go: 0 < 1"}
+            ]
+            if not unknown_errs:
+                issues.ledger_5788.finish_test()
+            else:
+                # Fall through to node_4895 with the remaining (unknown) totals errors
+                err_joined = "\n".join(total_stake_errors)
+                node_4895 = issues.node_4895.copy()
+                node_4895.message = f"Unexpected values for total stake:\n{err_joined}"
+                node_4895.finish_test()
 
     @pytest.fixture
     def pool_ids(self, cluster: clusterlib.ClusterLib) -> list[str]:
