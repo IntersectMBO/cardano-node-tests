@@ -196,8 +196,8 @@ class TestSetup:
             cluster_nodes.get_cluster_env().state_dir / "config-pool1.json", encoding="utf-8"
         ) as in_json:
             is_experimental_enabled = bool(json.load(in_json).get("ExperimentalHardForksEnabled"))
-        if not is_experimental_enabled:
-            pytest.skip("Experimental hard-forks are not enabled on the cluster.")
+        if VERSIONS.node < version.parse("11.0.0") and not is_experimental_enabled:
+            pytest.skip("Enabled experimental hard-forks are needed for this node version.")
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster
