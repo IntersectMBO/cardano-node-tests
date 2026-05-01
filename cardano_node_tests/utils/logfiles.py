@@ -34,7 +34,6 @@ ERRORS_IGNORED = [
     ":Debug:",
     ":Info:",
     # Allowed errors
-    "BenchTxSubDebug",
     "Event: LedgerUpdate",
     "trace.*ErrorPolicy",
     "ErrorPolicySuspendConsumer",
@@ -47,6 +46,10 @@ ERRORS_IGNORED = [
     "closed when reading data, waiting on next header",
     "IOException writev: resource vanished",
     r"IOException Network\.Socket\.recvBuf: resource vanished",
+    # tx-generator allowed errors
+    "BenchTxSubDebug",
+    "BenchTxSubSummary",
+    "QRT Last Message",
     # Can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
     # Can happen on p2p when node is shutting down
