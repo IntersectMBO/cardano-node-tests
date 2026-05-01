@@ -76,9 +76,8 @@ if [ "$1" = "step1" ]; then
   ln -s "$(command -v cardano-node)" "$STEP1_BIN/cardano-node-step1"
   ln -s "$(command -v cardano-cli)" "$STEP1_BIN/cardano-cli-step1"
 
-  # backup the original genesis files
-  cp -f "$STATE_CLUSTER/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.step1.json"
-  cp -f "$STATE_CLUSTER/shelley/genesis.conway.json" "$STATE_CLUSTER/shelley/genesis.conway.step1.json"
+  # backup the original config file
+  cp -f "$STATE_CLUSTER/config-pool3.json" "$STATE_CLUSTER/config-pool3.step1.json"
 
   # run smoke tests
   printf "STEP1 tests: %(%H:%M:%S)T\n" -1
@@ -121,69 +120,44 @@ elif [ "$1" = "step2" ]; then
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step2/state-cluster0/bft1.socket" \
-    ENABLE_EXPERIMENTAL=true \
+    PROTOCOL_VERSION=11 \
     DRY_RUN=true \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
-  # copy newly generated topology files to the cluster state dir
-  cp -f "$WORKDIR"/dry_config_step2/state-cluster0/topology-*.json "$STATE_CLUSTER"
 
-  if [ -n "${REPLACE_GENESIS_STEP2:-""}" ]; then
-    # Copy newly generated Alonzo genesis to the cluster state dir
-    cp -f "$WORKDIR/dry_config_step2/state-cluster0/shelley/genesis.alonzo.json" "$STATE_CLUSTER/shelley"
-
-    # Copy newly generated Conway genesis file to the cluster state dir, use committee members from the original
-    # Conway genesis.
-    jq \
-      --argfile src "$STATE_CLUSTER/shelley/genesis.conway.step1.json" \
-      '.committee.members = $src.committee.members' \
-      "$WORKDIR/dry_config_step2/state-cluster0/shelley/genesis.conway.json" > "$STATE_CLUSTER/shelley/genesis.conway.json"
-  fi
-
-  # use the original Byron, Shelley and Dijkstra genesis files
+  # use the original genesis files
   BYRON_GENESIS_HASH="$(jq -r '.ByronGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
   SHELLEY_GENESIS_HASH="$(jq -r '.ShelleyGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  # hashes of the original alonzo and conway genesis files
-  CONWAY_GENESIS_STEP1_HASH="$(jq -r '.ConwayGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  ALONZO_GENESIS_STEP1_HASH="$(jq -r '.AlonzoGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  # hashes of genesis files that were potentially replaced
-  ALONZO_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
-    "$STATE_CLUSTER/shelley/genesis.alonzo.json")"
-  CONWAY_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
-    "$STATE_CLUSTER/shelley/genesis.conway.json")"
+  ALONZO_GENESIS_HASH="$(jq -r '.AlonzoGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  CONWAY_GENESIS_HASH="$(jq -r '.ConwayGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
 
   # copy newly generated config files to the cluster state dir
   for conf in "$WORKDIR"/dry_config_step2/state-cluster0/config-*.json; do
     fname="${conf##*/}"
+    nodename="${fname#config-}"
+    nodename="${nodename%.json}"
 
-    if [ "$fname" = "config-pool3.json" ]; then
-      # use old Alonzo and Conway genesis on pool3
-      selected_alonzo_hash="$ALONZO_GENESIS_STEP1_HASH"
-      selected_alonzo_file="shelley/genesis.alonzo.step1.json"
-      selected_conway_hash="$CONWAY_GENESIS_STEP1_HASH"
-      selected_conway_file="shelley/genesis.conway.step1.json"
-    else
-      # use new Alonzo and Conway genesis on upgraded nodes
-      selected_alonzo_hash="$ALONZO_GENESIS_HASH"
-      selected_alonzo_file="shelley/genesis.alonzo.json"
-      selected_conway_hash="$CONWAY_GENESIS_HASH"
-      selected_conway_file="shelley/genesis.conway.json"
+    # use new config on upgraded nodes
+    if [ "$fname" != "config-pool3.json" ]; then
+      jq \
+        --arg byron_hash "$BYRON_GENESIS_HASH" \
+        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+        --arg alonzo_file "shelley/genesis.alonzo.json" \
+        --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+        --arg conway_file "shelley/genesis.conway.json" \
+        --arg conway_hash "$CONWAY_GENESIS_HASH" '
+        .ByronGenesisHash = $byron_hash
+        | .ShelleyGenesisHash = $shelley_hash
+        | .AlonzoGenesisFile = $alonzo_file
+        | .AlonzoGenesisHash = $alonzo_hash
+        | .ConwayGenesisFile = $conway_file
+        | .ConwayGenesisHash = $conway_hash
+        | .ExperimentalHardForksEnabled = false
+        ' "$conf" > "$STATE_CLUSTER/$fname"
     fi
 
-    jq \
-      --arg byron_hash "$BYRON_GENESIS_HASH" \
-      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
-      --arg alonzo_file "$selected_alonzo_file" \
-      --arg alonzo_hash "$selected_alonzo_hash" \
-      --arg conway_file "$selected_conway_file" \
-      --arg conway_hash "$selected_conway_hash" '
-      .ByronGenesisHash = $byron_hash
-      | .ShelleyGenesisHash = $shelley_hash
-      | .AlonzoGenesisFile = $alonzo_file
-      | .AlonzoGenesisHash = $alonzo_hash
-      | .ConwayGenesisFile = $conway_file
-      | .ConwayGenesisHash = $conway_hash
-      ' "$conf" > "$STATE_CLUSTER/$fname"
+    # copy newly generated topology files to the cluster state dir
+    cp -f "${WORKDIR}/dry_config_step2/state-cluster0/topology-${nodename}.json" "$STATE_CLUSTER"
   done
 
   # run the pool3 with the original cardano-node binary
@@ -288,7 +262,7 @@ elif [ "$1" = "step3" ]; then
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step3/state-cluster0/bft1.socket" \
-    ENABLE_EXPERIMENTAL=true \
+    PROTOCOL_VERSION=11 \
     DRY_RUN=true \
     "$CLUSTER_SCRIPTS_DIR/start-cluster"
 
@@ -306,6 +280,9 @@ elif [ "$1" = "step3" ]; then
     DIJKSTRA_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
       "$STATE_CLUSTER/shelley/genesis.dijkstra.json")"
   fi
+  NODE_VER="$(version_parse "$(get_node_version)")"
+  NODE_V11="$(version_parse 11.0.0)"
+
   for conf in "$WORKDIR"/dry_config_step3/state-cluster0/config-*.json; do
     fname="${conf##*/}"
     jq \
@@ -313,12 +290,15 @@ elif [ "$1" = "step3" ]; then
       --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
       --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
       --arg conway_hash "$CONWAY_GENESIS_HASH" \
-      --arg dijkstra_hash "$DIJKSTRA_GENESIS_HASH" '
+      --arg dijkstra_hash "$DIJKSTRA_GENESIS_HASH" \
+      --argjson node_ver "$NODE_VER" \
+      --argjson node_v11 "$NODE_V11" '
       .ByronGenesisHash = $byron_hash
       | .ShelleyGenesisHash = $shelley_hash
       | .AlonzoGenesisHash = $alonzo_hash
       | .ConwayGenesisHash = $conway_hash
       | .DijkstraGenesisHash = $dijkstra_hash
+      | .ExperimentalProtocolsEnabled = ($node_ver < $node_v11)
       ' "$conf" > "$STATE_CLUSTER/$fname"
   done
 
