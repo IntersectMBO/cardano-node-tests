@@ -64,7 +64,6 @@ if [ -n "${DBSYNC_TAR_URL:-}" ]; then
   rm -rf dbsync_download
   mkdir -p dbsync_download
   tar -C dbsync_download -xzf "$DBSYNC_TAR_FILE" || exit 1
-  chmod +x dbsync_download/bin/*  # TODO: Remove this line once the tarball has the correct permissions set
   rm -f "$DBSYNC_TAR_FILE"
   rm -f db-sync-node
   ln -s dbsync_download db-sync-node || exit 1
