@@ -137,6 +137,8 @@ markers = [
     "smash: test(s) for node + optionaly cardano-smash",
     "testnets: test(s) can run on public testnets, like Preview",
     "long: test(s) run for a long time on local testnets",
+    "xdist_group: group test(s) onto a single xdist worker",
+    "xdist_split: spread tests sharing a heavy resource across xdist workers",
     "smoke: fast test(s) under 1 minute",
     "upgrade_step1: test(s) for upgrade testing in step1",
     "upgrade_step2: test(s) for upgrade testing in step2",

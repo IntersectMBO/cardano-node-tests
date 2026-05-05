@@ -1632,6 +1632,7 @@ class TestDRepActivity:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
+    @pytest.mark.xdist_split("governance")
     @pytest.mark.long
     def test_drep_inactivity(  # noqa: C901
         self,

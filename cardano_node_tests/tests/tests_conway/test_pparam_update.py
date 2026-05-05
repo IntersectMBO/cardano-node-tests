@@ -261,6 +261,7 @@ class TestPParamUpdate:
     """Tests for protocol parameters update."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split("governance,plutus")
     @pytest.mark.long
     @pytest.mark.dbsync
     def test_pparam_update(  # noqa: C901
