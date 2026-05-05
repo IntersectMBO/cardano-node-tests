@@ -47,6 +47,7 @@ class TestHardfork:
     """Tests for hard-fork."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split("governance")
     @pytest.mark.long
     def test_hardfork(
         self,

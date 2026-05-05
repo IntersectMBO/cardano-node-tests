@@ -312,6 +312,7 @@ class TestConstitution:
     """Tests for constitution."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split("governance")
     @pytest.mark.dbsync
     @pytest.mark.long
     def test_change_constitution(
