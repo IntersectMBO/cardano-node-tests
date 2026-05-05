@@ -61,7 +61,10 @@ def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
     with open(cbor_file, "rb") as in_fp:
         cbor_binary = in_fp.read()
 
-    r = 0
+    # Retry only on `MempoolTxTooSlow`, which is a wallclock soft-timeout in the node's
+    # mempool. It is transient when caused by GC pauses, snapshot writes, or CPU spikes;
+    # backoff must outlast those. If it persists after a few retries, the cause is not
+    # transient (expensive tx or overloaded node) and further retries won't help.
     attempts = 6
     for r in range(1, attempts + 1):
         if r > 1:
@@ -71,17 +74,20 @@ def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
             url, headers=headers, data=cbor_binary, timeout=300
         )
 
-        if not response and "MempoolTxTooSlow" in response.text:
+        if response.status_code == 400 and "MempoolTxTooSlow" in response.text:
             if r < attempts:
-                time.sleep(random.uniform(0, r))
-            continue
+                time.sleep(random.uniform(2, 10))
+                continue
+            err = (
+                f"Failed to submit the tx after {attempts} attempts due to "
+                f"`MempoolTxTooSlow`: {response.text}"
+            )
+            raise SubmitApiError(err)
 
-        break
-    else:
-        err = f"Failed to submit the tx after {attempts} attempts."
-        raise SubmitApiError(err)
+        return response
 
-    return response
+    msg = f"Unreachable: loop exited without return after {attempts} attempts."
+    raise RuntimeError(msg)
 
 
 def submit_tx_bare(*, tx_file: clusterlib.FileType) -> SubmitApiOut:
