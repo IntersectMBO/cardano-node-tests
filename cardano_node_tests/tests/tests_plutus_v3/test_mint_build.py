@@ -271,6 +271,7 @@ class TestPlutusV3Builtins:
     batch6_overspend_scripts = plutus_common.OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split("governance")
     @pytest.mark.long
     @pytest.mark.team_plutus
     @pytest.mark.upgrade_step1
