@@ -1,7 +1,7 @@
 CLUSTER_ERA=conway
 COMMAND_ERA=latest
 MARKEXPR=dbsync or smash
-DBSYNC_REV=13.7.0.2
-DBSYNC_TAR_URL=https://github.com/IntersectMBO/cardano-db-sync/releases/download/13.7.0.2/cardano-db-sync-13.7.0.2-linux.tar.gz
+DBSYNC_REV=13.7.0.4
+DBSYNC_TAR_URL=https://github.com/IntersectMBO/cardano-db-sync/releases/download/13.7.0.4/cardano-db-sync-13.7.0.4-linux.tar.gz
 SMASH=true
 DBSYNC_SKIP_INDEXES=true
