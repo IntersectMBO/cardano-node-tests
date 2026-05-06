@@ -196,7 +196,7 @@ target_testpr() {
 target_testnets() {
   export FORBID_RESTART=true
   export CLUSTERS_COUNT=1
-  TEST_THREADS="${TEST_THREADS:-15}"
+  TEST_THREADS="${TEST_THREADS:-6}"
   SESSION_TIMEOUT="${SESSION_TIMEOUT:-20h}"
   ensure_markexpr_default "testnets"
 
