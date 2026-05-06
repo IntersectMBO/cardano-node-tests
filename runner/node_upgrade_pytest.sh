@@ -375,6 +375,7 @@ elif [ "$1" = "step3" ]; then
 
   # Hard fork
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 6
+  export PROTOCOL_VERSION=11
 
   # Run smoke tests
   printf "STEP3 tests: %(%H:%M:%S)T\n" -1
