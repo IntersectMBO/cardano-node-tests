@@ -9,7 +9,7 @@ export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
 STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
 
 # default era to use, can be overridden in each step if needed
-export CLUSTER_ERA="${CLUSTER_ERA:-"conway"}"
+CLUSTER_ERA="conway"
 export COMMAND_ERA="${COMMAND_ERA:-"$CLUSTER_ERA"}"
 
 : "${WORKDIR:?WORKDIR environment variable must be set}"

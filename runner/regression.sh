@@ -66,10 +66,8 @@ if [ -n "${CLUSTERS_COUNT:-}" ]; then
   export CLUSTERS_COUNT
 fi
 
-if [ "${CLUSTER_ERA:-}" = "conway 10" ]; then
-  export CLUSTER_ERA="conway"
-elif [ "${CLUSTER_ERA:-}" = "conway 11" ]; then
-  export CLUSTER_ERA="conway"
+CLUSTER_ERA="conway"
+if [ "${CI_CLUSTER_ERA:-}" = "conway 11" ]; then
   export PROTOCOL_VERSION=11
 fi
 
@@ -82,7 +80,7 @@ fi
 if [ -n "${TESTNET_VARIANT:-}" ]; then
   export TESTNET_VARIANT
 elif is_truthy "${CI_BYRON_CLUSTER:-}"; then
-  export TESTNET_VARIANT="${CLUSTER_ERA:-conway}_slow"
+  export TESTNET_VARIANT="${CLUSTER_ERA:?}_slow"
 fi
 
 if [ "${CI_CONSENSUS_MODE:-}" = "Genesis" ]; then

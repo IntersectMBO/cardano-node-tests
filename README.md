@@ -140,7 +140,6 @@ You can fine-tune test runs using these environment variables:
 | ------------------------------- | --------------------------------------------------- |
 | `BOOTSTRAP_DIR`                 | Bootstrap testnet directory.                        |
 | `CLUSTERS_COUNT`                | Number of clusters to launch (default: 9).          |
-| `CLUSTER_ERA`                   | Testnet Cluster era (default: `conway`).            |
 | `COMMAND_ERA`                   | CLI command target era.                             |
 | `KEEP_CLUSTERS_RUNNING`         | Don't shut down clusters after tests.               |
 | `MARKEXPR`                      | Marker expression for pytest filtering.             |
