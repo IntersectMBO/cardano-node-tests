@@ -1,0 +1,74 @@
+{
+    "title": "CIP-108 Common",
+    "description": "Metadata",
+    "type": "object",
+    "required": [
+        "hashAlgorithm",
+        "authors",
+        "body"
+    ],
+    "hashAlgorithm": "blake2b-256",
+    "authors": [
+        {
+            "name": "Artur Wieczorek",
+            "witness": {
+                "witnessAlgorithm": "ed25519",
+                "publicKey": "7b5bb76010969223260ad382508527b13d46b830554504af8ce7efd50a5af23f",
+                "signature": "9a5f59c702cf54f3397132cc813abb54ab7ae9fe5c10aea0fc68994714843c8691f3880b0b3442aa5ed5c64aa27d5417c6f0e341abe185fb26713d25dd71a40d"
+            }
+        },
+        {
+            "name": "Ryan Williams"
+        }
+    ],
+    "body": {
+        "title": "Test cardano-db-sync off_chain_vote_data table",
+        "abstract": "Conway Era Tests",
+        "motivation": "Good Quality of the Product",
+        "rationale": "cardano-db-sync needs to support all Conway Era features",
+        "references": [
+            {
+                "@type": "Link",
+                "label": "CIP-100",
+                "uri": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0100/README.md",
+                "referenceHash": {
+                    "hashDigest": "70e79c1f12ff3c8c955bc2178a542b5994a21be163dd7655af2c5308d2643323",
+                    "hashAlgorithm": "blake2b-256"
+                }
+            },
+            {
+                "@type": "Identity",
+                "label": "CIP-108",
+                "uri": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0108/README.md",
+                "referenceHash": {
+                    "hashDigest": "68e09c1f22ff3c8c555b7bs78ac42s599ah61be163dd7655af2c73fhd7263379",
+                    "hashAlgorithm": "blake2b-256"
+                }
+            },
+            {
+                "@type": "Other",
+                "label": "CIP-112",
+                "uri": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0112/README.md",
+                "referenceHash": {
+                    "hashDigest": "97e09f6fv2zf3c8c7d3b7hs8bacf5s5h7ahklbe163dd7655af2c73fhd72hu8s4",
+                    "hashAlgorithm": "blake2b-256"
+                }
+            }
+        ],
+        "comment": "This is a test vector for CIP-100",
+        "externalUpdates": [
+            {
+                "title": "cardano-node-tests",
+                "uri": "https://github.com/IntersectMBO/cardano-node-tests"
+            },
+            {
+                "title": "cardano-node",
+                "uri": "https://github.com/IntersectMBO/cardano-node"
+            },
+            {
+                "title": "cardano-db-sync",
+                "uri": "https://github.com/IntersectMBO/cardano-db-sync"
+            }
+        ]
+    }
+}
