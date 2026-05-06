@@ -29,8 +29,8 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
     can reorder them independently, and the number of in-flight tests sharing a given
     split key is capped at the available cluster instance capacity
     (see ``self.clusters_count``). A test that locks multiple shared resources can
-    declare several keys at once with a comma-separated value
-    (e.g. ``@pytest.mark.xdist_split("governance,plutus")``); the cap is then
+    declare several keys at once as positional args
+    (e.g. ``@pytest.mark.xdist_split("governance", "plutus")``); the cap is then
     enforced independently for each key.
 
     Without this cap, when many tests with the same split key are collected together
@@ -120,7 +120,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         """Return the set of split keys encoded in a nodeid (empty if none).
 
         A test can declare multiple split keys (locking multiple shared resources)
-        via ``@pytest.mark.xdist_split("a,b")``; each key is encoded as its own
+        via ``@pytest.mark.xdist_split("a", "b")``; each key is encoded as its own
         ``@split=<key>`` suffix.
         """
         param_end_idx = nodeid.rfind("]")
@@ -277,16 +277,12 @@ def pytest_collection_modifyitems(items: list) -> None:
 
         # Add the split key(s) to nodeid as suffix. Recognized by the scheduler to spread
         # tests sharing a heavy runtime resource across workers, without grouping them.
-        # Multiple keys can be supplied as a comma-separated string for tests that lock
-        # several shared resources (e.g. "governance,plutus").
+        # Multiple keys can be supplied as separate positional args for tests that lock
+        # several shared resources (e.g. ``xdist_split("governance", "plutus")``).
         if split_marker:
-            skey = (
-                split_marker.args[0]
-                if len(split_marker.args) > 0
-                else split_marker.kwargs.get("name", "default")
-            )
-            for raw in skey.split(","):
-                k = raw.strip()
+            skeys = split_marker.args or (split_marker.kwargs.get("name", "default"),)
+            for raw in skeys:
+                k = str(raw).strip()
                 if k:
                     comps.append(f"{SPLIT_NODEID_PREFIX}{k}")
 

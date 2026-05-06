@@ -52,7 +52,7 @@ class TestNoConfidence:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
-    @pytest.mark.xdist_split("governance")
+    @pytest.mark.xdist_split(common.XdSplits.governance)
     @pytest.mark.long
     def test_no_confidence_action(
         self,
@@ -321,7 +321,7 @@ class TestNoConfidence:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
-    @pytest.mark.xdist_split("governance")
+    @pytest.mark.xdist_split(common.XdSplits.governance)
     @pytest.mark.long
     def test_committee_min_size(
         self,
