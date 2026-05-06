@@ -928,7 +928,7 @@ class TestQueryUTxO:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era != VERSIONS.DEFAULT_CLUSTER_ERA,
+        VERSIONS.transaction_era < VERSIONS.DEFAULT_CLUSTER_ERA,
         reason="works only with the latest TX era",
     )
     @pytest.mark.smoke

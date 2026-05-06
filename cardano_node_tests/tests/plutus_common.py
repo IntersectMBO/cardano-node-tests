@@ -294,7 +294,14 @@ UNDETERMINED_COST = ExecutionCost(
 )
 
 
-# ----- All succeeding bitwise tests ----- #
+# Rotate/shift bitwise builtins succeed pre-PV11 and fail under PV11+ on node >= 11.0.0.
+_ROTATE_SHIFT_SCRIPTS_V3 = (
+    ("succeedingRotateByteStringPolicyScriptV3.plutus", 22767760, 109004, 7932),
+    ("succeedingShiftByteStringPolicyScriptV3.plutus", 17914625, 85787, 6242),
+)
+_ROTATE_SHIFT_NAMES_V3 = tuple(s[0] for s in _ROTATE_SHIFT_SCRIPTS_V3)
+_PV11_BITWISE_FAILS = VERSIONS.cluster_era >= 11 and VERSIONS.node >= version.parse("11.0.0")
+
 
 # Tuples of (script_name, per_time, per_space, fixed_cost) for each succeeding bitwise script.
 SUCCEEDING_BITWISE_SCRIPTS_V3 = (
@@ -306,22 +313,10 @@ SUCCEEDING_BITWISE_SCRIPTS_V3 = (
     ("succeedingFindFirstSetBitPolicyScriptV3.plutus", 8071583, 40221, 2903),
     ("succeedingReadBitPolicyScriptV3.plutus", 15272720, 82724, 5875),
     ("succeedingReplicateBytePolicyScriptV3.plutus", 4585827, 22946, 1655),
-    ("succeedingRotateByteStringPolicyScriptV3.plutus", 22767760, 109004, 7932),
-    ("succeedingShiftByteStringPolicyScriptV3.plutus", 17914625, 85787, 6242),
     ("succeedingWriteBitsPolicyScriptV3.plutus", 90629019, 462457, 33219),
+    *(() if _PV11_BITWISE_FAILS else _ROTATE_SHIFT_SCRIPTS_V3),
 )
 
-SUCCEEDING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V3_DIR / script_name,
-        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-        execution_cost=ExecutionCost(per_time=per_time, per_space=per_space, fixed_cost=fixed_cost),
-    )
-    for script_name, per_time, per_space, fixed_cost in SUCCEEDING_BITWISE_SCRIPTS_V3
-)
-
-
-# ----- All failing bitwise tests ----- #
 
 FAILING_BITWISE_SCRIPT_FILES_V3 = (
     "failingReadBitPolicyScriptV3_1.plutus",
@@ -363,6 +358,17 @@ FAILING_BITWISE_SCRIPT_FILES_V3 = (
     "failingWriteBitsPolicyScriptV3_17.plutus",
     "failingWriteBitsPolicyScriptV3_18.plutus",
     "failingWriteBitsPolicyScriptV3_19.plutus",
+    *(_ROTATE_SHIFT_NAMES_V3 if _PV11_BITWISE_FAILS else ()),
+)
+
+
+SUCCEEDING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_DIR / script_name,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=ExecutionCost(per_time=per_time, per_space=per_space, fixed_cost=fixed_cost),
+    )
+    for script_name, per_time, per_space, fixed_cost in SUCCEEDING_BITWISE_SCRIPTS_V3
 )
 
 
@@ -388,6 +394,106 @@ SUCCEEDING_MINTING_RIPEMD_160_SCRIPTS_V3 = (MINTING_RIPEMD_160_V3,)
 #
 # Includes tests for casing on constants, which will be released together with batch 6 in PV 11
 
+# Extra batch6 scripts available only on node >= 10.7.0.
+_NODE_10_7_PLUS = VERSIONS.node >= version.parse("10.7.0")
+_BATCH6_NODE_10_7_EXTRA_SUCCEEDING = (
+    ("succeedingG1MultiScalarMulPolicyScript1_V3_110.plutus", 9183574944, 437274, 687367),
+    ("succeedingG1MultiScalarMulPolicyScript2_V3_110.plutus", 9915620336, 477870, 742490),
+    ("succeedingG2MultiScalarMulPolicyScript1a_V3_110.plutus", 9008519498, 199418, 661021),
+    ("succeedingG2MultiScalarMulPolicyScript1b_V3_110.plutus", 7170645678, 250628, 531465),
+    ("succeedingG2MultiScalarMulPolicyScript2a_V3_110.plutus", 8521851043, 193470, 625589),
+    ("succeedingG2MultiScalarMulPolicyScript2b_V3_110.plutus", 9372322810, 304876, 693336),
+    ("succeedingDeleteExistingCoinPolicyScript_V3_100.plutus", 2272287, 6579, 544),
+    ("succeedingDeleteExistingCoinPolicyScript_V3_110.plutus", 2176287, 5979, 502),
+    ("succeedingDeleteMissingCoinPolicyScript_V3_100.plutus", 2291175, 6579, 545),
+    ("succeedingDeleteMissingCoinPolicyScript_V3_110.plutus", 2195175, 5979, 504),
+    ("succeedingInsertExistingCoinPolicyScript_V3_100.plutus", 2291175, 6579, 545),
+    ("succeedingInsertExistingCoinPolicyScript_V3_110.plutus", 2195175, 5979, 504),
+    ("succeedingInsertNewCoinPolicyScript_V3_100.plutus", 1769425, 5692, 457),
+    ("succeedingInsertNewCoinPolicyScript_V3_110.plutus", 1673425, 5092, 415),
+    ("succeedingLookupMissingCoinPolicyScript_V3_100.plutus", 1265613, 4847, 371),
+    ("succeedingLookupMissingCoinPolicyScript_V3_110.plutus", 1169613, 4247, 330),
+    ("succeedingScaleValueNegativePolicyScript_V3_100.plutus", 3973637, 7417, 715),
+    ("succeedingScaleValueNegativePolicyScript_V3_110.plutus", 3877637, 6817, 673),
+    ("succeedingScaleValuePositivePolicyScript_V3_100.plutus", 3973637, 7417, 715),
+    ("succeedingScaleValuePositivePolicyScript_V3_110.plutus", 3877637, 6817, 673),
+    ("succeedingScaleValueZeroPolicyScript_V3_100.plutus", 2846094, 6228, 565),
+    ("succeedingScaleValueZeroPolicyScript_V3_110.plutus", 2750094, 5628, 524),
+    ("succeedingUnionValueAssociativePolicyScript_V3_100.plutus", 7288077, 11023, 1162),
+    ("succeedingUnionValueAssociativePolicyScript_V3_110.plutus", 7192077, 10423, 1120),
+    (
+        "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_100.plutus",
+        5989072,
+        10893,
+        1061,
+    ),
+    (
+        "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_110.plutus",
+        5893072,
+        10293,
+        1019,
+    ),
+    ("succeedingUnionValueCommutativePolicyScript_V3_100.plutus", 4964712, 8860, 870),
+    ("succeedingUnionValueCommutativePolicyScript_V3_110.plutus", 4868712, 8260, 828),
+    ("succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_100.plutus", 4615604, 8816, 842),
+    ("succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_110.plutus", 4519604, 8216, 800),
+    ("succeedingUnionValueEmptyIdentityPolicyScript_V3_100.plutus", 5679334, 9379, 951),
+    ("succeedingUnionValueEmptyIdentityPolicyScript_V3_110.plutus", 5583334, 8779, 910),
+    ("succeedingUnionValueInversablePolicyScript_V3_100.plutus", 3456713, 7406, 677),
+    ("succeedingUnionValueInversablePolicyScript_V3_110.plutus", 3360713, 6806, 636),
+    ("succeedingValueContainsDisjointPolicyScript_V3_100.plutus", 2611834, 6536, 566),
+    ("succeedingValueContainsDisjointPolicyScript_V3_110.plutus", 2515834, 5936, 524),
+    ("succeedingValueContainsEmptyPolicyScript_V3_100.plutus", 3522852, 7880, 709),
+    ("succeedingValueContainsEmptyPolicyScript_V3_110.plutus", 3426852, 7280, 668),
+    ("succeedingValueContainsIsSubValuePolicyScript_V3_100.plutus", 3087582, 7123, 634),
+    ("succeedingValueContainsIsSubValuePolicyScript_V3_110.plutus", 2991582, 6523, 593),
+    ("succeedingValueContainsReflexivePolicyScript_V3_100.plutus", 2078910, 5391, 461),
+    ("succeedingValueContainsReflexivePolicyScript_V3_110.plutus", 1982910, 4791, 420),
+    ("succeedingValueContainsRightExtraKeyPolicyScript_V3_100.plutus", 3637590, 8010, 725),
+    ("succeedingValueContainsRightExtraKeyPolicyScript_V3_110.plutus", 3541590, 7410, 683),
+    ("succeedingValueContainsRightHigherAmountPolicyScript_V3_100.plutus", 2563834, 6236, 545),
+    ("succeedingValueContainsRightHigherAmountPolicyScript_V3_110.plutus", 2467834, 5636, 504),
+    ("succeedingValueDataRoundTripPolicyScript_V3_100.plutus", 3610826, 6095, 613),
+    ("succeedingValueDataRoundTripPolicyScript_V3_110.plutus", 3514826, 5495, 571),
+    (
+        "succeedingValueContainsIsSubValueSmallerAmountPolicyScript_V3_100.plutus",
+        3087582,
+        7123,
+        634,
+    ),
+    (
+        "succeedingValueContainsIsSubValueSmallerAmountPolicyScript_V3_110.plutus",
+        2991582,
+        6523,
+        593,
+    ),
+)
+_BATCH6_NODE_10_7_EXTRA_FAILING = (
+    "failingInsertInvalidCurrencySymbolPolicyScript_V3_100.plutus",
+    "failingInsertInvalidCurrencySymbolPolicyScript_V3_110.plutus",
+    "failingInsertInvalidTokenNamePolicyScript_V3_100.plutus",
+    "failingInsertInvalidTokenNamePolicyScript_V3_110.plutus",
+    "failingInsertOverflowQuantityPolicyScript_V3_100.plutus",
+    "failingInsertOverflowQuantityPolicyScript_V3_110.plutus",
+    "failingInsertUnderflowQuantityPolicyScript_V3_100.plutus",
+    "failingInsertUnderflowQuantityPolicyScript_V3_110.plutus",
+    "failingScaleValueOverflowPolicyScript_V3_100.plutus",
+    "failingScaleValueOverflowPolicyScript_V3_110.plutus",
+    "failingScaleValueUnderflowPolicyScript_V3_100.plutus",
+    "failingScaleValueUnderflowPolicyScript_V3_110.plutus",
+    "failingUnValueDataInvalidDataPolicyScript_V3_100.plutus",
+    "failingUnValueDataInvalidDataPolicyScript_V3_110.plutus",
+    "failingUnionValueOverflowPolicyScript_V3_100.plutus",
+    "failingUnionValueOverflowPolicyScript_V3_110.plutus",
+    "failingUnionValueUnderflowPolicyScript_V3_100.plutus",
+    "failingUnionValueUnderflowPolicyScript_V3_110.plutus",
+    "failingValueContainsLeftNegativePolicyScript_V3_100.plutus",
+    "failingValueContainsLeftNegativePolicyScript_V3_110.plutus",
+    "failingValueContainsRightNegativePolicyScript_V3_100.plutus",
+    "failingValueContainsRightNegativePolicyScript_V3_110.plutus",
+)
+
+
 # Tuples of (script_name, per_time, per_space, fixed_cost) for each succeeding batch6 script.
 SUCCEEDING_BATCH6_SCRIPTS_V3 = (
     ("caseBoolHappy_V3_110.plutus", 208100, 1400, 96),
@@ -402,6 +508,7 @@ SUCCEEDING_BATCH6_SCRIPTS_V3 = (
     ("succeedingIndexArrayPolicyScript_V3_110.plutus", 2831492, 12706, 938),
     ("succeedingLengthOfArrayPolicyScript_V3_110.plutus", 2060965, 9018, 669),
     ("succeedingListToArrayPolicyScript_V3_110.plutus", 3918949, 15619, 1184),
+    *(_BATCH6_NODE_10_7_EXTRA_SUCCEEDING if _NODE_10_7_PLUS else ()),
 )
 
 FAILING_BATCH6_SCRIPT_FILES_V3 = (
@@ -435,6 +542,7 @@ FAILING_BATCH6_SCRIPT_FILES_V3 = (
     "failingExpModIntegerScript_V3_110_7.plutus",
     "failingExpModIntegerScript_V3_110_8.plutus",
     "failingExpModIntegerScript_V3_110_9.plutus",
+    *(_BATCH6_NODE_10_7_EXTRA_FAILING if _NODE_10_7_PLUS else ()),
 )
 
 OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
@@ -444,106 +552,6 @@ OVERSPENDING_BATCH6_SCRIPT_FILES_V3 = (
     "expensiveDropListPolicyScript_V3_110_4.plutus",
     "expensiveDropListPolicyScript_V3_110_5.plutus",
 )
-
-if VERSIONS.node >= version.parse("10.7.0"):
-    SUCCEEDING_BATCH6_SCRIPTS_V3 = (  # type: ignore[assignment]
-        *SUCCEEDING_BATCH6_SCRIPTS_V3,
-        ("succeedingG1MultiScalarMulPolicyScript1_V3_110.plutus", 9183574944, 437274, 687367),
-        ("succeedingG1MultiScalarMulPolicyScript2_V3_110.plutus", 9915620336, 477870, 742490),
-        ("succeedingG2MultiScalarMulPolicyScript1a_V3_110.plutus", 9008519498, 199418, 661021),
-        ("succeedingG2MultiScalarMulPolicyScript1b_V3_110.plutus", 7170645678, 250628, 531465),
-        ("succeedingG2MultiScalarMulPolicyScript2a_V3_110.plutus", 8521851043, 193470, 625589),
-        ("succeedingG2MultiScalarMulPolicyScript2b_V3_110.plutus", 9372322810, 304876, 693336),
-        ("succeedingDeleteExistingCoinPolicyScript_V3_100.plutus", 2272287, 6579, 544),
-        ("succeedingDeleteExistingCoinPolicyScript_V3_110.plutus", 2176287, 5979, 502),
-        ("succeedingDeleteMissingCoinPolicyScript_V3_100.plutus", 2291175, 6579, 545),
-        ("succeedingDeleteMissingCoinPolicyScript_V3_110.plutus", 2195175, 5979, 504),
-        ("succeedingInsertExistingCoinPolicyScript_V3_100.plutus", 2291175, 6579, 545),
-        ("succeedingInsertExistingCoinPolicyScript_V3_110.plutus", 2195175, 5979, 504),
-        ("succeedingInsertNewCoinPolicyScript_V3_100.plutus", 1769425, 5692, 457),
-        ("succeedingInsertNewCoinPolicyScript_V3_110.plutus", 1673425, 5092, 415),
-        ("succeedingLookupMissingCoinPolicyScript_V3_100.plutus", 1265613, 4847, 371),
-        ("succeedingLookupMissingCoinPolicyScript_V3_110.plutus", 1169613, 4247, 330),
-        ("succeedingScaleValueNegativePolicyScript_V3_100.plutus", 3973637, 7417, 715),
-        ("succeedingScaleValueNegativePolicyScript_V3_110.plutus", 3877637, 6817, 673),
-        ("succeedingScaleValuePositivePolicyScript_V3_100.plutus", 3973637, 7417, 715),
-        ("succeedingScaleValuePositivePolicyScript_V3_110.plutus", 3877637, 6817, 673),
-        ("succeedingScaleValueZeroPolicyScript_V3_100.plutus", 2846094, 6228, 565),
-        ("succeedingScaleValueZeroPolicyScript_V3_110.plutus", 2750094, 5628, 524),
-        ("succeedingUnionValueAssociativePolicyScript_V3_100.plutus", 7288077, 11023, 1162),
-        ("succeedingUnionValueAssociativePolicyScript_V3_110.plutus", 7192077, 10423, 1120),
-        (
-            "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_100.plutus",
-            5989072,
-            10893,
-            1061,
-        ),
-        (
-            "succeedingUnionValueAssociativeSingleCoinPolicyScript_V3_110.plutus",
-            5893072,
-            10293,
-            1019,
-        ),
-        ("succeedingUnionValueCommutativePolicyScript_V3_100.plutus", 4964712, 8860, 870),
-        ("succeedingUnionValueCommutativePolicyScript_V3_110.plutus", 4868712, 8260, 828),
-        ("succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_100.plutus", 4615604, 8816, 842),
-        ("succeedingUnionValueCommutativeSingleCoinPolicyScript_V3_110.plutus", 4519604, 8216, 800),
-        ("succeedingUnionValueEmptyIdentityPolicyScript_V3_100.plutus", 5679334, 9379, 951),
-        ("succeedingUnionValueEmptyIdentityPolicyScript_V3_110.plutus", 5583334, 8779, 910),
-        ("succeedingUnionValueInversablePolicyScript_V3_100.plutus", 3456713, 7406, 677),
-        ("succeedingUnionValueInversablePolicyScript_V3_110.plutus", 3360713, 6806, 636),
-        ("succeedingValueContainsDisjointPolicyScript_V3_100.plutus", 2611834, 6536, 566),
-        ("succeedingValueContainsDisjointPolicyScript_V3_110.plutus", 2515834, 5936, 524),
-        ("succeedingValueContainsEmptyPolicyScript_V3_100.plutus", 3522852, 7880, 709),
-        ("succeedingValueContainsEmptyPolicyScript_V3_110.plutus", 3426852, 7280, 668),
-        ("succeedingValueContainsIsSubValuePolicyScript_V3_100.plutus", 3087582, 7123, 634),
-        ("succeedingValueContainsIsSubValuePolicyScript_V3_110.plutus", 2991582, 6523, 593),
-        ("succeedingValueContainsReflexivePolicyScript_V3_100.plutus", 2078910, 5391, 461),
-        ("succeedingValueContainsReflexivePolicyScript_V3_110.plutus", 1982910, 4791, 420),
-        ("succeedingValueContainsRightExtraKeyPolicyScript_V3_100.plutus", 3637590, 8010, 725),
-        ("succeedingValueContainsRightExtraKeyPolicyScript_V3_110.plutus", 3541590, 7410, 683),
-        ("succeedingValueContainsRightHigherAmountPolicyScript_V3_100.plutus", 2563834, 6236, 545),
-        ("succeedingValueContainsRightHigherAmountPolicyScript_V3_110.plutus", 2467834, 5636, 504),
-        ("succeedingValueDataRoundTripPolicyScript_V3_100.plutus", 3610826, 6095, 613),
-        ("succeedingValueDataRoundTripPolicyScript_V3_110.plutus", 3514826, 5495, 571),
-        (
-            "succeedingValueContainsIsSubValueSmallerAmountPolicyScript_V3_100.plutus",
-            3087582,
-            7123,
-            634,
-        ),
-        (
-            "succeedingValueContainsIsSubValueSmallerAmountPolicyScript_V3_110.plutus",
-            2991582,
-            6523,
-            593,
-        ),
-    )
-    FAILING_BATCH6_SCRIPT_FILES_V3 = (  # type: ignore[assignment]
-        *FAILING_BATCH6_SCRIPT_FILES_V3,
-        "failingInsertInvalidCurrencySymbolPolicyScript_V3_100.plutus",
-        "failingInsertInvalidCurrencySymbolPolicyScript_V3_110.plutus",
-        "failingInsertInvalidTokenNamePolicyScript_V3_100.plutus",
-        "failingInsertInvalidTokenNamePolicyScript_V3_110.plutus",
-        "failingInsertOverflowQuantityPolicyScript_V3_100.plutus",
-        "failingInsertOverflowQuantityPolicyScript_V3_110.plutus",
-        "failingInsertUnderflowQuantityPolicyScript_V3_100.plutus",
-        "failingInsertUnderflowQuantityPolicyScript_V3_110.plutus",
-        "failingScaleValueOverflowPolicyScript_V3_100.plutus",
-        "failingScaleValueOverflowPolicyScript_V3_110.plutus",
-        "failingScaleValueUnderflowPolicyScript_V3_100.plutus",
-        "failingScaleValueUnderflowPolicyScript_V3_110.plutus",
-        "failingUnValueDataInvalidDataPolicyScript_V3_100.plutus",
-        "failingUnValueDataInvalidDataPolicyScript_V3_110.plutus",
-        "failingUnionValueOverflowPolicyScript_V3_100.plutus",
-        "failingUnionValueOverflowPolicyScript_V3_110.plutus",
-        "failingUnionValueUnderflowPolicyScript_V3_100.plutus",
-        "failingUnionValueUnderflowPolicyScript_V3_110.plutus",
-        "failingValueContainsLeftNegativePolicyScript_V3_100.plutus",
-        "failingValueContainsLeftNegativePolicyScript_V3_110.plutus",
-        "failingValueContainsRightNegativePolicyScript_V3_100.plutus",
-        "failingValueContainsRightNegativePolicyScript_V3_110.plutus",
-    )
 
 
 def _get_script_data_succ(r: tuple) -> PlutusScriptData:
