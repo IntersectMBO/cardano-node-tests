@@ -340,6 +340,11 @@ def get_instance_num() -> int:
 
 def get_cluster_env() -> ClusterEnv:
     """Get cardano cluster environment."""
+    # VERSIONS executes cardano-node and cardano-cli, and the binaries may not be available.
+    # Importing VERSIONS here allows to delay the execution until it's really needed, and avoid
+    # potential issues with missing binaries when the module is imported.
+    from cardano_node_tests.utils.versions import VERSIONS  # noqa: PLC0415
+
     socket_path = pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
     state_dir = socket_path.parent
     work_dir = state_dir.parent
@@ -350,8 +355,8 @@ def get_cluster_env() -> ClusterEnv:
         state_dir=state_dir,
         work_dir=work_dir,
         instance_num=instance_num,
-        cluster_era=configuration.CLUSTER_ERA,
-        command_era=configuration.COMMAND_ERA,
+        cluster_era=VERSIONS.cluster_era_name,
+        command_era=VERSIONS.command_era_name,
     )
     return cluster_env
 

@@ -1,5 +1,6 @@
 """Cardano node version, cluster era, transaction era, db-sync version."""
 
+import os
 import typing as tp
 
 from packaging import version
@@ -9,9 +10,17 @@ from cardano_node_tests.utils import helpers
 
 
 class Versions:
-    """Cluster era, transaction era, node version info."""
+    """Protocol version, cluster era, transaction era, node version info.
 
-    # Era names for latest corresponding (or current mainnet) protocol version
+    Note:
+        ``cluster_era`` holds the current protocol version (set via the
+        ``PROTOCOL_VERSION`` env var, defaulting to ``DEFAULT_CLUSTER_ERA``),
+        while ``cluster_era_name`` is the era name that corresponds to that
+        protocol version. The era constants below (e.g. ``CONWAY``) are the
+        latest protocol version associated with each era.
+    """
+
+    # Latest protocol version associated with each era
     BYRON: tp.Final[int] = 1
     SHELLEY: tp.Final[int] = 2
     ALLEGRA: tp.Final[int] = 3
@@ -44,17 +53,26 @@ class Versions:
     }
 
     def __init__(self) -> None:
-        self.cluster_era_name = configuration.CLUSTER_ERA or self.MAP[self.DEFAULT_CLUSTER_ERA]
-        self.cluster_era = getattr(self, self.cluster_era_name.upper())
+        protocol_version = int(os.environ.get("PROTOCOL_VERSION") or self.DEFAULT_CLUSTER_ERA)
+        if protocol_version not in self.MAP:
+            msg = (
+                f"Unsupported PROTOCOL_VERSION {protocol_version}; "
+                f"expected one of {sorted(self.MAP)}"
+            )
+            raise ValueError(msg)
+
+        self.cluster_era = protocol_version
+        self.cluster_era_name = self.MAP[self.cluster_era]
 
         self.command_era_name = configuration.COMMAND_ERA
 
+        self.transaction_era = protocol_version
         if self.command_era_name and self.command_era_name in self.MAP.values():
             self.transaction_era_name: str = self.command_era_name
+            if self.MAP[self.transaction_era] != self.transaction_era_name:
+                self.transaction_era = getattr(self, self.transaction_era_name.upper())
         else:
-            self.transaction_era_name = self.MAP[self.DEFAULT_TX_ERA]
-
-        self.transaction_era = getattr(self, self.transaction_era_name.upper())
+            self.transaction_era_name = self.MAP[self.transaction_era]
 
         node_version_db = self.get_cardano_node_version()
         self.node = version.parse(node_version_db["version"])
