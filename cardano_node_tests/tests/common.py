@@ -1,4 +1,5 @@
 import contextlib
+import enum
 import logging
 import string
 import time
@@ -30,6 +31,27 @@ ORDER5_BYRON = (
     pytest.mark.order(5) if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop
 )
 LONG_BYRON = pytest.mark.long if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop
+
+
+class XdSplits(enum.StrEnum):
+    """Known split keys for the ``xdist_split`` pytest marker.
+
+    Each member names a heavy shared resource. Tests that lock such a resource
+    declare the matching key (or several, as separate positional args) so the
+    custom xdist scheduler caps concurrent in-flight tests sharing the key at
+    the cluster instance capacity, instead of letting workers stall on the
+    cluster manager. See ``cardano_node_tests.pytest_plugins.xdist_scheduler``.
+
+    Example:
+        ``@pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.plutus)``
+
+    Members:
+        governance: Governance setup (committee, DReps, constitution, etc.).
+        plutus: Plutus cost model / built-ins state shared across tests.
+    """
+
+    governance = "governance"
+    plutus = "plutus"
 
 
 _BLD_SKIP_REASON = ""

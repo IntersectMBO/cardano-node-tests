@@ -1565,7 +1565,7 @@ def get_subtests() -> tp.Generator[tp.Callable]:  # noqa: C901
 
 class TestGovernanceGuardrails:
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split("governance")
+    @pytest.mark.xdist_split(common.XdSplits.governance)
     @pytest.mark.long
     def test_guardrails(
         self,
