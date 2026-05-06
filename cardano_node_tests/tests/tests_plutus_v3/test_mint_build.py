@@ -271,13 +271,72 @@ class TestPlutusV3Builtins:
     batch6_overspend_scripts = plutus_common.OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split("governance")
+    @pytest.mark.team_plutus
+    @pytest.mark.upgrade_step1
+    @pytest.mark.upgrade_step2
+    @pytest.mark.upgrade_step3
+    @pytest.mark.parametrize(
+        ("batch", "cost_model_required", "prot_version_required"),
+        (
+            (5, BATCH5_COST_MODEL_LEN, BATCH5_PROT_VERSION),
+            (6, BATCH6_COST_MODEL_LEN, BATCH6_PROT_VERSION),
+        ),
+        ids=("batch5", "batch6"),
+    )
+    def test_plutusv3_builtins_old(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        subtests: pytest_subtests.SubTests,
+        batch: int,
+        cost_model_required: int,
+        prot_version_required: int,
+    ):
+        """Test minting with a batch of Plutus Core built-in functions.
+
+        Run tests with the old cost model and possibly also old protocol version.
+
+        Expect correct behavior (errors) depending on whether the protocol version
+        supports the new built-in functions or not.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        pparams_init = cluster.g_query.get_protocol_params()
+        cost_model_len_init = len(pparams_init["costModels"]["PlutusV3"])
+        prot_version = pparams_init["protocolVersion"]["major"]
+
+        is_cost_model_ok = cost_model_len_init >= cost_model_required
+        is_prot_version_ok = prot_version >= prot_version_required
+
+        # Run tests only when the corresponding cost model isn't up-to-date, otherwise
+        # we would be repeating the same tests in `test_plutusv3_builtins_new_cost`.
+        if is_cost_model_ok:
+            pytest.skip(
+                f"Cost model is already up-to-date, skipping batch{batch} old cost model tests."
+            )
+
+        variant = f"old_batch{batch}_{'prot_ok' if is_prot_version_ok else 'prot_nok'}"
+        run_plutusv3_builtins_test(
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{variant}",
+            variant=variant,
+            success_scripts=getattr(self, f"batch{batch}_success_scripts"),
+            fail_scripts=getattr(self, f"batch{batch}_fail_scripts"),
+            overspend_scripts=getattr(self, f"batch{batch}_overspend_scripts"),
+            is_cost_model_ok=is_cost_model_ok,
+            is_prot_version_ok=is_prot_version_ok,
+            subtests=subtests,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.plutus)
     @pytest.mark.long
     @pytest.mark.team_plutus
     @pytest.mark.upgrade_step1
     @pytest.mark.upgrade_step2
     @pytest.mark.upgrade_step3
-    def test_plutusv3_builtins(  # noqa: C901
+    def test_plutusv3_builtins_new_cost(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_plutus: clusterlib.ClusterLib,
@@ -285,13 +344,11 @@ class TestPlutusV3Builtins:
     ):
         """Test minting with the new batches of Plutus Core built-in functions.
 
-        * Query initial protocol parameters
-        * Run tests with the old cost model, if applicable
-        * Update cost model to include new built-in functions
+        * When needed, update cost model to include new built-in functions
         * Run tests with the updated cost model
 
-        Expect correct behavior (errors or success) depending on whether the cost model
-        includes the new built-in functions or not, and whether the protocol version supports them.
+        Expect correct behavior (errors or success) depending on whether the protocol version
+        supports the new built-in functions or not.
 
         All batches are tested in a single test as each batch needs cost model update, and it would
         not be practical to update cost model multiple times in separate tests.
@@ -303,9 +360,7 @@ class TestPlutusV3Builtins:
         cost_model_len_init = len(pparams_init["costModels"]["PlutusV3"])
         prot_version = pparams_init["protocolVersion"]["major"]
 
-        is_batch5_cost_model_ok = cost_model_len_init >= BATCH5_COST_MODEL_LEN
         is_batch5_prot_version_ok = prot_version >= BATCH5_PROT_VERSION
-        is_batch6_cost_model_ok = cost_model_len_init >= BATCH6_COST_MODEL_LEN
         is_batch6_prot_version_ok = prot_version >= BATCH6_PROT_VERSION
 
         def _get_variant(batch: int) -> str:
@@ -319,42 +374,7 @@ class TestPlutusV3Builtins:
 
             return f"batch{batch}_{prot_part}"
 
-        # Step 1: run tests with the old cost model
-
-        # Run tests only when the corresponding cost model isn't up-to-date,
-        # otherwise we would be repeating the same tests in Step 3.
-
-        if cost_model_len_init < BATCH5_COST_MODEL_LEN:
-            batch5_variant_old = f"old_{_get_variant(batch=5)}"
-            run_plutusv3_builtins_test(
-                cluster_manager=cluster_manager,
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_{batch5_variant_old}",
-                variant=batch5_variant_old,
-                success_scripts=self.batch5_success_scripts,
-                fail_scripts=self.batch5_fail_scripts,
-                overspend_scripts=self.batch5_overspend_scripts,
-                is_cost_model_ok=is_batch5_cost_model_ok,
-                is_prot_version_ok=is_batch5_prot_version_ok,
-                subtests=subtests,
-            )
-
-        if cost_model_len_init < BATCH6_COST_MODEL_LEN:
-            batch6_variant_old = f"old_{_get_variant(batch=6)}"
-            run_plutusv3_builtins_test(
-                cluster_manager=cluster_manager,
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_{batch6_variant_old}",
-                variant=batch6_variant_old,
-                success_scripts=self.batch6_success_scripts,
-                fail_scripts=self.batch6_fail_scripts,
-                overspend_scripts=self.batch6_overspend_scripts,
-                is_cost_model_ok=is_batch6_cost_model_ok,
-                is_prot_version_ok=is_batch6_prot_version_ok,
-                subtests=subtests,
-            )
-
-        # Step 2: update cost model, if not already updated
+        # Update cost model, if not already updated
 
         if UPGRADE_TESTS_STEP and UPGRADE_TESTS_STEP < 3:
             LOGGER.info(
@@ -372,27 +392,34 @@ class TestPlutusV3Builtins:
             cost_model_len_updated = len(
                 cluster.g_query.get_protocol_params()["costModels"]["PlutusV3"]
             )
+            # The cluster needs respin if cost model was updated.
+            # Don't try to respin if the test runs as part of upgrade testing.
+            if not UPGRADE_TESTS_STEP and cost_model_len_updated != cost_model_len_init:
+                cluster_manager.set_needs_respin()
+
             if prot_version >= BATCH6_PROT_VERSION:
                 assert cost_model_len_updated >= BATCH6_COST_MODEL_LEN
             elif prot_version >= BATCH5_PROT_VERSION:
                 assert cost_model_len_updated >= BATCH5_COST_MODEL_LEN
 
-        # Step 3: run tests with the updated cost model
+        # Run tests with the updated cost model
 
-        if cost_model_len_updated >= BATCH5_COST_MODEL_LEN:
-            batch5_variant_updated = f"upd_{_get_variant(batch=5)}"
-            run_plutusv3_builtins_test(
-                cluster_manager=cluster_manager,
-                cluster_obj=cluster,
-                temp_template=f"{temp_template}_{batch5_variant_updated}",
-                variant=batch5_variant_updated,
-                success_scripts=self.batch5_success_scripts,
-                fail_scripts=self.batch5_fail_scripts,
-                overspend_scripts=self.batch5_overspend_scripts,
-                is_cost_model_ok=True,
-                is_prot_version_ok=is_batch5_prot_version_ok,
-                subtests=subtests,
-            )
+        if cost_model_len_updated < BATCH5_COST_MODEL_LEN:
+            pytest.skip("Cost model is not updated, skipping new cost model tests.")
+
+        batch5_variant_updated = f"upd_{_get_variant(batch=5)}"
+        run_plutusv3_builtins_test(
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_{batch5_variant_updated}",
+            variant=batch5_variant_updated,
+            success_scripts=self.batch5_success_scripts,
+            fail_scripts=self.batch5_fail_scripts,
+            overspend_scripts=self.batch5_overspend_scripts,
+            is_cost_model_ok=True,
+            is_prot_version_ok=is_batch5_prot_version_ok,
+            subtests=subtests,
+        )
 
         if cost_model_len_updated >= BATCH6_COST_MODEL_LEN:
             batch6_variant_updated = f"upd_{_get_variant(batch=6)}"
