@@ -330,7 +330,7 @@ class TestPlutusV3Builtins:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.plutus)
+    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
     @pytest.mark.long
     @pytest.mark.team_plutus
     @pytest.mark.upgrade_step1

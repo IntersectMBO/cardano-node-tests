@@ -36,6 +36,12 @@ LONG_BYRON = pytest.mark.long if "_fast" not in configuration.TESTNET_VARIANT el
 class XdSplits(enum.StrEnum):
     """Known split keys for the ``xdist_split`` pytest marker.
 
+    Warning:
+        Do not combine this marker with ``cluster_manager.get(marker=...)``. The two
+        work against each other: ``marker=`` groups tagged tests onto the same cluster
+        instance so they run close together, while ``xdist_split`` spreads them across
+        workers to keep them apart.
+
     Each member names a heavy shared resource. Tests that lock such a resource
     declare the matching key (or several, as separate positional args) so the
     custom xdist scheduler caps concurrent in-flight tests sharing the key at
@@ -43,15 +49,15 @@ class XdSplits(enum.StrEnum):
     cluster manager. See ``cardano_node_tests.pytest_plugins.xdist_scheduler``.
 
     Example:
-        ``@pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.plutus)``
+        ``@pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)``
 
     Members:
         governance: Governance setup (committee, DReps, constitution, etc.).
-        plutus: Plutus cost model / built-ins state shared across tests.
+        heavy: Tests that require a lot of locked cluster resources.
     """
 
     governance = "governance"
-    plutus = "plutus"
+    heavy = "heavy"
 
 
 _BLD_SKIP_REASON = ""
