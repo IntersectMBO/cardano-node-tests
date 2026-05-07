@@ -10,6 +10,11 @@
 #      container's health check on port 8090 before running tests, and
 #      setting DEV_CLUSTER_RUNNING=1 so pytest uses the pre-running cluster
 #      instead of starting its own.
+#   3b. Starting a local cardano-submit-api in the driver container so that
+#       tests using submit_api can reach it via localhost.  The test framework
+#       hard-codes http://localhost:<port> for submit_api; since submit_api in
+#       the node container binds to 127.0.0.1 there (unreachable here), we
+#       run our own instance against the shared cluster-state socket.
 #   4. Emitting the Antithesis setup_complete lifecycle signal.
 #   5. Handing off to regression.sh.
 #
@@ -91,7 +96,50 @@ except Exception:
     export CLUSTERS_COUNT="${CLUSTERS_COUNT:-1}"
     # Pre-set so regression.sh does not overwrite with its default workdir path.
     export CARDANO_NODE_SOCKET_PATH_CI="${CLUSTER_STATE_DIR}/state-cluster0/bft1.socket"
+
+    # -------------------------------------------------------------------------
+    # 3b. Start a local cardano-submit-api so tests can reach it via localhost.
+    #
+    #     start-cluster already generated state-cluster0/run-cardano-submit-api
+    #     with the correct port, socket path, and testnet magic substituted in.
+    #     We run it from CLUSTER_STATE_DIR so its relative paths resolve, and
+    #     put the pre-built binary on PATH.
+    # -------------------------------------------------------------------------
+    _submit_api_script="${CLUSTER_STATE_DIR}/state-cluster0/run-cardano-submit-api"
+    if [ -x "$_submit_api_script" ]; then
+        export PATH="/opt/cardano/cardano-submit-api/bin:${PATH}"
+        # Derive the port the same way cluster_scripts.py does:
+        #   base = PORTS_BASE + instance_num*10  (instance 0 → base = PORTS_BASE)
+        #   submit_api = base + ports_per_instance - 1 - 2 = base + 7
+        _submit_api_port=$(( ${PORTS_BASE:-23000} + 7 ))
+
+        echo "Starting local cardano-submit-api on port ${_submit_api_port}..."
+        (cd "${CLUSTER_STATE_DIR}" && exec "${_submit_api_script}") &
+        _submit_api_pid=$!
+        # Kill it when this script exits so no orphan is left behind.
+        trap 'kill "${_submit_api_pid}" 2>/dev/null || true' EXIT
+
+        # Wait up to 30 s for the port to open.
+        _sa_ready=0
+        for _i in $(seq 1 30); do
+            if (echo >/dev/tcp/127.0.0.1/"${_submit_api_port}") 2>/dev/null; then
+                _sa_ready=1
+                echo "Local submit_api is ready."
+                break
+            fi
+            echo "  waiting for local submit_api (${_i}/30)..."
+            sleep 1
+        done
+        if [ "$_sa_ready" -ne 1 ]; then
+            echo "WARNING: local submit_api did not start within 30 s; submit_api tests will fail." >&2
+        fi
+        unset _submit_api_port _sa_ready _i
+    else
+        echo "WARNING: ${_submit_api_script} not found; submit_api tests will fail." >&2
+    fi
+    unset _submit_api_script
 fi
+# _submit_api_pid is intentionally kept in scope so the EXIT trap above can kill it.
 
 # ---------------------------------------------------------------------------
 # 4. Emit the Antithesis setup_complete signal.
