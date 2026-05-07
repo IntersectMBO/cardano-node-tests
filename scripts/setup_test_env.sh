@@ -69,7 +69,6 @@ export DEV_CLUSTER_RUNNING=true
 export FORBID_RESTART=true
 export NO_ARTIFACTS=true
 export CLUSTERS_COUNT=1
-export CLUSTER_ERA="${CLUSTER_ERA:-}"
 export COMMAND_ERA="${COMMAND_ERA:-}"
 echo "Activated test environment for era: ${CLUSTER_ERA:-}"
 EoF

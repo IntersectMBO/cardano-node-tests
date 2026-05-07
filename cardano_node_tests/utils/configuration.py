@@ -45,11 +45,6 @@ BLOCK_PRODUCTION_DB: str | pl.Path = os.environ.get("BLOCK_PRODUCTION_DB") or ""
 if BLOCK_PRODUCTION_DB:
     BLOCK_PRODUCTION_DB = pl.Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
 
-CLUSTER_ERA = os.environ.get("CLUSTER_ERA") or ""
-if CLUSTER_ERA not in ("", "conway"):
-    __msg = f"Invalid or unsupported CLUSTER_ERA: {CLUSTER_ERA}"
-    raise RuntimeError(__msg)
-
 COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
 if COMMAND_ERA not in ("", "latest", "conway"):
     __msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
@@ -91,10 +86,6 @@ ALLOW_UNSTABLE_ERROR_MESSAGES = helpers.is_truthy_env_var("ALLOW_UNSTABLE_ERROR_
 KEEP_CLUSTERS_RUNNING = helpers.is_truthy_env_var("KEEP_CLUSTERS_RUNNING")
 
 # Determine what scripts to use to start the cluster
-TESTNET_VARIANT = os.environ.get("TESTNET_VARIANT") or ""
-if TESTNET_VARIANT:
-    pass
-elif BOOTSTRAP_DIR:
-    TESTNET_VARIANT = "testnets"
-else:
-    TESTNET_VARIANT = f"{CLUSTER_ERA or 'conway'}_fast"
+TESTNET_VARIANT = os.environ.get("TESTNET_VARIANT") or (
+    "testnets" if BOOTSTRAP_DIR else "conway_fast"
+)

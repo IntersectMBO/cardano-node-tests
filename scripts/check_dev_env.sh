@@ -113,7 +113,6 @@ if [ "$SOCKET_PATH_SET" = "$true" ]; then
   printf "socket path exists: $IS_SOCKET\n"
 fi
 
-printf "cluster era: %s\n" "${CLUSTER_ERA:-"default"}"
 printf "command era: %s\n" "${COMMAND_ERA:-"latest"}"
 
 printf "using dbsync (optional): $USE_DBSYNC\n"
