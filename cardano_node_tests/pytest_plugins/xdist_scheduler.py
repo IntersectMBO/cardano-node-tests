@@ -16,6 +16,21 @@ SPLIT_NODEID_PREFIX = "split="
 DEFAULT_MAX_CLUSTERS = 9
 
 
+def _get_env_int(var: str, default: int) -> int:
+    """Read int env var, raising informative ValueError on malformed value.
+
+    Local copy to keep this pytest plugin free of framework-package imports.
+    """
+    raw = os.environ.get(var)
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError as err:
+        msg = f"Invalid integer value for env var '{var}': {raw!r}"
+        raise ValueError(msg) from err
+
+
 class OneLongScheduling(scheduler.LoadScopeScheduling):
     """Scheduling plugin with long-test balancing and split-key dispersion.
 
@@ -88,7 +103,7 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         # DEFAULT_MAX_CLUSTERS; final fallback to 1.
         # PYTEST_XDIST_WORKER_COUNT is NOT used here: xdist sets it only inside
         # worker subprocesses, never on the controller where the scheduler runs.
-        env_count = int(os.environ.get("CLUSTERS_COUNT") or 0)
+        env_count = _get_env_int("CLUSTERS_COUNT", 0)
         self.clusters_count = env_count or min(self.numnodes, DEFAULT_MAX_CLUSTERS) or 1
 
     def _split_scope(self, nodeid: str) -> str:

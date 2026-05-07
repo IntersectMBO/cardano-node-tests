@@ -24,7 +24,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 ROLLBACK_PAUSE = os.environ.get("ROLLBACK_PAUSE") is not None
-ROLLBACK_NODES_OFFSET = int(os.environ.get("ROLLBACK_NODES_OFFSET") or 1)
+ROLLBACK_NODES_OFFSET = helpers.get_env_int("ROLLBACK_NODES_OFFSET", 1)
 LAST_POOL_NAME = f"pool{configuration.NUM_POOLS}"
 
 

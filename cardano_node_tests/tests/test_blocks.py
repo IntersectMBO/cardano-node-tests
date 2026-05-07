@@ -275,6 +275,7 @@ class TestCollectData:
     @pytest.fixture
     def block_production_db(self) -> tp.Generator[sqlite3.Connection]:
         """Open block production db."""
+        assert configuration.BLOCK_PRODUCTION_DB is not None
         conn = sqlite3.connect(configuration.BLOCK_PRODUCTION_DB)
         yield conn
         conn.close()
@@ -298,7 +299,7 @@ class TestCollectData:
         """
         temp_template = common.get_test_id(cluster)
         rand = clusterlib.get_rand_str(5)
-        num_epochs = int(os.environ.get("BLOCK_PRODUCTION_EPOCHS") or 50)
+        num_epochs = helpers.get_env_int("BLOCK_PRODUCTION_EPOCHS", 50)
         mixed_backends = (
             configuration.MIXED_UTXO_BACKENDS.split() if configuration.MIXED_UTXO_BACKENDS else []
         )
