@@ -355,9 +355,9 @@ class DBSyncManager:
     def recreate_database(self) -> None:
         """Reinitializes the PostgreSQL database by running the `postgres-setup.sh` script.
 
-        !!! WARNING !!!
-        This is a DESTRUCTIVE operation!
-        It will delete existing data and recreate the database from scratch.
+        Warning:
+            This is a DESTRUCTIVE operation!
+            It will delete existing data and recreate the database from scratch.
         """
         common_scripts_dir = cluster_scripts.COMMON_DIR
         if not common_scripts_dir:
