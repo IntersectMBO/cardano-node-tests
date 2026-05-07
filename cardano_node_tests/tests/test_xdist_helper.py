@@ -5,11 +5,11 @@ gets scheduled as first not long-running test on every pytest worker so the othe
 an actual long-running test.
 """
 
-import os
-
 import pytest
 
-PYTEST_XDIST_WORKER_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 0)
+from cardano_node_tests.utils import helpers
+
+PYTEST_XDIST_WORKER_COUNT = helpers.get_env_int("PYTEST_XDIST_WORKER_COUNT", 0)
 
 pytestmark = pytest.mark.skipif(
     PYTEST_XDIST_WORKER_COUNT == 0, reason="helper test is not needed when running without xdist"

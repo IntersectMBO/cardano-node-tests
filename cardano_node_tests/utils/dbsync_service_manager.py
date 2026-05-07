@@ -366,7 +366,7 @@ class DBSyncManager:
 
         db_script_template = common_scripts_dir / "postgres-setup.sh"
         if not db_script_template.exists() and configuration.BOOTSTRAP_DIR:
-            db_script_template = pl.Path(configuration.BOOTSTRAP_DIR) / "postgres-setup.sh"
+            db_script_template = configuration.BOOTSTRAP_DIR / "postgres-setup.sh"
 
         if not db_script_template.exists():
             err = f"Database setup script '{db_script_template}' not found."

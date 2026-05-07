@@ -12,14 +12,18 @@ TX_SUBMISSION_DELAY = 60
 DBSYNC_DB = "dbsync"
 IS_XDIST = bool(os.environ.get("PYTEST_XDIST_TESTRUNUID"))
 
+# Default upper bound on parallel cluster instances when neither CLUSTERS_COUNT
+# is set nor a worker count is available.
+DEFAULT_MAX_CLUSTERS = 9
+
 # Make sure the ports don't overlap with ephemeral port range. It's usually 32768 to 60999.
 # See `cat /proc/sys/net/ipv4/ip_local_port_range`.
-PORTS_BASE = int(os.environ.get("PORTS_BASE") or 23000)
+PORTS_BASE = helpers.get_env_int("PORTS_BASE", 23000)
 
 HAS_CC = not helpers.is_truthy_env_var("NO_CC")
 
 # Number of new blocks before the Tx is considered confirmed. Use default value if set to 0.
-CONFIRM_BLOCKS_NUM = int(os.environ.get("CONFIRM_BLOCKS_NUM") or 0)
+CONFIRM_BLOCKS_NUM = helpers.get_env_int("CONFIRM_BLOCKS_NUM", 0)
 
 # Used also in startup scripts
 UTXO_BACKEND = os.environ.get("UTXO_BACKEND") or ""
@@ -30,46 +34,42 @@ if UTXO_BACKEND not in ("", "mem", "disk", "disklmdb", "empty"):
 MIXED_UTXO_BACKENDS = os.environ.get("MIXED_UTXO_BACKENDS") or ""
 
 # Resolve CARDANO_NODE_SOCKET_PATH
-STARTUP_CARDANO_NODE_SOCKET_PATH = (
-    pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"]).expanduser().resolve()
-)
+__socket_path = helpers.get_env_path("CARDANO_NODE_SOCKET_PATH")
+if __socket_path is None:
+    __msg = "The `CARDANO_NODE_SOCKET_PATH` env variable is not set."
+    raise RuntimeError(__msg)
+STARTUP_CARDANO_NODE_SOCKET_PATH: pl.Path = __socket_path
 os.environ["CARDANO_NODE_SOCKET_PATH"] = str(STARTUP_CARDANO_NODE_SOCKET_PATH)
 
 # Resolve SCHEDULING_LOG
-SCHEDULING_LOG: str | pl.Path = os.environ.get("SCHEDULING_LOG") or ""
-if SCHEDULING_LOG:
-    SCHEDULING_LOG = pl.Path(SCHEDULING_LOG).expanduser().resolve()
+SCHEDULING_LOG = helpers.get_env_path("SCHEDULING_LOG")
 
 # Resolve BLOCK_PRODUCTION_DB
-BLOCK_PRODUCTION_DB: str | pl.Path = os.environ.get("BLOCK_PRODUCTION_DB") or ""
-if BLOCK_PRODUCTION_DB:
-    BLOCK_PRODUCTION_DB = pl.Path(BLOCK_PRODUCTION_DB).expanduser().resolve()
+BLOCK_PRODUCTION_DB = helpers.get_env_path("BLOCK_PRODUCTION_DB")
 
 COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
 if COMMAND_ERA not in ("", "latest", "conway"):
     __msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
     raise RuntimeError(__msg)
 
-XDIST_WORKERS_COUNT = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT") or 0)
-MAX_TESTS_PER_CLUSTER = int(os.environ.get("MAX_TESTS_PER_CLUSTER") or 8)
+XDIST_WORKERS_COUNT = helpers.get_env_int("PYTEST_XDIST_WORKER_COUNT", 0)
+MAX_TESTS_PER_CLUSTER = helpers.get_env_int("MAX_TESTS_PER_CLUSTER", 8)
 # If CLUSTERS_COUNT is not set, use the number of xdist workers or 1
-CLUSTERS_COUNT = int(os.environ.get("CLUSTERS_COUNT") or 0)
-CLUSTERS_COUNT = int(CLUSTERS_COUNT or (min(XDIST_WORKERS_COUNT, 9)) or 1)
+CLUSTERS_COUNT = helpers.get_env_int("CLUSTERS_COUNT", 0)
+CLUSTERS_COUNT = CLUSTERS_COUNT or min(XDIST_WORKERS_COUNT, DEFAULT_MAX_CLUSTERS) or 1
 
 DEV_CLUSTER_RUNNING = helpers.is_truthy_env_var("DEV_CLUSTER_RUNNING")
 FORBID_RESTART = helpers.is_truthy_env_var("FORBID_RESTART")
 
-BOOTSTRAP_DIR: str | pl.Path = os.environ.get("BOOTSTRAP_DIR") or ""
-if BOOTSTRAP_DIR:
-    BOOTSTRAP_DIR = pl.Path(BOOTSTRAP_DIR).expanduser().resolve()
-    if not (BOOTSTRAP_DIR / "genesis-shelley.json").exists():
-        __msg = (
-            f"The `BOOTSTRAP_DIR` is set to '{BOOTSTRAP_DIR}'"
-            ", but the 'genesis-shelley.json' file is not found."
-        )
-        raise RuntimeError(__msg)
+BOOTSTRAP_DIR = helpers.get_env_path("BOOTSTRAP_DIR")
+if BOOTSTRAP_DIR and not (BOOTSTRAP_DIR / "genesis-shelley.json").exists():
+    __msg = (
+        f"The `BOOTSTRAP_DIR` is set to '{BOOTSTRAP_DIR}'"
+        ", but the 'genesis-shelley.json' file is not found."
+    )
+    raise RuntimeError(__msg)
 
-NUM_POOLS = int(os.environ.get("NUM_POOLS") or 3)
+NUM_POOLS = helpers.get_env_int("NUM_POOLS", 3)
 if not BOOTSTRAP_DIR and NUM_POOLS < 3:
     __msg = f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3"
     raise RuntimeError(__msg)

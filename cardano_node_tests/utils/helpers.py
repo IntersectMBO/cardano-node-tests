@@ -78,6 +78,34 @@ def is_truthy_env_var(var: str) -> bool:
     return (os.environ.get(var) or "").lower() in ("1", "true", "yes", "y", "on", "enabled")
 
 
+def get_env_int(var: str, default: int) -> int:
+    """Read an integer environment variable.
+
+    Returns ``default`` when the variable is unset or empty. Raises a
+    ``ValueError`` naming the offending variable when the value is malformed.
+    """
+    raw = os.environ.get(var)
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError as err:
+        msg = f"Invalid integer value for env var '{var}': {raw!r}"
+        raise ValueError(msg) from err
+
+
+def get_env_path(var: str) -> pl.Path | None:
+    """Read a path environment variable.
+
+    Returns the resolved ``pathlib.Path`` (with ``~`` expanded) when set,
+    otherwise ``None``.
+    """
+    raw = os.environ.get(var)
+    if not raw:
+        return None
+    return pl.Path(raw).expanduser().resolve()
+
+
 def run_command(
     command: str | list,
     *,

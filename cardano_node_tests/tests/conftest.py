@@ -110,9 +110,7 @@ def pytest_configure(config: tp.Any) -> None:
 
     network_magic = configuration.NETWORK_MAGIC_LOCAL
     if configuration.BOOTSTRAP_DIR:
-        with open(
-            pl.Path(configuration.BOOTSTRAP_DIR) / "genesis-shelley.json", encoding="utf-8"
-        ) as in_fp:
+        with open(configuration.BOOTSTRAP_DIR / "genesis-shelley.json", encoding="utf-8") as in_fp:
             genesis = json.load(in_fp)
         network_magic = genesis["networkMagic"]
     config.stash[metadata_key]["network magic"] = network_magic

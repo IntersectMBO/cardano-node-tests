@@ -1,6 +1,5 @@
 """Cardano node version, cluster era, transaction era, db-sync version."""
 
-import os
 import typing as tp
 
 from packaging import version
@@ -53,7 +52,7 @@ class Versions:
     }
 
     def __init__(self) -> None:
-        protocol_version = int(os.environ.get("PROTOCOL_VERSION") or self.DEFAULT_CLUSTER_ERA)
+        protocol_version = helpers.get_env_int("PROTOCOL_VERSION", self.DEFAULT_CLUSTER_ERA)
         if protocol_version not in self.MAP:
             msg = (
                 f"Unsupported PROTOCOL_VERSION {protocol_version}; "

@@ -2,7 +2,6 @@
 
 import enum
 import logging
-import os
 import pathlib as pl
 import typing as tp
 
@@ -23,7 +22,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 DATA_DIR = pl.Path(__file__).parent.parent / "data"
-UPGRADE_TESTS_STEP = int(os.environ.get("UPGRADE_TESTS_STEP") or 0)
+UPGRADE_TESTS_STEP = helpers.get_env_int("UPGRADE_TESTS_STEP", 0)
 
 # Minimum protocol version required for batch5 built-in functions
 BATCH5_PROT_VERSION = 10

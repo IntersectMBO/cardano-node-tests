@@ -529,7 +529,7 @@ class TestnetScripts(ScriptsTypes):
             if not configuration.BOOTSTRAP_DIR:
                 msg = "The 'BOOTSTRAP_DIR' env variable is not set."
                 raise RuntimeError(msg)
-            bootstrap_conf_dir = pl.Path(configuration.BOOTSTRAP_DIR)
+            bootstrap_conf_dir = configuration.BOOTSTRAP_DIR
         if not self._is_bootstrap_conf_dir(bootstrap_conf_dir):
             msg = (
                 f"The 'BOOTSTRAP_DIR' is set to '{bootstrap_conf_dir}'"
