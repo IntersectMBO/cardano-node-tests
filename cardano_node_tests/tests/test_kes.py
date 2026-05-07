@@ -134,6 +134,7 @@ class TestKES:
         reason="Runs only on local cluster with HF shortcut.",
     )
     @pytest.mark.order(5)
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     @pytest.mark.long
     def test_expired_kes(
         self,
@@ -348,6 +349,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     @pytest.mark.long
     def test_opcert_invalid_kes_period(
         self,
@@ -602,6 +604,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     @pytest.mark.long
     def test_update_valid_opcert(
         self,

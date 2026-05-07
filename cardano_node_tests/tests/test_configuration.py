@@ -135,6 +135,7 @@ class TestBasic:
     """Basic tests for node configuration."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     def test_epoch_length(self, cluster_epoch_length: clusterlib.ClusterLib):
         """Test the *epochLength* configuration.
 
@@ -157,6 +158,7 @@ class TestBasic:
         check_epoch_length(cluster)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
         """Test the *slotLength* configuration.
 

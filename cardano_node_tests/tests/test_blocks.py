@@ -459,6 +459,7 @@ class TestDynamicBlockProd:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     @pytest.mark.long
     def test_dynamic_block_production(
         self,

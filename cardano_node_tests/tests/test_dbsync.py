@@ -322,6 +322,7 @@ class TestDBSync:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     @pytest.mark.testnets
     def test_reconnect_dbsync(
         self,

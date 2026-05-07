@@ -122,6 +122,7 @@ class TestTreasuryDonation:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     @pytest.mark.needs_dbsync
     def test_dbsync_transfer_treasury_donation(
         self,

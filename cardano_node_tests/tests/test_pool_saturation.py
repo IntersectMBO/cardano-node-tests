@@ -205,6 +205,7 @@ def _check_pool_records(pool_records: dict[int, PoolRecord]) -> None:
 class TestPoolSaturation:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
+    @pytest.mark.xdist_split(common.XdSplits.heavy)
     @pytest.mark.long
     def test_oversaturated(  # noqa: C901
         self,
