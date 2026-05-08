@@ -105,8 +105,8 @@ class ClusterGetter:
             # Hard timeout (seconds): always applies, regardless of cluster selection.
             self.grace_period_hard = 7200
         else:
-            self.grace_period_soft = 28800
-            self.grace_period_hard = 30000
+            self.grace_period_soft = 36000
+            self.grace_period_hard = 37800
 
         # Time window (seconds) before deadline when stricter dead cluster checks apply.
         self.strict_check_window = 1200
@@ -735,6 +735,30 @@ class ClusterGetter:
             mark=cget_status.mark,
         )
 
+    def _make_instances_order(
+        self,
+        available_instances: list[int],
+        lock_resources: tp.Collection[tp.Any],
+        use_resources: tp.Collection[tp.Any],
+    ) -> tuple[int, ...]:
+        """Return a randomized iteration order over cluster instances.
+
+        Light tests (no `lock_resources`, only `CLUSTER` in `use_resources`) get the tail
+        (last two instances) first so heavy tests have a better chance to claim the head
+        instances. Earlier instances would otherwise fill up with light tests, leaving
+        heavy tests unable to find a free instance.
+        """
+        tail_size = min(2, self.num_of_instances)
+        head_size = self.num_of_instances - tail_size
+        head_sample = random.sample(available_instances[:head_size], head_size)
+        # Iterate tail instances in fixed order so light tests pack onto the first
+        # tail instance up to `configuration.MAX_TESTS_PER_CLUSTER` before spilling
+        # onto the next. This keeps light load concentrated on a single tail instance
+        # for as long as possible, leaving more head instances free for heavy tests.
+        tail_instances = available_instances[head_size:]
+        light_test = not lock_resources and len(use_resources) == 1
+        return (*tail_instances, *head_sample) if light_test else (*head_sample, *tail_instances)
+
     def _init_use_resources(
         self,
         lock_resources: resources_management.ResourcesType,
@@ -831,8 +855,8 @@ class ClusterGetter:
             # Always clean after test(s) that started cluster with custom configuration
             cleanup = True
 
-        use_resources = self._init_use_resources(
-            lock_resources=lock_resources, use_resources=use_resources
+        use_resources = list(
+            self._init_use_resources(lock_resources=lock_resources, use_resources=use_resources)
         )
 
         cget_status = _ClusterGetStatus(
@@ -873,6 +897,14 @@ class ClusterGetter:
             _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
             cget_status.sleep_delay = max(cget_status.sleep_delay, 1)
 
+            # Compute the instance iteration order outside the lock to keep the locked
+            # section as short as possible.
+            instances_order = self._make_instances_order(
+                available_instances=available_instances,
+                lock_resources=lock_resources,
+                use_resources=use_resources,
+            )
+
             # Nothing time consuming can go under this lock as all other workers will need to wait
             with locking.FileLockIfXdist(self.cluster_lock):
                 if self._is_already_running():
@@ -897,8 +929,8 @@ class ClusterGetter:
 
                 self._cluster_instance_num = -1
 
-                # Try all existing cluster instances; randomize the order
-                for instance_num in random.sample(available_instances, k=self.num_of_instances):
+                # Try all existing cluster instances in the precomputed order
+                for instance_num in instances_order:
                     # If instance to run the test on was already decided, skip all other instances
                     if cget_status.selected_instance not in (-1, instance_num):
                         continue
