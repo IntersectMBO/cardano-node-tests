@@ -8,12 +8,18 @@ from xdist import workermanage
 from xdist.remote import Producer
 
 LONG_MARKER = "long"
+SMOKE_MARKER = "smoke"
 GROUP_MARKER = "xdist_group"
 SPLIT_MARKER = "xdist_split"
 SPLIT_NODEID_PREFIX = "split="
 # Default upper bound on parallel cluster instances when neither CLUSTERS_COUNT
 # is set nor a worker count is available. Matches the framework default.
 DEFAULT_MAX_CLUSTERS = 9
+# Reserve a couple of workers exclusively for smoke tests when the run has at least
+# this many workers; smoke tests are short, and dedicated workers prevent them from
+# getting stuck behind long/heavy tests.
+SMOKE_DEDICATED_THRESHOLD = 10
+SMOKE_DEDICATED_COUNT = 2
 
 
 def _get_env_int(var: str, default: int) -> int:
@@ -38,6 +44,13 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
 
     Tests marked with ``@pytest.mark.long`` are tracked so that no more than one is
     scheduled per worker at a time.
+
+    Tests marked with ``@pytest.mark.smoke`` get a fast lane when the run has at least
+    ``SMOKE_DEDICATED_THRESHOLD`` workers AND there are smoke tests in the collection:
+    ``SMOKE_DEDICATED_COUNT`` workers (the lowest by gateway id) prefer smoke tests
+    over any other work. Other workers continue to pick up any work, including smoke
+    tests. Once no smoke tests remain queued, smoke workers fall back to the regular
+    scheduling path so they don't sit idle for the rest of the run.
 
     Tests marked with ``@pytest.mark.xdist_split("<key>")`` are NOT grouped onto one
     worker (unlike ``xdist_group``). Each gets its own per-test scope so the scheduler
@@ -105,6 +118,8 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         # worker subprocesses, never on the controller where the scheduler runs.
         env_count = _get_env_int("CLUSTERS_COUNT", 0)
         self.clusters_count = env_count or min(self.numnodes, DEFAULT_MAX_CLUSTERS) or 1
+        self.dedicate_smoke_workers = self.numnodes >= SMOKE_DEDICATED_THRESHOLD
+        self._smoke_workers_cache: frozenset[workermanage.WorkerController] | None = None
 
     def _split_scope(self, nodeid: str) -> str:
         """Determine the scope (grouping) of a nodeid.
@@ -125,10 +140,12 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
 
         # An xdist_split marker does NOT define a group scope. Tests sharing a split key
         # remain in their own per-test scope so they can be spread across workers.
-        if middle and not middle[0].startswith(SPLIT_NODEID_PREFIX):
+        # The smoke marker is also non-grouping; it just tags tests for the dedicated
+        # smoke worker lane.
+        if middle and middle[0] != SMOKE_MARKER and not middle[0].startswith(SPLIT_NODEID_PREFIX):
             return middle[0]  # group scope
 
-        return nodeid  # per-test scope (long-only, split, split+long, or unmarked)
+        return nodeid  # per-test scope (long-only, split, smoke, combos, or unmarked)
 
     @staticmethod
     def _get_split_keys(nodeid: str) -> set[str]:
@@ -177,6 +194,18 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         """Return True if the work unit contains any long-running test."""
         return any(nid.endswith(f"@{LONG_MARKER}") for nid in work_unit)
 
+    @staticmethod
+    def _is_smoke_unit(work_unit: dict) -> bool:
+        """Return True if the work unit contains any smoke test."""
+        for nid in work_unit:
+            param_end_idx = nid.rfind("]")
+            scope_start_idx = param_end_idx if param_end_idx != -1 else 0
+            if nid.rfind("@") <= scope_start_idx:
+                continue
+            if SMOKE_MARKER in nid[scope_start_idx:].split("@")[1:]:
+                return True
+        return False
+
     def _is_long_pending(self, assigned_to_node: dict) -> bool:
         """Return True if there is a long-running test pending."""
         for nodeids_dict in assigned_to_node.values():
@@ -185,6 +214,33 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
                     return True
 
         return False
+
+    def _smoke_workers(self) -> frozenset:
+        """Return the set of workers reserved for smoke tests (empty if not dedicated).
+
+        Dedication is active only when the run has at least ``SMOKE_DEDICATED_THRESHOLD``
+        workers and the workqueue contains at least one smoke test. The lowest gateway
+        ids (e.g. ``gw0``, ``gw1``) are picked as the smoke lane.
+        """
+        if self._smoke_workers_cache is not None:
+            return self._smoke_workers_cache
+
+        if not self.dedicate_smoke_workers or not any(
+            self._is_smoke_unit(wu) for wu in self.workqueue.values()
+        ):
+            self._smoke_workers_cache = frozenset()
+            return self._smoke_workers_cache
+
+        ranked = sorted(self.assigned_work, key=lambda n: n.gateway.id)
+        self._smoke_workers_cache = frozenset(ranked[:SMOKE_DEDICATED_COUNT])
+        return self._smoke_workers_cache
+
+    def _get_smoke_scope(self) -> str:
+        """Return first scope containing a smoke test, or empty string."""
+        for scope, work_unit in self.workqueue.items():
+            if self._is_smoke_unit(work_unit):
+                return str(scope)
+        return ""
 
     def _get_short_scope(self, avoid_split_keys: tp.AbstractSet[str] = frozenset()) -> str:
         """Return first non-long work unit, preferring scopes without a conflicting split key."""
@@ -227,33 +283,41 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
         assigned_to_node = self.assigned_work.setdefault(node, collections.OrderedDict())
         scope, work_unit = "", None
 
-        # Check if there are any long-running tests already pending
-        long_pending = self._is_long_pending(assigned_to_node)
+        # Smoke-dedicated worker prefers smoke tests; fall through to the regular
+        # scheduling path when no smoke work is queued.
+        if node in self._smoke_workers():
+            scope = self._get_smoke_scope()
+            if scope:
+                work_unit = self.workqueue.pop(scope)
 
-        # Cap concurrent in-flight tests with the same split key at the cluster
-        # instance capacity, so workers beyond that limit pick non-conflicting work
-        # instead of stalling in the cluster manager.
-        avoid_split_keys = self._get_saturated_split_keys()
-
-        if long_pending:
-            # Try to find a work unit with no long-running test if there is already a long-running
-            # test pending
-            scope = self._get_short_scope(avoid_split_keys=avoid_split_keys)
-        else:
-            # Try to find a work unit with long-running test if there is no long-running test
-            # pending. We want to schedule long-running tests as early as possible
-            scope = self._get_long_scope(avoid_split_keys=avoid_split_keys)
-
-        # Long-balancing didn't pick anything; at least try to avoid split conflicts
-        if not scope:
-            scope = self._get_non_split_scope(avoid_split_keys=avoid_split_keys)
-
-        if scope:
-            work_unit = self.workqueue.pop(scope)
-
-        # Grab the first unit of work if none was grabbed above
         if work_unit is None:
-            scope, work_unit = self.workqueue.popitem(last=False)
+            # Check if there are any long-running tests already pending
+            long_pending = self._is_long_pending(assigned_to_node)
+
+            # Cap concurrent in-flight tests with the same split key at the cluster
+            # instance capacity, so workers beyond that limit pick non-conflicting work
+            # instead of stalling in the cluster manager.
+            avoid_split_keys = self._get_saturated_split_keys()
+
+            if long_pending:
+                # Try to find a work unit with no long-running test if there is already a
+                # long-running test pending
+                scope = self._get_short_scope(avoid_split_keys=avoid_split_keys)
+            else:
+                # Try to find a work unit with long-running test if there is no long-running
+                # test pending. We want to schedule long-running tests as early as possible
+                scope = self._get_long_scope(avoid_split_keys=avoid_split_keys)
+
+            # Long-balancing didn't pick anything; at least try to avoid split conflicts
+            if not scope:
+                scope = self._get_non_split_scope(avoid_split_keys=avoid_split_keys)
+
+            if scope:
+                work_unit = self.workqueue.pop(scope)
+
+            # Grab the first unit of work if none was grabbed above
+            if work_unit is None:
+                scope, work_unit = self.workqueue.popitem(last=False)
 
         # Keep track of the assigned work
         assigned_to_node[scope] = work_unit
@@ -275,8 +339,9 @@ def pytest_collection_modifyitems(items: list) -> None:
         group_marker = item.get_closest_marker(GROUP_MARKER)
         split_marker = item.get_closest_marker(SPLIT_MARKER)
         long_marker = item.get_closest_marker(LONG_MARKER)
+        smoke_marker = item.get_closest_marker(SMOKE_MARKER)
 
-        if not (group_marker or split_marker or long_marker):
+        if not (group_marker or split_marker or long_marker or smoke_marker):
             continue
 
         comps = [item.nodeid]
@@ -290,6 +355,12 @@ def pytest_collection_modifyitems(items: list) -> None:
             )
             comps.append(gname)
 
+        # Tag smoke tests so the scheduler can route them onto the dedicated smoke
+        # worker lane. Must come after the optional group name so `_split_scope` keeps
+        # treating the group name as the scope.
+        if smoke_marker:
+            comps.append(SMOKE_MARKER)
+
         # Add the split key(s) to nodeid as suffix. Recognized by the scheduler to spread
         # tests sharing a heavy runtime resource across workers, without grouping them.
         # Multiple keys can be supplied as separate positional args for tests that lock
@@ -301,7 +372,7 @@ def pytest_collection_modifyitems(items: list) -> None:
                 if k:
                     comps.append(f"{SPLIT_NODEID_PREFIX}{k}")
 
-        # Add "long" to nodeid as suffix
+        # Add "long" to nodeid as suffix (must remain last; `_split_scope` strips it)
         if long_marker:
             comps.append(LONG_MARKER)
 
