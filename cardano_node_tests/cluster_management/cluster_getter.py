@@ -105,8 +105,8 @@ class ClusterGetter:
             # Hard timeout (seconds): always applies, regardless of cluster selection.
             self.grace_period_hard = 7200
         else:
-            self.grace_period_soft = 28800
-            self.grace_period_hard = 30000
+            self.grace_period_soft = 36000
+            self.grace_period_hard = 37800
 
         # Time window (seconds) before deadline when stricter dead cluster checks apply.
         self.strict_check_window = 1200
