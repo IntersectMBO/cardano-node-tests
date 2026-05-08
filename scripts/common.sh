@@ -23,9 +23,14 @@ is_venv_active() {
 # for the lifetime of the calling shell; it is released automatically on exit.
 # The lock file lives next to the workdir so that wiping the workdir does not
 # drop the lock.
-# Usage: acquire_workdir_lock <workdir>
+# If <fd_var_name> is given, the lock FD number is written into a variable of
+# that name in the caller's scope. Long-lived background processes spawned by
+# the caller can then close the inherited FD (e.g. `exec {LOCK_FD}>&-`) so the
+# lock is released even if they outlive the parent shell.
+# Usage: acquire_workdir_lock <workdir> [<fd_var_name>]
 acquire_workdir_lock() {
   local workdir="${1:?acquire_workdir_lock requires a workdir argument}"
+  local out_var="${2:-}"
   local lockfile="${workdir}.lock"
   local lockfd
 
@@ -46,6 +51,10 @@ acquire_workdir_lock() {
     echo "If no testrun is running, simply retry (the lock is released automatically when the holding process exits)." >&2
     exec {lockfd}>&-
     return 1
+  fi
+
+  if [ -n "$out_var" ]; then
+    printf -v "$out_var" '%s' "$lockfd"
   fi
 }
 
@@ -96,4 +105,28 @@ version_parse() {
   minor="${minor%%[!0-9]*}"
   patch="${patch%%[!0-9]*}"
   printf '%d\n' "$((10#${major:-0} * 1000000 + 10#${minor:-0} * 1000 + 10#${patch:-0}))"
+}
+
+# Send SIGTERM, wait up to 5s for exit, escalate to SIGKILL if still alive.
+# Returns 0 if the process is gone, 1 if it survived even SIGKILL.
+# Note: `wait` only reaps direct children of the calling shell; for non-children
+# the function still returns correctly but cannot harvest the zombie.
+kill_and_wait() {
+  local pid="${1:?Missing PID}"
+  if ! kill -0 "$pid" 2>/dev/null; then
+    return 0
+  fi
+  if ! kill "$pid" 2>/dev/null; then
+    kill -0 "$pid" 2>/dev/null || return 0
+    return 1
+  fi
+  for _ in {1..5}; do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep 1
+  done
+  echo "Warning: process $pid did not exit after SIGTERM, sending SIGKILL." >&2
+  kill -9 "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  kill -0 "$pid" 2>/dev/null && return 1
+  return 0
 }

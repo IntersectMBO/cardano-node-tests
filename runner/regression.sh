@@ -28,7 +28,9 @@ if is_venv_active; then
 fi
 
 # Refuse to start if another testrun is already using this workdir.
-acquire_workdir_lock "$WORKDIR" || exit 1
+# `LOCK_FD` is set so background processes (e.g. monitor_system) can drop the
+# inherited lock FD and not keep the lock alive if they outlive this script.
+acquire_workdir_lock "$WORKDIR" LOCK_FD || exit 1
 
 # shellcheck disable=SC1091
 . runner/stop_cluster_instances.sh
@@ -229,8 +231,14 @@ if [ "$(echo "$PWD"/.bin/*)" != "${PWD}/.bin/*" ]; then
   echo
 fi
 
-# function to monitor system resources and log them every 10 minutes
+# Function to monitor system resources and log them every 10 minutes
 monitor_system() {
+  # Drop the inherited workdir lock FD so this background subshell does not
+  # keep the lock held if it outlives the parent script.
+  if [ -n "${LOCK_FD:-}" ]; then
+    exec {LOCK_FD}>&-
+  fi
+
   : > monitor.log
 
   while true; do
@@ -253,9 +261,20 @@ monitor_system() {
 monitor_system &
 MON_PID=$!
 
-# ensure cleanup on ANY exit (success, error, Ctrl-C, set -e, etc.)
-# shellcheck disable=SC2064
-trap "echo 'Stopping monitor'; kill ${MON_PID:-} 2>/dev/null || true" EXIT
+# Kill the sleep child first via pkill -P; otherwise the bash subshell stays blocked
+# in the foreground sleep and SIGTERM is only handled after sleep returns.
+# shellcheck disable=SC2329
+kill_monitor() {
+  if [ -n "${MON_PID:-}" ]; then
+    echo "Stopping monitor with PID $MON_PID"
+    pkill -P "$MON_PID" 2>/dev/null || true
+    kill_and_wait "$MON_PID" || true
+    unset MON_PID
+  fi
+}
+
+# ensure cleanup on ANY exit (success, error, Ctrl-C, set -e, etc.).
+trap 'kill_monitor' EXIT
 
 # Run tests and generate report
 
