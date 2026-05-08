@@ -15,6 +15,10 @@
 #       hard-codes http://localhost:<port> for submit_api; since submit_api in
 #       the node container binds to 127.0.0.1 there (unreachable here), we
 #       run our own instance against the shared cluster-state socket.
+#   3c. Starting a TCP proxy (Python, no extra packages) that forwards
+#       localhost:<pool1_port> → NODE_HOST:<pool1_port>.  cardano-cli ping
+#       hardcodes --host localhost, so without this the ping tests fail in
+#       multi-container mode.
 #   4. Emitting the Antithesis setup_complete lifecycle signal.
 #   5. Handing off to regression.sh.
 #
@@ -116,8 +120,6 @@ except Exception:
         echo "Starting local cardano-submit-api on port ${_submit_api_port}..."
         (cd "${CLUSTER_STATE_DIR}" && exec "${_submit_api_script}") &
         _submit_api_pid=$!
-        # Kill it when this script exits so no orphan is left behind.
-        trap 'kill "${_submit_api_pid}" 2>/dev/null || true' EXIT
 
         # Wait up to 30 s for the port to open.
         _sa_ready=0
@@ -138,8 +140,54 @@ except Exception:
         echo "WARNING: ${_submit_api_script} not found; submit_api tests will fail." >&2
     fi
     unset _submit_api_script
+
+    # -------------------------------------------------------------------------
+    # 3c. Start a TCP proxy so ping tests using --host localhost can reach the
+    #     cardano-node P2P port in the node container.
+    #
+    #     cardano-cli ping hardcodes --host localhost --port <pool1_port>.  In
+    #     multi-container mode the node's TCP P2P port lives in the node
+    #     container and is unreachable on the driver's localhost.  We forward
+    #     localhost:<pool1_port> → NODE_HOST:<pool1_port> using a small Python
+    #     proxy backed by the pre-built venv Python (no extra packages needed).
+    #
+    #     pool1 port = PORTS_BASE + 5  (see cardonnay local_scripts.py).
+    # -------------------------------------------------------------------------
+    _pool1_port=$(( ${PORTS_BASE:-23000} + 5 ))
+    echo "Starting TCP proxy localhost:${_pool1_port} → ${NODE_HOST}:${_pool1_port}..."
+    "${_VENV_DIR}/bin/python3" -c "
+import socket, threading
+def relay(a, b):
+    try:
+        while True:
+            d = a.recv(4096)
+            if not d: break
+            b.sendall(d)
+    except OSError: pass
+    finally:
+        for s in (a, b):
+            try: s.close()
+            except OSError: pass
+def fwd(src, host, port):
+    try: dst = socket.create_connection((host, port), timeout=10)
+    except OSError: src.close(); return
+    for args in ((src, dst), (dst, src)):
+        threading.Thread(target=relay, args=args, daemon=True).start()
+srv = socket.socket()
+srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+srv.bind(('127.0.0.1', ${_pool1_port}))
+srv.listen(32)
+while True:
+    conn, _ = srv.accept()
+    threading.Thread(target=fwd, args=(conn, '${NODE_HOST}', ${_pool1_port}), daemon=True).start()
+" &
+    _proxy_pid=$!
+    unset _pool1_port
+
+    # Kill both background processes when this script exits.
+    trap 'kill "${_submit_api_pid:-}" "${_proxy_pid:-}" 2>/dev/null || true' EXIT
 fi
-# _submit_api_pid is intentionally kept in scope so the EXIT trap above can kill it.
+# _submit_api_pid and _proxy_pid are intentionally kept in scope so the EXIT trap above can kill them.
 
 # ---------------------------------------------------------------------------
 # 4. Emit the Antithesis setup_complete signal.
