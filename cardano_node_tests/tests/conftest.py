@@ -228,13 +228,16 @@ def pytest_runtest_logreport(report: tp.Any) -> None:
         return
     sdk_file = pl.Path(os.environ.get("ANTITHESIS_OUTPUT_DIR", "/tmp/antithesis")) / "sdk.jsonl"
     sdk_file.parent.mkdir(parents=True, exist_ok=True)
+    longrepr = report.longrepr
+    reprcrash = getattr(longrepr, "reprcrash", None)
+    exc_message = reprcrash.message if reprcrash else (str(longrepr)[:2000] if longrepr else "")
     assertion = {
         "antithesis_assert": {
             "type": "always",
             "condition": False,
             "display_name": report.nodeid,
-            "message": str(report.longrepr)[:500] if report.longrepr else "",
-            "details": {},
+            "message": exc_message,
+            "details": {"traceback": str(longrepr)[-2000:] if longrepr else ""},
             "location": {
                 "function": report.nodeid,
                 "file": str(report.fspath),
