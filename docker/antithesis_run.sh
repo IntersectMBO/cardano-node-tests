@@ -205,7 +205,13 @@ unset _output_dir
 #    code (other than 137/143) as an error property violation.  Test
 #    failures are expected and communicated via SDK assertions, not the
 #    process exit code.  Always exit 0 so the container is not flagged.
+#
+#    Ignore SIGINT in this driver so that SESSION_TIMEOUT's `timeout
+#    --foreground --signal=INT` does not kill PID 1 before exit 0 is
+#    reached.  regression.sh sets its own trap and handles SIGINT
+#    independently.
 # ---------------------------------------------------------------------------
+trap '' SIGINT
 set +e
 /work/.github/regression.sh
 _rc=$?
