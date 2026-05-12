@@ -1,0 +1,68 @@
+10.5.1
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.5.1>
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - default UTxO backend - `Conway PV10 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.5.1-conway10_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - LMDB UTxO backend - `Conway PV10 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.5.1-conway10_p2p_disk_01/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (10.4.1 to 10.5.1)
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Reconnection testing
+     - |:heavy_check_mark:|
+   * - Sanity checks of the submit-api REST service
+     - |:heavy_check_mark:|
+   * - P2P Dynamic Block Production testing
+     - |:heavy_check_mark:|
+   * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C)
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+-------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `10.5.1` pushed to `preview`
+     - |:heavy_check_mark:|
+   * - Regression testing against `preview`
+     - |:heavy_check_mark:|
+   * - `Sync testing ran against Mainnet (Linux) <https://docs.google.com/document/d/e/2PACX-1vRVJFy_A610oOAk1AUSX9TjeDJopNZAGbQQl-gcK9P28v_muKxWikGbeulPzrZJy3OFGb4j5H8dpbCI/pub>`__
+     - |:heavy_check_mark:|
+   * - DB re-validation testing (ledger snapshots compatibility)
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:hourglass_flowing_sand:|
+
+
+
+New functionalities in this tag
+-------------------------------
+
+
+New issues
+----------
+
+
+Breaking changes
+----------------

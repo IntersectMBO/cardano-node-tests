@@ -1,0 +1,21 @@
+cardano\_node\_tests.pytest\_plugins package
+============================================
+
+Submodules
+----------
+
+cardano\_node\_tests.pytest\_plugins.xdist\_scheduler module
+------------------------------------------------------------
+
+.. automodule:: cardano_node_tests.pytest_plugins.xdist_scheduler
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: cardano_node_tests.pytest_plugins
+   :members:
+   :show-inheritance:
+   :undoc-members:

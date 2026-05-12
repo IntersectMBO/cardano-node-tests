@@ -1,0 +1,51 @@
+10.7.1
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.7.1>
+
+
+Release Testing Checklists
+--------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Default UTxO backend
+     - |:heavy_check_mark:|
+   * - LSM disk UTxO backend
+     - |:heavy_check_mark:|
+   * - Conway protocol version 11
+     - |:heavy_check_mark:|
+   * - Genesis consensus mode
+     - |:heavy_check_mark:|
+   * - Testing on `Preview`
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (10.6.4 to 10.7.1)
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Reconnection testing
+     - |:heavy_check_mark:|
+   * - Block-production testing
+     - |:heavy_check_mark:|
+   * - Testing on Ubuntu, Debian, Mint
+     - |:heavy_check_mark:|
+   * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C)
+     - |:heavy_check_mark:|
+   * - Sync testing on Mainnet (Linux)
+     - |:heavy_check_mark:|
+   * - Byron to Conway 10 hard-fork testing
+     - |:heavy_check_mark:|
+   * - Byron to Conway 11 hard-fork testing
+     - |:question:|\ :sup:`1`
+   * - Check build instructions changes
+     - |:question:|\ :sup:`2`
+
+| \ :sup:`1` - Cannot hard-fork from Babbage to Conway when `ExperimentalHardForksEnabled` is set to `true`.
+| \ :sup:`2` - Incorrect build instructions, see `PR #1763 <https://github.com/cardano-foundation/developer-portal/pull/1763>`__

@@ -1,0 +1,63 @@
+10.2.1
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.2.1>
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - P2P ON - `Conway PV10 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.2.1-conway10_p2p_01/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (10.1.4 to 10.2.1)
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Reconnection testing
+     - |:heavy_check_mark:|
+   * - Sanity checks of the submit-api REST service
+     - |:heavy_check_mark:|
+   * - P2P Dynamic Block Production testing
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+-------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `10.2.1` pushed to `preview`
+     - |:heavy_check_mark:|
+   * - Regression testing against `preview`
+     - |:heavy_check_mark:|
+   * - `Sync testing ran against Mainnet (Linux) <https://docs.google.com/document/d/e/2PACX-1vRLI7SaVkQlx4KR7iWzWEp246e1Mcu3q8GPMvyIMWkDjjAf2MxTeou-TYZe9_RMb9xwGgaq9bc7El0s/pub>`__
+     - |:heavy_check_mark:|
+   * - DB re-validation testing (ledger snapshots compatibility)
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:hourglass_flowing_sand:|
+
+
+New functionalities in this tag
+-------------------------------
+
+
+New issues
+----------
+
+
+Breaking changes
+----------------

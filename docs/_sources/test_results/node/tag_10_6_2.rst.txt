@@ -1,0 +1,42 @@
+10.6.2
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.6.2>
+
+
+Release Testing Checklists
+--------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.6.2-conway10_01/>`__
+     - |:heavy_check_mark:|
+   * - `LMDB disk UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.6.2-conway10_disk_01/>`__
+     - |:heavy_check_mark:|
+   * - `Conway protocol version 11 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.6.2-conway11_01/>`__
+     - |:heavy_check_mark:|
+   * - Testing on `Preview`
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `Upgrade testing (10.5.4 to 10.6.2) <https://github.com/IntersectMBO/cardano-node-tests/actions/runs/21953220164>`__
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Reconnection testing
+     - |:heavy_check_mark:|
+   * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C)
+     - |:heavy_check_mark:|
+   * - `Sync testing on Mainnet (Linux) <https://docs.google.com/document/d/e/2PACX-1vRE0SVZgrdE06cvGsO5Stbi80tRksZhbpEeZyJuVBA6Vvn3qvEejgPXh34ap1F8cGOElify_rZC0Owj/pub>`__
+     - |:question:|
+   * - Byron to Conway 10 hard-fork testing
+     - |:heavy_check_mark:|
+   * - Byron to Conway 11 hard-fork testing
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
