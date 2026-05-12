@@ -3,7 +3,7 @@
 #
 # Runs the full test suite without any network access by:
 #   1. Forcing nix into offline mode (all store paths were pre-built into
-#      the image by docker/Dockerfile).
+#      the image by docker-antithesis/Dockerfile).
 #   2. Pointing regression.sh at the pre-built cardano binaries and Python
 #      venv so it skips all download / build steps.
 #   3. When NODE_HOST is set (multi-container mode): waiting for the node
