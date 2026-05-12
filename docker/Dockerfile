@@ -61,7 +61,8 @@ RUN nix develop --accept-flake-config .#testenv --command \
     bash -c 'python3 -m venv /opt/tests-venv --prompt tests-venv && \
              . /opt/tests-venv/bin/activate && \
              cd /work && \
-             uv sync --active --no-dev'
+             uv sync --active --no-dev && \
+             pip install "antithesis>=0.2.0,<0.3.0"'
 
 # Pre-warm the base dev shell (bash, coreutils, git, jq, …) so its store
 # paths are cached and the regression.sh shebang resolves offline.

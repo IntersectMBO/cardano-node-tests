@@ -15,6 +15,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import tx_common
+from cardano_node_tests.utils import antithesis
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -181,13 +182,27 @@ class TestBasicTransactions:
         )
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=src_addr.address)[0].amount
-            == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
-        ), f"Incorrect balance for source address `{src_addr.address}`"
-        assert (
-            clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
-        ), f"Incorrect balance for destination address `{dst_addr.address}`"
+
+        src_actual = clusterlib.filter_utxos(utxos=out_utxos, address=src_addr.address)[0].amount
+        src_expected = clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
+        antithesis.always(
+            src_actual == src_expected,
+            "Source balance decreased by transfer amount and fee",
+            {"src_addr": src_addr.address, "expected": src_expected, "actual": src_actual},
+        )
+        assert src_actual == src_expected, (
+            f"Incorrect balance for source address `{src_addr.address}`"
+        )
+
+        dst_actual = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount
+        antithesis.always(
+            dst_actual == amount,
+            "Destination received exact transfer amount",
+            {"dst_addr": dst_addr.address, "expected": amount, "actual": dst_actual},
+        )
+        assert dst_actual == amount, (
+            f"Incorrect balance for destination address `{dst_addr.address}`"
+        )
 
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
