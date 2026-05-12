@@ -8,7 +8,7 @@
 #   NODE_REV      — cardano-node git ref to pre-build (default: master)
 #
 # Build and push to GHCR before submitting to Antithesis:
-#   docker build -f docker/Dockerfile \
+#   docker build -f docker-antithesis/Dockerfile \
 #     --build-arg GIT_REVISION=$(git rev-parse HEAD) \
 #     --build-arg NODE_REV=master \
 #     -t ghcr.io/saratomaz/cardano-node-tests-antithesis:latest .
@@ -71,7 +71,7 @@ RUN nix develop --accept-flake-config .#base --command true
 # Create the Antithesis test driver directory and install the entry-points.
 # singleton_driver_* files are run once per test run by Antithesis.
 RUN mkdir -p /opt/antithesis/test/v1/quickstart && \
-    cp /work/docker/antithesis_run.sh \
+    cp /work/docker-antithesis/antithesis_run.sh \
        /opt/antithesis/test/v1/quickstart/singleton_driver_regression.sh && \
     chmod +x /opt/antithesis/test/v1/quickstart/singleton_driver_regression.sh && \
-    chmod +x /work/docker/node_run.sh
+    chmod +x /work/docker-antithesis/node_run.sh

@@ -12,7 +12,7 @@
 #            suite against the pre-running cluster via DEV_CLUSTER_RUNNING=1.
 #
 # Both images must be pre-built with all cardano binaries and the Python venv
-# baked in (see docker/Dockerfile).  No internet access is available at
+# baked in (see docker-antithesis/Dockerfile).  No internet access is available at
 # runtime inside the Antithesis environment.
 #
 # Push images to the Antithesis registry before submitting:
@@ -21,8 +21,8 @@
 #
 # Validate locally (requires internet — use an isolated netns to simulate
 # the Antithesis environment):
-#   docker compose -f docker/docker-compose.yaml config
-#   docker compose -f docker/docker-compose.yaml up --build
+#   docker compose -f docker-antithesis/docker-compose.yaml config
+#   docker compose -f docker-antithesis/docker-compose.yaml up --build
 
 networks:
   antithesis-net:
@@ -36,8 +36,8 @@ services:
     image: ghcr.io/saratomaz/cardano-node-tests-antithesis:latest
     build:
       context: ..
-      dockerfile: docker/Dockerfile
-    command: ["/work/docker/node_run.sh"]
+      dockerfile: docker-antithesis/Dockerfile
+    command: ["/work/docker-antithesis/node_run.sh"]
     networks:
       - antithesis-net
     volumes:
@@ -60,11 +60,11 @@ services:
     image: ghcr.io/saratomaz/cardano-node-tests-antithesis:latest
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker-antithesis/Dockerfile
     # antithesis_run.sh sets nix offline, waits for the node health check,
     # exports DEV_CLUSTER_RUNNING=1, emits setup_complete, then hands off
     # to regression.sh.
-    command: ["/work/docker/antithesis_run.sh"]
+    command: ["/work/docker-antithesis/antithesis_run.sh"]
     networks:
       - antithesis-net
     depends_on:

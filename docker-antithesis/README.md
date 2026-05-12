@@ -39,7 +39,7 @@ dependencies are baked into the image at build time:
 ### 1. Build and push the driver image
 
 ```bash
-docker build -f docker/Dockerfile \
+docker build -f docker-antithesis/Dockerfile \
   --build-arg GIT_REVISION=$(git rev-parse HEAD) \
   --build-arg NODE_REV=master \
   -t ghcr.io/saratomaz/cardano-node-tests-antithesis:latest .
@@ -53,7 +53,7 @@ regardless of what is on the `master` branch when the container starts.
 ### 2. Build and push the config image
 
 ```bash
-docker build -f docker/Dockerfile.config \
+docker build -f docker-antithesis/Dockerfile.config \
   -t us-central1-docker.pkg.dev/<tenant>/antithesis/config:latest .
 
 docker push us-central1-docker.pkg.dev/<tenant>/antithesis/config:latest
@@ -62,15 +62,15 @@ docker push us-central1-docker.pkg.dev/<tenant>/antithesis/config:latest
 ### 3. Validate locally (internet-connected build, isolated network at runtime)
 
 ```bash
-docker compose -f docker/docker-compose.yaml config
-docker compose -f docker/docker-compose.yaml up --build
+docker compose -f docker-antithesis/docker-compose.yaml config
+docker compose -f docker-antithesis/docker-compose.yaml up --build
 ```
 
 To fully simulate the Antithesis no-internet constraint, run inside an
 isolated network namespace on Linux:
 
 ```bash
-unshare -n docker compose -f docker/docker-compose.yaml up
+unshare -n docker compose -f docker-antithesis/docker-compose.yaml up
 ```
 
 ## Environment variables
