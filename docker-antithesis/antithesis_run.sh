@@ -112,10 +112,9 @@ except Exception:
     _submit_api_script="${CLUSTER_STATE_DIR}/state-cluster0/run-cardano-submit-api"
     if [ -x "$_submit_api_script" ]; then
         export PATH="/opt/cardano/cardano-submit-api/bin:${PATH}"
-        # Derive the port the same way cluster_scripts.py does:
-        #   base = PORTS_BASE + instance_num*10  (instance 0 → base = PORTS_BASE)
-        #   submit_api = base + ports_per_instance - 1 - 2 = base + 7
-        _submit_api_port=$(( ${PORTS_BASE:-23000} + 7 ))
+        # Parse the port directly from the generated script so we are not
+        # tied to a specific cluster variant's port formula.
+        _submit_api_port=$(grep -oE -- '--port [0-9]+' "$_submit_api_script" | grep -oE '[0-9]+' | head -1)
 
         echo "Starting local cardano-submit-api on port ${_submit_api_port}..."
         (cd "${CLUSTER_STATE_DIR}" && exec "${_submit_api_script}") &
