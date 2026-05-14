@@ -17,3 +17,4 @@ jobs:
       CI_FAIL_MAILS: ${{ secrets.NIGHTLY_FAIL_MAILS }}
       GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
       GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
