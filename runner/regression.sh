@@ -241,6 +241,7 @@ monitor_system() {
 
   : > monitor.log
 
+  set +e  # don't exit on error in this monitoring loop, just log the error and keep going
   while true; do
     {
       echo "===== $(date) ====="
@@ -251,7 +252,7 @@ monitor_system() {
       echo "--- DISK ---"
       df -h .
       echo
-    } >> monitor.log
+    } >> monitor.log 2>&1
 
     sleep 600 # 10 minutes
   done
