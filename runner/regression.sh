@@ -242,6 +242,8 @@ monitor_system() {
   : > monitor.log
 
   set +e  # don't exit on error in this monitoring loop, just log the error and keep going
+  trap - ERR EXIT SIGINT # reset traps in this subshell so they don't interfere with the main script's traps
+
   while true; do
     {
       echo "===== $(date) ====="
