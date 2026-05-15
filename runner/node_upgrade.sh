@@ -76,15 +76,15 @@ mkdir -p "$TMPDIR"
 
 export CARDANO_NODE_SOCKET_PATH_CI="$WORKDIR/state-cluster0/bft1.socket"
 
-export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
-rm -rf "${ARTIFACTS_DIR:?}"
+export ARTIFACTS_DIR="${WORKDIR}/artifacts"
 mkdir -p "$ARTIFACTS_DIR"
 
-export COVERAGE_DIR="${COVERAGE_DIR:-".cli_coverage"}"
-rm -rf "${COVERAGE_DIR:?}"
+export COVERAGE_DIR="${WORKDIR}/cli_coverage"
 mkdir -p "$COVERAGE_DIR"
 
-export SCHEDULING_LOG=scheduling.log
+export REPORTS_DIR="${WORKDIR}/reports"
+
+export SCHEDULING_LOG="${WORKDIR}/scheduling.log"
 : > "$SCHEDULING_LOG"
 
 export DEV_CLUSTER_RUNNING=true FORBID_RESTART=true CLUSTERS_COUNT=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
@@ -188,14 +188,14 @@ if [ ! -e "$WORKDIR/.nix_setup" ]; then
 fi
 
 # grep testing artifacts for errors
-./runner/grep_errors.sh
+./runner/grep_errors.sh "$ARTIFACTS_DIR" "${WORKDIR}/errors_all.log"
 
 _last_cleanup
 
 # prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
   # save testing artifacts
-  ./runner/save_artifacts.sh
+  ./runner/save_artifacts.sh "$ARTIFACTS_DIR" "$WORKDIR"
 fi
 
 exit "$retval"

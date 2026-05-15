@@ -47,10 +47,11 @@ export PYTHONPYCACHEPREFIX="${WORKDIR}/__pycache__"
 export TMPDIR="$WORKDIR/tmp"
 mkdir -p "$TMPDIR"
 
-export ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
-rm -rf "${ARTIFACTS_DIR:?}"
+export ARTIFACTS_DIR="${WORKDIR}/artifacts"
+export COVERAGE_DIR="${WORKDIR}/cli_coverage"
+export REPORTS_DIR="${WORKDIR}/reports"
 
-export SCHEDULING_LOG=scheduling.log
+export SCHEDULING_LOG="${WORKDIR}/scheduling.log"
 : > "$SCHEDULING_LOG"
 
 MARKEXPR="${MARKEXPR:-}"
@@ -239,7 +240,8 @@ monitor_system() {
     exec {LOCK_FD}>&-
   fi
 
-  : > monitor.log
+  monitor_log="${WORKDIR}/monitor.log"
+  : > "$monitor_log"
 
   set +e  # don't exit on error in this monitoring loop, just log the error and keep going
   trap - ERR EXIT SIGINT # reset traps in this subshell so they don't interfere with the main script's traps
@@ -254,7 +256,7 @@ monitor_system() {
       echo "--- DISK ---"
       df -h .
       echo
-    } >> monitor.log 2>&1
+    } >> "$monitor_log" 2>&1
 
     sleep 600 # 10 minutes
   done
@@ -303,13 +305,13 @@ nix develop --accept-flake-config .#testenv --command bash -c '
 
   echo "::group::Collect artifacts & teardown cluster"
   printf "start: %(%H:%M:%S)T\n" -1
-  ./runner/cli_coverage.sh || :
-  ./runner/reqs_coverage.sh || :
+  ./runner/cli_coverage.sh "$COVERAGE_DIR" "${WORKDIR}/cli_coverage.json" || :
+  ./runner/reqs_coverage.sh "$ARTIFACTS_DIR" "${WORKDIR}/requirements_coverage.json" || :
   exit "$retval"
 ' || retval="$?"
 
 # grep testing artifacts for errors
-./runner/grep_errors.sh
+./runner/grep_errors.sh "$ARTIFACTS_DIR" "${WORKDIR}/errors_all.log"
 
 # Don't stop cluster instances just yet if KEEP_CLUSTERS_RUNNING is set to 1.
 # After any key is pressed, resume this script and stop all running cluster instances.
@@ -322,19 +324,17 @@ fi
 
 _last_cleanup
 
-# prepare artifacts for upload in GitHub Actions
-if [ -n "${GITHUB_ACTIONS:-}" ]; then
+# Prepare artifacts
 
-  # move reports to root dir
-  if [ -e .reports/testrun-report.html ]; then
-    mv .reports/testrun-report.* ./
-  fi
-
-  # create results archive
-  ./runner/create_results.sh || :
-
-  # save testing artifacts
-  ./runner/save_artifacts.sh || :
+# Move reports to workdir
+if [ -e "${REPORTS_DIR}/testrun-report.html" ]; then
+  mv "${REPORTS_DIR}"/testrun-report.* "$WORKDIR/"
 fi
+
+# Create results archive
+./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" || :
+
+# Save testing artifacts
+./runner/save_artifacts.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
 
 exit "$retval"

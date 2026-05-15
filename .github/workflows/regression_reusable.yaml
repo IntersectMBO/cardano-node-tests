@@ -136,27 +136,27 @@ jobs:
           prompt: |
             You are triaging a failed cardano-node-tests regression run. Produce a concise preliminary failure analysis.
 
-            Inputs available in the repo root (use only what exists):
-              - `allure-results/`         — one JSON per test (status, statusDetails.message, statusDetails.trace, stdout/stderr attachments listed by name)
-              - `latest_artifacts/`       — symlink to `artifacts_<timestamp>/`, contains per-test artifact dirs with cluster logs, node stdouts, etc.
-              - `errors_all.log`          — output of `runner/grep_errors.sh` over cluster logs
-              - `scheduling.log`          — cluster instance manager log
-              - `testrun-report.xml`      — junit XML
-              - `monitor.log`             — system resource snapshots every 10 min
+            Inputs available under `run_workdir/` (use only what exists):
+              - `run_workdir/allure-results/`         — one JSON per test (status, statusDetails.message, statusDetails.trace, stdout/stderr attachments listed by name)
+              - `run_workdir/testing_artifacts/`      — per-test artifact dirs with cluster logs, node stdouts, etc.
+              - `run_workdir/errors_all.log`          — output of `runner/grep_errors.sh` over cluster logs
+              - `run_workdir/scheduling.log`          — cluster instance manager log
+              - `run_workdir/testrun-report.xml`      — junit XML
+              - `run_workdir/monitor.log`             — system resource snapshots every 10 min
 
             Steps:
               1. Enumerate failed/broken tests:
-                 `grep -E '"status": "(failed|broken)"' allure-results/*result.json | cut -c1-200`.
+                 `grep -E '"status": "(failed|broken)"' run_workdir/allure-results/*result.json | cut -c1-200`.
                  (`broken` = pytest error in setup/teardown; `failed` = assertion failure.)
               2. Group failures by likely root cause (same exception class + message head, same node crash, same infra symptom). Treat one node crash that flunks many tests as a single group.
               3. For each group: list affected tests (truncate to ~10 with a "+N more" tail), give the most informative 1–3 lines of error context, and classify as one of `node-bug | test-bug | infra-flake | env-issue | unknown` with a short justification.
-              4. Skim `errors_all.log` and `monitor.log` for anything corroborating (OOM, disk pressure, repeated tracebacks).
+              4. Skim `run_workdir/errors_all.log` and `run_workdir/monitor.log` for anything corroborating (OOM, disk pressure, repeated tracebacks).
 
             Known patterns:
               - `All cluster instances are dead.` — no cluster instance could start; usually caused by a `cardano-cli` argument change or a `cardano-node` configuration change.
 
             Constraints:
-              - Output a single markdown file at repo root: `failure_analysis.md`.
+              - Output a single markdown file at: `run_workdir/failure_analysis.md`.
               - Keep it under ~300 lines. No full stack traces — only the most informative line(s).
               - If a source file is missing, note it once and move on; do not fail.
               - Do not modify any other files.
@@ -166,10 +166,10 @@ jobs:
         id: read-analysis
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CLAUDE_CODE_OAUTH_TOKEN
         run: |
-          if [ -s failure_analysis.md ]; then
+          if [ -s run_workdir/failure_analysis.md ]; then
             {
               echo 'FAILURE_ANALYSIS<<__EOF_ANALYSIS42__'
-              cat failure_analysis.md
+              cat run_workdir/failure_analysis.md
               # ensure delimiter is on its own line even if the file lacks a trailing newline
               printf '\n__EOF_ANALYSIS42__\n'
             } >> "$GITHUB_ENV"
@@ -178,31 +178,31 @@ jobs:
             # in a foldable log group, and a copy in the run summary so it's
             # reachable without downloading the testrun-files artifact.
             echo "::group::Preliminary failure analysis"
-            cat failure_analysis.md
+            cat run_workdir/failure_analysis.md
             echo
             echo "::endgroup::"
             {
               echo '## 🤖 Preliminary failure analysis'
               echo
-              cat failure_analysis.md
+              cat run_workdir/failure_analysis.md
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "FAILURE_ANALYSIS=(no analysis produced)" >> "$GITHUB_ENV"
-            echo "::warning::No failure_analysis.md produced by the analyze step."
+            echo "::warning::No run_workdir/failure_analysis.md produced by the analyze step."
           fi
       - name: Report test results
         if: (success() || failure()) && inputs.testrun_name
         run: |
-          if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ] && [ -e testrun-report.xml ]; then
+          if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ] && [ -e run_workdir/testrun-report.xml ]; then
             testrun_name_strip="$(echo "${{ inputs.testrun_name }}" | sed 's/[^a-zA-Z0-9_-]//g')"
-            curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@testrun-report.xml"
+            curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@run_workdir/testrun-report.xml"
           fi
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: testing-artifacts
-          path: testing_artifacts.tar.xz
+          path: run_workdir/testing_artifacts.tar.xz
       - name: ↟ Upload Allure results
         uses: actions/upload-artifact@v7
         # When using `always()`, you lose ability to manually cancel the workflow.
@@ -210,32 +210,32 @@ jobs:
         if: success() || failure()
         with:
           name: allure-results
-          path: allure-results.tar.xz
+          path: run_workdir/allure-results.tar.xz
       - name: ↟ Upload HTML report
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: testrun-report
-          path: testrun-report.html
+          path: run_workdir/testrun-report.html
       - name: ↟ Upload testrun files
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: testrun-files
           path: |
-            scheduling.log
-            errors_all.log
-            testrun-report.xml
+            run_workdir/scheduling.log
+            run_workdir/errors_all.log
+            run_workdir/testrun-report.xml
             deselected_tests.txt
-            requirements_coverage.json
-            monitor.log
-            failure_analysis.md
+            run_workdir/requirements_coverage.json
+            run_workdir/monitor.log
+            run_workdir/failure_analysis.md
       - name: ↟ Upload CLI coverage
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: cli-coverage
-          path: cli_coverage.json
+          path: run_workdir/cli_coverage.json
       - name: ✉ Mail failure report
         uses: dawidd6/action-send-mail@v17
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS && github.event_name == 'schedule'
@@ -254,4 +254,4 @@ jobs:
             ── Preliminary failure analysis ──
             ${{ env.FAILURE_ANALYSIS }}
           reply_to: noreply@github.com
-          attachments: testrun-report.html
+          attachments: run_workdir/testrun-report.html

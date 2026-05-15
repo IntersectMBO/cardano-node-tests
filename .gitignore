@@ -1,11 +1,11 @@
-# Testing artifacts
-/.artifacts/
-/.cli_coverage/
-/.reports/
-
 # Workdir for running tests
 /run_workdir/
 /dev_workdir/
+
+# Legacy testing artifacts dirs (kept to ignore leftovers in existing checkouts)
+/.artifacts/
+/.cli_coverage/
+/.reports/
 
 # Local files
 /tmp*/

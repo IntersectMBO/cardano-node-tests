@@ -19,7 +19,6 @@ CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 STEP1_BIN="$WORKDIR/step1-bin"
 
 # init reports dir before each step
-export REPORTS_DIR="${REPORTS_DIR:-".reports"}"
 rm -rf "${REPORTS_DIR:?}"
 mkdir -p "$REPORTS_DIR"
 
@@ -89,7 +88,7 @@ if [ "$1" = "step1" ]; then
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
-    --html=testrun-report-step1.html \
+    --html="$WORKDIR/testrun-report-step1.html" \
     --self-contained-html \
     || retval="$?"
 
@@ -97,8 +96,8 @@ if [ "$1" = "step1" ]; then
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step1
-  ./runner/create_results.sh .
-  mv allure-results.tar.xz allure-results-step1.tar.xz
+  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR"
+  mv "$WORKDIR/allure-results.tar.xz" "$WORKDIR/allure-results-step1.tar.xz"
 
   printf "STEP1 finish: %(%H:%M:%S)T\n" -1
 
@@ -232,7 +231,7 @@ elif [ "$1" = "step2" ]; then
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
-    --html=testrun-report-step2.html \
+    --html="$WORKDIR/testrun-report-step2.html" \
     --self-contained-html \
     ||retval="$?"
 
@@ -240,8 +239,8 @@ elif [ "$1" = "step2" ]; then
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step2
-  ./runner/create_results.sh .
-  mv allure-results.tar.xz allure-results-step2.tar.xz
+  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR"
+  mv "$WORKDIR/allure-results.tar.xz" "$WORKDIR/allure-results-step2.tar.xz"
 
   [ "$err_retval" -gt "$retval" ] && retval=1
 
@@ -387,13 +386,13 @@ elif [ "$1" = "step3" ]; then
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
-    --html=testrun-report-step3.html \
+    --html="$WORKDIR/testrun-report-step3.html" \
     --self-contained-html \
     ||retval="$?"
 
   # create results archive for step3
-  ./runner/create_results.sh .
-  mv allure-results.tar.xz allure-results-step3.tar.xz
+  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR"
+  mv "$WORKDIR/allure-results.tar.xz" "$WORKDIR/allure-results-step3.tar.xz"
 
   [ "$err_retval" -gt "$retval" ] && retval=1
 
@@ -408,7 +407,7 @@ elif [ "$1" = "finish" ]; then
   "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # generate CLI coverage reports
-  ./runner/cli_coverage.sh .
+  ./runner/cli_coverage.sh "$COVERAGE_DIR" "${WORKDIR}/cli_coverage.json"
 
   retval=0
 fi
