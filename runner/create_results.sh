@@ -21,4 +21,5 @@ mv "$reports_dir"/*.properties "$allure_results_dir" 2>/dev/null || :
 echo "Creating results archive $results_tar"
 rm -f "$results_tar"
 tar -C "$tests_repo" -cJf "$results_tar" allure-results
-rm -rf "${allure_results_dir:?}"
+# Keep $allure_results_dir around so post-testrun consumers (e.g. failure
+# analysis) can read it without having to untar the archive.
