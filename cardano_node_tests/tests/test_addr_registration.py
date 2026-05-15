@@ -315,7 +315,7 @@ class TestRegisterAddr:
                 if VERSIONS.transaction_era == VERSIONS.CONWAY:
                     # The ledger issue 4566 will not be fixed in Conway
                     issues.ledger_4566.finish_test(force_blocked=True)
-                if VERSIONS.transaction_era > VERSIONS.CONWAY:
+                if VERSIONS.transaction_era >= VERSIONS.DIJKSTRA:
                     issues.ledger_4566.finish_test()
             if build_method == clusterlib_utils.BuildMethods.BUILD_EST and (
                 "The transaction balance is negative" in str_exc
@@ -330,7 +330,7 @@ class TestRegisterAddr:
             if VERSIONS.transaction_era == VERSIONS.CONWAY:
                 # The ledger issue 4566 will not be fixed in Conway
                 issues.ledger_4566.finish_test(force_blocked=True)
-            if VERSIONS.transaction_era > VERSIONS.CONWAY:
+            if VERSIONS.transaction_era >= VERSIONS.DIJKSTRA:
                 issues.ledger_4566.finish_test()
         assert stake_addr_info, f"Stake address is not registered: {user_registered.stake.address}"
 
