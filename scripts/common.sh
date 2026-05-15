@@ -116,7 +116,7 @@ kill_and_wait() {
   if ! kill -0 "$pid" 2>/dev/null; then
     return 0
   fi
-  if ! kill "$pid" 2>/dev/null; then
+  if ! kill "$pid"; then
     kill -0 "$pid" 2>/dev/null || return 0
     return 1
   fi
@@ -126,7 +126,7 @@ kill_and_wait() {
   done
   echo "Warning: process $pid did not exit after SIGTERM, sending SIGKILL." >&2
   kill -9 "$pid" 2>/dev/null || true
-  wait "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true  # reap if it's a child, ignore error if it's not
   kill -0 "$pid" 2>/dev/null && return 1
   return 0
 }
