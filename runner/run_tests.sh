@@ -10,9 +10,9 @@
 #
 # Env vars:
 #   TESTS_DIR: directory with tests to run (default: cardano_node_tests/)
-#   ARTIFACTS_DIR: directory to save artifacts into (default: .artifacts)
-#   COVERAGE_DIR: directory to save CLI coverage data into (default: .cli_coverage)
-#   REPORTS_DIR: directory to save Allure test reports into (default: .reports)
+#   ARTIFACTS_DIR: directory to save artifacts into (default: run_workdir/artifacts)
+#   COVERAGE_DIR: directory to save CLI coverage data into (default: run_workdir/cli_coverage)
+#   REPORTS_DIR: directory to save Allure test reports into (default: run_workdir/reports)
 #   MARKEXPR: pytest mark expression to filter tests, without the `-m` flag
 #   NO_ARTIFACTS: if set to true, do not save artifacts
 #   PYTEST_ARGS: additional args to pass to pytest
@@ -33,9 +33,9 @@ set -Eeuo pipefail
 
 # Defaults
 TESTS_DIR="${TESTS_DIR:-cardano_node_tests/}"
-ARTIFACTS_DIR="${ARTIFACTS_DIR:-.artifacts}"
-COVERAGE_DIR="${COVERAGE_DIR:-.cli_coverage}"
-REPORTS_DIR="${REPORTS_DIR:-.reports}"
+ARTIFACTS_DIR="${ARTIFACTS_DIR:-run_workdir/artifacts}"
+COVERAGE_DIR="${COVERAGE_DIR:-run_workdir/cli_coverage}"
+REPORTS_DIR="${REPORTS_DIR:-run_workdir/reports}"
 
 _TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 # shellcheck disable=SC1091

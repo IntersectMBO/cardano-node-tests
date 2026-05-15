@@ -2,20 +2,26 @@
 
 set -euo pipefail
 
-ARTIFACTS_TAR="${PWD}/testing_artifacts.tar.xz"
-ARTIFACTS_DIR="${ARTIFACTS_DIR:-".artifacts"}"
-if [ "$(echo "$ARTIFACTS_DIR"/*)" = "$ARTIFACTS_DIR/*" ]; then
-  echo "No artifacts found in $ARTIFACTS_DIR" >&2
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 <artifacts_dir> <output_dir>" >&2
   exit 1
 fi
 
-NEW_DIR="artifacts_$(date +%Y%m%d%H%M%S)"
-mv "$ARTIFACTS_DIR" "$NEW_DIR" || { echo "Cannot move $ARTIFACTS_DIR to $NEW_DIR" >&2; exit 1; }
+artifacts_dir="$1"
+output_dir="$2"
 
-# Predictable symlink so post-testrun consumers (e.g. failure analysis) can
-# find the artifacts without having to untar the archive we just created.
-ln -snf "$NEW_DIR" latest_artifacts
+if [ "$(echo "$artifacts_dir"/*)" = "$artifacts_dir/*" ]; then
+  echo "No artifacts found in $artifacts_dir" >&2
+  exit 1
+fi
 
-echo "Creating artifacts archive $ARTIFACTS_TAR"
-rm -f "$ARTIFACTS_TAR"
-tar -cJf "$ARTIFACTS_TAR" "$NEW_DIR"
+mkdir -p "$output_dir" || { echo "Cannot create $output_dir" >&2; exit 1; }
+
+new_dir="${output_dir}/testing_artifacts"
+rm -rf "${new_dir:?}"
+mv "$artifacts_dir" "$new_dir" || { echo "Cannot move $artifacts_dir to $new_dir" >&2; exit 1; }
+
+artifacts_tar="${output_dir}/testing_artifacts.tar.xz"
+echo "Creating artifacts archive $artifacts_tar"
+rm -f "$artifacts_tar"
+tar -C "$output_dir" -cJf "$artifacts_tar" testing_artifacts

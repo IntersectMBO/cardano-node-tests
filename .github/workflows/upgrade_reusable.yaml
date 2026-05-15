@@ -82,7 +82,7 @@ jobs:
         if: failure()
         with:
           name: testing-artifacts
-          path: testing_artifacts.tar.xz
+          path: run_workdir/testing_artifacts.tar.xz
       - name: ↟ Upload Allure results for step1
         uses: actions/upload-artifact@v7
         # When using `always()`, you lose ability to manually cancel the workflow.
@@ -90,42 +90,42 @@ jobs:
         if: success() || failure()
         with:
           name: allure-results-step1
-          path: allure-results-step1.tar.xz
+          path: run_workdir/allure-results-step1.tar.xz
       - name: ↟ Upload Allure results for step2
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: allure-results-step2
-          path: allure-results-step2.tar.xz
+          path: run_workdir/allure-results-step2.tar.xz
       - name: ↟ Upload Allure results for step3
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: allure-results-step3
-          path: allure-results-step3.tar.xz
+          path: run_workdir/allure-results-step3.tar.xz
       - name: ↟ Upload HTML reports
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: testrun-reports
           path: |
-            testrun-report-step1.html
-            testrun-report-step2.html
-            testrun-report-step3.html
+            run_workdir/testrun-report-step1.html
+            run_workdir/testrun-report-step2.html
+            run_workdir/testrun-report-step3.html
       - name: ↟ Upload testrun files
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: testrun-files
           path: |
-            scheduling.log
-            errors_all.log
+            run_workdir/scheduling.log
+            run_workdir/errors_all.log
       - name: ↟ Upload CLI coverage
         uses: actions/upload-artifact@v7
         if: success() || failure()
         with:
           name: cli-coverage
-          path: cli_coverage.json
+          path: run_workdir/cli_coverage.json
       - name: ✉ Mail failure report
         uses: dawidd6/action-send-mail@v17
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS && github.event_name == 'schedule'
@@ -140,4 +140,4 @@ jobs:
           from: 'Cardano GitHub Actions <${{secrets.GMAIL_USERNAME}}>'
           body: "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           reply_to: noreply@github.com
-          attachments: testrun-report.html
+          attachments: run_workdir/testrun-report-step1.html,run_workdir/testrun-report-step2.html,run_workdir/testrun-report-step3.html
