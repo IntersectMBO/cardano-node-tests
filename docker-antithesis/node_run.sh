@@ -46,6 +46,15 @@ export _output_dir="${ANTITHESIS_OUTPUT_DIR:-/tmp/antithesis}"
 mkdir -p "$_output_dir" "${CLUSTER_STATE_DIR}"
 
 # ---------------------------------------------------------------------------
+# Clean up any stale cluster state left by a previous container run on the
+# same Docker volume.  The previous node process is gone (fresh container),
+# so only the socket file and lock files remain — start-cluster refuses to
+# run if it finds them.  Remove before starting the health check so the
+# health endpoint never serves a stale socket as "ready".
+# ---------------------------------------------------------------------------
+rm -rf "${_STATE_CLUSTER:?}" "${_SCRIPTS_DEST:?}"
+
+# ---------------------------------------------------------------------------
 # 4. Health check server on port 8090 (Antithesis network bridge traffic).
 #    Returns HTTP 200 "ready" once the cluster socket file exists,
 #    503 "starting" while the cluster is still coming up.
