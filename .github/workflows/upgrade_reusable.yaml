@@ -35,9 +35,12 @@ on:
         required: false
       GMAIL_PASSWORD:
         required: false
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: false
 
 env:
   CI_FAIL_MAILS: ${{ secrets.CI_FAIL_MAILS }}
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
 jobs:
   reusable_run:
@@ -77,6 +80,50 @@ jobs:
           echo "::group::Script setup"
           ./runner/node_upgrade.sh
           echo "::endgroup::"
+      - name: Load failure-analysis prompt
+        id: load-analysis-prompt
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CLAUDE_CODE_OAUTH_TOKEN
+        run: |
+          {
+            echo 'ANALYSIS_PROMPT<<__EOF_PROMPT42__'
+            sed 's|{RUN_DIR}|run_workdir|g' agent_docs/upgrade_failure_analysis_prompt.md
+            printf '\n__EOF_PROMPT42__\n'
+          } >> "$GITHUB_ENV"
+      - name: 🤖 Analyze test failures with Claude
+        id: analyze-failures
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CLAUDE_CODE_OAUTH_TOKEN
+        continue-on-error: true
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: sonnet
+          max_turns: "40"
+          allowed_tools: "Read,Write,Glob,Grep,Bash(ls:*),Bash(wc:*),Bash(head:*),Bash(tail:*),Bash(grep:*),Bash(find:*),Bash(cut:*),Bash(sort:*),Bash(uniq:*),Bash(awk:*),Bash(jq:*)"
+          prompt: ${{ env.ANALYSIS_PROMPT }}
+      - name: Read failure analysis into env
+        id: read-analysis
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CLAUDE_CODE_OAUTH_TOKEN
+        run: |
+          if [ -s run_workdir/failure_analysis.md ]; then
+            {
+              echo 'FAILURE_ANALYSIS<<__EOF_ANALYSIS42__'
+              cat run_workdir/failure_analysis.md
+              # ensure delimiter is on its own line even if the file lacks a trailing newline
+              printf '\n__EOF_ANALYSIS42__\n'
+            } >> "$GITHUB_ENV"
+
+            # Surface the analysis in the workflow run UI itself: full content
+            # in a foldable log group, and a copy in the run summary so it's
+            # reachable without downloading the testrun-files artifact.
+            echo "::group::Preliminary failure analysis"
+            cat run_workdir/failure_analysis.md
+            echo
+            echo "::endgroup::"
+            cat run_workdir/failure_analysis.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "FAILURE_ANALYSIS=(no analysis produced)" >> "$GITHUB_ENV"
+            echo "::warning::No run_workdir/failure_analysis.md produced by the analyze step."
+          fi
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7
         if: failure()
@@ -120,6 +167,7 @@ jobs:
           path: |
             run_workdir/scheduling.log
             run_workdir/errors_all.log
+            run_workdir/failure_analysis.md
       - name: ↟ Upload CLI coverage
         uses: actions/upload-artifact@v7
         if: success() || failure()
@@ -138,6 +186,13 @@ jobs:
           subject: "Status: ${{ steps.testing-step.outcome }}; workflow: ${{ github.workflow }}"
           to: ${{secrets.CI_FAIL_MAILS}}
           from: 'Cardano GitHub Actions <${{secrets.GMAIL_USERNAME}}>'
-          body: "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          convert_markdown: true
+          body: &mail_body |
+            Run URL: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>
+
+            ── Preliminary failure analysis ──
+
+            ${{ env.FAILURE_ANALYSIS }}
+          html_body: *mail_body
           reply_to: noreply@github.com
           attachments: run_workdir/testrun-report-step1.html,run_workdir/testrun-report-step2.html,run_workdir/testrun-report-step3.html

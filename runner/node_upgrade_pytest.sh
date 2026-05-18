@@ -18,10 +18,6 @@ CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
 # init dir for step1 binaries
 STEP1_BIN="$WORKDIR/step1-bin"
 
-# init reports dir before each step
-rm -rf "${REPORTS_DIR:?}"
-mkdir -p "$REPORTS_DIR"
-
 # shellcheck disable=SC1091
 . scripts/common.sh
 
@@ -33,6 +29,9 @@ if [ "$1" = "step1" ]; then
   printf "STEP1 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=1
+
+  REPORTS_DIR="${WORKDIR}/reports-step1"
+  mkdir -p "$REPORTS_DIR"
 
   if [ -n "${BASE_TAR_URL:-""}" ]; then
     # download and extract base revision binaries
@@ -96,8 +95,7 @@ if [ "$1" = "step1" ]; then
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step1
-  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR"
-  mv "$WORKDIR/allure-results.tar.xz" "$WORKDIR/allure-results-step1.tar.xz"
+  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" allure-results-step1
 
   printf "STEP1 finish: %(%H:%M:%S)T\n" -1
 
@@ -110,6 +108,9 @@ elif [ "$1" = "step2" ]; then
   printf "STEP2 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=2
+
+  REPORTS_DIR="${WORKDIR}/reports-step2"
+  mkdir -p "$REPORTS_DIR"
 
   NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
@@ -239,8 +240,7 @@ elif [ "$1" = "step2" ]; then
   [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
 
   # create results archive for step2
-  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR"
-  mv "$WORKDIR/allure-results.tar.xz" "$WORKDIR/allure-results-step2.tar.xz"
+  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" allure-results-step2
 
   [ "$err_retval" -gt "$retval" ] && retval=1
 
@@ -255,6 +255,9 @@ elif [ "$1" = "step3" ]; then
   printf "STEP3 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=3
+
+  REPORTS_DIR="${WORKDIR}/reports-step3"
+  mkdir -p "$REPORTS_DIR"
 
   NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
   export NETWORK_MAGIC
@@ -391,8 +394,7 @@ elif [ "$1" = "step3" ]; then
     ||retval="$?"
 
   # create results archive for step3
-  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR"
-  mv "$WORKDIR/allure-results.tar.xz" "$WORKDIR/allure-results-step3.tar.xz"
+  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" allure-results-step3
 
   [ "$err_retval" -gt "$retval" ] && retval=1
 
