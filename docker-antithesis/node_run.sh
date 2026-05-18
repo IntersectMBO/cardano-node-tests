@@ -103,6 +103,15 @@ nix develop --accept-flake-config .#testenv --command bash -c '
         --instance-num "$_INSTANCE_NUM" \
         --clean
 
+    # Patch pool1 to bind on all interfaces so the driver container can reach
+    # its P2P port over the Docker bridge network.  By default cardonnay
+    # generates --host-addr 127.0.0.1 for all local cluster nodes; pool1 is
+    # the one the ping tests connect to via TCP.
+    if [ -f "$_SCRIPTS_DEST/cardano-node-pool1" ]; then
+        sed -i "s/--host-addr 127.0.0.1/--host-addr 0.0.0.0/g" \
+            "$_SCRIPTS_DEST/cardano-node-pool1"
+    fi
+
     # start-cluster must run from the parent of the state-cluster directory.
     cd "$CLUSTER_STATE_DIR"
     "$_SCRIPTS_DEST/start-cluster"
