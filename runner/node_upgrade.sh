@@ -82,8 +82,6 @@ mkdir -p "$ARTIFACTS_DIR"
 export COVERAGE_DIR="${WORKDIR}/cli_coverage"
 mkdir -p "$COVERAGE_DIR"
 
-export REPORTS_DIR="${WORKDIR}/reports"
-
 export SCHEDULING_LOG="${WORKDIR}/scheduling.log"
 : > "$SCHEDULING_LOG"
 
