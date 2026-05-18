@@ -226,11 +226,12 @@ jobs:
           to: ${{secrets.CI_FAIL_MAILS}}
           from: 'Cardano GitHub Actions <${{secrets.GMAIL_USERNAME}}>'
           convert_markdown: true
-          body: |
+          body: &mail_body |
             Run URL: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>
 
             ── Preliminary failure analysis ──
 
             ${{ env.FAILURE_ANALYSIS }}
+          html_body: *mail_body
           reply_to: noreply@github.com
           attachments: run_workdir/testrun-report.html
