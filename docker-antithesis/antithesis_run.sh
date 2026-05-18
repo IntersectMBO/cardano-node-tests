@@ -134,7 +134,7 @@ except Exception:
         if [ "$_sa_ready" -ne 1 ]; then
             echo "WARNING: local submit_api did not start within 30 s; submit_api tests will fail." >&2
         fi
-        unset _submit_api_port _sa_ready _i
+        unset _sa_ready _i
     else
         echo "WARNING: ${_submit_api_script} not found; submit_api tests will fail." >&2
     fi
@@ -147,8 +147,7 @@ except Exception:
     #     cardano-cli ping hardcodes --host localhost --port <pool1_port>.  In
     #     multi-container mode the node's TCP P2P port lives in the node
     #     container and is unreachable on the driver's localhost.  We forward
-    #     localhost:<pool1_port> → NODE_HOST:<pool1_port> using a small Python
-    #     proxy backed by the pre-built venv Python (no extra packages needed).
+    #     localhost:<pool1_port> → NODE_HOST:<pool1_port>.
     #
     #     pool1 port = PORTS_BASE + 5  (see cardonnay local_scripts.py).
     # -------------------------------------------------------------------------
@@ -183,10 +182,39 @@ while True:
     _proxy_pid=$!
     unset _pool1_port
 
-    # Kill both background processes when this script exits.
-    trap 'kill "${_submit_api_pid:-}" "${_proxy_pid:-}" 2>/dev/null || true' EXIT
+    # -------------------------------------------------------------------------
+    # 3d. Start a local HTTP file server for anchor URLs.
+    #
+    #     cardano-cli transaction build fetches and verifies anchor hashes at
+    #     http://localhost:<webserver_port>/p/<file>.  The cluster's webserver
+    #     runs in the node container but binds to 127.0.0.1 there (Python 3.11+
+    #     http.server default), making it unreachable from the driver container.
+    #     Since the webserver directory lives on the shared cluster-state volume,
+    #     running our own http.server in the driver container serves the same
+    #     files without going over the network bridge.
+    #
+    #     webserver port = submit_api port + 2  (last_port in cardonnay;
+    #     submit_api = last_port - 2).
+    # -------------------------------------------------------------------------
+    # Derive webserver port from the already-parsed submit_api port.
+    # Fall back to PORTS_BASE + 99 (correct for a 3-pool cluster).
+    _webserver_port=$(( ${_submit_api_port:-$(( ${PORTS_BASE:-23000} + 97 ))} + 2 ))
+    unset _submit_api_port
+
+    _webserver_dir="${CLUSTER_STATE_DIR}/state-cluster0/webserver"
+    mkdir -p "${_webserver_dir}"
+    echo "Starting local HTTP file server on port ${_webserver_port} (dir: ${_webserver_dir})..."
+    "${_VENV_DIR}/bin/python3" -m http.server \
+        --bind 127.0.0.1 \
+        --directory "${_webserver_dir}" \
+        "${_webserver_port}" &
+    _webserver_pid=$!
+    unset _webserver_port _webserver_dir
+
+    # Kill all background processes when this script exits.
+    trap 'kill "${_submit_api_pid:-}" "${_proxy_pid:-}" "${_webserver_pid:-}" 2>/dev/null || true' EXIT
 fi
-# _submit_api_pid and _proxy_pid are intentionally kept in scope so the EXIT trap above can kill them.
+# _submit_api_pid, _proxy_pid, _webserver_pid are kept in scope for the EXIT trap above.
 
 # ---------------------------------------------------------------------------
 # 4. Emit the Antithesis setup_complete signal.
