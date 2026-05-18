@@ -182,8 +182,6 @@ jobs:
             echo
             echo "::endgroup::"
             {
-              echo '## 🤖 Preliminary failure analysis'
-              echo
               cat run_workdir/failure_analysis.md
             } >> "$GITHUB_STEP_SUMMARY"
           else
@@ -248,10 +246,12 @@ jobs:
           subject: "Status: ${{ steps.testing-step.outcome }}; workflow: ${{ github.workflow }}"
           to: ${{secrets.CI_FAIL_MAILS}}
           from: 'Cardano GitHub Actions <${{secrets.GMAIL_USERNAME}}>'
+          convert_markdown: true
           body: |
-            Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Run URL: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>
 
             ── Preliminary failure analysis ──
+
             ${{ env.FAILURE_ANALYSIS }}
           reply_to: noreply@github.com
           attachments: run_workdir/testrun-report.html
