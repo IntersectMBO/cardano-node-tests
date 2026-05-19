@@ -10,12 +10,17 @@ on:
       - '.github/workflows/nix_smoke.yaml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   nix_smoke:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:

@@ -70,6 +70,9 @@ on:
 
 run-name: ${{ inputs.testrun_name && 'Run:' || ''}} ${{ inputs.testrun_name }} ${{ (inputs.testrun_name && inputs.skip_passed) && ':repeat:' || '' }}
 
+permissions:
+  contents: read
+
 jobs:
   regression_tests:
     # reusable workflow from local repo and same branch as this config

@@ -32,6 +32,10 @@ repos:
   hooks:
   - id: rstcheck
     additional_dependencies: [sphinx, toml]
+- repo: https://github.com/zizmorcore/zizmor-pre-commit
+  rev: v1.25.2
+  hooks:
+  - id: zizmor
 - repo: local
   hooks:
   - id: mypy

@@ -5,6 +5,9 @@ on:
     - cron: '15 02 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   nightly_job:
     if: github.repository_owner == 'IntersectMBO' || github.event_name != 'schedule'

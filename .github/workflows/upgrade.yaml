@@ -20,6 +20,9 @@ on:
         default: false
         description: "Start cluster in Byron era"
 
+permissions:
+  contents: read
+
 jobs:
   upgrade_tests:
     # reusable workflow from local repo and same branch as this config

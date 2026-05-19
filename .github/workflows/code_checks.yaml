@@ -8,12 +8,17 @@ on:
 env:
   PY_COLORS: "1"
 
+permissions:
+  contents: read
+
 jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
       uses: actions/checkout@v6
+      with:
+        persist-credentials: false
     - name: Set up python
       id: setup-python
       uses: actions/setup-python@v6
