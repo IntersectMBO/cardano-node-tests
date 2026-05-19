@@ -32,6 +32,17 @@ repos:
   hooks:
   - id: rstcheck
     additional_dependencies: [sphinx, toml]
+- repo: https://github.com/rhysd/actionlint
+  rev: v1.7.12
+  hooks:
+  - id: actionlint
+    # Allow empty-string options in workflow_dispatch `type: choice` lists:
+    # we use "" to mean "leave the backend/era at its default".
+    args: ['-ignore', 'string should not be empty']
+- repo: https://github.com/zizmorcore/zizmor-pre-commit
+  rev: v1.25.2
+  hooks:
+  - id: zizmor
 - repo: local
   hooks:
   - id: mypy

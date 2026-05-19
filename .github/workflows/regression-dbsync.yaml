@@ -70,6 +70,9 @@ on:
 
 run-name: ${{ inputs.testrun_name && 'Run:' || ''}} ${{ inputs.testrun_name }} ${{ (inputs.testrun_name && inputs.skip_passed) && ':repeat:' || '' }}
 
+permissions:
+  contents: read
+
 jobs:
   regression_tests:
     # reusable workflow from local repo and same branch as this config
@@ -88,7 +91,6 @@ jobs:
       skip_passed: ${{ inputs.skip_passed }}
       env-path: runner/env_regression_dbsync
     secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
       TCACHE_URL: ${{ secrets.TCACHE_URL }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

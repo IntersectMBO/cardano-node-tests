@@ -52,8 +52,6 @@ on:
         type: boolean
         default: false
     secrets:
-      GH_TOKEN:
-        required: true
       TCACHE_BASIC_AUTH:
         required: false
       TCACHE_URL:
@@ -68,56 +66,64 @@ on:
         required: false
 
 env:
-  CI_FAIL_MAILS: ${{ secrets.CI_FAIL_MAILS }}
-  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  PY_COLORS: "1"
+  NODE_REV: ${{ inputs.node_rev }}
+  CARDANO_CLI_REV: ${{ inputs.cli_rev }}
+  DBSYNC_REV: ${{ inputs.dbsync_rev }}
+  MARKEXPR: ${{ inputs.markexpr }}
+  UTXO_BACKEND: ${{ inputs.utxo_backend }}
+  ALLOW_UNSTABLE_ERROR_MESSAGES: ${{ inputs.allow_unstable_error_msgs }}
+  CI_CLUSTER_ERA: ${{ inputs.cluster_era }}
+  CI_CONSENSUS_MODE: ${{ inputs.consensus_mode }}
+  CI_BYRON_CLUSTER: ${{ inputs.byron_cluster }}
+  CI_TESTRUN_NAME: ${{ inputs.testrun_name }}
+  CI_SKIP_PASSED: ${{ inputs.skip_passed }}
 
 jobs:
   reusable_run:
     runs-on: ubuntu-latest
+    # The `secrets` context is not available in step-level `if:` expressions,
+    # so promote secret-presence checks to job-level booleans (allowed here)
+    # and gate the steps on `env.HAS_*` instead.
+    env:
+      HAS_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+      HAS_CI_FAIL_MAILS: ${{ secrets.CI_FAIL_MAILS != '' }}
     steps:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@v9
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GH_TOKEN }}
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo=
             substituters = https://cache.nixos.org https://cache.iog.io https://iohk.cachix.org
             allow-import-from-derivation = true
-      - name: Collect env variables
+      - name: Load extra env from file
+        if: inputs.env-path
+        env:
+          ENV_PATH: ${{ inputs.env-path }}
         run: |
-          : > .github_ci_env
-          echo "PY_COLORS=1" >> .github_ci_env
-          echo "NODE_REV=${{ inputs.node_rev }}" >> .github_ci_env
-          echo "CARDANO_CLI_REV=${{ inputs.cli_rev }}" >> .github_ci_env
-          echo "DBSYNC_REV=${{ inputs.dbsync_rev }}" >> .github_ci_env
-          echo "MARKEXPR=${{ inputs.markexpr }}" >> .github_ci_env
-          echo "UTXO_BACKEND=${{ inputs.utxo_backend }}" >> .github_ci_env
-          echo "ALLOW_UNSTABLE_ERROR_MESSAGES=${{ inputs.allow_unstable_error_msgs }}" >> .github_ci_env
-          echo "CI_CLUSTER_ERA=${{ inputs.cluster_era }}" >> .github_ci_env
-          echo "CI_CONSENSUS_MODE=${{ inputs.consensus_mode }}" >> .github_ci_env
-          echo "CI_BYRON_CLUSTER=${{ inputs.byron_cluster }}" >> .github_ci_env
-          echo "CI_TESTRUN_NAME=${{ inputs.testrun_name }}" >> .github_ci_env
-          echo "CI_SKIP_PASSED=${{ inputs.skip_passed }}" >> .github_ci_env
-          if [ -e "${{ inputs.env-path }}" ]; then cat "${{ inputs.env-path }}" >> .github_ci_env; fi
-      - name: Export env variables
-        run: |
-          cat .github_ci_env
-          cat .github_ci_env >> $GITHUB_ENV
-          echo "GITHUB_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
+          if [ -e "$ENV_PATH" ]; then cat "$ENV_PATH" >> "$GITHUB_ENV"; fi
       - name: Get previous test results
         if: inputs.testrun_name && inputs.skip_passed
+        env:
+          TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+          TCACHE_URL: ${{ secrets.TCACHE_URL }}
         run: |
-          if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ]; then
-            testrun_name_strip="$(echo "${{ inputs.testrun_name }}" | sed 's/[^a-zA-Z0-9_-]//g')"
-            curl -s -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/pypassed" > deselected_tests.txt
-            echo "DESELECT_FROM_FILE=deselected_tests.txt" >> $GITHUB_ENV
+          if [ -n "$TCACHE_BASIC_AUTH" ] && [ -n "$TCACHE_URL" ]; then
+            testrun_name_strip="${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}"
+            curl -s -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/${testrun_name_strip}/pypassed" > deselected_tests.txt
+            echo "DESELECT_FROM_FILE=deselected_tests.txt" >> "$GITHUB_ENV"
           fi
       - name: ▶️ Run Regression Tests
         id: testing-step
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # env
           echo "::group::Script setup"
@@ -125,7 +131,7 @@ jobs:
           echo "::endgroup::"
       - name: Load failure-analysis prompt
         id: load-analysis-prompt
-        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CLAUDE_CODE_OAUTH_TOKEN
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_OAUTH_TOKEN == 'true'
         run: |
           {
             echo 'ANALYSIS_PROMPT<<__EOF_PROMPT42__'
@@ -134,7 +140,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: 🤖 Analyze test failures with Claude
         id: analyze-failures
-        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CLAUDE_CODE_OAUTH_TOKEN
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_OAUTH_TOKEN == 'true'
         continue-on-error: true
         uses: anthropics/claude-code-base-action@beta
         with:
@@ -145,7 +151,7 @@ jobs:
           prompt: ${{ env.ANALYSIS_PROMPT }}
       - name: Read failure analysis into env
         id: read-analysis
-        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CLAUDE_CODE_OAUTH_TOKEN
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_OAUTH_TOKEN == 'true'
         run: |
           if [ -s run_workdir/failure_analysis.md ]; then
             {
@@ -169,10 +175,13 @@ jobs:
           fi
       - name: Report test results
         if: (success() || failure()) && inputs.testrun_name
+        env:
+          TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+          TCACHE_URL: ${{ secrets.TCACHE_URL }}
         run: |
-          if [ -n "${{ secrets.TCACHE_BASIC_AUTH }}" ] && [ -n "${{ secrets.TCACHE_URL }}" ] && [ -e run_workdir/testrun-report.xml ]; then
-            testrun_name_strip="$(echo "${{ inputs.testrun_name }}" | sed 's/[^a-zA-Z0-9_-]//g')"
-            curl -s -X PUT --fail-with-body -u ${{ secrets.TCACHE_BASIC_AUTH }} "${{ secrets.TCACHE_URL }}/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@run_workdir/testrun-report.xml"
+          if [ -n "$TCACHE_BASIC_AUTH" ] && [ -n "$TCACHE_URL" ] && [ -e run_workdir/testrun-report.xml ]; then
+            testrun_name_strip="${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}"
+            curl -s -X PUT --fail-with-body -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@run_workdir/testrun-report.xml"
           fi
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7
@@ -215,7 +224,7 @@ jobs:
           path: run_workdir/cli_coverage.json
       - name: ✉ Mail failure report
         uses: dawidd6/action-send-mail@v17
-        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.CI_FAIL_MAILS && github.event_name == 'schedule'
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_CI_FAIL_MAILS == 'true' && github.event_name == 'schedule'
         with:
           server_address: smtp.gmail.com
           server_port: 465
