@@ -1,3 +1,8 @@
+# Deliberate: workflows pin third-party actions by major tag (e.g. @v6) and
+# rely on Dependabot (.github/dependabot.yml) to bump them, with a 7-day
+# cooldown to avoid churn from fresh point releases. SHA-pinning every
+# action would force manual SHA bumps on every Dependabot PR with no
+# additional protection over the Dependabot review flow.
 rules:
   unpinned-uses:
     disable: true
