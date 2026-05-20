@@ -43,6 +43,7 @@ ERRORS_IGNORED = [
     "Failed to start all required subscriptions",
     "TraceDidntAdoptBlock",
     r"Forge\.Loop\.DidntAdoptBlock",
+    r"Startup\.RpcConfigUpdateError",
     "failedScripts",
     "closed when reading data, waiting on next header",
     "IOException writev: resource vanished",
