@@ -22,8 +22,16 @@ dependencies are baked into the image at build time:
   1. Forces nix into offline mode (`offline = true`).
   2. Exports `CARDANO_PREBUILT_DIR=/opt/cardano` and `_VENV_DIR=/opt/tests-venv`
      so `regression.sh` skips all downloads and uses the pre-built artefacts.
-  3. Emits the Antithesis `setup_complete` lifecycle signal.
-  4. Hands off to `.github/regression.sh`.
+  3. In multi-container mode (when `NODE_HOST` is set):
+     - Polls `NODE_HOST:NODE_PORT` until the node cluster reports ready.
+     - Starts a local `cardano-submit-api` in the driver container so that
+       submit-api tests can reach it via `localhost`.
+     - Starts a TCP proxy forwarding `localhost:<pool1_port>` →
+       `NODE_HOST:<pool1_port>` so `cardano-cli ping` tests work.
+     - Starts a local HTTP file server for anchor URLs used by governance
+       tests (`cardano-cli transaction build` fetches anchor hashes via HTTP).
+  4. Emits the Antithesis `setup_complete` lifecycle signal.
+  5. Hands off to `.github/regression.sh`.
 
 - `Dockerfile.config` — builds the Antithesis config image (`FROM scratch`)
   containing only `docker-compose.yaml`.
@@ -63,7 +71,8 @@ docker push us-central1-docker.pkg.dev/<tenant>/antithesis/config:latest
 
 ```bash
 docker compose -f docker-antithesis/docker-compose.yaml config
-docker compose -f docker-antithesis/docker-compose.yaml up --build
+docker compose -f docker-antithesis/docker-compose.yaml up --build \
+  --abort-on-container-exit --exit-code-from driver
 ```
 
 To fully simulate the Antithesis no-internet constraint, run inside an
@@ -78,13 +87,15 @@ unshare -n docker compose -f docker-antithesis/docker-compose.yaml up
 `NODE_REV` is baked into the image at build time and must **not** be set at
 runtime.  All other variables are passed through docker-compose as before.
 
-| Variable          | Default    | Description                              |
-|-------------------|------------|------------------------------------------|
-| `CARDANO_CLI_REV` | (built-in) | cardano-cli revision, empty = use node's |
-| `DBSYNC_REV`      | (disabled) | db-sync revision, empty = disabled       |
-| `RUN_TARGET`      | `tests`    | `tests`, `testpr`, or `testnets`         |
-| `MARKEXPR`        |            | pytest marker expression                 |
-| `CLUSTERS_COUNT`  |            | number of local cluster instances        |
-| `CLUSTER_ERA`     |            | e.g. `conway`                            |
-| `PROTOCOL_VERSION`|            | e.g. `11`                                |
-| `UTXO_BACKEND`    |            | e.g. `disk`, `mem`                       |
+| Variable           | Default        | Description                                    |
+|--------------------|----------------|------------------------------------------------|
+| `CARDANO_CLI_REV`  | (built-in)     | cardano-cli revision, empty = use node's       |
+| `DBSYNC_REV`       | (disabled)     | db-sync revision, empty = disabled             |
+| `RUN_TARGET`       | `tests`        | `tests`, `testpr`, or `testnets`               |
+| `MARKEXPR`         | `smoke`        | pytest marker expression                       |
+| `SESSION_TIMEOUT`  | `1h`           | wall-clock limit passed to `timeout(1)`        |
+| `TESTNET_VARIANT`  | `conway_fast`  | cluster variant for `prepare_cluster_scripts`  |
+| `CLUSTERS_COUNT`   | `1`            | number of local cluster instances              |
+| `CLUSTER_ERA`      |                | e.g. `conway`                                  |
+| `PROTOCOL_VERSION` |                | e.g. `11`                                      |
+| `UTXO_BACKEND`     |                | e.g. `disk`, `mem`                             |
