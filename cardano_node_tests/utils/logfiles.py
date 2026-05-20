@@ -42,6 +42,7 @@ ERRORS_IGNORED = [
     "ExceededTimeLimit",
     "Failed to start all required subscriptions",
     "TraceDidntAdoptBlock",
+    r"Forge\.Loop\.DidntAdoptBlock",
     "failedScripts",
     "closed when reading data, waiting on next header",
     "IOException writev: resource vanished",
