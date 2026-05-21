@@ -2,11 +2,13 @@
     "auxiliary scripts": null,
     "certificates": null,
     "collateral inputs": [],
+    "currentTreasuryValue": null,
     "datums": [],
-    "era": "Babbage",
-    "fee": "190279 Lovelace",
+    "era": "Conway",
+    "fee": "183841 Lovelace",
+    "governance actions": [],
     "inputs": [
-        "dd104594a4931043f7ef36013f242d4970b9a29fc6b830287da8d76672aa94f7#0"
+        "4ad2df9b1f1202220d1ab47a94453ea76383f80aa5c74850d9883ed9bd9a51b3#0"
     ],
     "metadata": {
         "1": "foo",
@@ -18,13 +20,13 @@
     "mint": null,
     "outputs": [
         {
-            "address": "addr_test1vqr5aky0nwt8ew90naqhc8el0xfnmy5xvnerzm0r2w6g9tcsug7hk",
+            "address": "addr_test1vpln5ss96745ugyzzzay6cvn5t9gstnz4fk63hkjmg7kxgc3j0r9m",
             "address era": "Shelley",
             "amount": {
-                "lovelace": 999809721
+                "lovelace": 149816159
             },
             "network": "Testnet",
-            "payment credential key hash": "074ed88f9b967cb8af9f417c1f3f79933d928664f2316de353b482af",
+            "payment credential key hash": "7f3a4205d7ab4e208210ba4d6193a2ca882e62aa6da8ded2da3d6323",
             "reference script": null,
             "stake reference": null
         }
@@ -35,16 +37,17 @@
     "return collateral": null,
     "scripts": [],
     "total collateral": null,
-    "update proposal": null,
+    "treasuryDonation": 0,
     "validity range": {
         "lower bound": null,
         "upper bound": null
     },
+    "voters": {},
     "withdrawals": null,
     "witnesses": [
         {
-            "key": "VKey (VerKeyEd25519DSIGN \"c1e17fce61b04af4db756abc51c5079c1fe2ebeeb6b8aeb7d0f5befbd95dc597\")",
-            "signature": "SignedDSIGN (SigEd25519DSIGN \"c4e90ada7bdd904ce91eb529a1c2047c88b54c0dd7d72afd3d452d065eca4bb3f66d3338cd23a4cf34954e6247812b2220c0a7828e9cf8492b9d71a4f39e3a0b\")"
+            "key": "VKey (VerKeyEd25519DSIGN \"30d6dabd81a036a78a2995f4c2e62fe03bf958a4a353d0e8da75b0d22c27ec60\")",
+            "signature": "SignedDSIGN (SigEd25519DSIGN \"2c97662e1fd4f5ef3b7f494596901e133393b3438ad18b3e351c19a7d613d1c472bbd6023b6c841cb7217fc88c676aa4f21566efc21832236d26129e65f09d0b\")"
         }
     ]
 }

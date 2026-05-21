@@ -2,11 +2,13 @@
     "auxiliary scripts": null,
     "certificates": null,
     "collateral inputs": [],
+    "currentTreasuryValue": null,
     "datums": [],
-    "era": "Babbage",
-    "fee": "190279 Lovelace",
+    "era": "Conway",
+    "fee": "183841 Lovelace",
+    "governance actions": [],
     "inputs": [
-        "dd104594a4931043f7ef36013f242d4970b9a29fc6b830287da8d76672aa94f7#0"
+        "09dc7193a34e99ec75abb398ce6dad49d6a5d403bead3bc5bafdc03a364859f8#0"
     ],
     "metadata": {
         "1": "foo",
@@ -18,13 +20,13 @@
     "mint": null,
     "outputs": [
         {
-            "address": "addr_test1vqr5aky0nwt8ew90naqhc8el0xfnmy5xvnerzm0r2w6g9tcsug7hk",
+            "address": "addr_test1vzfgl2n7hauuhrxdeascef33c3jn5m34hvpt0yhf3maq0ngt6rpls",
             "address era": "Shelley",
             "amount": {
-                "lovelace": 999809721
+                "lovelace": 149816159
             },
             "network": "Testnet",
-            "payment credential key hash": "074ed88f9b967cb8af9f417c1f3f79933d928664f2316de353b482af",
+            "payment credential key hash": "928faa7ebf79cb8ccdcf618ca631c4653a6e35bb02b792e98efa07cd",
             "reference script": null,
             "stake reference": null
         }
@@ -35,10 +37,11 @@
     "return collateral": null,
     "scripts": [],
     "total collateral": null,
-    "update proposal": null,
+    "treasuryDonation": 0,
     "validity range": {
         "lower bound": null,
         "upper bound": null
     },
+    "voters": {},
     "withdrawals": null
 }
