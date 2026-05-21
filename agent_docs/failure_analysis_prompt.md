@@ -13,6 +13,23 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 - `{RUN_DIR}/testrun-report.xml` — junit XML
 - `{RUN_DIR}/monitor.log` — system resource snapshots every 10 min
 
+Counting tests (IMPORTANT):
+
+The runner may do an initial "skip-all" pass before the real testrun which writes one placeholder result per collected test (`status: "skipped"`, `statusDetails.message == "Skipped: collected, not run"`). So `allure-results/` mixes placeholders with real-run results. Run these commands to get the correct counts:
+
+```sh
+passed=$(grep -l '"status": "passed"' {RUN_DIR}/allure-results/*result.json | wc -l)
+failed=$(grep -l '"status": "failed"' {RUN_DIR}/allure-results/*result.json | wc -l)
+broken=$(grep -l '"status": "broken"' {RUN_DIR}/allure-results/*result.json | wc -l)
+total=$(grep -l '"message": "Skipped: collected, not run"' {RUN_DIR}/allure-results/*result.json | wc -l)
+if [ "$total" -gt 0 ]; then
+  skipped=$(( total - passed - failed - broken ))
+else
+  skipped=$(grep -l '"status": "skipped"' {RUN_DIR}/allure-results/*result.json | wc -l)
+  total=$(( passed + failed + broken + skipped ))
+fi
+```
+
 Steps:
 
 1. Enumerate failed/broken tests:
@@ -24,7 +41,7 @@ Steps:
 
 Known patterns:
 
-- `All cluster instances are dead.` — no cluster instance could start; usually caused by a `cardano-cli` argument change or a `cardano-node` configuration change.
+- `All cluster instances are dead.` — no cluster instance could start; usually caused by a `cardano-cli` argument change or a `cardano-node` configuration change. Inspect `scheduling.log` for the cluster startup failure details.
 
 Constraints:
 
