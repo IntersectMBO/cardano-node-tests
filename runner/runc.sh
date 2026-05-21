@@ -61,7 +61,7 @@ while [ $# -gt 0 ]; do
     --nixos-container=*)  CONTAINER_TYPE="nixos";  CONTAINER_VERSION="${1#*=}"; shift ;;
     --ubuntu-container)   CONTAINER_TYPE="ubuntu"; shift ;;
     --ubuntu-container=*) CONTAINER_TYPE="ubuntu"; CONTAINER_VERSION="${1#*=}"; shift ;;
-    --debian-container)   CONTAINER_TYPE="debian"; shift ;;
+    --debian-container)   CONTAINER_TYPE="debian"; CONTAINER_VERSION="stable"; shift ;;
     --debian-container=*) CONTAINER_TYPE="debian"; CONTAINER_VERSION="${1#*=}"; shift ;;
     --mint-container)     CONTAINER_TYPE="mint";   shift ;;
     --mint-container=*)   CONTAINER_TYPE="mint";   MINT_VERSION="${1#*=}";      shift ;;
