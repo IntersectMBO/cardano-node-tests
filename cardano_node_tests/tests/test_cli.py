@@ -35,11 +35,10 @@ pytestmark = common.SKIPIF_WRONG_ERA
 class TestCLI:
     """Tests for cardano-cli."""
 
-    TX_BODY_FILE = DATA_DIR / "test_tx_metadata_both_tx.body"
     TX_BODY_FILE_CONWAY = DATA_DIR / "test_tx_metadata_both_tx_conway.body"
-    TX_FILE = DATA_DIR / "test_tx_metadata_both_tx.signed"
-    TX_BODY_OUT_JSON = DATA_DIR / "test_tx_metadata_both_tx_body_json.out"
-    TX_OUT_JSON = DATA_DIR / "test_tx_metadata_both_tx_json.out"
+    TX_FILE_CONWAY = DATA_DIR / "test_tx_metadata_both_tx_conway.signed"
+    TX_BODY_OUT_JSON_CONWAY = DATA_DIR / "test_tx_metadata_both_tx_conway_body_json.out"
+    TX_OUT_JSON_CONWAY = DATA_DIR / "test_tx_metadata_both_tx_conway_json.out"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -225,32 +224,35 @@ class TestCLI:
         body and signed transaction files.
 
         * Execute `cardano-cli transaction view --tx-body-file` command
-        * Check output includes redeemers and datums fields
         * Compare transaction body JSON output with golden file
         * Execute `cardano-cli transaction view --tx-file` command for signed transaction
         * Compare signed transaction JSON output with golden file
+
+        We no longer test the CLI 799 issue (`issues.cli_799`), Babbage-era transactions
+        are not supported by the `transaction view` anymore.
         """
         common.get_test_id(cluster)
 
-        tx_body = cluster.g_transaction.view_tx(tx_body_file=self.TX_BODY_FILE)
+        def _sanitize(tx_view_out: str) -> str:
+            # The legacy "update proposal" is not present in the output produced
+            # by newer versions of `cardano-cli`.
+            return "\n".join(
+                line
+                for line in tx_view_out.splitlines()
+                if not line.strip().startswith('"update proposal":')
+            ).strip()
 
-        if '"redeemers":' not in tx_body:
-            pytest.skip("unsupported old output format")
-        if '"datums":' not in tx_body:
-            pytest.skip("unsupported old output format")
+        tx_body = cluster.g_transaction.view_tx(tx_body_file=self.TX_BODY_FILE_CONWAY)
 
-        with open(self.TX_BODY_OUT_JSON, encoding="utf-8") as infile:
+        with open(self.TX_BODY_OUT_JSON_CONWAY, encoding="utf-8") as infile:
             tx_body_golden = infile.read()
-        assert tx_body == tx_body_golden.strip()
+        assert _sanitize(tx_body) == tx_body_golden.strip()
 
-        tx = cluster.g_transaction.view_tx(tx_file=self.TX_FILE)
+        tx = cluster.g_transaction.view_tx(tx_file=self.TX_FILE_CONWAY)
 
-        if '"governance actions":' in tx:
-            issues.cli_799.finish_test()
-
-        with open(self.TX_OUT_JSON, encoding="utf-8") as infile:
+        with open(self.TX_OUT_JSON_CONWAY, encoding="utf-8") as infile:
             tx_golden = infile.read()
-        assert tx == tx_golden.strip()
+        assert _sanitize(tx) == tx_golden.strip()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
