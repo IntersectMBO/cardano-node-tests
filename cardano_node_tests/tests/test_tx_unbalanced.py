@@ -13,6 +13,8 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import submit_api
+from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -432,7 +434,7 @@ class TestUnbalanced:
         * Build transaction with output amount below minimum UTxO (0 to ~1 ADA)
         * Sign the transaction successfully (no validation at build-raw stage)
         * Attempt to submit the transaction
-        * Check that submission fails with OutputTooSmallUTxO error
+        * Check that submission fails with BabbageOutputTooSmallUTxO error
         """
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
@@ -472,11 +474,70 @@ class TestUnbalanced:
 
         with pytest.raises(clusterlib.CLIError) as excinfo_build:
             # Submit the signed transaction
-            cluster.g_transaction.submit_tx(tx_file=out_file_signed, txins=[pbt_highest_utxo])
+            cluster.g_transaction.submit_tx_bare(tx_file=out_file_signed)
 
         exc_value = str(excinfo_build.value)
         with common.allow_unstable_error_messages():
-            assert "OutputTooSmallUTxO" in exc_value, exc_value
+            assert "BabbageOutputTooSmallUTxO" in exc_value, exc_value
+
+    @allure.link(helpers.get_vcs_link())
+    # The "submit_method" is a fixture defined in `conftest.py`. Use the fixture here for checking
+    # if Submit API is available and running.
+    @pytest.mark.parametrize(
+        "submit_method",
+        (submit_utils.SubmitMethods.API,),
+        ids=("submit_api",),
+        indirect=True,
+    )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    def test_output_too_small(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        submit_method: str,
+    ):
+        """Try to submit transaction with output amount below minimum UTxO threshold via Submit API.
+
+        Expect failure.
+
+        Uses `cardano-cli transaction build-raw` command.
+        The `transaction build` scenario is covered by `test_build_transfer_amount_bellow_minimum`.
+        Submitting using `cardano-cli` is covered by `test_transfer_amount_bellow_minimum`.
+
+        * Build raw transaction with output amount below minimum UTxO value
+        * Sign the transaction
+        * Submit the transaction via `cardano-submit-api` REST service and check that submission
+          fails with `BabbageOutputTooSmallUTxO` error
+        """
+        del submit_method  # The parameter is used only for checking Submit API availability
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
+
+        tx_raw_output = cluster.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            fee=200_000,
+        )
+        out_file_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        with pytest.raises(submit_api.SubmitApiError) as excinfo:
+            submit_api.submit_tx_bare(tx_file=out_file_signed)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "BabbageOutputTooSmallUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(amount=st.integers(min_value=-MAX_LOVELACE_AMOUNT, max_value=-1))

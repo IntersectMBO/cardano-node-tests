@@ -788,18 +788,12 @@ class TestNegative:
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
 
         # Build and sign a transaction
-        fee = cluster.g_transaction.calculate_tx_fee(
-            src_address=src_address,
-            tx_name=temp_template,
-            txouts=txouts,
-            tx_files=tx_files,
-        )
         tx_raw_output = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
             tx_name=temp_template,
             txouts=txouts,
             tx_files=tx_files,
-            fee=fee,
+            fee=2_000,
         )
         out_file_signed = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output.out_file,
