@@ -129,6 +129,12 @@ jobs:
           echo "::group::Script setup"
           runner/regression.sh
           echo "::endgroup::"
+      - name: Move deselected_tests.txt artifact
+        if: success() || failure()
+        run: |
+          if [ -f deselected_tests.txt ]; then
+            mv deselected_tests.txt run_workdir/
+          fi
       - name: Load failure-analysis prompt
         id: load-analysis-prompt
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_OAUTH_TOKEN == 'true'
@@ -189,6 +195,7 @@ jobs:
         with:
           name: testing-artifacts
           path: run_workdir/testing_artifacts.tar.xz
+          compression-level: 0
       - name: ↟ Upload Allure results
         uses: actions/upload-artifact@v7
         # When using `always()`, you lose ability to manually cancel the workflow.
@@ -197,6 +204,7 @@ jobs:
         with:
           name: allure-results
           path: run_workdir/allure-results.tar.xz
+          compression-level: 0
       - name: ↟ Upload HTML report
         uses: actions/upload-artifact@v7
         if: success() || failure()
@@ -212,7 +220,7 @@ jobs:
             run_workdir/scheduling.log
             run_workdir/errors_all.log
             run_workdir/testrun-report.xml
-            deselected_tests.txt
+            run_workdir/deselected_tests.txt
             run_workdir/requirements_coverage.json
             run_workdir/monitor.log
             run_workdir/failure_analysis.md
