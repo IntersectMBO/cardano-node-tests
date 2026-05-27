@@ -1,15 +1,22 @@
 """Tests for basic SMASH operations."""
 
+import dataclasses
 import http
 import logging
+import pathlib as pl
 import random
 import re
+import typing as tp
 
 import allure
 import pytest
 import requests
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import common
+from cardano_node_tests.tests import delegation
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_types
@@ -19,6 +26,16 @@ from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import smash_utils
 
 LOGGER = logging.getLogger(__name__)
+
+DATA_DIR = pl.Path(__file__).parent / "data"
+
+# Publicly-hosted equivalent of ``data/pool_metadata.json``. Used as the
+# stake-pool metadata URL whenever a test needs db-sync's off-chain fetcher to
+# actually succeed: the fetcher rejects URLs whose host is one of localhost,
+# 127.0.0.1, ::1, 10.*, or 192.168.* (see ``parseOffChainUrl`` in
+# ``cardano-db-sync/src/Cardano/DbSync/OffChain/Http.hs``), so the
+# cluster-bootstrap ``http://localhost:.../poolN.json`` URLs always fail.
+PUBLIC_POOL_METADATA_URL = "https://tinyurl.com/yvkfs7pr"
 
 pytestmark = [
     pytest.mark.skipif(not configuration.HAS_SMASH, reason="SMASH is not available"),
@@ -79,34 +96,199 @@ class TestBasicSmash:
             pytest.skip("SMASH client is not available.")
         return smash
 
+    @pytest.fixture()
+    def locked_pool_with_public_metadata(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_lock_pool: tuple[clusterlib.ClusterLib, str],
+    ) -> tp.Iterator[dbsync_types.PoolDataRecord]:
+        """Lock any cluster pool and re-register it with a publicly-hosted metadata URL.
+
+        Cluster-bootstrap pools register with ``http://localhost:.../poolN.json``, but
+        db-sync's off-chain pool fetcher refuses to connect to private/loopback/link-local
+        addresses (see ``cardano-db-sync/src/Cardano/DbSync/OffChain/Http.hs``), so those
+        pools never get an ``off_chain_pool_data`` row. To exercise the success path of
+        the fetcher this fixture re-registers the locked pool with a publicly-reachable
+        URL pointing at the same content as ``data/pool_metadata.json``. Re-registration
+        uses ``deposit=0`` because the pool is already registered. The original metadata
+        URL and hash are restored at teardown so the pool is handed back to the cluster
+        in the state the bootstrap left it.
+
+        Yields:
+            dbsync_types.PoolDataRecord: The locked pool refreshed from db-sync once
+            it has ingested the metadata update.
+        """
+        cluster_obj, pool_name = cluster_lock_pool
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+        pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
+        pool_id_bech32 = delegation.get_pool_id(
+            cluster_obj=cluster_obj,
+            addrs_data=cluster_manager.cache.addrs_data,
+            pool_name=pool_name,
+        )
+
+        # Snapshot the current on-chain pool data so we can restore it after the test.
+        original_pool_data = clusterlib_utils.load_registered_pool_data(
+            cluster_obj=cluster_obj, pool_name=pool_name, pool_id=pool_id_bech32
+        )
+
+        public_metadata_file = DATA_DIR / "pool_metadata.json"
+        public_metadata_hash = cluster_obj.g_stake_pool.gen_pool_metadata_hash(public_metadata_file)
+        public_pool_data = dataclasses.replace(
+            original_pool_data,
+            pool_metadata_url=PUBLIC_POOL_METADATA_URL,
+            pool_metadata_hash=public_metadata_hash,
+        )
+
+        temp_template = common.get_test_id(cluster_obj)
+
+        # Re-register the pool with the public metadata URL. ``deposit=0`` because the
+        # pool is already registered; the certificate acts as an update.
+        cluster_obj.g_stake_pool.register_stake_pool(
+            pool_data=public_pool_data,
+            pool_owners=[pool_owner],
+            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
+            cold_key_pair=pool_rec["cold_key_pair"],
+            tx_name=f"{temp_template}_smash_metadata_public",
+            reward_account_vkey_file=pool_rec["reward"].vkey_file,
+            deposit=0,
+        )
+
+        # Wait until db-sync has ingested the metadata update so the test sees a
+        # consistent view of the new URL/hash.
+        def _wait_for_dbsync() -> dbsync_types.PoolDataRecord:
+            record = dbsync_utils.get_pool_data(pool_id_bech32=pool_id_bech32)
+            if record is None or record.metadata_url != PUBLIC_POOL_METADATA_URL:
+                msg = f"db-sync has not yet ingested the metadata update for pool {pool_id_bech32}"
+                raise dbsync_utils.DbSyncNoResponseError(msg)
+            return record
+
+        try:
+            yield dbsync_utils.retry_query(query_func=_wait_for_dbsync, timeout=120)
+        finally:
+            # Re-register the pool with its original metadata URL and hash so the
+            # cluster_lock_pool resource is handed back in the state we found it.
+            # If restoration fails, mark the cluster instance for respin so a
+            # subsequent test isn't left with the locked pool stuck on the public URL
+            # (the ``locked_pool`` fixture searches by URL pattern containing the pool
+            # name and would not match ``PUBLIC_POOL_METADATA_URL``).
+            with cluster_manager.respin_on_failure():
+                cluster_obj.g_stake_pool.register_stake_pool(
+                    pool_data=original_pool_data,
+                    pool_owners=[pool_owner],
+                    vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
+                    cold_key_pair=pool_rec["cold_key_pair"],
+                    tx_name=f"{temp_template}_smash_metadata_restore",
+                    reward_account_vkey_file=pool_rec["reward"].vkey_file,
+                    deposit=0,
+                )
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
-    def test_fetch_pool_metadata(
-        self, locked_pool: dbsync_types.PoolDataRecord, smash: smash_utils.SmashClient
+    def test_fetch_pool_metadata_localhost_rejected(
+        self,
+        locked_pool: dbsync_types.PoolDataRecord,
     ):
-        """Test fetching pool metadata from SMASH.
+        """Verify db-sync rejects pool metadata served from localhost / private hosts.
 
-        Test retrieval of off-chain pool metadata from SMASH server and verify it matches
-        db-sync records.
+        db-sync's off-chain pool-metadata fetcher refuses URLs whose host part is one
+        of ``localhost``, ``127.0.0.1``, ``::1``, ``[::1]``, ``10.*``, or ``192.168.*``
+        (see ``parseOffChainUrl`` and ``isLocalhostHost`` in
+        ``cardano-db-sync/src/Cardano/DbSync/OffChain/Http.hs``). The rejection happens
+        at URL parse time, before any network I/O, and is recorded as an
+        ``OCFErrUrlParseFail`` whose stored string is of the form
+        ``Error Offchain Pool: URL parse error for <url> resulted in :
+        "Access to localhost is not allowed"`` — see the ``Show OffChainFetchError``
+        instance and ``fetchUrlToString`` in
+        ``cardano-db-sync/src/Cardano/DbSync/Types.hs``. A second layer — a restricted
+        HTTP manager that rejects any address resolving into a private / loopback /
+        link-local range — backs this up at connect time, but for verbatim
+        ``localhost`` URLs the string-based check fires first.
 
-        * Get pool ID from locked pool fixture
-        * Query off-chain pool metadata from db-sync (retry with timeout for availability)
-        * Extract expected metadata fields (name, description, ticker, homepage)
-        * Fetch pool metadata from SMASH using pool ID and metadata hash
-        * Verify SMASH metadata matches db-sync metadata exactly
+        Cluster-bootstrap pools register with ``http://localhost:.../poolN.json``, so for
+        those pools the fetch always fails and the result lands in
+        ``off_chain_pool_fetch_error`` instead of ``off_chain_pool_data``.
+
+        * Use a cluster-bootstrap pool whose metadata URL points at localhost
+        * Wait for db-sync's off-chain fetcher to record the rejection
+        * Assert that ``off_chain_pool_fetch_error`` has a row for the pool
+        * Assert the recorded error contains db-sync's exact rejection wording
+        * Assert that ``off_chain_pool_data`` has no row for this pool
         """
-        pool_id = locked_pool.hash
+        pool_id_bech32 = locked_pool.view
 
-        # Offchain metadata is inserted into database few minutes after start of a cluster
-        def _query_func():
-            pool_metadata = next(
-                iter(dbsync_queries.query_off_chain_pool_data(pool_id_bech32=locked_pool.view)),
+        def _query_func() -> dbsync_queries.PoolOffChainFetchErrorDBRow:
+            fetch_error = next(
+                iter(
+                    dbsync_queries.query_off_chain_pool_fetch_error(pool_id_bech32=pool_id_bech32)
+                ),
                 None,
             )
-            if pool_metadata is None:
-                msg = f"no off-chain pool data record found for pool {pool_id}"
+            if fetch_error is None:
+                msg = (
+                    f"no off-chain pool fetch error row found for pool "
+                    f"{pool_id_bech32} (metadata URL {locked_pool.metadata_url!r})"
+                )
                 raise dbsync_utils.DbSyncNoResponseError(msg)
-            return pool_metadata
+            return fetch_error
+
+        fetch_error_row = dbsync_utils.retry_query(query_func=_query_func, timeout=360)
+
+        # Match db-sync's exact rejection wording for localhost URLs (verified against
+        # `Show OffChainFetchError` in cardano-db-sync/src/Cardano/DbSync/Types.hs).
+        expected_substring = "Access to localhost is not allowed"
+        assert expected_substring in (fetch_error_row.fetch_error or ""), (
+            f"Expected db-sync fetch error for {locked_pool.metadata_url!r} to contain "
+            f"{expected_substring!r}, got {fetch_error_row.fetch_error!r}"
+        )
+
+        successful_rows = list(
+            dbsync_queries.query_off_chain_pool_data(pool_id_bech32=pool_id_bech32)
+        )
+        assert not successful_rows, (
+            f"Expected no successful off_chain_pool_data rows for pool "
+            f"{pool_id_bech32} with localhost URL {locked_pool.metadata_url!r}, "
+            f"got {len(successful_rows)} row(s)"
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.smoke
+    def test_fetch_pool_metadata_public(
+        self,
+        locked_pool_with_public_metadata: dbsync_types.PoolDataRecord,
+        smash: smash_utils.SmashClient,
+    ):
+        """Test fetching pool metadata from SMASH when the URL is publicly reachable.
+
+        db-sync's off-chain pool fetcher succeeds only for URLs that resolve to
+        non-private IP addresses. The ``locked_pool_with_public_metadata`` fixture
+        re-registers a cluster-bootstrap pool with ``PUBLIC_POOL_METADATA_URL``
+        (content equivalent to ``data/pool_metadata.json``) and restores the
+        pool's original metadata at teardown.
+
+        * Re-register a locked cluster pool with a publicly-hosted metadata URL (fixture)
+        * Wait for db-sync's off-chain fetcher to ingest the metadata
+        * Read the metadata as db-sync recorded it
+        * Fetch the same pool's metadata from SMASH using pool ID and metadata hash
+        * Verify SMASH and db-sync agree on every metadata field
+        """
+        locked_pool = locked_pool_with_public_metadata
+        pool_id = locked_pool.hash
+        expected_hash_bytes = bytes.fromhex(locked_pool.metadata_hash)
+
+        # Off-chain metadata appears in db-sync once the fetcher has processed the
+        # new pool_metadata_ref row (poll interval ~5 s plus HTTP fetch time).
+        def _query_func() -> dbsync_queries.PoolOffChainDataDBRow:
+            for pool_metadata in dbsync_queries.query_off_chain_pool_data(
+                pool_id_bech32=locked_pool.view
+            ):
+                if bytes(pool_metadata.hash) == expected_hash_bytes:
+                    return pool_metadata
+            msg = (
+                f"no off-chain pool data record with expected hash "
+                f"{locked_pool.metadata_hash} found for pool {pool_id}"
+            )
+            raise dbsync_utils.DbSyncNoResponseError(msg)
 
         metadata_dbsync = dbsync_utils.retry_query(query_func=_query_func, timeout=360)
 
