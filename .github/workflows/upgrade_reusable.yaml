@@ -193,7 +193,7 @@ jobs:
           body: &mail_body |
             Run URL: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>
 
-            ── Preliminary failure analysis ──
+            ────
 
             ${{ env.FAILURE_ANALYSIS }}
           html_body: *mail_body
