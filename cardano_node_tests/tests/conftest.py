@@ -72,6 +72,15 @@ def pytest_configure(config: tp.Any) -> None:
     if config.getvalue("skipall"):
         return
 
+    gha_server = os.environ.get("GITHUB_SERVER_URL")
+    gha_repo = os.environ.get("GITHUB_REPOSITORY")
+    gha_run_id = os.environ.get("GITHUB_RUN_ID")
+    config.stash[metadata_key]["github actions url"] = (
+        f"{gha_server}/{gha_repo}/actions/runs/{gha_run_id}"
+        if gha_server and gha_repo and gha_run_id
+        else ""
+    )
+
     config.stash[metadata_key]["cardano-node"] = str(VERSIONS.node)
     config.stash[metadata_key]["cardano-node rev"] = VERSIONS.git_rev
     config.stash[metadata_key]["cardano-node ghc"] = VERSIONS.ghc
