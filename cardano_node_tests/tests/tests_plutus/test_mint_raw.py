@@ -8,6 +8,7 @@ import allure
 import pytest
 from cardano_clusterlib import clusterlib
 from cardano_clusterlib import clusterlib_helpers
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -65,6 +66,7 @@ def _check_pretty_utxo(
         .split()
     )
 
+    datum_none = "NoDatum" if VERSIONS.cli >= version.parse("11.1.0.0") else "TxOutDatumNone"
     expected_out = [
         "TxHash",
         "TxIx",
@@ -81,7 +83,7 @@ def _check_pretty_utxo(
         str(tx_raw_output.txouts[2].amount),
         tx_raw_output.txouts[2].coin,
         "+",
-        "TxOutDatumNone",
+        datum_none,
     ]
 
     if utxo_out != expected_out:
