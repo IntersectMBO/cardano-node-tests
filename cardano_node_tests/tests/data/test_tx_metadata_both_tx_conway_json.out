@@ -25,6 +25,7 @@
             "amount": {
                 "lovelace": 149816159
             },
+            "datum": null,
             "network": "Testnet",
             "payment credential key hash": "7f3a4205d7ab4e208210ba4d6193a2ca882e62aa6da8ded2da3d6323",
             "reference script": null,

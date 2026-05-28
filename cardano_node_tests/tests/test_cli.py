@@ -13,6 +13,7 @@ import hypothesis
 import hypothesis.strategies as st
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
@@ -216,6 +217,12 @@ class TestCLI:
         helpers.run_in_bash(command=cmd)
 
     @allure.link(helpers.get_vcs_link())
+    # Golden files track only the latest `cardano-cli` output format. Older CLI versions were
+    # validated previously; skip them here to avoid maintaining stale golden files per version.
+    @pytest.mark.skipif(
+        VERSIONS.cli < version.parse("11.1.0.0"),
+        reason="needs up-to-date cardano-cli version",
+    )
     @pytest.mark.smoke
     def test_tx_view(self, cluster: clusterlib.ClusterLib):
         """View transaction body and signed transaction in JSON format.
@@ -232,27 +239,17 @@ class TestCLI:
         are not supported by the `transaction view` anymore.
         """
         common.get_test_id(cluster)
-
-        def _sanitize(tx_view_out: str) -> str:
-            # The legacy "update proposal" is not present in the output produced
-            # by newer versions of `cardano-cli`.
-            return "\n".join(
-                line
-                for line in tx_view_out.splitlines()
-                if not line.strip().startswith('"update proposal":')
-            ).strip()
-
         tx_body = cluster.g_transaction.view_tx(tx_body_file=self.TX_BODY_FILE_CONWAY)
 
         with open(self.TX_BODY_OUT_JSON_CONWAY, encoding="utf-8") as infile:
             tx_body_golden = infile.read()
-        assert _sanitize(tx_body) == tx_body_golden.strip()
+        assert tx_body == tx_body_golden.strip()
 
         tx = cluster.g_transaction.view_tx(tx_file=self.TX_FILE_CONWAY)
 
         with open(self.TX_OUT_JSON_CONWAY, encoding="utf-8") as infile:
             tx_golden = infile.read()
-        assert _sanitize(tx) == tx_golden.strip()
+        assert tx == tx_golden.strip()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -999,6 +996,7 @@ class TestQueryUTxO:
             .split()
         )
 
+        datum_none = "NoDatum" if VERSIONS.cli >= version.parse("11.1.0.0") else "TxOutDatumNone"
         txid = cluster.g_transaction.get_txid(tx_body_file=tx_raw_output.out_file)
         expected_out = [
             "TxHash",
@@ -1011,13 +1009,13 @@ class TestQueryUTxO:
             str(amount1),
             "lovelace",
             "+",
-            "TxOutDatumNone",
+            datum_none,
             txid,
             "1",
             str(amount2),
             "lovelace",
             "+",
-            "TxOutDatumNone",
+            datum_none,
         ]
 
         assert utxo_out == expected_out
