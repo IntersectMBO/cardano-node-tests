@@ -91,6 +91,11 @@ def _check_pretty_utxo(
     datum_hash = clusterlib_utils.datum_hash_from_txout(
         cluster_obj=cluster_obj, txout=tx_raw_output.txouts[0]
     )
+    versioned_out = (
+        ("DatumHash", "(SafeHash", f'"{datum_hash}")')
+        if VERSIONS.cli >= version.parse("11.1.0.0")
+        else ("TxOutDatumHash", f"AlonzoEraOnwards{cluster_era}", f'"{datum_hash}"')
+    )
     expected_out = [
         "TxHash",
         "TxIx",
@@ -101,11 +106,7 @@ def _check_pretty_utxo(
         str(tx_raw_output.txouts[0].amount),
         tx_raw_output.txouts[0].coin,
         "+",
-        "TxOutDatumHash",
-        f"AlonzoEraOnwards{cluster_era}"
-        if VERSIONS.node > version.parse("8.1.2")
-        else f"ScriptDataIn{cluster_era}Era",
-        f'"{datum_hash}"',
+        *versioned_out,
     ]
 
     if utxo_out != expected_out:
