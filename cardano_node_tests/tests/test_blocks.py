@@ -466,6 +466,7 @@ class TestDynamicBlockProd:
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        worker_id: str,
     ):
         """Check dynamic block production.
 
@@ -567,6 +568,19 @@ class TestDynamicBlockProd:
                     if not backup_node_status.pid:
                         msg = "Replacement node is not running."
                         raise AssertionError(msg)
+                    # Sending `SIGHUP` triggers the node's RPC configuration reload, which
+                    # re-parses the node config file and fails with
+                    # "Error while updating RPC configuration: Missing YAML config file".
+                    # The reload re-validates the whole config from the file alone, but the
+                    # config file path itself is only supplied via the `--config` CLI argument
+                    # and is never stored in the file, so the validation always fails. The
+                    # failure is non-fatal (the reload is simply skipped), so ignore the error.
+                    # See https://github.com/IntersectMBO/cardano-node/issues/6589
+                    logfiles.add_ignore_rule(
+                        files_glob=f"{self.backup_node_name}.stdout",
+                        regex="RpcConfigUpdateError",
+                        ignore_file_id=worker_id,
+                    )
                     cluster_nodes.stop_nodes(node_names=[self.producing_node_name])
                     os.kill(backup_node_status.pid, signal.SIGHUP)
 
