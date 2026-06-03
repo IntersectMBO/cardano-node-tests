@@ -33,6 +33,8 @@ ERRORS_IGNORED = [
     # Old tracing system
     ":Debug:",
     ":Info:",
+    # Allowed errors - new tracing
+    "Forge.Loop.DidntAdoptBlock",
     # Allowed errors
     "Event: LedgerUpdate",
     "trace.*ErrorPolicy",
