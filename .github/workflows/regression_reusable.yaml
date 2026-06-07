@@ -92,7 +92,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@v9
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           persist-credentials: false
       - name: Install Nix
