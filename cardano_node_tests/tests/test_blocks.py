@@ -79,7 +79,7 @@ class TestLeadershipSchedule:
             )
             queried_epoch = cluster.g_query.get_epoch() + 1
 
-        debug_log_template = (f"{temp_template}_ep{queried_epoch}_pool_{pool_short_name}",)
+        debug_log_template = f"{temp_template}_ep{queried_epoch}_pool_{pool_short_name}"
 
         # Query leadership schedule for selected pool
         leadership_schedule = cluster.g_query.get_leadership_schedule(
@@ -110,7 +110,7 @@ class TestLeadershipSchedule:
         def _check_logs() -> None:
             # Get info about forged blocks in queried epoch for the selected pool
             forged_lines = logfiles.find_msgs_in_logs(
-                regex='"TraceForgedBlock"',
+                regex="Forge.Loop.ForgedBlock",
                 logfile=pool_log,
                 seek_offset=seek_offset,
                 timestamp=timestamp,
@@ -122,7 +122,7 @@ class TestLeadershipSchedule:
             first_slot_this_ep = int(tip["slot"]) - int(tip["slotInEpoch"])
             first_slot_queried_ep = first_slot_this_ep - (ep_num_after_queried * ep_length)
             last_slot_queried_ep = first_slot_queried_ep + ep_length - 1
-            slots_pattern = re.compile(r'"slot",Number (\d+)\.0')
+            slots_pattern = re.compile(r"Forged block in slot (\d+)")
             slots_when_forged = {
                 s
                 for m in forged_lines
