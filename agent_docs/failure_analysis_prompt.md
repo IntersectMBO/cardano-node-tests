@@ -15,7 +15,7 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 
 Counting tests (IMPORTANT):
 
-The runner may do an initial "skip-all" pass before the real testrun which writes one placeholder result per collected test (`status: "skipped"`, `statusDetails.message == "Skipped: collected, not run"`). So `allure-results/` mixes placeholders with real-run results. Run these commands to get the correct counts:
+Run following code snippet to get the correct counts:
 
 ```sh
 passed=$(grep -l '"status": "passed"' {RUN_DIR}/allure-results/*result.json | wc -l)
@@ -28,6 +28,7 @@ else
   skipped=$(grep -l '"status": "skipped"' {RUN_DIR}/allure-results/*result.json | wc -l)
   total=$(( passed + failed + broken + skipped ))
 fi
+echo "Total: $total, Passed: $passed, Failed: $failed, Broken: $broken, Skipped: $skipped"
 ```
 
 Steps:
