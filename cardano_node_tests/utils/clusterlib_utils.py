@@ -562,6 +562,7 @@ def load_registered_pool_data(
         pool_metadata_url=metadata.get("url") or "",
         pool_metadata_hash=metadata.get("hash") or "",
         pool_relay_ipv4=relay.get("IPv4") or "",
+        pool_relay_ipv6=relay.get("IPv6") or "",
         pool_relay_port=relay.get("port") or 0,
     )
 
