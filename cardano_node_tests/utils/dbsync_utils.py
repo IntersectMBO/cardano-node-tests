@@ -1388,8 +1388,18 @@ def check_off_chain_drep_registration(  # noqa: C901
 def get_action_data(  # noqa: C901
     *,
     data_hash: str,
+    voting_anchor_id: int | None = None,
 ) -> dbsync_types.OffChainVoteDataRecord | None:
-    """Get off chain action data from db-sync."""
+    """Get off chain action data from db-sync.
+
+    Args:
+        data_hash: The blake2b-256 hash of the anchor metadata.
+        voting_anchor_id: When set, return the row for this specific voting anchor. The same
+            content (and therefore the same ``data_hash``) can be referenced by several anchors
+            of different types (e.g. a gov action and a DRep registration), each getting its own
+            ``off_chain_vote_data`` row. Pass the anchor id to disambiguate; otherwise the most
+            recent anchor for the hash is used.
+    """
     votes = list(dbsync_queries.query_off_chain_vote_data(data_hash=data_hash))
     if not votes:
         return None
@@ -1398,8 +1408,12 @@ def get_action_data(  # noqa: C901
     references = []
     external_updates = []
 
-    latest_vot_anchor_id = votes[-1].data_vot_anchor_id
-    latest_votes = [vote for vote in votes if vote.data_vot_anchor_id == latest_vot_anchor_id]
+    target_vot_anchor_id = (
+        voting_anchor_id if voting_anchor_id is not None else votes[-1].data_vot_anchor_id
+    )
+    latest_votes = [vote for vote in votes if vote.data_vot_anchor_id == target_vot_anchor_id]
+    if not latest_votes:
+        return None
 
     vote = None
     gov_action = None
@@ -1446,11 +1460,13 @@ def get_action_data(  # noqa: C901
                 "block_id": vote.vot_anchor_block_id,
             }
 
+    # A stored `off_chain_vote_data` row always has its row data and a voting anchor.
+    # `gov_action`, `authors`, `references` and `external_updates`, however, are only
+    # populated for valid, CIP-conformant metadata (is_valid=True). For metadata that is
+    # not CIP-conformant (is_valid=False) or not valid JSON at all (is_valid=NULL), the
+    # related tables stay empty, so those values are legitimately absent here.
     if vote is None:
         msg = "vote is not expected to be None here"
-        raise RuntimeError(msg)
-    if gov_action is None:
-        msg = "gov_action is not expected to be None here"
         raise RuntimeError(msg)
     if voting_anchor is None:
         msg = "voting_anchor is not expected to be None here"
@@ -1468,7 +1484,7 @@ def get_action_data(  # noqa: C901
         is_valid=vote.data_is_valid,
         authors=list(authors),
         references=list(references),
-        gov_action_data=gov_action,
+        gov_action_data=tp.cast("dict[str, tp.Any]", gov_action or {}),
         external_updates=list(external_updates),
         voting_anchor=voting_anchor,
     )
@@ -1480,17 +1496,32 @@ def check_action_data(  # noqa: C901
     *,
     json_anchor_file: dict[str, tp.Any],
     anchor_data_hash: str,
+    expected_is_valid: bool | None = True,
+    voting_anchor_id: int | None = None,
 ) -> None:
-    """Compare anchor json file with off chain action's data from db-sync."""
+    """Compare anchor json file with off chain action's data from db-sync.
+
+    Args:
+        json_anchor_file: The anchor metadata loaded from the local JSON file.
+        anchor_data_hash: The blake2b-256 hash of the anchor metadata.
+        expected_is_valid: Expected value of ``off_chain_vote_data.is_valid``. Defaults to
+            ``True`` because this helper compares CIP-conformant fields (authors, references,
+            external updates) that are only populated for valid metadata.
+        voting_anchor_id: When the same content is referenced by several anchors, pass the
+            specific anchor id to compare against the right ``off_chain_vote_data`` row.
+    """
     if not configuration.HAS_DBSYNC:
         return
 
     errors = []
-    db_action_data = get_action_data(data_hash=anchor_data_hash)
+    db_action_data = get_action_data(data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id)
 
     if db_action_data is None:
         msg = f"No data for action with anchor hash: {anchor_data_hash} in db-sync"
         raise AssertionError(msg)
+
+    if db_action_data.is_valid != expected_is_valid:
+        errors.append(f"Unexpected is_valid: {db_action_data.is_valid} vs {expected_is_valid}")
 
     if json_anchor_file != db_action_data.json:
         errors.append(
