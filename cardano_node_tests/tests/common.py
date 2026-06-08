@@ -53,6 +53,16 @@ PUBLIC_ACTION_ANCHOR_URL = (
     "https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/master"
     "/cardano_node_tests/tests/data/ga_anchor.json"
 )
+# Off-chain voting anchor test vectors (valid-but-non-CIP and invalid-JSON). Short file names
+# keep the raw-content URL under the 128-byte on-chain anchor limit.
+PUBLIC_ACTION_ANCHOR_NONCONFORMANT_URL = (
+    "https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/master"
+    "/cardano_node_tests/tests/data/ga_anchor_nonconf.json"
+)
+PUBLIC_ACTION_ANCHOR_INVALID_URL = (
+    "https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/master"
+    "/cardano_node_tests/tests/data/ga_anchor_invalid.json"
+)
 
 ORDER5_BYRON = (
     pytest.mark.order(5) if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop

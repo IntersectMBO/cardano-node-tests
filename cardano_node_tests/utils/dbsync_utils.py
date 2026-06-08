@@ -1388,8 +1388,13 @@ def check_off_chain_drep_registration(  # noqa: C901
 def get_action_data(  # noqa: C901
     *,
     data_hash: str,
+    voting_anchor_id: int | None = None,
 ) -> dbsync_types.OffChainVoteDataRecord | None:
-    """Get off chain action data from db-sync."""
+    """Get off chain action data from db-sync.
+
+    The same content (same ``data_hash``) can back several anchors of different types, each with
+    its own row; pass ``voting_anchor_id`` to select one, otherwise the most recent is used.
+    """
     votes = list(dbsync_queries.query_off_chain_vote_data(data_hash=data_hash))
     if not votes:
         return None
@@ -1398,13 +1403,17 @@ def get_action_data(  # noqa: C901
     references = []
     external_updates = []
 
-    latest_vot_anchor_id = votes[-1].data_vot_anchor_id
-    latest_votes = [vote for vote in votes if vote.data_vot_anchor_id == latest_vot_anchor_id]
+    target_vot_anchor_id = (
+        voting_anchor_id if voting_anchor_id is not None else votes[-1].data_vot_anchor_id
+    )
+    target_votes = [vote for vote in votes if vote.data_vot_anchor_id == target_vot_anchor_id]
+    if not target_votes:
+        return None
 
     vote = None
     gov_action = None
     voting_anchor = None
-    for vote in latest_votes:
+    for vote in target_votes:
         if vote.auth_name:
             author = {
                 "name": vote.auth_name,
@@ -1446,11 +1455,11 @@ def get_action_data(  # noqa: C901
                 "block_id": vote.vot_anchor_block_id,
             }
 
+    # `vote` and `voting_anchor` are always present. `gov_action`, `authors`, `references` and
+    # `external_updates` are derived only from a decodable CIP body, so they can be legitimately
+    # empty (is_valid False/NULL, or a DRep anchor that carries no gov-action fields).
     if vote is None:
         msg = "vote is not expected to be None here"
-        raise RuntimeError(msg)
-    if gov_action is None:
-        msg = "gov_action is not expected to be None here"
         raise RuntimeError(msg)
     if voting_anchor is None:
         msg = "voting_anchor is not expected to be None here"
@@ -1468,7 +1477,7 @@ def get_action_data(  # noqa: C901
         is_valid=vote.data_is_valid,
         authors=list(authors),
         references=list(references),
-        gov_action_data=gov_action,
+        gov_action_data=tp.cast("dict[str, tp.Any]", gov_action or {}),
         external_updates=list(external_updates),
         voting_anchor=voting_anchor,
     )
@@ -1480,17 +1489,26 @@ def check_action_data(  # noqa: C901
     *,
     json_anchor_file: dict[str, tp.Any],
     anchor_data_hash: str,
+    voting_anchor_id: int | None = None,
 ) -> None:
-    """Compare anchor json file with off chain action's data from db-sync."""
+    """Compare anchor json file with off chain action's data from db-sync.
+
+    Only valid, CIP-conformant anchors are compared here; authors, references and external
+    updates are populated only for those. Pass ``voting_anchor_id`` when the same content backs
+    several anchors, to compare against the right ``off_chain_vote_data`` row.
+    """
     if not configuration.HAS_DBSYNC:
         return
 
     errors = []
-    db_action_data = get_action_data(data_hash=anchor_data_hash)
+    db_action_data = get_action_data(data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id)
 
     if db_action_data is None:
         msg = f"No data for action with anchor hash: {anchor_data_hash} in db-sync"
         raise AssertionError(msg)
+
+    if db_action_data.is_valid is not True:
+        errors.append(f"Expected is_valid=True, got: {db_action_data.is_valid}")
 
     if json_anchor_file != db_action_data.json:
         errors.append(
