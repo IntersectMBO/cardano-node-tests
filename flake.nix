@@ -39,6 +39,7 @@
                 nodePkgs.cardano-submit-api
                 nodePkgs.bech32
                 nodePkgs.tx-generator
+                pkgs.libfaketime
                 pkgs.bashInteractive
               ];
             };
