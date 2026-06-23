@@ -31,8 +31,6 @@ class Versions:
 
     DEFAULT_CLUSTER_ERA: tp.Final[int] = CONWAY
     DEFAULT_TX_ERA: tp.Final[int] = DEFAULT_CLUSTER_ERA
-    # Latest protocol version supported by the node
-    LAST_KNOWN_PROTOCOL_VERSION: tp.Final[int] = 11
 
     # Map protocol versions to era names
     MAP: tp.ClassVar[dict[int, str]] = {
