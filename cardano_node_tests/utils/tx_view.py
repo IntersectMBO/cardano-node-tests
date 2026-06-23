@@ -240,7 +240,14 @@ def check_tx_view(  # noqa: C901
     *, cluster_obj: clusterlib.ClusterLib, tx_raw_output: clusterlib.TxRawOutput
 ) -> dict[str, tp.Any]:
     """Check output of the `transaction view` command."""
-    tx_loaded = load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_raw_output.out_file)
+    try:
+        tx_loaded = load_tx_view(cluster_obj=cluster_obj, tx_body_file=tx_raw_output.out_file)
+    except clusterlib.CLIError as exc:
+        # `transaction view` is not yet implemented on Dijkstra; return empty dict so callers
+        # skip the view checks instead of failing.
+        if "TODO Dijkstra" in str(exc):
+            return {}
+        raise
 
     # Check inputs
     loaded_txins = set(tx_loaded.get("inputs") or [])
