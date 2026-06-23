@@ -48,7 +48,7 @@ SCHEDULING_LOG = helpers.get_env_path("SCHEDULING_LOG")
 BLOCK_PRODUCTION_DB = helpers.get_env_path("BLOCK_PRODUCTION_DB")
 
 COMMAND_ERA = os.environ.get("COMMAND_ERA") or ""
-if COMMAND_ERA not in ("", "latest", "conway"):
+if COMMAND_ERA not in ("", "latest", "conway", "dijkstra"):
     __msg = f"Invalid COMMAND_ERA: {COMMAND_ERA}"
     raise RuntimeError(__msg)
 
