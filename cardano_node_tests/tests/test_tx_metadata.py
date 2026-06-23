@@ -527,7 +527,7 @@ class TestMetadata:
 
         # Check `transaction view` command
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
-        assert json_body_metadata == tx_view_out["metadata"]
+        assert tx_view_out and json_body_metadata == tx_view_out["metadata"]
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -596,7 +596,7 @@ class TestMetadata:
 
         # Check `transaction view` command
         tx_view_out = tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
-        assert json_body_metadata == tx_view_out["metadata"]
+        assert tx_view_out and json_body_metadata == tx_view_out["metadata"]
 
         # Check TX and metadata in db-sync if available
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
