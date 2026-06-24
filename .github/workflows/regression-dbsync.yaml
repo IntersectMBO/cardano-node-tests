@@ -18,6 +18,7 @@ on:
         options:
         - conway 10
         - conway 11
+        - dijkstra 12
         default: conway 10
       markexpr:
         type: choice
