@@ -87,5 +87,5 @@ KEEP_CLUSTERS_RUNNING = helpers.is_truthy_env_var("KEEP_CLUSTERS_RUNNING")
 
 # Determine what scripts to use to start the cluster
 TESTNET_VARIANT = os.environ.get("TESTNET_VARIANT") or (
-    "testnets" if BOOTSTRAP_DIR else "conway_fast"
+    "testnets" if BOOTSTRAP_DIR else "local_fast"
 )

@@ -12,10 +12,12 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 1
 fi
 
+env_name="Unknown"
 case "${1:-}" in
   "conway")
-    CLUSTER_ERA=conway
     COMMAND_ERA=conway
+    PROTOCOL_VERSION=11
+    env_name="Conway PV11"
     ;;
   *)
     echo "Usage: $0 {conway}"
@@ -70,12 +72,13 @@ export FORBID_RESTART=true
 export NO_ARTIFACTS=true
 export CLUSTERS_COUNT=1
 export COMMAND_ERA="${COMMAND_ERA:-}"
-echo "Activated test environment for era: ${CLUSTER_ERA:-}"
+export PROTOCOL_VERSION="${PROTOCOL_VERSION:-}"
+echo "Activated test environment for '$env_name'"
 EoF
 
 # shellcheck disable=SC1091
 source "$WORKDIR/activate"
-prepare-cluster-scripts -d "$WORKDIR/${CLUSTER_ERA}_fast" -t "${CLUSTER_ERA}_fast"
+prepare-cluster-scripts -d "$WORKDIR/local_fast" -t "local_fast"
 
 # Compute a relative path only if WORKDIR is under ORIG_PWD
 if [[ "$WORKDIR" == "$ORIG_PWD"* ]]; then
@@ -93,5 +96,5 @@ echo "👉  Activate the environment:"
 echo "    source $REL_WORKDIR/activate"
 echo
 echo "👉  Start the local testnet:"
-echo "    $REL_WORKDIR/${CLUSTER_ERA}_fast/start-cluster"
+echo "    $REL_WORKDIR/local_fast/start-cluster"
 echo
