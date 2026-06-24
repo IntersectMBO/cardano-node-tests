@@ -22,46 +22,46 @@ if [ $# -ne 3 ]; then
   exit 2
 fi
 
-REPO_PATH="$(readlink -m "$1")"
-BUILD_OUTPUT_DIR="$(readlink -m "$2")"
-BIN_DIR="$(readlink -m "$3")"
+repo_path="$(readlink -m "$1")"
+build_output_dir="$(readlink -m "$2")"
+bin_dir="$(readlink -m "$3")"
 
 # Validate repo path
-if [ ! -d "$REPO_PATH" ]; then
-  err "Repo path not found: $REPO_PATH"
+if [ ! -d "$repo_path" ]; then
+  err "Repo path not found: $repo_path"
   exit 1
 fi
-if [[ ! -d "$REPO_PATH/cardano-node" && ! -d "$REPO_PATH/cardano-cli" ]]; then
+if [[ ! -d "$repo_path/cardano-node" && ! -d "$repo_path/cardano-cli" ]]; then
   err "Given path doesn't look like the cardano-node repo."
   exit 1
 fi
 
 # Build binaries
-cd "$REPO_PATH" >/dev/null
-mkdir -p "$BUILD_OUTPUT_DIR"
+cd "$repo_path" >/dev/null
+mkdir -p "$build_output_dir"
 
-echo "👉  Building node binaries in repo: $REPO_PATH"
-nix build .#cardano-node -o "$BUILD_OUTPUT_DIR/node"
-echo "👉  Building cli binaries in repo: $REPO_PATH"
-nix build .#cardano-cli -o "$BUILD_OUTPUT_DIR/cli"
-echo "👉  Building submit-api binaries in repo: $REPO_PATH"
-nix build .#cardano-submit-api -o "$BUILD_OUTPUT_DIR/submit-api"
-echo "👉  Building bech32 binaries in repo: $REPO_PATH"
-nix build .#bech32 -o "$BUILD_OUTPUT_DIR/bech32"
-echo "👉  Building tx-generator binaries in repo: $REPO_PATH"
-nix build .#tx-generator -o "$BUILD_OUTPUT_DIR/tx-generator"
+echo "👉  Building node binaries in repo: $repo_path"
+nix build .#cardano-node -o "$build_output_dir/node"
+echo "👉  Building cli binaries in repo: $repo_path"
+nix build .#cardano-cli -o "$build_output_dir/cli"
+echo "👉  Building submit-api binaries in repo: $repo_path"
+nix build .#cardano-submit-api -o "$build_output_dir/submit-api"
+echo "👉  Building bech32 binaries in repo: $repo_path"
+nix build .#bech32 -o "$build_output_dir/bech32"
+echo "👉  Building tx-generator binaries in repo: $repo_path"
+nix build .#tx-generator -o "$build_output_dir/tx-generator"
 
 # Create symlinks
-echo "👉  Updating symlinks to built binaries in: $BIN_DIR"
-mkdir -p "$BIN_DIR"
+echo "👉  Updating symlinks to built binaries in: $bin_dir"
+mkdir -p "$bin_dir"
 
-rm -f "$BIN_DIR"/cardano-node
-rm -f "$BIN_DIR"/cardano-cli
-rm -f "$BIN_DIR"/cardano-submit-api
-rm -f "$BIN_DIR"/bech32
-rm -f "$BIN_DIR"/tx-generator
-ln -s "$BUILD_OUTPUT_DIR/node/bin/cardano-node" "$BIN_DIR/cardano-node"
-ln -s "$BUILD_OUTPUT_DIR/cli/bin/cardano-cli" "$BIN_DIR/cardano-cli"
-ln -s "$BUILD_OUTPUT_DIR/submit-api/bin/cardano-submit-api" "$BIN_DIR/cardano-submit-api"
-ln -s "$BUILD_OUTPUT_DIR/bech32/bin/bech32" "$BIN_DIR/bech32"
-ln -s "$BUILD_OUTPUT_DIR/tx-generator/bin/tx-generator" "$BIN_DIR/tx-generator"
+rm -f "$bin_dir"/cardano-node
+rm -f "$bin_dir"/cardano-cli
+rm -f "$bin_dir"/cardano-submit-api
+rm -f "$bin_dir"/bech32
+rm -f "$bin_dir"/tx-generator
+ln -s "$build_output_dir/node/bin/cardano-node" "$bin_dir/cardano-node"
+ln -s "$build_output_dir/cli/bin/cardano-cli" "$bin_dir/cardano-cli"
+ln -s "$build_output_dir/submit-api/bin/cardano-submit-api" "$bin_dir/cardano-submit-api"
+ln -s "$build_output_dir/bech32/bin/bech32" "$bin_dir/bech32"
+ln -s "$build_output_dir/tx-generator/bin/tx-generator" "$bin_dir/tx-generator"

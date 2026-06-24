@@ -3,13 +3,13 @@
 
 set -euo pipefail
 
-SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
-STATE_CLUSTER="${SOCKET_PATH%/*}"
-INSTANCE_NUM="${STATE_CLUSTER#*state-cluster}"
-DATABASE_NAME="dbsync${INSTANCE_NUM}"
+socket_path="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+state_cluster="${socket_path%/*}"
+instance_num="${state_cluster#*state-cluster}"
+database_name="dbsync${instance_num}"
 
 export PGHOST="${PGHOST:-localhost}"
 export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-postgres}"
 
-psql -A -t -d "$DATABASE_NAME" -c "SELECT block_no FROM block ORDER BY ID DESC LIMIT 1;"
+psql -A -t -d "$database_name" -c "SELECT block_no FROM block ORDER BY ID DESC LIMIT 1;"

@@ -13,16 +13,16 @@
 
 set -euo pipefail
 
-TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 
 export NUM_POOLS="${NUM_POOLS:-"10"}" CLUSTERS_COUNT=1 TEST_THREADS=0
 
 if [ -n "${INTERACTIVE:-""}" ]; then
   export ROLLBACK_PAUSE=1 TESTNET_VARIANT="mainnet_fast" PYTEST_ARGS="-s -k test_consensus_reached"
-  "$TOP_DIR/runner/regression.sh"
+  "$top_dir/runner/regression.sh"
 else
   export TESTNET_VARIANT="local_fast" PYTEST_ARGS="-k test_permanent_fork"
-  "$TOP_DIR/runner/regression.sh" || exit "$?"
+  "$top_dir/runner/regression.sh" || exit "$?"
   export TESTNET_VARIANT="mainnet_fast" PYTEST_ARGS="-k test_consensus_reached"
-  "$TOP_DIR/runner/regression.sh"
+  "$top_dir/runner/regression.sh"
 fi

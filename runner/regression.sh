@@ -14,6 +14,7 @@ df -h .
 retval=0
 
 REPODIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine repo dir, exiting." >&2; exit 1; }
+readonly REPODIR
 cd "$REPODIR"
 
 export WORKDIR="$REPODIR/run_workdir"
@@ -28,9 +29,9 @@ if is_venv_active; then
 fi
 
 # Refuse to start if another testrun is already using this workdir.
-# `LOCK_FD` is set so background processes (e.g. monitor_system) can drop the
+# `lock_fd` is set so background processes (e.g. monitor_system) can drop the
 # inherited lock FD and not keep the lock alive if they outlive this script.
-acquire_workdir_lock "$WORKDIR" LOCK_FD || exit 1
+acquire_workdir_lock "$WORKDIR" lock_fd || exit 1
 
 # shellcheck disable=SC1091
 . runner/stop_cluster_instances.sh
@@ -237,8 +238,8 @@ fi
 monitor_system() {
   # Drop the inherited workdir lock FD so this background subshell does not
   # keep the lock held if it outlives the parent script.
-  if [ -n "${LOCK_FD:-}" ]; then
-    exec {LOCK_FD}>&-
+  if [ -n "${lock_fd:-}" ]; then
+    exec {lock_fd}>&-
   fi
 
   monitor_log="${WORKDIR}/monitor.log"
@@ -265,17 +266,17 @@ monitor_system() {
 
 # start monitor in background
 monitor_system &
-MON_PID=$!
+mon_pid=$!
 
 # Kill the sleep child first via pkill -P; otherwise the bash subshell stays blocked
 # in the foreground sleep and SIGTERM is only handled after sleep returns.
 # shellcheck disable=SC2329
 kill_monitor() {
-  if [ -n "${MON_PID:-}" ]; then
-    echo "Stopping monitor with PID $MON_PID"
-    pkill -P "$MON_PID" 2>/dev/null || true
-    kill_and_wait "$MON_PID" || true
-    unset MON_PID
+  if [ -n "${mon_pid:-}" ]; then
+    echo "Stopping monitor with PID $mon_pid"
+    pkill -P "$mon_pid" 2>/dev/null || true
+    kill_and_wait "$mon_pid" || true
+    unset mon_pid
   fi
 }
 

@@ -9,26 +9,26 @@ if [ $# -ne 1 ]; then
   usage >&2
   exit 2
 fi
-REPO_PATH="$(readlink -f "$1")"
+repo_path="$(readlink -f "$1")"
 
-TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
-cd "$TOP_DIR"
+top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+cd "$top_dir"
 
 # shellcheck disable=SC1091
-. "$TOP_DIR/scripts/common.sh"
+. "$top_dir/scripts/common.sh"
 
 # Activate python virtual environment
 if ! is_venv_active; then
-  if [ ! -e "$TOP_DIR/.venv/bin/activate" ]; then
-    err "Virtual environment not found at: $TOP_DIR/.venv"
+  if [ ! -e "$top_dir/.venv/bin/activate" ]; then
+    err "Virtual environment not found at: $top_dir/.venv"
     exit 1
   fi
   # shellcheck disable=SC1091
-  . "$TOP_DIR/.venv/bin/activate"
+  . "$top_dir/.venv/bin/activate"
 fi
 
 # check that correct virtual env is activated
-assert_correct_venv "$TOP_DIR"
+assert_correct_venv "$top_dir"
 
 filter_out_nix
 
@@ -43,15 +43,15 @@ then
 fi
 
 # Validate repo path
-if [ ! -d "$REPO_PATH" ]; then
-  err "Repo path not found: $REPO_PATH"
+if [ ! -d "$repo_path" ]; then
+  err "Repo path not found: $repo_path"
   exit 1
 fi
-if [[ ! -f "$REPO_PATH/pyproject.toml" && ! -f "$REPO_PATH/setup.cfg" && ! -f "$REPO_PATH/setup.py" ]]; then
+if [[ ! -f "$repo_path/pyproject.toml" && ! -f "$repo_path/setup.cfg" && ! -f "$repo_path/setup.py" ]]; then
   err "Given path doesn't look like python package."
   exit 1
 fi
 
-echo "Installing editable from: $REPO_PATH"
-cd "$REPO_PATH"
+echo "Installing editable from: $repo_path"
+cd "$repo_path"
 uv pip install -e . --config-setting editable_mode=compat

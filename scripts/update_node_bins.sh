@@ -13,11 +13,11 @@ if [ $# -ne 1 ]; then
   usage >&2
   exit 2
 fi
-REPO_PATH="$(readlink -f "$1")"
+repo_path="$(readlink -f "$1")"
 
-TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
-BUILD_OUTPUT_DIR="$REPO_PATH/.nix_tests_bins"
-BIN_DIR="$TOP_DIR/.bin_node"
+top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+build_output_dir="$repo_path/.nix_tests_bins"
+bin_dir="$top_dir/.bin_node"
 
 # Call the generic build and link script
-"${0%/*}/build_and_link_node_bins.sh" "$REPO_PATH" "$BUILD_OUTPUT_DIR" "$BIN_DIR"
+"${0%/*}/build_and_link_node_bins.sh" "$repo_path" "$build_output_dir" "$bin_dir"

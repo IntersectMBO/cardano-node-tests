@@ -2,6 +2,7 @@
 
 # Build all required binaries into $WORKDIR/*-build<postfix>
 cardano_bins_build_all() {
+  : "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
   local node_rev="${1:?}"
   local cli_rev="${2:-}"
   local node_bindir_postfix="${3:-}"
@@ -42,6 +43,7 @@ cardano_bins_build_all() {
 
 # Print PATH to prepend based on previously built outputs
 cardano_bins_print_path_prepend() {
+  : "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
   local cli_rev="${1:-}"
   local node_bindir_postfix="${2:-}"
   local origpwd="$PWD"
