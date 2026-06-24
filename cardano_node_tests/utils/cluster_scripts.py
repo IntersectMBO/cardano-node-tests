@@ -97,21 +97,22 @@ fi
 
 
 def _inject_time_drift_hook(content: str, pool_num: int) -> str:
-    """Inject a conditional clock-skew bash block before exec in pool wrapper scripts.
+    """Inject a conditional clock-skew bash block into pool wrapper scripts.
 
-    Activated only when TIME_DRIFT_POOL=<pool_num> and TIME_DRIFT_SPEC are set at
-    cluster start time. Default-off: unset env vars leave behaviour unchanged.
+    Replaces the pre-run setup placeholder in the cardonnay template. Activated
+    only when TIME_DRIFT_POOL=<pool_num> and TIME_DRIFT_SPEC are set at cluster
+    start time. Default-off: unset env vars leave behaviour unchanged.
 
     Raises:
-        ValueError: When the expected exec marker is absent from the template.
+        ValueError: When the pre-run setup placeholder is absent from the template.
     """
-    marker = "exec cardano-node run"
+    marker = "# --- Placeholder for any pre-run setup ---"
     if marker not in content:
-        msg = f"Cannot inject TIME_DRIFT hook: '{marker}' not found in pool{pool_num} wrapper."
+        msg = f"TIME_DRIFT hook: pre-run placeholder missing in pool{pool_num} wrapper."
         raise ValueError(msg)
 
     hook = _TIME_DRIFT_HOOK.replace("%%POOL_NUM%%", str(pool_num))
-    return content.replace(marker, f"{hook}{marker}", 1)
+    return content.replace(marker, hook.rstrip("\n"), 1)
 
 
 class CustomCardonnayScripts(cardonnay_local.LocalScripts):
