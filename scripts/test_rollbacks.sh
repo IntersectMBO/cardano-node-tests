@@ -21,7 +21,7 @@ if [ -n "${INTERACTIVE:-""}" ]; then
   export ROLLBACK_PAUSE=1 TESTNET_VARIANT="mainnet_fast" PYTEST_ARGS="-s -k test_consensus_reached"
   "$TOP_DIR/runner/regression.sh"
 else
-  export TESTNET_VARIANT="conway_fast" PYTEST_ARGS="-k test_permanent_fork"
+  export TESTNET_VARIANT="local_fast" PYTEST_ARGS="-k test_permanent_fork"
   "$TOP_DIR/runner/regression.sh" || exit "$?"
   export TESTNET_VARIANT="mainnet_fast" PYTEST_ARGS="-k test_consensus_reached"
   "$TOP_DIR/runner/regression.sh"

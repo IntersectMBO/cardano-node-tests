@@ -225,7 +225,7 @@ make cluster-scripts
 make start-cluster
 ```
 
-The default cluster variant is `conway_fast`. Override with `TESTNET_VARIANT=<variant>`, e.g. `make cluster-scripts TESTNET_VARIANT=conway_slow`.
+The default cluster variant is `local_fast`. Override with `TESTNET_VARIANT=<variant>`, e.g. `make cluster-scripts TESTNET_VARIANT=local_slow`.
 
 Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
 

@@ -35,24 +35,26 @@ class TestNegative:
     """Transaction tests that are expected to fail."""
 
     @pytest.fixture(scope="class")
-    def skip_on_last_era(self) -> None:
-        last_known_era_name = VERSIONS.MAP[VERSIONS.LAST_KNOWN_PROTOCOL_VERSION]
-        if VERSIONS.cluster_era_name == last_known_era_name:
+    def skip_on_wrong_future_era(self) -> None:
+        future_era_name = VERSIONS.MAP.get(VERSIONS.cluster_era + 1)
+        if future_era_name is None:
             pytest.skip(
-                f"doesn't run with the latest cluster era ({VERSIONS.cluster_era_name})",
+                "no known era with higher protocol version than the current cluster era "
+                f"({VERSIONS.cluster_era_name})"
             )
-
-    @pytest.fixture(scope="class")
-    def skip_unknown_last_era(self) -> None:
-        last_known_era_name = VERSIONS.MAP[VERSIONS.LAST_KNOWN_PROTOCOL_VERSION]
-        if not clusterlib_utils.cli_has(last_known_era_name):
-            pytest.skip(f"`{last_known_era_name} transaction build-raw` command is not available")
+        current_era_name = VERSIONS.MAP[VERSIONS.cluster_era]
+        if current_era_name == future_era_name:
+            pytest.skip(
+                f"current cluster era ({current_era_name}) "
+                f"is the same as the future era ({future_era_name})"
+            )
+        if not clusterlib_utils.cli_has(future_era_name):
+            pytest.skip(f"`{future_era_name} transaction build-raw` command is not available")
 
     @pytest.fixture
     def cluster_wrong_tx_era(
         self,
-        skip_on_last_era: None,  # noqa: ARG002
-        skip_unknown_last_era: None,  # noqa: ARG002
+        skip_on_wrong_future_era: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,  # noqa: ARG002
     ) -> clusterlib.ClusterLib:
         # The `cluster` argument (representing the `cluster` fixture) needs to be present

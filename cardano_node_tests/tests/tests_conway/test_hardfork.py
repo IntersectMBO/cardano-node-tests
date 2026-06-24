@@ -71,10 +71,11 @@ class TestHardfork:
         prot_ver_init = clusterlib_utils.get_protocol_version(cluster_obj=cluster)
         prot_ver_target = prot_ver_init + 1
 
-        if prot_ver_init >= VERSIONS.LAST_KNOWN_PROTOCOL_VERSION:
+        if VERSIONS.MAP.get(prot_ver_target) is None:
             pytest.skip(
-                "The major protocol version needs to be at most "
-                f"{VERSIONS.LAST_KNOWN_PROTOCOL_VERSION - 1}."
+                "The target protocol version needs to be known. "
+                f"Current protocol version: {prot_ver_init}, "
+                f"target protocol version: {prot_ver_target}."
             )
 
         with open(

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-TESTNET_VARIANT ?= conway_fast
+TESTNET_VARIANT ?= local_fast
 VENV := .venv
 
 .PHONY: .check-venv-exists
@@ -62,17 +62,17 @@ reinstall-editable: ## Reinstall python package in editable mode from a given gi
 	@./scripts/reinstall_editable.sh "$(repo)"
 
 .PHONY: test-env
-test-env: ## Set up test environment (variant: TESTNET_VARIANT=conway_fast)
-	@./scripts/setup_test_env.sh $(TESTNET_VARIANT:%_fast=%)
+test-env: ## Set up test environment (conway era, local_fast scripts)
+	@./scripts/setup_test_env.sh conway
 
 # prepare cluster scripts for the given variant
 .PHONY: cluster-scripts
-cluster-scripts: .check-venv-activated ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=conway_fast)
+cluster-scripts: .check-venv-activated ## Prepare local testnet cluster scripts (variant: TESTNET_VARIANT=local_fast)
 	prepare-cluster-scripts -c -d dev_workdir/$(TESTNET_VARIANT) -t $(TESTNET_VARIANT)
 
 # start the local testnet cluster
 .PHONY: start-cluster
-start-cluster: .check-venv-activated ## Start local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+start-cluster: .check-venv-activated ## Start local testnet cluster (variant: TESTNET_VARIANT=local_fast)
 	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/start-cluster" ]; then \
 		echo "Error: dev_workdir/$(TESTNET_VARIANT)/start-cluster not found." >&2; \
 		echo "Run 'make cluster-scripts' first." >&2; \
@@ -82,7 +82,7 @@ start-cluster: .check-venv-activated ## Start local testnet cluster (variant: TE
 
 # stop the local testnet cluster
 .PHONY: stop-cluster
-stop-cluster: .check-venv-activated ## Stop local testnet cluster (variant: TESTNET_VARIANT=conway_fast)
+stop-cluster: .check-venv-activated ## Stop local testnet cluster (variant: TESTNET_VARIANT=local_fast)
 	@if [ ! -x "dev_workdir/$(TESTNET_VARIANT)/stop-cluster" ]; then \
 		echo "Error: dev_workdir/$(TESTNET_VARIANT)/stop-cluster not found." >&2; \
 		echo "Run 'make cluster-scripts' first." >&2; \

@@ -53,9 +53,9 @@ if [ "$1" = "step1" ]; then
   fi
 
   if is_truthy "${CI_BYRON_CLUSTER:-}"; then
-    : "${TESTNET_VARIANT:="${CLUSTER_ERA}_slow"}"
+    : "${TESTNET_VARIANT:="local_slow"}"
   else
-    : "${TESTNET_VARIANT:="${CLUSTER_ERA}_fast"}"
+    : "${TESTNET_VARIANT:="local_fast"}"
   fi
   export TESTNET_VARIANT
 

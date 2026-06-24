@@ -69,9 +69,10 @@ if [ -n "${CLUSTERS_COUNT:-}" ]; then
   export CLUSTERS_COUNT
 fi
 
-CLUSTER_ERA="conway"
 if [ "${CI_CLUSTER_ERA:-}" = "conway 11" ]; then
   export PROTOCOL_VERSION=11
+elif [ "${CI_CLUSTER_ERA:-}" = "dijkstra 12" ]; then
+  export PROTOCOL_VERSION=12
 fi
 
 # Decrease the number of tests per cluster if we are using the "disk" (LMDB) UTxO backend to avoid
@@ -83,7 +84,7 @@ fi
 if [ -n "${TESTNET_VARIANT:-}" ]; then
   export TESTNET_VARIANT
 elif is_truthy "${CI_BYRON_CLUSTER:-}"; then
-  export TESTNET_VARIANT="${CLUSTER_ERA:?}_slow"
+  export TESTNET_VARIANT="local_slow"
 fi
 
 if [ "${CI_CONSENSUS_MODE:-}" = "Genesis" ]; then

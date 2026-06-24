@@ -53,7 +53,8 @@ class TestDBSync:
         "drep_distr",
         "drep_hash",
         "drep_registration",
-        "epoch",
+        "epoch_finalized",
+        "epoch_sync_enabled",
         "epoch_param",
         "epoch_state",
         "epoch_stake",
@@ -109,8 +110,8 @@ class TestDBSync:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.dbsync < version.parse("12.0.1"),
-        reason="needs db-sync version >= 12.0.1",
+        VERSIONS.dbsync < version.parse("13.7.2"),
+        reason="needs db-sync version >= 13.7.2",
     )
     @pytest.mark.testnets
     @pytest.mark.smoke

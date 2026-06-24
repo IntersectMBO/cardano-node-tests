@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository
-      uses: actions/checkout@v6.0.3
+      uses: actions/checkout@v7.0.0
       with:
         persist-credentials: false
     - name: Set up python
       id: setup-python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v6.2.0
       with:
         python-version: '3.13'
     - name: Install uv
@@ -30,7 +30,7 @@ jobs:
         enable-cache: true
     - name: Load cached venv
       id: cached-uv-dependencies
-      uses: actions/cache@v5
+      uses: actions/cache@v5.0.5
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock') }}
@@ -38,7 +38,7 @@ jobs:
       run: uv sync --group dev
     - name: Load cached pre-commit env
       id: cached-pre-commit
-      uses: actions/cache@v5
+      uses: actions/cache@v5.0.5
       with:
         path: ~/.cache/pre-commit
         key: pre-commit-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}

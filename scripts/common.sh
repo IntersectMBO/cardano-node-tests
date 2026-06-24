@@ -30,7 +30,9 @@ is_venv_active() {
 # Usage: acquire_workdir_lock <workdir> [<fd_var_name>]
 acquire_workdir_lock() {
   local workdir="${1:?acquire_workdir_lock requires a workdir argument}"
-  local out_var="${2:-}"
+  # Internal local is prefixed with `_aw_` to avoid shadowing the caller's
+  # output variable, which is passed by name.
+  local _aw_out_var="${2:-}"
   local lockfile="${workdir}.lock"
   local lockfd
 
@@ -53,8 +55,8 @@ acquire_workdir_lock() {
     return 1
   fi
 
-  if [ -n "$out_var" ]; then
-    printf -v "$out_var" '%s' "$lockfd"
+  if [ -n "$_aw_out_var" ]; then
+    printf -v "$_aw_out_var" '%s' "$lockfd"
   fi
 }
 
