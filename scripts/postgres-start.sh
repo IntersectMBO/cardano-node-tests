@@ -4,12 +4,12 @@ set -Eeuo pipefail
 trap 'echo "Error at line $LINENO"' ERR
 
 usage() {
-  echo "Usage: $(basename "$0") [-k|--kill] [-h|--help] POSTGRES_DIR"
+  echo "Usage: $(basename "$0") [-k|--kill] [-h|--help] postgres_dir"
   echo ""
   echo "Start a PostgreSQL instance in the given directory."
   echo ""
   echo "Arguments:"
-  echo "  POSTGRES_DIR  Path to the postgres data directory"
+  echo "  postgres_dir  Path to the postgres data directory"
   echo ""
   echo "Options:"
   echo "  -k, --kill  Kill running postgres on PGPORT and clear data before starting"
@@ -117,52 +117,52 @@ kill_postgres() {
   rm -f "$pg_dir"/.*.lock
 }
 
-KILL_EXISTING=""
-POSTGRES_DIR=""
+kill_existing=""
+postgres_dir=""
 
 for arg in "$@"; do
   case "$arg" in
-    -k|--kill) KILL_EXISTING=1 ;;
+    -k|--kill) kill_existing=1 ;;
     -h|--help) usage 0 ;;
     -*)
       echo "Error: Unknown option '$arg'" >&2
       usage 2
       ;;
     *)
-      if [ -n "$POSTGRES_DIR" ]; then
+      if [ -n "$postgres_dir" ]; then
         echo "Error: Unexpected argument '$arg'" >&2
         usage 2
       fi
-      POSTGRES_DIR="$arg"
+      postgres_dir="$arg"
       ;;
   esac
 done
 
-if [ -z "$POSTGRES_DIR" ]; then
-  echo "Error: POSTGRES_DIR is required" >&2
+if [ -z "$postgres_dir" ]; then
+  echo "Error: postgres_dir is required" >&2
   usage 2
 fi
 
-POSTGRES_DIR="$(readlink -m "$POSTGRES_DIR")"
+postgres_dir="$(readlink -m "$postgres_dir")"
 
-# validate POSTGRES_DIR basename matches expected postgres directory naming
-pg_basename="$(basename "$POSTGRES_DIR")"
+# validate postgres_dir basename matches expected postgres directory naming
+pg_basename="$(basename "$postgres_dir")"
 if [[ ! "$pg_basename" =~ postgres ]]; then
-  echo "Error: POSTGRES_DIR basename '$pg_basename' must match '*postgres*'" >&2
+  echo "Error: postgres_dir basename '$pg_basename' must match '*postgres*'" >&2
   exit 1
 fi
 
-parent_dir="$(dirname "$POSTGRES_DIR")"
+parent_dir="$(dirname "$postgres_dir")"
 if [ ! -d "$parent_dir" ]; then
   echo "Error: parent directory '$parent_dir' does not exist" >&2
   exit 1
 fi
-if [ ! -w "$parent_dir" ] && [ ! -d "$POSTGRES_DIR" ]; then
+if [ ! -w "$parent_dir" ] && [ ! -d "$postgres_dir" ]; then
   echo "Error: parent directory '$parent_dir' is not writable" >&2
   exit 1
 fi
-if [ -d "$POSTGRES_DIR" ] && [ ! -w "$POSTGRES_DIR" ]; then
-  echo "Error: POSTGRES_DIR '$POSTGRES_DIR' is not writable" >&2
+if [ -d "$postgres_dir" ] && [ ! -w "$postgres_dir" ]; then
+  echo "Error: postgres_dir '$postgres_dir' is not writable" >&2
   exit 1
 fi
 
@@ -172,22 +172,22 @@ export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-postgres}"
 
 # kill running postgres and clear its data
-if [ -n "$KILL_EXISTING" ]; then
-  kill_postgres "$POSTGRES_DIR" "$PGPORT"
+if [ -n "$kill_existing" ]; then
+  kill_postgres "$postgres_dir" "$PGPORT"
 fi
 
 # setup db
-if [ ! -e "$POSTGRES_DIR/data" ]; then
-  mkdir -p "$POSTGRES_DIR/data"
-  initdb -D "$POSTGRES_DIR/data" --encoding=UTF8 --locale=en_US.UTF-8 -A trust -U "$PGUSER"
+if [ ! -e "$postgres_dir/data" ]; then
+  mkdir -p "$postgres_dir/data"
+  initdb -D "$postgres_dir/data" --encoding=UTF8 --locale=en_US.UTF-8 -A trust -U "$PGUSER"
 fi
 
 # start postgres
-postgres -D "$POSTGRES_DIR/data" -k "$POSTGRES_DIR" > "$POSTGRES_DIR/postgres.log" 2>&1 &
-PSQL_PID="$!"
-echo "$PSQL_PID" > "$POSTGRES_DIR/postgres.pid"
+postgres -D "$postgres_dir/data" -k "$postgres_dir" > "$postgres_dir/postgres.log" 2>&1 &
+psql_pid="$!"
+echo "$psql_pid" > "$postgres_dir/postgres.pid"
 
 sleep 5
-cat "$POSTGRES_DIR/postgres.log"
+cat "$postgres_dir/postgres.log"
 echo
-ps -fp "$PSQL_PID"
+ps -fp "$psql_pid"

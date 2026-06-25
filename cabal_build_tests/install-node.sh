@@ -11,8 +11,8 @@
 # Please note: 'source ~/.bashrc' cmd is not used because Docker runs this script as subscript
 
 # Versions
-GHC_VERSION="9.6.7"
-CABAL_VERSION="3.12.1.0"
+readonly GHC_VERSION="9.6.7"
+readonly CABAL_VERSION="3.12.1.0"
 
 echo ""
 
@@ -82,8 +82,8 @@ elif [[ "$distro" == "ubuntu" ]]; then
 fi
 
 # Version of iohk-nix
-IOHKNIX_VERSION="$(curl "https://raw.githubusercontent.com/IntersectMBO/cardano-node/$GIT_OBJECT/flake.lock" | jq -r '.nodes.iohkNix.locked.rev')"
-echo "iohk-nix version: $IOHKNIX_VERSION"
+iohknix_version="$(curl "https://raw.githubusercontent.com/IntersectMBO/cardano-node/$GIT_OBJECT/flake.lock" | jq -r '.nodes.iohkNix.locked.rev')"
+echo "iohk-nix version: $iohknix_version"
 
 # Install GHCup - the main installer for Haskell
 echo "Install GHCup"
@@ -118,12 +118,12 @@ echo "Install Libsodium"
 mkdir -p ~/src || exit 1
 cd ~/src || exit 1
 
-LIBSODIUM_VERSION="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock" | jq -r '.nodes.sodium.original.rev')"
-echo "Using sodium version: $LIBSODIUM_VERSION"
+libsodium_version="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$iohknix_version/flake.lock" | jq -r '.nodes.sodium.original.rev')"
+echo "Using sodium version: $libsodium_version"
 
 git clone https://github.com/IntersectMBO/libsodium
 cd libsodium || exit 1
-git checkout "$LIBSODIUM_VERSION"
+git checkout "$libsodium_version"
 ./autogen.sh
 ./configure
 make
@@ -141,10 +141,10 @@ echo "Install Secp256k1"
 mkdir -p ~/src || exit 1
 cd ~/src || exit 1
 
-SECP256K1_VERSION="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock" | jq -r '.nodes.secp256k1.original.ref')"
-echo "Using secp256k1 version: ${SECP256K1_VERSION}"
+secp256k1_version="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$iohknix_version/flake.lock" | jq -r '.nodes.secp256k1.original.ref')"
+echo "Using secp256k1 version: ${secp256k1_version}"
 
-git clone --depth 1 --branch "${SECP256K1_VERSION}" https://github.com/bitcoin-core/secp256k1
+git clone --depth 1 --branch "${secp256k1_version}" https://github.com/bitcoin-core/secp256k1
 cd secp256k1 || exit 1
 ./autogen.sh
 ./configure --enable-module-schnorrsig --enable-experimental
@@ -158,10 +158,10 @@ echo "Install BLST"
 mkdir -p ~/src || exit 1
 cd ~/src || exit 1
 
-BLST_VERSION="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$IOHKNIX_VERSION/flake.lock" | jq -r '.nodes.blst.original.ref')"
-echo "Using blst version: ${BLST_VERSION}"
+blst_version="$(curl "https://raw.githubusercontent.com/input-output-hk/iohk-nix/$iohknix_version/flake.lock" | jq -r '.nodes.blst.original.ref')"
+echo "Using blst version: ${blst_version}"
 
-git clone --depth 1 --branch "${BLST_VERSION}" https://github.com/supranational/blst
+git clone --depth 1 --branch "${blst_version}" https://github.com/supranational/blst
 cd blst || exit 1
 ./build.sh
 cat > libblst.pc << EOF
@@ -173,7 +173,7 @@ includedir=\${prefix}/include
 Name: libblst
 Description: Multilingual BLS12-381 signature library
 URL: https://github.com/supranational/blst
-Version: ${BLST_VERSION#v}
+Version: ${blst_version#v}
 Cflags: -I\${includedir}
 Libs: -L\${libdir} -lblst
 EOF
@@ -192,14 +192,14 @@ cd cardano-node || exit 1
 git fetch --all --recurse-submodules --tags
 
 # Checkout with prechecks for git object and git object type
-OBJ_TYPE="$(git cat-file -t "$GIT_OBJECT")"
-if [[ "$OBJ_TYPE" != "commit" && "$OBJ_TYPE" != "tag" ]]; then
-  >&2 echo "'$OBJ_TYPE' does not refer to a commit/tag."
+obj_type="$(git cat-file -t "$GIT_OBJECT")"
+if [[ "$obj_type" != "commit" && "$obj_type" != "tag" ]]; then
+  >&2 echo "'$obj_type' does not refer to a commit/tag."
   exit 1
 fi
 
 git checkout "$GIT_OBJECT"
-GIT_REV=$(git rev-parse HEAD)
+git_rev=$(git rev-parse HEAD)
 
 # Configure build options
 echo "Configure build options"
@@ -216,13 +216,13 @@ cp -p "$(cabal list-bin cardano-cli)" ~/.local/bin/
 
 # Verify installation
 echo "Verify 'cardano-cli' is installed"
-if ! [[ "$(cardano-cli --version | tail -n 1)" == *"$GIT_REV"* ]]; then
+if ! [[ "$(cardano-cli --version | tail -n 1)" == *"$git_rev"* ]]; then
   >&2 echo "'$(cardano-cli --version)' failed"
   exit 1
 fi
 
 echo "Verify 'cardano-node' is installed"
-if ! [[ "$(cardano-node --version | tail -n 1)" == *"$GIT_REV"* ]]; then
+if ! [[ "$(cardano-node --version | tail -n 1)" == *"$git_rev"* ]]; then
   >&2 echo "'$(cardano-node --version)' failed"
   exit 1
 fi

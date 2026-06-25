@@ -2,6 +2,7 @@
 
 # Build cardano-cli from the standalone repo into $WORKDIR/cardano-cli-build<postfix>
 cardano_cli_build() {
+  : "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
   local cli_rev="${1:?}"
   local node_bindir_postfix="${2:-}"
   local origpwd="$PWD"
@@ -27,6 +28,7 @@ cardano_cli_build() {
 
 # Print PATH to prepend for the standalone cardano-cli build output.
 cardano_cli_print_path_prepend() {
+  : "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
   local node_bindir_postfix="${1:-}"
   local origpwd="$PWD"
 

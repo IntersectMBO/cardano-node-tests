@@ -7,8 +7,8 @@ if [ -z "$CARDANO_NODE_SOCKET_PATH" ]; then
   exit 1
 fi
 
-BOOTSRAP_DIR="${CARDANO_NODE_SOCKET_PATH%/*}"
-cd "$BOOTSRAP_DIR" || exit 1
+bootstrap_dir="${CARDANO_NODE_SOCKET_PATH%/*}"
+cd "$bootstrap_dir" || exit 1
 
 rm -f nodefifo
 mkfifo nodefifo

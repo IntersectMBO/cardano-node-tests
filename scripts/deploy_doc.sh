@@ -2,24 +2,24 @@
 
 set -euo pipefail
 
-TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
-cd "$TOP_DIR"
+top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+cd "$top_dir"
 
-DOC_SRC="src_docs"
+doc_src="src_docs"
 
 unset GITHUB_TOKEN
 
-# check that "$DOC_SRC" dir exists
-if [ ! -d "$DOC_SRC" ]; then
-    echo "The '$DOC_SRC' dir doesn't exist, are you in the right directory?"
+# check that "$doc_src" dir exists
+if [ ! -d "$doc_src" ]; then
+    echo "The '$doc_src' dir doesn't exist, are you in the right directory?"
     exit 1
 fi
 
 # shellcheck disable=SC1091
-. "$TOP_DIR/scripts/common.sh"
+. "$top_dir/scripts/common.sh"
 
 # check that correct virtual env is activated
-assert_correct_venv "$TOP_DIR"
+assert_correct_venv "$top_dir"
 
 # check that current branch is "master"
 cur_branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -38,8 +38,8 @@ fi
 make build-doc
 
 # drop changes made automatically by `make build-doc`
-if ! git diff-index --quiet HEAD -- "$DOC_SRC"; then
-  git stash -- "$DOC_SRC"
+if ! git diff-index --quiet HEAD -- "$doc_src"; then
+  git stash -- "$doc_src"
   git stash drop
 fi
 
@@ -51,7 +51,7 @@ git reset --hard upstream/master
 
 # copy generated documention to 'docs' dir
 rm -rf docs/*
-cp -aT "$DOC_SRC"/build/html docs
+cp -aT "$doc_src"/build/html docs
 
 # stage changes
 git add docs
