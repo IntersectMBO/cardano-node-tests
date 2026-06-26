@@ -1,248 +1,253 @@
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
-trap 'echo "Error at line $LINENO"' ERR
+trap 'echo "Error at line $LINENO in ${BASH_SOURCE[0]}" >&2' ERR
 
-TESTNET_DIR="${1:?"Testnet dir needed"}"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
-SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
-STATE_CLUSTER="${SOCKET_PATH%/*}"
-# Fail if PWD is STATE_CLUSTER, as STATE_CLUSTER will be deleted
-if [ "$PWD" = "$STATE_CLUSTER" ]; then
-  echo "Please run this script from outside of '$STATE_CLUSTER'" >&2
-  exit 1
-fi
-STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
-SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
-START_CLUSTER_LOG="${STATE_CLUSTER}/start-cluster.log"
-START_CLUSTER_STATUS="${STATE_CLUSTER}/status_started"
+readonly INSTANCE_NUM="%%INSTANCE_NUM%%"
+readonly RELAY1_EKG="%%EKG_PORT_RELAY1%%"
+readonly RELAY1_PROMETHEUS="%%PROMETHEUS_PORT_RELAY1%%"
+readonly WEBSERVER_PORT="%%WEBSERVER_PORT%%"
 
-INSTANCE_NUM="%%INSTANCE_NUM%%"
-if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
-  echo "CARDANO_NODE_SOCKET_PATH must be set to a path containing 'state-cluster${INSTANCE_NUM}', line $LINENO" >&2
-  exit 1
-fi
+initialize_globals() {
+  TESTNET_DIR="${1:?"Testnet dir needed"}"
+  readonly TESTNET_DIR
 
-if [ -e "$SUPERVISORD_SOCKET_PATH" ]; then
-  echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
-  exit 1
-fi
+  # Use a POSIX-compatible method to resolve the script directory, as `readlink -m`
+  # is not available on all the hosts running the long-running testnets.
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
+  readonly SCRIPT_DIR
+  SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+  readonly SOCKET_PATH
+  readonly STATE_CLUSTER="${SOCKET_PATH%/*}"
 
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/common.sh"
+  # Fail if PWD is STATE_CLUSTER, as STATE_CLUSTER will be deleted
+  if [ "$PWD" = "$STATE_CLUSTER" ]; then
+    echo "Please run this script from outside of '$STATE_CLUSTER'" >&2
+    exit 1
+  fi
 
-if [ -e "$SCRIPT_DIR/shell_env" ]; then
+  readonly STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
+  readonly SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
+  readonly START_CLUSTER_LOG="${STATE_CLUSTER}/start-cluster.log"
+  readonly START_CLUSTER_STATUS="${STATE_CLUSTER}/status_started"
+
+  if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
+    echo "CARDANO_NODE_SOCKET_PATH must be set to a path containing 'state-cluster${INSTANCE_NUM}', line $LINENO in ${BASH_SOURCE[0]}" >&2
+    exit 1
+  fi
+
+  if [ -e "$SUPERVISORD_SOCKET_PATH" ]; then
+    echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
+    exit 1
+  fi
+
+  # Testnet configuration files can be overridden by a local `testnet_conf` directory.
+  TESTNET_CONF_DIR="$TESTNET_DIR"
+  if [ -e "${SCRIPT_DIR}/testnet_conf" ]; then
+    TESTNET_CONF_DIR="${SCRIPT_DIR}/testnet_conf"
+  fi
+  readonly TESTNET_CONF_DIR
+
+  ENABLE_SUBMIT_API="$(command -v cardano-submit-api >/dev/null 2>&1 && \
+    [ -e "${TESTNET_CONF_DIR}/submit-api-config.json" ] && \
+    echo 1 || echo 0)"
+  readonly ENABLE_SUBMIT_API
+
   # shellcheck disable=SC1091
-  source "$SCRIPT_DIR/shell_env"
-fi
+  source "${SCRIPT_DIR}/common.sh"
 
-if ! rm_retry "$STATE_CLUSTER"; then
-  echo "Could not remove existing '$STATE_CLUSTER'" >&2
-  exit 1
-fi
-mkdir -p "$STATE_CLUSTER"/{byron,shelley,webserver}
-cd "$STATE_CLUSTER/.."
+  if [ -e "${SCRIPT_DIR}/shell_env" ]; then
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/shell_env"
+  fi
+}
 
-TESTNET_CONF_DIR="$TESTNET_DIR"
-if [ -e "$SCRIPT_DIR/testnet_conf" ]; then
-  TESTNET_CONF_DIR="$SCRIPT_DIR/testnet_conf"
-fi
+setup_state_cluster() {
+  if ! rm_retry "$STATE_CLUSTER"; then
+    echo "Could not remove existing '$STATE_CLUSTER'" >&2
+    exit 1
+  fi
+  mkdir -p "${STATE_CLUSTER}"/{byron,shelley,webserver}
+  cd "${STATE_CLUSTER}/.." || { echo "Could not cd to '${STATE_CLUSTER}/..', line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
 
-ENABLE_SUBMIT_API="$(command -v cardano-submit-api >/dev/null 2>&1 && \
-  [ -e "$TESTNET_CONF_DIR/submit-api-config.json" ] && \
-  echo 1 || echo 0)"
+  # Copy faucet address and keys
+  cp "$TESTNET_DIR"/shelley/faucet.* "${STATE_CLUSTER}/shelley"
+  local f
+  for f in faucet.addr faucet.vkey faucet.skey; do
+    [ -e "${STATE_CLUSTER}/shelley/$f" ] || \
+      { echo "The \`${STATE_CLUSTER}/shelley/$f\` not found, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
+  done
 
-# copy faucet address and keys
-cp "$TESTNET_DIR"/shelley/faucet.* "$STATE_CLUSTER/shelley"
-[ -e "$STATE_CLUSTER/shelley/faucet.addr" ] || \
-  { echo "The \`$STATE_CLUSTER/shelley/faucet.addr\` not found, line $LINENO" >&2; exit 1; }  # assert
-[ -e "$STATE_CLUSTER/shelley/faucet.vkey" ] || \
-  { echo "The \`$STATE_CLUSTER/shelley/faucet.vkey\` not found, line $LINENO" >&2; exit 1; }  # assert
-[ -e "$STATE_CLUSTER/shelley/faucet.skey" ] || \
-  { echo "The \`$STATE_CLUSTER/shelley/faucet.skey\` not found, line $LINENO" >&2; exit 1; }  # assert
+  # Copy configuration files
+  cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
+  cp "${SCRIPT_DIR}/testnet.json" "$STATE_CLUSTER"
+  cp "${TESTNET_CONF_DIR}/topology-relay1.json" "$STATE_CLUSTER"
+  cp "$TESTNET_CONF_DIR"/genesis-*.json "$STATE_CLUSTER"
+  ln -rs "${STATE_CLUSTER}/genesis-byron.json" "${STATE_CLUSTER}/byron/genesis.json"
+  ln -rs "${STATE_CLUSTER}/genesis-shelley.json" "${STATE_CLUSTER}/shelley/genesis.json"
+  ln -rs "${STATE_CLUSTER}/genesis-alonzo.json" "${STATE_CLUSTER}/shelley/genesis.alonzo.json"
+  ln -rs "${STATE_CLUSTER}/genesis-conway.json" "${STATE_CLUSTER}/shelley/genesis.conway.json"
 
-# copy configuration files
-cp "$SCRIPT_DIR"/cardano-node-* "$STATE_CLUSTER"
-cp "$SCRIPT_DIR/supervisor.conf" "$STATE_CLUSTER"
-cp "$SCRIPT_DIR/testnet.json" "$STATE_CLUSTER"
-cp "$TESTNET_CONF_DIR/topology-relay1.json" "$STATE_CLUSTER"
-cp "$TESTNET_CONF_DIR"/genesis-*.json "$STATE_CLUSTER"
-ln -rs "$STATE_CLUSTER/genesis-byron.json" "$STATE_CLUSTER/byron/genesis.json"
-ln -rs "$STATE_CLUSTER/genesis-shelley.json" "$STATE_CLUSTER/shelley/genesis.json"
-ln -rs "$STATE_CLUSTER/genesis-alonzo.json" "$STATE_CLUSTER/shelley/genesis.alonzo.json"
-ln -rs "$STATE_CLUSTER/genesis-conway.json" "$STATE_CLUSTER/shelley/genesis.conway.json"
+  NETWORK_MAGIC="$(jq -r '.networkMagic' "${STATE_CLUSTER}/shelley/genesis.json")"
+  readonly NETWORK_MAGIC
 
-NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  # Edit port numbers in configuration
+  jq \
+    --arg ekg "$RELAY1_EKG" \
+    --arg prometheus "$RELAY1_PROMETHEUS" \
+    '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
+    "${TESTNET_CONF_DIR}/config-relay1.json" > "${STATE_CLUSTER}/config-relay1.json"
+  chmod u+w "${STATE_CLUSTER}"/config-*.json
 
-# edit port numbers in configuration
-RELAY1_EKG="%%EKG_PORT_RELAY1%%"
-RELAY1_PROMETHEUS="%%PROMETHEUS_PORT_RELAY1%%"
-jq --arg ekg "$RELAY1_EKG" --arg prometheus "$RELAY1_PROMETHEUS" \
-  '.hasEKG = ($ekg|tonumber) | .hasPrometheus[1] = ($prometheus|tonumber)' \
-  "$TESTNET_CONF_DIR/config-relay1.json" > "$STATE_CLUSTER/config-relay1.json"
-chmod u+w "$STATE_CLUSTER"/config-*.json
+  # Copy node database
+  cp -r "${TESTNET_DIR}/relay1-db" "${STATE_CLUSTER}/db-relay1"
+}
 
-cat >> "${STATE_CLUSTER}/supervisor.conf" <<EoF
-
+configure_supervisor() {
+  cat > "${STATE_CLUSTER}/supervisor.conf" <<EoF
 [unix_http_server]
 file = ${SUPERVISORD_SOCKET_PATH}
 
 [supervisorctl]
 serverurl = unix:///${SUPERVISORD_SOCKET_PATH}
+
+[program:relay1]
+command=./${STATE_CLUSTER_NAME}/cardano-node-relay1
+stderr_logfile=./${STATE_CLUSTER_NAME}/relay1.stderr
+stdout_logfile=./${STATE_CLUSTER_NAME}/relay1.stdout
+startsecs=5
 EoF
 
-# enable db-sync service
-if [ -n "${DBSYNC_SCHEMA_DIR:-""}" ]; then
-  command -v cardano-db-sync > /dev/null 2>&1 || \
-    { echo "The \`cardano-db-sync\` binary not found, line $LINENO" >&2; exit 1; }  # assert
+  # Enable db-sync service
+  if [ -n "${DBSYNC_SCHEMA_DIR:-}" ]; then
+    command -v cardano-db-sync > /dev/null 2>&1 || \
+      { echo "The \`cardano-db-sync\` binary not found, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
 
-  # copy db-sync config file
-  cp "$TESTNET_CONF_DIR/dbsync-config.yaml" "$STATE_CLUSTER"
-  # copy db-sync state
-  cp -r "$TESTNET_DIR/db-sync" "$STATE_CLUSTER/db-sync"
-  # copy run script
-  cp "$SCRIPT_DIR/run-cardano-dbsync" "$STATE_CLUSTER"
+    cp "${TESTNET_CONF_DIR}/dbsync-config.yaml" "$STATE_CLUSTER"
+    cp -r "${TESTNET_DIR}/db-sync" "${STATE_CLUSTER}/db-sync"
+    cp "${SCRIPT_DIR}/run-cardano-dbsync" "$STATE_CLUSTER"
 
-  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+    cat >> "${STATE_CLUSTER}/supervisor.conf" <<EoF
 
 [program:dbsync]
-command=./$STATE_CLUSTER_NAME/run-cardano-dbsync
-stderr_logfile=./$STATE_CLUSTER_NAME/dbsync.stderr
-stdout_logfile=./$STATE_CLUSTER_NAME/dbsync.stdout
+command=./${STATE_CLUSTER_NAME}/run-cardano-dbsync
+stderr_logfile=./${STATE_CLUSTER_NAME}/dbsync.stderr
+stdout_logfile=./${STATE_CLUSTER_NAME}/dbsync.stdout
 autostart=false
 autorestart=false
 startsecs=5
 EoF
-fi
+  fi
 
-# enable cardano-submit-api service
-if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
-  # copy run script
-  cp "$SCRIPT_DIR/run-cardano-submit-api" "$STATE_CLUSTER"
-  # copy cardano-submit-api config file
-  cp "$TESTNET_CONF_DIR/submit-api-config.json" "$STATE_CLUSTER"
+  # Enable cardano-submit-api service
+  if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
+    cp "${SCRIPT_DIR}/run-cardano-submit-api" "$STATE_CLUSTER"
+    cp "${TESTNET_CONF_DIR}/submit-api-config.json" "$STATE_CLUSTER"
 
-  cat >> "$STATE_CLUSTER/supervisor.conf" <<EoF
+    cat >> "${STATE_CLUSTER}/supervisor.conf" <<EoF
 
 [program:submit_api]
-command=./$STATE_CLUSTER_NAME/run-cardano-submit-api
-stderr_logfile=./$STATE_CLUSTER_NAME/submit_api.stderr
-stdout_logfile=./$STATE_CLUSTER_NAME/submit_api.stdout
+command=./${STATE_CLUSTER_NAME}/run-cardano-submit-api
+stderr_logfile=./${STATE_CLUSTER_NAME}/submit_api.stderr
+stdout_logfile=./${STATE_CLUSTER_NAME}/submit_api.stdout
 autostart=false
 autorestart=false
 startsecs=5
 EoF
-fi
+  fi
 
-# create scripts for cluster starting / stopping
-printf "#!/bin/sh\n\nsupervisorctl -s unix:///%s start all" "$SUPERVISORD_SOCKET_PATH" > "${STATE_CLUSTER}/supervisorctl_start"
-printf "#!/bin/sh\n\nsupervisorctl -s unix:///%s \"\$@\"" "$SUPERVISORD_SOCKET_PATH" > "${STATE_CLUSTER}/supervisorctl_local"
+  cat >> "${STATE_CLUSTER}/supervisor.conf" <<EoF
 
-cat > "$STATE_CLUSTER/supervisord_start" <<EoF
-#!/usr/bin/env bash
+[group:nodes]
+programs=relay1
 
-set -uo pipefail
+[program:webserver]
+command=python -m http.server --bind 127.0.0.1 ${WEBSERVER_PORT}
+directory=./${STATE_CLUSTER_NAME}/webserver
 
-SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface
 
-cd "\$SCRIPT_DIR/.."
-
-supervisord --config "\$SCRIPT_DIR/supervisor.conf"
+[supervisord]
+logfile=./${STATE_CLUSTER_NAME}/supervisord.log
+pidfile=./${STATE_CLUSTER_NAME}/supervisord.pid
 EoF
+}
 
-cat > "$STATE_CLUSTER/stop-cluster" <<EoF
-#!/usr/bin/env bash
+start_node() {
+  supervisord --config "${STATE_CLUSTER}/supervisor.conf"
 
-set -uo pipefail
-
-SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)" || { echo "Cannot determine SCRIPT_DIR, exiting." >&2; exit 1; }
-PID_FILE="\$SCRIPT_DIR/supervisord.pid"
-SUPERVISORD_SOCKET_PATH="${SUPERVISORD_SOCKET_PATH}"
-
-if [ -e "\$SUPERVISORD_SOCKET_PATH" ]; then
-  supervisorctl -s unix:///\${SUPERVISORD_SOCKET_PATH} stop all || rm -f "\$SUPERVISORD_SOCKET_PATH"
-fi
-
-if [ ! -f "\$PID_FILE" ]; then
-  echo "Cluster is not running!"
-  exit 0
-fi
-
-PID="\$(<"\$PID_FILE")"
-for _ in {1..5}; do
-  if ! kill "\$PID"; then
-    break
-  fi
-  sleep 1
-  if [ ! -f "\$PID_FILE" ]; then
-    break
-  fi
-done
-
-rm -f "\$PID_FILE"
-echo "Cluster terminated!"
-EoF
-
-chmod u+x "$STATE_CLUSTER"/{supervisorctl*,supervisord_*,stop-cluster}
-
-# copy db
-cp -r "$TESTNET_DIR/relay1-db" "$STATE_CLUSTER/db-relay1"
-
-supervisord --config "$STATE_CLUSTER/supervisor.conf"
-
-echo "Waiting until replay is finished"
-sleep 10
-while tail -n 10 "$STATE_CLUSTER/relay1.stdout" | grep -E -q "replay progress|IPSubscriptionTarget"; do
+  echo "Waiting until replay is finished"
   sleep 10
-done
+  while tail -n 10 "${STATE_CLUSTER}/relay1.stdout" | grep -E -q "replay progress|IPSubscriptionTarget"; do
+    sleep 10
+  done
 
-for _ in {1..10}; do
-  if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
-    break
-  fi
-  echo "Waiting 5 seconds for relay node to start"
-  sleep 5
-done
-[ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the relay node, line $LINENO" >&2; exit 1; }  # assert
-
-echo "Waiting to make sure the chain is synced"
-for _ in {1..600}; do
-  sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
-  if [ "$sync_progress" = "100.00" ]; then
-    break
-  fi
-  sleep 30
-done
-[ "$sync_progress" = "100.00" ] || { echo "Failed to sync the realy node, line $LINENO" >&2; exit 1; }  # assert
-
-# start cardano-submit-api
-if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
-  echo "Starting cardano-submit-api"
-  supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start submit_api
-fi
-
-# start db-sync
-if [ -n "${DBSYNC_SCHEMA_DIR:-""}" ]; then
-  echo "Starting db-sync"
-  supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start dbsync
-  sleep 10
-
-  echo "Waiting to make sure db-sync is synced"
-  for _ in {1..600}; do
-    node_block="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.block')"
-    sleep 5
-    dbsync_block="$("$SCRIPT_DIR/dbsync_block_no.sh")"
-    if [ "$node_block" -le "$dbsync_block" ]; then
+  local _
+  for _ in {1..10}; do
+    if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
       break
     fi
-    sleep 60
+    echo "Waiting 5 seconds for relay node to start"
+    sleep 5
   done
-fi
+  [ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the relay node, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
 
-faucet_init_balance="$(get_address_balance \
-  --testnet-magic "$NETWORK_MAGIC" \
-  --address "$(<"$STATE_CLUSTER/shelley/faucet.addr")")"
-echo "Faucet initial balance: $faucet_init_balance" >> "$START_CLUSTER_LOG"
+  echo "Waiting to make sure the chain is synced"
+  local sync_progress=""
+  for _ in {1..600}; do
+    sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
+    if [ "$sync_progress" = "100.00" ]; then
+      break
+    fi
+    sleep 30
+  done
+  [ "$sync_progress" = "100.00" ] || { echo "Failed to sync the relay node, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
+}
 
-: > "$START_CLUSTER_STATUS"
-echo "Cluster started 🚀"
+start_optional_services() {
+  if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
+    echo "Starting cardano-submit-api"
+    supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start submit_api
+  fi
+
+  if [ -n "${DBSYNC_SCHEMA_DIR:-}" ]; then
+    echo "Starting db-sync"
+    supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start dbsync
+    sleep 10
+
+    echo "Waiting to make sure db-sync is synced"
+    local node_block dbsync_block _
+    for _ in {1..600}; do
+      node_block="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.block')"
+      sleep 5
+      dbsync_block="$("${SCRIPT_DIR}/dbsync_block_no.sh")"
+      if [ "$node_block" -le "$dbsync_block" ]; then
+        break
+      fi
+      sleep 60
+    done
+  fi
+}
+
+log_faucet_balance() {
+  local faucet_init_balance
+  faucet_init_balance="$(get_address_balance \
+    --address "$(<"${STATE_CLUSTER}/shelley/faucet.addr")")"
+  echo "Faucet initial balance: $faucet_init_balance" >> "$START_CLUSTER_LOG"
+}
+
+main() {
+  initialize_globals "$@"
+  setup_state_cluster
+  configure_supervisor
+  create_cluster_scripts
+  start_node
+  start_optional_services
+  log_faucet_balance
+
+  : > "$START_CLUSTER_STATUS"
+  echo "Cluster started 🚀"
+}
+
+main "$@"
