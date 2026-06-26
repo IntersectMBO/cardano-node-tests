@@ -1196,6 +1196,21 @@ def query_table_names() -> list[str]:
         return table_names
 
 
+def query_view_names() -> list[str]:
+    """Query view names in db-sync."""
+    query = (
+        "SELECT viewname "
+        "FROM pg_catalog.pg_views "
+        "WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema' "
+        "ORDER BY viewname ASC;"
+    )
+
+    with execute(query=query) as cur:
+        results: list[tuple[str]] = cur.fetchall()
+        view_names = [r[0] for r in results]
+        return view_names
+
+
 def query_datum(*, datum_hash: str) -> tp.Generator[DatumDBRow]:
     """Query datum record in db-sync."""
     query = "SELECT id, hash, tx_id, value, bytes FROM datum WHERE hash = %s;"
@@ -1306,6 +1321,42 @@ def query_epoch(*, epoch_from: int = 0, epoch_to: int = 99999999) -> tp.Generato
     with execute(query=query, vars=query_vars) as cur:
         while (result := cur.fetchone()) is not None:
             yield EpochDBRow(*result)
+
+
+def query_epoch_current(
+    *, epoch_from: int = 0, epoch_to: int = 99999999
+) -> tp.Generator[EpochDBRow]:
+    """Query the live `epoch_current` view in db-sync (since db-sync 13.7.2).
+
+    Unlike the public `epoch` view (finalized rows UNION the live aggregation), this reads the
+    in-progress current-epoch branch directly. It is empty unless live epoch sync is enabled
+    (see `query_epoch_sync_enabled`).
+    """
+    query_vars = (epoch_from, epoch_to)
+
+    query = (
+        "SELECT"
+        " epoch_current.id, epoch_current.out_sum, epoch_current.fees,"
+        " epoch_current.tx_count, epoch_current.blk_count, epoch_current.no "
+        "FROM epoch_current "
+        "WHERE (no BETWEEN %s AND %s);"
+    )
+
+    with execute(query=query, vars=query_vars) as cur:
+        while (result := cur.fetchone()) is not None:
+            yield EpochDBRow(*result)
+
+
+def query_epoch_sync_enabled() -> bool:
+    """Query whether live epoch sync is enabled in db-sync (since db-sync 13.7.2).
+
+    When disabled, both the `epoch_current` and `epoch` views return no rows by design.
+    """
+    query = "SELECT enabled FROM epoch_sync_enabled WHERE singleton = TRUE;"
+
+    with execute(query=query) as cur:
+        result = cur.fetchone()
+        return bool(result[0]) if result is not None else False
 
 
 def query_committee_registration(*, cold_key: str) -> tp.Generator[CommitteeRegistrationDBRow]:
