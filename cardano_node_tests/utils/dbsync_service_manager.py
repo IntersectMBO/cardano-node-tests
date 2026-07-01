@@ -42,11 +42,13 @@ class Table(enum.StrEnum):
     DREP_DISTR = "drep_distr"
     DREP_HASH = "drep_hash"
     DREP_REGISTRATION = "drep_registration"
-    EPOCH = "epoch"
+    # `epoch` is a view since db-sync 13.7.2 (see the View enum), not a table.
+    EPOCH_FINALIZED = "epoch_finalized"
     EPOCH_PARAM = "epoch_param"
     EPOCH_STAKE = "epoch_stake"
     EPOCH_STAKE_PROGRESS = "epoch_stake_progress"
     EPOCH_STATE = "epoch_state"
+    EPOCH_SYNC_ENABLED = "epoch_sync_enabled"
     EPOCH_SYNC_TIME = "epoch_sync_time"
     EVENT_INFO = "event_info"
     EXTRA_KEY_WITNESS = "extra_key_witness"
@@ -98,6 +100,15 @@ class Table(enum.StrEnum):
     TX_OUT = "tx_out"
     VOTING_ANCHOR = "voting_anchor"
     VOTING_PROCEDURE = "voting_procedure"
+
+
+class View(enum.StrEnum):
+    """Enum representing the views in the Cardano db-sync database (since db-sync 13.7.2)."""
+
+    # Public epoch rollup: finalized rows UNION live current rows.
+    EPOCH = "epoch"
+    # Live aggregation of in-progress epochs from `block`/`tx`.
+    EPOCH_CURRENT = "epoch_current"
 
 
 class Column:

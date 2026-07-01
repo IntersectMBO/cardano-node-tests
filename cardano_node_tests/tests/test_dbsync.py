@@ -18,6 +18,7 @@ from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dbsync_service_manager
 from cardano_node_tests.utils import dbsync_snapshot_service
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -108,6 +109,10 @@ class TestDBSync:
         "withdrawal",
     }
 
+    # Since db-sync 13.7.2 the `epoch` rollup is exposed through views, not a table.
+    # Derived from the `View` enum so the enum stays the single source of truth.
+    DBSYNC_VIEWS: tp.Final[set[str]] = {v.value for v in dbsync_service_manager.View}
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
         VERSIONS.dbsync < version.parse("13.7.2"),
@@ -126,6 +131,22 @@ class TestDBSync:
         """
         common.get_test_id(cluster)
         assert self.DBSYNC_TABLES.issubset(dbsync_queries.query_table_names())
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.dbsync < version.parse("13.7.2"),
+        reason="needs db-sync version >= 13.7.2",
+    )
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_view_names(self, cluster: clusterlib.ClusterLib):
+        """Check that the expected views are present in db-sync.
+
+        Since db-sync 13.7.2 `epoch` is a view, so `test_table_names` (which queries
+        `pg_tables`) does not cover it; assert the views exist here instead.
+        """
+        common.get_test_id(cluster)
+        assert self.DBSYNC_VIEWS.issubset(dbsync_queries.query_view_names())
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(-10)
@@ -396,11 +417,10 @@ class TestDBSync:
         """Check expected values in the `epoch` table in db-sync.
 
         Test db-sync epoch table data consistency by comparing aggregated counts with
-        block table data. Skip if running in epoch 0.
+        block table data, using a finalized epoch (current - 1).
 
-        * Query current epoch from cluster
-        * Use previous epoch for validation (current - 1) if not in epoch 0
-        * Skip test if in epoch 0
+        * Wait for epoch 2 so a finalized epoch (current - 1 >= 1) is available
+        * Query current epoch from cluster and validate the previous epoch (current - 1)
         * Query all blocks for the target epoch from block table
         * Count blocks and transactions from block table records
         * Query epoch summary from epoch table for same epoch
@@ -410,11 +430,12 @@ class TestDBSync:
         """
         common.get_test_id(cluster)
 
-        current_epoch = cluster.g_query.get_epoch()
-        epoch = current_epoch - 1 if current_epoch >= 1 else current_epoch
+        # Ensure a finalized epoch is available to validate (need current >= 2 so that
+        # current - 1 >= 1). No-op on long-lived testnets (already far past epoch 2).
+        cluster.wait_for_epoch(epoch_no=2)
 
-        if epoch == 0:
-            pytest.skip("Not meant to run in epoch 0")
+        current_epoch = cluster.g_query.get_epoch()
+        epoch = current_epoch - 1
 
         blocks_data_blk_count = 0
         blocks_data_tx_count = 0
@@ -439,6 +460,57 @@ class TestDBSync:
 
         assert blocks_data_tx_count == epoch_data_tx_count, (
             f"Transactions count don't match between tables for epoch {epoch}"
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.dbsync < version.parse("13.7.2"),
+        reason="needs db-sync version >= 13.7.2",
+    )
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_epoch_current(self, cluster: clusterlib.ClusterLib):
+        """Check the live current-epoch branch via the `epoch_current` view.
+
+        Since db-sync 13.7.2 the in-progress epoch is served live by `epoch_current`,
+        unioned into the public `epoch` view; `test_epoch` only covers a finalized epoch.
+        This is a smoke test that the feature is wired up against a running chain: the live
+        branch is enabled (`epoch_sync_enabled`) and the current epoch is surfaced as exactly
+        one correctly-numbered row.
+
+        Count/sum correctness is not asserted here: the view derives its counts from the same
+        `block`/`tx` tables, so comparing it back against them is self-referential, and the
+        aggregation logic itself is covered by the db-sync repo's own unit tests.
+        """
+        common.get_test_id(cluster)
+
+        # Ensure the chain has progressed past the genesis epoch so the current epoch is
+        # actively producing blocks. No-op on long-lived testnets (already past epoch 1).
+        cluster.wait_for_epoch(epoch_no=1)
+
+        # The live branch must be enabled, otherwise `epoch_current` is empty by design.
+        assert dbsync_queries.query_epoch_sync_enabled(), (
+            "Live epoch sync (`epoch_sync_enabled`) is not enabled in db-sync"
+        )
+
+        current_epoch = cluster.g_query.get_epoch()
+
+        epoch_rows = list(
+            dbsync_queries.query_epoch_current(epoch_from=current_epoch, epoch_to=current_epoch)
+        )
+
+        if not epoch_rows:
+            pytest.skip(f"No `epoch_current` view row yet for the current epoch {current_epoch}")
+
+        assert len(epoch_rows) == 1, (
+            f"Expected a single `epoch_current` view row for epoch {current_epoch}, "
+            f"got {len(epoch_rows)}"
+        )
+
+        epoch_row = epoch_rows[0]
+        assert epoch_row.epoch_number == current_epoch, (
+            f"`epoch_current` view row has epoch_no {epoch_row.epoch_number}, "
+            f"expected {current_epoch}"
         )
 
 
