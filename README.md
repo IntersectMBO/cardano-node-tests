@@ -229,6 +229,25 @@ The default cluster variant is `local_fast`. Override with `TESTNET_VARIANT=<var
 
 Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
 
+#### Time-Drift Resilience Testing (local only)
+
+Inject a gradual clock skew into a single pool node to observe network resilience.
+`libfaketime` is included automatically in the Nix dev shell.
+
+**Environment variables:**
+
+| Variable | Description |
+| --- | --- |
+| `TIME_DRIFT_POOL` | Which pool gets the skewed clock (1, 2, or 3); unset = no drift. |
+| `TIME_DRIFT_SPEC` | `libfaketime` `FAKETIME` string; `+0` = no offset at startup, `x<rate>` = clock speed multiplier. |
+| `LIBFAKETIME_PATH` | Override the `.so` path if not in the default location. |
+
+**Example:**
+
+```sh
+TIME_DRIFT_POOL=1 TIME_DRIFT_SPEC='+0 x1.008' make start-cluster
+```
+
 ### Run Individual Tests
 
 ```sh

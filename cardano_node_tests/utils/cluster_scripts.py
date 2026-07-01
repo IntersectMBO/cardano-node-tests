@@ -74,6 +74,47 @@ def get_testnet_variant_scriptdir2(*, testnet_variant: str) -> pl.Path:
     return scriptdir
 
 
+_TIME_DRIFT_HOOK = """\
+# TIME_DRIFT: activate clock skew on this pool when TIME_DRIFT_POOL=%%POOL_NUM%%
+if [[ -n "${TIME_DRIFT_POOL:-}" && -n "${TIME_DRIFT_SPEC:-}" \\
+      && "${TIME_DRIFT_POOL}" == "%%POOL_NUM%%" ]]; then
+  _ft_so="${LIBFAKETIME_PATH:-/usr/lib/x86_64-linux-gnu/faketime/libfaketimeMT.so.1}"
+  if [[ ! -f "$_ft_so" ]]; then
+    _ft_bin="$(command -v faketime 2>/dev/null || true)"
+    if [[ -n "$_ft_bin" ]]; then
+      _ft_so="$(dirname "$(dirname "$_ft_bin")")/lib/faketime/libfaketimeMT.so.1"
+    fi
+  fi
+  if [[ ! -f "$_ft_so" ]]; then
+    echo "[faketime] ERROR: libfaketimeMT.so.1 not found" >&2
+    exit 1
+  fi
+  export LD_PRELOAD="${LD_PRELOAD:+${LD_PRELOAD}:}$_ft_so"
+  export FAKETIME="${TIME_DRIFT_SPEC}"
+  echo "[faketime] pool%%POOL_NUM%%: LD_PRELOAD=$LD_PRELOAD FAKETIME=$FAKETIME" >&2
+fi
+"""
+
+
+def _inject_time_drift_hook(content: str, pool_num: int) -> str:
+    """Inject a conditional clock-skew bash block into pool wrapper scripts.
+
+    Replaces the pre-run setup placeholder in the cardonnay template. Activated
+    only when TIME_DRIFT_POOL=<pool_num> and TIME_DRIFT_SPEC are set at cluster
+    start time. Default-off: unset env vars leave behaviour unchanged.
+
+    Raises:
+        ValueError: When the pre-run setup placeholder is absent from the template.
+    """
+    marker = "# --- Placeholder for any pre-run setup ---"
+    if marker not in content:
+        msg = f"TIME_DRIFT hook: pre-run placeholder missing in pool{pool_num} wrapper."
+        raise ValueError(msg)
+
+    hook = _TIME_DRIFT_HOOK.replace("%%POOL_NUM%%", str(pool_num))
+    return content.replace(marker, hook.rstrip("\n"), 1)
+
+
 class CustomCardonnayScripts(cardonnay_local.LocalScripts):
     """Scripts for starting local cluster.
 
@@ -186,6 +227,9 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
                     template_file=indir / "template-cardano-node-pool",
                     node_rec=node_rec,
                     instance_num=instance_num,
+                )
+                supervisor_script_content = _inject_time_drift_hook(
+                    content=supervisor_script_content, pool_num=node_rec.num
                 )
                 supervisor_script.unlink(missing_ok=True)
                 supervisor_script.write_text(f"{supervisor_script_content}\n", encoding="utf-8")
