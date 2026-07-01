@@ -114,9 +114,24 @@ class View(enum.StrEnum):
 class Column:
     class Tx(enum.StrEnum):
         FEE = "tx.fee"
+        DEPOSIT = "tx.deposit"
 
     class Redeemer(enum.StrEnum):
         SCRIPT_HASH = "redeemer.script_hash"
+        FEE = "redeemer.fee"
+
+    class TxOut(enum.StrEnum):
+        CONSUMED_BY_TX_ID = "tx_out.consumed_by_tx_id"
+
+    class StakeRegistration(enum.StrEnum):
+        DEPOSIT = "stake_registration.deposit"
+
+    class PoolUpdate(enum.StrEnum):
+        DEPOSIT = "pool_update.deposit"
+
+    class GovActionProposal(enum.StrEnum):
+        X_EPOCH = "gov_action_proposal.x_epoch"
+        EXPIRATION = "gov_action_proposal.expiration"
 
 
 class SettingState(enum.StrEnum):

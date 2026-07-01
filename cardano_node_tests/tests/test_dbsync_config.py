@@ -42,7 +42,9 @@ class ColumnCondition(enum.StrEnum):
     """Enum for column-level db-sync condition checks."""
 
     ZERO = "column_condition:=0"
+    NOT_ZERO = "column_condition:!= 0"
     IS_NULL = "column_condition:IS NULL"
+    IS_NOT_NULL = "column_condition:IS NOT NULL"
 
 
 GOVERNANCE_TABLES = (
@@ -123,6 +125,29 @@ def check_dbsync_state(
                 case _:
                     error_msg = f"Unknown table condition '{condition}' for table '{key}'"
                     raise ValueError(error_msg)
+
+
+def wait_for_tables_not_empty(
+    tables: tp.Iterable[str | db_sync.Table],
+    *,
+    timeout: int = 600,
+) -> None:
+    """Wait until all given db-sync tables have data.
+
+    Off-chain data (pool/vote metadata) is fetched asynchronously and can appear up to
+    several minutes after db-sync starts (the fetch loop sleeps ~300s between passes), so
+    such tables must be polled rather than checked once. Raises ``TimeoutError`` (via
+    ``retry_query``) if any table is still empty after ``timeout`` seconds.
+    """
+
+    def _query_func() -> bool:
+        empty_tables = [table for table in tables if dbsync_utils.table_empty(table=table)]
+        if empty_tables:
+            msg = f"Following tables are still empty: {empty_tables}"
+            raise dbsync_utils.DbSyncNoResponseError(msg)
+        return True
+
+    dbsync_utils.retry_query(query_func=_query_func, timeout=timeout)
 
 
 @pytest.fixture
@@ -211,18 +236,7 @@ class TestDBSyncConfig:
             )
 
             # Off-chain data is inserted into the DB a few minutes after the restart of db-sync
-            def _query_func():
-                empty_tables = [
-                    table for table in GOVERNANCE_TABLES if dbsync_utils.table_empty(table=table)
-                ]
-
-                if empty_tables:
-                    msg = f"Following tables are still empty: {empty_tables}"
-                    raise dbsync_utils.DbSyncNoResponseError(msg)
-
-                return True
-
-            dbsync_utils.retry_query(query_func=_query_func, timeout=600)
+            wait_for_tables_not_empty(GOVERNANCE_TABLES, timeout=600)
 
             check_dbsync_state(
                 expected_state={t: TableCondition.NOT_EMPTY for t in GOVERNANCE_TABLES}  # noqa: C420
