@@ -211,6 +211,35 @@ def pytest_keyboard_interrupt() -> None:
     (session_basetemp / INTERRUPTED_NAME).touch()
 
 
+def pytest_runtest_logreport(report: tp.Any) -> None:
+    """Emit an Antithesis SDK assertion for every test failure."""
+    if report.when != "call" or not report.failed:
+        return
+    sdk_file = pl.Path(os.environ.get("ANTITHESIS_OUTPUT_DIR", "/tmp/antithesis")) / "sdk.jsonl"
+    sdk_file.parent.mkdir(parents=True, exist_ok=True)
+    longrepr = report.longrepr
+    reprcrash = getattr(longrepr, "reprcrash", None)
+    exc_message = reprcrash.message if reprcrash else (str(longrepr)[:2000] if longrepr else "")
+    assertion = {
+        "antithesis_assert": {
+            "type": "always",
+            "condition": False,
+            "display_name": report.nodeid,
+            "message": exc_message,
+            "details": {"traceback": str(longrepr)[-2000:] if longrepr else ""},
+            "location": {
+                "function": report.nodeid,
+                "file": str(report.fspath),
+                "begin_line": 0,
+                "begin_column": 0,
+                "class": "",
+            },
+        }
+    }
+    with sdk_file.open("a") as f:
+        f.write(json.dumps(assertion) + "\n")
+
+
 @pytest.fixture(scope="session")
 def init_pytest_temp_dirs(tmp_path_factory: TempPathFactory) -> None:
     """Init `PytestTempDirs`."""
