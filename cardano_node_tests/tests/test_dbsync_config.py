@@ -303,6 +303,128 @@ class TestDBSyncConfig:
 
         yield multi_asset_disable
 
+        yield from self._subtests_phase1()
+
+    def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
+        """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
+
+        def plutus_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `plutus` option.
+
+            With Plutus disabled, db-sync must not insert script-execution data, so the
+            redeemer / redeemer_data / datum tables stay empty even though the chain
+            contains a Plutus transaction.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_plutus(enable=False))
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.REDEEMER: TableCondition.EMPTY,
+                    db_sync.Table.REDEEMER_DATA: TableCondition.EMPTY,
+                    db_sync.Table.DATUM: TableCondition.EMPTY,
+                }
+            )
+
+        yield plutus_disable
+
+        def metadata_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `metadata` option.
+
+            With metadata disabled, the tx_metadata table stays empty even though the
+            chain contains a transaction carrying metadata.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_metadata(enable=False))
+            check_dbsync_state(expected_state={db_sync.Table.TX_METADATA: TableCondition.EMPTY})
+
+        yield metadata_disable
+
+        def tx_out_consumed(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `tx_out` in `consumed` mode (without `force_tx_in`).
+
+            In `consumed` mode db-sync records consumption via the new
+            `tx_out.consumed_by_tx_id` column instead of populating `tx_in`, so `tx_in`
+            stays empty while `tx_out` / `ma_tx_out` are populated.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_out(
+                    value=db_sync.TxOutMode.CONSUMED, force_tx_in=False
+                )
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.TX_OUT: TableCondition.NOT_EMPTY,
+                    db_sync.Table.MA_TX_OUT: TableCondition.NOT_EMPTY,
+                    db_sync.Table.TX_IN: TableCondition.EMPTY,
+                }
+            )
+            assert dbsync_utils.column_exists(
+                table=db_sync.Table.TX_OUT, column="consumed_by_tx_id"
+            ), "`consumed` mode should add the `tx_out.consumed_by_tx_id` column"
+
+        yield tx_out_consumed
+
+        def tx_out_consumed_force_tx_in(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `tx_out` in `consumed` mode with `force_tx_in=True`.
+
+            `force_tx_in` re-enables population of the `tx_in` table on top of `consumed`
+            mode, so both `tx_out` and `tx_in` are populated.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_out(
+                    value=db_sync.TxOutMode.CONSUMED, force_tx_in=True
+                )
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.TX_OUT: TableCondition.NOT_EMPTY,
+                    db_sync.Table.TX_IN: TableCondition.NOT_EMPTY,
+                }
+            )
+
+        yield tx_out_consumed_force_tx_in
+
+        def tx_out_use_address_table(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `tx_out` with `use_address_table=True`.
+
+            With the address table enabled, db-sync normalizes addresses into a separate
+            `address` table (which otherwise does not exist).
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_out(
+                    value=db_sync.TxOutMode.ENABLE, use_address_table=True
+                )
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.ADDRESS: TableCondition.EXISTS,
+                    db_sync.Table.TX_OUT: TableCondition.NOT_EMPTY,
+                }
+            )
+            assert not dbsync_utils.table_empty(table=db_sync.Table.ADDRESS), (
+                "`use_address_table` should populate the `address` table"
+            )
+
+        yield tx_out_use_address_table
+
     @allure.link(helpers.get_vcs_link())
     def test_dbsync_config(
         self,

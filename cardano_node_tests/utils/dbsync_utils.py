@@ -1666,6 +1666,16 @@ def table_exists(*, table: str) -> bool:
     return table in table_names
 
 
+def column_exists(*, table: str, column: str) -> bool:
+    """Check if a column exists in a database table."""
+    return dbsync_queries.query_column_data_type(table=table, column=column) is not None
+
+
+def column_data_type(*, table: str, column: str) -> str | None:
+    """Return the SQL data type of a column, or `None` if it does not exist."""
+    return dbsync_queries.query_column_data_type(table=table, column=column)
+
+
 def check_epoch_state(*, epoch_no: int, txid: str, action_type: ActionTypes) -> None:
     """Check governance stats per epoch in dbsync."""
     if not configuration.HAS_DBSYNC:
