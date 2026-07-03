@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 
-# This script builds the cardano-node, cardano-cli, cardano-submit-api, and bech32 binaries
-# from a given cardano-node repository using Nix, and then creates symlinks to these binaries
-# in a specified directory.
+# This script builds the cardano-node, cardano-cli, cardano-submit-api, bech32 and
+# tx-generator binaries from a given cardano-node repository using Nix, and then creates
+# symlinks to these binaries in a specified directory. When ENABLE_TX_CENTRIFUGE is set,
+# tx-centrifuge is built and linked too (only available on cardano-node branches that
+# ship it, e.g. bench/leios-11.0.1).
 #
 # Example usage:
 #  ./scripts/build_and_link_node_bins.sh ../cardano-node ../cardano-node/.nix_tests_bins_10.6.2 bin_10.6.2
 
 set -euo pipefail
+
+# shellcheck disable=SC1091
+. "$(dirname "$0")/common.sh"
 
 err() { printf "Error: %s\n" "$*" >&2; }
 usage() {
@@ -50,6 +55,10 @@ echo "👉  Building bech32 binaries in repo: $repo_path"
 nix build .#bech32 -o "$build_output_dir/bech32"
 echo "👉  Building tx-generator binaries in repo: $repo_path"
 nix build .#tx-generator -o "$build_output_dir/tx-generator"
+if is_truthy "${ENABLE_TX_CENTRIFUGE:-}"; then
+  echo "👉  Building tx-centrifuge binaries in repo: $repo_path"
+  nix build .#tx-centrifuge -o "$build_output_dir/tx-centrifuge"
+fi
 
 # Create symlinks
 echo "👉  Updating symlinks to built binaries in: $bin_dir"
@@ -60,8 +69,12 @@ rm -f "$bin_dir"/cardano-cli
 rm -f "$bin_dir"/cardano-submit-api
 rm -f "$bin_dir"/bech32
 rm -f "$bin_dir"/tx-generator
+rm -f "$bin_dir"/tx-centrifuge
 ln -s "$build_output_dir/node/bin/cardano-node" "$bin_dir/cardano-node"
 ln -s "$build_output_dir/cli/bin/cardano-cli" "$bin_dir/cardano-cli"
 ln -s "$build_output_dir/submit-api/bin/cardano-submit-api" "$bin_dir/cardano-submit-api"
 ln -s "$build_output_dir/bech32/bin/bech32" "$bin_dir/bech32"
 ln -s "$build_output_dir/tx-generator/bin/tx-generator" "$bin_dir/tx-generator"
+if is_truthy "${ENABLE_TX_CENTRIFUGE:-}"; then
+  ln -s "$build_output_dir/tx-centrifuge/bin/tx-centrifuge" "$bin_dir/tx-centrifuge"
+fi
