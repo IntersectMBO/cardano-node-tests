@@ -143,6 +143,15 @@ cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
 PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
 export PATH_PREPEND
 
+# setup tx-centrifuge (only when it is enabled); it lives on its own cardano-node ref
+if is_truthy "${ENABLE_TX_CENTRIFUGE:-}"; then
+  # shellcheck disable=SC1091
+  . runner/source_tx_centrifuge.sh
+  tx_centrifuge_build "${TX_CENTRIFUGE_REV:-bench/leios-11.0.1}"
+  PATH_PREPEND="$(tx_centrifuge_print_path_prepend "")${PATH_PREPEND}"
+  export PATH_PREPEND
+fi
+
 # optimize nix store if running in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
   nix store gc || :
