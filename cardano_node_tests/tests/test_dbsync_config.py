@@ -304,6 +304,7 @@ class TestDBSyncConfig:
         yield multi_asset_disable
 
         yield from self._subtests_phase1()
+        yield from self._subtests_phase2()
 
     def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
         """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
@@ -424,6 +425,148 @@ class TestDBSyncConfig:
             )
 
         yield tx_out_use_address_table
+
+    def _subtests_phase2(self) -> tp.Generator[tp.Callable]:
+        """Phase 2 subtests: enable-side population (depends on prior on-chain activity)."""
+
+        def plutus_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `plutus` option.
+
+            With Plutus enabled, script-execution data is inserted: the script, redeemer,
+            redeemer_data and datum tables are populated (the chain must contain a Plutus
+            transaction that locks/spends with a datum).
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_plutus(enable=True))
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.SCRIPT: TableCondition.NOT_EMPTY,
+                    db_sync.Table.REDEEMER: TableCondition.NOT_EMPTY,
+                    db_sync.Table.REDEEMER_DATA: TableCondition.NOT_EMPTY,
+                    db_sync.Table.DATUM: TableCondition.NOT_EMPTY,
+                }
+            )
+
+        yield plutus_enable
+
+        def metadata_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `metadata` option.
+
+            With metadata enabled, the tx_metadata table is populated from transactions
+            carrying metadata.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_metadata(enable=True))
+            check_dbsync_state(expected_state={db_sync.Table.TX_METADATA: TableCondition.NOT_EMPTY})
+
+        yield metadata_enable
+
+        def metadata_keys_filter(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test the `metadata.keys` filter.
+
+            When `metadata.keys` lists specific metadata keys, db-sync stores only metadata
+            with those keys; every tx_metadata row must therefore have the configured key.
+            """
+            keep_key = 2
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_metadata(enable=True, keys=[keep_key])
+            )
+            check_dbsync_state(expected_state={db_sync.Table.TX_METADATA: TableCondition.NOT_EMPTY})
+            # Every stored metadata row must have the single kept key.
+            dbsync_utils.check_column_condition(
+                table=db_sync.Table.TX_METADATA, column="key", condition=f"= {keep_key}"
+            )
+
+        yield metadata_keys_filter
+
+        def shelley_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `shelley` option.
+
+            Shelley-era data (certificates, etc.) is inserted: the stake_registration and
+            pool_update tables are populated.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_shelley(enable=True))
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.STAKE_REGISTRATION: TableCondition.NOT_EMPTY,
+                    db_sync.Table.POOL_UPDATE: TableCondition.NOT_EMPTY,
+                }
+            )
+
+        yield shelley_enable
+
+        def shelley_disable_independence(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `shelley` option and its independence from `ledger`.
+
+            With Shelley disabled, ledger-derived data (epoch_stake) is still populated
+            because it is controlled by the `ledger` option, not `shelley`.
+
+            Note: certificate tables are deliberately NOT asserted empty here. Genesis pool
+            registrations are inserted via an ungated path (Shelley/Genesis.hs), so
+            `pool_update` stays populated regardless of the `shelley` flag, and legacy
+            stake-registration certs are likewise ungated (covered separately by
+            ``shelley_disable_stake_registration``). `epoch_stake` is therefore the clean
+            signal for shelley/ledger independence.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_shelley(enable=False))
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.EPOCH_STAKE: TableCondition.NOT_EMPTY,
+                }
+            )
+
+        yield shelley_disable_independence
+
+        def shelley_disable_stake_registration(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test that `shelley=disable` suppresses stake_registration (per the docs).
+
+            doc/configuration.md states `shelley.enable` disables "all certificates", which
+            includes stake registrations. The assertion below expresses that documented
+            behavior.
+
+            KNOWN db-sync discrepancy: legacy ``ShelleyRegCert`` stake registrations are
+            inserted regardless of the flag, because
+            ``Cardano.DbSync.Era.Universal.Insert.Certificate.insertDelegCert`` calls
+            ``insertStakeRegistration`` without a ``when (ioShelley iopts)`` guard, unlike
+            the Conway ``insertConwayDelegCert`` path which is guarded. The assertion is kept
+            as the documented expectation and marked xfail until db-sync gates the legacy
+            path (pending cardano-db-sync issue; convert to ``issues.dbsync_<n>.finish_test``
+            once filed).
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_shelley(enable=False))
+            if not dbsync_utils.table_empty(table=db_sync.Table.STAKE_REGISTRATION):
+                pytest.xfail(
+                    "db-sync inserts legacy ShelleyRegCert stake registrations regardless of "
+                    "shelley=disable (Certificate.insertDelegCert is unguarded); docs say "
+                    "shelley disables all certificates."
+                )
+            check_dbsync_state(
+                expected_state={db_sync.Table.STAKE_REGISTRATION: TableCondition.EMPTY}
+            )
+
+        yield shelley_disable_stake_registration
 
     @allure.link(helpers.get_vcs_link())
     def test_dbsync_config(
