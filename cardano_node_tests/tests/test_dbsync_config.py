@@ -13,6 +13,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_service_manager as db_sync
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -305,6 +306,7 @@ class TestDBSyncConfig:
 
         yield from self._subtests_phase1()
         yield from self._subtests_phase2()
+        yield from self._subtests_phase3()
 
     def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
         """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
@@ -567,6 +569,122 @@ class TestDBSyncConfig:
             )
 
         yield shelley_disable_stake_registration
+
+    def _subtests_phase3(self) -> tp.Generator[tp.Callable]:
+        """Phase 3 subtests: `ledger` modes and `pool_stat` (ledger-derived data)."""
+        # Tables populated only from ledger state; empty unless `ledger` maintains and uses it.
+        ledger_derived_tables = (
+            db_sync.Table.REWARD,
+            db_sync.Table.EPOCH_STAKE,
+            db_sync.Table.ADA_POTS,
+            db_sync.Table.EPOCH_PARAM,
+        )
+
+        def ledger_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `ledger` option.
+
+            With ledger enabled, db-sync maintains ledger state and populates the
+            ledger-derived tables (reward, epoch_stake, ada_pots, epoch_param), computes
+            redeemer fees, and records ledger-derived deposits.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_ledger(value=db_sync.LedgerMode.ENABLE)
+            )
+            check_dbsync_state(
+                expected_state={
+                    **dict.fromkeys(ledger_derived_tables, TableCondition.NOT_EMPTY),
+                    db_sync.Column.Redeemer.FEE: ColumnCondition.IS_NOT_NULL,
+                }
+            )
+            # Ledger state lets db-sync compute deposits: at least one tx carries a positive
+            # deposit (e.g. a registration deposit). Contrast with the ledger=disable case.
+            assert (
+                dbsync_queries.query_rows_count(table="tx", column="deposit", condition="> 0") > 0
+            ), "ledger=enable should record ledger-derived (positive) tx deposits"
+
+        yield ledger_enable
+
+        def ledger_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `ledger` option.
+
+            With ledger disabled, db-sync does not maintain ledger state: the ledger-derived
+            tables stay empty and ledger-derived columns are null (redeemer.fee, tx.deposit).
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_ledger(value=db_sync.LedgerMode.DISABLE)
+            )
+            check_dbsync_state(
+                expected_state={
+                    **dict.fromkeys(ledger_derived_tables, TableCondition.EMPTY),
+                    db_sync.Column.Redeemer.FEE: ColumnCondition.IS_NULL,
+                }
+            )
+            # Ledger-derived deposits are dropped without ledger state: no tx has a positive
+            # deposit. (Note: tx.deposit is not uniformly NULL - db-sync still records 0 for
+            # some txs - so we assert the meaningful effect: no positive deposit remains.)
+            assert (
+                dbsync_queries.query_rows_count(table="tx", column="deposit", condition="> 0") == 0
+            ), "ledger=disable should drop ledger-derived (positive) tx deposits"
+
+        yield ledger_disable
+
+        def ledger_ignore(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `ledger` in `ignore` mode.
+
+            In `ignore` mode db-sync maintains ledger state but does not use any of its data
+            (except UTxO for bootstrap), so the ledger-derived tables stay empty, like
+            `disable`.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_ledger(value=db_sync.LedgerMode.IGNORE)
+            )
+            check_dbsync_state(
+                expected_state=dict.fromkeys(ledger_derived_tables, TableCondition.EMPTY)
+            )
+
+        yield ledger_ignore
+
+        def pool_stat_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `pool_stat` option.
+
+            With pool_stat enabled, per-epoch pool statistics are stored in the pool_stat
+            table once an epoch boundary has been crossed.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_pool_stat(value=db_sync.SettingState.ENABLE)
+            )
+            check_dbsync_state(expected_state={db_sync.Table.POOL_STAT: TableCondition.NOT_EMPTY})
+
+        yield pool_stat_enable
+
+        def pool_stat_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `pool_stat` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_pool_stat(value=db_sync.SettingState.DISABLE)
+            )
+            check_dbsync_state(expected_state={db_sync.Table.POOL_STAT: TableCondition.EMPTY})
+
+        yield pool_stat_disable
 
     @allure.link(helpers.get_vcs_link())
     def test_dbsync_config(
