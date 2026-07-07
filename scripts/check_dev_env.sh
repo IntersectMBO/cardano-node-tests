@@ -45,6 +45,7 @@ has_cli="$([ -n "$(command -v cardano-cli)" ]; process_result)" || exit_code=1
 has_submit_api="$([ -n "$(command -v cardano-submit-api)" ]; process_result "optional")" || exit_code=1
 has_bech32="$([ -n "$(command -v bech32)" ]; process_result)" || exit_code=1
 has_tx_generator="$([ -n "$(command -v tx-generator)" ]; process_result "optional")" || exit_code=1
+has_tx_centrifuge="$([ -n "$(command -v tx-centrifuge)" ]; process_result "optional")" || exit_code=1
 has_python="$([ -n "$(command -v python)" ]; process_result)" || exit_code=1
 has_pytest="$([ -n "$(command -v pytest)" ]; process_result)" || exit_code=1
 has_nix="$([ -n "$(command -v nix)" ]; process_result)" || exit_code=1
@@ -63,6 +64,7 @@ printf "'cardano-cli' available: $has_cli\n"
 printf "'cardano-submit-api' available (optional): $has_submit_api\n"
 printf "'bech32' available: $has_bech32\n"
 printf "'tx-generator' available (optional): $has_tx_generator\n"
+printf "'tx-centrifuge' available (optional): $has_tx_centrifuge\n"
 printf "'python' available: $has_python\n"
 printf "'pytest' available: $has_pytest\n"
 printf "'nix' available: $has_nix\n"
