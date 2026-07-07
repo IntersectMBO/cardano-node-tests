@@ -74,6 +74,7 @@ if [ "${CI_CLUSTER_ERA:-}" = "conway 11" ]; then
   export PROTOCOL_VERSION=11
 elif [ "${CI_CLUSTER_ERA:-}" = "dijkstra 12" ]; then
   export PROTOCOL_VERSION=12
+  export COMMAND_ERA=dijkstra
 fi
 
 # Decrease the number of tests per cluster if we are using the "disk" (LMDB) UTxO backend to avoid
