@@ -32,7 +32,7 @@ class Versions:
     DEFAULT_CLUSTER_ERA: tp.Final[int] = CONWAY
     DEFAULT_TX_ERA: tp.Final[int] = DEFAULT_CLUSTER_ERA
 
-    # Map protocol versions to era names
+    # Map protocol versions to era names — add new entries here when a new era ships
     MAP: tp.ClassVar[dict[int, str]] = {
         0: "byron",
         1: "byron",
@@ -48,6 +48,9 @@ class Versions:
         11: "conway",
         12: "dijkstra",
     }
+
+    # Derived from MAP so it stays current when new eras are added above
+    LAST_KNOWN_PROTOCOL_VERSION: tp.Final[int] = max(MAP)
 
     def __init__(self) -> None:
         protocol_version = helpers.get_env_int("PROTOCOL_VERSION", self.DEFAULT_CLUSTER_ERA)

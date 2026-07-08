@@ -17,11 +17,13 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import cost_model_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
+from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -280,6 +282,11 @@ class TestPParamUpdate:
 
         * Vote to disapprove the actions
         * Submit a "protocol parameters update" action that will be enacted
+
+            - Cost model proposal is generated dynamically from the running cluster's
+              current protocol parameters, so no static fixture file needs updating
+              when mainnet governance changes cost models.
+
         * Check that SPOs cannot vote on a "protocol parameters update" action that doesn't
           change security parameters
         * Vote to approve the action
@@ -293,7 +300,10 @@ class TestPParamUpdate:
         """
         cluster, governance_data = cluster_lock_governance_plutus
         temp_template = common.get_test_id(cluster)
-        cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
+        cost_proposal_file = cost_model_utils.write_cost_model_proposal(
+            cost_models=cost_model_utils.get_current_cost_models(cluster),
+            dest=temptools.get_basetemp() / f"{temp_template}_cost_models.json",
+        )
         db_errors_final = []
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
 

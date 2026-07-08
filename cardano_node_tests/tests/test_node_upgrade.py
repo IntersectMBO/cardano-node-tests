@@ -15,6 +15,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import cost_model_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
@@ -132,7 +133,7 @@ class TestSetup:
         Test updating Plutus cost models after node upgrade. Runs only on step 2 of upgrade
         testing sequence.
 
-        * Load cost model proposal from JSON file (PlutusV2 and PlutusV3 models)
+        * Generate cost model proposal from the running cluster's current protocol parameters
         * Get default governance data (DReps, committee members, pools)
         * Submit cost model update governance action
         * Vote and ratify the cost model update
@@ -141,7 +142,10 @@ class TestSetup:
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
-        cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
+        cost_proposal_file = cost_model_utils.write_cost_model_proposal(
+            cost_models=cost_model_utils.get_current_cost_models(cluster),
+            dest=temptools.get_basetemp() / f"{temp_template}_cost_models.json",
+        )
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster
