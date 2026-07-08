@@ -90,6 +90,7 @@ jobs:
           {
             echo 'ANALYSIS_PROMPT<<__EOF_PROMPT42__'
             sed 's|{RUN_DIR}|run_workdir|g' agent_docs/upgrade_failure_analysis_prompt.md
+            sed 's|{RUN_DIR}|run_workdir|g' agent_docs/ci_analysis_prompt.md
             printf '\n__EOF_PROMPT42__\n'
           } >> "$GITHUB_ENV"
       - name: 🤖 Analyze test failures with Claude
