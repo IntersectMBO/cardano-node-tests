@@ -2,7 +2,7 @@
 
 You are triaging a failed cardano-node-tests **node upgrade** run. Produce a concise preliminary failure analysis.
 
-The run directory is `{RUN_DIR}` (path is relative to the current working directory unless it is absolute). All input paths below are under that directory.
+The run directory is `{RUN_DIR}` (path is relative to the current working directory unless it is absolute). The default run directory is `run_workdir`. All input paths below are under that directory.
 
 A node upgrade run executes the same smoke-test suite three times against an evolving cluster:
 
@@ -39,9 +39,6 @@ Known patterns:
 
 Constraints:
 
-- Output a single markdown file at: `{RUN_DIR}/failure_analysis.md`.
-- Keep it under ~300 lines. No full stack traces — only the most informative line(s).
+- No full stack traces — only the most informative line(s).
 - If a source file is missing, note it once and move on; do not fail.
 - Do not modify any other files.
-
-Start now.
