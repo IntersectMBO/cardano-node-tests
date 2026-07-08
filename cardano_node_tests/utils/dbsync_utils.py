@@ -4,6 +4,7 @@ import enum
 import functools
 import itertools
 import logging
+import pathlib as pl
 import time
 import typing as tp
 
@@ -1674,6 +1675,28 @@ def column_exists(*, table: str, column: str) -> bool:
 def column_data_type(*, table: str, column: str) -> str | None:
     """Return the SQL data type of a column, or `None` if it does not exist."""
     return dbsync_queries.query_column_data_type(table=table, column=column)
+
+
+def allow_private_offchain_urls_enabled() -> bool:
+    """Check whether the running db-sync uses ``--allow-private-offchain-urls``.
+
+    This is a start-time CLI flag (gated by the ``DBSYNC_ALLOW_PRIVATE_OFFCHAIN_URLS`` env
+    var in the ``run-cardano-dbsync`` script), not an insert option, so it cannot be toggled
+    per test. Off-chain fetching of private / localhost metadata URLs only works when it is
+    set. Detected from the running process arguments, because the run script always contains
+    the conditional flag and so its text is not a reliable signal.
+    """
+    proc_root = pl.Path("/proc")
+    for proc_dir in proc_root.iterdir():
+        if not proc_dir.name.isdigit():
+            continue
+        try:
+            cmdline = (proc_dir / "cmdline").read_bytes()
+        except OSError:
+            continue
+        if b"cardano-db-sync" in cmdline and b"--allow-private-offchain-urls" in cmdline:
+            return True
+    return False
 
 
 def check_epoch_state(*, epoch_no: int, txid: str, action_type: ActionTypes) -> None:

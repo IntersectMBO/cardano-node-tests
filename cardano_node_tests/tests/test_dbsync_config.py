@@ -307,6 +307,7 @@ class TestDBSyncConfig:
         yield from self._subtests_phase1()
         yield from self._subtests_phase2()
         yield from self._subtests_phase3()
+        yield from self._subtests_phase4()
 
     def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
         """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
@@ -685,6 +686,61 @@ class TestDBSyncConfig:
             check_dbsync_state(expected_state={db_sync.Table.POOL_STAT: TableCondition.EMPTY})
 
         yield pool_stat_disable
+
+    def _subtests_phase4(self) -> tp.Generator[tp.Callable]:
+        """Phase 4 subtests: off-chain pool metadata (needs --allow-private-offchain-urls)."""
+
+        def offchain_pool_data_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `offchain_pool_data` option.
+
+            With off-chain pool data enabled (and db-sync allowed to fetch private/localhost
+            URLs), db-sync fetches the cluster pools' registered metadata and stores it in
+            off_chain_pool_data, with no fetch errors. The fetch is asynchronous (the fetch
+            loop sleeps ~300s between passes), so off_chain_pool_data is polled.
+            """
+            if not dbsync_utils.allow_private_offchain_urls_enabled():
+                pytest.skip("requires db-sync started with --allow-private-offchain-urls")
+
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_offchain_pool_data(value=db_sync.SettingState.ENABLE)
+            )
+            wait_for_tables_not_empty([db_sync.Table.OFF_CHAIN_POOL_DATA], timeout=600)
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.OFF_CHAIN_POOL_DATA: TableCondition.NOT_EMPTY,
+                    db_sync.Table.OFF_CHAIN_POOL_FETCH_ERROR: TableCondition.EMPTY,
+                }
+            )
+
+        yield offchain_pool_data_enable
+
+        def offchain_pool_data_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `offchain_pool_data` option.
+
+            With off-chain pool data disabled, db-sync does not fetch pool metadata, so both
+            off_chain_pool_data and off_chain_pool_fetch_error stay empty. The on-chain
+            metadata reference (pool_metadata_ref) is still recorded.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_offchain_pool_data(value=db_sync.SettingState.DISABLE)
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.OFF_CHAIN_POOL_DATA: TableCondition.EMPTY,
+                    db_sync.Table.OFF_CHAIN_POOL_FETCH_ERROR: TableCondition.EMPTY,
+                    db_sync.Table.POOL_METADATA_REF: TableCondition.NOT_EMPTY,
+                }
+            )
+
+        yield offchain_pool_data_disable
 
     @allure.link(helpers.get_vcs_link())
     def test_dbsync_config(
