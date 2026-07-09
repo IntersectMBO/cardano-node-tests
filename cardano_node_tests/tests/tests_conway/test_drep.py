@@ -326,12 +326,12 @@ class TestDReps:
         (
             {
                 "drep_metadata_file": DATA_DIR / "drep_metadata_url.json",
-                "drep_metadata_url": "https://tinyurl.com/drep-url",
+                "drep_metadata_url": common.PUBLIC_DREP_METADATA_URL,
                 "expected_hash": "18b4b10150eab04ba66c8f9cb497ff05c6c31b9c9825388481c1790ce76b6b90",
             },
             {
                 "drep_metadata_file": DATA_DIR / "drep_metadata_ipfs.json",
-                "drep_metadata_url": "https://tinyurl.com/drep-ipfs",
+                "drep_metadata_url": common.PUBLIC_DREP_METADATA_IPFS,
                 "expected_hash": "7b45535061dce55fca685fedfec6e41a195c4fe4ef812767c34505390b413ff3",
             },
         ),
@@ -518,10 +518,10 @@ class TestDReps:
         """
         temp_template = common.get_test_id(cluster)
 
-        drep_metadata_file = DATA_DIR / "governance_action_anchor.json"
+        drep_metadata_file = DATA_DIR / "ga_anchor.json"
 
         # Register DRep
-        drep_metadata_url = "https://tinyurl.com/drep-url"
+        drep_metadata_url = common.PUBLIC_DREP_METADATA_URL
         drep_metadata_hash = cluster.g_governance.drep.get_metadata_hash(
             drep_metadata_file=drep_metadata_file
         )

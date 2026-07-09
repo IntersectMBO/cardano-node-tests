@@ -27,6 +27,33 @@ COMPAT_ERAS = ("shelley", "allegra", "mary", "alonzo", "babbage")
 
 ADDR_ALPHABET = string.ascii_lowercase + string.digits
 
+# Publicly-hosted metadata/anchor URLs, used by both db-sync and cardano-cli
+# whenever a test needs a publicly accessible URL (for pool metadata, DRep
+# metadata or governance action anchors) rather than a cluster-local one. Each
+# URL below points to the equivalent file under ``data/`` served from the public
+# repo. Keep the raw-content paths short: some consumers cap the URL at 128 bytes.
+
+# db-sync's off-chain fetcher rejects URLs whose host is one of localhost,
+# 127.0.0.1, ::1, 10.*, or 192.168.* (see ``parseOffChainUrl`` in
+# ``cardano-db-sync/src/Cardano/DbSync/OffChain/Http.hs``), so the cluster-local
+# ``http://localhost:...`` URLs always fail and this public equivalent is needed.
+PUBLIC_POOL_METADATA_URL = (
+    "https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/master"
+    "/cardano_node_tests/tests/data/pool_metadata.json"
+)
+PUBLIC_DREP_METADATA_URL = (
+    "https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/master"
+    "/cardano_node_tests/tests/data/drep_metadata_url.json"
+)
+PUBLIC_DREP_METADATA_IPFS = (
+    "https://peach-accused-sloth-87.mypinata.cloud/ipfs"
+    "/bafkreigphrowsgabffhrhhlnf3fufoxiomzm56qyynlxtbgbbpq2xpqwxa"
+)
+PUBLIC_ACTION_ANCHOR_URL = (
+    "https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/master"
+    "/cardano_node_tests/tests/data/ga_anchor.json"
+)
+
 ORDER5_BYRON = (
     pytest.mark.order(5) if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop
 )

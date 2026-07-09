@@ -738,7 +738,7 @@ class TestStakePool:
             pool_pledge=1_000,
             pool_cost=cluster.g_query.get_protocol_params().get("minPoolCost", 500),
             pool_margin=0.2,
-            pool_metadata_url="https://tinyurl.com/yvkfs7pr",
+            pool_metadata_url=common.PUBLIC_POOL_METADATA_URL,
             pool_metadata_hash=cluster.g_stake_pool.gen_pool_metadata_hash(pool_metadata_file),
         )
 
