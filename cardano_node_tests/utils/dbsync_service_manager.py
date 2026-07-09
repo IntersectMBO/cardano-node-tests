@@ -200,6 +200,7 @@ class DBSyncConfigBuilder:
             "plutus": PlutusConfig(),
             "governance": SettingState.ENABLE,
             "offchain_pool_data": SettingState.ENABLE,
+            "offchain_vote_data": SettingState.DISABLE,
             "pool_stat": SettingState.ENABLE,
             "remove_jsonb_from_schema": SettingState.DISABLE,
         }
@@ -322,6 +323,11 @@ class DBSyncConfigBuilder:
             self._config["offchain_pool_data"] = value
         return self
 
+    def with_offchain_vote_data(self, *, value: SettingState) -> tp.Self:
+        if not self._preset_applied:
+            self._config["offchain_vote_data"] = value
+        return self
+
     def with_pool_stat(self, *, value: SettingState) -> tp.Self:
         if not self._preset_applied:
             self._config["pool_stat"] = value
@@ -356,6 +362,7 @@ class DBSyncConfigBuilder:
             "plutus": {"enable": plutus.enable},
             "governance": self._enum_to_value(self._config["governance"]),
             "offchain_pool_data": self._enum_to_value(self._config["offchain_pool_data"]),
+            "offchain_vote_data": self._enum_to_value(self._config["offchain_vote_data"]),
             "pool_stat": self._enum_to_value(self._config["pool_stat"]),
             "remove_jsonb_from_schema": self._enum_to_value(
                 self._config["remove_jsonb_from_schema"]

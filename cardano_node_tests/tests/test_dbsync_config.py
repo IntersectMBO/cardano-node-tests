@@ -48,6 +48,9 @@ class ColumnCondition(enum.StrEnum):
     IS_NOT_NULL = "column_condition:IS NOT NULL"
 
 
+# On-chain governance tables. Off-chain vote metadata is controlled by `offchain_vote_data`
+# (and needs --allow-private-offchain-urls), so it is covered separately by the
+# offchain_vote_data subtests rather than bundled here with on-chain governance data.
 GOVERNANCE_TABLES = (
     db_sync.Table.COMMITTEE_DE_REGISTRATION,
     db_sync.Table.COMMITTEE_MEMBER,
@@ -59,15 +62,21 @@ GOVERNANCE_TABLES = (
     db_sync.Table.DREP_REGISTRATION,
     db_sync.Table.EPOCH_STATE,
     db_sync.Table.GOV_ACTION_PROPOSAL,
+    db_sync.Table.VOTING_ANCHOR,
+    db_sync.Table.VOTING_PROCEDURE,
+    db_sync.Table.TREASURY_WITHDRAWAL,
+)
+
+# Off-chain vote metadata tables, populated only when `offchain_vote_data` is enabled and
+# db-sync is allowed to fetch the (private/localhost) anchor URLs.
+OFFCHAIN_VOTE_TABLES = (
     db_sync.Table.OFF_CHAIN_VOTE_DATA,
     db_sync.Table.OFF_CHAIN_VOTE_DREP_DATA,
     db_sync.Table.OFF_CHAIN_VOTE_EXTERNAL_UPDATE,
     db_sync.Table.OFF_CHAIN_VOTE_FETCH_ERROR,
     db_sync.Table.OFF_CHAIN_VOTE_GOV_ACTION_DATA,
     db_sync.Table.OFF_CHAIN_VOTE_REFERENCE,
-    db_sync.Table.VOTING_ANCHOR,
-    db_sync.Table.VOTING_PROCEDURE,
-    db_sync.Table.TREASURY_WITHDRAWAL,
+    db_sync.Table.OFF_CHAIN_VOTE_AUTHOR,
 )
 
 
@@ -308,6 +317,7 @@ class TestDBSyncConfig:
         yield from self._subtests_phase2()
         yield from self._subtests_phase3()
         yield from self._subtests_phase4()
+        yield from self._subtests_phase5()
 
     def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
         """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
@@ -741,6 +751,84 @@ class TestDBSyncConfig:
             )
 
         yield offchain_pool_data_disable
+
+    def _subtests_phase5(self) -> tp.Generator[tp.Callable]:
+        """Phase 5 subtests: off-chain vote metadata (needs --allow-private-offchain-urls)."""
+
+        def offchain_vote_data_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `offchain_vote_data`, independent of `governance`.
+
+            With governance enabled but off-chain vote data disabled, db-sync records on-chain
+            governance anchors (voting_anchor) but does not fetch any anchor metadata, so all
+            off_chain_vote_* tables stay empty. This proves `offchain_vote_data` gates the
+            metadata fetch independently of the `governance` flag.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_governance(
+                    value=db_sync.SettingState.ENABLE
+                ).with_offchain_vote_data(value=db_sync.SettingState.DISABLE)
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.VOTING_ANCHOR: TableCondition.NOT_EMPTY,
+                    **dict.fromkeys(OFFCHAIN_VOTE_TABLES, TableCondition.EMPTY),
+                }
+            )
+
+        yield offchain_vote_data_disable
+
+        def offchain_vote_data_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `offchain_vote_data`.
+
+            With off-chain vote data enabled (and db-sync allowed to fetch private/localhost
+            URLs), db-sync fetches governance anchor metadata; the fetch is recorded in
+            off_chain_vote_data (or off_chain_vote_fetch_error on failure).
+
+            Skipped unless db-sync allows private URLs and the chain has a fetchable vote
+            anchor. The framework's governance activity publishes only non-CIP anchors and
+            unpublishes them, so on a standard cluster there is nothing for db-sync to fetch;
+            full off-chain vote coverage requires anchored governance activity with reachable
+            metadata. (The CIP sub-tables - off_chain_vote_gov_action_data / drep_data /
+            author / reference - additionally need CIP-compliant anchors and are not asserted
+            here.)
+            """
+            if not dbsync_utils.allow_private_offchain_urls_enabled():
+                pytest.skip("requires db-sync started with --allow-private-offchain-urls")
+            if (
+                dbsync_queries.query_rows_count(
+                    table="voting_anchor", column="url", condition="!= ''"
+                )
+                == 0
+            ):
+                pytest.skip("no fetchable governance vote anchors on chain")
+
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_governance(
+                    value=db_sync.SettingState.ENABLE
+                ).with_offchain_vote_data(value=db_sync.SettingState.ENABLE)
+            )
+
+            # The fetch is asynchronous; wait until db-sync has recorded the result either as
+            # fetched data or as a fetch error.
+            def _query_func() -> bool:
+                data = not dbsync_utils.table_empty(table=db_sync.Table.OFF_CHAIN_VOTE_DATA)
+                err = not dbsync_utils.table_empty(table=db_sync.Table.OFF_CHAIN_VOTE_FETCH_ERROR)
+                if not (data or err):
+                    msg = "off_chain_vote_data / off_chain_vote_fetch_error still empty"
+                    raise dbsync_utils.DbSyncNoResponseError(msg)
+                return True
+
+            dbsync_utils.retry_query(query_func=_query_func, timeout=600)
+
+        yield offchain_vote_data_enable
 
     @allure.link(helpers.get_vcs_link())
     def test_dbsync_config(
