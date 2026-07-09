@@ -99,9 +99,10 @@ fi
 def _inject_time_drift_hook(content: str, pool_num: int) -> str:
     """Inject a conditional clock-skew bash block into pool wrapper scripts.
 
-    Replaces the pre-run setup placeholder in the cardonnay template. Activated
-    only when TIME_DRIFT_POOL=<pool_num> and TIME_DRIFT_SPEC are set at cluster
-    start time. Default-off: unset env vars leave behaviour unchanged.
+    Appends after the pre-run setup placeholder in the cardonnay template, leaving
+    the placeholder itself intact. Activated only when TIME_DRIFT_POOL=<pool_num>
+    and TIME_DRIFT_SPEC are set at cluster start time. Default-off: unset env vars
+    leave behaviour unchanged.
 
     Raises:
         ValueError: When the pre-run setup placeholder is absent from the template.
@@ -112,7 +113,7 @@ def _inject_time_drift_hook(content: str, pool_num: int) -> str:
         raise ValueError(msg)
 
     hook = _TIME_DRIFT_HOOK.replace("%%POOL_NUM%%", str(pool_num))
-    return content.replace(marker, hook.rstrip("\n"), 1)
+    return content.replace(marker, f"{marker}\n{hook.rstrip(chr(10))}", 1)
 
 
 class CustomCardonnayScripts(cardonnay_local.LocalScripts):

@@ -245,7 +245,7 @@ Inject a gradual clock skew into a single pool node to observe network resilienc
 **Example:**
 
 ```sh
-TIME_DRIFT_POOL=1 TIME_DRIFT_SPEC='+0 x1.008' make start-cluster
+./runner/runc.sh -- TIME_DRIFT_POOL=1 TIME_DRIFT_SPEC='+0 x1.008' make start-cluster
 ```
 
 ### Run Individual Tests
