@@ -51,7 +51,7 @@ def pool_user_ug(
 class TestInfo:
     """Tests for info."""
 
-    GOV_ACTION_ANCHOR_FILE = DATA_DIR / "governance_action_anchor.json"
+    GOV_ACTION_ANCHOR_FILE = DATA_DIR / "ga_anchor.json"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
@@ -80,7 +80,7 @@ class TestInfo:
 
         # Create an action
         # Shortened url for info_action_anchor.json
-        anchor_url = "https://tinyurl.com/cardano-qa-anchor"
+        anchor_url = common.PUBLIC_ACTION_ANCHOR_URL
         anchor_data_hash = cluster.g_governance.get_anchor_data_hash(
             file_text=self.GOV_ACTION_ANCHOR_FILE
         )

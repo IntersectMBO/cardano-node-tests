@@ -90,9 +90,9 @@ class TestConway:
         action_deposit_amt = cluster.g_query.get_gov_action_deposit()
 
         # Create an action
-        anchor_url = "https://tinyurl.com/cardano-qa-anchor"
+        anchor_url = common.PUBLIC_ACTION_ANCHOR_URL
         anchor_data_hash = cluster.g_governance.get_anchor_data_hash(
-            file_text=DATA_DIR / "governance_action_anchor.json"
+            file_text=DATA_DIR / "ga_anchor.json"
         )
 
         info_action = cluster.g_governance.action.create_info(
