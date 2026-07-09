@@ -151,20 +151,22 @@ You can fine-tune test runs using these environment variables:
 | `UTXO_BACKEND`                  | Backend type: `mem`, `disk`, `disklmdb` or `empty`. |
 | `MIXED_UTXO_BACKENDS`           | List of UTXO backends for mixed setup.              |
 | `ENABLE_TX_GENERATOR`           | Enable tx-generator (default: `false`).             |
+| `ENABLE_TX_CENTRIFUGE`          | Enable tx-centrifuge (default: `false`).            |
 | `PROTOCOL_VERSION`              | Cardano protocol version to use (default: `10`).    |
 | `USE_GENESIS_MODE`              | Switch to using `GenesisMode` (default: `false`).   |
 | `ALLOW_UNSTABLE_ERROR_MESSAGES` | Allow tests to pass with unstable error messages.   |
 
 ### Additional for `regression.sh`
 
-| Variable           | Description                                       |
-| ------------------ | ------------------------------------------------- |
-| `CARDANO_CLI_REV`  | `cardano-cli` version.                            |
-| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow start).     |
-| `DBSYNC_REV`       | `cardano-db-sync` version.                        |
-| `NODE_REV`         | `cardano-node` version (default: `master`).       |
-| `PYTEST_ARGS`      | Extra options passed to pytest.                   |
-| `TEST_THREADS`     | Number of pytest workers (default: `20`).         |
+| Variable           | Description                                             |
+| ------------------ | ------------------------------------------------------- |
+| `CARDANO_CLI_REV`  | `cardano-cli` version.                                  |
+| `CI_BYRON_CLUSTER` | Run cluster from Byron ➝ Conway (slow start).           |
+| `DBSYNC_REV`       | `cardano-db-sync` version.                              |
+| `NODE_REV`         | `cardano-node` version (default: `master`).             |
+| `TX_CENTRIFUGE_REV`| `tx-centrifuge` version (default: `bench/leios-11.0.1`) |
+| `PYTEST_ARGS`      | Extra options passed to pytest.                         |
+| `TEST_THREADS`     | Number of pytest workers (default: `20`).               |
 
 ### 💡 Usage Examples
 

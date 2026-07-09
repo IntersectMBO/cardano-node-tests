@@ -35,33 +35,49 @@ class TestNegative:
     """Transaction tests that are expected to fail."""
 
     @pytest.fixture(scope="class")
-    def skip_on_wrong_future_era(self) -> None:
-        future_era_name = VERSIONS.MAP.get(VERSIONS.cluster_era + 1)
-        if future_era_name is None:
+    def future_tx_era(self) -> int:
+        """Return the protocol version of a usable era higher than the current cluster era.
+
+        Skip the test if no such era exists. Scans the next few protocol versions so that
+        eras sharing the current era's name (e.g. multiple conway protocol versions) are
+        skipped over in favor of a genuinely different, CLI-supported era.
+        """
+        higher_eras = tuple(
+            he for i in range(1, 4) if VERSIONS.MAP.get(he := VERSIONS.cluster_era + i)
+        )
+        if not higher_eras:
             pytest.skip(
                 "no known era with higher protocol version than the current cluster era "
                 f"({VERSIONS.cluster_era_name})"
             )
+
         current_era_name = VERSIONS.MAP[VERSIONS.cluster_era]
-        if current_era_name == future_era_name:
-            pytest.skip(
-                f"current cluster era ({current_era_name}) "
-                f"is the same as the future era ({future_era_name})"
-            )
-        if not clusterlib_utils.cli_has(future_era_name):
-            pytest.skip(f"`{future_era_name} transaction build-raw` command is not available")
+        skip_msg = ""
+        for he in higher_eras:
+            future_era_name = VERSIONS.MAP[he]
+            if current_era_name == future_era_name:
+                skip_msg = (
+                    f"current cluster era ({current_era_name}) "
+                    f"is the same as the future era ({future_era_name})"
+                )
+            elif not clusterlib_utils.cli_has(f"{future_era_name} transaction build-raw"):
+                skip_msg = f"`{future_era_name} transaction build-raw` command is not available"
+            else:
+                return he
+
+        pytest.skip(skip_msg)
 
     @pytest.fixture
     def cluster_wrong_tx_era(
         self,
-        skip_on_wrong_future_era: None,  # noqa: ARG002
+        future_tx_era: int,
         cluster: clusterlib.ClusterLib,  # noqa: ARG002
     ) -> clusterlib.ClusterLib:
         # The `cluster` argument (representing the `cluster` fixture) needs to be present
         # in order to have an actual cluster instance assigned at the time this fixture
         # is executed
         return cluster_nodes.get_cluster_type().get_cluster_obj(
-            command_era=VERSIONS.MAP[VERSIONS.cluster_era + 1]
+            command_era=VERSIONS.MAP[future_tx_era]
         )
 
     @pytest.fixture

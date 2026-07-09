@@ -6,17 +6,17 @@ trap 'echo "Error at line $LINENO"' ERR
 retval=0
 
 export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
-STATE_CLUSTER="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
+state_cluster="${CARDANO_NODE_SOCKET_PATH_CI%/*}"
 
 # default era to use, can be overridden in each step if needed
-CLUSTER_ERA="conway"
-export COMMAND_ERA="${COMMAND_ERA:-"$CLUSTER_ERA"}"
+cluster_era="conway"
+export COMMAND_ERA="${COMMAND_ERA:-"$cluster_era"}"
 
 : "${WORKDIR:?WORKDIR environment variable must be set}"
-CLUSTER_SCRIPTS_DIR="$WORKDIR/cluster0_${CLUSTER_ERA}"
+cluster_scripts_dir="$WORKDIR/cluster0_${cluster_era}"
 
 # init dir for step1 binaries
-STEP1_BIN="$WORKDIR/step1-bin"
+readonly STEP1_BIN="$WORKDIR/step1-bin"
 
 # shellcheck disable=SC1091
 . scripts/common.sh
@@ -30,26 +30,26 @@ if [ "$1" = "step1" ]; then
 
   export UPGRADE_TESTS_STEP=1
 
-  REPORTS_DIR="${WORKDIR}/reports-step1"
-  mkdir -p "$REPORTS_DIR"
+  reports_dir="${WORKDIR}/reports-step1"
+  mkdir -p "$reports_dir"
 
   if [ -n "${BASE_TAR_URL:-""}" ]; then
     # download and extract base revision binaries
-    BASE_TAR_FILE="$WORKDIR/base_rev.tar.gz"
-    curl -sSL "$BASE_TAR_URL" > "$BASE_TAR_FILE" || exit 6
+    base_tar_file="$WORKDIR/base_rev.tar.gz"
+    curl -sSL "$BASE_TAR_URL" > "$base_tar_file" || exit 6
     mkdir -p "$WORKDIR/base_rev"
-    tar -C "$WORKDIR/base_rev" -xzf "$BASE_TAR_FILE" || exit 6
-    rm -f "$BASE_TAR_FILE"
+    tar -C "$WORKDIR/base_rev" -xzf "$base_tar_file" || exit 6
+    rm -f "$base_tar_file"
     # add base revision binaries to the PATH
-    BASE_REV_BIN="$WORKDIR/base_rev/bin"
-    mkdir -p "$BASE_REV_BIN"
+    base_rev_bin="$WORKDIR/base_rev/bin"
+    mkdir -p "$base_rev_bin"
     # TODO: there seems to be a change of layout of the archive. Since 10.2.0, there is already a `bin`
     # dir and the binaries are already placed there.
-    if [ ! -e "$BASE_REV_BIN/cardano-node" ]; then
-      ln -s "$WORKDIR/base_rev/cardano-node" "$BASE_REV_BIN/cardano-node"
-      ln -s "$WORKDIR/base_rev/cardano-cli" "$BASE_REV_BIN/cardano-cli"
+    if [ ! -e "$base_rev_bin/cardano-node" ]; then
+      ln -s "$WORKDIR/base_rev/cardano-node" "$base_rev_bin/cardano-node"
+      ln -s "$WORKDIR/base_rev/cardano-cli" "$base_rev_bin/cardano-cli"
     fi
-    export PATH="${BASE_REV_BIN}:${PATH}"
+    export PATH="${base_rev_bin}:${PATH}"
   fi
 
   if is_truthy "${CI_BYRON_CLUSTER:-}"; then
@@ -61,13 +61,13 @@ if [ "$1" = "step1" ]; then
 
   # generate local cluster scripts
   prepare-cluster-scripts \
-    -d "$CLUSTER_SCRIPTS_DIR" \
+    -d "$cluster_scripts_dir" \
     -t "$TESTNET_VARIANT"
 
   # try to stop local cluster
-  "$CLUSTER_SCRIPTS_DIR/stop-cluster"
+  "$cluster_scripts_dir/stop-cluster"
   # start local cluster
-  "$CLUSTER_SCRIPTS_DIR/start-cluster" || exit 6
+  "$cluster_scripts_dir/start-cluster" || exit 6
 
   # backup the original cardano binaries
   mkdir -p "$STEP1_BIN"
@@ -75,7 +75,7 @@ if [ "$1" = "step1" ]; then
   ln -s "$(command -v cardano-cli)" "$STEP1_BIN/cardano-cli-step1"
 
   # backup the original config file
-  cp -f "$STATE_CLUSTER/config-pool3.json" "$STATE_CLUSTER/config-pool3.step1.json"
+  cp -f "$state_cluster/config-pool3.json" "$state_cluster/config-pool3.step1.json"
 
   # run smoke tests
   printf "STEP1 tests: %(%H:%M:%S)T\n" -1
@@ -86,16 +86,16 @@ if [ "$1" = "step1" ]; then
     -m "smoke or upgrade_step1" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
-    --alluredir="$REPORTS_DIR" \
+    --alluredir="$reports_dir" \
     --html="$WORKDIR/testrun-report-step1.html" \
     --self-contained-html \
     || retval="$?"
 
   # stop local cluster if tests failed unexpectedly
-  [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
+  [ "$retval" -le 1 ] || "$cluster_scripts_dir/stop-cluster"
 
   # create results archive for step1
-  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" allure-results-step1
+  ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step1
 
   printf "STEP1 finish: %(%H:%M:%S)T\n" -1
 
@@ -109,10 +109,10 @@ elif [ "$1" = "step2" ]; then
 
   export UPGRADE_TESTS_STEP=2
 
-  REPORTS_DIR="${WORKDIR}/reports-step2"
-  mkdir -p "$REPORTS_DIR"
+  reports_dir="${WORKDIR}/reports-step2"
+  mkdir -p "$reports_dir"
 
-  NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  NETWORK_MAGIC="$(jq -r '.networkMagic' "$state_cluster/shelley/genesis.json")"
   export NETWORK_MAGIC
 
   # add binaries saved in step1 to the PATH
@@ -122,14 +122,14 @@ elif [ "$1" = "step2" ]; then
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step2/state-cluster0/bft1.socket" \
     PROTOCOL_VERSION=11 \
     DRY_RUN=true \
-    "$CLUSTER_SCRIPTS_DIR/start-cluster"
+    "$cluster_scripts_dir/start-cluster"
 
 
   # use the original genesis files
-  BYRON_GENESIS_HASH="$(jq -r '.ByronGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  SHELLEY_GENESIS_HASH="$(jq -r '.ShelleyGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  ALONZO_GENESIS_HASH="$(jq -r '.AlonzoGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  CONWAY_GENESIS_HASH="$(jq -r '.ConwayGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
+  byron_genesis_hash="$(jq -r '.ByronGenesisHash' "$state_cluster/config-bft1.json")"
+  shelley_genesis_hash="$(jq -r '.ShelleyGenesisHash' "$state_cluster/config-bft1.json")"
+  alonzo_genesis_hash="$(jq -r '.AlonzoGenesisHash' "$state_cluster/config-bft1.json")"
+  conway_genesis_hash="$(jq -r '.ConwayGenesisHash' "$state_cluster/config-bft1.json")"
 
   # copy newly generated config files to the cluster state dir
   for conf in "$WORKDIR"/dry_config_step2/state-cluster0/config-*.json; do
@@ -140,12 +140,12 @@ elif [ "$1" = "step2" ]; then
     # use new config on upgraded nodes
     if [ "$fname" != "config-pool3.json" ]; then
       jq \
-        --arg byron_hash "$BYRON_GENESIS_HASH" \
-        --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+        --arg byron_hash "$byron_genesis_hash" \
+        --arg shelley_hash "$shelley_genesis_hash" \
         --arg alonzo_file "shelley/genesis.alonzo.json" \
-        --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+        --arg alonzo_hash "$alonzo_genesis_hash" \
         --arg conway_file "shelley/genesis.conway.json" \
-        --arg conway_hash "$CONWAY_GENESIS_HASH" '
+        --arg conway_hash "$conway_genesis_hash" '
         .ByronGenesisHash = $byron_hash
         | .ShelleyGenesisHash = $shelley_hash
         | .AlonzoGenesisFile = $alonzo_file
@@ -153,35 +153,35 @@ elif [ "$1" = "step2" ]; then
         | .ConwayGenesisFile = $conway_file
         | .ConwayGenesisHash = $conway_hash
         | .ExperimentalHardForksEnabled = false
-        ' "$conf" > "$STATE_CLUSTER/$fname"
+        ' "$conf" > "$state_cluster/$fname"
     fi
 
     # copy newly generated topology files to the cluster state dir
-    cp -f "${WORKDIR}/dry_config_step2/state-cluster0/topology-${nodename}.json" "$STATE_CLUSTER"
+    cp -f "${WORKDIR}/dry_config_step2/state-cluster0/topology-${nodename}.json" "$state_cluster"
   done
 
   # run the pool3 with the original cardano-node binary
-  cp -f "$STATE_CLUSTER/cardano-node-pool3" "$STATE_CLUSTER/cardano-node-pool3.orig"
-  sed -i 's/cardano-node run/cardano-node-step1 run/' "$STATE_CLUSTER/cardano-node-pool3"
+  cp -f "$state_cluster/cardano-node-pool3" "$state_cluster/cardano-node-pool3.orig"
+  sed -i 's/cardano-node run/cardano-node-step1 run/' "$state_cluster/cardano-node-pool3"
 
   # Restart local cluster nodes with binaries from new cluster-node version.
   # It is necessary to restart supervisord with new environment.
-  "$STATE_CLUSTER/supervisorctl_local" stop all
+  "$state_cluster/supervisorctl_local" stop all
   sleep 5
-  "$STATE_CLUSTER/stop-cluster"
+  "$state_cluster/stop-cluster"
   sleep 3
-  "$STATE_CLUSTER/supervisord_start" || exit 6
+  "$state_cluster/supervisord_start" || exit 6
   sleep 5
-  "$STATE_CLUSTER/supervisorctl_local" start all
+  "$state_cluster/supervisorctl_local" start all
   sleep 5
-  "$STATE_CLUSTER/supervisorctl_local" status
+  "$state_cluster/supervisorctl_local" status
 
   # print path to cardano-node binaries
   echo "pool1 node binary:"
-  pool1_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool1)"
+  pool1_pid="$("$state_cluster/supervisorctl_local" pid nodes:pool1)"
   readlink -f "/proc/$pool1_pid/exe"
   echo "pool3 node binary:"
-  pool3_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool3)"
+  pool3_pid="$("$state_cluster/supervisorctl_local" pid nodes:pool3)"
   readlink -f "/proc/$pool3_pid/exe"
 
   # check that nodes are running
@@ -214,10 +214,10 @@ elif [ "$1" = "step2" ]; then
   # generate ledger peer snapshot using old node version
   cardano-cli-step1 query ledger-peer-snapshot \
     --testnet-magic "$NETWORK_MAGIC" \
-    --socket-path "$STATE_CLUSTER/pool3.socket" \
+    --socket-path "$state_cluster/pool3.socket" \
     --output-json \
-    --out-file "$STATE_CLUSTER/peer-snapshot-base.json"
-  if [ ! -e "$STATE_CLUSTER/peer-snapshot-base.json" ]; then
+    --out-file "$state_cluster/peer-snapshot-base.json"
+  if [ ! -e "$state_cluster/peer-snapshot-base.json" ]; then
     echo "Failed to get peer snapshot from pool3" >&2
     exit 6
   fi
@@ -231,16 +231,16 @@ elif [ "$1" = "step2" ]; then
     -m "smoke or upgrade_step2" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
-    --alluredir="$REPORTS_DIR" \
+    --alluredir="$reports_dir" \
     --html="$WORKDIR/testrun-report-step2.html" \
     --self-contained-html \
     ||retval="$?"
 
   # stop local cluster if tests failed unexpectedly
-  [ "$retval" -le 1 ] || "$CLUSTER_SCRIPTS_DIR/stop-cluster"
+  [ "$retval" -le 1 ] || "$cluster_scripts_dir/stop-cluster"
 
   # create results archive for step2
-  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" allure-results-step2
+  ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step2
 
   [ "$err_retval" -gt "$retval" ] && retval=1
 
@@ -256,61 +256,61 @@ elif [ "$1" = "step3" ]; then
 
   export UPGRADE_TESTS_STEP=3
 
-  REPORTS_DIR="${WORKDIR}/reports-step3"
-  mkdir -p "$REPORTS_DIR"
+  reports_dir="${WORKDIR}/reports-step3"
+  mkdir -p "$reports_dir"
 
-  NETWORK_MAGIC="$(jq -r '.networkMagic' "$STATE_CLUSTER/shelley/genesis.json")"
+  NETWORK_MAGIC="$(jq -r '.networkMagic' "$state_cluster/shelley/genesis.json")"
   export NETWORK_MAGIC
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step3/state-cluster0/bft1.socket" \
     PROTOCOL_VERSION=11 \
     DRY_RUN=true \
-    "$CLUSTER_SCRIPTS_DIR/start-cluster"
+    "$cluster_scripts_dir/start-cluster"
 
   # copy newly generated topology files to the cluster state dir
-  cp -f "$WORKDIR"/dry_config_step3/state-cluster0/topology-*.json "$STATE_CLUSTER"
+  cp -f "$WORKDIR"/dry_config_step3/state-cluster0/topology-*.json "$state_cluster"
 
   # Copy newly generated config files to the cluster state dir, but use the original genesis files
-  BYRON_GENESIS_HASH="$(jq -r '.ByronGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  SHELLEY_GENESIS_HASH="$(jq -r '.ShelleyGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  ALONZO_GENESIS_HASH="$(jq -r '.AlonzoGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  CONWAY_GENESIS_HASH="$(jq -r '.ConwayGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  DIJKSTRA_GENESIS_HASH="$(jq -r '.DijkstraGenesisHash' "$STATE_CLUSTER/config-bft1.json")"
-  if [ -z "$DIJKSTRA_GENESIS_HASH" ] || [ "$DIJKSTRA_GENESIS_HASH" = "null" ]; then
-    cp -f "$WORKDIR/dry_config_step3/state-cluster0/shelley/genesis.dijkstra.json" "$STATE_CLUSTER/shelley"
-    DIJKSTRA_GENESIS_HASH="$(cardano-cli latest genesis hash --genesis \
-      "$STATE_CLUSTER/shelley/genesis.dijkstra.json")"
+  byron_genesis_hash="$(jq -r '.ByronGenesisHash' "$state_cluster/config-bft1.json")"
+  shelley_genesis_hash="$(jq -r '.ShelleyGenesisHash' "$state_cluster/config-bft1.json")"
+  alonzo_genesis_hash="$(jq -r '.AlonzoGenesisHash' "$state_cluster/config-bft1.json")"
+  conway_genesis_hash="$(jq -r '.ConwayGenesisHash' "$state_cluster/config-bft1.json")"
+  dijkstra_genesis_hash="$(jq -r '.DijkstraGenesisHash' "$state_cluster/config-bft1.json")"
+  if [ -z "$dijkstra_genesis_hash" ] || [ "$dijkstra_genesis_hash" = "null" ]; then
+    cp -f "$WORKDIR/dry_config_step3/state-cluster0/shelley/genesis.dijkstra.json" "$state_cluster/shelley"
+    dijkstra_genesis_hash="$(cardano-cli latest genesis hash --genesis \
+      "$state_cluster/shelley/genesis.dijkstra.json")"
   fi
-  NODE_VER="$(version_parse "$(get_node_version)")"
-  NODE_V11="$(version_parse 11.0.0)"
+  node_ver="$(version_parse "$(get_node_version)")"
+  node_v11="$(version_parse 11.0.0)"
 
   for conf in "$WORKDIR"/dry_config_step3/state-cluster0/config-*.json; do
     fname="${conf##*/}"
     jq \
-      --arg byron_hash "$BYRON_GENESIS_HASH" \
-      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
-      --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
-      --arg conway_hash "$CONWAY_GENESIS_HASH" \
-      --arg dijkstra_hash "$DIJKSTRA_GENESIS_HASH" \
-      --argjson node_ver "$NODE_VER" \
-      --argjson node_v11 "$NODE_V11" '
+      --arg byron_hash "$byron_genesis_hash" \
+      --arg shelley_hash "$shelley_genesis_hash" \
+      --arg alonzo_hash "$alonzo_genesis_hash" \
+      --arg conway_hash "$conway_genesis_hash" \
+      --arg dijkstra_hash "$dijkstra_genesis_hash" \
+      --argjson node_ver "$node_ver" \
+      --argjson node_v11 "$node_v11" '
       .ByronGenesisHash = $byron_hash
       | .ShelleyGenesisHash = $shelley_hash
       | .AlonzoGenesisHash = $alonzo_hash
       | .ConwayGenesisHash = $conway_hash
       | .DijkstraGenesisHash = $dijkstra_hash
       | .ExperimentalProtocolsEnabled = ($node_ver < $node_v11)
-      ' "$conf" > "$STATE_CLUSTER/$fname"
+      ' "$conf" > "$state_cluster/$fname"
   done
 
   # generate ledger peer snapshot using new node version
   cardano-cli query ledger-peer-snapshot \
     --testnet-magic "$NETWORK_MAGIC" \
-    --socket-path "$STATE_CLUSTER/pool1.socket" \
+    --socket-path "$state_cluster/pool1.socket" \
     --output-json \
-    --out-file "$STATE_CLUSTER/peer-snapshot-upgrade.json"
-  if [ ! -e "$STATE_CLUSTER/peer-snapshot-upgrade.json" ]; then
+    --out-file "$state_cluster/peer-snapshot-upgrade.json"
+  if [ ! -e "$state_cluster/peer-snapshot-upgrade.json" ]; then
     echo "Failed to get peer snapshot from pool1" >&2
     exit 6
   fi
@@ -319,35 +319,35 @@ elif [ "$1" = "step3" ]; then
   jq '
     .localRoots[] += {"trustable": true}
     | .peerSnapshotFile = "peer-snapshot-base.json"
-    ' "$STATE_CLUSTER/topology-pool1.json" > "$STATE_CLUSTER/topology-pool1.tmp.json"
-  mv -f "$STATE_CLUSTER/topology-pool1.tmp.json" "$STATE_CLUSTER/topology-pool1.json"
+    ' "$state_cluster/topology-pool1.json" > "$state_cluster/topology-pool1.tmp.json"
+  mv -f "$state_cluster/topology-pool1.tmp.json" "$state_cluster/topology-pool1.json"
   jq '
     .localRoots[] += {"trustable": true}
     | .peerSnapshotFile = "peer-snapshot-upgrade.json"
-    ' "$STATE_CLUSTER/topology-pool3.json" > "$STATE_CLUSTER/topology-pool3.tmp.json"
-  mv -f "$STATE_CLUSTER/topology-pool3.tmp.json" "$STATE_CLUSTER/topology-pool3.json"
+    ' "$state_cluster/topology-pool3.json" > "$state_cluster/topology-pool3.tmp.json"
+  mv -f "$state_cluster/topology-pool3.tmp.json" "$state_cluster/topology-pool3.json"
 
   # set `GenesisMode` for nodes that will use the ledger peer snapshot
   for pool in pool1 pool3; do
     jq '.ConsensusMode = "GenesisMode"' \
-      "$STATE_CLUSTER/config-${pool}.json" > "$STATE_CLUSTER/config-${pool}.tmp.json"
-    mv -f "$STATE_CLUSTER/config-${pool}.tmp.json" "$STATE_CLUSTER/config-${pool}.json"
+      "$state_cluster/config-${pool}.json" > "$state_cluster/config-${pool}.tmp.json"
+    mv -f "$state_cluster/config-${pool}.tmp.json" "$state_cluster/config-${pool}.json"
   done
 
   # use the upgraded cardano-node binary for pool3
-  cp -f "$STATE_CLUSTER/cardano-node-pool3.orig" "$STATE_CLUSTER/cardano-node-pool3"
+  cp -f "$state_cluster/cardano-node-pool3.orig" "$state_cluster/cardano-node-pool3"
 
   # restart all nodes
-  "$STATE_CLUSTER/supervisorctl_local" restart nodes:
+  "$state_cluster/supervisorctl_local" restart nodes:
   sleep 10
-  "$STATE_CLUSTER/supervisorctl_local" status
+  "$state_cluster/supervisorctl_local" status
 
   # print path to cardano-node binaries
   echo "pool1 node binary:"
-  pool1_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool1)"
+  pool1_pid="$("$state_cluster/supervisorctl_local" pid nodes:pool1)"
   readlink -f "/proc/$pool1_pid/exe"
   echo "pool3 node binary:"
-  pool3_pid="$("$STATE_CLUSTER/supervisorctl_local" pid nodes:pool3)"
+  pool3_pid="$("$state_cluster/supervisorctl_local" pid nodes:pool3)"
   readlink -f "/proc/$pool3_pid/exe"
 
   # check that nodes are running
@@ -363,7 +363,7 @@ elif [ "$1" = "step3" ]; then
   for _ in {1..10}; do
     sync_progress="$(cardano-cli latest query tip \
       --testnet-magic "$NETWORK_MAGIC" \
-      --socket-path "${STATE_CLUSTER}/pool3.socket" | jq -r '.syncProgress')"
+      --socket-path "${state_cluster}/pool3.socket" | jq -r '.syncProgress')"
     if [ "$sync_progress" = "100.00" ]; then
       break
     fi
@@ -388,13 +388,13 @@ elif [ "$1" = "step3" ]; then
     -m "smoke or upgrade_step3" \
     --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
-    --alluredir="$REPORTS_DIR" \
+    --alluredir="$reports_dir" \
     --html="$WORKDIR/testrun-report-step3.html" \
     --self-contained-html \
     ||retval="$?"
 
   # create results archive for step3
-  ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" allure-results-step3
+  ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step3
 
   [ "$err_retval" -gt "$retval" ] && retval=1
 
@@ -406,7 +406,7 @@ elif [ "$1" = "step3" ]; then
 
 elif [ "$1" = "finish" ]; then
   # stop local cluster
-  "$CLUSTER_SCRIPTS_DIR/stop-cluster"
+  "$cluster_scripts_dir/stop-cluster"
 
   # generate CLI coverage reports
   ./runner/cli_coverage.sh "$COVERAGE_DIR" "${WORKDIR}/cli_coverage.json"

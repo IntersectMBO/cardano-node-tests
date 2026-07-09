@@ -29,14 +29,6 @@ LOGGER = logging.getLogger(__name__)
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 
-# Publicly-hosted equivalent of ``data/pool_metadata.json``. Used as the
-# stake-pool metadata URL whenever a test needs db-sync's off-chain fetcher to
-# actually succeed: the fetcher rejects URLs whose host is one of localhost,
-# 127.0.0.1, ::1, 10.*, or 192.168.* (see ``parseOffChainUrl`` in
-# ``cardano-db-sync/src/Cardano/DbSync/OffChain/Http.hs``), so the
-# cluster-bootstrap ``http://localhost:.../poolN.json`` URLs always fail.
-PUBLIC_POOL_METADATA_URL = "https://tinyurl.com/yvkfs7pr"
-
 pytestmark = [
     pytest.mark.skipif(not configuration.HAS_SMASH, reason="SMASH is not available"),
     pytest.mark.smash,
@@ -136,7 +128,7 @@ class TestBasicSmash:
         public_metadata_hash = cluster_obj.g_stake_pool.gen_pool_metadata_hash(public_metadata_file)
         public_pool_data = dataclasses.replace(
             original_pool_data,
-            pool_metadata_url=PUBLIC_POOL_METADATA_URL,
+            pool_metadata_url=common.PUBLIC_POOL_METADATA_URL,
             pool_metadata_hash=public_metadata_hash,
         )
 
@@ -158,7 +150,7 @@ class TestBasicSmash:
         # consistent view of the new URL/hash.
         def _wait_for_dbsync() -> dbsync_types.PoolDataRecord:
             record = dbsync_utils.get_pool_data(pool_id_bech32=pool_id_bech32)
-            if record is None or record.metadata_url != PUBLIC_POOL_METADATA_URL:
+            if record is None or record.metadata_url != common.PUBLIC_POOL_METADATA_URL:
                 msg = f"db-sync has not yet ingested the metadata update for pool {pool_id_bech32}"
                 raise dbsync_utils.DbSyncNoResponseError(msg)
             return record
@@ -171,7 +163,7 @@ class TestBasicSmash:
             # If restoration fails, mark the cluster instance for respin so a
             # subsequent test isn't left with the locked pool stuck on the public URL
             # (the ``locked_pool`` fixture searches by URL pattern containing the pool
-            # name and would not match ``PUBLIC_POOL_METADATA_URL``).
+            # name and would not match ``common.PUBLIC_POOL_METADATA_URL``).
             with cluster_manager.respin_on_failure():
                 cluster_obj.g_stake_pool.register_stake_pool(
                     pool_data=original_pool_data,
@@ -262,7 +254,7 @@ class TestBasicSmash:
 
         db-sync's off-chain pool fetcher succeeds only for URLs that resolve to
         non-private IP addresses. The ``locked_pool_with_public_metadata`` fixture
-        re-registers a cluster-bootstrap pool with ``PUBLIC_POOL_METADATA_URL``
+        re-registers a cluster-bootstrap pool with ``common.PUBLIC_POOL_METADATA_URL``
         (content equivalent to ``data/pool_metadata.json``) and restores the
         pool's original metadata at teardown.
 

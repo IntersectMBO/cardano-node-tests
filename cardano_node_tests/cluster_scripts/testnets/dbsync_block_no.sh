@@ -4,9 +4,10 @@
 set -euo pipefail
 
 SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
-STATE_CLUSTER="${SOCKET_PATH%/*}"
-INSTANCE_NUM="${STATE_CLUSTER#*state-cluster}"
-DATABASE_NAME="dbsync${INSTANCE_NUM}"
+readonly SOCKET_PATH
+readonly STATE_CLUSTER="${SOCKET_PATH%/*}"
+readonly INSTANCE_NUM="${STATE_CLUSTER#*state-cluster}"
+readonly DATABASE_NAME="dbsync${INSTANCE_NUM}"
 
 export PGHOST="${PGHOST:-localhost}"
 export PGPORT="${PGPORT:-5432}"

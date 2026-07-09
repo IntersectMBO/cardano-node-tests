@@ -10,12 +10,12 @@ else
 fi
 
 GIT_OBJECT=""
-DISTRO=""
+distro=""
 
 while getopts "o:d:" flag; do
   case "${flag}" in
     o) GIT_OBJECT=${OPTARG};;
-    d) DISTRO=${OPTARG};;
+    d) distro=${OPTARG};;
     *) echo "Error in command line parsing" >&2
        exit 1
        ;;
@@ -28,36 +28,36 @@ if [ -z "$GIT_OBJECT" ]; then
   exit 1
 fi
 
-# Validate that DISTRO was provided
-if [ -z "$DISTRO" ]; then
+# Validate that distro was provided
+if [ -z "$distro" ]; then
   echo "Error: Missing required -d flag for distro." >&2
   exit 1
 fi
 
 # Determine correct base image and tag
-case "$DISTRO" in
+case "$distro" in
   fedora)
     BASE_IMAGE="docker.io/library/fedora:latest"
-    TAG="cardano-node-fedora"
+    tag="cardano-node-fedora"
     ;;
   ubuntu)
     BASE_IMAGE="docker.io/library/ubuntu:latest"
-    TAG="cardano-node-ubuntu"
+    tag="cardano-node-ubuntu"
     ;;
   *)
-    echo "Unsupported distro: $DISTRO. Use 'ubuntu' or 'fedora'." >&2
+    echo "Unsupported distro: $distro. Use 'ubuntu' or 'fedora'." >&2
     exit 1
     ;;
 esac
 
 echo "Using base image: $BASE_IMAGE"
-echo "Building image: $TAG"
+echo "Building image: $tag"
 
 $container_manager build . \
   --pull \
   -f Dockerfile \
   --build-arg BASE_IMAGE="$BASE_IMAGE" \
-  -t "$TAG" \
+  -t "$tag" \
   || exit 1
 
 $container_manager run \
@@ -66,4 +66,4 @@ $container_manager run \
   -it \
   -e GIT_OBJECT="$GIT_OBJECT" \
   -e KEEP_RUNNING="${KEEP_RUNNING:-1}" \
-  "$TAG"
+  "$tag"

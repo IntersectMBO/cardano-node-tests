@@ -25,21 +25,21 @@ case "${1:-}" in
     ;;
 esac
 
-ORIG_PWD="$PWD"
-REPODIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine repo dir, exiting." >&2; exit 1; }
-export WORKDIR="$REPODIR/dev_workdir"
+orig_pwd="$PWD"
+repodir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine repo dir, exiting." >&2; exit 1; }
+export WORKDIR="$repodir/dev_workdir"
 
-if [ "$ORIG_PWD" = "$WORKDIR" ]; then
+if [ "$orig_pwd" = "$WORKDIR" ]; then
   echo "Please run this script from outside of '$WORKDIR'" >&2
   exit 1
 fi
 
-cd "$REPODIR" || exit 1
+cd "$repodir" || exit 1
 rm -rf "${WORKDIR:?}"
 mkdir -p "${WORKDIR}/tmp"
 
 # shellcheck disable=SC1091
-. "$REPODIR/runner/setup_venv.sh"
+. "$repodir/runner/setup_venv.sh"
 
 cat > "$WORKDIR/activate" <<EoF
 if ! command -v cardano-node >/dev/null 2>&1; then
@@ -80,11 +80,11 @@ EoF
 source "$WORKDIR/activate"
 prepare-cluster-scripts -d "$WORKDIR/local_fast" -t "local_fast"
 
-# Compute a relative path only if WORKDIR is under ORIG_PWD
-if [[ "$WORKDIR" == "$ORIG_PWD"* ]]; then
-    REL_WORKDIR="./${WORKDIR#"$ORIG_PWD"/}"
+# Compute a relative path only if WORKDIR is under orig_pwd
+if [[ "$WORKDIR" == "$orig_pwd"* ]]; then
+    rel_workdir="./${WORKDIR#"$orig_pwd"/}"
 else
-    REL_WORKDIR="$WORKDIR"
+    rel_workdir="$WORKDIR"
 fi
 
 echo
@@ -93,8 +93,8 @@ echo "      🚀  Test Environment Ready"
 echo "========================================"
 echo
 echo "👉  Activate the environment:"
-echo "    source $REL_WORKDIR/activate"
+echo "    source $rel_workdir/activate"
 echo
 echo "👉  Start the local testnet:"
-echo "    $REL_WORKDIR/local_fast/start-cluster"
+echo "    $rel_workdir/local_fast/start-cluster"
 echo

@@ -10,10 +10,10 @@
 
 set -Eeuo pipefail
 
-CONTAINER_TYPE=""     # empty = auto-detect
-CONTAINER_VERSION="latest"
-MINT_VERSION="22.3"
-EXTRA_MOUNTS=()
+container_type=""     # empty = auto-detect
+container_version="latest"
+mint_version="22.3"
+extra_mounts=()
 
 usage() {
   local script_name
@@ -57,15 +57,15 @@ USAGE
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help)            usage; exit 0 ;;
-    --nixos-container)    CONTAINER_TYPE="nixos";  shift ;;
-    --nixos-container=*)  CONTAINER_TYPE="nixos";  CONTAINER_VERSION="${1#*=}"; shift ;;
-    --ubuntu-container)   CONTAINER_TYPE="ubuntu"; shift ;;
-    --ubuntu-container=*) CONTAINER_TYPE="ubuntu"; CONTAINER_VERSION="${1#*=}"; shift ;;
-    --debian-container)   CONTAINER_TYPE="debian"; CONTAINER_VERSION="stable"; shift ;;
-    --debian-container=*) CONTAINER_TYPE="debian"; CONTAINER_VERSION="${1#*=}"; shift ;;
-    --mint-container)     CONTAINER_TYPE="mint";   shift ;;
-    --mint-container=*)   CONTAINER_TYPE="mint";   MINT_VERSION="${1#*=}";      shift ;;
-    --extra-mount=*)      EXTRA_MOUNTS+=("-v" "${1#*=}"); shift ;;
+    --nixos-container)    container_type="nixos";  shift ;;
+    --nixos-container=*)  container_type="nixos";  container_version="${1#*=}"; shift ;;
+    --ubuntu-container)   container_type="ubuntu"; shift ;;
+    --ubuntu-container=*) container_type="ubuntu"; container_version="${1#*=}"; shift ;;
+    --debian-container)   container_type="debian"; container_version="stable"; shift ;;
+    --debian-container=*) container_type="debian"; container_version="${1#*=}"; shift ;;
+    --mint-container)     container_type="mint";   shift ;;
+    --mint-container=*)   container_type="mint";   mint_version="${1#*=}";      shift ;;
+    --extra-mount=*)      extra_mounts+=("-v" "${1#*=}"); shift ;;
     --) shift; break ;;
     -*) echo "Error: Unknown option '$1'. Use -h for help." >&2; exit 2 ;;
     *) break ;;
@@ -78,12 +78,12 @@ if [ $# -eq 0 ]; then
   exit 2
 fi
 
-if [ -z "$CONTAINER_TYPE" ]; then
+if [ -z "$container_type" ]; then
   # Auto-detect: Alpine with bind-mounted /nix when available, NixOS otherwise.
   if [ -d "/nix" ]; then
-    CONTAINER_TYPE="alpine"
+    container_type="alpine"
   else
-    CONTAINER_TYPE="nixos"
+    container_type="nixos"
   fi
 fi
 
@@ -96,13 +96,14 @@ else
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$script_dir/.." && pwd)"
+readonly REPO_DIR
 
 # When running from a git worktree, .git is a file referencing the main repo's
 # .git directory.  The path it points to won't exist inside the container unless
 # we also mount the main .git directory at the same absolute path.
-# Appends to the global EXTRA_MOUNTS array when a main .git dir must be mounted.
+# Appends to the global extra_mounts array when a main .git dir must be mounted.
 add_worktree_git_mount() {
   local repo_dir="$1"
   local gitdir main_git_dir
@@ -117,7 +118,7 @@ add_worktree_git_mount() {
   main_git_dir="${gitdir%%/worktrees/*}"
   [ -d "$main_git_dir" ] || return 0
   echo "Git worktree detected; mounting main .git: $main_git_dir"
-  EXTRA_MOUNTS+=("-v" "$main_git_dir:$main_git_dir")
+  extra_mounts+=("-v" "$main_git_dir:$main_git_dir")
 }
 
 add_worktree_git_mount "$REPO_DIR"
@@ -182,10 +183,10 @@ validate_bin_dir() {
   fi
 }
 
-validate_bin_dir "$REPO_DIR/.bin" "$CONTAINER_TYPE" || exit 1
+validate_bin_dir "$REPO_DIR/.bin" "$container_type" || exit 1
 
 # Select base image, tag, and runtime options based on the container type.
-# Sets globals BASE_IMAGE, TAG, and appends to NIX_MOUNTS.
+# Sets globals BASE_IMAGE, tag, and appends to nix_mounts.
 select_image() {
   local container_type="$1"
   local container_version="$2"
@@ -194,22 +195,22 @@ select_image() {
   case "$container_type" in
     nixos)
       BASE_IMAGE="docker.io/nixos/nix:${container_version}"
-      TAG="cardano-tests-nixos"
+      tag="cardano-tests-nixos"
       echo "NixOS container selected; /nix will be created inside the container."
       ;;
     alpine)
       echo "Host /nix found; mounting into Alpine container."
       BASE_IMAGE="docker.io/library/alpine:${container_version}"
-      TAG="cardano-tests-alpine"
-      NIX_MOUNTS+=("-v" "/nix:/nix")
+      tag="cardano-tests-alpine"
+      nix_mounts+=("-v" "/nix:/nix")
       ;;
     ubuntu|debian|mint)
       if [ ! -d "/nix" ]; then
         echo "Error: Host /nix not found; --${container_type}-container requires /nix on the host." >&2
         return 1
       fi
-      NIX_MOUNTS+=("-v" "/nix:/nix")
-      TAG="cardano-tests-${container_type}"
+      nix_mounts+=("-v" "/nix:/nix")
+      tag="cardano-tests-${container_type}"
       case "$container_type" in
         ubuntu) BASE_IMAGE="docker.io/library/ubuntu:${container_version}" ;;
         debian) BASE_IMAGE="docker.io/library/debian:${container_version}" ;;
@@ -224,25 +225,25 @@ select_image() {
   esac
 }
 
-NIX_MOUNTS=()
-select_image "$CONTAINER_TYPE" "$CONTAINER_VERSION" "$MINT_VERSION" || exit 1
+nix_mounts=()
+select_image "$container_type" "$container_version" "$mint_version" || exit 1
 
 echo "Using base image:  $BASE_IMAGE"
-echo "Building image:    $TAG"
+echo "Building image:    $tag"
 echo "Repository:        $REPO_DIR"
 echo "Command:           $*"
 echo
 
-$container_manager build "$SCRIPT_DIR" \
+$container_manager build "$script_dir" \
   --pull \
-  -f "$SCRIPT_DIR/Dockerfile" \
+  -f "$script_dir/Dockerfile" \
   --build-arg BASE_IMAGE="$BASE_IMAGE" \
-  -t "$TAG" \
+  -t "$tag" \
   || exit 1
 
-TTY_FLAG=()
+tty_flag=()
 if [ -t 0 ] && [ -t 1 ]; then
-  TTY_FLAG=("-t")
+  tty_flag=("-t")
 fi
 
 # `seccomp=unconfined` is needed so GHC's RTS can call io_uring_setup
@@ -251,10 +252,10 @@ $container_manager run \
   --security-opt label=disable \
   --security-opt seccomp=unconfined \
   -i \
-  "${TTY_FLAG[@]}" \
-  "${NIX_MOUNTS[@]}" \
+  "${tty_flag[@]}" \
+  "${nix_mounts[@]}" \
   -v "$REPO_DIR":"$REPO_DIR" \
-  "${EXTRA_MOUNTS[@]}" \
+  "${extra_mounts[@]}" \
   -e REPO_DIR="$REPO_DIR" \
-  "$TAG" \
+  "$tag" \
   "$@"

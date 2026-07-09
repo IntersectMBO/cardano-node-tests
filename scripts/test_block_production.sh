@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 
 # The database file will be created if missing
 if [ -z "${BLOCK_PRODUCTION_DB:-}" ]; then
@@ -28,4 +28,4 @@ export BLOCK_PRODUCTION_EPOCHS="${BLOCK_PRODUCTION_EPOCHS:-"100"}"
 
 export MIXED_UTXO_BACKENDS="mem disk" SESSION_TIMEOUT=10h CLUSTERS_COUNT=1 TEST_THREADS=0 PYTEST_ARGS="-k test_block_production"
 
-"$TOP_DIR/runner/regression.sh"
+"$top_dir/runner/regression.sh"

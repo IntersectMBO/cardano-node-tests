@@ -37,9 +37,9 @@ ARTIFACTS_DIR="${ARTIFACTS_DIR:-run_workdir/artifacts}"
 COVERAGE_DIR="${COVERAGE_DIR:-run_workdir/cli_coverage}"
 REPORTS_DIR="${REPORTS_DIR:-run_workdir/reports}"
 
-_TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+_top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 # shellcheck disable=SC1091
-. "$_TOP_DIR/scripts/common.sh"
+. "$_top_dir/scripts/common.sh"
 
 # Helpers
 usage() {
@@ -90,41 +90,44 @@ set_common_env() {
   if [[ -n "${CI_ARGS:-}" ]]; then
     export PYTEST_ADDOPTS="${PYTEST_ADDOPTS:+$PYTEST_ADDOPTS }${CI_ARGS}"
   fi
+
+  readonly CLEANUP
+  readonly RUN_SKIPS
 }
 
 # Compute args that depend on current environment.
 compute_common_args() {
   # MARKEXPR handling
   if [[ -n "${MARKEXPR:-}" ]]; then
-    MARKEXPR_ARR=( -m "$MARKEXPR" )
+    markexpr_arr=( -m "$MARKEXPR" )
   else
-    MARKEXPR_ARR=()
+    markexpr_arr=()
   fi
 
   # It may not be always necessary to save artifacts, e.g. when running tests on local cluster
   # on local machine.
   if is_truthy "${NO_ARTIFACTS:-}"; then
-    ARTIFACTS_ARR=()
+    artifacts_arr=()
   else
-    ARTIFACTS_ARR=( "--artifacts-base-dir=$ARTIFACTS_DIR" )
+    artifacts_arr=( "--artifacts-base-dir=$ARTIFACTS_DIR" )
   fi
 
   # Test run report args only when PYTEST_ARGS is unset.
   if [[ -z "${PYTEST_ARGS:-}" ]]; then
-    TESTRUN_REPORT_ARR=(
+    testrun_report_arr=(
       "--html=$REPORTS_DIR/testrun-report.html"
       "--self-contained-html"
       "--junitxml=$REPORTS_DIR/testrun-report.xml"
     )
   else
-    TESTRUN_REPORT_ARR=()
+    testrun_report_arr=()
   fi
 
   # Deselect-from-file
   if [[ -n "${DESELECT_FROM_FILE:-}" ]]; then
-    DESELECT_FROM_FILE_ARR=( "--deselect-from-file=$DESELECT_FROM_FILE" )
+    deselect_from_file_arr=( "--deselect-from-file=$DESELECT_FROM_FILE" )
   else
-    DESELECT_FROM_FILE_ARR=()
+    deselect_from_file_arr=()
   fi
 }
 
@@ -139,20 +142,20 @@ cleanup_previous_run() {
 initial_skip_pass() {
   if [[ "$RUN_SKIPS" == "yes" ]]; then
     echo "Initial pass: skipping all tests to register them with Allure"
-    pytest -s "$TESTS_DIR" "${MARKEXPR_ARR[@]}" --skipall --alluredir="$REPORTS_DIR" >/dev/null
+    pytest -s "$TESTS_DIR" "${markexpr_arr[@]}" --skipall --alluredir="$REPORTS_DIR" >/dev/null
   fi
 }
 
 run_real_tests() {
   run_pytest \
     "$TESTS_DIR" \
-    "${MARKEXPR_ARR[@]}" \
-    "${DESELECT_FROM_FILE_ARR[@]}" \
+    "${markexpr_arr[@]}" \
+    "${deselect_from_file_arr[@]}" \
     -n "${TEST_THREADS}" \
-    "${ARTIFACTS_ARR[@]}" \
+    "${artifacts_arr[@]}" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
-    "${TESTRUN_REPORT_ARR[@]}" \
+    "${testrun_report_arr[@]}" \
     "$@"
 }
 

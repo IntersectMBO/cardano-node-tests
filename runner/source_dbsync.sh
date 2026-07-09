@@ -1,5 +1,7 @@
 #!/bin/bash
 
+: "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
+: "${REPODIR:?"REPODIR must be set to the root of the cardano-node repository"}"
 TEST_THREADS="${TEST_THREADS:-15}"
 CLUSTERS_COUNT="${CLUSTERS_COUNT:-4}"
 export TEST_THREADS CLUSTERS_COUNT
@@ -59,12 +61,12 @@ fi
 
 if [ -n "${DBSYNC_TAR_URL:-}" ]; then
   # Download db-sync
-  DBSYNC_TAR_FILE="${WORKDIR}/dbsync_bins.tar.gz"
-  curl -sSL "$DBSYNC_TAR_URL" > "$DBSYNC_TAR_FILE" || exit 1
+  dbsync_tar_file="${WORKDIR}/dbsync_bins.tar.gz"
+  curl -sSL "$DBSYNC_TAR_URL" > "$dbsync_tar_file" || exit 1
   rm -rf dbsync_download
   mkdir -p dbsync_download
-  tar -C dbsync_download -xzf "$DBSYNC_TAR_FILE" || exit 1
-  rm -f "$DBSYNC_TAR_FILE"
+  tar -C dbsync_download -xzf "$dbsync_tar_file" || exit 1
+  rm -f "$dbsync_tar_file"
   rm -f db-sync-node
   ln -s dbsync_download db-sync-node || exit 1
   DBSYNC_SCHEMA_DIR="${WORKDIR}/db-sync-node/schema"

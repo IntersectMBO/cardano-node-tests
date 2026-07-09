@@ -3,19 +3,19 @@
 
 set -euo pipefail
 
-SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
-STATE_CLUSTER="${SOCKET_PATH%/*}"
-DATABASE_NAME="dbsync0"
+socket_path="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+state_cluster="${socket_path%/*}"
+database_name="dbsync0"
 
-PGPASSFILE="$STATE_CLUSTER/pgpass"
+pgpassfile="$state_cluster/pgpass"
 export PGHOST="${PGHOST:-localhost}"
 export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-postgres}"
 
-echo "Deleting db $DATABASE_NAME"
-dropdb --if-exists "$DATABASE_NAME" > /dev/null
-echo "Setting up db $DATABASE_NAME"
-createdb -T template0 --owner="$PGUSER" --encoding=UTF8 "$DATABASE_NAME"
+echo "Deleting db $database_name"
+dropdb --if-exists "$database_name" > /dev/null
+echo "Setting up db $database_name"
+createdb -T template0 --owner="$PGUSER" --encoding=UTF8 "$database_name"
 
-echo "${PGHOST}:${PGPORT}:${DATABASE_NAME}:${PGUSER}:secret" > "$PGPASSFILE"
-chmod 600 "$PGPASSFILE"
+echo "${PGHOST}:${PGPORT}:${database_name}:${PGUSER}:secret" > "$pgpassfile"
+chmod 600 "$pgpassfile"

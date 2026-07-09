@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-TOP_DIR="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
 
 export \
   CLUSTERS_COUNT=1 \
@@ -14,4 +14,4 @@ export \
   TESTNET_VARIANT="mainnet_fast" \
   PYTEST_ARGS="-s -k TestNodeReconnect"
 
-"$TOP_DIR/runner/regression.sh"
+"$top_dir/runner/regression.sh"

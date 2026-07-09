@@ -13,12 +13,12 @@ if [ ! -e shelley/faucet.addr ]; then
 fi
 
 if [ -n "${APIKEY:-""}" ]; then
-  ADDR="$(<shelley/faucet.addr)"
-  echo "Fund the faucet address '$ADDR'? Press Ctrl+C to cancel."
+  addr="$(<shelley/faucet.addr)"
+  echo "Fund the faucet address '$addr'? Press Ctrl+C to cancel."
   read -r
 
-  curl -v -XPOST "https://faucet.${TESTNET_NAME}.dev.cardano.org/send-money/${ADDR}?apiKey=${APIKEY}"
+  curl -v -XPOST "https://faucet.${TESTNET_NAME}.dev.cardano.org/send-money/${addr}?apiKey=${APIKEY}"
   sleep 10
-  cardano-cli latest query utxo --out-file /dev/stdout --testnet-magic "$TESTNET_MAGIC" --address "$ADDR"
+  cardano-cli latest query utxo --out-file /dev/stdout --testnet-magic "$TESTNET_MAGIC" --address "$addr"
   echo
 fi

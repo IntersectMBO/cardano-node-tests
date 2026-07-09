@@ -6,17 +6,23 @@
     cardano-node = {
       url = "github:IntersectMBO/cardano-node";
     };
+    # tx-centrifuge only, lives on a different cardano-node branch than the
+    # one providing cardano-node / cardano-cli above.
+    cardano-node-tx-centrifuge = {
+      url = "github:IntersectMBO/cardano-node?ref=bench/leios-11.0.1";
+    };
     flake-utils = {
       url = "github:numtide/flake-utils";
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, cardano-node }:
+  outputs = { self, nixpkgs, flake-utils, cardano-node, cardano-node-tx-centrifuge }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
           nodePkgs = cardano-node.packages.${system};
+          centrifugePkgs = cardano-node-tx-centrifuge.packages.${system};
         in
         {
           devShells = rec {
@@ -40,6 +46,7 @@
                 nodePkgs.bech32
                 nodePkgs.tx-generator
                 pkgs.libfaketime
+                centrifugePkgs.tx-centrifuge
                 pkgs.bashInteractive
               ];
             };
