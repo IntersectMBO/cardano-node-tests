@@ -179,7 +179,7 @@ jobs:
           name: cli-coverage
           path: run_workdir/cli_coverage.json
       - name: ✉ Mail failure report
-        uses: dawidd6/action-send-mail@v17
+        uses: dawidd6/action-send-mail@v18
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_CI_FAIL_MAILS == 'true' && github.event_name == 'schedule'
         with:
           server_address: smtp.gmail.com
