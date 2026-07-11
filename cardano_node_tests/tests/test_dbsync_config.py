@@ -318,6 +318,7 @@ class TestDBSyncConfig:
         yield from self._subtests_phase3()
         yield from self._subtests_phase4()
         yield from self._subtests_phase5()
+        yield from self._subtests_phase6()
 
     def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
         """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
@@ -829,6 +830,55 @@ class TestDBSyncConfig:
             dbsync_utils.retry_query(query_func=_query_func, timeout=600)
 
         yield offchain_vote_data_enable
+
+    def _subtests_phase6(self) -> tp.Generator[tp.Callable]:
+        """Phase 6 subtests: `remove_jsonb_from_schema` column-type effects."""
+        # jsonb columns controlled by remove_jsonb_from_schema. Limited to columns NOT also
+        # governed by `json_type` (the *.json columns), to isolate this option's effect.
+        # Column types are schema-level, so these checks hold regardless of row counts.
+        jsonb_columns = (
+            (db_sync.Table.DATUM, "value"),
+            (db_sync.Table.COST_MODEL, "costs"),
+            (db_sync.Table.GOV_ACTION_PROPOSAL, "description"),
+        )
+
+        def remove_jsonb_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `remove_jsonb_from_schema`: jsonb columns keep the jsonb type."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_remove_jsonb_from_schema(
+                    value=db_sync.SettingState.DISABLE
+                )
+            )
+            for table, column in jsonb_columns:
+                assert dbsync_utils.column_data_type(table=table, column=column) == "jsonb", (
+                    f"{table}.{column} should be jsonb when remove_jsonb_from_schema is disabled"
+                )
+
+        yield remove_jsonb_disable
+
+        def remove_jsonb_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `remove_jsonb_from_schema`: jsonb columns drop the jsonb type."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_remove_jsonb_from_schema(
+                    value=db_sync.SettingState.ENABLE
+                )
+            )
+            for table, column in jsonb_columns:
+                dtype = dbsync_utils.column_data_type(table=table, column=column)
+                assert dtype is not None and dtype != "jsonb", (
+                    f"{table}.{column} should not be jsonb when remove_jsonb_from_schema is "
+                    f"enabled (got {dtype})"
+                )
+
+        yield remove_jsonb_enable
 
     @allure.link(helpers.get_vcs_link())
     def test_dbsync_config(
