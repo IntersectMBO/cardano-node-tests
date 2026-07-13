@@ -319,6 +319,7 @@ class TestDBSyncConfig:
         yield from self._subtests_phase4()
         yield from self._subtests_phase5()
         yield from self._subtests_phase6()
+        yield from self._subtests_phase7()
 
     def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
         """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
@@ -879,6 +880,112 @@ class TestDBSyncConfig:
                 )
 
         yield remove_jsonb_enable
+
+    def _subtests_phase7(self) -> tp.Generator[tp.Callable]:
+        """Phase 7 subtests: insert-option presets (exercise db-sync's own preset expansion)."""
+
+        def preset_full(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test the `full` preset: all insert options on except tx_cbor and off-chain."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_preset(preset=db_sync.Preset.FULL)
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.TX_OUT: TableCondition.NOT_EMPTY,
+                    db_sync.Table.MA_TX_OUT: TableCondition.NOT_EMPTY,
+                    db_sync.Table.TX_METADATA: TableCondition.NOT_EMPTY,
+                    db_sync.Table.REDEEMER: TableCondition.NOT_EMPTY,
+                    db_sync.Table.DREP_REGISTRATION: TableCondition.NOT_EMPTY,
+                    db_sync.Table.TX_CBOR: TableCondition.EMPTY,
+                }
+            )
+
+        yield preset_full
+
+        def preset_only_utxo(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test the `only_utxo` preset: load block/tx/tx_out/ma_tx_out only.
+
+            shelley / metadata / plutus are disabled, so tx_metadata and redeemer stay empty.
+
+            tx_out / ma_tx_out are not asserted here: only_utxo uses tx_out=bootstrap, which
+            loads the whole UTxO set in bulk only once the chain tip is reached. That bulk
+            load is environment-sensitive (designed for mainnet-scale initial sync) and does
+            not reliably complete on a small/fast dev cluster within a reasonable timeout, so
+            asserting it would be flaky.
+
+            KNOWN doc-vs-code discrepancy: db-sync's only_utxo preset ENABLES governance
+            (Config/Types.hs ``onlyUTxOInsertOptions`` -> ``sioGovernance =
+            GovernanceConfig True``), while doc/configuration.md describes only_utxo as
+            disabling governance ("Only load block, tx, tx_out and ma_tx_out"). The
+            governance assertion below expresses the documented behavior and is xfailed until
+            db-sync / the docs are reconciled.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_preset(preset=db_sync.Preset.ONLY_UTXO)
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.TX_METADATA: TableCondition.EMPTY,
+                    db_sync.Table.REDEEMER: TableCondition.EMPTY,
+                }
+            )
+            if not dbsync_utils.table_empty(table=db_sync.Table.DREP_REGISTRATION):
+                pytest.xfail(
+                    "only_utxo preset enables governance in db-sync "
+                    "(onlyUTxOInsertOptions sioGovernance=True), contrary to the docs"
+                )
+            check_dbsync_state(
+                expected_state={db_sync.Table.DREP_REGISTRATION: TableCondition.EMPTY}
+            )
+
+        yield preset_only_utxo
+
+        def preset_only_governance(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test the `only_governance` preset: governance data, no tx_out / multi_asset."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_preset(preset=db_sync.Preset.ONLY_GOVERNANCE)
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.TX_OUT: TableCondition.EMPTY,
+                    db_sync.Table.MA_TX_OUT: TableCondition.EMPTY,
+                    db_sync.Table.DREP_REGISTRATION: TableCondition.NOT_EMPTY,
+                }
+            )
+
+        yield preset_only_governance
+
+        def preset_disable_all(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test the `disable_all` preset: only block/tx and ledger-related data."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_preset(preset=db_sync.Preset.DISABLE_ALL)
+            )
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.TX_OUT: TableCondition.EMPTY,
+                    db_sync.Table.MA_TX_OUT: TableCondition.EMPTY,
+                    db_sync.Table.REDEEMER: TableCondition.EMPTY,
+                    db_sync.Table.DREP_REGISTRATION: TableCondition.EMPTY,
+                }
+            )
+
+        yield preset_disable_all
 
     @allure.link(helpers.get_vcs_link())
     def test_dbsync_config(

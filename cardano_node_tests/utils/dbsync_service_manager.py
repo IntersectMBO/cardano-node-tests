@@ -205,9 +205,11 @@ class DBSyncConfigBuilder:
             "remove_jsonb_from_schema": SettingState.DISABLE,
         }
         self._preset_applied = False
+        self._preset: Preset | None = None
 
     def with_preset(self, *, preset: Preset) -> tp.Self:
         self._preset_applied = True
+        self._preset = preset
 
         if preset == Preset.FULL:
             self._config.update(
@@ -339,6 +341,11 @@ class DBSyncConfigBuilder:
         return self
 
     def build(self) -> dict[str, tp.Any]:
+        # When a preset is selected, emit only the `preset` key so db-sync expands it with
+        # its own preset definitions (individual keys would override the preset base).
+        if self._preset is not None:
+            return {"preset": self._preset.value}
+
         tx_out = tp.cast(TxOutConfig, self._config["tx_out"])
         shelley = tp.cast(ShelleyConfig, self._config["shelley"])
         multi_asset = tp.cast(MultiAssetConfig, self._config["multi_asset"])
