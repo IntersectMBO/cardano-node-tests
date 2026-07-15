@@ -114,24 +114,10 @@ class View(enum.StrEnum):
 class Column:
     class Tx(enum.StrEnum):
         FEE = "tx.fee"
-        DEPOSIT = "tx.deposit"
 
     class Redeemer(enum.StrEnum):
         SCRIPT_HASH = "redeemer.script_hash"
         FEE = "redeemer.fee"
-
-    class TxOut(enum.StrEnum):
-        CONSUMED_BY_TX_ID = "tx_out.consumed_by_tx_id"
-
-    class StakeRegistration(enum.StrEnum):
-        DEPOSIT = "stake_registration.deposit"
-
-    class PoolUpdate(enum.StrEnum):
-        DEPOSIT = "pool_update.deposit"
-
-    class GovActionProposal(enum.StrEnum):
-        X_EPOCH = "gov_action_proposal.x_epoch"
-        EXPIRATION = "gov_action_proposal.expiration"
 
 
 class SettingState(enum.StrEnum):
@@ -208,68 +194,11 @@ class DBSyncConfigBuilder:
         self._preset: Preset | None = None
 
     def with_preset(self, *, preset: Preset) -> tp.Self:
+        # Emit only the `preset` key and let db-sync expand it with its own preset
+        # definitions (see ``build``). The per-option `with_*` builders no-op once a
+        # preset is selected, so the individual config values are not used here.
         self._preset_applied = True
         self._preset = preset
-
-        if preset == Preset.FULL:
-            self._config.update(
-                {
-                    "tx_cbor": SettingState.DISABLE,
-                    "tx_out": TxOutConfig(value=TxOutMode.ENABLE),
-                    "ledger": LedgerMode.ENABLE,
-                    "shelley": ShelleyConfig(enable=True),
-                    "multi_asset": MultiAssetConfig(enable=True),
-                    "metadata": MetadataConfig(enable=True),
-                    "plutus": PlutusConfig(enable=True),
-                    "governance": SettingState.ENABLE,
-                    "offchain_pool_data": SettingState.ENABLE,
-                    "pool_stat": SettingState.ENABLE,
-                }
-            )
-        elif preset == Preset.ONLY_UTXO:
-            self._config.update(
-                {
-                    "tx_cbor": SettingState.DISABLE,
-                    "tx_out": TxOutConfig(value=TxOutMode.BOOTSTRAP),
-                    "ledger": LedgerMode.IGNORE,
-                    "shelley": ShelleyConfig(enable=False),
-                    "metadata": MetadataConfig(enable=False),
-                    "multi_asset": MultiAssetConfig(enable=True),
-                    "plutus": PlutusConfig(enable=False),
-                    "governance": SettingState.DISABLE,
-                    "offchain_pool_data": SettingState.DISABLE,
-                    "pool_stat": SettingState.DISABLE,
-                }
-            )
-        elif preset == Preset.ONLY_GOVERNANCE:
-            self._config.update(
-                {
-                    "tx_cbor": SettingState.DISABLE,
-                    "tx_out": TxOutConfig(value=TxOutMode.DISABLE),
-                    "ledger": LedgerMode.ENABLE,
-                    "shelley": ShelleyConfig(enable=False),
-                    "multi_asset": MultiAssetConfig(enable=False),
-                    "plutus": PlutusConfig(enable=False),
-                    "governance": SettingState.ENABLE,
-                    "offchain_pool_data": SettingState.DISABLE,
-                    "pool_stat": SettingState.ENABLE,
-                }
-            )
-        elif preset == Preset.DISABLE_ALL:
-            self._config.update(
-                {
-                    "tx_cbor": SettingState.DISABLE,
-                    "tx_out": TxOutConfig(value=TxOutMode.DISABLE),
-                    "ledger": LedgerMode.DISABLE,
-                    "shelley": ShelleyConfig(enable=False),
-                    "multi_asset": MultiAssetConfig(enable=False),
-                    "plutus": PlutusConfig(enable=False),
-                    "governance": SettingState.DISABLE,
-                    "offchain_pool_data": SettingState.DISABLE,
-                    "pool_stat": SettingState.DISABLE,
-                }
-            )
-
         return self
 
     def with_tx_cbor(self, *, value: SettingState) -> tp.Self:

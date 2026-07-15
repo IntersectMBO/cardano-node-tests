@@ -145,6 +145,16 @@ dbsync_2105 = blockers.GH(
     fixed_in="13.7.0.3",
     message="Swapped min_pool_cost / coins_per_utxo_size.",
 )
+dbsync_2150 = blockers.GH(
+    issue=2150,
+    repo="IntersectMBO/cardano-db-sync",
+    message="only_utxo preset (tx_out bootstrap) inserts 0 tx_out and crashes near tip.",
+)
+dbsync_2151 = blockers.GH(
+    issue=2151,
+    repo="IntersectMBO/cardano-db-sync",
+    message="only_utxo preset populates governance tables, contrary to the docs.",
+)
 
 ledger_3731 = blockers.GH(
     issue=3731,

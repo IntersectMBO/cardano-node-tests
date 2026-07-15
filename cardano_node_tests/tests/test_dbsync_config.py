@@ -11,6 +11,7 @@ import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
@@ -43,7 +44,6 @@ class ColumnCondition(enum.StrEnum):
     """Enum for column-level db-sync condition checks."""
 
     ZERO = "column_condition:=0"
-    NOT_ZERO = "column_condition:!= 0"
     IS_NULL = "column_condition:IS NULL"
     IS_NOT_NULL = "column_condition:IS NOT NULL"
 
@@ -149,6 +149,9 @@ def wait_for_tables_not_empty(
     such tables must be polled rather than checked once. Raises ``TimeoutError`` (via
     ``retry_query``) if any table is still empty after ``timeout`` seconds.
     """
+    # Materialize once so a generator argument is not exhausted by the first (failing)
+    # poll, which would make every subsequent retry see an empty list and pass falsely.
+    tables = list(tables)
 
     def _query_func() -> bool:
         empty_tables = [table for table in tables if dbsync_utils.table_empty(table=table)]
@@ -327,11 +330,9 @@ class TestDBSyncConfig:
         def plutus_disable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test disabled `plutus` option.
+            """Test disabled `plutus`: no script-execution data.
 
-            With Plutus disabled, db-sync must not insert script-execution data, so the
-            redeemer / redeemer_data / datum tables stay empty even though the chain
-            contains a Plutus transaction.
+            redeemer / redeemer_data / datum stay empty despite a Plutus tx on chain.
             """
             db_config = db_sync_manager.get_config_builder()
 
@@ -349,11 +350,7 @@ class TestDBSyncConfig:
         def metadata_disable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test disabled `metadata` option.
-
-            With metadata disabled, the tx_metadata table stays empty even though the
-            chain contains a transaction carrying metadata.
-            """
+            """Test disabled `metadata`: tx_metadata stays empty despite a tx with metadata."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(custom_config=db_config.with_metadata(enable=False))
@@ -364,11 +361,10 @@ class TestDBSyncConfig:
         def tx_out_consumed(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test `tx_out` in `consumed` mode (without `force_tx_in`).
+            """Test `tx_out=consumed` (no force_tx_in).
 
-            In `consumed` mode db-sync records consumption via the new
-            `tx_out.consumed_by_tx_id` column instead of populating `tx_in`, so `tx_in`
-            stays empty while `tx_out` / `ma_tx_out` are populated.
+            Consumption is tracked via `tx_out.consumed_by_tx_id`, so `tx_in` stays empty
+            while `tx_out` / `ma_tx_out` are populated.
             """
             db_config = db_sync_manager.get_config_builder()
 
@@ -393,11 +389,7 @@ class TestDBSyncConfig:
         def tx_out_consumed_force_tx_in(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test `tx_out` in `consumed` mode with `force_tx_in=True`.
-
-            `force_tx_in` re-enables population of the `tx_in` table on top of `consumed`
-            mode, so both `tx_out` and `tx_in` are populated.
-            """
+            """Test `tx_out=consumed` with force_tx_in: `tx_in` is populated alongside `tx_out`."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(
@@ -417,11 +409,7 @@ class TestDBSyncConfig:
         def tx_out_use_address_table(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test `tx_out` with `use_address_table=True`.
-
-            With the address table enabled, db-sync normalizes addresses into a separate
-            `address` table (which otherwise does not exist).
-            """
+            """Test `tx_out` with use_address_table: addresses go to a separate `address` table."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(
@@ -447,11 +435,9 @@ class TestDBSyncConfig:
         def plutus_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test enabled `plutus` option.
+            """Test enabled `plutus`: script / redeemer / redeemer_data / datum are populated.
 
-            With Plutus enabled, script-execution data is inserted: the script, redeemer,
-            redeemer_data and datum tables are populated (the chain must contain a Plutus
-            transaction that locks/spends with a datum).
+            Needs a Plutus tx that locks/spends with a datum on chain.
             """
             db_config = db_sync_manager.get_config_builder()
 
@@ -470,11 +456,7 @@ class TestDBSyncConfig:
         def metadata_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test enabled `metadata` option.
-
-            With metadata enabled, the tx_metadata table is populated from transactions
-            carrying metadata.
-            """
+            """Test enabled `metadata`: tx_metadata is populated from txs carrying metadata."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(custom_config=db_config.with_metadata(enable=True))
@@ -485,11 +467,7 @@ class TestDBSyncConfig:
         def metadata_keys_filter(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test the `metadata.keys` filter.
-
-            When `metadata.keys` lists specific metadata keys, db-sync stores only metadata
-            with those keys; every tx_metadata row must therefore have the configured key.
-            """
+            """Test the `metadata.keys` filter: only metadata with the listed key is stored."""
             keep_key = 2
             db_config = db_sync_manager.get_config_builder()
 
@@ -507,11 +485,7 @@ class TestDBSyncConfig:
         def shelley_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test enabled `shelley` option.
-
-            Shelley-era data (certificates, etc.) is inserted: the stake_registration and
-            pool_update tables are populated.
-            """
+            """Test enabled `shelley`: certificate data (stake_registration, pool_update) is set."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(custom_config=db_config.with_shelley(enable=True))
@@ -527,17 +501,12 @@ class TestDBSyncConfig:
         def shelley_disable_independence(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test disabled `shelley` option and its independence from `ledger`.
+            """Test disabled `shelley` is independent of `ledger`.
 
-            With Shelley disabled, ledger-derived data (epoch_stake) is still populated
-            because it is controlled by the `ledger` option, not `shelley`.
-
-            Note: certificate tables are deliberately NOT asserted empty here. Genesis pool
-            registrations are inserted via an ungated path (Shelley/Genesis.hs), so
-            `pool_update` stays populated regardless of the `shelley` flag, and legacy
-            stake-registration certs are likewise ungated (covered separately by
-            ``shelley_disable_stake_registration``). `epoch_stake` is therefore the clean
-            signal for shelley/ledger independence.
+            `epoch_stake` is ledger-controlled, so it stays populated with shelley off.
+            Certificate tables are not asserted empty: tx-era certs are gated by `shelley`,
+            but genesis pool/stake registrations are inserted unconditionally
+            (Shelley/Genesis.hs), so `pool_update` / `stake_registration` keep genesis rows.
             """
             db_config = db_sync_manager.get_config_builder()
 
@@ -549,39 +518,6 @@ class TestDBSyncConfig:
             )
 
         yield shelley_disable_independence
-
-        def shelley_disable_stake_registration(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test that `shelley=disable` suppresses stake_registration (per the docs).
-
-            doc/configuration.md states `shelley.enable` disables "all certificates", which
-            includes stake registrations. The assertion below expresses that documented
-            behavior.
-
-            KNOWN db-sync discrepancy: legacy ``ShelleyRegCert`` stake registrations are
-            inserted regardless of the flag, because
-            ``Cardano.DbSync.Era.Universal.Insert.Certificate.insertDelegCert`` calls
-            ``insertStakeRegistration`` without a ``when (ioShelley iopts)`` guard, unlike
-            the Conway ``insertConwayDelegCert`` path which is guarded. The assertion is kept
-            as the documented expectation and marked xfail until db-sync gates the legacy
-            path (pending cardano-db-sync issue; convert to ``issues.dbsync_<n>.finish_test``
-            once filed).
-            """
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(custom_config=db_config.with_shelley(enable=False))
-            if not dbsync_utils.table_empty(table=db_sync.Table.STAKE_REGISTRATION):
-                pytest.xfail(
-                    "db-sync inserts legacy ShelleyRegCert stake registrations regardless of "
-                    "shelley=disable (Certificate.insertDelegCert is unguarded); docs say "
-                    "shelley disables all certificates."
-                )
-            check_dbsync_state(
-                expected_state={db_sync.Table.STAKE_REGISTRATION: TableCondition.EMPTY}
-            )
-
-        yield shelley_disable_stake_registration
 
     def _subtests_phase3(self) -> tp.Generator[tp.Callable]:
         """Phase 3 subtests: `ledger` modes and `pool_stat` (ledger-derived data)."""
@@ -596,11 +532,9 @@ class TestDBSyncConfig:
         def ledger_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test enabled `ledger` option.
+            """Test enabled `ledger`: ledger-derived tables and columns are populated.
 
-            With ledger enabled, db-sync maintains ledger state and populates the
-            ledger-derived tables (reward, epoch_stake, ada_pots, epoch_param), computes
-            redeemer fees, and records ledger-derived deposits.
+            reward / epoch_stake / ada_pots / epoch_param, redeemer.fee and tx deposits.
             """
             db_config = db_sync_manager.get_config_builder()
 
@@ -613,8 +547,7 @@ class TestDBSyncConfig:
                     db_sync.Column.Redeemer.FEE: ColumnCondition.IS_NOT_NULL,
                 }
             )
-            # Ledger state lets db-sync compute deposits: at least one tx carries a positive
-            # deposit (e.g. a registration deposit). Contrast with the ledger=disable case.
+            # With ledger state, deposits are computed: at least one tx has a positive deposit.
             assert (
                 dbsync_queries.query_rows_count(table="tx", column="deposit", condition="> 0") > 0
             ), "ledger=enable should record ledger-derived (positive) tx deposits"
@@ -624,11 +557,7 @@ class TestDBSyncConfig:
         def ledger_disable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test disabled `ledger` option.
-
-            With ledger disabled, db-sync does not maintain ledger state: the ledger-derived
-            tables stay empty and ledger-derived columns are null (redeemer.fee, tx.deposit).
-            """
+            """Test disabled `ledger`: derived tables empty, redeemer.fee null, no deposits."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(
@@ -640,9 +569,8 @@ class TestDBSyncConfig:
                     db_sync.Column.Redeemer.FEE: ColumnCondition.IS_NULL,
                 }
             )
-            # Ledger-derived deposits are dropped without ledger state: no tx has a positive
-            # deposit. (Note: tx.deposit is not uniformly NULL - db-sync still records 0 for
-            # some txs - so we assert the meaningful effect: no positive deposit remains.)
+            # No ledger state -> no positive deposits (tx.deposit isn't uniformly NULL; some
+            # txs keep 0, so assert the meaningful effect: no positive deposit remains).
             assert (
                 dbsync_queries.query_rows_count(table="tx", column="deposit", condition="> 0") == 0
             ), "ledger=disable should drop ledger-derived (positive) tx deposits"
@@ -652,12 +580,7 @@ class TestDBSyncConfig:
         def ledger_ignore(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test `ledger` in `ignore` mode.
-
-            In `ignore` mode db-sync maintains ledger state but does not use any of its data
-            (except UTxO for bootstrap), so the ledger-derived tables stay empty, like
-            `disable`.
-            """
+            """Test `ledger=ignore`: state is kept but unused, so derived tables stay empty."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(
@@ -672,11 +595,7 @@ class TestDBSyncConfig:
         def pool_stat_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test enabled `pool_stat` option.
-
-            With pool_stat enabled, per-epoch pool statistics are stored in the pool_stat
-            table once an epoch boundary has been crossed.
-            """
+            """Test enabled `pool_stat`: per-epoch pool stats stored after an epoch boundary."""
             db_config = db_sync_manager.get_config_builder()
 
             db_sync_manager.restart_with_config(
@@ -705,12 +624,10 @@ class TestDBSyncConfig:
         def offchain_pool_data_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test enabled `offchain_pool_data` option.
+            """Test enabled `offchain_pool_data`: pool metadata is fetched into off_chain_pool_data.
 
-            With off-chain pool data enabled (and db-sync allowed to fetch private/localhost
-            URLs), db-sync fetches the cluster pools' registered metadata and stores it in
-            off_chain_pool_data, with no fetch errors. The fetch is asynchronous (the fetch
-            loop sleeps ~300s between passes), so off_chain_pool_data is polled.
+            Fetch is async (~300s loop) so the table is polled. Skipped without private URLs
+            allowed or when no pool metadata is registered on chain.
             """
             if not dbsync_utils.allow_private_offchain_urls_enabled():
                 pytest.skip("requires db-sync started with --allow-private-offchain-urls")
@@ -720,6 +637,8 @@ class TestDBSyncConfig:
             db_sync_manager.restart_with_config(
                 custom_config=db_config.with_offchain_pool_data(value=db_sync.SettingState.ENABLE)
             )
+            if dbsync_utils.table_empty(table=db_sync.Table.POOL_METADATA_REF):
+                pytest.skip("no pool metadata registered on chain to fetch")
             wait_for_tables_not_empty([db_sync.Table.OFF_CHAIN_POOL_DATA], timeout=600)
             check_dbsync_state(
                 expected_state={
@@ -733,11 +652,10 @@ class TestDBSyncConfig:
         def offchain_pool_data_disable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test disabled `offchain_pool_data` option.
+            """Test disabled `offchain_pool_data`: no fetch.
 
-            With off-chain pool data disabled, db-sync does not fetch pool metadata, so both
-            off_chain_pool_data and off_chain_pool_fetch_error stay empty. The on-chain
-            metadata reference (pool_metadata_ref) is still recorded.
+            off_chain_pool_data / off_chain_pool_fetch_error stay empty; the on-chain
+            pool_metadata_ref is still recorded.
             """
             db_config = db_sync_manager.get_config_builder()
 
@@ -760,12 +678,10 @@ class TestDBSyncConfig:
         def offchain_vote_data_disable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test disabled `offchain_vote_data`, independent of `governance`.
+            """Test `offchain_vote_data=disable` gates the fetch independently of `governance`.
 
-            With governance enabled but off-chain vote data disabled, db-sync records on-chain
-            governance anchors (voting_anchor) but does not fetch any anchor metadata, so all
-            off_chain_vote_* tables stay empty. This proves `offchain_vote_data` gates the
-            metadata fetch independently of the `governance` flag.
+            With governance on but vote data off, voting_anchor is recorded but no anchor
+            metadata is fetched, so all off_chain_vote_* tables stay empty.
             """
             db_config = db_sync_manager.get_config_builder()
 
@@ -786,27 +702,12 @@ class TestDBSyncConfig:
         def offchain_vote_data_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test enabled `offchain_vote_data`.
+            """Test enabled `offchain_vote_data`: anchor metadata is fetched.
 
-            With off-chain vote data enabled (and db-sync allowed to fetch private/localhost
-            URLs), db-sync fetches governance anchor metadata; the fetch is recorded in
-            off_chain_vote_data (or off_chain_vote_fetch_error on failure).
-
-            Skipped unless db-sync allows private URLs and the chain has a fetchable vote
-            anchor. The framework's governance activity publishes only non-CIP anchors and
-            unpublishes them, so on a standard cluster there is nothing for db-sync to fetch;
-            full off-chain vote coverage requires anchored governance activity with reachable
-            metadata. (The CIP sub-tables - off_chain_vote_gov_action_data / drep_data /
-            author / reference - additionally need CIP-compliant anchors and are not asserted
-            here.)
-
-            TODO (covered once cardano-node-tests PR #3497 merges): with the anchor test-data
-            vectors in place, a governance test can register conformant + non-conformant +
-            invalid-JSON anchors so this can assert off_chain_vote_data.is_valid (TRUE / FALSE /
-            NULL) and the sub-tables instead of skipping. No new data files are needed:
-            governance_action_anchor.json already provides a conformant CIP-100 vector (authors
-            / references / externalUpdates), and #3497 adds the non-conformant and invalid-JSON
-            negatives (reusable across all anchor types).
+            The fetch result lands in off_chain_vote_data (or off_chain_vote_fetch_error).
+            Skipped without private URLs allowed or with no fetchable vote anchor on chain.
+            is_valid and the CIP sub-tables need conformant anchors; asserting those (using
+            the #3497 anchor vectors) is left to a dedicated off-chain test.
             """
             if not dbsync_utils.allow_private_offchain_urls_enabled():
                 pytest.skip("requires db-sync started with --allow-private-offchain-urls")
@@ -842,9 +743,8 @@ class TestDBSyncConfig:
 
     def _subtests_phase6(self) -> tp.Generator[tp.Callable]:
         """Phase 6 subtests: `remove_jsonb_from_schema` column-type effects."""
-        # jsonb columns controlled by remove_jsonb_from_schema. Limited to columns NOT also
-        # governed by `json_type` (the *.json columns), to isolate this option's effect.
-        # Column types are schema-level, so these checks hold regardless of row counts.
+        # jsonb columns controlled by remove_jsonb_from_schema (excluding *.json columns, which
+        # `json_type` also governs). Column types are schema-level, so row counts don't matter.
         jsonb_columns = (
             (db_sync.Table.DATUM, "value"),
             (db_sync.Table.COST_MODEL, "costs"),
@@ -917,28 +817,23 @@ class TestDBSyncConfig:
         def preset_only_utxo(
             db_sync_manager: db_sync.DBSyncManager,
         ):
-            """Test the `only_utxo` preset: load block/tx/tx_out/ma_tx_out only.
+            """Test the `only_utxo` preset (docs: block/tx/tx_out/ma_tx_out only).
 
-            shelley / metadata / plutus are disabled, so tx_metadata and redeemer stay empty.
-
-            tx_out / ma_tx_out are not asserted here: only_utxo uses tx_out=bootstrap, which
-            loads the whole UTxO set in bulk only once the chain tip is reached. That bulk
-            load is environment-sensitive (designed for mainnet-scale initial sync) and does
-            not reliably complete on a small/fast dev cluster within a reasonable timeout, so
-            asserting it would be flaky.
-
-            KNOWN doc-vs-code discrepancy: db-sync's only_utxo preset ENABLES governance
-            (Config/Types.hs ``onlyUTxOInsertOptions`` -> ``sioGovernance =
-            GovernanceConfig True``), while doc/configuration.md describes only_utxo as
-            disabling governance ("Only load block, tx, tx_out and ma_tx_out"). The
-            governance assertion below expresses the documented behavior and is xfailed until
-            db-sync / the docs are reconciled.
+            tx_out/ma_tx_out are not asserted: bootstrap bulk-loads them only at tip, which
+            is flaky on a dev cluster. db-sync also crashes syncing under this preset
+            (dbsync #2150), so the restart is xfailed while that is open. If it does sync, the
+            preset still enables governance contrary to the docs (dbsync #2151).
             """
             db_config = db_sync_manager.get_config_builder()
 
-            db_sync_manager.restart_with_config(
-                custom_config=db_config.with_preset(preset=db_sync.Preset.ONLY_UTXO)
-            )
+            try:
+                db_sync_manager.restart_with_config(
+                    custom_config=db_config.with_preset(preset=db_sync.Preset.ONLY_UTXO)
+                )
+            except Exception:
+                # db-sync bootstrap crash under only_utxo (dbsync #2150).
+                issues.dbsync_2150.finish_test()
+
             check_dbsync_state(
                 expected_state={
                     db_sync.Table.TX_METADATA: TableCondition.EMPTY,
@@ -946,10 +841,7 @@ class TestDBSyncConfig:
                 }
             )
             if not dbsync_utils.table_empty(table=db_sync.Table.DREP_REGISTRATION):
-                pytest.xfail(
-                    "only_utxo preset enables governance in db-sync "
-                    "(onlyUTxOInsertOptions sioGovernance=True), contrary to the docs"
-                )
+                issues.dbsync_2151.finish_test()
             check_dbsync_state(
                 expected_state={db_sync.Table.DREP_REGISTRATION: TableCondition.EMPTY}
             )
@@ -1005,17 +897,18 @@ class TestDBSyncConfig:
         """Test DB-Sync configuration options using multiple subtests.
 
         Verifies that different DB-Sync configuration settings correctly control table population
-        and data insertion behavior. Each subtest modifies the configuration, restarts DB-Sync,
-        and validates the expected database state.
+        and data insertion behavior. Each subtest modifies the configuration, restarts DB-Sync
+        (recreating and re-syncing the database), and validates the expected database state.
 
-        * Test `tx_out` option (enable/disable modes with various settings)
-        * Verify address, tx_in, tx_out, and ma_tx_out tables respond to tx_out configuration
-        * Test `governance` option (enable/disable)
-        * Verify all governance-related tables populate when enabled and clear when disabled
-        * Test `tx_cbor` option (enable/disable)
-        * Verify tx_cbor table populates when enabled and clears when disabled
-        * Test `multi_asset` option (enable/disable)
-        * Verify multi_asset table populates when enabled and clears when disabled
+        Covers, across the phased subtests:
+
+        * `tx_out` (enable/disable/consumed modes, force_tx_in, use_address_table)
+        * `governance`, `tx_cbor`, `multi_asset` (enable/disable)
+        * `plutus`, `metadata` (+ keys filter), `shelley` (enable/disable side effects)
+        * `ledger` (enable/disable/ignore) and `pool_stat`
+        * `offchain_pool_data` and `offchain_vote_data` (need --allow-private-offchain-urls)
+        * `remove_jsonb_from_schema` (column-type effects)
+        * insert-option presets (`full`, `only_utxo`, `only_governance`, `disable_all`)
         * Restore original DB-Sync configuration after all subtests complete
         """
         cluster = cluster_singleton
