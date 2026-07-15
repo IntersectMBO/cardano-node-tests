@@ -212,6 +212,7 @@ class TestDBSyncConfig:
         yield from self._subtests_offchain_pool()
         yield from self._subtests_offchain_vote()
         yield from self._subtests_remove_jsonb()
+        yield from self._subtests_disable_epoch()
         yield from self._subtests_presets()
 
     def _subtests_tx_out(self) -> tp.Generator[tp.Callable]:
@@ -810,6 +811,35 @@ class TestDBSyncConfig:
 
         yield remove_jsonb_enable
 
+    def _subtests_disable_epoch(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `disable_epoch` option (controls the `epoch` rollup view)."""
+
+        def disable_epoch_true(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `disable_epoch=true`: the `epoch` view returns no rows."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_disable_epoch(value=True)
+            )
+            check_dbsync_state(expected_state={db_sync.View.EPOCH: TableCondition.EMPTY})
+
+        yield disable_epoch_true
+
+        def disable_epoch_false(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `disable_epoch=false`: the `epoch` view is populated."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_disable_epoch(value=False)
+            )
+            check_dbsync_state(expected_state={db_sync.View.EPOCH: TableCondition.NOT_EMPTY})
+
+        yield disable_epoch_false
+
     def _subtests_presets(self) -> tp.Generator[tp.Callable]:
         """Subtests for insert-option presets (exercise db-sync's own preset expansion)."""
 
@@ -911,6 +941,7 @@ class TestDBSyncConfig:
         * `ledger` (enable/disable/ignore) and `pool_stat`
         * `offchain_pool_data` and `offchain_vote_data` (need --allow-private-offchain-urls)
         * `remove_jsonb_from_schema` (column-type effects)
+        * `disable_epoch` (the `epoch` rollup view)
         * insert-option presets (`full`, `only_utxo`, `only_governance`, `disable_all`)
         * Restore original DB-Sync configuration after all subtests complete
         """

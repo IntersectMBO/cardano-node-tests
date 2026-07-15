@@ -189,6 +189,9 @@ class DBSyncConfigBuilder:
             "offchain_vote_data": SettingState.DISABLE,
             "pool_stat": SettingState.ENABLE,
             "remove_jsonb_from_schema": SettingState.DISABLE,
+            # Optional key: emitted only when explicitly set, otherwise db-sync's own default
+            # is used (keeps the config for all other subtests unchanged).
+            "disable_epoch": None,
         }
         self._preset_applied = False
         self._preset: Preset | None = None
@@ -269,6 +272,11 @@ class DBSyncConfigBuilder:
             self._config["remove_jsonb_from_schema"] = value
         return self
 
+    def with_disable_epoch(self, *, value: bool) -> tp.Self:
+        if not self._preset_applied:
+            self._config["disable_epoch"] = value
+        return self
+
     def build(self) -> dict[str, tp.Any]:
         # When a preset is selected, emit only the `preset` key so db-sync expands it with
         # its own preset definitions (individual keys would override the preset base).
@@ -303,6 +311,7 @@ class DBSyncConfigBuilder:
             "remove_jsonb_from_schema": self._enum_to_value(
                 self._config["remove_jsonb_from_schema"]
             ),
+            **self._optional("disable_epoch", self._config["disable_epoch"]),
         }
 
         return config
