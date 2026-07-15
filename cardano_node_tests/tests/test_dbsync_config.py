@@ -799,6 +799,14 @@ class TestDBSyncConfig:
             metadata. (The CIP sub-tables - off_chain_vote_gov_action_data / drep_data /
             author / reference - additionally need CIP-compliant anchors and are not asserted
             here.)
+
+            TODO (covered once cardano-node-tests PR #3497 merges): with the anchor test-data
+            vectors in place, a governance test can register conformant + non-conformant +
+            invalid-JSON anchors so this can assert off_chain_vote_data.is_valid (TRUE / FALSE /
+            NULL) and the sub-tables instead of skipping. No new data files are needed:
+            governance_action_anchor.json already provides a conformant CIP-100 vector (authors
+            / references / externalUpdates), and #3497 adds the non-conformant and invalid-JSON
+            negatives (reusable across all anchor types).
             """
             if not dbsync_utils.allow_private_offchain_urls_enabled():
                 pytest.skip("requires db-sync started with --allow-private-offchain-urls")
