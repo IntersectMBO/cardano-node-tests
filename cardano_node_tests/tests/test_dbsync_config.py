@@ -18,6 +18,7 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_service_manager as db_sync
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import logfiles
 
 LOGGER = logging.getLogger(__name__)
 
@@ -660,11 +661,11 @@ class TestDBSyncConfig:
             if dbsync_utils.table_empty(table=db_sync.Table.POOL_METADATA_REF):
                 pytest.skip("no pool metadata registered on chain to fetch")
             wait_for_tables_not_empty([db_sync.Table.OFF_CHAIN_POOL_DATA], timeout=600)
+            # `off_chain_pool_fetch_error` is intentionally not asserted empty: in a full run
+            # other pools can have unreachable metadata, and db-sync may record a transient
+            # fetch error before a later successful retry populates the data.
             check_dbsync_state(
-                expected_state={
-                    db_sync.Table.OFF_CHAIN_POOL_DATA: TableCondition.NOT_EMPTY,
-                    db_sync.Table.OFF_CHAIN_POOL_FETCH_ERROR: TableCondition.EMPTY,
-                }
+                expected_state={db_sync.Table.OFF_CHAIN_POOL_DATA: TableCondition.NOT_EMPTY}
             )
 
         yield offchain_pool_data_enable
@@ -913,6 +914,7 @@ class TestDBSyncConfig:
         cluster_singleton: clusterlib.ClusterLib,
         db_sync_manager: db_sync.DBSyncManager,
         subtests: pytest_subtests.SubTests,
+        worker_id: str,
     ):
         """Test DB-Sync configuration options using multiple subtests.
 
@@ -933,6 +935,23 @@ class TestDBSyncConfig:
         """
         cluster = cluster_singleton
         common.get_test_id(cluster)
+
+        # Ignore expected db-sync log noise that would otherwise fail the test in teardown:
+        # * the `only_utxo` preset deliberately triggers the known bootstrap crash (db-sync
+        #   issue #2150), which logs "TxIn not found in memory" and exits the dbsync service;
+        # * `pool_stat` logs a benign "assume the pool exists and move on" warning while a
+        #   pool is not yet in the active cache (queryPoolHashId / insertPoolStats).
+        for _glob in ("dbsync.stdout", "dbsync.stderr"):
+            logfiles.add_ignore_rule(
+                files_glob=_glob,
+                regex="TxIn not found in memory|queryPoolHashId",
+                ignore_file_id=worker_id,
+            )
+        logfiles.add_ignore_rule(
+            files_glob="supervisord.log",
+            regex="exited: dbsync .exit status 1",
+            ignore_file_id=worker_id,
+        )
 
         for subt in self.get_subtests():
             with subtests.test(scenario=getattr(subt, "__name__", "")):
