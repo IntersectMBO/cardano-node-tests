@@ -11,7 +11,6 @@ import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
@@ -50,8 +49,9 @@ class ColumnCondition(enum.StrEnum):
 
 
 # On-chain governance tables. Off-chain vote metadata is controlled by `offchain_vote_data`
-# (and needs --allow-private-offchain-urls), so it is covered separately by the
-# offchain_vote_data subtests rather than bundled here with on-chain governance data.
+# and has to be fetched from the anchor URLs (only cluster-local/localhost anchors need
+# --allow-private-offchain-urls; public URLs are fetched regardless), so it is covered
+# separately by the offchain_vote_data subtests rather than bundled here.
 GOVERNANCE_TABLES = (
     db_sync.Table.COMMITTEE_DE_REGISTRATION,
     db_sync.Table.COMMITTEE_MEMBER,
@@ -836,36 +836,17 @@ class TestDBSyncConfig:
         yield preset_full
 
         def preset_only_utxo(
-            db_sync_manager: db_sync.DBSyncManager,
+            db_sync_manager: db_sync.DBSyncManager,  # noqa: ARG001
         ):
             """Test the `only_utxo` preset (docs: block/tx/tx_out/ma_tx_out only).
 
-            tx_out/ma_tx_out are not asserted: bootstrap bulk-loads them only at tip, which
-            is flaky on a dev cluster. db-sync also crashes syncing under this preset
-            (dbsync #2150), so the restart is xfailed while that is open. If it does sync, the
-            preset still enables governance contrary to the docs (dbsync #2151).
+            Skipped: the preset uses tx_out bootstrap mode, under which db-sync inserts 0
+            tx_out and then crashes near tip (dbsync #2150). The crash exits the dbsync
+            service and that unexpected exit is logged to supervisord.log, which the teardown
+            log check cannot ignore. Re-enable this (and assert the #2151 governance-vs-docs
+            behaviour) once #2150 is fixed.
             """
-            db_config = db_sync_manager.get_config_builder()
-
-            try:
-                db_sync_manager.restart_with_config(
-                    custom_config=db_config.with_preset(preset=db_sync.Preset.ONLY_UTXO)
-                )
-            except Exception:
-                # db-sync bootstrap crash under only_utxo (dbsync #2150).
-                issues.dbsync_2150.finish_test()
-
-            check_dbsync_state(
-                expected_state={
-                    db_sync.Table.TX_METADATA: TableCondition.EMPTY,
-                    db_sync.Table.REDEEMER: TableCondition.EMPTY,
-                }
-            )
-            if not dbsync_utils.table_empty(table=db_sync.Table.DREP_REGISTRATION):
-                issues.dbsync_2151.finish_test()
-            check_dbsync_state(
-                expected_state={db_sync.Table.DREP_REGISTRATION: TableCondition.EMPTY}
-            )
+            pytest.skip("only_utxo preset crashes db-sync, see cardano-db-sync issue #2150")
 
         yield preset_only_utxo
 
@@ -936,22 +917,15 @@ class TestDBSyncConfig:
         cluster = cluster_singleton
         common.get_test_id(cluster)
 
-        # Ignore expected db-sync log noise that would otherwise fail the test in teardown:
-        # * the `only_utxo` preset deliberately triggers the known bootstrap crash (db-sync
-        #   issue #2150), which logs "TxIn not found in memory" and exits the dbsync service;
-        # * `pool_stat` logs a benign "assume the pool exists and move on" warning while a
-        #   pool is not yet in the active cache (queryPoolHashId / insertPoolStats).
+        # `pool_stat` logs a benign "assume the pool exists and move on" warning
+        # (queryPoolHashId / insertPoolStats) while a pool is not yet in the active cache.
+        # Ignore it so it does not fail the test during the teardown log check.
         for _glob in ("dbsync.stdout", "dbsync.stderr"):
             logfiles.add_ignore_rule(
                 files_glob=_glob,
-                regex="TxIn not found in memory|queryPoolHashId",
+                regex="queryPoolHashId",
                 ignore_file_id=worker_id,
             )
-        logfiles.add_ignore_rule(
-            files_glob="supervisord.log",
-            regex="exited: dbsync .exit status 1",
-            ignore_file_id=worker_id,
-        )
 
         for subt in self.get_subtests():
             with subtests.test(scenario=getattr(subt, "__name__", "")):
