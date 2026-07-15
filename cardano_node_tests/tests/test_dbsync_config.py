@@ -197,8 +197,24 @@ class TestDBSyncConfig:
     def get_subtests(self) -> tp.Generator[tp.Callable]:
         """Get the DB-Sync Config scenarios.
 
-        The scenarios are executed as subtests in the `test_dbsync_config` test.
+        The scenarios are executed as subtests in the `test_dbsync_config` test,
+        grouped by the db-sync config option each set exercises.
         """
+        yield from self._subtests_tx_out()
+        yield from self._subtests_governance()
+        yield from self._subtests_tx_cbor()
+        yield from self._subtests_multi_asset()
+        yield from self._subtests_plutus()
+        yield from self._subtests_metadata()
+        yield from self._subtests_shelley()
+        yield from self._subtests_ledger()
+        yield from self._subtests_offchain_pool()
+        yield from self._subtests_offchain_vote()
+        yield from self._subtests_remove_jsonb()
+        yield from self._subtests_presets()
+
+    def _subtests_tx_out(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `tx_out` option (modes, force_tx_in, use_address_table)."""
 
         def basic_tx_out(
             db_sync_manager: db_sync.DBSyncManager,
@@ -237,126 +253,6 @@ class TestDBSyncConfig:
             )
 
         yield basic_tx_out
-
-        def governance(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test `governance` option."""
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(
-                custom_config=db_config.with_governance(value=db_sync.SettingState.ENABLE)
-            )
-
-            # Off-chain data is inserted into the DB a few minutes after the restart of db-sync
-            wait_for_tables_not_empty(GOVERNANCE_TABLES, timeout=600)
-
-            check_dbsync_state(
-                expected_state={t: TableCondition.NOT_EMPTY for t in GOVERNANCE_TABLES}  # noqa: C420
-            )
-
-            db_sync_manager.restart_with_config(
-                custom_config=db_config.with_governance(value=db_sync.SettingState.DISABLE)
-            )
-            check_dbsync_state(
-                expected_state={t: TableCondition.EMPTY for t in GOVERNANCE_TABLES}  # noqa: C420
-            )
-
-        yield governance
-
-        def tx_cbor_value_enable(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test enabled `tx_cbor` option."""
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(
-                custom_config=db_config.with_tx_cbor(value=db_sync.SettingState.ENABLE)
-            )
-            check_dbsync_state(expected_state={db_sync.Table.TX_CBOR: TableCondition.NOT_EMPTY})
-
-        yield tx_cbor_value_enable
-
-        def tx_cbor_value_disable(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test disabled `tx_cbor` option."""
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(
-                custom_config=db_config.with_tx_cbor(value=db_sync.SettingState.DISABLE)
-            )
-            check_dbsync_state(expected_state={db_sync.Table.TX_CBOR: TableCondition.EMPTY})
-
-        yield tx_cbor_value_disable
-
-        def multi_asset_enable(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test elabled `multi_asset` option."""
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(
-                custom_config=db_config.with_multi_asset(enable=True)
-            )
-            check_dbsync_state({db_sync.Table.MULTI_ASSET: TableCondition.NOT_EMPTY})
-
-        yield multi_asset_enable
-
-        def multi_asset_disable(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test disabled `multi_asset` option."""
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(
-                custom_config=db_config.with_multi_asset(enable=False)
-            )
-            check_dbsync_state({db_sync.Table.MULTI_ASSET: TableCondition.EMPTY})
-
-        yield multi_asset_disable
-
-        yield from self._subtests_phase1()
-        yield from self._subtests_phase2()
-        yield from self._subtests_phase3()
-        yield from self._subtests_phase4()
-        yield from self._subtests_phase5()
-        yield from self._subtests_phase6()
-        yield from self._subtests_phase7()
-
-    def _subtests_phase1(self) -> tp.Generator[tp.Callable]:
-        """Phase 1 subtests: config-presence / empties (no extra on-chain activity needed)."""
-
-        def plutus_disable(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test disabled `plutus`: no script-execution data.
-
-            redeemer / redeemer_data / datum stay empty despite a Plutus tx on chain.
-            """
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(custom_config=db_config.with_plutus(enable=False))
-            check_dbsync_state(
-                expected_state={
-                    db_sync.Table.REDEEMER: TableCondition.EMPTY,
-                    db_sync.Table.REDEEMER_DATA: TableCondition.EMPTY,
-                    db_sync.Table.DATUM: TableCondition.EMPTY,
-                }
-            )
-
-        yield plutus_disable
-
-        def metadata_disable(
-            db_sync_manager: db_sync.DBSyncManager,
-        ):
-            """Test disabled `metadata`: tx_metadata stays empty despite a tx with metadata."""
-            db_config = db_sync_manager.get_config_builder()
-
-            db_sync_manager.restart_with_config(custom_config=db_config.with_metadata(enable=False))
-            check_dbsync_state(expected_state={db_sync.Table.TX_METADATA: TableCondition.EMPTY})
-
-        yield metadata_disable
 
         def tx_out_consumed(
             db_sync_manager: db_sync.DBSyncManager,
@@ -429,8 +325,95 @@ class TestDBSyncConfig:
 
         yield tx_out_use_address_table
 
-    def _subtests_phase2(self) -> tp.Generator[tp.Callable]:
-        """Phase 2 subtests: enable-side population (depends on prior on-chain activity)."""
+    def _subtests_governance(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `governance` option."""
+
+        def governance(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test `governance` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_governance(value=db_sync.SettingState.ENABLE)
+            )
+
+            # Off-chain data is inserted into the DB a few minutes after the restart of db-sync
+            wait_for_tables_not_empty(GOVERNANCE_TABLES, timeout=600)
+
+            check_dbsync_state(
+                expected_state={t: TableCondition.NOT_EMPTY for t in GOVERNANCE_TABLES}  # noqa: C420
+            )
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_governance(value=db_sync.SettingState.DISABLE)
+            )
+            check_dbsync_state(
+                expected_state={t: TableCondition.EMPTY for t in GOVERNANCE_TABLES}  # noqa: C420
+            )
+
+        yield governance
+
+    def _subtests_tx_cbor(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `tx_cbor` option."""
+
+        def tx_cbor_value_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test enabled `tx_cbor` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_cbor(value=db_sync.SettingState.ENABLE)
+            )
+            check_dbsync_state(expected_state={db_sync.Table.TX_CBOR: TableCondition.NOT_EMPTY})
+
+        yield tx_cbor_value_enable
+
+        def tx_cbor_value_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `tx_cbor` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_tx_cbor(value=db_sync.SettingState.DISABLE)
+            )
+            check_dbsync_state(expected_state={db_sync.Table.TX_CBOR: TableCondition.EMPTY})
+
+        yield tx_cbor_value_disable
+
+    def _subtests_multi_asset(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `multi_asset` option."""
+
+        def multi_asset_enable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test elabled `multi_asset` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_multi_asset(enable=True)
+            )
+            check_dbsync_state({db_sync.Table.MULTI_ASSET: TableCondition.NOT_EMPTY})
+
+        yield multi_asset_enable
+
+        def multi_asset_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `multi_asset` option."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(
+                custom_config=db_config.with_multi_asset(enable=False)
+            )
+            check_dbsync_state({db_sync.Table.MULTI_ASSET: TableCondition.EMPTY})
+
+        yield multi_asset_disable
+
+    def _subtests_plutus(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `plutus` option."""
 
         def plutus_enable(
             db_sync_manager: db_sync.DBSyncManager,
@@ -453,6 +436,29 @@ class TestDBSyncConfig:
 
         yield plutus_enable
 
+        def plutus_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `plutus`: no script-execution data.
+
+            redeemer / redeemer_data / datum stay empty despite a Plutus tx on chain.
+            """
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_plutus(enable=False))
+            check_dbsync_state(
+                expected_state={
+                    db_sync.Table.REDEEMER: TableCondition.EMPTY,
+                    db_sync.Table.REDEEMER_DATA: TableCondition.EMPTY,
+                    db_sync.Table.DATUM: TableCondition.EMPTY,
+                }
+            )
+
+        yield plutus_disable
+
+    def _subtests_metadata(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `metadata` option (enable/disable and keys filter)."""
+
         def metadata_enable(
             db_sync_manager: db_sync.DBSyncManager,
         ):
@@ -463,6 +469,17 @@ class TestDBSyncConfig:
             check_dbsync_state(expected_state={db_sync.Table.TX_METADATA: TableCondition.NOT_EMPTY})
 
         yield metadata_enable
+
+        def metadata_disable(
+            db_sync_manager: db_sync.DBSyncManager,
+        ):
+            """Test disabled `metadata`: tx_metadata stays empty despite a tx with metadata."""
+            db_config = db_sync_manager.get_config_builder()
+
+            db_sync_manager.restart_with_config(custom_config=db_config.with_metadata(enable=False))
+            check_dbsync_state(expected_state={db_sync.Table.TX_METADATA: TableCondition.EMPTY})
+
+        yield metadata_disable
 
         def metadata_keys_filter(
             db_sync_manager: db_sync.DBSyncManager,
@@ -481,6 +498,9 @@ class TestDBSyncConfig:
             )
 
         yield metadata_keys_filter
+
+    def _subtests_shelley(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `shelley` option (enable/disable side effects)."""
 
         def shelley_enable(
             db_sync_manager: db_sync.DBSyncManager,
@@ -519,8 +539,8 @@ class TestDBSyncConfig:
 
         yield shelley_disable_independence
 
-    def _subtests_phase3(self) -> tp.Generator[tp.Callable]:
-        """Phase 3 subtests: `ledger` modes and `pool_stat` (ledger-derived data)."""
+    def _subtests_ledger(self) -> tp.Generator[tp.Callable]:
+        """Subtests for the `ledger` modes and `pool_stat` (ledger-derived data)."""
         # Tables populated only from ledger state; empty unless `ledger` maintains and uses it.
         ledger_derived_tables = (
             db_sync.Table.REWARD,
@@ -618,8 +638,8 @@ class TestDBSyncConfig:
 
         yield pool_stat_disable
 
-    def _subtests_phase4(self) -> tp.Generator[tp.Callable]:
-        """Phase 4 subtests: off-chain pool metadata (needs --allow-private-offchain-urls)."""
+    def _subtests_offchain_pool(self) -> tp.Generator[tp.Callable]:
+        """Subtests for `offchain_pool_data` (needs --allow-private-offchain-urls)."""
 
         def offchain_pool_data_enable(
             db_sync_manager: db_sync.DBSyncManager,
@@ -672,8 +692,8 @@ class TestDBSyncConfig:
 
         yield offchain_pool_data_disable
 
-    def _subtests_phase5(self) -> tp.Generator[tp.Callable]:
-        """Phase 5 subtests: off-chain vote metadata (needs --allow-private-offchain-urls)."""
+    def _subtests_offchain_vote(self) -> tp.Generator[tp.Callable]:
+        """Subtests for `offchain_vote_data` (needs --allow-private-offchain-urls)."""
 
         def offchain_vote_data_disable(
             db_sync_manager: db_sync.DBSyncManager,
@@ -741,8 +761,8 @@ class TestDBSyncConfig:
 
         yield offchain_vote_data_enable
 
-    def _subtests_phase6(self) -> tp.Generator[tp.Callable]:
-        """Phase 6 subtests: `remove_jsonb_from_schema` column-type effects."""
+    def _subtests_remove_jsonb(self) -> tp.Generator[tp.Callable]:
+        """Subtests for `remove_jsonb_from_schema` column-type effects."""
         # jsonb columns controlled by remove_jsonb_from_schema (excluding *.json columns, which
         # `json_type` also governs). Column types are schema-level, so row counts don't matter.
         jsonb_columns = (
@@ -789,8 +809,8 @@ class TestDBSyncConfig:
 
         yield remove_jsonb_enable
 
-    def _subtests_phase7(self) -> tp.Generator[tp.Callable]:
-        """Phase 7 subtests: insert-option presets (exercise db-sync's own preset expansion)."""
+    def _subtests_presets(self) -> tp.Generator[tp.Callable]:
+        """Subtests for insert-option presets (exercise db-sync's own preset expansion)."""
 
         def preset_full(
             db_sync_manager: db_sync.DBSyncManager,
@@ -900,7 +920,7 @@ class TestDBSyncConfig:
         and data insertion behavior. Each subtest modifies the configuration, restarts DB-Sync
         (recreating and re-syncing the database), and validates the expected database state.
 
-        Covers, across the phased subtests:
+        Covers, grouped by config option:
 
         * `tx_out` (enable/disable/consumed modes, force_tx_in, use_address_table)
         * `governance`, `tx_cbor`, `multi_asset` (enable/disable)
