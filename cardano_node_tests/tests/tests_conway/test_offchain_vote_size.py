@@ -24,8 +24,10 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dbsync_service_manager as db_sync
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import web
@@ -73,13 +75,31 @@ class TestOffChainVoteSize:
     """Tests for the off-chain voting anchor data size boundary."""
 
     @pytest.fixture
+    def cluster_singleton_governance(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+    ) -> governance_utils.GovClusterT:
+        """Lock the whole cluster instance and set up governance.
+
+        These tests restart db-sync with the ``--allow-private-offchain-urls`` flag, a
+        cluster-wide change; locking the whole instance keeps it isolated from tests running in
+        parallel while still allowing governance actions to be submitted.
+        """
+        cluster_obj = cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
+        governance_data = governance_setup.get_default_governance(
+            cluster_manager=cluster_manager, cluster_obj=cluster_obj
+        )
+        governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
+        return cluster_obj, governance_data
+
+    @pytest.fixture
     def pool_user_ug(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_use_governance: governance_utils.GovClusterT,
+        cluster_singleton_governance: governance_utils.GovClusterT,
     ) -> clusterlib.PoolUser:
         """Create a pool user for "use governance"."""
-        cluster, __ = cluster_use_governance
+        cluster, __ = cluster_singleton_governance
         key = helpers.get_current_line_str()
         name_template = common.get_test_id(cluster)
         # Re-fund when the balance drops below `min_amount` so each proposal can cover the gov
@@ -92,6 +112,24 @@ class TestOffChainVoteSize:
             amount=400_000_000,
             min_amount=350_000_000,
         )
+
+    @pytest.fixture
+    def allow_private_offchain_urls(
+        self,
+        cluster_singleton_governance: governance_utils.GovClusterT,  # noqa: ARG002
+    ) -> tp.Generator[None]:
+        """Enable db-sync's ``--allow-private-offchain-urls`` for the duration of the test.
+
+        The anchor is served from the internal (localhost) web server, which db-sync's off-chain
+        fetcher rejects by default. The flag is enabled on the locked singleton cluster and
+        disabled again on teardown, so the cluster-wide default (localhost rejected, as asserted
+        by ``test_smash.py::test_fetch_pool_metadata_localhost_rejected``) is restored for other
+        tests.
+        """
+        manager = db_sync.DBSyncManager()
+        manager.set_allow_private_offchain_urls(enable=True)
+        yield
+        manager.set_allow_private_offchain_urls(enable=False)
 
     def _submit_info_action_with_anchor(
         self,
@@ -147,8 +185,9 @@ class TestOffChainVoteSize:
     @pytest.mark.dbsync
     def test_within_size_limit(
         self,
-        cluster_use_governance: governance_utils.GovClusterT,
+        cluster_singleton_governance: governance_utils.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
+        allow_private_offchain_urls: None,  # noqa: ARG002
         request: FixtureRequest,
     ):
         """Test that an anchor at the size limit is stored.
@@ -156,7 +195,7 @@ class TestOffChainVoteSize:
         * Submit an info action with a conformant anchor of exactly ``OFFCHAIN_VOTE_MAX_BYTES``.
         * Verify db-sync stores ``off_chain_vote_data`` with ``is_valid = TRUE`` and the raw bytes.
         """
-        cluster, __ = cluster_use_governance
+        cluster, __ = cluster_singleton_governance
         temp_template = common.get_test_id(cluster)
 
         anchor_data_hash, _anchor_url, anchor_json = self._submit_info_action_with_anchor(
@@ -191,8 +230,9 @@ class TestOffChainVoteSize:
     @pytest.mark.dbsync
     def test_over_size_limit(
         self,
-        cluster_use_governance: governance_utils.GovClusterT,
+        cluster_singleton_governance: governance_utils.GovClusterT,
         pool_user_ug: clusterlib.PoolUser,
+        allow_private_offchain_urls: None,  # noqa: ARG002
         request: FixtureRequest,
     ):
         """Test that an anchor just over the size limit is rejected.
@@ -201,7 +241,7 @@ class TestOffChainVoteSize:
         * Verify db-sync records a ``Size error`` in ``off_chain_vote_fetch_error`` and stores no
           ``off_chain_vote_data`` row.
         """
-        cluster, __ = cluster_use_governance
+        cluster, __ = cluster_singleton_governance
         temp_template = common.get_test_id(cluster)
 
         anchor_data_hash, anchor_url, _anchor_json = self._submit_info_action_with_anchor(
