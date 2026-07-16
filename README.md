@@ -38,6 +38,12 @@ The preferred way is via `runner/runc.sh`, which builds a container image and ru
 ./runner/runc.sh ./runner/regression.sh
 ```
 
+Run with clock skew on one pool node:
+
+```sh
+./runner/runc.sh -- TIME_DRIFT_POOL=1 TIME_DRIFT_SPEC='+0 x1.008' ./runner/regression.sh
+```
+
 Run a specific test:
 
 ```sh
@@ -167,6 +173,9 @@ You can fine-tune test runs using these environment variables:
 | `TX_CENTRIFUGE_REV`| `tx-centrifuge` version (default: `bench/leios-11.0.1`) |
 | `PYTEST_ARGS`      | Extra options passed to pytest.                         |
 | `TEST_THREADS`     | Number of pytest workers (default: `20`).               |
+| `TIME_DRIFT_POOL`  | Pool (1-3) for libfaketime clock skew; unset = off.     |
+| `TIME_DRIFT_SPEC`  | libfaketime `FAKETIME` string, e.g. `+0 x1.008`.        |
+| `LIBFAKETIME_PATH` | Override path to `libfaketimeMT.so.1`.                  |
 
 ### 💡 Usage Examples
 
@@ -230,25 +239,6 @@ make start-cluster
 The default cluster variant is `local_fast`. Override with `TESTNET_VARIANT=<variant>`, e.g. `make cluster-scripts TESTNET_VARIANT=local_slow`.
 
 Keys and configs are stored under `/var/tmp/cardonnay-of-$USER/state-cluster0`.
-
-#### Time-Drift Resilience Testing (local only)
-
-Inject a gradual clock skew into a single pool node to observe network resilience.
-`libfaketime` is included automatically in the Nix dev shell.
-
-**Environment variables:**
-
-| Variable | Description |
-| --- | --- |
-| `TIME_DRIFT_POOL` | Which pool gets the skewed clock (1, 2, or 3); unset = no drift. |
-| `TIME_DRIFT_SPEC` | `libfaketime` `FAKETIME` string; `+0` = no offset at startup, `x<rate>` = clock speed multiplier. |
-| `LIBFAKETIME_PATH` | Override the `.so` path if not in the default location. |
-
-**Example:**
-
-```sh
-./runner/runc.sh -- TIME_DRIFT_POOL=1 TIME_DRIFT_SPEC='+0 x1.008' make start-cluster
-```
 
 ### Run Individual Tests
 
