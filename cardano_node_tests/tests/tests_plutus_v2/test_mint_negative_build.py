@@ -78,20 +78,13 @@ class TestNegativeCollateralOutput:
 
         # Step 1: fund the token issuer
 
-        mint_utxos, *__ = mint_build._fund_issuer(
+        mint_utxos, collateral_utxos, *__ = mint_build._fund_issuer(
             cluster_obj=cluster,
             temp_template=temp_template,
             payment_addr=payment_addr,
             issuer_addr=issuer_addr,
             minting_cost=minting_cost,
             amount=script_fund,
-        )
-
-        collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=mint_utxos[0].utxo_hash,
-            utxo_ix=2,
-            amount=minting_cost.collateral,
-            address=issuer_addr.address,
         )
 
         # Step 2: mint the "qacoin"
@@ -107,18 +100,12 @@ class TestNegativeCollateralOutput:
             clusterlib.Mint(
                 txouts=mint_txouts,
                 script_file=plutus_v_record.script_file,
-                collaterals=[collateral_utxo],
-                execution_units=(
-                    plutus_common.MINTING_COST.per_time,
-                    plutus_common.MINTING_COST.per_space,
-                ),
+                collaterals=collateral_utxos,
                 redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             )
         ]
 
-        tx_files_step2 = clusterlib.TxFiles(
-            signing_key_files=[issuer_addr.skey_file],
-        )
+        tx_files_step2 = clusterlib.TxFiles(signing_key_files=[issuer_addr.skey_file])
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
             *mint_txouts,
