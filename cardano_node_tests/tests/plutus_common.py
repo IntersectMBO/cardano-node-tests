@@ -1,5 +1,6 @@
 import dataclasses
 import itertools
+import math
 import pathlib as pl
 
 import pytest
@@ -657,7 +658,10 @@ def get_cost_per_unit(protocol_params: dict) -> ExecutionCost:
 
 
 def compute_cost(
-    execution_cost: ExecutionCost, protocol_params: dict, collateral_fraction_offset: float = 1.0
+    execution_cost: ExecutionCost,
+    protocol_params: dict,
+    base_fee: int | None = None,  # Fee without script cost; default = fee for tx of max size
+    collateral_fraction_offset: float = 1.0,
 ) -> ScriptCost:
     """Compute fee and collateral required for the Plutus script."""
     cost_per_unit = get_cost_per_unit(protocol_params=protocol_params)
@@ -668,11 +672,34 @@ def compute_cost(
         )
         + execution_cost.fixed_cost
     )
+    if base_fee is None:
+        base_fee = (
+            protocol_params["txFeeFixed"]
+            + protocol_params["txFeePerByte"] * protocol_params["maxTxSize"]
+        )
 
     collateral_fraction = protocol_params["collateralPercentage"] / 100
-    min_collateral = int(fee_redeem * collateral_fraction * collateral_fraction_offset)
-    # Eventual return collateral UTxO value must be bigger than min UTxO value
-    collateral_amount = max(min_collateral + 1_000_000, 2_000_000)
+    # The ledger requires collateral to cover `collateralPercentage` of the WHOLE
+    # transaction fee, not just the Plutus script execution cost. The exact fee is
+    # unknown before the transaction is built (chicken-and-egg), so `base_fee` is
+    # a pessimistic estimate of the non-script part of the fee. Overestimating is
+    # harmless: collateral is not spent for valid scripts, and any excess over
+    # `total_collateral` comes back in the return collateral output.
+    # Ceiling matches the ledger's rounding (see `validateInsufficientCollateral`
+    # in cardano-ledger and `calcReturnAndTotalCollateral` in cardano-api).
+    # The `collateral_fraction_offset` scales only the script part of the fee, so
+    # tests that use a large offset to inflate collateral for a cheap script don't
+    # multiply the size-based fee estimate as well.
+    min_collateral = math.ceil(
+        (base_fee + fee_redeem * collateral_fraction_offset) * collateral_fraction
+    )
+    # The eventual return collateral txout must itself satisfy the min UTxO value:
+    # (160 + serialized txout size) * `utxoCostPerByte` (see `babbageMinUTxOValue`
+    # in cardano-ledger). An ada-only txout with payment and staking credentials
+    # is 67 bytes, so add the corresponding min UTxO value as a buffer on top of
+    # `min_collateral` to keep the return collateral output above the limit.
+    min_utxo_value = (160 + 67) * protocol_params["utxoCostPerByte"]
+    collateral_amount = max(min_collateral + min_utxo_value, 2_000_000)
 
     return ScriptCost(fee=fee_redeem, collateral=collateral_amount, min_collateral=min_collateral)
 
