@@ -64,7 +64,6 @@ class TestNegativeCollateralOutput:
         issuer_addr = payment_addrs[1]
 
         lovelace_amount = 2_000_000
-        collateral_amount = 2_000_000
         token_amount = 5
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
@@ -73,6 +72,8 @@ class TestNegativeCollateralOutput:
             execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
+        # The amount of the collateral UTxO created by `_fund_issuer`
+        collateral_amount = minting_cost.collateral
 
         # Step 1: fund the token issuer
 
@@ -122,8 +123,10 @@ class TestNegativeCollateralOutput:
             *mint_txouts,
         ]
 
-        # Limit the amount of collateral that can be used and balance the return collateral txout
-        total_collateral_amount = minting_cost.min_collateral // 2
+        # Limit the amount of collateral that can be used and balance the return collateral
+        # txout. Half of the tx fee is guaranteed to be insufficient, as the ledger requires
+        # collateral to cover `collateralPercentage` (>= 100) of the fee.
+        total_collateral_amount = (minting_cost.fee + mint_raw.FEE_MINT_TXSIZE) // 2
         return_collateral_txouts = [
             clusterlib.TxOut(
                 payment_addr.address, amount=collateral_amount - total_collateral_amount
