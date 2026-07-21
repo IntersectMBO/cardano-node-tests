@@ -162,7 +162,11 @@ elif [ "$1" = "step2" ]; then
 
   # run the pool3 with the original cardano-node binary
   cp -f "$state_cluster/cardano-node-pool3" "$state_cluster/cardano-node-pool3.orig"
-  sed -i 's/cardano-node run/cardano-node-step1 run/' "$state_cluster/cardano-node-pool3"
+  sed -i 's/^exec cardano-node /exec cardano-node-step1 /' "$state_cluster/cardano-node-pool3"
+  grep -q '^exec cardano-node-step1 ' "$state_cluster/cardano-node-pool3" || {
+    echo "Failed to switch pool3 to the original cardano-node binary" >&2
+    exit 6
+  }
 
   # Restart local cluster nodes with binaries from new cluster-node version.
   # It is necessary to restart supervisord with new environment.
@@ -179,14 +183,22 @@ elif [ "$1" = "step2" ]; then
   # print path to cardano-node binaries
   echo "pool1 node binary:"
   pool1_pid="$("$state_cluster/supervisorctl_local" pid nodes:pool1)"
-  readlink -f "/proc/$pool1_pid/exe"
+  pool1_bin="$(readlink -f "/proc/$pool1_pid/exe")"
+  echo "$pool1_bin"
   echo "pool3 node binary:"
   pool3_pid="$("$state_cluster/supervisorctl_local" pid nodes:pool3)"
-  readlink -f "/proc/$pool3_pid/exe"
+  pool3_bin="$(readlink -f "/proc/$pool3_pid/exe")"
+  echo "$pool3_bin"
 
   # check that nodes are running
   if [ "$pool1_pid" = 0 ] || [ "$pool3_pid" = 0 ]; then
     echo "Failed to start node" >&2
+    exit 6
+  fi
+
+  # check that pool3 is still running the original (base) binary, not the upgraded one
+  if [ "$pool1_bin" = "$pool3_bin" ]; then
+    echo "pool3 is running the same binary as pool1, expected it to stay on the base revision" >&2
     exit 6
   fi
 
