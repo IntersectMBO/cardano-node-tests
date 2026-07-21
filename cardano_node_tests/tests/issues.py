@@ -11,6 +11,11 @@ api_829 = blockers.GH(
     fixed_in="10.5.0.0",
     message="Wrong autobalancing when there's no change.",
 )
+api_1261 = blockers.GH(
+    issue=1261,
+    repo="IntersectMBO/cardano-api",
+    message="`transaction build` does not validate min UTxO for the collateral return output.",
+)
 
 cli_49 = blockers.GH(
     issue=49,
