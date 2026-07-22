@@ -743,24 +743,23 @@ class TestNegativeCollateral:
         issuer_addr = payment_addrs[1]
 
         lovelace_amount = 2_000_000
-        collateral_amount = 2_000_000
         token_amount = 5
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
-        # Increase fixed cost so the required collateral is higher than minimum collateral of 2 ADA
+        # Increase fixed cost so the required collateral is higher than minimal collateral
         execution_cost = dataclasses.replace(plutus_v_record.execution_cost, fixed_cost=2_000_000)
 
         minting_cost = plutus_common.compute_cost(
             execution_cost=execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
-            # Will use the minimal default collateral amount
+            # Exclude script fee from collateral so it stays below the required amount
             collateral_fraction_offset=0.0,
         )
 
         # Step 1: fund the token issuer
 
-        mint_utxos, *__ = mint_raw._fund_issuer(
+        mint_utxos, collateral_utxos, *__ = mint_raw._fund_issuer(
             cluster_obj=cluster,
             temp_template=temp_template,
             payment_addr=payment_addr,
@@ -770,13 +769,6 @@ class TestNegativeCollateral:
         )
 
         # Step 2: mint the "qacoin"
-
-        invalid_collateral_utxo = clusterlib.UTXOData(
-            utxo_hash=mint_utxos[0].utxo_hash,
-            utxo_ix=1,
-            amount=collateral_amount,
-            address=issuer_addr.address,
-        )
 
         policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
@@ -789,7 +781,7 @@ class TestNegativeCollateral:
             clusterlib.Mint(
                 txouts=mint_txouts,
                 script_file=plutus_v_record.script_file,
-                collaterals=[invalid_collateral_utxo],
+                collaterals=collateral_utxos,
                 execution_units=(
                     execution_cost.per_time,
                     execution_cost.per_space,
@@ -798,9 +790,7 @@ class TestNegativeCollateral:
             )
         ]
 
-        tx_files_step2 = clusterlib.TxFiles(
-            signing_key_files=[issuer_addr.skey_file],
-        )
+        tx_files_step2 = clusterlib.TxFiles(signing_key_files=[issuer_addr.skey_file])
         txouts_step2 = [
             clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
             *mint_txouts,
