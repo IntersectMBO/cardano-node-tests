@@ -101,8 +101,8 @@ class TestNegativeCollateralOutput:
                 script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_COST.per_time,
-                    plutus_common.MINTING_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             )
@@ -207,8 +207,8 @@ class TestNegativeCollateralOutput:
                 script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_COST.per_time,
-                    plutus_common.MINTING_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
             )
