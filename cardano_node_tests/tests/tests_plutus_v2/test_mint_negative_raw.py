@@ -1,5 +1,6 @@
 """Negative tests for minting with Plutus V2 using `transaction build-raw`."""
 
+import dataclasses
 import logging
 
 import allure
@@ -9,6 +10,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.tests import tx_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_raw
 from cardano_node_tests.utils import helpers
 
@@ -246,3 +248,111 @@ class TestNegativeCollateralOutput:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert "IncorrectTotalCollateralField" in exc_value, exc_value
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "with_total_collateral",
+        (True, False),
+        ids=("with_total_collateral", "without_total_collateral"),
+    )
+    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    def test_minting_with_small_return_collateral(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        with_total_collateral: bool,
+        plutus_version: str,
+    ):
+        """Test minting a token with a Plutus script with return collateral < min UTxO.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+        payment_addr = payment_addrs[0]
+        issuer_addr = payment_addrs[1]
+
+        lovelace_amount = 2_000_000
+        token_amount = 5
+        collateral_diff = 200
+
+        plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
+
+        minting_cost_orig = plutus_common.compute_cost(
+            execution_cost=plutus_v_record.execution_cost,
+            protocol_params=cluster.g_query.get_protocol_params(),
+            base_fee=50_000,
+        )
+        # Make sure that the return collateral amount (what's left after collateral is taken)
+        # is below min UTxO value.
+        collateral_amount = minting_cost_orig.min_collateral - 100 + tx_common.MIN_UTXO_VALUE[1]
+        minting_cost = dataclasses.replace(minting_cost_orig, collateral=collateral_amount)
+
+        # Step 1: fund the token issuer
+
+        mint_utxos, collateral_utxos, *__ = mint_raw._fund_issuer(
+            cluster_obj=cluster,
+            temp_template=temp_template,
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_cost=minting_cost,
+            amount=lovelace_amount,
+        )
+
+        # Step 2: mint the "qacoin"
+
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
+        asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
+        token = f"{policyid}.{asset_name}"
+        mint_txouts = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)
+        ]
+
+        plutus_mint_data = [
+            clusterlib.Mint(
+                txouts=mint_txouts,
+                script_file=plutus_v_record.script_file,
+                collaterals=collateral_utxos,
+                execution_units=(
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
+                ),
+                redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
+            )
+        ]
+
+        tx_files_step2 = clusterlib.TxFiles(signing_key_files=[issuer_addr.skey_file])
+        txouts_step2 = [
+            clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
+            *mint_txouts,
+        ]
+
+        tx_output_step2 = cluster.g_transaction.build_raw_tx_bare(
+            out_file=f"{temp_template}_step2_tx.body",
+            txins=mint_utxos,
+            # Return collateral is always needed, otherwise all collateral is used and tx submit
+            # succeeds.
+            return_collateral_txouts=[
+                clusterlib.TxOut(payment_addr.address, amount=collateral_diff)
+            ],
+            total_collateral_amount=minting_cost.collateral - collateral_diff
+            if with_total_collateral
+            else None,
+            txouts=txouts_step2,
+            mint=plutus_mint_data,
+            tx_files=tx_files_step2,
+            fee=minting_cost.fee + mint_raw.FEE_MINT_TXSIZE,
+        )
+        tx_signed_step2 = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output_step2.out_file,
+            signing_key_files=tx_files_step2.signing_key_files,
+            tx_name=f"{temp_template}_step2",
+        )
+
+        # It should NOT be possible to mint with return collateral < min UTxO
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "BabbageOutputTooSmallUTxO" in exc_value, exc_value
