@@ -510,6 +510,31 @@ def propose_pparams_update(
     )
 
 
+def is_cost_model_update_needed(
+    cluster_obj: clusterlib.ClusterLib,
+    cost_proposal_file: pl.Path,
+    cost_models_to_check: tp.Sequence[str],
+) -> bool:
+    """Check whether any of `cost_models_to_check` is still below its proposed length.
+
+    `cost_proposal_file` can bundle cost models that aren't the actual subject of the
+    calling test, e.g. carried along unchanged because the CLI needs a full file. Only
+    `cost_models_to_check` is compared, other cost models in the file are ignored.
+
+    Returns:
+        True if at least one of `cost_models_to_check` is below its proposed length, i.e.
+        an update is still needed. False if all of them are already at or above it.
+    """
+    with open(cost_proposal_file, encoding="utf-8") as fp:
+        cost_models_in = json.load(fp)
+
+    live_cost_models = cluster_obj.g_query.get_protocol_params()["costModels"]
+    return any(
+        len(live_cost_models.get(name, [])) < len(cost_models_in[name])
+        for name in cost_models_to_check
+    )
+
+
 def update_cost_model(
     cluster_obj: clusterlib.ClusterLib,
     name_template: str,

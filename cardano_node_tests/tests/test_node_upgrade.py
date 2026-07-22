@@ -132,6 +132,7 @@ class TestSetup:
         Test updating Plutus cost models after node upgrade. Runs only on step 2 of upgrade
         testing sequence.
 
+        * Check that the cost model update is actually needed at this point
         * Load cost model proposal from JSON file (PlutusV2 and PlutusV3 models)
         * Get default governance data (DReps, committee members, pools)
         * Submit cost model update governance action
@@ -142,6 +143,19 @@ class TestSetup:
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
+        cost_models_to_check = ("PlutusV2", "PlutusV3")
+
+        # This step is expected to run against a cost model that is still short. If it's
+        # already at the proposed length, the "cost model not yet updated" scenario was
+        # missed, e.g. the cluster started with it already updated.
+        assert conway_common.is_cost_model_update_needed(
+            cluster_obj=cluster,
+            cost_proposal_file=cost_proposal_file,
+            cost_models_to_check=cost_models_to_check,
+        ), (
+            "Cost model(s) already at or above the proposed length before the update. "
+            "The 'cost model not yet updated' test scenario was skipped."
+        )
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster
