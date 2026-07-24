@@ -252,7 +252,7 @@ def propose_param_changes(
     )
 
     execution_units = (740000000, 8000000)
-    raw_fee = 900_000
+    raw_fee = 1_000_000
 
     proposal_script = clusterlib.ComplexProposal(
         proposal_file=pparams_action.action_file,

@@ -269,6 +269,33 @@ class TestPlutusV3Builtins:
     batch6_fail_scripts = plutus_common.FAILING_MINTING_BATCH6_SCRIPTS_V3
     batch6_overspend_scripts = plutus_common.OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3
 
+    def _get_scripts(
+        self, batch: int, prot_version: int
+    ) -> tuple[
+        tuple[plutus_common.PlutusScriptData, ...], tuple[plutus_common.PlutusScriptData, ...]
+    ]:
+        """Get success and fail scripts for the given batch.
+
+        The rotate/shift bitwise scripts (batch 5) succeed or fail depending on the actual
+        protocol version of the cluster, so they are classified at runtime.
+        """
+        success_scripts = tuple(getattr(self, f"batch{batch}_success_scripts"))
+        fail_scripts = tuple(getattr(self, f"batch{batch}_fail_scripts"))
+
+        if batch == 5:
+            if plutus_common.rotate_shift_bitwise_fails(protocol_version=prot_version):
+                fail_scripts = (
+                    *fail_scripts,
+                    *plutus_common.FAILING_MINTING_ROTATE_SHIFT_SCRIPTS_V3,
+                )
+            else:
+                success_scripts = (
+                    *success_scripts,
+                    *plutus_common.SUCCEEDING_MINTING_ROTATE_SHIFT_SCRIPTS_V3,
+                )
+
+        return success_scripts, fail_scripts
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
     @pytest.mark.team_plutus
@@ -315,14 +342,16 @@ class TestPlutusV3Builtins:
                 f"Cost model is already up-to-date, skipping batch{batch} old cost model tests."
             )
 
+        success_scripts, fail_scripts = self._get_scripts(batch=batch, prot_version=prot_version)
+
         variant = f"old_batch{batch}_{'prot_ok' if is_prot_version_ok else 'prot_nok'}"
         run_plutusv3_builtins_test(
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{variant}",
             variant=variant,
-            success_scripts=getattr(self, f"batch{batch}_success_scripts"),
-            fail_scripts=getattr(self, f"batch{batch}_fail_scripts"),
+            success_scripts=success_scripts,
+            fail_scripts=fail_scripts,
             overspend_scripts=getattr(self, f"batch{batch}_overspend_scripts"),
             is_cost_model_ok=is_cost_model_ok,
             is_prot_version_ok=is_prot_version_ok,
@@ -407,14 +436,18 @@ class TestPlutusV3Builtins:
         if cost_model_len_updated < BATCH5_COST_MODEL_LEN:
             pytest.skip("Cost model is not updated, skipping new cost model tests.")
 
+        batch5_success_scripts, batch5_fail_scripts = self._get_scripts(
+            batch=5, prot_version=prot_version
+        )
+
         batch5_variant_updated = f"upd_{_get_variant(batch=5)}"
         run_plutusv3_builtins_test(
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             temp_template=f"{temp_template}_{batch5_variant_updated}",
             variant=batch5_variant_updated,
-            success_scripts=self.batch5_success_scripts,
-            fail_scripts=self.batch5_fail_scripts,
+            success_scripts=batch5_success_scripts,
+            fail_scripts=batch5_fail_scripts,
             overspend_scripts=self.batch5_overspend_scripts,
             is_cost_model_ok=True,
             is_prot_version_ok=is_batch5_prot_version_ok,

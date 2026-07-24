@@ -92,15 +92,15 @@ class ExecutionCost:
 
 # Scripts execution cost for Txs with single UTxO input and single Plutus script
 ALWAYS_FAILS_COST = ExecutionCost(per_time=476_468, per_space=1_700, fixed_cost=133)
-ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=368_100, per_space=1_700, fixed_cost=125)
-GUESSING_GAME_COST = ExecutionCost(per_time=282_016_214, per_space=1_034_516, fixed_cost=80_025)
-GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_985_806, per_space=11_368, fixed_cost=1_016)
+ALWAYS_SUCCEEDS_COST = ExecutionCost(per_time=256_100, per_space=1_700, fixed_cost=125)
+GUESSING_GAME_COST = ExecutionCost(per_time=213_834_074, per_space=1_034_516, fixed_cost=80_025)
+GUESSING_GAME_UNTYPED_COST = ExecutionCost(per_time=4_043_882, per_space=11_368, fixed_cost=1_016)
 
 ALWAYS_FAILS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
-ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
-GUESSING_GAME_V2_COST = ExecutionCost(per_time=200_253_161, per_space=637_676, fixed_cost=51_233)
+ALWAYS_SUCCEEDS_V2_COST = ExecutionCost(per_time=160_100, per_space=1_100, fixed_cost=81)
+GUESSING_GAME_V2_COST = ExecutionCost(per_time=160_599_324, per_space=637_676, fixed_cost=51_233)
 GUESSING_GAME_UNTYPED_V2_COST = ExecutionCost(
-    per_time=4_985_806, per_space=11_368, fixed_cost=1_016
+    per_time=4_043_882, per_space=11_368, fixed_cost=1_016
 )
 BYTE_STRING_ROUNDTRIP_V2_COST = ExecutionCost(
     per_time=168_868_800, per_space=540_612, fixed_cost=43_369
@@ -115,17 +115,17 @@ SECP256K1_SCHNORR_LOOP_COST = ExecutionCost(
 ALWAYS_FAILS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 ALWAYS_SUCCEEDS_V3_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
 
-MINTING_COST = ExecutionCost(per_time=259_868_784, per_space=978_434, fixed_cost=74_960)
+MINTING_COST = ExecutionCost(per_time=195_825_449, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
-    per_time=277_239_670, per_space=1_044_064, fixed_cost=80_232
+    per_time=208_506_665, per_space=1_044_064, fixed_cost=80_232
 )
 MINTING_WITNESS_REDEEMER_COST = ExecutionCost(
-    per_time=261_056_789, per_space=1_013_630, fixed_cost=75_278
+    per_time=202_604_644, per_space=1_013_630, fixed_cost=75_278
 )
-MINTING_TOKENNAME_COST = ExecutionCost(per_time=162_418_952, per_space=539_860, fixed_cost=42_861)
+MINTING_TOKENNAME_COST = ExecutionCost(per_time=128_182_621, per_space=539_860, fixed_cost=42_861)
 
-MINTING_V2_COST = ExecutionCost(per_time=167_089_597, per_space=537_352, fixed_cost=43_053)
-MINTING_V2_REF_COST = ExecutionCost(per_time=198_080_433, per_space=633_678, fixed_cost=50_845)
+MINTING_V2_COST = ExecutionCost(per_time=134_237_874, per_space=537_352, fixed_cost=43_053)
+MINTING_V2_REF_COST = ExecutionCost(per_time=159_033_503, per_space=633_678, fixed_cost=50_845)
 MINTING_V2_CHECK_REF_INPUTS_COST = ExecutionCost(
     per_time=214_916_514, per_space=696_858, fixed_cost=55_705
 )
@@ -296,12 +296,21 @@ UNDETERMINED_COST = ExecutionCost(
 
 
 # Rotate/shift bitwise builtins succeed pre-PV11 and fail under PV11+ on node >= 11.0.0.
+# Whether they fail depends on the actual protocol version of the cluster, so tests need
+# to classify these scripts at runtime using `rotate_shift_bitwise_fails`.
 _ROTATE_SHIFT_SCRIPTS_V3 = (
     ("succeedingRotateByteStringPolicyScriptV3.plutus", 22767760, 109004, 7932),
     ("succeedingShiftByteStringPolicyScriptV3.plutus", 17914625, 85787, 6242),
 )
-_ROTATE_SHIFT_NAMES_V3 = tuple(s[0] for s in _ROTATE_SHIFT_SCRIPTS_V3)
-_PV11_BITWISE_FAILS = VERSIONS.cluster_era >= 11 and VERSIONS.node >= version.parse("11.0.0")
+
+
+def rotate_shift_bitwise_fails(protocol_version: int) -> bool:
+    """Check if the rotate/shift bitwise builtin scripts fail on the given protocol version.
+
+    Args:
+        protocol_version: Actual major protocol version of the cluster.
+    """
+    return protocol_version >= 11 and VERSIONS.node >= version.parse("11.0.0")
 
 
 # Tuples of (script_name, per_time, per_space, fixed_cost) for each succeeding bitwise script.
@@ -315,7 +324,6 @@ SUCCEEDING_BITWISE_SCRIPTS_V3 = (
     ("succeedingReadBitPolicyScriptV3.plutus", 15272720, 82724, 5875),
     ("succeedingReplicateBytePolicyScriptV3.plutus", 4585827, 22946, 1655),
     ("succeedingWriteBitsPolicyScriptV3.plutus", 90629019, 462457, 33219),
-    *(() if _PV11_BITWISE_FAILS else _ROTATE_SHIFT_SCRIPTS_V3),
 )
 
 
@@ -359,7 +367,6 @@ FAILING_BITWISE_SCRIPT_FILES_V3 = (
     "failingWriteBitsPolicyScriptV3_17.plutus",
     "failingWriteBitsPolicyScriptV3_18.plutus",
     "failingWriteBitsPolicyScriptV3_19.plutus",
-    *(_ROTATE_SHIFT_NAMES_V3 if _PV11_BITWISE_FAILS else ()),
 )
 
 
@@ -380,6 +387,30 @@ FAILING_MINTING_BITWISE_SCRIPTS_V3 = tuple(
         execution_cost=UNDETERMINED_COST,
     )
     for n in FAILING_BITWISE_SCRIPT_FILES_V3
+)
+
+
+# Rotate/shift scripts for use when they are expected to succeed
+# (see `rotate_shift_bitwise_fails`).
+SUCCEEDING_MINTING_ROTATE_SHIFT_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_DIR / script_name,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=ExecutionCost(per_time=per_time, per_space=per_space, fixed_cost=fixed_cost),
+    )
+    for script_name, per_time, per_space, fixed_cost in _ROTATE_SHIFT_SCRIPTS_V3
+)
+
+
+# Rotate/shift scripts for use when they are expected to fail
+# (see `rotate_shift_bitwise_fails`).
+FAILING_MINTING_ROTATE_SHIFT_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_DIR / script_name,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for script_name, *__ in _ROTATE_SHIFT_SCRIPTS_V3
 )
 
 MINTING_RIPEMD_160_PLUTUS_V3 = SCRIPTS_V3_DIR / "succeedingRipemd_160Policy.plutus"
