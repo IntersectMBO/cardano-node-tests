@@ -38,6 +38,12 @@ The preferred way is via `runner/runc.sh`, which builds a container image and ru
 ./runner/runc.sh ./runner/regression.sh
 ```
 
+Run with clock skew on one pool node:
+
+```sh
+./runner/runc.sh -- TIME_DRIFT_POOL=1 TIME_DRIFT_SPEC='+0 x1.008' ./runner/regression.sh
+```
+
 Run a specific test:
 
 ```sh
@@ -167,6 +173,9 @@ You can fine-tune test runs using these environment variables:
 | `TX_CENTRIFUGE_REV`| `tx-centrifuge` version (default: `bench/leios-11.0.1`) |
 | `PYTEST_ARGS`      | Extra options passed to pytest.                         |
 | `TEST_THREADS`     | Number of pytest workers (default: `20`).               |
+| `TIME_DRIFT_POOL`  | Pool (1-3) for libfaketime clock skew; unset = off.     |
+| `TIME_DRIFT_SPEC`  | libfaketime `FAKETIME` string, e.g. `+0 x1.008`.        |
+| `LIBFAKETIME_PATH` | Override path to `libfaketimeMT.so.1`.                  |
 
 ### 💡 Usage Examples
 
