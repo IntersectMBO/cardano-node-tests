@@ -154,7 +154,7 @@ class TestSetup:
             cost_models_to_check=cost_models_to_check,
         ), (
             "Cost model(s) already at or above the proposed length before the update. "
-            "The 'cost model not yet updated' test scenario was skipped."
+            "The 'cost model not yet updated' test scenario would be missed."
         )
 
         governance_data = governance_setup.get_default_governance(
