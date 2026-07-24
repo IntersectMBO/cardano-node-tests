@@ -2,7 +2,6 @@
 
 import json
 import logging
-import pathlib as pl
 import shutil
 
 import allure
@@ -24,7 +23,6 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-DATA_DIR = pl.Path(__file__).parent / "data"
 UPGRADE_TESTS_STEP = helpers.get_env_int("UPGRADE_TESTS_STEP", 0)
 
 pytestmark = [
@@ -132,7 +130,7 @@ class TestSetup:
         Test updating Plutus cost models after node upgrade. Runs only on step 2 of upgrade
         testing sequence.
 
-        * Load cost model proposal from JSON file (PlutusV2 and PlutusV3 models)
+        * Load cost model proposal from JSON file (PlutusV1, PlutusV2 and PlutusV3 models)
         * Get default governance data (DReps, committee members, pools)
         * Submit cost model update governance action
         * Vote and ratify the cost model update
@@ -141,7 +139,7 @@ class TestSetup:
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
-        cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
+        cost_proposal_file = common.COST_PROPOSAL_FILE
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster
