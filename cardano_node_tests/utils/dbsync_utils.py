@@ -1332,8 +1332,6 @@ def check_off_chain_drep_registration(  # noqa: C901
     expected_metadata = metadata["body"]
 
     # For the image rules refer to: https://cips.cardano.org/cip/CIP-0119
-    # off_chain_drep_data.image_url includes the image base64 with the data uri
-    # header prefix stripped and the off_chain_drep_data.image_sha256 remains empty.
     def _check_image() -> None:
         if "image" not in expected_metadata:
             return
@@ -1349,10 +1347,10 @@ def check_off_chain_drep_registration(  # noqa: C901
                         "Invalid metadata: base64 encoded image should start with 'data:image/'"
                     )
                 if "base64" in content_url:
-                    base64_image_data = content_url.split("base64,")[1]
-                    if db_metadata.image_url != base64_image_data:
+                    # db-sync stores the data URI verbatim (cardano-db-sync #2138).
+                    if db_metadata.image_url != content_url:
                         errors.append(
-                            "'image_url' value is different than expected Base64 'contentUrl';"
+                            "'image_url' value is different than expected data-URI 'contentUrl';"
                         )
                 else:
                     errors.append("Invalid metadata: image is not Base64 encoded")
