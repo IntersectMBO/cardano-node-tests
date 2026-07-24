@@ -64,6 +64,11 @@ elif [ "$MARKEXPR" = "conway only" ]; then
 elif [ "$MARKEXPR" = "dbsync config" ]; then
   export CLUSTERS_COUNT=1
   export MARKEXPR="(dbsync and smoke) or dbsync_config"
+  # Allow db-sync to fetch off-chain metadata from the cluster's private/localhost
+  # URLs so the off-chain config tests can exercise offchain_pool_data /
+  # offchain_vote_data (the flag only permits private URLs; the tests still enable
+  # the corresponding insert options themselves).
+  export DBSYNC_ALLOW_PRIVATE_OFFCHAIN_URLS=true
 fi
 
 if [ -n "${CLUSTERS_COUNT:-}" ]; then
