@@ -29,6 +29,7 @@ if [ "$1" = "step1" ]; then
   printf "STEP1 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=1
+  export PROTOCOL_VERSION=10
 
   reports_dir="${WORKDIR}/reports-step1"
   mkdir -p "$reports_dir"
@@ -108,6 +109,7 @@ elif [ "$1" = "step2" ]; then
   printf "STEP2 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=2
+  export PROTOCOL_VERSION=10
 
   reports_dir="${WORKDIR}/reports-step2"
   mkdir -p "$reports_dir"
