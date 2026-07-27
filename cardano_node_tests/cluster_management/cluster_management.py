@@ -7,11 +7,11 @@ by multiple test workers.
 Key concepts:
     - **Pool of Instances**: Multiple cluster instances can be running concurrently. Each test worker
       requests a cluster instance to run a test on.
-    - **Coordination via File System**: Workers communicate and coordinate through a system of status
-      files created on a shared file system. These files act as locks and signals to indicate the
-      state of cluster instances (e.g., which test is running, if a respin is needed, which
-      resources are locked). The `status_files` module manages the creation and lookup of these
-      files.
+    - **Coordination via Shared Database**: Workers communicate and coordinate through status
+      records kept in a SQLite database on a shared file system. The records act as signals that
+      indicate the state of cluster instances (e.g., which test is running, if a respin is needed,
+      which resources are locked). The `status_db` module manages the creation and lookup of these
+      records.
     - **Resource Management**: Tests can declare what resources they need. A resource can be, for
       example, a specific feature of a cluster that cannot be used by multiple tests at the same
       time. The `ClusterManager` handles locking of these resources so that only one test can use
