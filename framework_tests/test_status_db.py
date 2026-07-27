@@ -212,6 +212,126 @@ class TestTestRunning:
         assert status_db.list_test_running(instance_num=0) == []
 
 
+def _get_dead_pid() -> int:
+    """Return PID of a process that is no longer running."""
+    proc = multiprocessing.get_context("spawn").Process(target=_noop)
+    proc.start()
+    pid = proc.pid
+    proc.join()
+    assert pid is not None
+    return pid
+
+
+def _noop() -> None:
+    """Do nothing - target for a short-lived process."""
+
+
+def _set_pid(table: str, pid: int) -> None:
+    """Set the writer PID on all records in the given table."""
+    status_db._get_conn().execute(f"UPDATE {table} SET pid = ?", (pid,))
+
+
+@pytest.mark.usefixtures("db_dir")
+class TestGC:
+    """Check garbage collection of records left by crashed pytest workers."""
+
+    def test_no_dead_workers(self):
+        """Check that records of running workers are kept."""
+        _populate_test_running()
+        assert status_db.gc_stale_records() == []
+        assert len(status_db.list_test_running()) == 3
+
+    def test_removes_dead_worker_records(self):
+        """Check that records of a dead worker are removed and other records are kept."""
+        dead_pid = _get_dead_pid()
+        status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_alive")
+        status_db.create_test_running(instance_num=0, worker_id="gw1", test_id="test_dead")
+        status_db.create_resources(
+            instance_num=0, worker_id="gw1", names=["pool1"], mode=status_db.MODE_LOCK
+        )
+        status_db.create_prio_in_progress(worker_id="gw1")
+        status_db._get_conn().execute(
+            "UPDATE test_running SET pid = ? WHERE worker_id = 'gw1'", (dead_pid,)
+        )
+        _set_pid(table="resources", pid=dead_pid)
+        _set_pid(table="flags", pid=dead_pid)
+
+        removed = status_db.gc_stale_records()
+
+        assert len(removed) == 3
+        assert status_db.get_test_names() == ["test_alive"]
+        assert status_db.get_resource_names(mode=status_db.MODE_LOCK) == []
+        assert status_db.list_prio_in_progress() == []
+
+    def test_keeps_marked_resources(self):
+        """Check that marked resource records of a dead worker are kept."""
+        dead_pid = _get_dead_pid()
+        status_db.create_resources(
+            instance_num=0,
+            worker_id="gw0",
+            names=["pool1"],
+            mode=status_db.MODE_LOCK,
+            mark="markA",
+        )
+        _set_pid(table="resources", pid=dead_pid)
+
+        status_db.gc_stale_records()
+
+        assert status_db.get_resource_names(mode=status_db.MODE_LOCK, mark="markA") == ["pool1"]
+
+    def test_keeps_respin_needed(self):
+        """Check that "needs respin" records of a dead worker are kept."""
+        dead_pid = _get_dead_pid()
+        status_db.create_respin_needed(instance_num=0, worker_id="gw0")
+        _set_pid(table="flags", pid=dead_pid)
+
+        status_db.gc_stale_records()
+
+        assert len(status_db.list_respin_needed(instance_num=0)) == 1
+
+    def test_respin_in_progress_converted(self):
+        """Check that "respin in progress" of a dead worker is replaced with "needs respin"."""
+        dead_pid = _get_dead_pid()
+        status_db.create_respin_progress(instance_num=0, worker_id="gw0")
+        _set_pid(table="flags", pid=dead_pid)
+
+        removed = status_db.gc_stale_records()
+
+        assert len(removed) == 1
+        assert status_db.list_respin_progress(instance_num=0) == []
+        assert len(status_db.list_respin_needed(instance_num=0)) == 1
+
+    def test_throttling(self):
+        """Check that garbage collection runs at most once per the given interval."""
+        dead_pid = _get_dead_pid()
+        status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_dead")
+        _set_pid(table="test_running", pid=dead_pid)
+        assert status_db.gc_stale_records(min_interval_sec=3600) != []
+
+        status_db.create_test_running(instance_num=0, worker_id="gw1", test_id="test_dead2")
+        _set_pid(table="test_running", pid=dead_pid)
+        # Second call within the interval must be throttled
+        assert status_db.gc_stale_records(min_interval_sec=3600) == []
+        assert len(status_db.list_test_running()) == 1
+        # Unthrottled call collects the remaining stale record
+        assert status_db.gc_stale_records() != []
+        assert status_db.list_test_running() == []
+
+    def test_pid_reuse_guard(self):
+        """Check that a record older than its writer process is treated as stale.
+
+        The record has the PID of the current (running) process, but `created_at` long before
+        the process started, so the PID must have been reused and the original writer is gone.
+        """
+        status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_reused")
+        status_db._get_conn().execute("UPDATE test_running SET created_at = 1.0")
+
+        removed = status_db.gc_stale_records()
+
+        assert len(removed) == 1
+        assert status_db.list_test_running() == []
+
+
 def _mp_create_test_running(root_tmp: pl.Path, worker_name: str) -> None:
     """Insert a "test running" record from a separate process."""
     temptools.PytestTempDirs.pytest_root_tmp = root_tmp

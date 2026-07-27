@@ -46,6 +46,11 @@ from cardano_node_tests.utils import types as ttypes
 
 LOGGER = logging.getLogger(__name__)
 
+# Minimal interval (seconds) between garbage collections of status records
+# that were left by crashed pytest workers. The last-run timestamp is kept in the
+# status database, so the interval applies across all workers.
+GC_INTERVAL_SEC = 60
+
 if configuration.IS_XDIST:
     _xdist_sleep = time.sleep
 else:
@@ -567,6 +572,17 @@ class ClusterGetter:
         # If here, this will be the first test with the mark
         return True
 
+    def _gc_stale_records(self) -> None:
+        """Garbage collect status records left by crashed pytest workers.
+
+        Remove the stale records so they don't block cluster instances and resources forever.
+        Runs at most once per `GC_INTERVAL_SEC` across all workers.
+
+        Must be called under the global cluster lock.
+        """
+        for gc_msg in status_db.gc_stale_records(min_interval_sec=GC_INTERVAL_SEC):
+            self.log(f"GC: removed stale {gc_msg}")
+
     def _check_dead_fraction(self, max_dead_fraction: float) -> None:
         """Fail if the fraction of dead cluster instances is too high."""
         total = self.num_of_instances
@@ -900,6 +916,8 @@ class ClusterGetter:
             with locking.FileLockIfXdist(self.cluster_lock):
                 if self._is_already_running():
                     return self.cluster_instance_num
+
+                self._gc_stale_records()
 
                 self._fail_on_dead_clusters(remaining_time_sec=remaining_soft)
 

@@ -21,16 +21,15 @@ Filter arguments semantics used throughout this module:
 
 The current status can be inspected with the stock `sqlite3` CLI, e.g.:
 
-    sqlite3 -readonly -header /tmp/pytest-of-$USER/pytest-0/status.db \\
-        'SELECT * FROM test_running'
-    sqlite3 -readonly -header /tmp/pytest-of-$USER/pytest-0/status.db \\
-        'SELECT * FROM resources ORDER BY instance_num, mode, name'
-    sqlite3 -readonly -header /tmp/pytest-of-$USER/pytest-0/status.db \\
-        'SELECT * FROM flags'
+    db=/tmp/pytest-of-$USER/pytest-0/status.db
+    sqlite3 -readonly -header "$db" 'SELECT * FROM test_running'
+    sqlite3 -readonly -header "$db" 'SELECT * FROM resources ORDER BY instance_num, mode, name'
+    sqlite3 -readonly -header "$db" 'SELECT * FROM flags'
 """
 
 import contextlib
 import dataclasses
+import functools
 import os
 import sqlite3
 import time
@@ -41,6 +40,7 @@ from cardano_node_tests.utils import temptools
 DB_NAME = "status.db"
 
 # Flag types stored in the `flags` table
+GC_LAST_RUN = "gc_last_run"
 RESPIN_NEEDED = "respin_needed"
 RESPIN_IN_PROGRESS = "respin_in_progress"
 RESPIN_AFTER_MARK = "respin_after_mark"
@@ -213,7 +213,7 @@ def _list_flags(
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     where = f"{where} AND type = ?" if where else " WHERE type = ?"
     rows = _get_conn().execute(
-        f"SELECT * FROM flags{where} ORDER BY instance_num, worker_id, mark",  # noqa: S608
+        f"SELECT * FROM flags{where} ORDER BY instance_num, worker_id, mark",
         [*params, ftype],
     )
     return [_row_to_status(r) for r in rows]
@@ -228,18 +228,21 @@ def _rm_flags(
     where = f"{where} AND type = ?" if where else " WHERE type = ?"
     with _transaction(conn):
         rows = [
-            _row_to_status(r)
-            for r in conn.execute(f"SELECT * FROM flags{where}", [*params, ftype])  # noqa: S608
+            _row_to_status(r) for r in conn.execute(f"SELECT * FROM flags{where}", [*params, ftype])
         ]
-        conn.execute(f"DELETE FROM flags{where}", [*params, ftype])  # noqa: S608
+        conn.execute(f"DELETE FROM flags{where}", [*params, ftype])
     return rows
 
 
 def _flag_exists(ftype: str, instance_num: int) -> bool:
-    row = _get_conn().execute(
-        "SELECT 1 FROM flags WHERE type = ? AND instance_num = ? LIMIT 1",
-        (ftype, instance_num),
-    ).fetchone()
+    row = (
+        _get_conn()
+        .execute(
+            "SELECT 1 FROM flags WHERE type = ? AND instance_num = ? LIMIT 1",
+            (ftype, instance_num),
+        )
+        .fetchone()
+    )
     return row is not None
 
 
@@ -395,7 +398,7 @@ def list_test_running(
     """List all "test running" records."""
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     rows = _get_conn().execute(
-        f"SELECT * FROM test_running{where} ORDER BY instance_num, worker_id",  # noqa: S608
+        f"SELECT * FROM test_running{where} ORDER BY instance_num, worker_id",
         params,
     )
     return [_row_to_status(r) for r in rows]
@@ -409,10 +412,9 @@ def rm_test_running(
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     with _transaction(conn):
         rows = [
-            _row_to_status(r)
-            for r in conn.execute(f"SELECT * FROM test_running{where}", params)  # noqa: S608
+            _row_to_status(r) for r in conn.execute(f"SELECT * FROM test_running{where}", params)
         ]
-        conn.execute(f"DELETE FROM test_running{where}", params)  # noqa: S608
+        conn.execute(f"DELETE FROM test_running{where}", params)
     return rows
 
 
@@ -429,8 +431,7 @@ def get_test_names(
 def get_marks_in_progress(instance_num: int | None = None, worker_id: str = "*") -> list[str]:
     """Return list of marks of currently running tests."""
     return [
-        r.mark
-        for r in list_test_running(instance_num=instance_num, worker_id=worker_id, mark="*")
+        r.mark for r in list_test_running(instance_num=instance_num, worker_id=worker_id, mark="*")
     ]
 
 
@@ -469,7 +470,7 @@ def list_resources(
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     where = f"{where} AND mode = ?" if where else " WHERE mode = ?"
     rows = _get_conn().execute(
-        f"SELECT * FROM resources{where} ORDER BY instance_num, name, worker_id",  # noqa: S608
+        f"SELECT * FROM resources{where} ORDER BY instance_num, name, worker_id",
         [*params, mode],
     )
     return [_row_to_status(r) for r in rows]
@@ -485,9 +486,9 @@ def rm_resources(
     with _transaction(conn):
         rows = [
             _row_to_status(r)
-            for r in conn.execute(f"SELECT * FROM resources{where}", [*params, mode])  # noqa: S608
+            for r in conn.execute(f"SELECT * FROM resources{where}", [*params, mode])
         ]
-        conn.execute(f"DELETE FROM resources{where}", [*params, mode])  # noqa: S608
+        conn.execute(f"DELETE FROM resources{where}", [*params, mode])
     return rows
 
 
@@ -501,3 +502,177 @@ def get_resource_names(
             mode=mode, instance_num=instance_num, worker_id=worker_id, mark=mark
         )
     ]
+
+
+# Garbage collection of records left by crashed pytest workers
+
+
+@functools.cache
+def _get_boot_time() -> float:
+    """Return system boot time as Unix timestamp."""
+    with open("/proc/stat", encoding="utf-8") as fp:
+        for line in fp:
+            if line.startswith("btime "):
+                return float(line.split()[1])
+    err = "Boot time not found in '/proc/stat'."
+    raise ValueError(err)
+
+
+def _get_proc_start_time(pid: int) -> float | None:
+    """Return process start time as Unix timestamp, or `None` when it cannot be determined."""
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as fp:
+            stat = fp.read()
+        # The second field (process name) can contain spaces and parentheses, fields are
+        # therefore parsed from the last closing parenthesis. The process start time in clock
+        # ticks since boot is the 22nd field.
+        fields = stat[stat.rindex(")") + 2 :].split()
+        start_ticks = int(fields[19])
+        return _get_boot_time() + start_ticks / os.sysconf("SC_CLK_TCK")
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _is_writer_alive(pid: int, first_created_at: float) -> bool:
+    """Check if the process that created status records is still running.
+
+    Guards against PID reuse: a process that started after the oldest record of the given
+    PID was created cannot be the process that created the record. When the process start
+    time cannot be determined, the writer is conservatively considered alive - stale records
+    are less harmful than records deleted while their writer is still running.
+    """
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+    start_time = _get_proc_start_time(pid)
+    if start_time is None:
+        return True
+
+    # Tolerate one second of clock granularity between the two timestamp sources
+    return start_time <= first_created_at + 1
+
+
+def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
+    """Remove status records left by pytest workers that are no longer running.
+
+    Must be called under the global cluster lock.
+
+    When `min_interval_sec` is set, the garbage collection runs at most once per that
+    interval across all workers - the last-run timestamp is kept in the database.
+    Throttled calls return an empty list without scanning.
+
+    Only records whose validity depends on the writer being alive are removed:
+
+    * "test running" records - the test is not running anymore.
+    * Resource records without mark - the test that held them is gone. Marked resource
+      records belong to the whole group of marked tests and are cleaned up by the mark
+      staleness handling.
+    * "priority test in progress" flags - would otherwise block all other workers forever.
+    * "respin in progress" flags - the cluster instance was left in an unknown state, so
+      a "needs respin" flag is created in its place.
+
+    The "needs respin" and "respin after mark" flags are kept even when their writer died,
+    as the cluster instance still needs the respin. The "current mark" flags are kept too -
+    once the ghost "test running" records are removed, the existing mark staleness handling
+    cleans them up.
+
+    Returns descriptions of the removed records, for logging.
+    """
+    conn = _get_conn()
+
+    if min_interval_sec > 0:
+        last_run = conn.execute(
+            "SELECT created_at FROM flags WHERE type = ? LIMIT 1", (GC_LAST_RUN,)
+        ).fetchone()
+        if last_run is not None and time.time() - last_run["created_at"] < min_interval_sec:
+            return []
+    _create_flag(ftype=GC_LAST_RUN, instance_num=NO_INSTANCE, worker_id="")
+
+    pid_rows = conn.execute(
+        "SELECT pid, MIN(created_at) AS first_created FROM ("
+        " SELECT pid, created_at FROM test_running"
+        " UNION ALL SELECT pid, created_at FROM resources WHERE mark = ''"
+        " UNION ALL SELECT pid, created_at FROM flags WHERE type IN (?, ?)"
+        ") WHERE pid > 0 GROUP BY pid",
+        (PRIO_IN_PROGRESS, RESPIN_IN_PROGRESS),
+    ).fetchall()
+
+    dead_pids = [r["pid"] for r in pid_rows if not _is_writer_alive(r["pid"], r["first_created"])]
+    if not dead_pids:
+        return []
+
+    removed: list[str] = []
+    placeholders = ",".join("?" * len(dead_pids))
+    with _transaction(conn):
+        removed.extend(
+            f"'test running' of dead worker {r['worker_id']} (pid {r['pid']}) "
+            f"on c{r['instance_num']}: {r['test_id']}"
+            for r in conn.execute(
+                f"SELECT * FROM test_running WHERE pid IN ({placeholders})",
+                dead_pids,
+            )
+        )
+        conn.execute(
+            f"DELETE FROM test_running WHERE pid IN ({placeholders})",
+            dead_pids,
+        )
+
+        removed.extend(
+            f"resource '{r['name']}' ({r['mode']}) of dead worker {r['worker_id']} "
+            f"(pid {r['pid']}) on c{r['instance_num']}"
+            for r in conn.execute(
+                f"SELECT * FROM resources WHERE mark = '' AND pid IN ({placeholders})",
+                dead_pids,
+            )
+        )
+        conn.execute(
+            f"DELETE FROM resources WHERE mark = '' AND pid IN ({placeholders})",
+            dead_pids,
+        )
+
+        removed.extend(
+            f"'prio in progress' of dead worker {r['worker_id']} (pid {r['pid']})"
+            for r in conn.execute(
+                f"SELECT * FROM flags WHERE type = ? AND pid IN ({placeholders})",
+                [PRIO_IN_PROGRESS, *dead_pids],
+            )
+        )
+        conn.execute(
+            f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders})",
+            [PRIO_IN_PROGRESS, *dead_pids],
+        )
+
+        # A worker that died in the middle of a respin left the cluster instance in an
+        # unknown state. Replace its "respin in progress" flag with "needs respin" so
+        # another worker respins the instance.
+        respin_rows = conn.execute(
+            f"SELECT * FROM flags WHERE type = ? AND pid IN ({placeholders})",
+            [RESPIN_IN_PROGRESS, *dead_pids],
+        ).fetchall()
+        for r in respin_rows:
+            conn.execute(
+                "INSERT OR REPLACE INTO flags (type, instance_num, worker_id, mark, pid, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    RESPIN_NEEDED,
+                    r["instance_num"],
+                    r["worker_id"],
+                    "",
+                    os.getpid(),
+                    time.time(),
+                ),
+            )
+            removed.append(
+                f"'respin in progress' of dead worker {r['worker_id']} (pid {r['pid']}) "
+                f"on c{r['instance_num']}, created 'needs respin'"
+            )
+        conn.execute(
+            f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders})",
+            [RESPIN_IN_PROGRESS, *dead_pids],
+        )
+
+    return removed
