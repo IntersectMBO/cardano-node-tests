@@ -1,11 +1,30 @@
 """Cardano node version, cluster era, transaction era, db-sync version."""
 
+import enum
 import typing as tp
 
 from packaging import version
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
+
+
+class EraName(enum.StrEnum):
+    """Cardano era names.
+
+    Members compare equal to their lowercase era name strings (e.g.
+    ``EraName.CONWAY == "conway"``), so they can be used anywhere an era
+    name string is expected.
+    """
+
+    BYRON = "byron"
+    SHELLEY = "shelley"
+    ALLEGRA = "allegra"
+    MARY = "mary"
+    ALONZO = "alonzo"
+    BABBAGE = "babbage"
+    CONWAY = "conway"
+    DIJKSTRA = "dijkstra"
 
 
 class Versions:
@@ -48,20 +67,20 @@ class Versions:
     DEFAULT_TX_ERA: tp.Final[int] = DEFAULT_CLUSTER_ERA
 
     # Map protocol versions to era names
-    MAP: tp.ClassVar[dict[int, str]] = {
-        0: "byron",
-        1: "byron",
-        2: "shelley",
-        3: "allegra",
-        4: "mary",
-        5: "alonzo",
-        6: "alonzo",
-        7: "babbage",
-        8: "babbage",
-        9: "conway",
-        10: "conway",
-        11: "conway",
-        12: "dijkstra",
+    MAP: tp.ClassVar[dict[int, EraName]] = {
+        0: EraName.BYRON,
+        1: EraName.BYRON,
+        2: EraName.SHELLEY,
+        3: EraName.ALLEGRA,
+        4: EraName.MARY,
+        5: EraName.ALONZO,
+        6: EraName.ALONZO,
+        7: EraName.BABBAGE,
+        8: EraName.BABBAGE,
+        9: EraName.CONWAY,
+        10: EraName.CONWAY,
+        11: EraName.CONWAY,
+        12: EraName.DIJKSTRA,
     }
 
     def __init__(self) -> None:
@@ -80,7 +99,7 @@ class Versions:
 
         self.transaction_era = protocol_version
         if self.command_era_name and self.command_era_name in self.MAP.values():
-            self.transaction_era_name: str = self.command_era_name
+            self.transaction_era_name: EraName = EraName(self.command_era_name)
             if self.MAP[self.transaction_era] != self.transaction_era_name:
                 self.transaction_era = getattr(self, self.transaction_era_name.upper())
         else:

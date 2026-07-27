@@ -17,6 +17,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +28,13 @@ COST_PROPOSAL_FILE = DATA_DIR / "cost_models_list_332_350_v2_v3.json"
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
 
-COMPAT_ERAS = ("shelley", "allegra", "mary", "alonzo", "babbage")
+COMPAT_ERAS = (
+    EraName.SHELLEY,
+    EraName.ALLEGRA,
+    EraName.MARY,
+    EraName.ALONZO,
+    EraName.BABBAGE,
+)
 
 ADDR_ALPHABET = string.ascii_lowercase + string.digits
 

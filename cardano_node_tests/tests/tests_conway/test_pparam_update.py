@@ -23,6 +23,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent.parent / "data"
@@ -1497,7 +1498,7 @@ class TestLegacyProposals:
         cluster: clusterlib.ClusterLib,
         payment_addr: clusterlib.AddressRecord,
         submit_method: str,
-        era: str,
+        era: EraName,
     ):
         """Reject legacy update proposal submission in Conway.
 
@@ -1506,11 +1507,11 @@ class TestLegacyProposals:
         * Expect the transaction submission to fail with a TextEnvelope type error.
         """
         era_valid_pparam = {
-            "shelley": ("--max-block-body-size", 65536, "maxBlockBodySize"),
-            "allegra": ("--max-block-body-size", 65536, "maxBlockBodySize"),
-            "mary": ("--max-block-body-size", 65536, "maxBlockBodySize"),
-            "alonzo": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
-            "babbage": ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+            EraName.SHELLEY: ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            EraName.ALLEGRA: ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            EraName.MARY: ("--max-block-body-size", 65536, "maxBlockBodySize"),
+            EraName.ALONZO: ("--max-collateral-inputs", 4, "maxCollateralInputs"),
+            EraName.BABBAGE: ("--max-collateral-inputs", 4, "maxCollateralInputs"),
         }
 
         temp_template = common.get_test_id(cluster)

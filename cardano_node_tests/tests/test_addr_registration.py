@@ -17,6 +17,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 
@@ -832,7 +833,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         pool_users_disposable: list[clusterlib.PoolUser],
-        era: str,
+        era: EraName,
     ):
         """Reject legacy stake address registration in Conway.
 

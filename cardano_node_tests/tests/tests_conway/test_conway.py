@@ -15,6 +15,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent.parent / "data"
@@ -218,7 +219,7 @@ class TestNegativeLegacyGovernance:
         self,
         cluster: clusterlib.ClusterLib,
         pool_user: clusterlib.PoolUser,
-        era: str,
+        era: EraName,
     ):
         """Reject mixed legacy governance action and Conway vote delegation.
 

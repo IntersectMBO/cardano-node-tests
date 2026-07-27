@@ -36,6 +36,7 @@ from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
@@ -2618,7 +2619,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
         testfile_temp_dir: pl.Path,
-        era: str,
+        era: EraName,
         request: FixtureRequest,
     ):
         """Reject legacy stake pool registration in Conway.

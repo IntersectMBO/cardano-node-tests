@@ -26,6 +26,7 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data"
@@ -390,7 +391,7 @@ class TestAddressInfo:
         addr_info = cluster.g_address.get_address_info(address=address)
 
         assert addr_info.address == address
-        assert addr_info.era == "shelley"
+        assert addr_info.era == EraName.SHELLEY
         assert addr_info.encoding == "bech32"
         assert addr_info.type == "payment"
         if addr_gen == "static":
@@ -425,7 +426,7 @@ class TestAddressInfo:
         addr_info = cluster.g_address.get_address_info(address=address)
 
         assert addr_info.address == address
-        assert addr_info.era == "shelley"
+        assert addr_info.era == EraName.SHELLEY
         assert addr_info.encoding == "bech32"
         assert addr_info.type == "stake"
         if addr_gen == "static":
@@ -471,7 +472,7 @@ class TestAddressInfo:
         addr_info = cluster.g_address.get_address_info(address=address)
 
         assert addr_info.address == address
-        assert addr_info.era == "shelley"
+        assert addr_info.era == EraName.SHELLEY
         assert addr_info.encoding == "bech32"
         assert addr_info.type == "payment"
 
