@@ -1,6 +1,7 @@
 import contextlib
 import enum
 import logging
+import pathlib as pl
 import string
 import time
 import typing as tp
@@ -19,6 +20,9 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+DATA_DIR = pl.Path(__file__).parent / "data"
+
+COST_PROPOSAL_FILE = DATA_DIR / "cost_models_list_332_350_v2_v3.json"
 
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1

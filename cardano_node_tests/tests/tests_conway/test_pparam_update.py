@@ -293,7 +293,7 @@ class TestPParamUpdate:
         """
         cluster, governance_data = cluster_lock_governance_plutus
         temp_template = common.get_test_id(cluster)
-        cost_proposal_file = DATA_DIR / "cost_models_list_185_v2_v3.json"
+        cost_proposal_file = common.COST_PROPOSAL_FILE
         db_errors_final = []
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
 

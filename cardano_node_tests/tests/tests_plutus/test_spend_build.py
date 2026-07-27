@@ -283,14 +283,14 @@ class TestBuildLocking:
         # This is higher than `plutus_common.GUESSING_GAME_COST`, because the script
         # context has changed to include more stuff
         execution_cost2_v1 = plutus_common.ExecutionCost(
-            per_time=325_969_144, per_space=1_194_986, fixed_cost=92_454
+            per_time=247_291_524, per_space=1_194_986, fixed_cost=92_454
         )
 
         script_file1_v2 = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V2
         execution_cost1_v2 = plutus_common.ALWAYS_SUCCEEDS_V2_COST
         script_file2_v2 = plutus_common.GUESSING_GAME_PLUTUS_V2
         execution_cost2_v2 = plutus_common.ExecutionCost(
-            per_time=239_699_145, per_space=662_274, fixed_cost=53_233
+            per_time=192_264_726, per_space=662_274, fixed_cost=53_233
         )
 
         expected_fee_fund = 174_389

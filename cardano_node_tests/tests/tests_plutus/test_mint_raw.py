@@ -534,14 +534,14 @@ class TestMinting:
         # This is higher than `plutus_common.MINTING*_COST`, because the script context has changed
         # to include more stuff
         minting_cost1_v1 = plutus_common.ExecutionCost(
-            per_time=297_744_405, per_space=1_126_016, fixed_cost=86_439
+            per_time=223_910_319, per_space=1_126_016, fixed_cost=86_439
         )
         minting_cost2_v1 = plutus_common.ExecutionCost(
-            per_time=312_830_204, per_space=1_188_952, fixed_cost=91_158
+            per_time=234_611_331, per_space=1_188_952, fixed_cost=91_158
         )
 
         minting_cost1_v2 = plutus_common.ExecutionCost(
-            per_time=185_595_199, per_space=595_446, fixed_cost=47_739
+            per_time=149_412_920, per_space=595_446, fixed_cost=47_739
         )
         minting_cost1_v3 = plutus_common.ExecutionCost(
             per_time=161_100, per_space=800, fixed_cost=58

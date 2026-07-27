@@ -252,7 +252,7 @@ def propose_param_changes(
     )
 
     execution_units = (740000000, 8000000)
-    raw_fee = 900_000
+    raw_fee = 1_000_000
 
     proposal_script = clusterlib.ComplexProposal(
         proposal_file=pparams_action.action_file,
@@ -1542,8 +1542,7 @@ def get_subtests() -> tp.Generator[tp.Callable]:  # noqa: C901
     def cost_models(cluster_with_constitution: ClusterWithConstitutionRecord):
         """Test costModels guardrails defined in the key "18" of default constitution."""
         # Sample cost model data file
-        data_dir = pl.Path(__file__).parent.parent / "data"
-        cost_proposal_file = data_dir / "cost_models_list_185_297_v2_v3.json"
+        cost_proposal_file = common.COST_PROPOSAL_FILE
 
         # Check that guardrails script accepts cost models
         _url = helpers.get_vcs_link()
