@@ -152,7 +152,7 @@ You can fine-tune test runs using these environment variables:
 | `MIXED_UTXO_BACKENDS`           | List of UTXO backends for mixed setup.              |
 | `ENABLE_TX_GENERATOR`           | Enable tx-generator (default: `false`).             |
 | `ENABLE_TX_CENTRIFUGE`          | Enable tx-centrifuge (default: `false`).            |
-| `PROTOCOL_VERSION`              | Cardano protocol version to use (default: `10`).    |
+| `PROTOCOL_VERSION`              | Cardano protocol version to use (default: `11`).    |
 | `USE_GENESIS_MODE`              | Switch to using `GenesisMode` (default: `false`).   |
 | `ALLOW_UNSTABLE_ERROR_MESSAGES` | Allow tests to pass with unstable error messages.   |
 

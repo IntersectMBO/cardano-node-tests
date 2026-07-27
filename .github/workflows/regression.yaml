@@ -16,7 +16,7 @@ on:
         - conway 10
         - conway 11
         - dijkstra 12
-        default: conway 10
+        default: conway 11
       markexpr:
         type: choice
         description: "Selection of tests"
