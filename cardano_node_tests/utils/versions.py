@@ -16,7 +16,12 @@ class Versions:
         ``PROTOCOL_VERSION`` env var, defaulting to ``DEFAULT_CLUSTER_ERA``),
         while ``cluster_era_name`` is the era name that corresponds to that
         protocol version. The era constants below (e.g. ``CONWAY``) are the
-        latest protocol version associated with each era.
+        latest protocol version associated with each era, and the ``*_FIRST``
+        constants (e.g. ``CONWAY_FIRST``) are the first protocol version of
+        each era. Use the ``*_FIRST`` constants for era membership checks
+        (e.g. ``transaction_era >= VERSIONS.CONWAY_FIRST`` for "in Conway era
+        or later"), so the checks keep working for all protocol versions of
+        an era. Both sets of constants must stay consistent with ``MAP``.
     """
 
     # Latest protocol version associated with each era
@@ -28,6 +33,16 @@ class Versions:
     BABBAGE: tp.Final[int] = 8
     CONWAY: tp.Final[int] = 11
     DIJKSTRA: tp.Final[int] = 12
+
+    # First protocol version associated with each era
+    BYRON_FIRST: tp.Final[int] = 0
+    SHELLEY_FIRST: tp.Final[int] = 2
+    ALLEGRA_FIRST: tp.Final[int] = 3
+    MARY_FIRST: tp.Final[int] = 4
+    ALONZO_FIRST: tp.Final[int] = 5
+    BABBAGE_FIRST: tp.Final[int] = 7
+    CONWAY_FIRST: tp.Final[int] = 9
+    DIJKSTRA_FIRST: tp.Final[int] = 12
 
     DEFAULT_CLUSTER_ERA: tp.Final[int] = CONWAY
     DEFAULT_TX_ERA: tp.Final[int] = DEFAULT_CLUSTER_ERA

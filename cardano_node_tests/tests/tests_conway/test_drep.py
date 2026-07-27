@@ -40,7 +40,7 @@ DATA_DIR = pl.Path(__file__).parent.parent / "data"
 MAINNET_DREP_DEPOSIT = 500_000_000
 
 pytestmark = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.CONWAY,
+    VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST,
     reason="runs only with Tx era >= Conway",
 )
 

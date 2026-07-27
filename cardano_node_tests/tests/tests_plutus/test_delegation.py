@@ -147,7 +147,7 @@ def register_delegate_stake_addr(
     # Register stake address and delegate it to pool
     execution_units = (218855869, 686154)
     raw_fee = 400_000
-    if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+    if VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST:
         execution_units = (240000000, 790000)
         raw_fee = 500_000
 
@@ -798,14 +798,14 @@ class TestDelegateAddr:
             if (
                 build_method == clusterlib_utils.BuildMethods.BUILD
                 and "overspent budget" in str_exc
-                and VERSIONS.transaction_era >= VERSIONS.CONWAY
+                and VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST
                 and VERSIONS.cli >= version.parse("10.2.0.0")
             ):
                 issues.cli_1023.finish_test()
             elif (
                 build_method == clusterlib_utils.BuildMethods.BUILD
                 and "overspent budget" in str_exc
-                and VERSIONS.transaction_era >= VERSIONS.CONWAY
+                and VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST
             ):
                 issues.cli_650.finish_test()
             raise
@@ -880,7 +880,7 @@ class TestDelegateAddr:
                 )
             except AssertionError as exc:
                 if (
-                    VERSIONS.transaction_era >= VERSIONS.CONWAY
+                    VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST
                     and len(tx_db_record.redeemers) == 2
                     and tx_db_record.redeemers[0].unit_steps == tx_db_record.redeemers[1].unit_steps
                     and "space:" in str(exc)

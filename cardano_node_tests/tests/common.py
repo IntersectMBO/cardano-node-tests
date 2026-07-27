@@ -118,12 +118,12 @@ SKIPIF_WRONG_ERA = pytest.mark.skipif(
 )
 
 SKIPIF_TOKENS_UNUSABLE = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY,
+    VERSIONS.transaction_era < VERSIONS.MARY_FIRST,
     reason="native tokens are available only in Mary+ eras",
 )
 
 _PLUTUS_SKIP_REASON = ""
-if VERSIONS.transaction_era < VERSIONS.ALONZO:
+if VERSIONS.transaction_era < VERSIONS.ALONZO_FIRST:
     _PLUTUS_SKIP_REASON = "Plutus is available only in Alonzo+ eras"
 SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
     bool(_PLUTUS_SKIP_REASON),
@@ -131,12 +131,12 @@ SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
 )
 
 SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+    VERSIONS.transaction_era < VERSIONS.BABBAGE_FIRST,
     reason="Plutus V2 is available only in Babbage+ eras",
 )
 
 _PLUTUSV3_SKIP_REASON = ""
-if VERSIONS.transaction_era < VERSIONS.CONWAY:
+if VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST:
     _PLUTUSV3_SKIP_REASON = "Plutus V3 is available only in Conway+ eras"
 PLUTUSV3_UNUSABLE = bool(_PLUTUSV3_SKIP_REASON)
 SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
@@ -431,7 +431,7 @@ def match_blocker(func: tp.Callable) -> tp.Any:
 def get_conway_address_deposit(cluster_obj: clusterlib.ClusterLib) -> int:
     """Get stake address deposit amount - is required in Conway+."""
     stake_deposit_amt = -1
-    if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+    if VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST:
         stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
     return stake_deposit_amt

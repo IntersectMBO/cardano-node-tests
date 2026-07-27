@@ -218,7 +218,7 @@ class TestNegativeDatum:
         """
         temp_template = common.get_test_id(cluster)
         amount = 2_000_000
-        in_conway_plus = VERSIONS.transaction_era >= VERSIONS.CONWAY
+        in_conway_plus = VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST
 
         payment_addr = payment_addrs[0]
         dst_addr = payment_addrs[1]
@@ -415,7 +415,7 @@ class TestNegativeDatum:
         except clusterlib.CLIError as exc:
             err_str = str(exc)
         else:
-            if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST:
                 return
             issues.cli_800.finish_test()
 

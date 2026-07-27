@@ -115,7 +115,7 @@ def _fund_script(
             == token.amount
         ), f"Incorrect token balance for address `{dst_addr.address}`"
 
-    if VERSIONS.transaction_era >= VERSIONS.ALONZO:
+    if VERSIONS.transaction_era >= VERSIONS.ALONZO_FIRST:
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     return script_utxos, collateral_utxos, tx_raw_output

@@ -458,7 +458,7 @@ class TestUnbalanced:
             "--out-file",
             out_file,
         ]
-        if VERSIONS.transaction_era < VERSIONS.ALLEGRA:
+        if VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST:
             build_args.extend(
                 ["--invalid-hereafter", str(cluster.g_transaction.calculate_tx_ttl())]
             )
@@ -585,7 +585,7 @@ class TestUnbalanced:
             "--out-file",
             out_file,
         ]
-        if VERSIONS.transaction_era < VERSIONS.ALLEGRA:
+        if VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST:
             build_args.extend(
                 ["--invalid-hereafter", str(cluster.g_transaction.calculate_tx_ttl())]
             )

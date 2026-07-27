@@ -96,7 +96,7 @@ class TestCompatibility:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era >= VERSIONS.ALONZO,
+        VERSIONS.transaction_era >= VERSIONS.ALONZO_FIRST,
         reason="runs only with Tx era < Alonzo",
     )
     @pytest.mark.smoke

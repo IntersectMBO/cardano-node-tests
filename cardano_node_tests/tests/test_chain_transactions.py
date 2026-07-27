@@ -152,7 +152,7 @@ class TestTxChaining:
             # Generate signed Txs
             invalid_hereafter = (
                 cluster.g_query.get_slot_no() + 4000
-                if VERSIONS.transaction_era < VERSIONS.ALLEGRA
+                if VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST
                 else None
             )
             generated_txs = []

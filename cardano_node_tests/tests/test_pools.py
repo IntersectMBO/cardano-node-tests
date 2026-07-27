@@ -2694,7 +2694,7 @@ class TestNegative:
 
 
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.CONWAY, reason="runs only with Tx era >= Conway"
+    VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST, reason="runs only with Tx era >= Conway"
 )
 class TestPoolVoteDeleg:
     """Tests for pool vote delegation to DRep."""

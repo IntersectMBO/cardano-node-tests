@@ -204,7 +204,10 @@ class TestCollateralOutput:
             )
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
-            if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
+            if (
+                VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST
+                and "(DeserialiseFailure" in str_exc
+            ):
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             inputs_spent = (
@@ -352,7 +355,10 @@ class TestCollateralOutput:
             )
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
-            if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
+            if (
+                VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST
+                and "(DeserialiseFailure" in str_exc
+            ):
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             inputs_spent = (
