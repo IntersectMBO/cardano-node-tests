@@ -24,7 +24,7 @@ DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
 pytestmark = [
     pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.CONWAY,
+        VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST,
         reason="runs only with Tx era >= Conway",
     ),
     pytest.mark.dbsync_config,

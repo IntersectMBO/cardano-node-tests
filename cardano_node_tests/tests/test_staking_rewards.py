@@ -386,7 +386,7 @@ class TestRewards:
         )
 
         native_tokens: list[clusterlib_utils.NativeTokenRec] = []
-        if VERSIONS.transaction_era >= VERSIONS.MARY:
+        if VERSIONS.transaction_era >= VERSIONS.MARY_FIRST:
             # Create native tokens UTxOs for pool user
             native_tokens = clusterlib_utils.new_tokens(
                 *[f"couttscoin{token_rand}{i}".encode().hex() for i in range(5)],
@@ -1082,7 +1082,7 @@ class TestRewards:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="needs Allegra+ TX to run",
     )
     @pytest.mark.order(6)

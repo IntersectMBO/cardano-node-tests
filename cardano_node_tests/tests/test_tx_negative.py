@@ -388,7 +388,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
     @common.PARAM_BUILD_METHOD
@@ -448,7 +448,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
     @common.PARAM_BUILD_METHOD
@@ -509,7 +509,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
     @common.PARAM_BUILD_METHOD
@@ -552,7 +552,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
     @hypothesis.given(before_value=st.integers(min_value=1, max_value=common.MAX_INT64))
@@ -604,7 +604,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
     @hypothesis.given(
@@ -659,7 +659,7 @@ class TestNegative:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
     @hypothesis.given(

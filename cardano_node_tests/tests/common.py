@@ -17,6 +17,7 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +28,13 @@ COST_PROPOSAL_FILE = DATA_DIR / "cost_models_list_332_350_v2_v3.json"
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
 
-COMPAT_ERAS = ("shelley", "allegra", "mary", "alonzo", "babbage")
+COMPAT_ERAS = (
+    EraName.SHELLEY,
+    EraName.ALLEGRA,
+    EraName.MARY,
+    EraName.ALONZO,
+    EraName.BABBAGE,
+)
 
 ADDR_ALPHABET = string.ascii_lowercase + string.digits
 
@@ -118,12 +125,12 @@ SKIPIF_WRONG_ERA = pytest.mark.skipif(
 )
 
 SKIPIF_TOKENS_UNUSABLE = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.MARY,
+    VERSIONS.transaction_era < VERSIONS.MARY_FIRST,
     reason="native tokens are available only in Mary+ eras",
 )
 
 _PLUTUS_SKIP_REASON = ""
-if VERSIONS.transaction_era < VERSIONS.ALONZO:
+if VERSIONS.transaction_era < VERSIONS.ALONZO_FIRST:
     _PLUTUS_SKIP_REASON = "Plutus is available only in Alonzo+ eras"
 SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
     bool(_PLUTUS_SKIP_REASON),
@@ -131,12 +138,12 @@ SKIPIF_PLUTUS_UNUSABLE = pytest.mark.skipif(
 )
 
 SKIPIF_PLUTUSV2_UNUSABLE = pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+    VERSIONS.transaction_era < VERSIONS.BABBAGE_FIRST,
     reason="Plutus V2 is available only in Babbage+ eras",
 )
 
 _PLUTUSV3_SKIP_REASON = ""
-if VERSIONS.transaction_era < VERSIONS.CONWAY:
+if VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST:
     _PLUTUSV3_SKIP_REASON = "Plutus V3 is available only in Conway+ eras"
 PLUTUSV3_UNUSABLE = bool(_PLUTUSV3_SKIP_REASON)
 SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
@@ -431,7 +438,7 @@ def match_blocker(func: tp.Callable) -> tp.Any:
 def get_conway_address_deposit(cluster_obj: clusterlib.ClusterLib) -> int:
     """Get stake address deposit amount - is required in Conway+."""
     stake_deposit_amt = -1
-    if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+    if VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST:
         stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
 
     return stake_deposit_amt

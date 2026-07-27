@@ -234,7 +234,7 @@ class TestReadonlyReferenceInputs:
                 script_txins=plutus_txins,
             )
         except clusterlib.CLIError as exc:
-            if VERSIONS.transaction_era < VERSIONS.CONWAY:
+            if VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST:
                 raise
             if "BabbageNonDisjointRefInputs" not in str(exc):
                 raise
@@ -508,7 +508,7 @@ class TestNegativeReadonlyReferenceInputs:
                 script_txins=plutus_txins,
             )
         except clusterlib.CLIError as exc:
-            if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST:
                 raise
             if "ReferenceInputsNotSupported" not in str(exc):
                 raise

@@ -44,7 +44,7 @@ class TestCompatibility:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era >= VERSIONS.BABBAGE,
+        VERSIONS.transaction_era >= VERSIONS.BABBAGE_FIRST,
         reason="runs only with Tx era < Babbage",
     )
     @pytest.mark.smoke
@@ -102,7 +102,7 @@ class TestCompatibility:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era >= VERSIONS.BABBAGE,
+        VERSIONS.transaction_era >= VERSIONS.BABBAGE_FIRST,
         reason="runs only with Tx era < Babbage",
     )
     @pytest.mark.smoke
@@ -161,7 +161,7 @@ class TestCompatibility:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era >= VERSIONS.BABBAGE,
+        VERSIONS.transaction_era >= VERSIONS.BABBAGE_FIRST,
         reason="runs only with Tx era < Babbage",
     )
     @pytest.mark.smoke

@@ -936,7 +936,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.BABBAGE,
+        VERSIONS.transaction_era < VERSIONS.BABBAGE_FIRST,
         reason="runs only with Babbage+ TX",
     )
     @pytest.mark.parametrize(
@@ -1186,7 +1186,7 @@ class TestCollateralOutput:
 
         # Check return collateral amount, this is only available on Babbage+ TX
 
-        if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+        if VERSIONS.transaction_era >= VERSIONS.BABBAGE_FIRST:
             tx_loaded = tx_view.load_tx_view(cluster_obj=cluster, tx_body_file=tx_body_step2)
 
             return_collateral = tx_loaded["return collateral"]["amount"]["lovelace"]

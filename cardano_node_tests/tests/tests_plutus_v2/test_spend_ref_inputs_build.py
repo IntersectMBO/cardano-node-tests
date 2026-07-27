@@ -268,7 +268,7 @@ class TestReadonlyReferenceInputs:
                 txins=[t.txins[0] for t in tx_output_redeem.script_txins if t.txins],
             )
         except clusterlib.CLIError as exc:
-            if VERSIONS.transaction_era < VERSIONS.CONWAY:
+            if VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST:
                 raise
             if "BabbageNonDisjointRefInputs" not in str(exc):
                 raise
@@ -645,7 +645,7 @@ class TestNegativeReadonlyReferenceInputs:
                 change_address=payment_addrs[0].address,
             )
         except clusterlib.CLIError as exc:
-            if VERSIONS.transaction_era >= VERSIONS.CONWAY:
+            if VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST:
                 raise
             if "ReferenceInputsNotSupported" not in str(exc):
                 raise

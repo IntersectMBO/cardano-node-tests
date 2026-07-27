@@ -139,7 +139,7 @@ def _fund_script(
         assert reference_utxos, "No reference script UTxO"
         reference_utxo = reference_utxos[0]
 
-    if VERSIONS.transaction_era >= VERSIONS.BABBAGE:
+    if VERSIONS.transaction_era >= VERSIONS.BABBAGE_FIRST:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # Check if inline datum is returned by 'query utxo'

@@ -1078,7 +1078,7 @@ class TestNegative:
 
 
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
     reason="runs only with Allegra+ TX",
 )
 class TestTimeLocking:
@@ -1825,7 +1825,7 @@ class TestTimeLocking:
 
 
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
     reason="runs only with Allegra+ TX",
 )
 class TestAuxiliaryScripts:
@@ -2086,7 +2086,7 @@ class TestIncrementalSigning:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+        VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -2277,7 +2277,7 @@ class TestIncrementalSigning:
 
 
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALONZO,
+    VERSIONS.transaction_era < VERSIONS.ALONZO_FIRST,
     reason="runs only with Alonzo+ TX",
 )
 class TestDatum:
@@ -2377,7 +2377,7 @@ class TestDatum:
 
 
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+    VERSIONS.transaction_era < VERSIONS.BABBAGE_FIRST,
     reason="runs only with Babbage+ TX",
 )
 class TestReferenceUTxO:
@@ -2686,7 +2686,7 @@ class TestReferenceUTxO:
 
 
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.ALLEGRA,
+    VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
     reason="runs only with Allegra+ TX",
 )
 class TestNested:

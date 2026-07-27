@@ -118,7 +118,7 @@ def _build_fund_script(
             == token.amount
         ), f"Incorrect token balance for address `{dst_addr.address}`"
 
-    if VERSIONS.transaction_era >= VERSIONS.ALONZO:
+    if VERSIONS.transaction_era >= VERSIONS.ALONZO_FIRST:
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     return script_utxos, collateral_utxos, tx_output
@@ -296,7 +296,10 @@ def _build_spend_locked_txin(  # noqa: C901
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
         except clusterlib.CLIError as exc:
             str_exc = str(exc)
-            if VERSIONS.transaction_era >= VERSIONS.CONWAY and "(DeserialiseFailure" in str_exc:
+            if (
+                VERSIONS.transaction_era >= VERSIONS.CONWAY_FIRST
+                and "(DeserialiseFailure" in str_exc
+            ):
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
             inputs_spent = (

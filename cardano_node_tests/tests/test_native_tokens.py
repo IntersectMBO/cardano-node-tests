@@ -33,6 +33,7 @@ from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1852,7 +1853,7 @@ class TestTransfer:
             # TODO: add ADA txout for change address - see node issue #3057
             txouts.append(clusterlib.TxOut(address=src_address, amount=2_000_000))
 
-            if VERSIONS.transaction_era == VERSIONS.ALONZO:
+            if VERSIONS.transaction_era_name == EraName.ALONZO:
                 err_str = ""
                 try:
                     cluster.g_transaction.build_tx(
@@ -2039,7 +2040,7 @@ class TestTransfer:
             txouts.append(clusterlib.TxOut(address=src_address, amount=4_000_000))
 
             # TODO: see node issue #4297
-            if VERSIONS.transaction_era == VERSIONS.ALONZO:
+            if VERSIONS.transaction_era_name == EraName.ALONZO:
                 err_str = ""
                 try:
                     cluster.g_transaction.build_tx(
@@ -2641,7 +2642,7 @@ class TestCLITxOutSyntax:
 
 
 @pytest.mark.skipif(
-    VERSIONS.transaction_era < VERSIONS.BABBAGE,
+    VERSIONS.transaction_era < VERSIONS.BABBAGE_FIRST,
     reason="runs only with Babbage+ TX",
 )
 class TestReferenceUTxO:

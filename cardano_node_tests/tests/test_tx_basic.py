@@ -1163,7 +1163,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.ALONZO,
+        VERSIONS.transaction_era < VERSIONS.ALONZO_FIRST,
         reason="doesn't run with TX era < Alonzo",
     )
     @submit_utils.PARAM_SUBMIT_METHOD

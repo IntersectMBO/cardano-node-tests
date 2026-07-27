@@ -195,7 +195,7 @@ class TestLeadershipSchedule:
             # Xfail if cardano-api GH-269 is still open
             if (
                 VERSIONS.node > version.parse("8.1.2")
-                and VERSIONS.cluster_era >= VERSIONS.BABBAGE
+                and VERSIONS.cluster_era >= VERSIONS.BABBAGE_FIRST
                 and issues.api_269.is_blocked()
             ):
                 issues.api_269.finish_test()
