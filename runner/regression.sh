@@ -70,8 +70,8 @@ if [ -n "${CLUSTERS_COUNT:-}" ]; then
   export CLUSTERS_COUNT
 fi
 
-if [ "${CI_CLUSTER_ERA:-}" = "conway 11" ]; then
-  export PROTOCOL_VERSION=11
+if [ "${CI_CLUSTER_ERA:-}" = "conway 10" ]; then
+  export PROTOCOL_VERSION=10
 elif [ "${CI_CLUSTER_ERA:-}" = "dijkstra 12" ]; then
   export PROTOCOL_VERSION=12
   export COMMAND_ERA=dijkstra

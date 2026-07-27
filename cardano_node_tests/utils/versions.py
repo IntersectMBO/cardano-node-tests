@@ -26,7 +26,7 @@ class Versions:
     MARY: tp.Final[int] = 4
     ALONZO: tp.Final[int] = 6
     BABBAGE: tp.Final[int] = 8
-    CONWAY: tp.Final[int] = 10
+    CONWAY: tp.Final[int] = 11
     DIJKSTRA: tp.Final[int] = 12
 
     DEFAULT_CLUSTER_ERA: tp.Final[int] = CONWAY
