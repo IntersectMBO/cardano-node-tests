@@ -27,6 +27,7 @@ from cardano_node_tests.cluster_management import cache
 from cardano_node_tests.cluster_management import cluster_getter
 from cardano_node_tests.cluster_management import common
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.cluster_management import status_db
 from cardano_node_tests.cluster_management import status_files
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
@@ -131,11 +132,10 @@ class ClusterManager:
     def _is_valid_cluster_instance(self, work_dir: pl.Path, instance_num: int) -> bool:
         """Check if cluster instance is valid."""
         state_dir = work_dir / f"{cluster_nodes.STATE_CLUSTER}{instance_num}"
-        cluster_stopped = status_files.get_cluster_stopped_file(instance_num=instance_num).exists()
-        cluster_started_or_dead = (
-            status_files.get_cluster_running_file(instance_num=instance_num).exists()
-            or status_files.get_cluster_dead_file(instance_num=instance_num).exists()
-        )
+        cluster_stopped = status_db.is_cluster_stopped(instance_num=instance_num)
+        cluster_started_or_dead = status_db.is_cluster_running(
+            instance_num=instance_num
+        ) or status_db.is_cluster_dead(instance_num=instance_num)
 
         if cluster_stopped or not cluster_started_or_dead:
             self.log(f"c{instance_num}: cluster instance not running")
@@ -203,14 +203,14 @@ class ClusterManager:
 
             shutil.rmtree(state_dir, ignore_errors=True)
 
-            status_files.create_cluster_stopped_file(instance_num=instance_num)
+            status_db.set_cluster_stopped(instance_num=instance_num)
             self.log(f"c{instance_num}: stopped cluster instance")
 
     def set_needs_respin(self) -> None:
         """Indicate that the cluster instance needs respin."""
         with locking.FileLockIfXdist(self.cluster_lock):
             self.log(f"c{self.cluster_instance_num}: called `set_needs_respin`")
-            status_files.create_respin_needed_file(
+            status_db.create_respin_needed(
                 instance_num=self.cluster_instance_num, worker_id=self.worker_id
             )
 
@@ -264,38 +264,45 @@ class ClusterManager:
             # If the ignored error continues to get printed into log file, tests that are still
             # running on the cluster instance would report that error. Therefore if the cluster
             # instance is scheduled for respin, don't delete the rules file.
-            if not status_files.list_respin_needed_files(instance_num=self.cluster_instance_num):
+            if not status_db.list_respin_needed(instance_num=self.cluster_instance_num):
                 logfiles.clean_ignore_rules(ignore_file_id=self.worker_id)
 
-            # Remove "resource locked" files created by the worker, ignore resources that have mark
-            status_files.rm_resource_locked_files(
-                instance_num=self.cluster_instance_num, worker_id=self.worker_id, mark=""
+            # Remove "resource locked" records created by the worker, ignore resources
+            # that have mark
+            status_db.rm_resources(
+                mode=status_db.MODE_LOCK,
+                instance_num=self.cluster_instance_num,
+                worker_id=self.worker_id,
+                mark="",
             )
 
-            # Remove "resource used" files created by the worker, ignore resources that have mark
-            status_files.rm_resource_used_files(
-                instance_num=self.cluster_instance_num, worker_id=self.worker_id, mark=""
+            # Remove "resource used" records created by the worker, ignore resources that have mark
+            status_db.rm_resources(
+                mode=status_db.MODE_USE,
+                instance_num=self.cluster_instance_num,
+                worker_id=self.worker_id,
+                mark="",
             )
 
-            # Remove file that indicates that a test is running on the worker
-            status_files.rm_test_running_files(
+            # Remove record that indicates that a test is running on the worker
+            status_db.rm_test_running(
                 instance_num=self.cluster_instance_num, worker_id=self.worker_id
             )
 
             # Log names of tests that keep running on the cluster instance
-            tnames = status_files.get_test_names(instance_num=self.cluster_instance_num)
+            tnames = status_db.get_test_names(instance_num=self.cluster_instance_num)
             self.log(f"c{self._cluster_instance_num}: running tests: {tnames}")
 
-    def _get_resources_from_paths(
+    def _filter_resources(
         self,
-        paths: tp.Iterable[pl.Path],
+        names: tp.Iterable[str],
         from_set: tp.Iterable[str] | None = None,
     ) -> list[str]:
         if from_set is not None and isinstance(from_set, str):
             msg = "`from_set` cannot be a string"
             raise TypeError(msg)
 
-        resources = set(status_files.get_resources_from_path(paths=paths))
+        resources = set(names)
 
         if from_set is not None:
             return list(resources.intersection(from_set))
@@ -309,12 +316,14 @@ class ClusterManager:
     ) -> list[str]:
         """Get resources locked by worker.
 
-        It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
+        Use `worker_id="*"` to get resources locked by any worker.
         """
-        paths = status_files.list_resource_locked_files(
-            instance_num=self.cluster_instance_num, worker_id=worker_id or self.worker_id
+        names = status_db.get_resource_names(
+            mode=status_db.MODE_LOCK,
+            instance_num=self.cluster_instance_num,
+            worker_id=worker_id or self.worker_id,
         )
-        return self._get_resources_from_paths(paths=paths, from_set=from_set)
+        return self._filter_resources(names=names, from_set=from_set)
 
     def get_used_resources(
         self,
@@ -323,12 +332,14 @@ class ClusterManager:
     ) -> list[str]:
         """Get resources used by worker.
 
-        It is possible to use glob patterns for `worker_id` (e.g. `worker_id="*"`).
+        Use `worker_id="*"` to get resources used by any worker.
         """
-        paths = status_files.list_resource_used_files(
-            instance_num=self.cluster_instance_num, worker_id=worker_id or self.worker_id
+        names = status_db.get_resource_names(
+            mode=status_db.MODE_USE,
+            instance_num=self.cluster_instance_num,
+            worker_id=worker_id or self.worker_id,
         )
-        return self._get_resources_from_paths(paths=paths, from_set=from_set)
+        return self._filter_resources(names=names, from_set=from_set)
 
     def _save_cli_coverage(self) -> None:
         """Save CLI coverage info collected by this `cluster_obj` instance."""
