@@ -483,16 +483,6 @@ class ClusterGetter:
                 )
                 return False
 
-        # Make sure that all resource names are sanitized, otherwise there will be issues with
-        # matching the unsanitized names to the sanitized ones.
-        unsanitized_res = resources.get_unsanitized([*res_usable, *res_lockable])
-        if unsanitized_res:
-            msg = (
-                "Following resource names violates naming '[a-zA-Z0-9_-]{1,20}': "
-                f"{unsanitized_res}"
-            )
-            raise RuntimeError(msg)
-
         # Resources that are locked are also in use
         use_minus_lock = list(set(res_usable) - set(res_lockable))
 
@@ -825,14 +815,7 @@ class ClusterGetter:
             msg = "`use_resources` cannot be a string"
             raise TypeError(msg)
 
-        # Normalize resource names and mark so they match the expected naming format
-        mark = resources.sanitize_res_name(mark)
-        lock_resources = [
-            resources.sanitize_res_name(r) if isinstance(r, str) else r for r in lock_resources
-        ]
-        use_resources = [
-            resources.sanitize_res_name(r) if isinstance(r, str) else r for r in use_resources
-        ]
+        lock_resources = list(lock_resources)
 
         if configuration.DEV_CLUSTER_RUNNING:
             if scriptsdir:
