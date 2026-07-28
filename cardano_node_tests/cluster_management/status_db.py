@@ -124,6 +124,12 @@ def _get_conn() -> sqlite3.Connection:
     global _conn, _conn_pid  # noqa: PLW0603
 
     if _conn is None or _conn_pid != os.getpid():
+        if sqlite3.sqlite_version_info < (3, 35):
+            err = (
+                "SQLite >= 3.35 is needed for the `RETURNING` clause, "
+                f"got {sqlite3.sqlite_version}."
+            )
+            raise RuntimeError(err)
         conn = sqlite3.connect(get_db_file(), timeout=10, isolation_level=None)
         conn.row_factory = sqlite3.Row
         # Switching to WAL needs an exclusive lock and the busy timeout does not reliably
@@ -223,15 +229,10 @@ def _rm_flags(
     ftype: str, instance_num: int | None = None, worker_id: str = "*", mark: str | None = None
 ) -> list[StatusRow]:
     """Delete flag records matching the given filters and return the deleted records."""
-    conn = _get_conn()
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     where = f"{where} AND type = ?" if where else " WHERE type = ?"
-    with _transaction(conn):
-        rows = [
-            _row_to_status(r) for r in conn.execute(f"SELECT * FROM flags{where}", [*params, ftype])
-        ]
-        conn.execute(f"DELETE FROM flags{where}", [*params, ftype])
-    return rows
+    rows = _get_conn().execute(f"DELETE FROM flags{where} RETURNING *", [*params, ftype]).fetchall()
+    return [_row_to_status(r) for r in rows]
 
 
 def _flag_exists(ftype: str, instance_num: int) -> bool:
@@ -408,14 +409,9 @@ def rm_test_running(
     instance_num: int | None = None, worker_id: str = "*", mark: str | None = None
 ) -> list[StatusRow]:
     """Delete all "test running" records."""
-    conn = _get_conn()
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
-    with _transaction(conn):
-        rows = [
-            _row_to_status(r) for r in conn.execute(f"SELECT * FROM test_running{where}", params)
-        ]
-        conn.execute(f"DELETE FROM test_running{where}", params)
-    return rows
+    rows = _get_conn().execute(f"DELETE FROM test_running{where} RETURNING *", params).fetchall()
+    return [_row_to_status(r) for r in rows]
 
 
 def get_test_names(
@@ -480,16 +476,12 @@ def rm_resources(
     mode: str, instance_num: int | None = None, worker_id: str = "*", mark: str | None = None
 ) -> list[StatusRow]:
     """Delete all resource records for the given mode."""
-    conn = _get_conn()
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     where = f"{where} AND mode = ?" if where else " WHERE mode = ?"
-    with _transaction(conn):
-        rows = [
-            _row_to_status(r)
-            for r in conn.execute(f"SELECT * FROM resources{where}", [*params, mode])
-        ]
-        conn.execute(f"DELETE FROM resources{where}", [*params, mode])
-    return rows
+    rows = (
+        _get_conn().execute(f"DELETE FROM resources{where} RETURNING *", [*params, mode]).fetchall()
+    )
+    return [_row_to_status(r) for r in rows]
 
 
 def get_resource_names(
@@ -612,45 +604,33 @@ def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
             f"'test running' of dead worker {r['worker_id']} (pid {r['pid']}) "
             f"on c{r['instance_num']}: {r['test_id']}"
             for r in conn.execute(
-                f"SELECT * FROM test_running WHERE pid IN ({placeholders})",
+                f"DELETE FROM test_running WHERE pid IN ({placeholders}) RETURNING *",
                 dead_pids,
-            )
-        )
-        conn.execute(
-            f"DELETE FROM test_running WHERE pid IN ({placeholders})",
-            dead_pids,
+            ).fetchall()
         )
 
         removed.extend(
             f"resource '{r['name']}' ({r['mode']}) of dead worker {r['worker_id']} "
             f"(pid {r['pid']}) on c{r['instance_num']}"
             for r in conn.execute(
-                f"SELECT * FROM resources WHERE mark = '' AND pid IN ({placeholders})",
+                f"DELETE FROM resources WHERE mark = '' AND pid IN ({placeholders}) RETURNING *",
                 dead_pids,
-            )
-        )
-        conn.execute(
-            f"DELETE FROM resources WHERE mark = '' AND pid IN ({placeholders})",
-            dead_pids,
+            ).fetchall()
         )
 
         removed.extend(
             f"'prio in progress' of dead worker {r['worker_id']} (pid {r['pid']})"
             for r in conn.execute(
-                f"SELECT * FROM flags WHERE type = ? AND pid IN ({placeholders})",
+                f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders}) RETURNING *",
                 [PRIO_IN_PROGRESS, *dead_pids],
-            )
-        )
-        conn.execute(
-            f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders})",
-            [PRIO_IN_PROGRESS, *dead_pids],
+            ).fetchall()
         )
 
         # A worker that died in the middle of a respin left the cluster instance in an
         # unknown state. Replace its "respin in progress" flag with "needs respin" so
         # another worker respins the instance.
         respin_rows = conn.execute(
-            f"SELECT * FROM flags WHERE type = ? AND pid IN ({placeholders})",
+            f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders}) RETURNING *",
             [RESPIN_IN_PROGRESS, *dead_pids],
         ).fetchall()
         for r in respin_rows:
@@ -670,9 +650,5 @@ def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
                 f"'respin in progress' of dead worker {r['worker_id']} (pid {r['pid']}) "
                 f"on c{r['instance_num']}, created 'needs respin'"
             )
-        conn.execute(
-            f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders})",
-            [RESPIN_IN_PROGRESS, *dead_pids],
-        )
 
     return removed
