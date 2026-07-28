@@ -212,6 +212,26 @@ class TestTestRunning:
         assert status_db.list_test_running(instance_num=0) == []
 
 
+@pytest.mark.usefixtures("db_dir")
+def test_overview_view():
+    """Check that the `overview` view combines all status records."""
+    status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_a")
+    status_db.create_resources(
+        instance_num=0, worker_id="gw0", names=["pool1"], mode=status_db.MODE_LOCK
+    )
+    status_db.create_respin_needed(instance_num=1, worker_id="gw1")
+    status_db.gc_stale_records(min_interval_sec=3600)
+
+    rows = status_db._get_conn().execute("SELECT kind, item FROM overview ORDER BY kind").fetchall()
+
+    # The "gc last run" bookkeeping record is not part of the overview
+    assert [tuple(r) for r in rows] == [
+        ("flag:respin_needed", "respin_needed"),
+        ("resource:lock", "pool1"),
+        ("test", "test_a"),
+    ]
+
+
 def _get_dead_pid() -> int:
     """Return PID of a process that is no longer running."""
     proc = multiprocessing.get_context("spawn").Process(target=_noop)

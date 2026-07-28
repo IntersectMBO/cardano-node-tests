@@ -19,12 +19,14 @@ Filter arguments semantics used throughout this module:
 * `mark`: `None` matches any record (with or without mark), `"*"` matches any non-empty
   mark, `""` matches only records without mark, any other string matches exactly.
 
-The current status can be inspected with the stock `sqlite3` CLI, e.g.:
+The current status can be inspected with the stock `sqlite3` CLI. The `overview` view
+combines all status records into one human-readable table:
 
     db=/tmp/pytest-of-$USER/pytest-0/status.db
-    sqlite3 -readonly -header "$db" 'SELECT * FROM test_running'
-    sqlite3 -readonly -header "$db" 'SELECT * FROM resources ORDER BY instance_num, mode, name'
-    sqlite3 -readonly -header "$db" 'SELECT * FROM flags'
+    sqlite3 -readonly -header "$db" 'SELECT * FROM overview ORDER BY instance_num, kind'
+
+The underlying tables (`test_running`, `resources`, `flags`) can be queried directly
+the same way.
 """
 
 import contextlib
@@ -88,6 +90,36 @@ CREATE TABLE IF NOT EXISTS resources (
     created_at    REAL    NOT NULL DEFAULT 0,
     PRIMARY KEY (instance_num, mode, name, worker_id)
 ) WITHOUT ROWID;
+
+-- Read-only convenience view for humans inspecting the current usage
+CREATE VIEW IF NOT EXISTS overview AS
+SELECT
+    'test' AS kind,
+    instance_num,
+    worker_id,
+    test_id AS item,
+    mark,
+    CAST(strftime('%s', 'now') - created_at AS INTEGER) AS age_sec
+FROM test_running
+UNION ALL
+SELECT
+    'resource:' || mode,
+    instance_num,
+    worker_id,
+    name,
+    mark,
+    CAST(strftime('%s', 'now') - created_at AS INTEGER)
+FROM resources
+UNION ALL
+SELECT
+    'flag:' || type,
+    instance_num,
+    worker_id,
+    type,
+    mark,
+    CAST(strftime('%s', 'now') - created_at AS INTEGER)
+FROM flags
+WHERE type != 'gc_last_run';
 """
 
 _conn: sqlite3.Connection | None = None
