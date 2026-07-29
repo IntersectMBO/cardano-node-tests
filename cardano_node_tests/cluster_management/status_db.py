@@ -659,7 +659,8 @@ def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
     * "test running" records - the test is not running anymore.
     * Resource records without mark - the test that held them is gone. Marked resource
       records belong to the whole group of marked tests and are cleaned up by the mark
-      staleness handling.
+      staleness handling, or removed together with the marks when the cluster instance
+      is respun or failed to start.
     * "priority test in progress" flags - would otherwise block all other workers forever.
     * "respin in progress" flags - the cluster instance was left in an unknown state, so
       a "needs respin" flag is created in its place.
