@@ -213,6 +213,88 @@ class TestTestRunning:
 
 
 @pytest.mark.usefixtures("db_dir")
+class TestSnapshot:
+    """Check that `StatusSnapshot` accessors match the module-level query functions."""
+
+    def _populate(self) -> None:
+        _populate_test_running()
+        status_db.create_resources(
+            instance_num=0, worker_id="gw0", names=["pool1"], mode=status_db.MODE_LOCK
+        )
+        status_db.create_resources(
+            instance_num=0, worker_id="gw1", names=["pool2"], mode=status_db.MODE_USE, mark="markA"
+        )
+        status_db.create_curr_mark(instance_num=0, worker_id="gw1", mark="markA")
+        status_db.create_respin_needed(instance_num=1, worker_id="gw2")
+        status_db.create_respin_progress(instance_num=1, worker_id="gw2")
+        status_db.create_prio_in_progress(worker_id="gw0")
+        status_db.set_cluster_running(instance_num=0)
+        status_db.set_cluster_dead(instance_num=1)
+
+    def test_parity(self):
+        """Check that snapshot reads return the same records as the module functions."""
+        self._populate()
+        snap = status_db.StatusSnapshot()
+
+        for mark in (None, "*", "", "markA"):
+            assert snap.list_test_running(mark=mark) == status_db.list_test_running(mark=mark)
+            for mode in (status_db.MODE_LOCK, status_db.MODE_USE):
+                assert snap.get_resource_names(mode=mode, mark=mark) == (
+                    status_db.get_resource_names(mode=mode, mark=mark)
+                )
+        for instance_num in (None, 0, 1, 5):
+            assert snap.list_test_running(instance_num=instance_num) == (
+                status_db.list_test_running(instance_num=instance_num)
+            )
+            assert snap.list_respin_needed(instance_num=instance_num) == (
+                status_db.list_respin_needed(instance_num=instance_num)
+            )
+            assert snap.list_respin_progress(instance_num=instance_num) == (
+                status_db.list_respin_progress(instance_num=instance_num)
+            )
+            assert snap.list_curr_mark(instance_num=instance_num) == (
+                status_db.list_curr_mark(instance_num=instance_num)
+            )
+            assert snap.list_cluster_dead(instance_num=instance_num) == (
+                status_db.list_cluster_dead(instance_num=instance_num)
+            )
+        assert snap.list_test_running(worker_id="gw0") == status_db.list_test_running(
+            worker_id="gw0"
+        )
+        assert snap.list_prio_in_progress() == status_db.list_prio_in_progress()
+        assert snap.get_marks_in_progress() == status_db.get_marks_in_progress()
+        assert snap.is_cluster_running(instance_num=0) == status_db.is_cluster_running(
+            instance_num=0
+        )
+        assert snap.is_cluster_dead(instance_num=1) == status_db.is_cluster_dead(instance_num=1)
+        assert snap.is_cluster_stopped(instance_num=0) == status_db.is_cluster_stopped(
+            instance_num=0
+        )
+
+    def test_auto_refresh_on_own_writes(self):
+        """Check that the snapshot sees writes done by this process."""
+        snap = status_db.StatusSnapshot()
+        assert snap.list_test_running() == []
+
+        status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_a")
+        assert len(snap.list_test_running()) == 1
+
+        status_db.rm_test_running(instance_num=0)
+        assert snap.list_test_running() == []
+
+    def test_explicit_refresh(self):
+        """Check that writes not visible via the generation counter appear after refresh."""
+        snap = status_db.StatusSnapshot()
+        # Simulate a write by another process - direct SQL doesn't bump the generation counter
+        status_db._get_conn().execute(
+            "INSERT INTO test_running (instance_num, worker_id, test_id) VALUES (0, 'gw9', 't')"
+        )
+        assert snap.list_test_running() == []
+        snap.refresh()
+        assert len(snap.list_test_running()) == 1
+
+
+@pytest.mark.usefixtures("db_dir")
 def test_overview_view():
     """Check that the `overview` view combines all status records."""
     status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_a")

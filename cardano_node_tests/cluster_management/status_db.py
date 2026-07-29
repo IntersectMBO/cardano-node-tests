@@ -125,6 +125,10 @@ WHERE type != 'gc_last_run';
 _conn: sqlite3.Connection | None = None
 _conn_pid: int = -1
 
+# Incremented on every write done by this process. Used by `StatusSnapshot` to detect
+# that its data is stale.
+_write_generation: int = 0
+
 
 @dataclasses.dataclass(frozen=True)
 class StatusRow:
@@ -224,6 +228,19 @@ def _build_where(
     return where, params
 
 
+def _match_filters(
+    row: sqlite3.Row, instance_num: int | None, worker_id: str, mark: str | None
+) -> bool:
+    """Check if a record matches the common filter arguments (same semantics as SQL)."""
+    if instance_num is not None and row["instance_num"] != instance_num:
+        return False
+    if worker_id != "*" and row["worker_id"] != worker_id:
+        return False
+    if mark == "*":
+        return bool(row["mark"])
+    return mark is None or row["mark"] == mark
+
+
 def _row_to_status(row: sqlite3.Row) -> StatusRow:
     keys = row.keys()
     return StatusRow(
@@ -235,8 +252,15 @@ def _row_to_status(row: sqlite3.Row) -> StatusRow:
     )
 
 
+def _bump_write_generation() -> None:
+    """Record that this process modified the database."""
+    global _write_generation  # noqa: PLW0603
+    _write_generation += 1
+
+
 def _create_flag(ftype: str, instance_num: int, worker_id: str, mark: str = "") -> None:
     """Create (or refresh) a flag record."""
+    _bump_write_generation()
     _get_conn().execute(
         "INSERT OR REPLACE INTO flags (type, instance_num, worker_id, mark, pid, created_at) "
         "VALUES (?, ?, ?, ?, ?, ?)",
@@ -261,6 +285,7 @@ def _rm_flags(
     ftype: str, instance_num: int | None = None, worker_id: str = "*", mark: str | None = None
 ) -> list[StatusRow]:
     """Delete flag records matching the given filters and return the deleted records."""
+    _bump_write_generation()
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     where = f"{where} AND type = ?" if where else " WHERE type = ?"
     rows = _get_conn().execute(f"DELETE FROM flags{where} RETURNING *", [*params, ftype]).fetchall()
@@ -418,6 +443,7 @@ def rm_prio_in_progress(worker_id: str = "*") -> list[StatusRow]:
 
 def create_test_running(instance_num: int, worker_id: str, test_id: str, mark: str = "") -> None:
     """Indicate that a test is running on a pytest worker."""
+    _bump_write_generation()
     _get_conn().execute(
         "INSERT OR REPLACE INTO test_running "
         "(instance_num, worker_id, test_id, mark, pid, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -441,6 +467,7 @@ def rm_test_running(
     instance_num: int | None = None, worker_id: str = "*", mark: str | None = None
 ) -> list[StatusRow]:
     """Delete all "test running" records."""
+    _bump_write_generation()
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     rows = _get_conn().execute(f"DELETE FROM test_running{where} RETURNING *", params).fetchall()
     return [_row_to_status(r) for r in rows]
@@ -478,6 +505,7 @@ def create_resources(
         mode: Either `MODE_LOCK` or `MODE_USE`.
         mark: Test mark, empty string for no mark.
     """
+    _bump_write_generation()
     conn = _get_conn()
     pid = os.getpid()
     created_at = time.time()
@@ -508,6 +536,7 @@ def rm_resources(
     mode: str, instance_num: int | None = None, worker_id: str = "*", mark: str | None = None
 ) -> list[StatusRow]:
     """Delete all resource records for the given mode."""
+    _bump_write_generation()
     where, params = _build_where(instance_num=instance_num, worker_id=worker_id, mark=mark)
     where = f"{where} AND mode = ?" if where else " WHERE mode = ?"
     rows = (
@@ -631,6 +660,7 @@ def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
 
     removed: list[str] = []
     placeholders = ",".join("?" * len(dead_pids))
+    _bump_write_generation()
     with _transaction(conn):
         removed.extend(
             f"'test running' of dead worker {r['worker_id']} (pid {r['pid']}) "
@@ -684,3 +714,155 @@ def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
             )
 
     return removed
+
+
+# Snapshot
+
+
+class StatusSnapshot:
+    """In-memory view of all status records.
+
+    The snapshot is loaded with one query per table and its read accessors mirror the
+    module-level query functions, including the filter argument semantics. Reads from
+    the snapshot are plain list traversals, so e.g. the scheduler can evaluate all
+    cluster instances without doing repeated database queries.
+
+    The snapshot refreshes itself when this process modifies the database (tracked by
+    the module-level write generation counter). Writes done by other processes are NOT
+    visible until `refresh` is called explicitly. Users must therefore hold the global
+    cluster lock while using the snapshot and must call `refresh` right after acquiring
+    the lock.
+    """
+
+    def __init__(self) -> None:
+        self._generation = -1
+        self._flags: list[sqlite3.Row] = []
+        self._test_running: list[sqlite3.Row] = []
+        self._resources: list[sqlite3.Row] = []
+        self.refresh()
+
+    def refresh(self) -> None:
+        """Reload all status records from the database."""
+        conn = _get_conn()
+        self._flags = conn.execute(
+            "SELECT * FROM flags ORDER BY instance_num, worker_id, mark"
+        ).fetchall()
+        self._test_running = conn.execute(
+            "SELECT * FROM test_running ORDER BY instance_num, worker_id"
+        ).fetchall()
+        self._resources = conn.execute(
+            "SELECT * FROM resources ORDER BY instance_num, name, worker_id"
+        ).fetchall()
+        self._generation = _write_generation
+
+    def _maybe_refresh(self) -> None:
+        """Refresh the snapshot if this process modified the database in the meantime."""
+        if self._generation != _write_generation:
+            self.refresh()
+
+    def _list_flags(
+        self,
+        ftype: str,
+        instance_num: int | None = None,
+        worker_id: str = "*",
+        mark: str | None = None,
+    ) -> list[StatusRow]:
+        self._maybe_refresh()
+        return [
+            _row_to_status(r)
+            for r in self._flags
+            if r["type"] == ftype
+            and _match_filters(r, instance_num=instance_num, worker_id=worker_id, mark=mark)
+        ]
+
+    # Cluster instance state
+
+    def is_cluster_running(self, instance_num: int) -> bool:
+        """Check if the cluster instance is running."""
+        return bool(self._list_flags(ftype=CLUSTER_RUNNING, instance_num=instance_num))
+
+    def is_cluster_stopped(self, instance_num: int) -> bool:
+        """Check if the cluster instance is stopped."""
+        return bool(self._list_flags(ftype=CLUSTER_STOPPED, instance_num=instance_num))
+
+    def is_cluster_dead(self, instance_num: int) -> bool:
+        """Check if the cluster instance is in broken state."""
+        return bool(self._list_flags(ftype=CLUSTER_DEAD, instance_num=instance_num))
+
+    def list_cluster_dead(self, instance_num: int | None = None) -> list[StatusRow]:
+        """List all "cluster dead" records."""
+        return self._list_flags(ftype=CLUSTER_DEAD, instance_num=instance_num)
+
+    # Respin flags
+
+    def list_respin_needed(
+        self, instance_num: int | None = None, worker_id: str = "*"
+    ) -> list[StatusRow]:
+        """List all "needs respin" records."""
+        return self._list_flags(ftype=RESPIN_NEEDED, instance_num=instance_num, worker_id=worker_id)
+
+    def list_respin_progress(
+        self, instance_num: int | None = None, worker_id: str = "*"
+    ) -> list[StatusRow]:
+        """List all "respin in progress" records."""
+        return self._list_flags(
+            ftype=RESPIN_IN_PROGRESS, instance_num=instance_num, worker_id=worker_id
+        )
+
+    # Marked tests
+
+    def list_curr_mark(
+        self, instance_num: int | None = None, worker_id: str = "*", mark: str = "*"
+    ) -> list[StatusRow]:
+        """List all "current mark" records."""
+        return self._list_flags(
+            ftype=CURR_MARK, instance_num=instance_num, worker_id=worker_id, mark=mark
+        )
+
+    # Priority tests
+
+    def list_prio_in_progress(self, worker_id: str = "*") -> list[StatusRow]:
+        """List all "priority test in progress" records."""
+        return self._list_flags(ftype=PRIO_IN_PROGRESS, worker_id=worker_id)
+
+    # Running tests
+
+    def list_test_running(
+        self, instance_num: int | None = None, worker_id: str = "*", mark: str | None = None
+    ) -> list[StatusRow]:
+        """List all "test running" records."""
+        self._maybe_refresh()
+        return [
+            _row_to_status(r)
+            for r in self._test_running
+            if _match_filters(r, instance_num=instance_num, worker_id=worker_id, mark=mark)
+        ]
+
+    def get_marks_in_progress(
+        self, instance_num: int | None = None, worker_id: str = "*"
+    ) -> list[str]:
+        """Return list of marks of currently running tests."""
+        return [
+            r.mark
+            for r in self.list_test_running(
+                instance_num=instance_num, worker_id=worker_id, mark="*"
+            )
+        ]
+
+    # Resources
+
+    def get_resource_names(
+        self,
+        mode: str,
+        instance_num: int | None = None,
+        worker_id: str = "*",
+        mark: str | None = None,
+    ) -> list[str]:
+        """Return names of resources that are locked or in use."""
+        self._maybe_refresh()
+        return [
+            r["name"]
+            for r in self._resources
+            if r["mode"] == mode
+            and _match_filters(r, instance_num=instance_num, worker_id=worker_id, mark=mark)
+        ]

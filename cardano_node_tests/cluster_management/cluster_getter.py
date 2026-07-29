@@ -120,6 +120,18 @@ class ClusterGetter:
         self.strict_dead_fraction = 0.51
 
         self._cluster_instance_num = -1
+        self._snapshot: status_db.StatusSnapshot | None = None
+
+    @property
+    def snap(self) -> status_db.StatusSnapshot:
+        """Return the snapshot of status records.
+
+        The snapshot is valid only while the global cluster lock is held and must be
+        refreshed right after the lock is acquired.
+        """
+        if self._snapshot is None:
+            self._snapshot = status_db.StatusSnapshot()
+        return self._snapshot
 
     @property
     def cluster_instance_num(self) -> int:
@@ -347,11 +359,11 @@ class ClusterGetter:
     def _cluster_needs_respin(self, instance_num: int) -> bool:
         """Check if it is necessary to respin cluster."""
         # If cluster instance is not started yet
-        if not status_db.is_cluster_running(instance_num=instance_num):
+        if not self.snap.is_cluster_running(instance_num=instance_num):
             return True
 
         # If it was indicated that the cluster instance needs to be respun
-        if status_db.list_respin_needed(instance_num=instance_num):
+        if self.snap.list_respin_needed(instance_num=instance_num):
             return True
 
         # If a service failed on cluster instance.
@@ -415,11 +427,11 @@ class ClusterGetter:
         test was running for some time.
         """
         # No need to continue if there are no marked tests
-        if not status_db.list_curr_mark(instance_num=cget_status.instance_num):
+        if not self.snap.list_curr_mark(instance_num=cget_status.instance_num):
             return
 
         # Marked tests don't need to be running yet if the cluster is being respun
-        respin_in_progress = status_db.list_respin_progress(instance_num=cget_status.instance_num)
+        respin_in_progress = self.snap.list_respin_progress(instance_num=cget_status.instance_num)
         if respin_in_progress:
             return
 
@@ -429,7 +441,7 @@ class ClusterGetter:
         )
 
         # Update marked tests status
-        marks_in_progress = status_db.get_marks_in_progress(instance_num=cget_status.instance_num)
+        marks_in_progress = self.snap.get_marks_in_progress(instance_num=cget_status.instance_num)
 
         for m in marks_in_progress:
             marked_tests_status[m] = 0
@@ -447,14 +459,14 @@ class ClusterGetter:
 
     def _resolve_resources_availability(self, cget_status: _ClusterGetStatus) -> bool:
         """Resolve availability of required "use" and "lock" resources."""
-        resources_locked = status_db.get_resource_names(
+        resources_locked = self.snap.get_resource_names(
             mode=status_db.MODE_LOCK, instance_num=cget_status.instance_num
         )
 
         # This test wants to lock some resources, check if these are not in use
         res_lockable = []
         if cget_status.lock_resources:
-            resources_used = status_db.get_resource_names(
+            resources_used = self.snap.get_resource_names(
                 mode=status_db.MODE_USE, instance_num=cget_status.instance_num
             )
             unlockable_resources = {*resources_locked, *resources_used}
@@ -498,7 +510,7 @@ class ClusterGetter:
 
     def _is_already_running(self) -> bool:
         """Check if the test is already setup and running."""
-        tests_on_worker = status_db.list_test_running(worker_id=self.worker_id)
+        tests_on_worker = self.snap.list_test_running(worker_id=self.worker_id)
 
         # Test is already running, nothing to set up
         if tests_on_worker and self._cluster_instance_num != -1:
@@ -518,7 +530,7 @@ class ClusterGetter:
                 or cget_status.selected_instance != -1
                 or cget_status.marked_running_my_anywhere
             )
-            and status_db.list_prio_in_progress()
+            and self.snap.list_prio_in_progress()
         ):
             self.log("'prio' test setup in progress, cannot continue")
             return True
@@ -539,7 +551,7 @@ class ClusterGetter:
         if cget_status.respin_here:
             return False
 
-        respin_in_progress = status_db.list_respin_progress(instance_num=cget_status.instance_num)
+        respin_in_progress = self.snap.list_respin_progress(instance_num=cget_status.instance_num)
         return bool(respin_in_progress)
 
     def _marked_select_instance(self, cget_status: _ClusterGetStatus) -> bool:
@@ -579,7 +591,7 @@ class ClusterGetter:
         if total == 0:
             msg = "Number of cluster instances must be greater than 0."
             raise ValueError(msg)
-        dead_count = len(status_db.list_cluster_dead())
+        dead_count = len(self.snap.list_cluster_dead())
         dead_fraction = dead_count / total
 
         if dead_fraction >= max_dead_fraction:
@@ -897,6 +909,11 @@ class ClusterGetter:
 
             # Nothing time consuming can go under this lock as all other workers will need to wait
             with locking.FileLockIfXdist(self.cluster_lock):
+                # Load status records that were modified by other workers while the lock
+                # was not held. All status reads in this iteration are then answered from
+                # the snapshot - it refreshes itself after writes done by this process.
+                self.snap.refresh()
+
                 if self._is_already_running():
                     return self.cluster_instance_num
 
@@ -906,7 +923,7 @@ class ClusterGetter:
 
                 if mark:
                     # Check if tests with my mark are already locked to any cluster instance
-                    cget_status.marked_running_my_anywhere = status_db.list_curr_mark(mark=mark)
+                    cget_status.marked_running_my_anywhere = self.snap.list_curr_mark(mark=mark)
 
                 # A "prio" test has priority in obtaining cluster instance. Check if it is needed
                 # to wait until earlier "prio" test obtains a cluster instance.
@@ -932,7 +949,7 @@ class ClusterGetter:
                     cget_status.instance_dir.mkdir(exist_ok=True)
 
                     # Cleanup cluster instance where attempt to start cluster failed repeatedly
-                    if status_db.is_cluster_dead(instance_num=instance_num):
+                    if self.snap.is_cluster_dead(instance_num=instance_num):
                         self._cleanup_dead_clusters(cget_status)
                         continue
 
@@ -942,12 +959,12 @@ class ClusterGetter:
                         continue
 
                     # Are there tests already running on this cluster instance?
-                    cget_status.started_tests_rows = status_db.list_test_running(
+                    cget_status.started_tests_rows = self.snap.list_test_running(
                         instance_num=instance_num
                     )
 
                     # "marked tests" = group of tests marked with my mark
-                    cget_status.marked_ready_rows = status_db.list_curr_mark(
+                    cget_status.marked_ready_rows = self.snap.list_curr_mark(
                         instance_num=instance_num, mark=mark
                     )
 
