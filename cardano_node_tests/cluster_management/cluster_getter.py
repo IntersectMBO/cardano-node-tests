@@ -846,7 +846,9 @@ class ClusterGetter:
             msg = "`use_resources` cannot be a string"
             raise TypeError(msg)
 
+        # Materialize the iterables - both are iterated multiple times below
         lock_resources = list(lock_resources)
+        use_resources = list(use_resources)
 
         if configuration.DEV_CLUSTER_RUNNING:
             if scriptsdir:
