@@ -1,7 +1,9 @@
 """Tests for `cluster_management.status_db`."""
 
 import multiprocessing
+import os
 import pathlib as pl
+import time
 import typing as tp
 
 import pytest
@@ -440,15 +442,78 @@ class TestGC:
         assert status_db.list_test_running() == []
 
     def test_pid_reuse_guard(self):
-        """Check that a record older than its writer process is treated as stale.
+        """Check that a record with a mismatched process start time is treated as stale.
 
-        The record has the PID of the current (running) process, but `created_at` long before
-        the process started, so the PID must have been reused and the original writer is gone.
+        The record has the PID of the current (running) process, but a `pid_start` of
+        a different process incarnation, so the PID must have been reused and the
+        original writer is gone.
         """
         status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_reused")
-        status_db._get_conn().execute("UPDATE test_running SET created_at = 1.0")
+        status_db._get_conn().execute("UPDATE test_running SET pid_start = 12345")
 
         removed = status_db.gc_stale_records()
+
+        assert len(removed) == 1
+        assert status_db.list_test_running() == []
+
+    def test_pid_reuse_mixed_incarnations(self):
+        """Check that only records of the dead PID incarnation are removed.
+
+        Records of a live writer must survive garbage collection even when a stale
+        record from a previous process with the same PID exists.
+        """
+        status_db.create_test_running(instance_num=0, worker_id="gw_live", test_id="test_live")
+        status_db.create_resources(
+            instance_num=0, worker_id="gw_live", names=["pool1"], mode=status_db.MODE_LOCK
+        )
+        # Simulate a stale record from a previous incarnation of this PID
+        status_db.create_test_running(instance_num=1, worker_id="gw_dead", test_id="test_dead")
+        status_db._get_conn().execute(
+            "UPDATE test_running SET pid_start = 12345 WHERE worker_id = 'gw_dead'"
+        )
+
+        removed = status_db.gc_stale_records()
+
+        assert len(removed) == 1
+        assert "gw_dead" in removed[0]
+        assert status_db.get_test_names() == ["test_live"]
+        assert status_db.get_resource_names(mode=status_db.MODE_LOCK) == ["pool1"]
+
+    def test_pid_start_unknown_kept(self):
+        """Check that records without the writer's start time are conservatively kept."""
+        status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_a")
+        status_db._get_conn().execute("UPDATE test_running SET pid_start = 0")
+
+        assert status_db.gc_stale_records() == []
+        assert len(status_db.list_test_running()) == 1
+
+    def test_zombie_writer_is_dead(self):
+        """Check that an unreaped (zombie) writer process is treated as dead.
+
+        A crashed xdist worker stays as a zombie until the end of the pytest session,
+        so the garbage collection must not consider it alive.
+        """
+        zombie_pid = os.fork()
+        if zombie_pid == 0:
+            os._exit(0)  # Child exits immediately, parent doesn't reap it yet
+
+        try:
+            # Wait until the child becomes a zombie
+            for _ in range(100):
+                stat = status_db._get_proc_stat(zombie_pid)
+                if stat is not None and stat[0] == "Z":
+                    break
+                time.sleep(0.05)
+            else:
+                err = f"Process {zombie_pid} didn't become a zombie"
+                raise AssertionError(err)
+
+            status_db.create_test_running(instance_num=0, worker_id="gw0", test_id="test_zombie")
+            status_db._get_conn().execute("UPDATE test_running SET pid = ?", (zombie_pid,))
+
+            removed = status_db.gc_stale_records()
+        finally:
+            os.waitpid(zombie_pid, 0)
 
         assert len(removed) == 1
         assert status_db.list_test_running() == []
