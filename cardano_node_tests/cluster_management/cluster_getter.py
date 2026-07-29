@@ -51,6 +51,21 @@ LOGGER = logging.getLogger(__name__)
 # status database, so the interval applies across all workers.
 GC_INTERVAL_SEC = 60
 
+# How long (seconds) no test with a given mark needs to be running before the mark
+# is considered abandoned and its status records are cleaned up.
+# To keep the gaps between marked tests short, the marked tests should also be marked
+# with `@pytest.mark.xdist_group("<same name>")`. The custom xdist scheduler
+# (`pytest_plugins.xdist_scheduler`) then schedules them as one work unit on a single
+# pytest worker, so they run back-to-back and the assigned "marked" cluster instance
+# is reused instead of being cleaned up and prepared again. Note that when the worker
+# dies mid-group, xdist re-queues the remaining tests and they can run on a different
+# worker with arbitrary tests in between.
+MARK_STALENESS_SEC = 60
+
+# Refresh the "current mark" records only when they are older than this (seconds),
+# so pollers don't write to the database on every scheduler iteration.
+MARK_REFRESH_SEC = 15
+
 if configuration.IS_XDIST:
     _xdist_sleep = time.sleep
 else:
@@ -404,30 +419,22 @@ class ClusterGetter:
         # Remove records of resources that are in-use by the marked tests
         status_db.rm_resources(mode=status_db.MODE_USE, instance_num=instance_num, mark=mark)
 
-    def _get_marked_tests_status(
-        self, marked_tests_cache: dict[int, dict[str, int]], instance_num: int
-    ) -> dict[str, int]:
-        """Return marked tests status for cluster instance."""
-        if instance_num not in marked_tests_cache:
-            marked_tests_cache[instance_num] = {}
-        marked_tests_status = marked_tests_cache[instance_num]
-        return marked_tests_status
-
-    def _update_marked_tests(
-        self,
-        marked_tests_cache: dict[int, dict[str, int]],
-        cget_status: _ClusterGetStatus,
-    ) -> None:
+    def _update_marked_tests(self, cget_status: _ClusterGetStatus) -> None:
         """Update status about running of marked test.
 
         When marked test is finished, we can't clear the mark right away. There might be a test
         with the same mark in the queue and it will be scheduled in a short while. We would need
-        to repeat all the expensive setup if we already cleared the mark. Therefore we need to
-        keep track of marked tests and clear the mark and cluster instance only when no marked
-        test was running for some time.
+        to repeat all the expensive setup if we already cleared the mark. Therefore the "current
+        mark" records are timestamped whenever a marked test is seen running or finishes
+        (see `ClusterManager.on_test_stop`), and the mark and cluster instance are cleared
+        only when no marked test was running for some time.
+
+        Must be called before the current state of the mark is read from the snapshot,
+        as the cleanup deletes the mark's status records.
         """
         # No need to continue if there are no marked tests
-        if not self.snap.list_curr_mark(instance_num=cget_status.instance_num):
+        curr_mark_rows = self.snap.list_curr_mark(instance_num=cget_status.instance_num)
+        if not curr_mark_rows:
             return
 
         # Marked tests don't need to be running yet if the cluster is being respun
@@ -435,27 +442,33 @@ class ClusterGetter:
         if respin_in_progress:
             return
 
-        # Get marked tests status
-        marked_tests_status = self._get_marked_tests_status(
-            marked_tests_cache=marked_tests_cache, instance_num=cget_status.instance_num
+        marks_in_progress = set(
+            self.snap.get_marks_in_progress(instance_num=cget_status.instance_num)
         )
 
-        # Update marked tests status
-        marks_in_progress = self.snap.get_marks_in_progress(instance_num=cget_status.instance_num)
+        # A mark can have one record per worker and the records age together - the newest
+        # one tells when a test with the mark was last seen running.
+        newest_by_mark: dict[str, float] = {}
+        for row in curr_mark_rows:
+            newest_by_mark[row.mark] = max(newest_by_mark.get(row.mark, 0.0), row.created_at)
 
-        for m in marks_in_progress:
-            marked_tests_status[m] = 0
+        now_ts = time.time()
+        for mark, newest in newest_by_mark.items():
+            # Record that a marked test is running now. Skip the write when the records
+            # are still fresh, so polling doesn't do a database write (and a snapshot
+            # reload) on every iteration.
+            if mark in marks_in_progress:
+                if now_ts - newest >= MARK_REFRESH_SEC:
+                    status_db.refresh_curr_mark(instance_num=cget_status.instance_num, mark=mark)
+                continue
 
-        for m in marked_tests_status:
-            marked_tests_status[m] += 1
-
-            # Clean the stale status records if we are waiting too long for the next marked test
-            if marked_tests_status[m] >= 20:
+            # Clean the stale status records if no marked test was running for too long
+            if now_ts - newest >= MARK_STALENESS_SEC:
                 self.log(
-                    f"c{cget_status.instance_num}: no marked tests running for a while, "
-                    "cleaning the mark status record"
+                    f"c{cget_status.instance_num}: no '{mark}' marked tests running "
+                    "for a while, cleaning the mark status record"
                 )
-                self._on_marked_test_stop(instance_num=cget_status.instance_num, mark=m)
+                self._on_marked_test_stop(instance_num=cget_status.instance_num, mark=mark)
 
     def _resolve_resources_availability(self, cget_status: _ClusterGetStatus) -> bool:
         """Resolve availability of required "use" and "lock" resources."""
@@ -806,7 +819,13 @@ class ClusterGetter:
         Args:
             mark: A string marking group of tests. Useful when group of tests need the same
                 expensive setup. The `mark` will make sure the marked tests run on the same
-                cluster instance.
+                cluster instance. Mark the tests also with
+                `@pytest.mark.xdist_group("<same name>")` so they are scheduled together
+                on a single pytest worker - the mark is considered abandoned and cleaned up
+                (see `MARK_STALENESS_SEC`) when no marked test is running for too long.
+                Where applicable, prefer subtests (`pytest_subtests`) over `mark` - a single
+                test with multiple subtests shares one setup with less magic. Subtests
+                however don't work with `hypothesis` property based tests.
             lock_resources: An iterable of resources (names of resources) that will be used
                 exclusively by the test (or marked group of tests). A locked resource cannot be used
                 by other tests.
@@ -870,7 +889,6 @@ class ClusterGetter:
             scriptsdir=scriptsdir,
             current_test=os.environ.get("PYTEST_CURRENT_TEST") or "",
         )
-        marked_tests_cache: dict[int, dict[str, int]] = {}
 
         self.log(f"want to run test '{cget_status.current_test}'")
 
@@ -958,6 +976,11 @@ class ClusterGetter:
                         cget_status.sleep_delay = 5
                         continue
 
+                    # If marked tests are already running, update their status.
+                    # Must be done before the mark state is read below, as stale marks
+                    # get cleaned up here.
+                    self._update_marked_tests(cget_status=cget_status)
+
                     # Are there tests already running on this cluster instance?
                     cget_status.started_tests_rows = self.snap.list_test_running(
                         instance_num=instance_num
@@ -966,11 +989,6 @@ class ClusterGetter:
                     # "marked tests" = group of tests marked with my mark
                     cget_status.marked_ready_rows = self.snap.list_curr_mark(
                         instance_num=instance_num, mark=mark
-                    )
-
-                    # If marked tests are already running, update their status
-                    self._update_marked_tests(
-                        marked_tests_cache=marked_tests_cache, cget_status=cget_status
                     )
 
                     # If there would be more tests running on this cluster instance than allowed,

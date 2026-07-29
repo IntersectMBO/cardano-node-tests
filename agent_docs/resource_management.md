@@ -62,6 +62,11 @@ def cluster_lock_pool_and_pots(
     return cluster_obj, locked_pools_names, used_pool_name
 ```
 
+## Sharing Expensive Setup
+
+To share one expensive setup across multiple test scenarios, use pytest-subtests, or the
+cluster manager `mark` when subtests are not applicable. See `subtests.md`.
+
 ## The `OneOf` Filter
 
 `resources_management.OneOf` selects one available resource from a set:

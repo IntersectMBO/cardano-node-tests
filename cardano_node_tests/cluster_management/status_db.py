@@ -143,6 +143,7 @@ class StatusRow:
     mark: str
     test_id: str = ""
     name: str = ""
+    created_at: float = 0.0
 
 
 def get_db_file() -> "os.PathLike[str]":
@@ -249,6 +250,7 @@ def _row_to_status(row: sqlite3.Row) -> StatusRow:
         mark=row["mark"],
         test_id=row["test_id"] if "test_id" in keys else "",
         name=row["name"] if "name" in keys else "",
+        created_at=row["created_at"],
     )
 
 
@@ -418,6 +420,22 @@ def rm_curr_mark(
 ) -> list[StatusRow]:
     """Delete all "current mark" records."""
     return _rm_flags(ftype=CURR_MARK, instance_num=instance_num, worker_id=worker_id, mark=mark)
+
+
+def refresh_curr_mark(instance_num: int, mark: str) -> None:
+    """Update creation time of "current mark" records to the current time.
+
+    Called whenever a test with the given mark is seen running or finishes, so the age
+    of a "current mark" record tells for how long no marked test was running. All the
+    mark's records (one per worker) are refreshed together, as the mark is also cleaned
+    up as a whole.
+    """
+    cur = _get_conn().execute(
+        "UPDATE flags SET created_at = ? WHERE type = ? AND instance_num = ? AND mark = ?",
+        (time.time(), CURR_MARK, instance_num, mark),
+    )
+    if cur.rowcount > 0:
+        _bump_write_generation()
 
 
 # Priority tests
