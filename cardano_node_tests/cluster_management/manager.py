@@ -284,10 +284,18 @@ class ClusterManager:
                 mark="",
             )
 
-            # Remove record that indicates that a test is running on the worker
-            status_db.rm_test_running(
+            # Remove record that indicates that a test is running on the worker.
+            # For a marked test, reset the staleness clock of its mark, so the mark
+            # doesn't expire while the next marked test is being scheduled - the clock
+            # is otherwise advanced only by workers that poll the cluster instance
+            # while a marked test is running.
+            for trow in status_db.rm_test_running(
                 instance_num=self.cluster_instance_num, worker_id=self.worker_id
-            )
+            ):
+                if trow.mark:
+                    status_db.refresh_curr_mark(
+                        instance_num=self.cluster_instance_num, mark=trow.mark
+                    )
 
             # Log names of tests that keep running on the cluster instance
             tnames = status_db.get_test_names(instance_num=self.cluster_instance_num)

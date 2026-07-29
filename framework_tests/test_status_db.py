@@ -144,6 +144,26 @@ class TestFlags:
         status_db.rm_prio_in_progress(worker_id="gw0")
         assert status_db.list_prio_in_progress() == []
 
+    def test_refresh_curr_mark(self):
+        """Check that refreshing "current mark" records updates their creation time.
+
+        All records of the given mark on the given instance are refreshed together,
+        records of other marks and other instances are left alone.
+        """
+        status_db.create_curr_mark(instance_num=0, worker_id="gw0", mark="markA")
+        status_db.create_curr_mark(instance_num=0, worker_id="gw1", mark="markA")
+        status_db.create_curr_mark(instance_num=0, worker_id="gw2", mark="markB")
+        status_db.create_curr_mark(instance_num=1, worker_id="gw3", mark="markA")
+        status_db._get_conn().execute("UPDATE flags SET created_at = 1.0")
+
+        status_db.refresh_curr_mark(instance_num=0, mark="markA")
+
+        refreshed = status_db.list_curr_mark(instance_num=0, mark="markA")
+        assert len(refreshed) == 2
+        assert all(r.created_at > 1.0 for r in refreshed)
+        assert status_db.list_curr_mark(instance_num=0, mark="markB")[0].created_at == 1.0
+        assert status_db.list_curr_mark(instance_num=1, mark="markA")[0].created_at == 1.0
+
     def test_respin_after_mark(self):
         """Check "respin after mark" records."""
         status_db.create_respin_after_mark(instance_num=0, worker_id="gw0", mark="markA")
