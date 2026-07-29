@@ -404,20 +404,12 @@ class ClusterGetter:
         """Perform actions after all marked tests are finished."""
         self.log(f"c{instance_num}: in `_on_marked_test_stop`")
 
-        # Set cluster instance to be respun if needed
-        respin_after_mark = status_db.rm_respin_after_mark(instance_num=instance_num, mark=mark)
+        respin_after_mark = self._rm_marks(instance_num=instance_num, mark=mark)
+
+        # Set cluster instance to be respun if it was requested by the marked tests
         if respin_after_mark:
             self.log(f"c{instance_num}: in `_on_marked_test_stop`, creating 'respin needed' record")
             status_db.create_respin_needed(instance_num=instance_num, worker_id=self.worker_id)
-
-        # Remove records that indicate that the mark is ready
-        status_db.rm_curr_mark(instance_num=instance_num, mark=mark)
-
-        # Remove records of resources that are locked by the marked tests
-        status_db.rm_resources(mode=status_db.MODE_LOCK, instance_num=instance_num, mark=mark)
-
-        # Remove records of resources that are in-use by the marked tests
-        status_db.rm_resources(mode=status_db.MODE_USE, instance_num=instance_num, mark=mark)
 
     def _update_marked_tests(self, cget_status: _ClusterGetStatus) -> None:
         """Update status about running of marked test.
@@ -577,14 +569,22 @@ class ClusterGetter:
             )
             return True
 
-        if cget_status.marked_running_my_anywhere:
+        if cget_status.marked_running_my_anywhere and not cget_status.respin_here:
             self.log(
                 f"c{cget_status.instance_num}: tests marked with my mark '{cget_status.mark}' "
                 "already running on other cluster instance, cannot start"
             )
             return False
 
-        # If here, this will be the first test with the mark
+        # If here, this will be the first test with the mark.
+        # A worker that is respinning this instance proceeds as the first test even when
+        # the mark is seen on another instance: its own mark records were removed when the
+        # respin was initiated, and another worker of the group (e.g. after the original
+        # worker died and xdist re-queued the remaining tests) could have claimed the mark
+        # elsewhere in the meantime. Waiting for the other instance would stall this worker
+        # forever - it is pinned to this instance by the respin. The mark then exists on
+        # two instances, which the framework already tolerates; it just means the expensive
+        # setup is done twice.
         return True
 
     def _gc_stale_records(self) -> None:
@@ -634,6 +634,39 @@ class ClusterGetter:
 
         self._check_dead_fraction(max_dead_fraction)
 
+    def _rm_marks(self, instance_num: int, mark: str = "*") -> list[status_db.StatusRow]:
+        """Remove status records of marks on the cluster instance.
+
+        By default, records of all marks on the instance are removed. Pass `mark` to
+        remove records of a single mark.
+
+        The marked resource records must be removed together with the "current mark"
+        records: with the "current mark" records gone, the mark staleness handling
+        cannot see the marks anymore, so any marked resource records left behind would
+        stay locked or in-use for the rest of the testrun.
+
+        The "respin after mark" records are removed without converting them to "needs
+        respin". The removed records are returned, so `_on_marked_test_stop` can do the
+        conversion itself; the other callers respin the cluster instance (or the
+        instance is dead), so the promised respin is either scheduled or moot. Note that
+        when the respinning test belongs to the marked group, the promise is re-created
+        only when the test itself requests cleanup - which holds as long as all tests of
+        a group pass the same arguments, as they are supposed to.
+
+        Returns:
+            The removed "respin after mark" records.
+        """
+        if not mark:
+            msg = "`mark` must be '*' or a non-empty mark."
+            raise ValueError(msg)
+
+        status_db.rm_curr_mark(instance_num=instance_num, mark=mark)
+        respin_after_mark = status_db.rm_respin_after_mark(instance_num=instance_num, mark=mark)
+        status_db.rm_resources(mode=status_db.MODE_LOCK, instance_num=instance_num, mark=mark)
+        status_db.rm_resources(mode=status_db.MODE_USE, instance_num=instance_num, mark=mark)
+
+        return respin_after_mark
+
     def _cleanup_dead_clusters(self, cget_status: _ClusterGetStatus) -> None:
         """Cleanup if the selected cluster instance failed to start."""
         # Move on to other cluster instance
@@ -642,7 +675,7 @@ class ClusterGetter:
         cget_status.respin_ready = False
 
         # Remove status records that are checked by other workers
-        status_db.rm_curr_mark(instance_num=cget_status.instance_num)
+        self._rm_marks(instance_num=cget_status.instance_num)
 
     def _init_respin(self, cget_status: _ClusterGetStatus) -> bool:
         """Initialize respin of this cluster instance on this worker."""
@@ -671,8 +704,24 @@ class ClusterGetter:
             instance_num=cget_status.instance_num, worker_id=self.worker_id
         )
 
-        # Remove mark status records as these will not be valid after respin
-        status_db.rm_curr_mark(instance_num=cget_status.instance_num)
+        # Remove mark status records and marked resource records as these will not be
+        # valid after respin
+        self._rm_marks(instance_num=cget_status.instance_num)
+
+        if cget_status.marked_ready_rows:
+            # This test's own mark was just removed and the group's resource records went
+            # with it. Return back to the retry loop, so that this cluster instance is
+            # re-evaluated and this test resolves its resources again, as the initial
+            # test of the mark.
+            # Record that the instance needs the respin: the re-evaluation happens on a
+            # later iteration, after the global lock was released, and it can be delayed
+            # e.g. by a resource conflict. The durable record keeps the respin scheduled
+            # even when this worker doesn't get to it right away.
+            status_db.create_respin_needed(
+                instance_num=cget_status.instance_num, worker_id=self.worker_id
+            )
+            cget_status.marked_ready_rows = ()
+            return False
 
         return True
 
