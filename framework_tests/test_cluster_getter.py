@@ -126,8 +126,9 @@ def test_rm_marks_rejects_empty_mark():
 def test_on_marked_test_stop():
     """Check that finished marked group converts its "respin after mark" record.
 
-    The "respin after mark" record must be converted to "needs respin" before the
-    mark's status records are removed, so the promised post-group respin happens.
+    The "respin after mark" record is removed by `_rm_marks` and converted to
+    "needs respin" from its return value, so the promised post-group respin happens
+    even though the mark's status records are already gone.
     """
     getter = _get_cluster_getter()
     _populate_marked(instance_num=0, mark="markA")

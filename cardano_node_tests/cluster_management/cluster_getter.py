@@ -404,14 +404,12 @@ class ClusterGetter:
         """Perform actions after all marked tests are finished."""
         self.log(f"c{instance_num}: in `_on_marked_test_stop`")
 
-        # Set cluster instance to be respun if needed
-        respin_after_mark = status_db.rm_respin_after_mark(instance_num=instance_num, mark=mark)
+        respin_after_mark = self._rm_marks(instance_num=instance_num, mark=mark)
+
+        # Set cluster instance to be respun if it was requested by the marked tests
         if respin_after_mark:
             self.log(f"c{instance_num}: in `_on_marked_test_stop`, creating 'respin needed' record")
             status_db.create_respin_needed(instance_num=instance_num, worker_id=self.worker_id)
-
-        # Remove the rest of the mark's status records
-        self._rm_marks(instance_num=instance_num, mark=mark)
 
     def _update_marked_tests(self, cget_status: _ClusterGetStatus) -> None:
         """Update status about running of marked test.
@@ -636,7 +634,7 @@ class ClusterGetter:
 
         self._check_dead_fraction(max_dead_fraction)
 
-    def _rm_marks(self, instance_num: int, mark: str = "*") -> None:
+    def _rm_marks(self, instance_num: int, mark: str = "*") -> list[status_db.StatusRow]:
         """Remove status records of marks on the cluster instance.
 
         By default, records of all marks on the instance are removed. Pass `mark` to
@@ -648,21 +646,26 @@ class ClusterGetter:
         stay locked or in-use for the rest of the testrun.
 
         The "respin after mark" records are removed without converting them to "needs
-        respin". The `_on_marked_test_stop` caller does the conversion itself beforehand;
-        the other callers respin the cluster instance (or the instance is dead), so the
-        promised respin is either scheduled or moot. Note that when the respinning test
-        belongs to the marked group, the promise is re-created only when the test itself
-        requests cleanup - which holds as long as all tests of a group pass the same
-        arguments, as they are supposed to.
+        respin". The removed records are returned, so `_on_marked_test_stop` can do the
+        conversion itself; the other callers respin the cluster instance (or the
+        instance is dead), so the promised respin is either scheduled or moot. Note that
+        when the respinning test belongs to the marked group, the promise is re-created
+        only when the test itself requests cleanup - which holds as long as all tests of
+        a group pass the same arguments, as they are supposed to.
+
+        Returns:
+            The removed "respin after mark" records.
         """
         if not mark:
             msg = "`mark` must be '*' or a non-empty mark."
             raise ValueError(msg)
 
         status_db.rm_curr_mark(instance_num=instance_num, mark=mark)
-        status_db.rm_respin_after_mark(instance_num=instance_num, mark=mark)
+        respin_after_mark = status_db.rm_respin_after_mark(instance_num=instance_num, mark=mark)
         status_db.rm_resources(mode=status_db.MODE_LOCK, instance_num=instance_num, mark=mark)
         status_db.rm_resources(mode=status_db.MODE_USE, instance_num=instance_num, mark=mark)
+
+        return respin_after_mark
 
     def _cleanup_dead_clusters(self, cget_status: _ClusterGetStatus) -> None:
         """Cleanup if the selected cluster instance failed to start."""
