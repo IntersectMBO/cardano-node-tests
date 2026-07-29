@@ -31,7 +31,6 @@ the same way.
 
 import contextlib
 import dataclasses
-import functools
 import os
 import sqlite3
 import time
@@ -59,13 +58,14 @@ MODE_USE = "use"
 # Value of `instance_num` for records that are not tied to any cluster instance
 NO_INSTANCE = -1
 
-_SCHEMA = """
+_SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS flags (
     type          TEXT    NOT NULL,
     instance_num  INTEGER NOT NULL DEFAULT -1,
     worker_id     TEXT    NOT NULL DEFAULT '',
     mark          TEXT    NOT NULL DEFAULT '',
     pid           INTEGER NOT NULL DEFAULT 0,
+    pid_start     INTEGER NOT NULL DEFAULT 0,
     created_at    REAL    NOT NULL DEFAULT 0,
     PRIMARY KEY (type, instance_num, worker_id, mark)
 ) WITHOUT ROWID;
@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS test_running (
     test_id       TEXT    NOT NULL,
     mark          TEXT    NOT NULL DEFAULT '',
     pid           INTEGER NOT NULL DEFAULT 0,
+    pid_start     INTEGER NOT NULL DEFAULT 0,
     created_at    REAL    NOT NULL DEFAULT 0,
     PRIMARY KEY (instance_num, worker_id)
 ) WITHOUT ROWID;
@@ -87,6 +88,7 @@ CREATE TABLE IF NOT EXISTS resources (
     mode          TEXT    NOT NULL CHECK (mode IN ('lock', 'use')),
     mark          TEXT    NOT NULL DEFAULT '',
     pid           INTEGER NOT NULL DEFAULT 0,
+    pid_start     INTEGER NOT NULL DEFAULT 0,
     created_at    REAL    NOT NULL DEFAULT 0,
     PRIMARY KEY (instance_num, mode, name, worker_id)
 ) WITHOUT ROWID;
@@ -119,7 +121,7 @@ SELECT
     mark,
     CAST(strftime('%s', 'now') - created_at AS INTEGER)
 FROM flags
-WHERE type != 'gc_last_run';
+WHERE type != '{GC_LAST_RUN}';
 """
 
 _conn: sqlite3.Connection | None = None
@@ -260,13 +262,45 @@ def _bump_write_generation() -> None:
     _write_generation += 1
 
 
+def _get_proc_stat(pid: int) -> tuple[str, int] | None:
+    """Return process state and start time from `/proc`.
+
+    The start time is in clock ticks since boot - together with the PID it uniquely
+    identifies a process incarnation on a running system.
+
+    Returns `None` when the process stat cannot be read (e.g. the process is gone,
+    or the platform has no `/proc`).
+    """
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as fp:
+            stat = fp.read()
+        # The second field (process name) can contain spaces and parentheses, fields are
+        # therefore parsed from the last closing parenthesis. The process state is the
+        # 3rd field and the process start time in clock ticks since boot is the 22nd field.
+        fields = stat[stat.rindex(")") + 2 :].split()
+        return fields[0], int(fields[19])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _get_own_pid_start() -> int:
+    """Return start time (in clock ticks since boot) of the current process.
+
+    Returns 0 when the start time cannot be determined - records with `pid_start` of 0
+    are exempt from the process identity check during garbage collection.
+    """
+    stat = _get_proc_stat(os.getpid())
+    return stat[1] if stat is not None else 0
+
+
 def _create_flag(ftype: str, instance_num: int, worker_id: str, mark: str = "") -> None:
     """Create (or refresh) a flag record."""
     _bump_write_generation()
     _get_conn().execute(
-        "INSERT OR REPLACE INTO flags (type, instance_num, worker_id, mark, pid, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (ftype, instance_num, worker_id, mark, os.getpid(), time.time()),
+        "INSERT OR REPLACE INTO flags "
+        "(type, instance_num, worker_id, mark, pid, pid_start, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (ftype, instance_num, worker_id, mark, os.getpid(), _get_own_pid_start(), time.time()),
     )
 
 
@@ -464,8 +498,9 @@ def create_test_running(instance_num: int, worker_id: str, test_id: str, mark: s
     _bump_write_generation()
     _get_conn().execute(
         "INSERT OR REPLACE INTO test_running "
-        "(instance_num, worker_id, test_id, mark, pid, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (instance_num, worker_id, test_id, mark, os.getpid(), time.time()),
+        "(instance_num, worker_id, test_id, mark, pid, pid_start, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (instance_num, worker_id, test_id, mark, os.getpid(), _get_own_pid_start(), time.time()),
     )
 
 
@@ -526,14 +561,15 @@ def create_resources(
     _bump_write_generation()
     conn = _get_conn()
     pid = os.getpid()
+    pid_start = _get_own_pid_start()
     created_at = time.time()
     with _transaction(conn):
         for name in names:
             conn.execute(
                 "INSERT OR REPLACE INTO resources "
-                "(instance_num, worker_id, name, mode, mark, pid, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (instance_num, worker_id, name, mode, mark, pid, created_at),
+                "(instance_num, worker_id, name, mode, mark, pid, pid_start, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (instance_num, worker_id, name, mode, mark, pid, pid_start, created_at),
             )
 
 
@@ -578,38 +614,16 @@ def get_resource_names(
 # Garbage collection of records left by crashed pytest workers
 
 
-@functools.cache
-def _get_boot_time() -> float:
-    """Return system boot time as Unix timestamp."""
-    with open("/proc/stat", encoding="utf-8") as fp:
-        for line in fp:
-            if line.startswith("btime "):
-                return float(line.split()[1])
-    err = "Boot time not found in '/proc/stat'."
-    raise ValueError(err)
-
-
-def _get_proc_start_time(pid: int) -> float | None:
-    """Return process start time as Unix timestamp, or `None` when it cannot be determined."""
-    try:
-        with open(f"/proc/{pid}/stat", encoding="utf-8") as fp:
-            stat = fp.read()
-        # The second field (process name) can contain spaces and parentheses, fields are
-        # therefore parsed from the last closing parenthesis. The process start time in clock
-        # ticks since boot is the 22nd field.
-        fields = stat[stat.rindex(")") + 2 :].split()
-        start_ticks = int(fields[19])
-        return _get_boot_time() + start_ticks / os.sysconf("SC_CLK_TCK")
-    except (OSError, ValueError, IndexError):
-        return None
-
-
-def _is_writer_alive(pid: int, first_created_at: float) -> bool:
+def _is_writer_alive(pid: int, pid_start: int) -> bool:
     """Check if the process that created status records is still running.
 
-    Guards against PID reuse: a process that started after the oldest record of the given
-    PID was created cannot be the process that created the record. When the process start
-    time cannot be determined, the writer is conservatively considered alive - stale records
+    The writer is dead when its process no longer exists, when it is a zombie (a crashed
+    xdist worker stays unreaped until the end of the pytest session), or when the PID was
+    reused by a different process - the process start time (in clock ticks since boot)
+    doesn't match the one recorded when the records were created.
+
+    When the process state cannot be inspected, or when the records don't carry the
+    writer's start time, the writer is conservatively considered alive - stale records
     are less harmful than records deleted while their writer is still running.
     """
     try:
@@ -619,12 +633,16 @@ def _is_writer_alive(pid: int, first_created_at: float) -> bool:
     except PermissionError:
         return True
 
-    start_time = _get_proc_start_time(pid)
-    if start_time is None:
+    stat = _get_proc_stat(pid)
+    if stat is None:
+        # The process disappeared between the checks, or `/proc` is not available
         return True
 
-    # Tolerate one second of clock granularity between the two timestamp sources
-    return start_time <= first_created_at + 1
+    state, start_ticks = stat
+    if state == "Z":
+        return False
+
+    return not (pid_start and start_ticks != pid_start)
 
 
 def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
@@ -663,73 +681,83 @@ def gc_stale_records(min_interval_sec: float = 0.0) -> list[str]:
             return []
     _create_flag(ftype=GC_LAST_RUN, instance_num=NO_INSTANCE, worker_id="")
 
-    pid_rows = conn.execute(
-        "SELECT pid, MIN(created_at) AS first_created FROM ("
-        " SELECT pid, created_at FROM test_running"
-        " UNION ALL SELECT pid, created_at FROM resources WHERE mark = ''"
-        " UNION ALL SELECT pid, created_at FROM flags WHERE type IN (?, ?)"
-        ") WHERE pid > 0 GROUP BY pid",
+    # A writer is identified by the (pid, pid_start) pair. Rows sharing a PID can come
+    # from different process incarnations (PID reuse), so staleness is decided per
+    # identity, never for a bare PID.
+    writer_rows = conn.execute(
+        "SELECT DISTINCT pid, pid_start FROM ("
+        " SELECT pid, pid_start FROM test_running"
+        " UNION ALL SELECT pid, pid_start FROM resources WHERE mark = ''"
+        " UNION ALL SELECT pid, pid_start FROM flags WHERE type IN (?, ?)"
+        ") WHERE pid > 0",
         (PRIO_IN_PROGRESS, RESPIN_IN_PROGRESS),
     ).fetchall()
 
-    dead_pids = [r["pid"] for r in pid_rows if not _is_writer_alive(r["pid"], r["first_created"])]
-    if not dead_pids:
+    dead_writers = [
+        (r["pid"], r["pid_start"])
+        for r in writer_rows
+        if not _is_writer_alive(pid=r["pid"], pid_start=r["pid_start"])
+    ]
+    if not dead_writers:
         return []
 
     removed: list[str] = []
-    placeholders = ",".join("?" * len(dead_pids))
     _bump_write_generation()
     with _transaction(conn):
-        removed.extend(
-            f"'test running' of dead worker {r['worker_id']} (pid {r['pid']}) "
-            f"on c{r['instance_num']}: {r['test_id']}"
-            for r in conn.execute(
-                f"DELETE FROM test_running WHERE pid IN ({placeholders}) RETURNING *",
-                dead_pids,
-            ).fetchall()
-        )
-
-        removed.extend(
-            f"resource '{r['name']}' ({r['mode']}) of dead worker {r['worker_id']} "
-            f"(pid {r['pid']}) on c{r['instance_num']}"
-            for r in conn.execute(
-                f"DELETE FROM resources WHERE mark = '' AND pid IN ({placeholders}) RETURNING *",
-                dead_pids,
-            ).fetchall()
-        )
-
-        removed.extend(
-            f"'prio in progress' of dead worker {r['worker_id']} (pid {r['pid']})"
-            for r in conn.execute(
-                f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders}) RETURNING *",
-                [PRIO_IN_PROGRESS, *dead_pids],
-            ).fetchall()
-        )
-
-        # A worker that died in the middle of a respin left the cluster instance in an
-        # unknown state. Replace its "respin in progress" flag with "needs respin" so
-        # another worker respins the instance.
-        respin_rows = conn.execute(
-            f"DELETE FROM flags WHERE type = ? AND pid IN ({placeholders}) RETURNING *",
-            [RESPIN_IN_PROGRESS, *dead_pids],
-        ).fetchall()
-        for r in respin_rows:
-            conn.execute(
-                "INSERT OR REPLACE INTO flags (type, instance_num, worker_id, mark, pid, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    RESPIN_NEEDED,
-                    r["instance_num"],
-                    r["worker_id"],
-                    "",
-                    os.getpid(),
-                    time.time(),
-                ),
+        for pid, pid_start in dead_writers:
+            removed.extend(
+                f"'test running' of dead worker {r['worker_id']} (pid {r['pid']}) "
+                f"on c{r['instance_num']}: {r['test_id']}"
+                for r in conn.execute(
+                    "DELETE FROM test_running WHERE pid = ? AND pid_start = ? RETURNING *",
+                    (pid, pid_start),
+                ).fetchall()
             )
-            removed.append(
-                f"'respin in progress' of dead worker {r['worker_id']} (pid {r['pid']}) "
-                f"on c{r['instance_num']}, created 'needs respin'"
+
+            removed.extend(
+                f"resource '{r['name']}' ({r['mode']}) of dead worker {r['worker_id']} "
+                f"(pid {r['pid']}) on c{r['instance_num']}"
+                for r in conn.execute(
+                    "DELETE FROM resources WHERE mark = '' AND pid = ? AND pid_start = ? "
+                    "RETURNING *",
+                    (pid, pid_start),
+                ).fetchall()
             )
+
+            removed.extend(
+                f"'prio in progress' of dead worker {r['worker_id']} (pid {r['pid']})"
+                for r in conn.execute(
+                    "DELETE FROM flags WHERE type = ? AND pid = ? AND pid_start = ? RETURNING *",
+                    (PRIO_IN_PROGRESS, pid, pid_start),
+                ).fetchall()
+            )
+
+            # A worker that died in the middle of a respin left the cluster instance in an
+            # unknown state. Replace its "respin in progress" flag with "needs respin" so
+            # another worker respins the instance.
+            respin_rows = conn.execute(
+                "DELETE FROM flags WHERE type = ? AND pid = ? AND pid_start = ? RETURNING *",
+                (RESPIN_IN_PROGRESS, pid, pid_start),
+            ).fetchall()
+            for r in respin_rows:
+                conn.execute(
+                    "INSERT OR REPLACE INTO flags "
+                    "(type, instance_num, worker_id, mark, pid, pid_start, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        RESPIN_NEEDED,
+                        r["instance_num"],
+                        r["worker_id"],
+                        "",
+                        os.getpid(),
+                        _get_own_pid_start(),
+                        time.time(),
+                    ),
+                )
+                removed.append(
+                    f"'respin in progress' of dead worker {r['worker_id']} (pid {r['pid']}) "
+                    f"on c{r['instance_num']}, created 'needs respin'"
+                )
 
     return removed
 
