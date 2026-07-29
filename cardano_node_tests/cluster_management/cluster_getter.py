@@ -834,12 +834,16 @@ class ClusterGetter:
         self,
         lock_resources: resources_management.ResourcesType,
         use_resources: resources_management.ResourcesType,
-    ) -> resources_management.ResourcesType:
+    ) -> list[str | resources_management.BaseFilter]:
         """Add `resources.Resources.CLUSTER` to `use_resources`.
 
         Filter out `lock_resources` from the list of `use_resources`.
         """
         lock_named = {r for r in lock_resources if isinstance(r, str)}
+
+        # Materialize the iterable - a one-shot iterator would be exhausted after the
+        # first of the two passes below
+        use_resources = list(use_resources)
 
         use_named = {r for r in use_resources if isinstance(r, str)}
         use_w_filter = [r for r in use_resources if not isinstance(r, str)]
@@ -895,9 +899,10 @@ class ClusterGetter:
             msg = "`use_resources` cannot be a string"
             raise TypeError(msg)
 
-        # Materialize the iterables - both are iterated multiple times below
+        # Materialize the iterable - it is iterated multiple times below.
+        # `use_resources` is materialized by `_init_use_resources`, where its double
+        # iteration lives.
         lock_resources = list(lock_resources)
-        use_resources = list(use_resources)
 
         if configuration.DEV_CLUSTER_RUNNING:
             if scriptsdir:
@@ -927,8 +932,8 @@ class ClusterGetter:
             # Always clean after test(s) that started cluster with custom configuration
             cleanup = True
 
-        use_resources = list(
-            self._init_use_resources(lock_resources=lock_resources, use_resources=use_resources)
+        use_resources = self._init_use_resources(
+            lock_resources=lock_resources, use_resources=use_resources
         )
 
         cget_status = _ClusterGetStatus(
