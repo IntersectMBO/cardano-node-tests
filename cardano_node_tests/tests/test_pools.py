@@ -1900,6 +1900,12 @@ class TestStakePool:
 # It takes long time to setup the cluster instance (when starting from Byron).
 # We mark the tests as "long" and set the highest priority, so the setup is done at the
 # beginning of the testrun, instead of needing to respin a cluster that is already running.
+# Note that the `order` and `long` markers apply only for testnet variants that start
+# from Byron; the cluster manager priority (`prio=True`) applies always.
+# The `xdist_group` matches the `mark` passed to `cluster_manager.get()` - the tests are
+# scheduled together on a single pytest worker, so they run back-to-back and reuse the
+# assigned "marked" cluster instance regardless of the testnet variant.
+@pytest.mark.xdist_group("minPoolCost")
 @common.ORDER5_BYRON
 @common.LONG_BYRON
 class TestPoolCost:
