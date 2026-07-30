@@ -188,7 +188,8 @@ def _get_ignore_rules(
                 for line in infile:
                     if ";;" not in line:
                         continue
-                    files_glob, skip_after_str, regex = line.split(";;")
+                    # Split on the first two separators only, so the regex itself may contain ";;"
+                    files_glob, skip_after_str, regex = line.split(";;", maxsplit=2)
                     skip_after = float(skip_after_str)
                     # Skip the rule if it is expired. The `timestamp` is the time of the last log
                     # search, so the expire time is compared to the time of the last log check.
