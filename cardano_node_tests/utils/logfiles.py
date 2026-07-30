@@ -21,7 +21,7 @@ from cardano_node_tests.utils import temptools
 LOGGER = logging.getLogger(__name__)
 
 BUFFER_SIZE = 512 * 1024  # 512 KB buffer
-ROTATED_RE = re.compile(r".+\.[0-9]+")  # Detect rotated log file
+ROTATED_RE = re.compile(r".+\.[0-9]+$")  # Detect rotated log file
 # NOTE: The regex needs to be unanchored.
 ERRORS_RE = re.compile("error|fail", re.IGNORECASE)
 ERRORS_IGNORE_FILE_NAME = ".errors_to_ignore"
@@ -538,7 +538,7 @@ def check_msgs_presence_in_logs(  # noqa: C901
         timestamp: Passed to `_get_rotated_logs`.
 
     Returns:
-        Error messages for missing entries.
+        Error messages for missing entries and for globs that matched no log file.
     """
 
     def _search(start_seek: int, logfile: str, regex_b: re.Pattern[bytes]) -> bool:
@@ -575,15 +575,20 @@ def check_msgs_presence_in_logs(  # noqa: C901
         # Compile to BYTES regex for speed; note: \w/\b are ASCII-only in bytes mode.
         regex_b = _compile_bytes_from_str(pat=regex)
 
-        # Get list of candidate files by globbing keys of seek_offsets
+        # Get list of candidate files by globbing keys of seek_offsets. Skip rotated file
+        # names here; `_get_rotated_logs` will include them appropriately.
         pattern = f"{state_dir}/{files_glob}"
-        matching_files = fnmatch.filter(seek_offsets, pattern)
+        matching_files = [
+            f
+            for f in fnmatch.filter(seek_offsets, pattern)
+            if not ROTATED_RE.match(pl.Path(f).name)
+        ]
+
+        if not matching_files:
+            errors.append(f"No files matched glob '{files_glob}' in '{state_dir}'.")
+            continue
 
         for logfile in matching_files:
-            # Skip rotated file names here; `_get_rotated_logs` will include them appropriately.
-            if ROTATED_RE.match(logfile):
-                continue
-
             start_seek = seek_offsets.get(logfile) or 0
             line_found = _retry_search(
                 functools.partial(_search, start_seek=start_seek, logfile=logfile, regex_b=regex_b)

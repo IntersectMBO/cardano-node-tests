@@ -1,5 +1,6 @@
-"""Tests for `utils.logfiles` ignore rules handling."""
+"""Tests for `utils.logfiles` ignore rules handling and expected messages checks."""
 
+import os
 import pathlib as pl
 import re
 
@@ -160,3 +161,169 @@ def test_empty_regex_matches_everything(cluster_env: cluster_nodes.ClusterEnv):
         ignore_rules=rules, regexes=["foo"], logfile=pl.Path("/tmp/node1.stdout")
     )
     assert re.search(regex, "arbitrary line")
+
+
+def _write_log(state_dir: pl.Path, name: str, content: str) -> pl.Path:
+    """Create a log file with the given content and return its path."""
+    logfile = state_dir / name
+    logfile.write_text(content, encoding="utf-8")
+    return logfile
+
+
+def test_check_msgs_present(tmp_path: pl.Path):
+    """Check that no errors are reported when the expected message is in the log."""
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="foo\nexpected msg\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): 0},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert errors == []
+
+
+def test_check_msgs_missing(tmp_path: pl.Path):
+    """Check that a missing expected message is reported."""
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="foo\nbar\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): 0},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert len(errors) == 1
+    assert "No line matching" in errors[0]
+
+
+def test_check_msgs_no_files_matched(tmp_path: pl.Path):
+    """Check that a glob matching no log file is reported instead of silently passing."""
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="foo\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stderr", "expected msg")],
+        seek_offsets={str(logfile): 0},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert errors == [f"No files matched glob '*.stderr' in '{tmp_path}'."]
+
+
+def test_check_msgs_dotted_dir_in_path(tmp_path: pl.Path):
+    """Check that log files are not skipped as rotated because of dots in parent dirs.
+
+    Only the file *name* decides whether a file is a rotated log. A parent directory
+    like "build.123" must not cause the file to be treated as rotated and skipped,
+    which would silently pass the check.
+    """
+    state_dir = tmp_path / "build.123"
+    state_dir.mkdir()
+    logfile = _write_log(state_dir=state_dir, name="node1.stdout", content="foo\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): 0},
+        state_dir=state_dir,
+        timestamp=0.0,
+    )
+    assert len(errors) == 1
+    assert "No line matching" in errors[0]
+
+
+def test_check_msgs_rotated_file_skipped(tmp_path: pl.Path):
+    """Check that rotated log files in the offsets mapping are not searched directly.
+
+    Rotated files are searched via `_get_rotated_logs` of the live log file, so a
+    rotated file name in the offsets mapping is skipped and doesn't produce an error
+    on its own.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="expected msg\n")
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="foo\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout*", "expected msg")],
+        seek_offsets={str(logfile): 0, str(rotated): 0},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert errors == []
+
+
+def test_check_msgs_only_rotated_matched(tmp_path: pl.Path):
+    """Check that a glob matching only rotated log files is reported.
+
+    Rotated files are filtered out before the "no files matched" check, so a glob
+    whose only matches are rotated file names is reported as matching no files.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="expected msg\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout*", "expected msg")],
+        seek_offsets={str(rotated): 0},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert len(errors) == 1
+    assert "No files matched glob" in errors[0]
+
+
+def test_check_msgs_dotted_file_name(tmp_path: pl.Path):
+    """Check that a live log file with dots and digits in its name is not skipped.
+
+    A name like "node-1.2.stdout" must not be treated as a rotated log file - only
+    names *ending* with a dot and digits are rotated logs.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node-1.2.stdout", content="expected msg\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): 0},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert errors == []
+
+
+def test_check_msgs_found_in_rotated(tmp_path: pl.Path):
+    """Check that the expected message is found in a rotated version of the log file.
+
+    The search of a live log file traverses its rotated versions, so a message that
+    was rotated away is still found.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="expected msg\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="foo\n")
+    # Make the rotated file older than the live file
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): 0},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert errors == []
+
+
+@pytest.mark.parametrize("msg_before_offset", (True, False), ids=("before_offset", "after_offset"))
+def test_check_msgs_seek_offset(tmp_path: pl.Path, msg_before_offset: bool):
+    """Check that the search starts at the recorded seek offset.
+
+    A message before the offset is not found, a message after the offset is found.
+    """
+    first_line = "expected msg\n" if msg_before_offset else "foo\n"
+    second_line = "bar\n" if msg_before_offset else "expected msg\n"
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content=first_line + second_line)
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): len(first_line)},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    if msg_before_offset:
+        assert len(errors) == 1
+        assert "No line matching" in errors[0]
+    else:
+        assert errors == []
