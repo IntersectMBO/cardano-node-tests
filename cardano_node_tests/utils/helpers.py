@@ -179,6 +179,8 @@ def get_current_commit() -> str:
     """Return the current git commit hash.
 
     Uses the `GIT_REVISION` env variable when set to a non-empty value, otherwise asks git.
+    Git is run in the repo containing this module, independent of CWD. The result is
+    cached for the lifetime of the process.
     """
     return (
         os.environ.get("GIT_REVISION")
@@ -232,7 +234,11 @@ def get_line_str_from_frame(frame: tt.FrameType) -> str:
 
 
 def _get_calling_frame() -> tt.FrameType:
-    """Return the frame of the caller of the function that invoked this helper."""
+    """Return the frame of the caller of the function that invoked this helper.
+
+    Raises:
+        ValueError: When the calling frame is not available.
+    """
     frame = inspect.currentframe()
     calling_frame = frame.f_back.f_back if frame and frame.f_back else None
 
@@ -246,7 +252,8 @@ def _get_calling_frame() -> tt.FrameType:
 def get_current_line_str() -> str:
     """Get `filename#L<lineno>` of current line.
 
-    NOTE: this will not work correctly if called from context manager.
+    NOTE: Reports the location of the immediate caller. Calling through any wrapper
+    (decorator, context manager, `functools.partial`) reports the wrapper's location instead.
     """
     return get_line_str_from_frame(frame=_get_calling_frame())
 
