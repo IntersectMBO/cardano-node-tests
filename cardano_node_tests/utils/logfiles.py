@@ -145,22 +145,33 @@ def _get_rotated_logs(
 
     When `inode` of the log file the `seek` offset was recorded for is known, the seek offset
     is applied to the file with the matching inode. If no listed file matches the inode, the
-    seek offset is discarded, as it belongs to a file that was already fully searched (and so
-    it was filtered out by `timestamp`) or that no longer exists.
+    seek offset is discarded, as it belongs to a file that no longer exists.
 
     When the `inode` is not known, the seek offset is applied to the file with modification
     time furthest in the past.
+
+    The live log file and the file the seek offset was recorded for are always included,
+    even when their modification time is not newer than `timestamp`. Their already searched
+    content is excluded by the seek offset, so this cannot report anything twice, and it
+    protects against filesystems with coarse timestamps, where a line appended shortly
+    after the search start can get a modification time that is not newer than the recorded
+    search start time.
     """
     # Get logfile including rotated versions
     logfiles = list(logfile.parent.glob(f"{logfile.name}*"))
 
     # Get list of logfiles modified after `timestamp`, sorted by their last modification time
-    # from oldest to newest.
+    # from oldest to newest. The live log file and the file matching `inode` are always
+    # included (see the docstring).
     _logfile_records = [
         RotableLog(logfile=f, seek=0, timestamp=(st := f.stat()).st_mtime, inode=st.st_ino)
         for f in logfiles
     ]
-    _logfile_records = [r for r in _logfile_records if r.timestamp > timestamp]
+    _logfile_records = [
+        r
+        for r in _logfile_records
+        if r.timestamp > timestamp or r.logfile == logfile or r.inode == inode
+    ]
     logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp)
 
     if not logfile_records:
