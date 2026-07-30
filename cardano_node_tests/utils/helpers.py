@@ -213,33 +213,29 @@ def get_line_str_from_frame(frame: tt.FrameType) -> str:
     return line_str
 
 
+def _get_calling_frame() -> tt.FrameType:
+    """Return the frame of the caller of the function that invoked this helper."""
+    frame = inspect.currentframe()
+    calling_frame = frame.f_back.f_back if frame and frame.f_back else None
+
+    if calling_frame is None:
+        msg = "Couldn't get the calling frame."
+        raise ValueError(msg)
+
+    return calling_frame
+
+
 def get_current_line_str() -> str:
     """Get `filename#lineno` of current line.
 
     NOTE: this will not work correctly if called from context manager.
     """
-    calling_frame = None
-    with contextlib.suppress(AttributeError):
-        calling_frame = inspect.currentframe().f_back  # type: ignore
-
-    if not calling_frame:
-        msg = "Couldn't get the calling frame."
-        raise ValueError(msg)
-
-    return get_line_str_from_frame(frame=calling_frame)
+    return get_line_str_from_frame(frame=_get_calling_frame())
 
 
 def get_vcs_link() -> str:
     """Return link to the current line in GitHub."""
-    calling_frame = None
-    with contextlib.suppress(AttributeError):
-        calling_frame = inspect.currentframe().f_back  # type: ignore
-
-    if not calling_frame:
-        msg = "Couldn't get the calling frame."
-        raise ValueError(msg)
-
-    line_str = get_line_str_from_frame(frame=calling_frame)
+    line_str = get_line_str_from_frame(frame=_get_calling_frame())
     repo_idx = line_str.find("cardano_node_tests")
     if repo_idx == -1:
         msg = f"Couldn't find the repo location in '{line_str}'."
