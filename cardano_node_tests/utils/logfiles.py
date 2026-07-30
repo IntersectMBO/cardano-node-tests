@@ -9,6 +9,7 @@ import math
 import os
 import pathlib as pl
 import re
+import re._parser as re_parser  # The same parser the `re` module itself uses
 import time
 import typing as tp
 from collections import deque
@@ -662,46 +663,55 @@ def find_msgs_in_logs(
     return lines_found
 
 
+def _subpattern_constrains(parsed: tp.Any) -> bool:
+    """Return True when the parsed (sub)pattern contains an end anchor or a lookahead."""
+    end_anchors = (
+        re_parser.AT_END,
+        re_parser.AT_END_STRING,
+        re_parser.AT_BOUNDARY,
+        re_parser.AT_NON_BOUNDARY,
+    )
+    for op, av in parsed:
+        if op is re_parser.AT and av in end_anchors:
+            return True
+        if op in (re_parser.ASSERT, re_parser.ASSERT_NOT) and av[0] == 1:
+            # A lookahead
+            return True
+        # Recurse into nested subpatterns of any operation (groups, repeats, branches,
+        # conditionals, lookbehinds, ...)
+        stack = [av]
+        while stack:
+            item = stack.pop()
+            if isinstance(item, re_parser.SubPattern):
+                if _subpattern_constrains(parsed=item):
+                    return True
+            elif isinstance(item, (tuple, list)):
+                stack.extend(item)
+    return False
+
+
 def _constrains_match_end(regex_b: re.Pattern[bytes]) -> bool:
     r"""Return True when the regex constrains what follows the match.
 
     A match in an incomplete line implies a match in the complete line only when the
-    regex doesn't rely on what comes after the match. End anchors, word boundaries and
-    lookaheads can match an incomplete line while the complete line doesn't match (or
-    vice versa), so an incomplete line must not be searched with such regexes.
+    regex doesn't rely on what comes after the match. End anchors (`$`, `\Z`), word
+    boundaries (`\b`, `\B`) and lookaheads can match an incomplete line while the
+    complete line doesn't match (or vice versa), so an incomplete line must not be
+    searched with such regexes.
 
-    Escaped literals (e.g. `\$`) and characters inside character classes are not
-    anchors, so they don't count as constraints.
+    The pattern is parsed with the stdlib regex parser, so escaped literals, character
+    classes, comments and verbose mode are interpreted exactly as by `re` itself.
 
     The check is a deliberate over-approximation: when in doubt (e.g. the pattern cannot
-    be scanned reliably), the regex is reported as constraining, which merely degrades to
-    not searching an incomplete line.
+    be parsed), the regex is reported as constraining, which merely degrades to not
+    searching an incomplete line.
     """
-    pat = regex_b.pattern
-    in_class = False
-    i = 0
-    while i < len(pat):
-        char = pat[i : i + 1]
-        if char == b"\\":
-            # An escape sequence: `\Z`, `\b` and `\B` are constraints (outside of a
-            # character class), any other escaped character is a literal
-            if not in_class and pat[i + 1 : i + 2] in (b"Z", b"b", b"B"):
-                return True
-            i += 2
-            continue
-        if in_class:
-            if char == b"]":
-                in_class = False
-        elif char == b"[":
-            in_class = True
-        elif char == b"$" or (char == b"(" and pat[i + 1 : i + 3] in (b"?=", b"?!")):
-            return True
-        i += 1
-
-    # A compiled regex can never have an unterminated character class. When it looks like
-    # we are still inside one, the scan desynced (e.g. on a "[" inside a "(?#...)" comment),
-    # so conservatively report the regex as constraining.
-    return in_class
+    try:
+        parsed = re_parser.parse(regex_b.pattern, regex_b.flags)
+    except Exception:
+        # Unexpected for an already compiled regex - be conservative
+        return True
+    return _subpattern_constrains(parsed=parsed)
 
 
 def check_msgs_presence_in_logs(  # noqa: C901
