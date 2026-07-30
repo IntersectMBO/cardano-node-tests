@@ -4,7 +4,6 @@ import datetime
 import functools
 import hashlib
 import inspect
-import io
 import itertools
 import json
 import logging
@@ -293,14 +292,6 @@ def check_file_arg(file_path: str) -> pl.Path | None:
         msg = f"check_file_arg: file '{file_path}' doesn't exist"
         raise argparse.ArgumentTypeError(msg)
     return abs_path
-
-
-def get_eof_offset(infile: pl.Path) -> int:
-    """Return position of the current end of the file."""
-    with open(infile, "rb") as in_fp:
-        in_fp.seek(0, io.SEEK_END)
-        last_line_pos = in_fp.tell()
-    return last_line_pos
 
 
 def is_in_interval(num1: float, num2: float, *, frac: float = 0.1) -> bool:
