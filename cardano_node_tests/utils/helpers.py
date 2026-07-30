@@ -26,7 +26,7 @@ GITHUB_URL = "https://github.com/IntersectMBO/cardano-node-tests"
 
 
 @contextlib.contextmanager
-def change_cwd(dir_path: ttypes.FileType) -> tp.Iterator[ttypes.FileType]:
+def change_cwd(dir_path: ttypes.FileType) -> tp.Generator[ttypes.FileType]:
     """Change and restore CWD - context manager."""
     orig_cwd = pl.Path.cwd()
     os.chdir(dir_path)
@@ -39,7 +39,7 @@ def change_cwd(dir_path: ttypes.FileType) -> tp.Iterator[ttypes.FileType]:
 
 
 @contextlib.contextmanager
-def ignore_interrupt() -> tp.Iterator[None]:
+def ignore_interrupt() -> tp.Generator[None]:
     """Ignore the KeyboardInterrupt signal."""
     orig_handler = None
     try:
@@ -59,7 +59,7 @@ def ignore_interrupt() -> tp.Iterator[None]:
 
 
 @contextlib.contextmanager
-def environ(env: dict) -> tp.Iterator[None]:
+def environ(env: dict[str, str]) -> tp.Generator[None]:
     """Temporarily set environment variables and restore previous environment afterwards."""
     original_env = {key: os.environ.get(key) for key in env}
     os.environ.update(env)
@@ -107,7 +107,7 @@ def get_env_path(var: str) -> pl.Path | None:
 
 
 def run_command(
-    command: str | list,
+    command: str | list[tp.Any],
     *,
     workdir: ttypes.FileType = "",
     ignore_fail: bool = False,
@@ -182,7 +182,7 @@ def get_rand_str(length: int = 8) -> str:
 
 
 # TODO: unify with the implementation in clusterlib
-def prepend_flag(flag: str, contents: tp.Iterable) -> list[str]:
+def prepend_flag(flag: str, contents: tp.Iterable[tp.Any]) -> list[str]:
     """Prepend flag to every item of the sequence.
 
     Args:
@@ -335,7 +335,9 @@ def tool_has(command: str) -> bool:
     return not cmd_err.startswith("Invalid")
 
 
-def flatten(iterable: tp.Iterable, *, ltypes: type[tp.Iterable] | None = None) -> tp.Generator:
+def flatten(
+    iterable: tp.Iterable[tp.Any], *, ltypes: type[tp.Iterable] | None = None
+) -> tp.Generator[tp.Any]:
     """Flatten an irregular (arbitrarily nested) iterable of iterables."""
     ltypes_p = ltypes if ltypes is not None else abc.Iterable
     remainder = iter(iterable)
