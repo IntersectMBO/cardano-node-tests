@@ -257,7 +257,7 @@ def checksum(filename: ttypes.FileType) -> str:
 def write_json(*, out_file: ttypes.FileType, content: dict) -> ttypes.FileType:
     """Write dictionary content to JSON file."""
     with open(pl.Path(out_file).expanduser(), "w", encoding="utf-8") as out_fp:
-        out_fp.write(json.dumps(content, indent=4))
+        json.dump(content, out_fp, indent=4)
     return out_file
 
 
