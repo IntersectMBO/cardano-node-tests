@@ -131,7 +131,7 @@ def run_command(
 
     Raises:
         RuntimeError: When the command fails (unless `ignore_fail` is used) or when
-            the executable is not found.
+            it cannot be executed at all (e.g. missing or non-executable file).
     """
     cmd: str | list[str]
     if isinstance(command, str):
@@ -154,8 +154,8 @@ def run_command(
         ) as p:
             stdout, stderr = p.communicate(input=stdin_data)
             retcode = p.returncode
-    except FileNotFoundError as err:
-        msg = f"Command not found while running `{cmd_str}`: {err}"
+    except OSError as err:
+        msg = f"Failed to execute `{cmd_str}`: {err}"
         raise RuntimeError(msg) from err
 
     if retcode != 0:

@@ -201,8 +201,13 @@ class TestRunCommand:
 
     def test_missing_executable(self):
         """Raise RuntimeError naming the command when the executable doesn't exist."""
-        with pytest.raises(RuntimeError, match=r"Command not found.*nonexistent-binary-xyz"):
+        with pytest.raises(RuntimeError, match=r"Failed to execute.*nonexistent-binary-xyz"):
             helpers.run_command(["nonexistent-binary-xyz", "--arg"])
+
+    def test_missing_workdir(self, tmp_path: pl.Path):
+        """Raise RuntimeError when the working directory doesn't exist."""
+        with pytest.raises(RuntimeError, match="Failed to execute"):
+            helpers.run_command([sys.executable, "-c", "pass"], workdir=tmp_path / "nonexistent")
 
 
 class TestRunInBash:
