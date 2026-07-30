@@ -332,8 +332,10 @@ def tool_has(command: str) -> bool:
     else:
         return True
 
-    # Strip the "An error occurred while running `...`:" prefix added by `run_command`
-    cmd_err = err_str.split(":", maxsplit=1)[-1].strip()
+    # Strip the "An error occurred while running `...`:" prefix added by `run_command`.
+    # Split on the exact "`: " delimiter so a colon inside the command string cannot
+    # select the wrong segment. Fall back to the whole message when the prefix is missing.
+    cmd_err = (err_str.partition("`: ")[2] or err_str).strip()
     return not cmd_err.startswith("Invalid")
 
 
