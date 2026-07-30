@@ -174,7 +174,7 @@ def get_rand_str(length: int = 8) -> str:
     """Return random string."""
     if length < 1:
         return ""
-    return "".join(random.choice(string.ascii_lowercase) for i in range(length))
+    return "".join(random.choices(string.ascii_lowercase, k=length))
 
 
 # TODO: unify with the implementation in clusterlib
