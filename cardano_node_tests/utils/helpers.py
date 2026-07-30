@@ -126,7 +126,7 @@ def run_command(
         stdin_data: Data to pass to stdin of the command.
 
     Returns:
-        bytes: Content of stdout.
+        bytes: Content of stdout (with stderr merged in when `merge_stderr` is used).
     """
     cmd: str | list[str]
     if isinstance(command, str):
@@ -165,6 +165,10 @@ def run_in_bash(command: str, *, workdir: ttypes.FileType = "") -> bytes:
 
 @functools.cache
 def get_current_commit() -> str:
+    """Return the current git commit hash.
+
+    Uses the `GIT_REVISION` env variable when set, otherwise asks git.
+    """
     # TODO: make sure we are in correct repo
     return os.environ.get("GIT_REVISION") or run_command("git rev-parse HEAD").decode().strip()
 
@@ -207,6 +211,7 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
 
 
 def get_line_str_from_frame(frame: tt.FrameType) -> str:
+    """Return `filename#lineno` string for the given frame."""
     lineno = frame.f_lineno
     fpath = frame.f_globals["__file__"]
     line_str = f"{fpath}#L{lineno}"
