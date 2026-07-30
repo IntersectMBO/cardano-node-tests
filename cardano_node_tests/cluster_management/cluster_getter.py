@@ -236,7 +236,7 @@ class ClusterGetter:
 
             try:
                 LOGGER.info(f"Stopping cluster with `{startup_files.stop_script}`.")
-                helpers.run_command(str(startup_files.stop_script))
+                helpers.run_command([startup_files.stop_script])
             except Exception as err:
                 self.log(f"c{self.cluster_instance_num}: failed to stop cluster:\n{err}")
 
