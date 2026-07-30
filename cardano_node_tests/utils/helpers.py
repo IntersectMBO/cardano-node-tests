@@ -238,8 +238,11 @@ def get_vcs_link() -> str:
         raise ValueError(msg)
 
     line_str = get_line_str_from_frame(frame=calling_frame)
-    loc_part = line_str[line_str.find("cardano_node_tests") :]
-    url = f"{GITHUB_URL}/blob/{get_current_commit()}/{loc_part}"
+    repo_idx = line_str.find("cardano_node_tests")
+    if repo_idx == -1:
+        msg = f"Couldn't find the repo location in '{line_str}'."
+        raise ValueError(msg)
+    url = f"{GITHUB_URL}/blob/{get_current_commit()}/{line_str[repo_idx:]}"
     return url
 
 
