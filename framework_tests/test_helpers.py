@@ -1,8 +1,8 @@
 """Unit tests for `cardano_node_tests.utils.helpers`.
 
-The tests must not depend on external binaries (`bech32`, `cardano-cli`, ...) being present.
-Subprocess tests use `sys.executable` and tests for helpers that wrap external tools
-monkeypatch `run_command`.
+The tests must not depend on project-specific binaries (`bech32`, `cardano-cli`, ...) being
+present. Subprocess tests use `sys.executable` or POSIX shell builtins, and tests for helpers
+that wrap external tools monkeypatch `run_command`.
 """
 
 import argparse
@@ -62,6 +62,14 @@ class TestEnviron:
         with helpers.environ({"HELPERS_TEST_VAR": "new"}):
             del os.environ["HELPERS_TEST_VAR"]
         assert "HELPERS_TEST_VAR" not in os.environ
+
+    def test_restore_on_error(self, monkeypatch: pytest.MonkeyPatch):
+        """Restore the original value even when the block raises."""
+        monkeypatch.setenv("HELPERS_TEST_VAR", "orig")
+        err = "boom"
+        with pytest.raises(RuntimeError), helpers.environ({"HELPERS_TEST_VAR": "new"}):
+            raise RuntimeError(err)
+        assert os.environ["HELPERS_TEST_VAR"] == "orig"
 
 
 class TestEnvVarHelpers:
@@ -183,6 +191,40 @@ class TestRunCommand:
         out = helpers.run_command("echo $((1 + 2))", shell=True)
         assert out.strip() == b"3"
 
+    def test_failure_merge_stderr(self):
+        """Take the error message from stdout when stderr is merged into it."""
+        with pytest.raises(RuntimeError, match="on both streams"):
+            helpers.run_command(
+                [sys.executable, "-c", "import sys; sys.stderr.write('on both streams'); exit(1)"],
+                merge_stderr=True,
+            )
+
+    def test_missing_executable(self):
+        """Raise RuntimeError naming the command when the executable doesn't exist."""
+        with pytest.raises(RuntimeError, match=r"Command not found.*nonexistent-binary-xyz"):
+            helpers.run_command(["nonexistent-binary-xyz", "--arg"])
+
+
+class TestRunInBash:
+    """Tests for `run_in_bash`.
+
+    `run_command` is monkeypatched, the bash binary is not needed.
+    """
+
+    def test_invocation(self, monkeypatch: pytest.MonkeyPatch):
+        """Run the command string via bash with pipefail enabled."""
+        recorded: dict[str, tp.Any] = {}
+
+        def _fake_run_command(command: list, **kwargs: tp.Any) -> bytes:
+            recorded["command"] = command
+            recorded["workdir"] = kwargs.get("workdir")
+            return b""
+
+        monkeypatch.setattr(helpers, "run_command", _fake_run_command)
+        helpers.run_in_bash("false | true", workdir="/some/dir")
+        assert recorded["command"] == ["bash", "-o", "pipefail", "-c", "false | true"]
+        assert recorded["workdir"] == "/some/dir"
+
 
 class TestBech32:
     """Tests for `decode_bech32` and `encode_bech32`.
@@ -292,6 +334,12 @@ class TestGetCurrentCommit:
             helpers, "run_command", lambda *_a, **_kw: pytest.fail("git was executed")
         )
         assert helpers.get_current_commit() == "f" * 40
+
+    def test_empty_env_var_falls_through(self, monkeypatch: pytest.MonkeyPatch):
+        """Ask git when `GIT_REVISION` is set but empty."""
+        monkeypatch.setenv("GIT_REVISION", "")
+        monkeypatch.setattr(helpers, "run_command", lambda *_a, **_kw: b"def456\n")
+        assert helpers.get_current_commit() == "def456"
 
     def test_anchored_to_repo(self, monkeypatch: pytest.MonkeyPatch):
         """Ask git in the directory of the helpers module, not in CWD."""
