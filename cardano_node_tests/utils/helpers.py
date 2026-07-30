@@ -25,6 +25,10 @@ LOGGER = logging.getLogger(__name__)
 GITHUB_URL = "https://github.com/IntersectMBO/cardano-node-tests"
 
 
+class CommandExecError(RuntimeError):
+    """Raised when a command cannot be executed at all (e.g. missing executable or workdir)."""
+
+
 @contextlib.contextmanager
 def change_cwd(dir_path: ttypes.FileType) -> tp.Generator[ttypes.FileType]:
     """Change and restore CWD - context manager."""
@@ -130,8 +134,9 @@ def run_command(
         bytes: Content of stdout (with stderr merged in when `merge_stderr` is used).
 
     Raises:
-        RuntimeError: When the command fails (unless `ignore_fail` is used) or when
-            it cannot be executed at all (e.g. missing or non-executable file).
+        RuntimeError: When the command fails (unless `ignore_fail` is used).
+        CommandExecError: When the command cannot be executed at all
+            (e.g. missing or non-executable file). Subclass of RuntimeError.
     """
     cmd: str | list[str]
     if isinstance(command, str):
@@ -156,7 +161,7 @@ def run_command(
             retcode = p.returncode
     except OSError as err:
         msg = f"Failed to execute `{cmd_str}`: {err}"
-        raise RuntimeError(msg) from err
+        raise CommandExecError(msg) from err
 
     if retcode != 0:
         if not ignore_fail:
@@ -342,9 +347,15 @@ def tool_has(command: str) -> bool:
     """Check if a tool has a subcommand or argument available.
 
     E.g. `tool_has("cardano-cli legacy governance")`
+
+    Raises:
+        CommandExecError: When the tool cannot be executed at all, as its
+            availability cannot be determined in that case.
     """
     try:
         run_command(command)
+    except CommandExecError:
+        raise
     except RuntimeError as err:
         err_str = str(err)
     else:

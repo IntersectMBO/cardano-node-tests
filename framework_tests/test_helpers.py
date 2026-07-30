@@ -200,13 +200,15 @@ class TestRunCommand:
             )
 
     def test_missing_executable(self):
-        """Raise RuntimeError naming the command when the executable doesn't exist."""
-        with pytest.raises(RuntimeError, match=r"Failed to execute.*nonexistent-binary-xyz"):
+        """Raise CommandExecError naming the command when the executable doesn't exist."""
+        with pytest.raises(
+            helpers.CommandExecError, match=r"Failed to execute.*nonexistent-binary-xyz"
+        ):
             helpers.run_command(["nonexistent-binary-xyz", "--arg"])
 
     def test_missing_workdir(self, tmp_path: pl.Path):
-        """Raise RuntimeError when the working directory doesn't exist."""
-        with pytest.raises(RuntimeError, match="Failed to execute"):
+        """Raise CommandExecError when the working directory doesn't exist."""
+        with pytest.raises(helpers.CommandExecError, match="Failed to execute"):
             helpers.run_command([sys.executable, "-c", "pass"], workdir=tmp_path / "nonexistent")
 
 
@@ -542,6 +544,17 @@ class TestToolHas:
 
         monkeypatch.setattr(helpers, "run_command", _fail)
         assert helpers.tool_has("sometool subcommand-d") is True
+
+    def test_exec_failure_propagates(self, monkeypatch: pytest.MonkeyPatch):
+        """Re-raise when the tool cannot be executed instead of reporting the capability."""
+
+        def _fail(_command: str) -> bytes:
+            err = "Failed to execute `sometool`: [Errno 2] No such file or directory"
+            raise helpers.CommandExecError(err)
+
+        monkeypatch.setattr(helpers, "run_command", _fail)
+        with pytest.raises(helpers.CommandExecError, match="Failed to execute"):
+            helpers.tool_has("sometool subcommand-e")
 
 
 class TestFlatten:
