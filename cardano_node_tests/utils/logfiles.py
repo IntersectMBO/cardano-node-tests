@@ -456,6 +456,11 @@ def _search_log_lines(  # noqa: C901
     - Decodes only matched lines for output.
     - Persists the search state for the live logfile: a byte offset at a line boundary,
       the file inode and the search start time.
+    - An unterminated final line of the live logfile is not searched. It is searched by
+      a later search, once the line is complete or the file is rotated. When the line is
+      never completed (e.g. the writer died mid-line and the file is never rotated), the
+      line is never searched. An unterminated final line of a rotated log file will never
+      be completed, so it is searched right away.
     """
     errs_b = _compile_bytes_from_pattern(pat=errors_re, encoding=encoding)
     if not errs_b:
@@ -471,6 +476,23 @@ def _search_log_lines(  # noqa: C901
     # Time when this search starts reading the log files. Recorded in the offset file, so
     # the next search doesn't skip lines that were appended while this search was running.
     search_start = time.time()
+
+    def _check_line(line_b: bytes, look_back: deque[bytes], path: pl.Path) -> None:
+        is_reported = not (
+            # Fast ignore
+            (ign_b and ign_b.search(line_b))
+            # Not an error
+            or not errs_b.search(line_b)
+            # Error, but ignored because of a preceding message in the look-back buffer
+            or (
+                lb_pairs and _should_ignore_error(line_b=line_b, lookback=look_back, pairs=lb_pairs)
+            )
+        )
+        look_back.append(line_b)
+        if is_reported:
+            # Report: decode only now
+            line = line_b.decode(encoding, errors="surrogateescape")
+            results.append((path, line))
 
     for rec in rotated_logs:
         path = rec.logfile
@@ -505,26 +527,12 @@ def _search_log_lines(  # noqa: C901
                     continue
 
                 for line_b in lines_b:
-                    # Fast ignore
-                    if ign_b and ign_b.search(line_b):
-                        look_back.append(line_b)
-                        continue
-                    # Not an error -> just update context
-                    if not errs_b.search(line_b):
-                        look_back.append(line_b)
-                        continue
-                    # Error: maybe ignore based on mapping
-                    if lb_pairs and _should_ignore_error(
-                        line_b=line_b, lookback=look_back, pairs=lb_pairs
-                    ):
-                        look_back.append(line_b)
-                        continue
+                    _check_line(line_b=line_b, look_back=look_back, path=path)
 
-                    look_back.append(line_b)
-
-                    # Report: decode only now
-                    line = line_b.decode(encoding, errors="surrogateescape")
-                    results.append((path, line))
+            # An unterminated final line of a rotated log file will never be completed.
+            # Search it now, otherwise it would never be searched.
+            if leftover and path != logfile:
+                _check_line(line_b=leftover, look_back=look_back, path=path)
 
             # Persist next offset for the "live" logfile at a line boundary
             if path == logfile:
@@ -598,7 +606,10 @@ def find_msgs_in_logs(
         encoding: Text encoding used to decode matched lines (default: "utf-8").
 
     Returns:
-        Matching log lines (decoded to str, without trailing newlines).
+        Matching log lines (decoded to str, without trailing newlines). An unterminated
+        final line of the live log file is not searched, so a truncated line is never
+        returned for it. An unterminated final line of a rotated log file is searched,
+        as it is the file's final content.
     """
     # Compile as BYTES regex for speed; note: \w/\b are ASCII-only in bytes mode.
     regex_b = _compile_bytes_from_str(pat=regex)
@@ -635,11 +646,31 @@ def find_msgs_in_logs(
                             lines_found.append(line)
                             if only_first:
                                 return lines_found
+
+                # An unterminated final line of a rotated log file is its final content,
+                # so search it as well. An unterminated final line of the live log file
+                # is skipped - it is searched once complete, and a truncated line must
+                # not be returned to callers that parse the line content.
+                if leftover and path != logfile and regex_b.search(leftover):
+                    lines_found.append(leftover.decode(encoding, errors="surrogateescape"))
+                    if only_first:
+                        return lines_found
         return lines_found
 
     lines_found = _retry_search(_search)
 
     return lines_found
+
+
+def _constrains_match_end(regex_b: re.Pattern[bytes]) -> bool:
+    """Return True when the regex constrains what follows the match.
+
+    A match in an incomplete line implies a match in the complete line only when the
+    regex doesn't rely on what comes after the match. End anchors, word boundaries and
+    lookaheads can match an incomplete line while the complete line doesn't match (or
+    vice versa), so an incomplete line must not be searched with such regexes.
+    """
+    return any(tok in regex_b.pattern for tok in (b"$", rb"\Z", rb"\b", rb"\B", b"(?=", b"(?!"))
 
 
 def check_msgs_presence_in_logs(  # noqa: C901
@@ -658,6 +689,9 @@ def check_msgs_presence_in_logs(  # noqa: C901
 
     Returns:
         Error messages for missing entries and for globs that matched no log file.
+
+    An expected message found in an unterminated final line counts as present, unless
+    the regex constrains what follows the match (see `_constrains_match_end`).
     """
 
     def _search(
@@ -689,6 +723,12 @@ def check_msgs_presence_in_logs(  # noqa: C901
                     for line_b in lines_b:
                         if regex_b.search(line_b):
                             return True
+
+                # Search also an unterminated final line. A match in an incomplete line
+                # is also a match in the complete line, unless the regex constrains what
+                # follows the match.
+                if leftover and not _constrains_match_end(regex_b) and regex_b.search(leftover):
+                    return True
         return False
 
     errors: list[str] = []

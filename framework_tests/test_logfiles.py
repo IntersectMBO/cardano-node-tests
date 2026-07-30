@@ -650,3 +650,160 @@ def test_search_log_lines_coarse_mtime(tmp_path: pl.Path):
 
     errors = _search_cluster_like(logfile=logfile)
     assert [e[1] for e in errors] == ["error two"]
+
+
+def test_check_msgs_unterminated_line(tmp_path: pl.Path):
+    """Check that the expected message is found in an unterminated final line."""
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="foo\nexpected msg")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert errors == []
+
+
+def test_find_msgs_unterminated_live(tmp_path: pl.Path):
+    """Check that an unterminated final line of the live log file is not returned.
+
+    Callers parse the content of the returned lines, so a truncated line must not
+    be returned.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="msg one\nmsg two")
+
+    lines = logfiles.find_msgs_in_logs(
+        regex="msg",
+        logfile=logfile,
+        seek_offset=0,
+        timestamp=0.0,
+        inode=logfile.stat().st_ino,
+    )
+    assert lines == ["msg one"]
+
+
+def test_find_msgs_unterminated_rotated(tmp_path: pl.Path):
+    """Check that an unterminated final line of a rotated log file is returned.
+
+    A rotated log file will never be appended to, so its unterminated final line is
+    the file's final content.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="msg one\nmsg two")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="other\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    lines = logfiles.find_msgs_in_logs(
+        regex="msg",
+        logfile=logfile,
+        seek_offset=0,
+        timestamp=0.0,
+        inode=rotated.stat().st_ino,
+    )
+    assert lines == ["msg one", "msg two"]
+
+    lines = logfiles.find_msgs_in_logs(
+        regex="msg",
+        logfile=logfile,
+        seek_offset=0,
+        timestamp=0.0,
+        inode=rotated.stat().st_ino,
+        only_first=True,
+    )
+    assert lines == ["msg one"]
+
+
+def test_search_log_lines_unterminated_rotated(tmp_path: pl.Path):
+    """Check that an unterminated final line of a rotated log file is searched.
+
+    A rotated log file will never be appended to, so its unterminated final line is
+    complete and must be searched right away.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="foo\nerror one")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert errors == [(rotated, "error one")]
+
+
+def test_search_log_lines_unterminated_live(tmp_path: pl.Path):
+    """Check that an unterminated final line of the live log file is not searched early.
+
+    The line is searched (exactly once) by a later search, when it is complete. This
+    avoids reporting a line whose ignored part was not flushed to the file yet.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\nerror one")
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert errors == []
+
+    # Complete the line
+    with open(logfile, "a", encoding="utf-8") as outfile:
+        outfile.write(" done\n")
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error one done"]
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert errors == []
+
+
+def test_check_msgs_unterminated_line_anchored(tmp_path: pl.Path):
+    """Check that an end-anchored regex is not searched in an unterminated final line.
+
+    A match of an end-anchored regex in an incomplete line doesn't imply a match in the
+    complete line, so the incomplete line must not count as message presence.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="foo\nexpected msg")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg$")],
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert len(errors) == 1
+    assert "No line matching" in errors[0]
+
+
+def _search_cluster_like_ignores(logfile: pl.Path) -> list[tuple[pl.Path, str]]:
+    """Search the log file for errors with ignore rules and a look-back map."""
+    seek, timestamp, inode = logfiles._load_search_state(logfile=logfile)
+    return logfiles._search_log_lines(
+        logfile=logfile,
+        rotated_logs=logfiles._get_rotated_logs(
+            logfile=logfile, seek=seek, timestamp=timestamp, inode=inode
+        ),
+        errors_re=logfiles.ERRORS_RE,
+        errors_ignored_re=re.compile("harmless"),
+        look_back_map={"error mapped": "trigger msg"},
+    )
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    (
+        pytest.param("foo\nerror one harmless", [], id="ignore_rule"),
+        pytest.param("trigger msg\nerror mapped one", [], id="look_back_suppressed"),
+        pytest.param("foo\nerror mapped one", ["error mapped one"], id="look_back_reported"),
+        pytest.param("foo\nerror one", ["error one"], id="reported"),
+    ),
+)
+def test_search_log_lines_unterminated_rotated_ignores(
+    tmp_path: pl.Path, content: str, expected: list[str]
+):
+    """Check that ignore rules and the look-back map apply to an unterminated final line.
+
+    The unterminated final line of a rotated log file goes through the same checks as
+    complete lines: the combined ignore regex, the error regex and the look-back map.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content=content)
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    errors = _search_cluster_like_ignores(logfile=logfile)
+    assert [e[1] for e in errors] == expected
