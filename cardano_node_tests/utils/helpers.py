@@ -159,7 +159,7 @@ def run_command(
 
 def run_in_bash(command: str, *, workdir: ttypes.FileType = "") -> bytes:
     """Run command(s) in bash."""
-    cmd = ["bash", "-o", "pipefail", "-c", f"{command}"]
+    cmd = ["bash", "-o", "pipefail", "-c", command]
     return run_command(cmd, workdir=workdir)
 
 
