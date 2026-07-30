@@ -197,7 +197,7 @@ class ClusterManager:
 
             self.log(f"c{instance_num}: stopping cluster instance with `{stop_script}`")
             try:
-                helpers.run_command(str(stop_script))
+                helpers.run_command([stop_script])
             except Exception as err:
                 self.log(f"c{instance_num}: failed to stop cluster:\n{err}")
 
