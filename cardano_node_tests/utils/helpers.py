@@ -118,7 +118,8 @@ def run_command(
     """Run command.
 
     Args:
-        command: A command to run - either a string or a list of arguments.
+        command: A command to run - either a string (tokenized with shlex unless `shell`
+            is used) or a list of arguments (items are converted to str).
         workdir: A working directory for the command.
         ignore_fail: Don't raise an exception when the command fails.
         shell: Run the command in a shell.
@@ -127,6 +128,10 @@ def run_command(
 
     Returns:
         bytes: Content of stdout (with stderr merged in when `merge_stderr` is used).
+
+    Raises:
+        RuntimeError: When the command fails (unless `ignore_fail` is used) or when
+            the executable is not found.
     """
     cmd: str | list[str]
     if isinstance(command, str):
@@ -138,21 +143,27 @@ def run_command(
 
     LOGGER.debug("Running `%s`", cmd_str)
 
-    with subprocess.Popen(
-        cmd,
-        stdin=subprocess.PIPE if stdin_data is not None else None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE,
-        shell=shell,
-        cwd=workdir or None,
-    ) as p:
-        stdout, stderr = p.communicate(input=stdin_data)
-        retcode = p.returncode
+    try:
+        with subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE if stdin_data is not None else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE,
+            shell=shell,
+            cwd=workdir or None,
+        ) as p:
+            stdout, stderr = p.communicate(input=stdin_data)
+            retcode = p.returncode
+    except FileNotFoundError as err:
+        msg = f"Command not found while running `{cmd_str}`: {err}"
+        raise RuntimeError(msg) from err
 
-    if not ignore_fail and retcode != 0:
-        err_dec = (stderr or stdout).decode()
-        msg = f"An error occurred while running `{cmd_str}`: {err_dec}"
-        raise RuntimeError(msg)
+    if retcode != 0:
+        if not ignore_fail:
+            err_dec = (stderr or stdout).decode()
+            msg = f"An error occurred while running `{cmd_str}`: {err_dec}"
+            raise RuntimeError(msg)
+        LOGGER.debug("Ignoring failure of `%s`, retcode `%s`.", cmd_str, retcode)
 
     return stdout
 
