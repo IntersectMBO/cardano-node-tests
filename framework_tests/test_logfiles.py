@@ -333,24 +333,29 @@ def test_check_msgs_seek_offset(tmp_path: pl.Path, msg_before_offset: bool):
 
 
 def test_offset_file_roundtrip(tmp_path: pl.Path):
-    """Check that the seek offset and inode survive the offset file round trip."""
+    """Check that the seek offset, inode and timestamp survive the offset file round trip."""
     offset_file = tmp_path / ".node1.stdout.offset"
-    logfiles._write_offset_file(offset_file=offset_file, seek=1234, inode=56)
+    logfiles._write_offset_file(offset_file=offset_file, seek=1234, inode=56, timestamp=789.5)
 
-    assert logfiles._read_offset_file(offset_file=offset_file) == (1234, 56)
+    assert logfiles._read_offset_file(offset_file=offset_file) == (1234, 56, 789.5)
 
 
 @pytest.mark.parametrize(
     ("content", "expected"),
     (
-        pytest.param("1234\n", (1234, None), id="missing_inode"),
-        pytest.param("garbage\n", (0, None), id="garbage"),
-        pytest.param("123\nabc\n", (123, None), id="corrupt_inode"),
-        pytest.param(None, (0, None), id="missing_file"),
+        pytest.param("1234\n", (1234, None, None), id="missing_inode"),
+        pytest.param("garbage\n", (0, None, None), id="garbage"),
+        pytest.param("123\nabc\n", (123, None, None), id="corrupt_inode"),
+        pytest.param("123\n45\n", (123, 45, None), id="missing_timestamp"),
+        pytest.param("123\n45\nbad\n", (123, 45, None), id="corrupt_timestamp"),
+        pytest.param("123\n45\ninf\n", (123, 45, None), id="inf_timestamp"),
+        pytest.param("123\n45\nnan\n", (123, 45, None), id="nan_timestamp"),
+        pytest.param("123\n45\n-1.0\n", (123, 45, None), id="negative_timestamp"),
+        pytest.param(None, (0, None, None), id="missing_file"),
     ),
 )
 def test_read_offset_file_fallback(
-    tmp_path: pl.Path, content: str | None, expected: tuple[int, int | None]
+    tmp_path: pl.Path, content: str | None, expected: tuple[int, int | None, float | None]
 ):
     """Check reading of an incomplete or invalid or missing offset file."""
     offset_file = tmp_path / ".node1.stdout.offset"
@@ -373,12 +378,13 @@ def test_rotated_logs_seek_by_inode(tmp_path: pl.Path):
     assert [(r.logfile, r.seek) for r in records] == [(rotated, 5), (logfile, 0)]
 
 
-def test_rotated_logs_seek_dropped(tmp_path: pl.Path):
-    """Check that the seek offset is dropped when its file was already fully searched.
+def test_rotated_logs_unmodified_seek_file_included(tmp_path: pl.Path):
+    """Check that the file the seek offset was recorded for is always included.
 
-    When the file the seek offset was recorded for was not modified since the last search,
-    it is filtered out by the timestamp check. The seek offset must not be applied to
-    another file, as that would skip unsearched content.
+    The file is included with the seek offset applied even when it was not modified since
+    the last search. Content before the seek offset was already searched, so this cannot
+    report anything twice, and content appended with a coarse modification time equal to
+    the last search time is not lost.
     """
     rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="old content\n")
     logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="new content\n")
@@ -388,7 +394,51 @@ def test_rotated_logs_seek_dropped(tmp_path: pl.Path):
     records = logfiles._get_rotated_logs(
         logfile=logfile, seek=5, timestamp=live_mtime - 5, inode=rotated.stat().st_ino
     )
+    assert [(r.logfile, r.seek) for r in records] == [(rotated, 5), (logfile, 0)]
+
+
+def test_rotated_logs_seek_dropped_for_missing_file(tmp_path: pl.Path):
+    """Check that the seek offset is dropped when its file no longer exists.
+
+    When no listed file matches the recorded inode, the seek offset must not be applied
+    to another file, as that would skip unsearched content.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="old content\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="new content\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+    missing_inode = rotated.stat().st_ino + logfile.stat().st_ino + 1
+
+    records = logfiles._get_rotated_logs(
+        logfile=logfile, seek=5, timestamp=0.0, inode=missing_inode
+    )
+    assert [(r.logfile, r.seek) for r in records] == [(rotated, 0), (logfile, 0)]
+
+
+def test_rotated_logs_live_file_always_included(tmp_path: pl.Path):
+    """Check that the live log file is included even when unmodified since the last search.
+
+    The live log file inode differs from the recorded inode (the file is fresh after
+    rotation), so the file is included purely because it is the live log file.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="content\n")
+    live_mtime = logfile.stat().st_mtime
+
+    records = logfiles._get_rotated_logs(
+        logfile=logfile, seek=3, timestamp=live_mtime + 10, inode=logfile.stat().st_ino + 1
+    )
     assert [(r.logfile, r.seek) for r in records] == [(logfile, 0)]
+
+
+def test_rotated_logs_live_file_included_without_inode(tmp_path: pl.Path):
+    """Check that the unmodified live log file is included also when the inode is unknown."""
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="content\n")
+    live_mtime = logfile.stat().st_mtime
+
+    records = logfiles._get_rotated_logs(
+        logfile=logfile, seek=3, timestamp=live_mtime + 10, inode=None
+    )
+    assert [(r.logfile, r.seek) for r in records] == [(logfile, 3)]
 
 
 def test_rotated_logs_seek_without_inode(tmp_path: pl.Path):
@@ -515,7 +565,88 @@ def test_search_log_lines_rotation_with_new_content(tmp_path: pl.Path):
 
     # The new search state belongs to the live log file
     offset_file = logfiles._get_offset_file(logfile=logfile)
-    assert logfiles._read_offset_file(offset_file=offset_file) == (
-        len(live_content),
-        logfile.stat().st_ino,
+    seek, inode, timestamp = logfiles._read_offset_file(offset_file=offset_file)
+    assert (seek, inode) == (len(live_content), logfile.stat().st_ino)
+    assert timestamp is not None
+
+
+def test_load_search_state_stored_timestamp(tmp_path: pl.Path):
+    """Check that the timestamp of the last search is read from the offset file."""
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\n")
+    offset_file = logfiles._get_offset_file(logfile=logfile)
+    logfiles._write_offset_file(offset_file=offset_file, seek=3, inode=7, timestamp=123.5)
+
+    assert logfiles._load_search_state(logfile=logfile) == (3, 123.5, 7)
+
+
+def test_load_search_state_mtime_fallback(tmp_path: pl.Path):
+    """Check the fallback to the offset file modification time.
+
+    When the offset file has no timestamp record, the modification time of the offset
+    file is used as the timestamp of the last search.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\n")
+    offset_file = logfiles._get_offset_file(logfile=logfile)
+    offset_file.write_text("3\n7\n", encoding="utf-8")
+
+    assert logfiles._load_search_state(logfile=logfile) == (
+        3,
+        offset_file.stat().st_mtime,
+        7,
     )
+
+
+def test_search_log_lines_appended_during_search(tmp_path: pl.Path):
+    """Check that lines appended to the log file during a search are not lost.
+
+    A line can be appended to the log file after the search read the file but before
+    the search state was recorded. The log file modification time then predates the
+    offset file, but is newer than the recorded search start time, so the file is
+    included in the next search.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\nerror one\n")
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error one"]
+
+    # Simulate the line appended while the previous search was running: the log file
+    # modification time predates the offset file, but is after the recorded search start.
+    with open(logfile, "a", encoding="utf-8") as outfile:
+        outfile.write("error two\n")
+    offset_file = logfiles._get_offset_file(logfile=logfile)
+    offset_mtime = offset_file.stat().st_mtime
+    seek, inode, _ = logfiles._read_offset_file(offset_file=offset_file)
+    assert inode is not None
+    logfiles._write_offset_file(
+        offset_file=offset_file, seek=seek, inode=inode, timestamp=offset_mtime - 10
+    )
+    os.utime(logfile, (offset_mtime - 5, offset_mtime - 5))
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error two"]
+
+
+def test_search_log_lines_coarse_mtime(tmp_path: pl.Path):
+    """Check that a line appended in the same coarse time tick as the search is not lost.
+
+    On filesystems with coarse timestamps, a line appended shortly after the search start
+    can get a modification time equal to the recorded search start time. The live log file
+    is searched from the seek offset regardless of its modification time, so the line is
+    found by the next search.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\nerror one\n")
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error one"]
+
+    with open(logfile, "a", encoding="utf-8") as outfile:
+        outfile.write("error two\n")
+    # Simulate a coarse filesystem timestamp: the log file modification time is exactly
+    # the recorded search start time, so the `mtime > timestamp` check filters it out.
+    offset_file = logfiles._get_offset_file(logfile=logfile)
+    _seek, _inode, stored_timestamp = logfiles._read_offset_file(offset_file=offset_file)
+    assert stored_timestamp is not None
+    os.utime(logfile, (stored_timestamp, stored_timestamp))
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error two"]

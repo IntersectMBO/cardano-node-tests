@@ -5,6 +5,7 @@ import functools
 import io
 import itertools
 import logging
+import math
 import os
 import pathlib as pl
 import re
@@ -144,22 +145,33 @@ def _get_rotated_logs(
 
     When `inode` of the log file the `seek` offset was recorded for is known, the seek offset
     is applied to the file with the matching inode. If no listed file matches the inode, the
-    seek offset is discarded, as it belongs to a file that was already fully searched (and so
-    it was filtered out by `timestamp`) or that no longer exists.
+    seek offset is discarded, as it belongs to a file that no longer exists.
 
     When the `inode` is not known, the seek offset is applied to the file with modification
     time furthest in the past.
+
+    The live log file and the file the seek offset was recorded for are always included,
+    even when their modification time is not newer than `timestamp`. Their already searched
+    content is excluded by the seek offset, so this cannot report anything twice, and it
+    protects against filesystems with coarse timestamps, where a line appended shortly
+    after the search start can get a modification time that is not newer than the recorded
+    search start time.
     """
     # Get logfile including rotated versions
     logfiles = list(logfile.parent.glob(f"{logfile.name}*"))
 
     # Get list of logfiles modified after `timestamp`, sorted by their last modification time
-    # from oldest to newest.
+    # from oldest to newest. The live log file and the file matching `inode` are always
+    # included (see the docstring).
     _logfile_records = [
         RotableLog(logfile=f, seek=0, timestamp=(st := f.stat()).st_mtime, inode=st.st_ino)
         for f in logfiles
     ]
-    _logfile_records = [r for r in _logfile_records if r.timestamp > timestamp]
+    _logfile_records = [
+        r
+        for r in _logfile_records
+        if r.timestamp > timestamp or r.logfile == logfile or r.inode == inode
+    ]
     logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp)
 
     if not logfile_records:
@@ -206,8 +218,9 @@ def _get_ignore_rules(
                     # Split on the first two separators only, so the regex itself may contain ";;"
                     files_glob, skip_after_str, regex = line.split(";;", maxsplit=2)
                     skip_after = float(skip_after_str)
-                    # Skip the rule if it is expired. The `timestamp` is the time of the last log
-                    # search, so the expire time is compared to the time of the last log check.
+                    # Skip the rule if it is expired. The `timestamp` is the start time of the
+                    # last log search, so the expire time is compared to the time when the log
+                    # file was last checked.
                     if 0 < skip_after < timestamp:
                         continue
                     rules.append((files_glob, regex.rstrip("\n")))
@@ -220,29 +233,33 @@ def _get_offset_file(logfile: pl.Path) -> pl.Path:
     return logfile.parent / f".{logfile.name}.offset"
 
 
-def _read_offset_file(offset_file: pl.Path) -> tuple[int, int | None]:
-    """Return the seek offset and the inode of the log file the offset was recorded for.
+def _read_offset_file(offset_file: pl.Path) -> tuple[int, int | None, float | None]:
+    """Return the seek offset, the inode and the timestamp of the last search.
 
-    The inode is `None` when the offset file has no inode record or when the inode
-    record is not valid. The seek offset is 0 when the offset file is missing
+    The inode belongs to the log file the seek offset was recorded for. The timestamp
+    is the time when the last search started reading the log files.
+
+    The inode (or the timestamp) is `None` when the offset file has no such record or
+    when the record is not valid. The seek offset is 0 when the offset file is missing
     or unreadable.
     """
     try:
         with open(offset_file, encoding="utf-8") as infile:
             seek_str = infile.readline().strip()
             inode_str = infile.readline().strip()
+            timestamp_str = infile.readline().strip()
     except FileNotFoundError:
         LOGGER.debug("Offset file '%s' does not exist.", offset_file)
-        return 0, None
+        return 0, None, None
     except Exception:
         LOGGER.warning("Cannot read offset file '%s'.", offset_file, exc_info=True)
-        return 0, None
+        return 0, None, None
 
     try:
         seek = int(seek_str)
     except ValueError:
         LOGGER.warning("Invalid seek offset in offset file '%s'.", offset_file)
-        return 0, None
+        return 0, None, None
 
     try:
         inode = int(inode_str) if inode_str else None
@@ -251,17 +268,32 @@ def _read_offset_file(offset_file: pl.Path) -> tuple[int, int | None]:
         LOGGER.warning("Invalid inode in offset file '%s'.", offset_file)
         inode = None
 
-    return seek, inode
+    try:
+        timestamp = float(timestamp_str) if timestamp_str else None
+        # Reject nan/inf - such timestamp would permanently exclude all files from searches
+        if timestamp is not None and not (math.isfinite(timestamp) and timestamp >= 0):
+            raise ValueError
+    except ValueError:
+        # An invalid timestamp degrades to the offset file modification time
+        LOGGER.warning("Invalid timestamp in offset file '%s'.", offset_file)
+        timestamp = None
+
+    return seek, inode, timestamp
 
 
-def _write_offset_file(offset_file: pl.Path, *, seek: int, inode: int) -> None:
-    """Store the seek offset and the inode of the log file the offset belongs to.
+def _write_offset_file(offset_file: pl.Path, *, seek: int, inode: int, timestamp: float) -> None:
+    """Store the seek offset, the inode of the log file the offset belongs to and the timestamp.
+
+    The timestamp is the time when the search started reading the log files, **not** the time
+    the search finished. Lines can be appended to a log file while it is being searched. When
+    the time of the search start is compared with the log file modification time, such log
+    file is included in the next search.
 
     Write to a temp file first and rename, so that an interrupted write cannot leave
-    a valid seek offset without its inode record.
+    a partial record.
     """
     tmp_file = offset_file.parent / f"{offset_file.name}.tmp"
-    tmp_file.write_text(f"{seek}\n{inode}\n", encoding="utf-8")
+    tmp_file.write_text(f"{seek}\n{inode}\n{timestamp}\n", encoding="utf-8")
     tmp_file.replace(offset_file)
 
 
@@ -269,16 +301,17 @@ def _load_search_state(logfile: pl.Path) -> tuple[int, float, int | None]:
     """Return the seek offset, the timestamp of the last search and the inode.
 
     The seek offset says where to start searching the log file. The timestamp of the last
-    search is the modification time of the offset file. The inode belongs to the log file
-    the seek offset was recorded for.
+    search is read from the offset file, with fallback to the offset file modification time.
+    The inode belongs to the log file the seek offset was recorded for.
 
     When there is no offset file, the log file was not searched yet and `(0, 0.0, None)`
     is returned.
     """
     offset_file = _get_offset_file(logfile=logfile)
     if offset_file.exists():
-        seek, inode = _read_offset_file(offset_file=offset_file)
-        timestamp = offset_file.stat().st_mtime
+        seek, inode, timestamp = _read_offset_file(offset_file=offset_file)
+        if timestamp is None:
+            timestamp = offset_file.stat().st_mtime
     else:
         seek, timestamp, inode = 0, 0.0, None
     return seek, timestamp, inode
@@ -421,7 +454,8 @@ def _search_log_lines(  # noqa: C901
 
     - Uses binary I/O + byte offsets for correctness and speed.
     - Decodes only matched lines for output.
-    - Persists a byte offset at a line boundary for the live logfile.
+    - Persists the search state for the live logfile: a byte offset at a line boundary,
+      the file inode and the search start time.
     """
     errs_b = _compile_bytes_from_pattern(pat=errors_re, encoding=encoding)
     if not errs_b:
@@ -434,6 +468,9 @@ def _search_log_lines(  # noqa: C901
     results: list[tuple[pl.Path, str]] = []
     last_offset_bytes = -1
     last_inode = -1
+    # Time when this search starts reading the log files. Recorded in the offset file, so
+    # the next search doesn't skip lines that were appended while this search was running.
+    search_start = time.time()
 
     for rec in rotated_logs:
         path = rec.logfile
@@ -497,7 +534,13 @@ def _search_log_lines(  # noqa: C901
 
     if last_offset_bytes >= 0:
         offset_file = _get_offset_file(logfile=logfile)
-        _write_offset_file(offset_file=offset_file, seek=last_offset_bytes, inode=last_inode)
+        _write_offset_file(
+            offset_file=offset_file,
+            seek=last_offset_bytes,
+            inode=last_inode,
+            # Clamp to the current time in case the clock stepped backward during the search
+            timestamp=min(search_start, time.time()),
+        )
 
     return results
 
