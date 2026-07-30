@@ -672,6 +672,10 @@ def _constrains_match_end(regex_b: re.Pattern[bytes]) -> bool:
 
     Escaped literals (e.g. `\$`) and characters inside character classes are not
     anchors, so they don't count as constraints.
+
+    The check is a deliberate over-approximation: when in doubt (e.g. the pattern cannot
+    be scanned reliably), the regex is reported as constraining, which merely degrades to
+    not searching an incomplete line.
     """
     pat = regex_b.pattern
     in_class = False
@@ -693,7 +697,11 @@ def _constrains_match_end(regex_b: re.Pattern[bytes]) -> bool:
         elif char == b"$" or (char == b"(" and pat[i + 1 : i + 3] in (b"?=", b"?!")):
             return True
         i += 1
-    return False
+
+    # A compiled regex can never have an unterminated character class. When it looks like
+    # we are still inside one, the scan desynced (e.g. on a "[" inside a "(?#...)" comment),
+    # so conservatively report the regex as constraining.
+    return in_class
 
 
 def check_msgs_presence_in_logs(  # noqa: C901
