@@ -176,7 +176,7 @@ def test_check_msgs_present(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout", "expected msg")],
-        seek_offsets={str(logfile): 0},
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -189,7 +189,7 @@ def test_check_msgs_missing(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout", "expected msg")],
-        seek_offsets={str(logfile): 0},
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -203,7 +203,7 @@ def test_check_msgs_no_files_matched(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stderr", "expected msg")],
-        seek_offsets={str(logfile): 0},
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -223,7 +223,7 @@ def test_check_msgs_dotted_dir_in_path(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout", "expected msg")],
-        seek_offsets={str(logfile): 0},
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
         state_dir=state_dir,
         timestamp=0.0,
     )
@@ -243,7 +243,10 @@ def test_check_msgs_rotated_file_skipped(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout*", "expected msg")],
-        seek_offsets={str(logfile): 0, str(rotated): 0},
+        seek_offsets={
+            str(logfile): (0, logfile.stat().st_ino),
+            str(rotated): (0, rotated.stat().st_ino),
+        },
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -260,7 +263,7 @@ def test_check_msgs_only_rotated_matched(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout*", "expected msg")],
-        seek_offsets={str(rotated): 0},
+        seek_offsets={str(rotated): (0, rotated.stat().st_ino)},
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -278,7 +281,7 @@ def test_check_msgs_dotted_file_name(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout", "expected msg")],
-        seek_offsets={str(logfile): 0},
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -299,7 +302,7 @@ def test_check_msgs_found_in_rotated(tmp_path: pl.Path):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout", "expected msg")],
-        seek_offsets={str(logfile): 0},
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -318,7 +321,7 @@ def test_check_msgs_seek_offset(tmp_path: pl.Path, msg_before_offset: bool):
 
     errors = logfiles.check_msgs_presence_in_logs(
         regex_pairs=[("*.stdout", "expected msg")],
-        seek_offsets={str(logfile): len(first_line)},
+        seek_offsets={str(logfile): (len(first_line), logfile.stat().st_ino)},
         state_dir=tmp_path,
         timestamp=0.0,
     )
@@ -327,3 +330,192 @@ def test_check_msgs_seek_offset(tmp_path: pl.Path, msg_before_offset: bool):
         assert "No line matching" in errors[0]
     else:
         assert errors == []
+
+
+def test_offset_file_roundtrip(tmp_path: pl.Path):
+    """Check that the seek offset and inode survive the offset file round trip."""
+    offset_file = tmp_path / ".node1.stdout.offset"
+    logfiles._write_offset_file(offset_file=offset_file, seek=1234, inode=56)
+
+    assert logfiles._read_offset_file(offset_file=offset_file) == (1234, 56)
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    (
+        pytest.param("1234\n", (1234, None), id="missing_inode"),
+        pytest.param("garbage\n", (0, None), id="garbage"),
+        pytest.param("123\nabc\n", (123, None), id="corrupt_inode"),
+        pytest.param(None, (0, None), id="missing_file"),
+    ),
+)
+def test_read_offset_file_fallback(
+    tmp_path: pl.Path, content: str | None, expected: tuple[int, int | None]
+):
+    """Check reading of an incomplete or invalid or missing offset file."""
+    offset_file = tmp_path / ".node1.stdout.offset"
+    if content is not None:
+        offset_file.write_text(content, encoding="utf-8")
+
+    assert logfiles._read_offset_file(offset_file=offset_file) == expected
+
+
+def test_rotated_logs_seek_by_inode(tmp_path: pl.Path):
+    """Check that the seek offset is applied to the file with the matching inode."""
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="old content\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="new content\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    records = logfiles._get_rotated_logs(
+        logfile=logfile, seek=5, timestamp=0.0, inode=rotated.stat().st_ino
+    )
+    assert [(r.logfile, r.seek) for r in records] == [(rotated, 5), (logfile, 0)]
+
+
+def test_rotated_logs_seek_dropped(tmp_path: pl.Path):
+    """Check that the seek offset is dropped when its file was already fully searched.
+
+    When the file the seek offset was recorded for was not modified since the last search,
+    it is filtered out by the timestamp check. The seek offset must not be applied to
+    another file, as that would skip unsearched content.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="old content\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="new content\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    records = logfiles._get_rotated_logs(
+        logfile=logfile, seek=5, timestamp=live_mtime - 5, inode=rotated.stat().st_ino
+    )
+    assert [(r.logfile, r.seek) for r in records] == [(logfile, 0)]
+
+
+def test_rotated_logs_seek_without_inode(tmp_path: pl.Path):
+    """Check that without a known inode the seek offset is applied to the oldest file."""
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="old content\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="new content\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    records = logfiles._get_rotated_logs(logfile=logfile, seek=5, timestamp=0.0, inode=None)
+    assert [(r.logfile, r.seek) for r in records] == [(rotated, 5), (logfile, 0)]
+
+
+def _search_cluster_like(logfile: pl.Path) -> list[tuple[pl.Path, str]]:
+    """Search the log file for errors the same way `search_cluster_logs` does."""
+    seek, timestamp, inode = logfiles._load_search_state(logfile=logfile)
+    return logfiles._search_log_lines(
+        logfile=logfile,
+        rotated_logs=logfiles._get_rotated_logs(
+            logfile=logfile, seek=seek, timestamp=timestamp, inode=inode
+        ),
+        errors_re=logfiles.ERRORS_RE,
+    )
+
+
+def test_search_log_lines_offset_persistence(tmp_path: pl.Path):
+    """Check that repeated searches report each error only once."""
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\nerror one\n")
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error one"]
+
+    # Second search must start where the first search ended
+    errors = _search_cluster_like(logfile=logfile)
+    assert errors == []
+
+    with open(logfile, "a", encoding="utf-8") as outfile:
+        outfile.write("error two\n")
+    # Make sure the log file modification time is newer than the recorded search time
+    # even on filesystems with coarse timestamps.
+    offset_mtime = logfiles._get_offset_file(logfile=logfile).stat().st_mtime
+    os.utime(logfile, (offset_mtime + 10, offset_mtime + 10))
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error two"]
+
+
+def test_search_log_lines_after_rotation(tmp_path: pl.Path):
+    """Check that errors at the beginning of a fresh log file are found after rotation.
+
+    After the log file was searched and then rotated without further writes, the recorded
+    seek offset belongs to the rotated file. The offset must not be applied to the fresh
+    live log file, so errors at its beginning are reported.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\nerror one\n")
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error one"]
+
+    # Rotate: rename the searched file and let its mtime predate the last search
+    rotated = tmp_path / "node1.stdout.1"
+    logfile.rename(rotated)
+    offset_mtime = logfiles._get_offset_file(logfile=logfile).stat().st_mtime
+    os.utime(rotated, (offset_mtime - 10, offset_mtime - 10))
+
+    # The fresh live log file has an error at its beginning and is larger than the
+    # recorded seek offset, so a misapplied offset would skip the error.
+    _write_log(state_dir=tmp_path, name="node1.stdout", content="error two\n" + "padding\n" * 5)
+    # Make sure the log file modification time is newer than the recorded search time
+    # even on filesystems with coarse timestamps.
+    os.utime(logfile, (offset_mtime + 10, offset_mtime + 10))
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error two"]
+
+
+def test_rotated_logs_seek_on_live(tmp_path: pl.Path):
+    """Check that the seek offset is applied to the live file when its inode matches.
+
+    The live log file is not the oldest file in the list, so this checks that the inode
+    matching is not limited to the oldest file.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="old content\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="new content\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    records = logfiles._get_rotated_logs(
+        logfile=logfile, seek=5, timestamp=0.0, inode=logfile.stat().st_ino
+    )
+    assert [(r.logfile, r.seek) for r in records] == [(rotated, 0), (logfile, 5)]
+
+
+def test_search_log_lines_rotation_with_new_content(tmp_path: pl.Path):
+    """Check the search through a rotated file with unsearched content and a fresh live file.
+
+    Content that was appended to the log file after the last search and then rotated away
+    is searched (starting at the recorded seek offset), together with the whole fresh live
+    log file. Already searched content is not reported again. The new search state is
+    recorded for the live log file.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="ok\nerror one\n")
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error one"]
+
+    # Append new content and rotate. The renamed file keeps its inode and modification time.
+    with open(logfile, "a", encoding="utf-8") as outfile:
+        outfile.write("error two\n")
+    rotated = tmp_path / "node1.stdout.1"
+    logfile.rename(rotated)
+    live_content = "error three\n"
+    _write_log(state_dir=tmp_path, name="node1.stdout", content=live_content)
+
+    # Make sure the log file modification times are newer than the recorded search time
+    # even on filesystems with coarse timestamps, and that the rotated file is older
+    # than the live file.
+    offset_mtime = logfiles._get_offset_file(logfile=logfile).stat().st_mtime
+    os.utime(rotated, (offset_mtime + 5, offset_mtime + 5))
+    os.utime(logfile, (offset_mtime + 10, offset_mtime + 10))
+
+    errors = _search_cluster_like(logfile=logfile)
+    assert [e[1] for e in errors] == ["error two", "error three"]
+
+    # The new search state belongs to the live log file
+    offset_file = logfiles._get_offset_file(logfile=logfile)
+    assert logfiles._read_offset_file(offset_file=offset_file) == (
+        len(live_content),
+        logfile.stat().st_ino,
+    )

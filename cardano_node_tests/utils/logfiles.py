@@ -14,7 +14,6 @@ from collections import deque
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import framework_log
-from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
 
@@ -134,12 +133,22 @@ def _retry_search[T](search_func: tp.Callable[[], T]) -> T:
 
 
 def _get_rotated_logs(
-    logfile: pl.Path, *, seek: int = 0, timestamp: float = 0.0
+    logfile: pl.Path, *, seek: int = 0, timestamp: float = 0.0, inode: int | None = None
 ) -> list[RotableLog]:
     """Return list of versions of the log file (list of `RotableLog`).
 
     When the seek offset was recorded for a log file and the log file was rotated,
     the seek offset now belongs to the rotated file and the "live" log file has seek offset 0.
+    Rotation is expected to rename the log file (as supervisord does), so the rotated file
+    keeps its inode.
+
+    When `inode` of the log file the `seek` offset was recorded for is known, the seek offset
+    is applied to the file with the matching inode. If no listed file matches the inode, the
+    seek offset is discarded, as it belongs to a file that was already fully searched (and so
+    it was filtered out by `timestamp`) or that no longer exists.
+
+    When the `inode` is not known, the seek offset is applied to the file with modification
+    time furthest in the past.
     """
     # Get logfile including rotated versions
     logfiles = list(logfile.parent.glob(f"{logfile.name}*"))
@@ -156,8 +165,14 @@ def _get_rotated_logs(
     if not logfile_records:
         return []
 
-    # The `seek` value belongs to the log file with modification time furthest in the past
-    logfile_records[0] = dataclasses.replace(logfile_records[0], seek=seek)
+    if inode is not None:
+        for i, rec in enumerate(logfile_records):
+            if rec.inode == inode:
+                logfile_records[i] = dataclasses.replace(rec, seek=seek)
+                break
+    else:
+        # The `seek` value belongs to the log file with modification time furthest in the past
+        logfile_records[0] = dataclasses.replace(logfile_records[0], seek=seek)
 
     return logfile_records
 
@@ -205,12 +220,68 @@ def _get_offset_file(logfile: pl.Path) -> pl.Path:
     return logfile.parent / f".{logfile.name}.offset"
 
 
-def _read_seek(offset_file: pl.Path) -> int:
+def _read_offset_file(offset_file: pl.Path) -> tuple[int, int | None]:
+    """Return the seek offset and the inode of the log file the offset was recorded for.
+
+    The inode is `None` when the offset file has no inode record or when the inode
+    record is not valid. The seek offset is 0 when the offset file is missing
+    or unreadable.
+    """
     try:
         with open(offset_file, encoding="utf-8") as infile:
-            return int(infile.readline().strip())
+            seek_str = infile.readline().strip()
+            inode_str = infile.readline().strip()
+    except FileNotFoundError:
+        LOGGER.debug("Offset file '%s' does not exist.", offset_file)
+        return 0, None
     except Exception:
-        return 0
+        LOGGER.warning("Cannot read offset file '%s'.", offset_file, exc_info=True)
+        return 0, None
+
+    try:
+        seek = int(seek_str)
+    except ValueError:
+        LOGGER.warning("Invalid seek offset in offset file '%s'.", offset_file)
+        return 0, None
+
+    try:
+        inode = int(inode_str) if inode_str else None
+    except ValueError:
+        # A valid seek offset with an unknown inode degrades to the oldest-file behavior
+        LOGGER.warning("Invalid inode in offset file '%s'.", offset_file)
+        inode = None
+
+    return seek, inode
+
+
+def _write_offset_file(offset_file: pl.Path, *, seek: int, inode: int) -> None:
+    """Store the seek offset and the inode of the log file the offset belongs to.
+
+    Write to a temp file first and rename, so that an interrupted write cannot leave
+    a valid seek offset without its inode record.
+    """
+    tmp_file = offset_file.parent / f"{offset_file.name}.tmp"
+    tmp_file.write_text(f"{seek}\n{inode}\n", encoding="utf-8")
+    tmp_file.replace(offset_file)
+
+
+def _load_search_state(logfile: pl.Path) -> tuple[int, float, int | None]:
+    """Return the seek offset, the timestamp of the last search and the inode.
+
+    The seek offset says where to start searching the log file. The timestamp of the last
+    search is the modification time of the offset file. The inode belongs to the log file
+    the seek offset was recorded for.
+
+    When there is no offset file, the log file was not searched yet and `(0, 0.0, None)`
+    is returned.
+    """
+    offset_file = _get_offset_file(logfile=logfile)
+    if offset_file.exists():
+        seek, inode = _read_offset_file(offset_file=offset_file)
+        timestamp = offset_file.stat().st_mtime
+    else:
+        seek, timestamp, inode = 0, 0.0, None
+    return seek, timestamp, inode
 
 
 def _get_ignore_regex(
@@ -362,6 +433,7 @@ def _search_log_lines(  # noqa: C901
 
     results: list[tuple[pl.Path, str]] = []
     last_offset_bytes = -1
+    last_inode = -1
 
     for rec in rotated_logs:
         path = rec.logfile
@@ -421,10 +493,11 @@ def _search_log_lines(  # noqa: C901
             if path == logfile:
                 cur = fb.tell()
                 last_offset_bytes = cur - len(leftover)
+                last_inode = rec.inode
 
     if last_offset_bytes >= 0:
         offset_file = _get_offset_file(logfile=logfile)
-        offset_file.write_text(str(last_offset_bytes), encoding="utf-8")
+        _write_offset_file(offset_file=offset_file, seek=last_offset_bytes, inode=last_inode)
 
     return results
 
@@ -463,6 +536,7 @@ def find_msgs_in_logs(
     logfile: pl.Path,
     seek_offset: int,
     timestamp: float,
+    inode: int | None = None,
     only_first: bool = False,
     encoding: str = "utf-8",
 ) -> list[str]:
@@ -476,6 +550,7 @@ def find_msgs_in_logs(
         logfile: Path to the primary log file.
         seek_offset: Byte offset to resume from (start of a line or 0).
         timestamp: Timestamp used by `_get_rotated_logs(...)`.
+        inode: Inode of the log file the `seek_offset` was recorded for (optional).
         only_first: If True, return immediately after the first match.
         encoding: Text encoding used to decode matched lines (default: "utf-8").
 
@@ -492,6 +567,7 @@ def find_msgs_in_logs(
             logfile=logfile,
             seek=seek_offset,
             timestamp=timestamp,
+            inode=inode,
         ):
             path = logfile_rec.logfile
             size = path.stat().st_size
@@ -525,7 +601,7 @@ def find_msgs_in_logs(
 
 def check_msgs_presence_in_logs(  # noqa: C901
     regex_pairs: list[tuple[str, str]],
-    seek_offsets: dict[str, int],
+    seek_offsets: tp.Mapping[str, tuple[int, int | None]],
     state_dir: pl.Path,
     timestamp: float,
 ) -> list[str]:
@@ -533,7 +609,7 @@ def check_msgs_presence_in_logs(  # noqa: C901
 
     Args:
         regex_pairs: (glob, regex) pairs.
-        seek_offsets: Mapping of absolute log path (str) -> byte offset.
+        seek_offsets: Mapping of absolute log path (str) -> (byte offset, inode or None).
         state_dir: Root directory for globs.
         timestamp: Passed to `_get_rotated_logs`.
 
@@ -541,11 +617,14 @@ def check_msgs_presence_in_logs(  # noqa: C901
         Error messages for missing entries and for globs that matched no log file.
     """
 
-    def _search(start_seek: int, logfile: str, regex_b: re.Pattern[bytes]) -> bool:
+    def _search(
+        start_seek: int, inode: int | None, logfile: str, regex_b: re.Pattern[bytes]
+    ) -> bool:
         for rec in _get_rotated_logs(
             logfile=pl.Path(logfile),
             seek=start_seek,
             timestamp=timestamp,
+            inode=inode,
         ):
             path = rec.logfile
             size = path.stat().st_size
@@ -589,9 +668,11 @@ def check_msgs_presence_in_logs(  # noqa: C901
             continue
 
         for logfile in matching_files:
-            start_seek = seek_offsets.get(logfile) or 0
+            start_seek, inode = seek_offsets.get(logfile) or (0, None)
             line_found = _retry_search(
-                functools.partial(_search, start_seek=start_seek, logfile=logfile, regex_b=regex_b)
+                functools.partial(
+                    _search, start_seek=start_seek, inode=inode, logfile=logfile, regex_b=regex_b
+                )
             )
             if not line_found:
                 errors.append(f"No line matching `{regex}` found in '{logfile}'.")
@@ -622,7 +703,9 @@ def expect_errors(regex_pairs: list[tuple[str, str]], *, worker_id: str) -> tp.I
     # Flatten the list
     expanded_paths = list(itertools.chain.from_iterable(_expanded_paths))
     # Record each end-of-file as a starting offset for searching the log file
-    seek_offsets = {str(p): helpers.get_eof_offset(p) for p in expanded_paths}
+    # Single `stat` call per file, so the offset (file size) and the inode belong to the
+    # same file even when the file is rotated in between.
+    seek_offsets = {str(p): ((st := p.stat()).st_size, st.st_ino) for p in expanded_paths}
 
     timestamp = time.time()
 
@@ -654,7 +737,9 @@ def expect_messages(regex_pairs: list[tuple[str, str]]) -> tp.Iterator[None]:
     # Flatten the list
     expanded_paths = list(itertools.chain.from_iterable(_expanded_paths))
     # Record each end-of-file as a starting offset for searching the log file
-    seek_offsets = {str(p): helpers.get_eof_offset(p) for p in expanded_paths}
+    # Single `stat` call per file, so the offset (file size) and the inode belong to the
+    # same file even when the file is rotated in between.
+    seek_offsets = {str(p): ((st := p.stat()).st_size, st.st_ino) for p in expanded_paths}
 
     timestamp = time.time()
 
@@ -674,11 +759,13 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
     lock_file = temptools.get_basetemp() / f"search_cluster_{cluster_env.instance_num}.lock"
 
     def _search(
-        logfile: pl.Path, seek: int, timestamp: float, errors_ignored: str
+        logfile: pl.Path, seek: int, timestamp: float, inode: int | None, errors_ignored: str
     ) -> list[tuple[pl.Path, str]]:
         return _search_log_lines(
             logfile=logfile,
-            rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+            rotated_logs=_get_rotated_logs(
+                logfile=logfile, seek=seek, timestamp=timestamp, inode=inode
+            ),
             errors_re=ERRORS_RE,
             errors_ignored_re=re.compile(errors_ignored),
             look_back_map=ERRORS_LOOK_BACK_MAP,
@@ -687,18 +774,13 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
     with locking.FileLockIfXdist(lock_file):
         errors = []
         for logfile in cluster_env.state_dir.glob("*.std*"):
-            # Skip if the log file is status file or rotated log
-            if logfile.name.endswith(".offset") or ROTATED_RE.match(logfile.name):
+            # Skip if the log file is offset file (or its temp file) or rotated log
+            if logfile.name.endswith((".offset", ".offset.tmp")) or ROTATED_RE.match(logfile.name):
                 continue
 
-            # Get seek offset (from where to start searching) and timestamp of last search
-            offset_file = _get_offset_file(logfile=logfile)
-            if offset_file.exists():
-                seek = _read_seek(offset_file=offset_file)
-                timestamp = offset_file.stat().st_mtime
-            else:
-                seek = 0
-                timestamp = 0.0
+            # Get seek offset (from where to start searching), timestamp of last search
+            # and inode of the log file the seek offset was recorded for
+            seek, timestamp, inode = _load_search_state(logfile=logfile)
 
             # Get ignore rules for the log file
             ignore_rules = _get_ignore_rules(
@@ -716,6 +798,7 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
                         logfile=logfile,
                         seek=seek,
                         timestamp=timestamp,
+                        inode=inode,
                         errors_ignored=errors_ignored,
                     )
                 )
@@ -730,19 +813,16 @@ def search_framework_log() -> list[tuple[pl.Path, str]]:
     # Each worker is checking only its own log file.
     logfile = framework_log.get_framework_log_path()
 
-    # Get seek offset (from where to start searching) and timestamp of last search
-    offset_file = _get_offset_file(logfile=logfile)
-    if offset_file.exists():
-        seek = _read_seek(offset_file=offset_file)
-        timestamp = offset_file.stat().st_mtime
-    else:
-        seek = 0
-        timestamp = 0.0
+    # Get seek offset (from where to start searching), timestamp of last search
+    # and inode of the log file the seek offset was recorded for
+    seek, timestamp, inode = _load_search_state(logfile=logfile)
 
     def _search() -> list[tuple[pl.Path, str]]:
         return _search_log_lines(
             logfile=logfile,
-            rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+            rotated_logs=_get_rotated_logs(
+                logfile=logfile, seek=seek, timestamp=timestamp, inode=inode
+            ),
             errors_re=ERRORS_RE,
         )
 
@@ -760,19 +840,16 @@ def search_supervisord_logs() -> list[tuple[pl.Path, str]]:
     with locking.FileLockIfXdist(lock_file):
         logfile = cluster_env.state_dir / "supervisord.log"
 
-        # Get seek offset (from where to start searching) and timestamp of last search
-        offset_file = _get_offset_file(logfile=logfile)
-        if offset_file.exists():
-            seek = _read_seek(offset_file=offset_file)
-            timestamp = offset_file.stat().st_mtime
-        else:
-            seek = 0
-            timestamp = 0.0
+        # Get seek offset (from where to start searching), timestamp of last search
+        # and inode of the log file the seek offset was recorded for
+        seek, timestamp, inode = _load_search_state(logfile=logfile)
 
         def _search() -> list[tuple[pl.Path, str]]:
             return _search_log_lines(
                 logfile=logfile,
-                rotated_logs=_get_rotated_logs(logfile=logfile, seek=seek, timestamp=timestamp),
+                rotated_logs=_get_rotated_logs(
+                    logfile=logfile, seek=seek, timestamp=timestamp, inode=inode
+                ),
                 errors_re=SUPERVISORD_ERRORS_RE,
             )
 
