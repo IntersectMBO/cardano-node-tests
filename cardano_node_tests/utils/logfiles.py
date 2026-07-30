@@ -708,10 +708,11 @@ def _constrains_match_end(regex_b: re.Pattern[bytes]) -> bool:
     """
     try:
         parsed = re_parser.parse(regex_b.pattern, regex_b.flags)
+        return _subpattern_constrains(parsed=parsed)
     except Exception:
-        # Unexpected for an already compiled regex - be conservative
+        # Unexpected for an already compiled regex (e.g. the shape of the parsed pattern
+        # changed in a new Python version) - be conservative
         return True
-    return _subpattern_constrains(parsed=parsed)
 
 
 def check_msgs_presence_in_logs(  # noqa: C901
@@ -722,6 +723,9 @@ def check_msgs_presence_in_logs(  # noqa: C901
 ) -> list[str]:
     """Check if the expected messages are present in logs (byte offsets, binary I/O).
 
+    An expected message found in an unterminated final line counts as present, unless
+    the regex constrains what follows the match (see `_constrains_match_end`).
+
     Args:
         regex_pairs: (glob, regex) pairs.
         seek_offsets: Mapping of absolute log path (str) -> (byte offset, inode or None).
@@ -730,9 +734,6 @@ def check_msgs_presence_in_logs(  # noqa: C901
 
     Returns:
         Error messages for missing entries and for globs that matched no log file.
-
-    An expected message found in an unterminated final line counts as present, unless
-    the regex constrains what follows the match (see `_constrains_match_end`).
     """
 
     def _search(
