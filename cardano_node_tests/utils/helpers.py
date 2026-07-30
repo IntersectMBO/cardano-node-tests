@@ -112,8 +112,21 @@ def run_command(
     ignore_fail: bool = False,
     shell: bool = False,
     merge_stderr: bool = False,
+    stdin_data: bytes | None = None,
 ) -> bytes:
-    """Run command."""
+    """Run command.
+
+    Args:
+        command: A command to run - either a string or a list of arguments.
+        workdir: A working directory for the command.
+        ignore_fail: Don't raise an exception when the command fails.
+        shell: Run the command in a shell.
+        merge_stderr: Redirect stderr to stdout.
+        stdin_data: Data to pass to stdin of the command.
+
+    Returns:
+        bytes: Content of stdout.
+    """
     if isinstance(command, str):
         cmd = command if shell else command.split()
         cmd_str = command
@@ -125,12 +138,13 @@ def run_command(
 
     with subprocess.Popen(
         cmd,
+        stdin=subprocess.PIPE if stdin_data is not None else None,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE,
         shell=shell,
         cwd=workdir or None,
     ) as p:
-        stdout, stderr = p.communicate()
+        stdout, stderr = p.communicate(input=stdin_data)
         retcode = p.returncode
 
     if not ignore_fail and retcode != 0:
@@ -247,12 +261,12 @@ def write_json(*, out_file: ttypes.FileType, content: dict) -> ttypes.FileType:
 
 def decode_bech32(bech32: str) -> str:
     """Convert from bech32 string."""
-    return run_command(f"echo '{bech32}' | bech32", shell=True).decode().strip()
+    return run_command(["bech32"], stdin_data=f"{bech32}\n".encode()).decode().strip()
 
 
 def encode_bech32(*, prefix: str, data: str) -> str:
     """Convert to bech32 string."""
-    return run_command(f"echo '{data}' | bech32 {prefix}", shell=True).decode().strip()
+    return run_command(["bech32", prefix], stdin_data=f"{data}\n".encode()).decode().strip()
 
 
 def check_dir_arg(dir_path: str) -> pl.Path | None:
