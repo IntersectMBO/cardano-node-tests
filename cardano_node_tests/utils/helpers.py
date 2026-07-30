@@ -248,13 +248,10 @@ def get_vcs_link() -> str:
     return url
 
 
-def checksum(filename: ttypes.FileType, *, blocksize: int = 65536) -> str:
+def checksum(filename: ttypes.FileType) -> str:
     """Return file checksum."""
-    hash_o = hashlib.blake2b()
     with open(filename, "rb") as f:
-        for block in iter(lambda: f.read(blocksize), b""):
-            hash_o.update(block)
-    return hash_o.hexdigest()
+        return hashlib.file_digest(f, hashlib.blake2b).hexdigest()
 
 
 def write_json(*, out_file: ttypes.FileType, content: dict) -> ttypes.FileType:
