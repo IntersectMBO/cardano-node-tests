@@ -1,4 +1,4 @@
-"""Tests for `utils.logfiles` ignore rules handling."""
+"""Tests for `utils.logfiles` ignore rules handling and expected messages checks."""
 
 import os
 import pathlib as pl
