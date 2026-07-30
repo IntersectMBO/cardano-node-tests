@@ -9,6 +9,7 @@ import math
 import os
 import pathlib as pl
 import re
+import re._parser as re_parser  # The same parser the `re` module itself uses
 import time
 import typing as tp
 from collections import deque
@@ -456,6 +457,11 @@ def _search_log_lines(  # noqa: C901
     - Decodes only matched lines for output.
     - Persists the search state for the live logfile: a byte offset at a line boundary,
       the file inode and the search start time.
+    - An unterminated final line of the live logfile is not searched. It is searched by
+      a later search, once the line is complete or the file is rotated. When the line is
+      never completed (e.g. the writer died mid-line and the file is never rotated), the
+      line is never searched. An unterminated final line of a rotated log file will never
+      be completed, so it is searched right away.
     """
     errs_b = _compile_bytes_from_pattern(pat=errors_re, encoding=encoding)
     if not errs_b:
@@ -471,6 +477,23 @@ def _search_log_lines(  # noqa: C901
     # Time when this search starts reading the log files. Recorded in the offset file, so
     # the next search doesn't skip lines that were appended while this search was running.
     search_start = time.time()
+
+    def _check_line(line_b: bytes, look_back: deque[bytes], path: pl.Path) -> None:
+        is_reported = not (
+            # Fast ignore
+            (ign_b and ign_b.search(line_b))
+            # Not an error
+            or not errs_b.search(line_b)
+            # Error, but ignored because of a preceding message in the look-back buffer
+            or (
+                lb_pairs and _should_ignore_error(line_b=line_b, lookback=look_back, pairs=lb_pairs)
+            )
+        )
+        look_back.append(line_b)
+        if is_reported:
+            # Report: decode only now
+            line = line_b.decode(encoding, errors="surrogateescape")
+            results.append((path, line))
 
     for rec in rotated_logs:
         path = rec.logfile
@@ -505,26 +528,12 @@ def _search_log_lines(  # noqa: C901
                     continue
 
                 for line_b in lines_b:
-                    # Fast ignore
-                    if ign_b and ign_b.search(line_b):
-                        look_back.append(line_b)
-                        continue
-                    # Not an error -> just update context
-                    if not errs_b.search(line_b):
-                        look_back.append(line_b)
-                        continue
-                    # Error: maybe ignore based on mapping
-                    if lb_pairs and _should_ignore_error(
-                        line_b=line_b, lookback=look_back, pairs=lb_pairs
-                    ):
-                        look_back.append(line_b)
-                        continue
+                    _check_line(line_b=line_b, look_back=look_back, path=path)
 
-                    look_back.append(line_b)
-
-                    # Report: decode only now
-                    line = line_b.decode(encoding, errors="surrogateescape")
-                    results.append((path, line))
+            # An unterminated final line of a rotated log file will never be completed.
+            # Search it now, otherwise it would never be searched.
+            if leftover and path != logfile:
+                _check_line(line_b=leftover, look_back=look_back, path=path)
 
             # Persist next offset for the "live" logfile at a line boundary
             if path == logfile:
@@ -598,7 +607,10 @@ def find_msgs_in_logs(
         encoding: Text encoding used to decode matched lines (default: "utf-8").
 
     Returns:
-        Matching log lines (decoded to str, without trailing newlines).
+        Matching log lines (decoded to str, without trailing newlines). An unterminated
+        final line of the live log file is not searched, so a truncated line is never
+        returned for it. An unterminated final line of a rotated log file is searched,
+        as it is the file's final content.
     """
     # Compile as BYTES regex for speed; note: \w/\b are ASCII-only in bytes mode.
     regex_b = _compile_bytes_from_str(pat=regex)
@@ -635,11 +647,72 @@ def find_msgs_in_logs(
                             lines_found.append(line)
                             if only_first:
                                 return lines_found
+
+                # An unterminated final line of a rotated log file is its final content,
+                # so search it as well. An unterminated final line of the live log file
+                # is skipped - it is searched once complete, and a truncated line must
+                # not be returned to callers that parse the line content.
+                if leftover and path != logfile and regex_b.search(leftover):
+                    lines_found.append(leftover.decode(encoding, errors="surrogateescape"))
+                    if only_first:
+                        return lines_found
         return lines_found
 
     lines_found = _retry_search(_search)
 
     return lines_found
+
+
+def _subpattern_constrains(parsed: tp.Any) -> bool:
+    """Return True when the parsed (sub)pattern contains an end anchor or a lookahead."""
+    end_anchors = (
+        re_parser.AT_END,
+        re_parser.AT_END_STRING,
+        re_parser.AT_BOUNDARY,
+        re_parser.AT_NON_BOUNDARY,
+    )
+    for op, av in parsed:
+        if op is re_parser.AT and av in end_anchors:
+            return True
+        if op in (re_parser.ASSERT, re_parser.ASSERT_NOT) and av[0] == 1:
+            # A lookahead
+            return True
+        # Recurse into nested subpatterns of any operation (groups, repeats, branches,
+        # conditionals, lookbehinds, ...)
+        stack = [av]
+        while stack:
+            item = stack.pop()
+            if isinstance(item, re_parser.SubPattern):
+                if _subpattern_constrains(parsed=item):
+                    return True
+            elif isinstance(item, (tuple, list)):
+                stack.extend(item)
+    return False
+
+
+def _constrains_match_end(regex_b: re.Pattern[bytes]) -> bool:
+    r"""Return True when the regex constrains what follows the match.
+
+    A match in an incomplete line implies a match in the complete line only when the
+    regex doesn't rely on what comes after the match. End anchors (`$`, `\Z`), word
+    boundaries (`\b`, `\B`) and lookaheads can match an incomplete line while the
+    complete line doesn't match (or vice versa), so an incomplete line must not be
+    searched with such regexes.
+
+    The pattern is parsed with the stdlib regex parser, so escaped literals, character
+    classes, comments and verbose mode are interpreted exactly as by `re` itself.
+
+    The check is a deliberate over-approximation: when in doubt (e.g. the pattern cannot
+    be parsed), the regex is reported as constraining, which merely degrades to not
+    searching an incomplete line.
+    """
+    try:
+        parsed = re_parser.parse(regex_b.pattern, regex_b.flags)
+        return _subpattern_constrains(parsed=parsed)
+    except Exception:
+        # Unexpected for an already compiled regex (e.g. the shape of the parsed pattern
+        # changed in a new Python version) - be conservative
+        return True
 
 
 def check_msgs_presence_in_logs(  # noqa: C901
@@ -649,6 +722,9 @@ def check_msgs_presence_in_logs(  # noqa: C901
     timestamp: float,
 ) -> list[str]:
     """Check if the expected messages are present in logs (byte offsets, binary I/O).
+
+    An expected message found in an unterminated final line counts as present, unless
+    the regex constrains what follows the match (see `_constrains_match_end`).
 
     Args:
         regex_pairs: (glob, regex) pairs.
@@ -689,6 +765,12 @@ def check_msgs_presence_in_logs(  # noqa: C901
                     for line_b in lines_b:
                         if regex_b.search(line_b):
                             return True
+
+                # Search also an unterminated final line. A match in an incomplete line
+                # is also a match in the complete line, unless the regex constrains what
+                # follows the match.
+                if leftover and not _constrains_match_end(regex_b) and regex_b.search(leftover):
+                    return True
         return False
 
     errors: list[str] = []
