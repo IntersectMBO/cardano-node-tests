@@ -169,8 +169,10 @@ def get_current_commit() -> str:
 
     Uses the `GIT_REVISION` env variable when set, otherwise asks git.
     """
-    # TODO: make sure we are in correct repo
-    return os.environ.get("GIT_REVISION") or run_command("git rev-parse HEAD").decode().strip()
+    return (
+        os.environ.get("GIT_REVISION")
+        or run_command("git rev-parse HEAD", workdir=pl.Path(__file__).parent).decode().strip()
+    )
 
 
 # TODO: unify with the implementation in clusterlib
