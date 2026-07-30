@@ -10,6 +10,7 @@ import logging
 import os
 import pathlib as pl
 import random
+import shlex
 import signal
 import string
 import subprocess
@@ -127,12 +128,13 @@ def run_command(
     Returns:
         bytes: Content of stdout.
     """
+    cmd: str | list[str]
     if isinstance(command, str):
-        cmd = command if shell else command.split()
+        cmd = command if shell else shlex.split(command)
         cmd_str = command
     else:
-        cmd = command
-        cmd_str = " ".join(command)
+        cmd = [str(c) for c in command]
+        cmd_str = " ".join(cmd)
 
     LOGGER.debug("Running `%s`", cmd_str)
 
