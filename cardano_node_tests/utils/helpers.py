@@ -67,7 +67,7 @@ def environ(env: dict) -> tp.Iterator[None]:
     finally:
         for key, value in original_env.items():
             if value is None:
-                del os.environ[key]
+                os.environ.pop(key, None)
             else:
                 os.environ[key] = value
 
