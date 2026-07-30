@@ -167,7 +167,7 @@ def run_in_bash(command: str, *, workdir: ttypes.FileType = "") -> bytes:
 def get_current_commit() -> str:
     """Return the current git commit hash.
 
-    Uses the `GIT_REVISION` env variable when set, otherwise asks git.
+    Uses the `GIT_REVISION` env variable when set to a non-empty value, otherwise asks git.
     """
     return (
         os.environ.get("GIT_REVISION")
@@ -213,7 +213,7 @@ def get_timestamped_rand_str(rand_str_length: int = 4) -> str:
 
 
 def get_line_str_from_frame(frame: tt.FrameType) -> str:
-    """Return `filename#lineno` string for the given frame."""
+    """Return `filename#L<lineno>` string for the given frame."""
     lineno = frame.f_lineno
     fpath = frame.f_globals["__file__"]
     line_str = f"{fpath}#L{lineno}"
@@ -233,7 +233,7 @@ def _get_calling_frame() -> tt.FrameType:
 
 
 def get_current_line_str() -> str:
-    """Get `filename#lineno` of current line.
+    """Get `filename#L<lineno>` of current line.
 
     NOTE: this will not work correctly if called from context manager.
     """
@@ -338,7 +338,7 @@ def tool_has(command: str) -> bool:
 
 
 def flatten(
-    iterable: tp.Iterable[tp.Any], *, ltypes: type[tp.Iterable] | None = None
+    iterable: tp.Iterable[tp.Any], *, ltypes: type[tp.Iterable[tp.Any]] | None = None
 ) -> tp.Generator[tp.Any]:
     """Flatten an irregular (arbitrarily nested) iterable of iterables."""
     ltypes_p = ltypes if ltypes is not None else abc.Iterable
