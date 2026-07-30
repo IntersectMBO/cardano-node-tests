@@ -320,7 +320,6 @@ def tool_has(command: str) -> bool:
 
     E.g. `tool_has("cardano-cli legacy governance")`
     """
-    err_str = ""
     try:
         run_command(command)
     except RuntimeError as err:
@@ -328,7 +327,8 @@ def tool_has(command: str) -> bool:
     else:
         return True
 
-    cmd_err = err_str.split(":", maxsplit=1)[1].strip()
+    # Strip the "An error occurred while running `...`:" prefix added by `run_command`
+    cmd_err = err_str.split(":", maxsplit=1)[-1].strip()
     return not cmd_err.startswith("Invalid")
 
 
