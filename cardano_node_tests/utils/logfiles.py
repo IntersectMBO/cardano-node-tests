@@ -663,14 +663,37 @@ def find_msgs_in_logs(
 
 
 def _constrains_match_end(regex_b: re.Pattern[bytes]) -> bool:
-    """Return True when the regex constrains what follows the match.
+    r"""Return True when the regex constrains what follows the match.
 
     A match in an incomplete line implies a match in the complete line only when the
     regex doesn't rely on what comes after the match. End anchors, word boundaries and
     lookaheads can match an incomplete line while the complete line doesn't match (or
     vice versa), so an incomplete line must not be searched with such regexes.
+
+    Escaped literals (e.g. `\$`) and characters inside character classes are not
+    anchors, so they don't count as constraints.
     """
-    return any(tok in regex_b.pattern for tok in (b"$", rb"\Z", rb"\b", rb"\B", b"(?=", b"(?!"))
+    pat = regex_b.pattern
+    in_class = False
+    i = 0
+    while i < len(pat):
+        char = pat[i : i + 1]
+        if char == b"\\":
+            # An escape sequence: `\Z`, `\b` and `\B` are constraints (outside of a
+            # character class), any other escaped character is a literal
+            if not in_class and pat[i + 1 : i + 2] in (b"Z", b"b", b"B"):
+                return True
+            i += 2
+            continue
+        if in_class:
+            if char == b"]":
+                in_class = False
+        elif char == b"[":
+            in_class = True
+        elif char == b"$" or (char == b"(" and pat[i + 1 : i + 3] in (b"?=", b"?!")):
+            return True
+        i += 1
+    return False
 
 
 def check_msgs_presence_in_logs(  # noqa: C901

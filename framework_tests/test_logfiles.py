@@ -807,3 +807,30 @@ def test_search_log_lines_unterminated_rotated_ignores(
 
     errors = _search_cluster_like_ignores(logfile=logfile)
     assert [e[1] for e in errors] == expected
+
+
+@pytest.mark.parametrize(
+    ("pattern", "expected"),
+    (
+        pytest.param("msg", False, id="plain"),
+        pytest.param("msg$", True, id="dollar"),
+        pytest.param(r"msg\$", False, id="escaped_dollar"),
+        pytest.param(r"msg\Z", True, id="end_of_string"),
+        pytest.param(r"\bmsg", True, id="word_boundary"),
+        pytest.param(r"\Bmsg", True, id="non_word_boundary"),
+        pytest.param(r"msg\\b", False, id="escaped_backslash"),
+        pytest.param("[$]msg", False, id="dollar_in_class"),
+        pytest.param(r"[\b]msg", False, id="backspace_in_class"),
+        pytest.param("msg(?=foo)", True, id="lookahead"),
+        pytest.param("msg(?!foo)", True, id="negative_lookahead"),
+        pytest.param("(?:msg)", False, id="non_capturing_group"),
+        pytest.param("(?<=foo)msg", False, id="lookbehind"),
+    ),
+)
+def test_constrains_match_end(pattern: str, expected: bool):
+    """Check the detection of regexes that constrain what follows the match.
+
+    Escaped literals and characters inside character classes are not anchors.
+    """
+    regex_b = re.compile(pattern.encode("utf-8"))
+    assert logfiles._constrains_match_end(regex_b) is expected
