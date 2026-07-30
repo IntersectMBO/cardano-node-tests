@@ -290,7 +290,7 @@ def check_dir_arg_keep(dir_path: str) -> pl.Path | None:
     orig_path = pl.Path(dir_path).expanduser()
     abs_path = orig_path.resolve()
     if not (abs_path.exists() and abs_path.is_dir()):
-        msg = f"check_dir_arg: directory '{dir_path}' doesn't exist"
+        msg = f"check_dir_arg_keep: directory '{dir_path}' doesn't exist"
         raise argparse.ArgumentTypeError(msg)
     return orig_path
 
