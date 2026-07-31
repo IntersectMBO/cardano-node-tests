@@ -75,6 +75,9 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
     dirs_to_copy = ("nodes", "shelley")
 
     for fpath in files_list:
+        # Skip dangling symlinks and other non-regular files
+        if not fpath.is_file():
+            continue
         shutil.copy(fpath, destdir)
     for dname in dirs_to_copy:
         src_dir = state_dir / dname
