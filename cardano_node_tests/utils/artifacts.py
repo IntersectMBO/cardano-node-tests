@@ -115,4 +115,4 @@ def copy_artifacts(*, pytest_tmp_dir: pl.Path, pytest_config: Config) -> None:
 
     destdir = artifacts_dir / f"{pytest_tmp_dir.name}-{helpers.get_rand_str(8)}"
     shutil.copytree(pytest_tmp_dir, destdir, symlinks=True, ignore_dangling_symlinks=True)
-    LOGGER.info(f"Collected artifacts copied to '{artifacts_dir}'.")
+    LOGGER.info(f"Collected artifacts copied to '{destdir}'.")
