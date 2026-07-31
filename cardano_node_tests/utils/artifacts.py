@@ -91,7 +91,12 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
         src_dir = state_dir / dname
         if not src_dir.exists():
             continue
-        shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
+        try:
+            shutil.copytree(src_dir, destdir / dname, symlinks=True)
+        except OSError as err:
+            # Same race as with the files above - the cluster may still be running and
+            # modifying the directory content.
+            LOGGER.warning(f"Failed to copy '{src_dir}': {err}")
 
     if not any(destdir.iterdir()):
         LOGGER.warning(f"No cluster artifacts found in '{state_dir}', nothing saved.")
