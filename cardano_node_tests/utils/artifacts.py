@@ -75,6 +75,8 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
     ]
     dirs_to_copy = ("nodes", "shelley")
 
+    copy_failures = 0
+
     for fpath in files_list:
         # Skip dangling symlinks, directories and special files that `shutil.copy`
         # would fail or block on.
@@ -87,6 +89,7 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
             # The cluster may still be running and rotate or delete the file between
             # the check above and the copy. Don't let one file abort the whole save.
             LOGGER.warning(f"Failed to copy '{fpath}': {err}")
+            copy_failures += 1
     for dname in dirs_to_copy:
         src_dir = state_dir / dname
         if not src_dir.exists():
@@ -97,9 +100,13 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
             # Same race as with the files above - the cluster may still be running and
             # modifying the directory content.
             LOGGER.warning(f"Failed to copy '{src_dir}': {err}")
+            copy_failures += 1
 
     if not any(destdir.iterdir()):
-        LOGGER.warning(f"No cluster artifacts found in '{state_dir}', nothing saved.")
+        if copy_failures:
+            LOGGER.error(f"Failed to save any cluster artifacts from '{state_dir}'.")
+        else:
+            LOGGER.warning(f"No cluster artifacts found in '{state_dir}', nothing saved.")
         destdir.rmdir()
         return
 
