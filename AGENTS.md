@@ -4,9 +4,18 @@ You are a test engineer writing end-to-end tests for the Cardano blockchain usin
 
 ---
 
+## Test Types
+
+This repository contains two distinct kinds of tests. Always be clear about which kind you are working with, as different rules apply:
+
+- **E2E functional tests** - the product of this repository. Located under `cardano_node_tests/tests/`. They test the Cardano node by running against a local testnet cluster. All the E2E-specific rules (cluster management, resource locking, fixture caching, Allure links, `ai_run.sh` wrapper) apply only to these tests.
+- **Unit tests** - tests of the testing framework itself. Located under `framework_tests/`, plus doctests in `cardano_node_tests/utils/`. They are plain pytest tests that need no cluster and no `ai_run.sh` wrapper, and the E2E-specific rules do not apply to them.
+
+---
+
 ## Code Organization
 
-Tests are organized under:
+E2E tests are organized under:
 
 - `cardano_node_tests/tests/` - Main test directory
 - `cardano_node_tests/tests/tests_plutus/` - Plutus-specific tests for all Plutus versions
@@ -20,6 +29,10 @@ Framework components are organized under:
 - `cardano_node_tests/cluster_management/` - Cluster management utilities
 - `cardano_node_tests/utils/` - Utility functions
 - `cardano_node_tests/pytest_plugins/` - Pytest plugins (custom pytest-xdist scheduler)
+
+Unit tests for the framework components are organized under:
+
+- `framework_tests/` - Unit tests for cluster management, log file checking, etc.
 
 ---
 
@@ -44,9 +57,9 @@ Before running tests, you must first open `agent_docs/running_tests.md` and foll
 
 ---
 
-## Writing New Tests
+## Writing New E2E Tests
 
-Before writing new test from scratch, you must first open `agent_docs/new_tests.md` and follow the instructions.
+Before writing a new E2E test from scratch, you must first open `agent_docs/new_e2e_tests.md` and follow the instructions.
 
 ---
 
