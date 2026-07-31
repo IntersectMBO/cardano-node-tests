@@ -78,7 +78,7 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
             continue
         shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
 
-    if not destdir.iterdir():
+    if not any(destdir.iterdir()):
         destdir.rmdir()
         return
 
