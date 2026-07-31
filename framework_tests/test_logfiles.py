@@ -1,5 +1,6 @@
 """Tests for `utils.logfiles` ignore rules handling and expected messages checks."""
 
+import logging
 import os
 import pathlib as pl
 import re
@@ -9,6 +10,12 @@ import pytest
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
+
+
+@pytest.fixture(autouse=True)
+def _reset_logged_warnings(monkeypatch: pytest.MonkeyPatch):
+    """Reset the warn-once dedup set, so tests don't depend on the execution order."""
+    monkeypatch.setattr(logfiles, "_logged_warnings", set())
 
 
 @pytest.fixture
@@ -73,13 +80,77 @@ def test_ignore_rules_expiry(
     assert rules == ([("*", "foo")] if expected_kept else [])
 
 
-def test_ignore_rules_skip_lines_without_separator(cluster_env: cluster_nodes.ClusterEnv):
-    """Check that lines without the ";;" separator are skipped without an error."""
-    rules_file = cluster_env.state_dir / f"{logfiles.ERRORS_IGNORE_FILE_NAME}_test_id"
-    rules_file.write_text("\nnot a rule\n*.stdout;;0.0;;valid\n", encoding="utf-8")
+@pytest.mark.parametrize(
+    "malformed_line",
+    (
+        pytest.param("not a rule", id="no_separator"),
+        pytest.param("*.stdout;;no regex part", id="one_separator"),
+        pytest.param("*.stdout;;not_a_float;;regex", id="invalid_expire_time"),
+    ),
+)
+def test_ignore_rules_skip_malformed_lines(
+    cluster_env: cluster_nodes.ClusterEnv,
+    caplog: pytest.LogCaptureFixture,
+    malformed_line: str,
+):
+    """Check that a malformed line is skipped with a warning and doesn't crash the parsing.
 
-    rules = logfiles._get_ignore_rules(cluster_env=cluster_env, timestamp=1000.0)
+    A crash while parsing ignore rules would abort the whole log check and poison every
+    subsequent log check on the cluster instance. Valid rules on other lines are still
+    parsed. Blank lines are skipped silently.
+    """
+    rules_file = cluster_env.state_dir / f"{logfiles.ERRORS_IGNORE_FILE_NAME}_test_id"
+    rules_file.write_text(f"\n{malformed_line}\n*.stdout;;0.0;;valid\n", encoding="utf-8")
+
+    with caplog.at_level(logging.WARNING):
+        rules = logfiles._get_ignore_rules(cluster_env=cluster_env, timestamp=1000.0)
+
     assert rules == [("*.stdout", "valid")]
+    malformed_warnings = [r for r in caplog.records if "malformed ignore rule" in r.message]
+    assert len(malformed_warnings) == 1
+
+
+@pytest.mark.parametrize(
+    ("files_glob", "regex", "match"),
+    (
+        pytest.param("*.std;;out", "regex", "must not", id="separator_in_glob"),
+        pytest.param("*.std\nout", "regex", "must not", id="newline_in_glob"),
+        pytest.param("*.stdout", "re\ngex", "must not", id="newline_in_regex"),
+        pytest.param("*.stdout", "re\rgex", "must not", id="carriage_return_in_regex"),
+        pytest.param("*.stdout", "", "empty string", id="empty_regex"),
+        pytest.param("*.stdout", "a*|foo", "empty string", id="matches_empty_string"),
+        pytest.param("*.stdout", "foo(", "not valid", id="regex_not_valid"),
+        pytest.param("*.stdout", "(?i)foo", "not valid", id="global_flag_mid_pattern"),
+        pytest.param("*.stdout", r"\N{BULLET}err", "not valid", id="str_only_escape"),
+    ),
+)
+def test_add_ignore_rule_validation(
+    cluster_env: cluster_nodes.ClusterEnv, files_glob: str, regex: str, match: str
+):
+    """Check that a hazardous ignore rule is rejected and nothing is written.
+
+    A files glob with ";;" or a newline in the glob or the regex would corrupt the
+    line-based rules file format. A regex matching an empty string would suppress all
+    errors for the matching files. A regex that doesn't compile, or that cannot be
+    combined into an alternation with other rules, would crash every log check.
+    """
+    with pytest.raises(ValueError, match=match):
+        logfiles.add_ignore_rule(files_glob=files_glob, regex=regex, ignore_file_id="test_id")
+
+    assert not list(cluster_env.state_dir.glob(f"{logfiles.ERRORS_IGNORE_FILE_NAME}_*"))
+
+
+@pytest.mark.parametrize("skip_after", (float("nan"), float("inf"), -1.0))
+@pytest.mark.usefixtures("cluster_env")
+def test_add_ignore_rule_invalid_skip_after(skip_after: float):
+    """Check that a non-finite or negative rule expire time is rejected.
+
+    Such expire time would silently turn "expire after X" into "never expire".
+    """
+    with pytest.raises(ValueError, match="skip_after"):
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout", regex="foo", ignore_file_id="test_id", skip_after=skip_after
+        )
 
 
 def test_ignore_rules_multiple_files(cluster_env: cluster_nodes.ClusterEnv):
@@ -144,23 +215,35 @@ def test_get_ignore_regex_multiple():
     assert sorted(regex.split("|")) == ["bar", "foo"]
 
 
-def test_empty_regex_matches_everything(cluster_env: cluster_nodes.ClusterEnv):
-    """Pin the hazard of an empty regex in an ignore rule.
+def test_get_ignore_regex_skips_hazardous(caplog: pytest.LogCaptureFixture):
+    """Check that hazardous regexes from ignore rules are skipped with a warning.
 
-    An empty regex round-trips through the rules file and becomes an empty branch in
-    the combined alternation, which matches every line - i.e. it suppresses all errors
-    for the matching files. This documents the current behavior; `add_ignore_rule`
-    does not reject empty regexes.
+    An empty regex (or a regex matching an empty string) would suppress all errors for
+    the matching files. A regex that doesn't compile, that uses global inline flags that
+    are not valid mid-pattern, or that conflicts with another rule (a redefined group
+    name - the first rule in sorted order wins) would crash every log check on compile.
+    Such regexes can appear in hand-edited rules files. Valid regexes are kept.
     """
-    logfiles.add_ignore_rule(files_glob="*", regex="", ignore_file_id="id1")
+    with caplog.at_level(logging.WARNING):
+        regex = logfiles._get_ignore_regex(
+            ignore_rules=[
+                ("*.stdout", ""),
+                ("*.stdout", "b*|bar"),
+                ("*.stdout", "unbalanced("),
+                ("*.stdout", "(?s)dotall"),
+                ("*.stdout", "(?P<g>aaa)"),
+                ("*.stdout", "(?P<g>bbb)"),
+                ("*.stdout", r"\N{BULLET}err"),
+                ("*.stdout", "kept1"),
+            ],
+            regexes=["kept2"],
+            logfile=pl.Path("/tmp/node1.stdout"),
+        )
 
-    rules = logfiles._get_ignore_rules(cluster_env=cluster_env, timestamp=1000.0)
-    assert rules == [("*", "")]
-
-    regex = logfiles._get_ignore_regex(
-        ignore_rules=rules, regexes=["foo"], logfile=pl.Path("/tmp/node1.stdout")
-    )
-    assert re.search(regex, "arbitrary line")
+    assert sorted(regex.split("|")) == ["(?P<g>aaa)", "kept1", "kept2"]
+    assert re.compile(f"x|{regex}")
+    skip_warnings = [r for r in caplog.records if "Skipping ignore regex" in r.message]
+    assert len(skip_warnings) == 6
 
 
 def _write_log(state_dir: pl.Path, name: str, content: str) -> pl.Path:
