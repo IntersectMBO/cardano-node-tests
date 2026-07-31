@@ -24,11 +24,11 @@ LOGGER = logging.getLogger(__name__)
 
 @functools.lru_cache(maxsize=1000)
 def _warn_once(message: str) -> None:
-    """Log the warning only once per process.
+    """Log the warning at most once per process (while it stays in the LRU cache).
 
     The ignore rules files are parsed again in every log search, so a warning about
     a malformed record would be logged again in every log search. The LRU cache keeps
-    the deduplication memory bounded.
+    the deduplication memory bounded - after eviction, the warning can be logged again.
     """
     LOGGER.warning("%s", message)
 

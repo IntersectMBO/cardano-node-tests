@@ -112,6 +112,12 @@ def test_ignore_rules_skip_malformed_lines(
     malformed_warnings = [r for r in caplog.records if "malformed ignore rule" in r.message]
     assert len(malformed_warnings) == 1
 
+    # Repeated parsing must not log the same warning again
+    with caplog.at_level(logging.WARNING):
+        logfiles._get_ignore_rules(cluster_env=cluster_env, timestamp=1000.0)
+    malformed_warnings = [r for r in caplog.records if "malformed ignore rule" in r.message]
+    assert len(malformed_warnings) == 1
+
 
 @pytest.mark.parametrize(
     ("files_glob", "regex", "match"),
