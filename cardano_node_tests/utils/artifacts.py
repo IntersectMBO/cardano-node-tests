@@ -79,7 +79,7 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
 
     for fpath in files_list:
         # Skip dangling symlinks, directories and special files that `shutil.copy`
-        # would fail or block on.
+        # would fail or hang on.
         if not fpath.is_file():
             LOGGER.warning(f"Skipping non-regular file '{fpath}'.")
             continue
@@ -126,5 +126,5 @@ def copy_artifacts(*, pytest_tmp_dir: pl.Path, pytest_config: Config) -> None:
         return
 
     destdir = artifacts_dir / f"{pytest_tmp_dir.name}-{helpers.get_rand_str(8)}"
-    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True, ignore_dangling_symlinks=True)
+    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True)
     LOGGER.info(f"Collected artifacts copied to '{destdir}'.")
