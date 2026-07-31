@@ -94,6 +94,7 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
         shutil.copytree(src_dir, destdir / dname, symlinks=True, ignore_dangling_symlinks=True)
 
     if not any(destdir.iterdir()):
+        LOGGER.warning(f"No cluster artifacts found in '{state_dir}', nothing saved.")
         destdir.rmdir()
         return
 
