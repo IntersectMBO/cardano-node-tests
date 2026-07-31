@@ -58,6 +58,10 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
     dir_rand_str = dir_rand_str or helpers.get_rand_str(8)
 
     destdir = save_dir / "cluster_artifacts" / f"{state_dir.name}_{dir_rand_str}"
+    if destdir.exists():
+        # Artifacts for this cluster instance were already saved once. Append a random
+        # suffix so the new save doesn't clash with the existing directory.
+        destdir = destdir.with_name(f"{destdir.name}_{helpers.get_rand_str(8)}")
     destdir.mkdir(parents=True)
 
     files_list = [
