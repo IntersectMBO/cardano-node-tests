@@ -13,9 +13,9 @@ from cardano_node_tests.utils import temptools
 
 
 @pytest.fixture(autouse=True)
-def _reset_logged_warnings(monkeypatch: pytest.MonkeyPatch):
-    """Reset the warn-once dedup set, so tests don't depend on the execution order."""
-    monkeypatch.setattr(logfiles, "_logged_warnings", set())
+def _reset_logged_warnings():
+    """Reset the warn-once dedup cache, so tests don't depend on the execution order."""
+    logfiles._warn_once.cache_clear()
 
 
 @pytest.fixture
@@ -86,6 +86,9 @@ def test_ignore_rules_expiry(
         pytest.param("not a rule", id="no_separator"),
         pytest.param("*.stdout;;no regex part", id="one_separator"),
         pytest.param("*.stdout;;not_a_float;;regex", id="invalid_expire_time"),
+        pytest.param("*.stdout;;nan;;regex", id="nan_expire_time"),
+        pytest.param("*.stdout;;inf;;regex", id="inf_expire_time"),
+        pytest.param("*.stdout;;-1.0;;regex", id="negative_expire_time"),
     ),
 )
 def test_ignore_rules_skip_malformed_lines(

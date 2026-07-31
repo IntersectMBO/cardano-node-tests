@@ -21,19 +21,15 @@ from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
-# Warnings that were already logged in this process
-_logged_warnings: set[str] = set()
 
-
+@functools.lru_cache(maxsize=1000)
 def _warn_once(message: str) -> None:
     """Log the warning only once per process.
 
     The ignore rules files are parsed again in every log search, so a warning about
-    a malformed record would be logged again in every log search.
+    a malformed record would be logged again in every log search. The LRU cache keeps
+    the deduplication memory bounded.
     """
-    if message in _logged_warnings:
-        return
-    _logged_warnings.add(message)
     LOGGER.warning("%s", message)
 
 
@@ -246,6 +242,10 @@ def _get_ignore_rules(
                     files_glob, skip_after_str, regex = parts
                     try:
                         skip_after = float(skip_after_str)
+                        # Reject nan/inf/negative - they would silently turn the expire
+                        # time into "never expire"
+                        if not (math.isfinite(skip_after) and skip_after >= 0):
+                            raise ValueError
                     except ValueError:
                         _warn_once(f"Skipping malformed ignore rule in '{rules_file}': {line!r}")
                         continue
@@ -379,8 +379,8 @@ def _get_ignore_regex(
                 f"all errors: {regex!r}"
             )
             continue
-        candidate_regexes = [*valid_regexes, regex]
-        combined = "x|" + "|".join(candidate_regexes)
+        valid_regexes.append(regex)
+        combined = "x|" + "|".join(valid_regexes)
         try:
             # Compile the actual combination, so that also conflicts between the rules
             # (e.g. a redefined group name) and global inline flags that are not valid
@@ -391,9 +391,9 @@ def _get_ignore_regex(
             re.compile(combined)
             re.compile(combined.encode("utf-8"))
         except re.error as err:
+            valid_regexes.pop()
             _warn_once(f"Skipping ignore regex that cannot be combined: {regex!r}: {err}")
             continue
-        valid_regexes = candidate_regexes
 
     return "|".join(valid_regexes) or "nothing_to_ignore"
 
