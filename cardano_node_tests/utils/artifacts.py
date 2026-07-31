@@ -30,7 +30,7 @@ def save_cli_coverage(
     )
     with open(json_file, "w", encoding="utf-8") as out_json:
         json.dump(cluster_obj.cli_coverage, out_json, indent=4)  # pyright: ignore [reportAttributeAccessIssue]
-    LOGGER.info(f"Coverage file saved to '{cli_coverage_dir}'.")
+    LOGGER.info(f"Coverage file saved to '{json_file}'.")
     return json_file
 
 
