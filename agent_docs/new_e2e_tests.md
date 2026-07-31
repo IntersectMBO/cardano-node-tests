@@ -1,4 +1,6 @@
-# Writing New Tests
+# Writing New E2E Tests
+
+This document applies only to E2E functional tests under `cardano_node_tests/tests/`. Unit tests for the framework itself live under `framework_tests/` and are plain pytest tests.
 
 Organize tests in classes that group related functionality.
 
@@ -10,13 +12,13 @@ When tests modify or use shared resources (stake pools, treasury, reserves, DRep
 
 Cache expensive fixture resources (addresses, keys, scripts) to avoid recreation on every test. Open `agent_docs/fixtures_caching.md` and follow the instructions.
 
-## Tests with Expensive Setup
+## E2E Tests with Expensive Setup
 
 Reuse expensive setups (governance actions, etc.) across multiple scenarios using pytest-subtests. Open `agent_docs/subtests.md` and follow the instructions.
 
 ## Summary Checklist
 
-When writing a new test, ensure:
+When writing a new E2E test, ensure:
 
 - [ ] Test is in a class grouping related functionality
 - [ ] `@allure.link(helpers.get_vcs_link())` decorator is present
