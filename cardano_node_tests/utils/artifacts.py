@@ -75,10 +75,17 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
     dirs_to_copy = ("nodes", "shelley")
 
     for fpath in files_list:
-        # Skip dangling symlinks and other non-regular files
+        # Skip dangling symlinks, directories and special files that `shutil.copy`
+        # would fail or block on.
         if not fpath.is_file():
+            LOGGER.warning(f"Skipping non-regular file '{fpath}'.")
             continue
-        shutil.copy(fpath, destdir)
+        try:
+            shutil.copy(fpath, destdir)
+        except OSError as err:
+            # The cluster may still be running and rotate or delete the file between
+            # the check above and the copy. Don't let one file abort the whole save.
+            LOGGER.warning(f"Failed to copy '{fpath}': {err}")
     for dname in dirs_to_copy:
         src_dir = state_dir / dname
         if not src_dir.exists():
