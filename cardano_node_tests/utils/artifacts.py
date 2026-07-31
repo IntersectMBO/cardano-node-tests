@@ -48,23 +48,8 @@ def save_start_script_coverage(*, log_file: pl.Path, pytest_config: Config) -> p
     return dest_file
 
 
-def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
-    """Save cluster artifacts (logs, certs, etc.)."""
-    dir_rand_str = ""
-    cluster_instance_id_log = state_dir / CLUSTER_INSTANCE_ID_FILENAME
-    if cluster_instance_id_log.exists():
-        with open(cluster_instance_id_log, encoding="utf-8") as fp_in:
-            dir_rand_str = fp_in.read().strip()
-    dir_rand_str = dir_rand_str or helpers.get_rand_str(8)
-
-    destdir = save_dir / "cluster_artifacts" / f"{state_dir.name}_{dir_rand_str}"
-    if destdir.exists():
-        # Artifacts for this cluster instance were already saved. Append a random
-        # suffix so the new save doesn't clash with the existing directory.
-        destdir = destdir.with_name(f"{destdir.name}_{helpers.get_rand_str(8)}")
-        LOGGER.warning(f"Cluster artifacts dir already exists, saving to '{destdir}' instead.")
-    destdir.mkdir(parents=True)
-
+def _copy_state_dir_content(*, state_dir: pl.Path, destdir: pl.Path) -> int:
+    """Copy artifact files and dirs from the state dir and return the number of failures."""
     files_list = [
         *state_dir.glob("*.stdout"),
         *state_dir.glob("*.stderr"),
@@ -101,6 +86,28 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
             # modifying the directory content.
             LOGGER.warning(f"Failed to copy '{src_dir}': {err}")
             copy_failures += 1
+
+    return copy_failures
+
+
+def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
+    """Save cluster artifacts (logs, certs, etc.)."""
+    dir_rand_str = ""
+    cluster_instance_id_log = state_dir / CLUSTER_INSTANCE_ID_FILENAME
+    if cluster_instance_id_log.exists():
+        with open(cluster_instance_id_log, encoding="utf-8") as fp_in:
+            dir_rand_str = fp_in.read().strip()
+    dir_rand_str = dir_rand_str or helpers.get_rand_str(8)
+
+    destdir = save_dir / "cluster_artifacts" / f"{state_dir.name}_{dir_rand_str}"
+    if destdir.exists():
+        # Artifacts for this cluster instance were already saved. Append a random
+        # suffix so the new save doesn't clash with the existing directory.
+        destdir = destdir.with_name(f"{destdir.name}_{helpers.get_rand_str(8)}")
+        LOGGER.warning(f"Cluster artifacts dir already exists, saving to '{destdir}' instead.")
+    destdir.mkdir(parents=True)
+
+    copy_failures = _copy_state_dir_content(state_dir=state_dir, destdir=destdir)
 
     if not any(destdir.iterdir()):
         if copy_failures:
