@@ -236,6 +236,19 @@ class TestSaveClusterArtifacts:
         assert not _get_saved_dirs(save_dir)
         assert "Failed to save any cluster artifacts" in caplog.text
 
+    def test_setup_failure_tolerated(
+        self, save_dir: pl.Path, state_dir: pl.Path, caplog: pytest.LogCaptureFixture
+    ):
+        """Log the failure instead of raising when the setup I/O fails."""
+        # A directory in place of the instance id file makes `open()` raise
+        # `IsADirectoryError` before any file copy starts.
+        (state_dir / artifacts.CLUSTER_INSTANCE_ID_FILENAME).mkdir()
+
+        artifacts.save_cluster_artifacts(save_dir=save_dir, state_dir=state_dir)
+
+        assert not _get_saved_dirs(save_dir)
+        assert "Failed to save cluster artifacts" in caplog.text
+
     def test_empty_state_dir(
         self, save_dir: pl.Path, tmp_path: pl.Path, caplog: pytest.LogCaptureFixture
     ):
