@@ -127,6 +127,9 @@ def finish_test(issues: tp.Iterable[GH]) -> None:
         return blocked, reason, log_message
 
     outcomes = [_get_outcome(i) for i in issues]
+    if not outcomes:
+        msg = "No issues were provided"
+        raise ValueError(msg)
 
     should_fail = False
     for blocked, __, log_message in outcomes:
