@@ -512,7 +512,7 @@ def _validated_start(seek: int | None, size: int) -> int:
 def _search_log_lines(  # noqa: C901
     logfile: pl.Path,
     rotated_logs: list[RotableLog],
-    errors_re: re.Pattern[str],  # The the error regex needs to be unanchored
+    errors_re: re.Pattern[str],  # The error regex needs to be unanchored
     *,
     errors_ignored_re: re.Pattern[str] | None = None,
     look_back_map: dict[str, str] | None = None,
@@ -1016,10 +1016,10 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
             # and inode of the log file the seek offset was recorded for
             seek, timestamp, inode = _load_search_state(logfile=logfile)
 
-            # Get ignore rules for the log file
-            ignore_rules = _get_ignore_rules(
-                cluster_env=cluster_env, timestamp=timestamp or time.time()
-            )
+            # Get ignore rules for the log file. A log file that was not searched yet (or
+            # whose offset file was lost) has timestamp 0.0, so no rule is expired for it -
+            # the whole file is going to be searched and the rules apply to all of it.
+            ignore_rules = _get_ignore_rules(cluster_env=cluster_env, timestamp=timestamp)
             errors_ignored = _get_ignore_regex(
                 ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile
             )
