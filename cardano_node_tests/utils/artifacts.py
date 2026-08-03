@@ -35,7 +35,12 @@ def save_cli_coverage(
 
 
 def save_start_script_coverage(*, log_file: pl.Path, pytest_config: Config) -> pl.Path | None:
-    """Save info about CLI commands executed by cluster start script."""
+    """Save info about CLI commands executed by cluster start script.
+
+    Returns:
+        Path to the saved coverage log file, or `None` when coverage collection is
+        disabled, the log file doesn't exist, or the copy failed.
+    """
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and log_file.exists()):
         return None
@@ -46,8 +51,9 @@ def save_start_script_coverage(*, log_file: pl.Path, pytest_config: Config) -> p
     try:
         shutil.copy(log_file, dest_file)
     except OSError as err:
-        # The log file may disappear between the check above and the copy.
-        LOGGER.warning(f"Failed to copy '{log_file}': {err}")
+        # The log file may disappear between the check above and the copy, or the
+        # destination may not be writable.
+        LOGGER.warning(f"Failed to copy '{log_file}' to '{dest_file}': {err}")
         return None
     LOGGER.info(f"Start script coverage log file saved to '{dest_file}'.")
     return dest_file
