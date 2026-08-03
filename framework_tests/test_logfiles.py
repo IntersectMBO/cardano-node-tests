@@ -932,3 +932,29 @@ def test_constrains_match_end(pattern: str, expected: bool):
     """
     regex_b = re.compile(pattern.encode("utf-8"))
     assert logfiles._constrains_match_end(regex_b) is expected
+
+
+def test_search_cluster_logs_first_search_expiry(cluster_env: cluster_nodes.ClusterEnv):
+    """Check that ignore rules apply to the first search of a log file.
+
+    A log file that was not searched yet may contain ignored errors from any time in
+    the past. An ignore rule must not expire for such file, even when its expire time
+    already passed. For further searches the rule is expired.
+    """
+    logfile = _write_log(
+        state_dir=cluster_env.state_dir, name="node1.stdout", content="ignored error one\n"
+    )
+    # The expire time is far in the past
+    logfiles.add_ignore_rule(
+        files_glob="*.stdout", regex="ignored error", ignore_file_id="id1", skip_after=100.0
+    )
+
+    # First search: the rule applies to the whole unsearched file history
+    assert logfiles.search_cluster_logs() == []
+
+    # Further searches: the rule is expired, new occurrences are reported
+    with open(logfile, "a", encoding="utf-8") as outfile:
+        outfile.write("ignored error two\n")
+
+    errors = logfiles.search_cluster_logs()
+    assert [e[1] for e in errors] == ["ignored error two"]
