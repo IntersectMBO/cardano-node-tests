@@ -38,8 +38,13 @@ class GH:
         self.issue = issue
         self.repo = repo
         self.fixed_in = fixed_in
-        # Parse eagerly so an invalid version is reported already when the issue is defined
-        self._fixed_in_version = version.parse(fixed_in) if fixed_in else None
+        # Validate eagerly so an invalid version is reported already when the issue is defined
+        if fixed_in:
+            try:
+                version.parse(fixed_in)
+            except version.InvalidVersion as excp:
+                msg = f"Invalid `fixed_in` version for issue '{repo}#{issue}': '{fixed_in}'"
+                raise ValueError(msg) from excp
         self.message = message
         self.gh_issue = gh_issue.GHIssue(number=self.issue, repo=self.repo)
 
@@ -51,8 +56,27 @@ class GH:
         else:
             self.is_blocked = self._issue_is_blocked
 
+    @property
+    def _fixed_in_version(self) -> version.Version | None:
+        """Parsed `fixed_in` version, or `None` when no `fixed_in` was set.
+
+        Parsed on access, so the check stays correct even when the `fixed_in`
+        attribute was changed after init.
+        """
+        return version.parse(self.fixed_in) if self.fixed_in else None
+
     def _issue_blocked_in_version(self, product_version: version.Version) -> bool:
-        """Check if an issue is blocked in given product version."""
+        """Check if an issue is blocked in given product version.
+
+        Args:
+            product_version: A version of the product to check the issue against.
+
+        Returns:
+            Whether the issue is considered blocked.
+
+        Raises:
+            ValueError: If the GitHub issue doesn't exist or is not accessible.
+        """
         # Assume that the issue is blocked if no GitHub token was provided and so the check
         # cannot be performed.
         if not self.gh_issue.TOKEN:
@@ -64,11 +88,20 @@ class GH:
 
         state = self.gh_issue.get_state()
 
-        # Fail early when the issue doesn't exist, e.g. because of a typo in the issue number.
-        # Otherwise the test would be silently xfailed forever.
-        if state == "unknown":
-            msg = f"Issue '{self.repo}#{self.issue}' doesn't exist"
+        # Fail early when the issue cannot be found, e.g. because of a typo in the issue
+        # number or repo name. Otherwise the test would be silently xfailed forever.
+        if state == gh_issue.STATE_UNKNOWN:
+            msg = f"Issue '{self.repo}#{self.issue}' doesn't exist or is not accessible"
             raise ValueError(msg)
+
+        # Assume that the issue is blocked when its state could not be determined,
+        # e.g. due to an API failure or rate limiting.
+        if state is None or state == gh_issue.STATE_FAILURE:
+            LOGGER.warning(
+                "Could not determine state of issue '%s', assuming it is blocked",
+                f"{self.repo}#{self.issue}",
+            )
+            return True
 
         # The issue is blocked if it was not closed yet
         if state != "closed":
@@ -93,7 +126,14 @@ class GH:
         return self._issue_blocked_in_version(VERSIONS.node)
 
     def finish_test(self, force_blocked: bool = False) -> None:
-        """Fail or Xfail test with GitHub issue reference."""
+        """Fail or Xfail test with GitHub issue reference.
+
+        Args:
+            force_blocked: Treat the issue as blocked without checking its state.
+
+        Raises:
+            ValueError: If the GitHub issue doesn't exist or is not accessible.
+        """
         reason = f"{self.gh_issue}: {self.message}"
         log_message = f"{self.gh_issue.url} => {self.message}"
 
@@ -118,7 +158,15 @@ class GH:
 
 
 def finish_test(issues: tp.Iterable[GH]) -> None:
-    """Fail or Xfail test with references to multiple GitHub issues."""
+    """Fail or Xfail test with references to multiple GitHub issues.
+
+    Args:
+        issues: GitHub issues to report. Must not be empty.
+
+    Raises:
+        ValueError: If no issues were provided, or if a referenced GitHub issue doesn't
+            exist or is not accessible.
+    """
 
     def _get_outcome(issue: GH) -> tuple[bool, str, str]:
         blocked = issue.is_blocked()
