@@ -2,10 +2,24 @@
 
 import pathlib as pl
 import shutil
+import typing as tp
 
 import pytest
+from _pytest.config import Config
 
 from cardano_node_tests.utils import artifacts
+
+
+class _PytestConfigStub:
+    """Minimal stub of pytest `Config` that provides only `getoption`."""
+
+    def __init__(self, cli_coverage_dir: str) -> None:
+        self._cli_coverage_dir = cli_coverage_dir
+
+    def getoption(self, name: str) -> str:
+        """Return the configured CLI coverage dir."""
+        assert name == artifacts.CLI_COVERAGE_ARG
+        return self._cli_coverage_dir
 
 
 @pytest.fixture
@@ -36,6 +50,63 @@ def save_dir(tmp_path: pl.Path) -> pl.Path:
 def _get_saved_dirs(save_dir: pl.Path) -> list[pl.Path]:
     """Return entries created under the `cluster_artifacts` dir."""
     return sorted((save_dir / "cluster_artifacts").glob("*"))
+
+
+class TestSaveStartScriptCoverage:
+    """Tests for `save_start_script_coverage`."""
+
+    def test_copies_log_file(self, tmp_path: pl.Path):
+        """Copy the start script log file to the coverage dir."""
+        log_file = tmp_path / "start_cluster.log"
+        log_file.write_text("cli commands")
+        coverage_dir = tmp_path / "coverage"
+        coverage_dir.mkdir()
+        pytest_config = tp.cast(Config, _PytestConfigStub(str(coverage_dir)))
+
+        dest_file = artifacts.save_start_script_coverage(
+            log_file=log_file, pytest_config=pytest_config
+        )
+
+        assert dest_file is not None
+        assert dest_file.parent == coverage_dir
+        assert dest_file.read_text() == "cli commands"
+
+    def test_disabled_coverage(self, tmp_path: pl.Path):
+        """Return `None` when CLI coverage collection is not enabled."""
+        log_file = tmp_path / "start_cluster.log"
+        log_file.write_text("cli commands")
+        pytest_config = tp.cast(Config, _PytestConfigStub(""))
+
+        assert (
+            artifacts.save_start_script_coverage(log_file=log_file, pytest_config=pytest_config)
+            is None
+        )
+
+    def test_copy_failure_returns_none(
+        self,
+        tmp_path: pl.Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        """Log a warning and return `None` when the copy fails."""
+        log_file = tmp_path / "start_cluster.log"
+        log_file.write_text("cli commands")
+        coverage_dir = tmp_path / "coverage"
+        coverage_dir.mkdir()
+        pytest_config = tp.cast(Config, _PytestConfigStub(str(coverage_dir)))
+
+        def _failing_copy(*_args: object, **_kwargs: object) -> str:
+            err = "Simulated copy failure"
+            raise OSError(err)
+
+        monkeypatch.setattr(artifacts.shutil, "copy", _failing_copy)
+
+        dest_file = artifacts.save_start_script_coverage(
+            log_file=log_file, pytest_config=pytest_config
+        )
+
+        assert dest_file is None
+        assert "Failed to copy" in caplog.text
 
 
 class TestSaveClusterArtifacts:
