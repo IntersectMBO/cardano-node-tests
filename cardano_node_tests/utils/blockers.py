@@ -38,6 +38,8 @@ class GH:
         self.issue = issue
         self.repo = repo
         self.fixed_in = fixed_in
+        # Parse eagerly so an invalid version is reported already when the issue is defined
+        self._fixed_in_version = version.parse(fixed_in) if fixed_in else None
         self.message = message
         self.gh_issue = gh_issue.GHIssue(number=self.issue, repo=self.repo)
 
@@ -74,10 +76,9 @@ class GH:
 
         # The issue is blocked if it was fixed or integrated into a product version that is greater
         # than the product version we are currently running.
-        if self.fixed_in and version.parse(self.fixed_in) > product_version:  # noqa:SIM103
-            return True
-
-        return False
+        if self._fixed_in_version is None:
+            return False
+        return self._fixed_in_version > product_version
 
     def _cli_issue_is_blocked(self) -> bool:
         """Check if cardano-cli issue is blocked."""
