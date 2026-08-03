@@ -250,11 +250,18 @@ class ClusterGetter:
 
             # Save artifacts only when produced during this test run
             if cluster_running or i > 0:
-                artifacts.save_start_script_coverage(
-                    log_file=state_dir / common.START_CLUSTER_LOG,
-                    pytest_config=self.pytest_config,
-                )
-                artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
+                # Artifact collection is best-effort diagnostics, it must not abort
+                # the cluster restart.
+                try:
+                    artifacts.save_start_script_coverage(
+                        log_file=state_dir / common.START_CLUSTER_LOG,
+                        pytest_config=self.pytest_config,
+                    )
+                    artifacts.save_cluster_artifacts(
+                        save_dir=self.pytest_tmp_dir, state_dir=state_dir
+                    )
+                except Exception as err:
+                    self.log(f"c{self.cluster_instance_num}: failed to save artifacts:\n{err}")
 
             shutil.rmtree(state_dir, ignore_errors=True)
 
