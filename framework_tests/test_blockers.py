@@ -14,7 +14,7 @@ PRODUCT_VERSION = version.parse("2.0.0")
 
 
 @pytest.fixture
-def gh_token(monkeypatch: pytest.MonkeyPatch):
+def gh_token(monkeypatch: pytest.MonkeyPatch) -> None:
     """Set a dummy GitHub token so the blocked check is not skipped."""
     monkeypatch.setattr(gh_issue.GHIssue, "TOKEN", "dummy_token")
 

@@ -32,7 +32,7 @@ class _FakeGithub:
 
 
 @pytest.fixture
-def clean_cache(monkeypatch: pytest.MonkeyPatch):
+def clean_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     """Give each test a fresh issue cache."""
     monkeypatch.setattr(gh_issue.GHIssue, "issue_cache", {})
 
