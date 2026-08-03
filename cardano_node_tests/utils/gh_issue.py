@@ -7,11 +7,11 @@ import github
 
 LOGGER = logging.getLogger(__name__)
 
-#: State of a closed issue.
+# State of a closed issue.
 STATE_CLOSED: tp.Final[str] = "closed"
-#: State reported when the issue cannot be found, e.g. wrong issue number or repo name.
+# State reported when the issue cannot be found, e.g. wrong issue number or repo name.
 STATE_UNKNOWN: tp.Final[str] = "unknown"
-#: State reported when the issue state could not be retrieved, e.g. due to an API failure.
+# State reported when the issue state could not be retrieved, e.g. due to an API failure.
 STATE_FAILURE: tp.Final[str] = "get_state_failure"
 
 
@@ -62,8 +62,9 @@ class GHIssue:
         """Get issue state.
 
         Returns:
-            The issue state (e.g. "open", `STATE_CLOSED`), `STATE_UNKNOWN` when the issue
-            cannot be found, or `STATE_FAILURE` when the state could not be retrieved.
+            The state as reported by GitHub, e.g. "open" or `STATE_CLOSED`; `STATE_UNKNOWN`
+            when the issue cannot be found, or `STATE_FAILURE` when the state could not
+            be retrieved.
         """
         if not self.github:
             LOGGER.error("Failed to get GitHub instance")

@@ -4,6 +4,7 @@ The tests must not touch the GitHub API. The `GHIssue._get_github` classmethod i
 monkeypatched with a fake that returns canned issue states.
 """
 
+import types
 import typing as tp
 
 import github
@@ -16,18 +17,18 @@ class _FakeGithub:
     """Fake `github.Github` returning canned issue states and counting API calls."""
 
     def __init__(self, responses: tp.Sequence[str | Exception]) -> None:
-        self.responses = list(responses)
+        self.responses = iter(responses)
         self.calls = 0
 
-    def get_repo(self, _repo: str) -> "_FakeGithub":
+    def get_repo(self, _repo: str) -> tp.Self:
         return self
 
-    def get_issue(self, _number: int) -> tp.Any:
+    def get_issue(self, _number: int) -> types.SimpleNamespace:
         self.calls += 1
-        response = self.responses.pop(0)
+        response = next(self.responses)
         if isinstance(response, Exception):
             raise response
-        return type("FakeIssue", (), {"state": response})
+        return types.SimpleNamespace(state=response)
 
 
 @pytest.fixture
