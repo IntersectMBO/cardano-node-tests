@@ -21,6 +21,18 @@ from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
 
+
+@functools.lru_cache(maxsize=1000)
+def _warn_once(message: str) -> None:
+    """Log the warning at most once per process (while it stays in the LRU cache).
+
+    The ignore rules files are parsed again in every log search, so a warning about
+    a malformed record would be logged again in every log search. The LRU cache keeps
+    the deduplication memory bounded - after eviction, the warning can be logged again.
+    """
+    LOGGER.warning("%s", message)
+
+
 BUFFER_SIZE = 512 * 1024  # 512 KB buffer
 ROTATED_RE = re.compile(r".+\.[0-9]+$")  # Detect rotated log file
 # NOTE: The regex needs to be unanchored.
@@ -206,7 +218,11 @@ def _get_ignore_rules_lock_file(instance_num: int) -> pl.Path:
 def _get_ignore_rules(
     cluster_env: cluster_nodes.ClusterEnv, timestamp: float
 ) -> list[tuple[str, str]]:
-    """Get rules (file glob and regex) for ignored errors."""
+    """Get rules (file glob and regex) for ignored errors.
+
+    Malformed rule records are skipped with a warning. Skipping a rule can only lead to
+    reporting previously ignored errors, while a crash would abort the whole log check.
+    """
     rules: list[tuple[str, str]] = []
     lock_file = _get_ignore_rules_lock_file(instance_num=cluster_env.instance_num)
 
@@ -214,11 +230,25 @@ def _get_ignore_rules(
         for rules_file in cluster_env.state_dir.glob(f"{ERRORS_IGNORE_FILE_NAME}_*"):
             with open(rules_file, encoding="utf-8") as infile:
                 for line in infile:
-                    if ";;" not in line:
+                    if not line.strip():
                         continue
                     # Split on the first two separators only, so the regex itself may contain ";;"
-                    files_glob, skip_after_str, regex = line.split(";;", maxsplit=2)
-                    skip_after = float(skip_after_str)
+                    parts = line.split(";;", maxsplit=2)
+                    if len(parts) != 3:
+                        # A malformed line must not crash the whole log check. Skipping the
+                        # rule can only lead to reporting the previously ignored errors.
+                        _warn_once(f"Skipping malformed ignore rule in '{rules_file}': {line!r}")
+                        continue
+                    files_glob, skip_after_str, regex = parts
+                    try:
+                        skip_after = float(skip_after_str)
+                        # Reject nan/inf/negative - they would silently turn the expire
+                        # time into "never expire"
+                        if not (math.isfinite(skip_after) and skip_after >= 0):
+                            raise ValueError
+                    except ValueError:
+                        _warn_once(f"Skipping malformed ignore rule in '{rules_file}': {line!r}")
+                        continue
                     # Skip the rule if it is expired. The `timestamp` is the start time of the
                     # last log search, so the expire time is compared to the time when the log
                     # file was last checked.
@@ -321,13 +351,51 @@ def _load_search_state(logfile: pl.Path) -> tuple[int, float, int | None]:
 def _get_ignore_regex(
     ignore_rules: list[tuple[str, str]], regexes: list[str], logfile: pl.Path
 ) -> str:
-    """Combine together regex for the given log file using file specific and global ignore rules."""
+    """Combine together regex for the given log file using file specific and global ignore rules.
+
+    Regexes that match an empty string or that cannot be combined into the alternation
+    (they don't compile, they use global inline flags that are not valid mid-pattern, or
+    they conflict with other rules, e.g. on a redefined group name) are skipped with
+    a warning. Skipping a regex can only lead to reporting previously ignored errors,
+    while a bad regex in the alternation would crash every log check on compile.
+    """
     regex_set = set(regexes)
     for record in ignore_rules:
         files_glob, regex = record
         if fnmatch.filter([logfile.name], files_glob):
             regex_set.add(regex)
-    return "|".join(regex_set) or "nothing_to_ignore"
+
+    valid_regexes: list[str] = []
+    # Sorted iteration makes the outcome deterministic when regexes conflict
+    for regex in sorted(regex_set):
+        try:
+            compiled = re.compile(regex)
+        except re.error as err:
+            _warn_once(f"Skipping ignore regex that is not valid: {regex!r}: {err}")
+            continue
+        if compiled.search(""):
+            _warn_once(
+                f"Skipping ignore regex that matches an empty string, as it would suppress "
+                f"all errors: {regex!r}"
+            )
+            continue
+        valid_regexes.append(regex)
+        combined = "x|" + "|".join(valid_regexes)
+        try:
+            # Compile the actual combination, so that also conflicts between the rules
+            # (e.g. a redefined group name) and global inline flags that are not valid
+            # mid-pattern are caught. The "x|" prefix makes sure no regex relies on being
+            # the first branch of the alternation. Compile also as bytes - the log search
+            # compiles the combined regex as bytes, and e.g. the "\\N{...}" escape is
+            # valid only in str regexes.
+            re.compile(combined)
+            re.compile(combined.encode("utf-8"))
+        except re.error as err:
+            valid_regexes.pop()
+            _warn_once(f"Skipping ignore regex that cannot be combined: {regex!r}: {err}")
+            continue
+
+    return "|".join(valid_regexes) or "nothing_to_ignore"
 
 
 def _resume_at_line_boundary(fb: tp.BinaryIO, pos: int, size: int) -> None:
@@ -557,7 +625,7 @@ def _search_log_lines(  # noqa: C901
 def add_ignore_rule(
     *, files_glob: str, regex: str, ignore_file_id: str, skip_after: float = 0.0
 ) -> None:
-    """Add ignore rule for expected errors.
+    r"""Add ignore rule for expected errors.
 
     Args:
         files_glob: A glob matching files that the `regex` should apply to.
@@ -573,7 +641,48 @@ def add_ignore_rule(
 
             NOTE: The rule will expire **only** when there are no yet to be searched log messages
             that were created before the `skip_after` time.
+
+    Raises:
+        ValueError: When the rule cannot be stored in the rules file format (";;" in the
+            file glob, a line break in the file glob or in the regex), when the regex is
+            not valid or cannot be combined with other rules, when the regex matches an
+            empty string (it would suppress all errors for the matching files), or when
+            the `skip_after` value is not a non-negative finite number.
+
+    NOTE: Conflicts between rules that fail compilation of the combined ignore regex
+    (e.g. two rules redefining the same group name) cannot be detected here. Such rules
+    are skipped with a warning when the combined ignore regex is built. Avoid numeric
+    backreferences (e.g. "\1") - group numbers shift in the combined regex, so the
+    backreference can silently bind to a group of a different rule.
     """
+    if ";;" in files_glob:
+        msg = f"The files glob must not contain ';;': {files_glob!r}"
+        raise ValueError(msg)
+    if any(char in files_glob or char in regex for char in "\r\n"):
+        msg = (
+            f"The files glob and the regex must not contain line breaks: {files_glob!r}, {regex!r}"
+        )
+        raise ValueError(msg)
+    try:
+        compiled = re.compile(regex)
+        # Compile also in an alternation context, as the rule is combined with other rules.
+        # This rejects global inline flags that are not valid mid-pattern. Compile also as
+        # bytes - the log search compiles the combined regex as bytes, and e.g. the
+        # "\\N{...}" escape is valid only in str regexes.
+        re.compile(f"x|{regex}")
+        re.compile(f"x|{regex}".encode())
+    except re.error as err:
+        msg = f"The regex is not valid or cannot be combined with other rules: {regex!r}: {err}"
+        raise ValueError(msg) from err
+    if compiled.search(""):
+        msg = (
+            f"The regex must not match an empty string, as it would suppress all errors: {regex!r}"
+        )
+        raise ValueError(msg)
+    if not (math.isfinite(skip_after) and skip_after >= 0):
+        msg = f"The `skip_after` value must be a non-negative finite number: {skip_after!r}"
+        raise ValueError(msg)
+
     cluster_env = cluster_nodes.get_cluster_env()
     rules_file = cluster_env.state_dir / f"{ERRORS_IGNORE_FILE_NAME}_{ignore_file_id}"
     lock_file = _get_ignore_rules_lock_file(instance_num=cluster_env.instance_num)
