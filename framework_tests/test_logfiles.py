@@ -1164,3 +1164,76 @@ def test_check_msgs_metacharacters_in_state_dir(tmp_path: pl.Path):
         timestamp=0.0,
     )
     assert errors == []
+
+
+@pytest.fixture
+def _failing_validate_inode(monkeypatch: pytest.MonkeyPatch):
+    """Make every log file look permanently rotated and skip the retry sleep."""
+
+    def _raise(log: logfiles.RotableLog) -> None:
+        msg = f"Log file {log.logfile} was rotated during search."
+        raise FileNotFoundError(msg)
+
+    monkeypatch.setattr(logfiles, "_validate_inode", _raise)
+    monkeypatch.setattr(logfiles.time, "sleep", lambda _seconds: None)
+
+
+@pytest.mark.usefixtures("_failing_validate_inode")
+def test_check_msgs_search_failure_reported(tmp_path: pl.Path):
+    """Check that a failed search is reported instead of raised.
+
+    When the search of a log file keeps failing (e.g. on repeated rotation), the failure
+    must not discard the results that were already collected for other regexes and files.
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="expected msg\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg"), ("*.stdout", "other msg")],
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
+        state_dir=tmp_path,
+        timestamp=0.0,
+    )
+    assert len(errors) == 2
+    assert all("Cannot search" in e for e in errors)
+
+
+@pytest.mark.usefixtures("_failing_validate_inode")
+def test_search_cluster_logs_search_failure_reported(cluster_env: cluster_nodes.ClusterEnv):
+    """Check that a failed log file search is reported as an error entry.
+
+    A raise would abort the whole log check and discard errors that were already found
+    in other log files.
+    """
+    logfile = _write_log(
+        state_dir=cluster_env.state_dir, name="node1.stdout", content="error one\n"
+    )
+
+    errors = logfiles.search_cluster_logs()
+    assert len(errors) == 1
+    assert errors[0][0] == logfile
+    assert "Cannot search the log file" in errors[0][1]
+
+
+@pytest.mark.usefixtures("_failing_validate_inode")
+def test_search_framework_log_failure_reported(tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch):
+    """Check that a failed framework log search is reported as an error entry."""
+    logfile = _write_log(state_dir=tmp_path, name="framework.log", content="error one\n")
+    monkeypatch.setattr(logfiles.framework_log, "get_framework_log_path", lambda: logfile)
+
+    errors = logfiles.search_framework_log()
+    assert errors == [
+        (logfile, f"Cannot search the log file: Log file {logfile} was rotated during search.")
+    ]
+
+
+@pytest.mark.usefixtures("_failing_validate_inode")
+def test_search_supervisord_logs_failure_reported(cluster_env: cluster_nodes.ClusterEnv):
+    """Check that a failed supervisord log search is reported as an error entry."""
+    logfile = _write_log(
+        state_dir=cluster_env.state_dir, name="supervisord.log", content="FATAL x\n"
+    )
+
+    errors = logfiles.search_supervisord_logs()
+    assert len(errors) == 1
+    assert errors[0][0] == logfile
+    assert "Cannot search the log file" in errors[0][1]

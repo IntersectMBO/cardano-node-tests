@@ -770,6 +770,12 @@ def find_msgs_in_logs(
         final line of the live log file is not searched, so a truncated line is never
         returned for it. An unterminated final line of a rotated log file is searched,
         as it is the file's final content.
+
+    Raises:
+        FileNotFoundError: When the log file keeps getting rotated during the search.
+            Unlike the error-aggregating searches, the failure is propagated - the
+            caller needs the matching lines, and an empty result would be misread
+            as "no matches".
     """
     # Compile as BYTES regex for speed; note: \w/\b are ASCII-only in bytes mode.
     regex_b = _compile_bytes_from_str(pat=regex)
@@ -895,7 +901,8 @@ def check_msgs_presence_in_logs(  # noqa: C901
         timestamp: Passed to `_get_rotated_logs`.
 
     Returns:
-        Error messages for missing entries and for globs that matched no log file.
+        Error messages for missing entries, for globs that matched no log file, and
+        for log files that could not be searched.
     """
 
     def _search(
@@ -957,11 +964,21 @@ def check_msgs_presence_in_logs(  # noqa: C901
 
         for logfile in matching_files:
             start_seek, inode = seek_offsets.get(logfile) or (0, None)
-            line_found = _retry_search(
-                functools.partial(
-                    _search, start_seek=start_seek, inode=inode, logfile=logfile, regex_b=regex_b
+            try:
+                line_found = _retry_search(
+                    functools.partial(
+                        _search,
+                        start_seek=start_seek,
+                        inode=inode,
+                        logfile=logfile,
+                        regex_b=regex_b,
+                    )
                 )
-            )
+            except FileNotFoundError as err:
+                # Report the failure instead of raising, so that findings that were
+                # already collected for other regexes and files are not lost
+                errors.append(f"Cannot search '{logfile}' for `{regex}`: {err}")
+                continue
             if not line_found:
                 errors.append(f"No line matching `{regex}` found in '{logfile}'.")
 
@@ -969,7 +986,7 @@ def check_msgs_presence_in_logs(  # noqa: C901
 
 
 @contextlib.contextmanager
-def expect_errors(regex_pairs: list[tuple[str, str]], *, worker_id: str) -> tp.Iterator[None]:
+def expect_errors(regex_pairs: list[tuple[str, str]], *, worker_id: str) -> tp.Generator[None]:
     """Make sure the expected errors are present in logs.
 
     Context manager.
@@ -1008,7 +1025,7 @@ def expect_errors(regex_pairs: list[tuple[str, str]], *, worker_id: str) -> tp.I
 
 
 @contextlib.contextmanager
-def expect_messages(regex_pairs: list[tuple[str, str]]) -> tp.Iterator[None]:
+def expect_messages(regex_pairs: list[tuple[str, str]]) -> tp.Generator[None]:
     """Make sure the expected messages are present in logs.
 
     Context manager.
@@ -1081,18 +1098,23 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
             )
 
             # Search for errors in the log file
-            errors.extend(
-                _retry_search(
-                    functools.partial(
-                        _search,
-                        logfile=logfile,
-                        seek=seek,
-                        timestamp=timestamp,
-                        inode=inode,
-                        errors_ignored=errors_ignored,
+            try:
+                errors.extend(
+                    _retry_search(
+                        functools.partial(
+                            _search,
+                            logfile=logfile,
+                            seek=seek,
+                            timestamp=timestamp,
+                            inode=inode,
+                            errors_ignored=errors_ignored,
+                        )
                     )
                 )
-            )
+            except FileNotFoundError as err:
+                # Report the failure instead of raising, so that errors that were already
+                # found in other log files are not lost
+                errors.append((logfile, f"Cannot search the log file: {err}"))
 
     return errors
 
@@ -1116,8 +1138,12 @@ def search_framework_log() -> list[tuple[pl.Path, str]]:
             errors_re=ERRORS_RE,
         )
 
-    # Search for errors in the log file
-    errors = _retry_search(_search)
+    # Search for errors in the log file. Report a failure instead of raising, so that
+    # errors found by the other log searches are not lost.
+    try:
+        errors = _retry_search(_search)
+    except FileNotFoundError as err:
+        errors = [(logfile, f"Cannot search the log file: {err}")]
 
     return errors
 
@@ -1143,8 +1169,12 @@ def search_supervisord_logs() -> list[tuple[pl.Path, str]]:
                 errors_re=SUPERVISORD_ERRORS_RE,
             )
 
-        # Search for errors in the log file
-        errors = _retry_search(_search)
+        # Search for errors in the log file. Report a failure instead of raising, so that
+        # errors found by the other log searches are not lost.
+        try:
+            errors = _retry_search(_search)
+        except FileNotFoundError as err:
+            errors = [(logfile, f"Cannot search the log file: {err}")]
 
     return errors
 
