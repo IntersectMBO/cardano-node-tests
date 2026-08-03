@@ -43,7 +43,12 @@ def save_start_script_coverage(*, log_file: pl.Path, pytest_config: Config) -> p
     dest_file = (
         pl.Path(cli_coverage_dir) / f"cli_coverage_script_{helpers.get_timestamped_rand_str()}.log"
     )
-    shutil.copy(log_file, dest_file)
+    try:
+        shutil.copy(log_file, dest_file)
+    except OSError as err:
+        # The log file may disappear between the check above and the copy.
+        LOGGER.warning(f"Failed to copy '{log_file}': {err}")
+        return None
     LOGGER.info(f"Start script coverage log file saved to '{dest_file}'.")
     return dest_file
 
