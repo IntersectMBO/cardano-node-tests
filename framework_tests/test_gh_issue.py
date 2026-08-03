@@ -4,6 +4,7 @@ The tests must not touch the GitHub API. The `GHIssue._get_github` classmethod i
 monkeypatched with a fake that returns canned issue states.
 """
 
+import logging
 import types
 import typing as tp
 
@@ -37,6 +38,12 @@ def clean_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gh_issue.GHIssue, "issue_cache", {})
 
 
+@pytest.fixture
+def quiet_logger(caplog: pytest.LogCaptureFixture) -> None:
+    """Silence expected error logs from the `gh_issue` module."""
+    caplog.set_level(logging.CRITICAL, logger=gh_issue.LOGGER.name)
+
+
 def _set_github(monkeypatch: pytest.MonkeyPatch, fake: _FakeGithub | None) -> None:
     """Make `GHIssue` use the given fake GitHub instance."""
     monkeypatch.setattr(gh_issue.GHIssue, "_get_github", classmethod(lambda _cls: fake))
@@ -55,6 +62,7 @@ class TestGetState:
         assert issue.get_state() == gh_issue.STATE_CLOSED
         assert fake.calls == 1
 
+    @pytest.mark.usefixtures("quiet_logger")
     def test_unknown_issue_cached(self, monkeypatch: pytest.MonkeyPatch):
         """Cache the state of a nonexistent issue, it cannot appear later."""
         fake = _FakeGithub(responses=[github.UnknownObjectException(status=404)])
@@ -64,6 +72,7 @@ class TestGetState:
         assert issue.get_state() == gh_issue.STATE_UNKNOWN
         assert fake.calls == 1
 
+    @pytest.mark.usefixtures("quiet_logger")
     def test_transient_failure_not_cached(self, monkeypatch: pytest.MonkeyPatch):
         """Don't cache a failed state retrieval, the next call may succeed."""
         fake = _FakeGithub(responses=[RuntimeError("API is down"), "OPEN"])
@@ -74,6 +83,7 @@ class TestGetState:
         assert issue.get_state() == "open"
         assert fake.calls == 2
 
+    @pytest.mark.usefixtures("quiet_logger")
     def test_no_github_instance(self, monkeypatch: pytest.MonkeyPatch):
         """Report a state retrieval failure when the GitHub instance is not available."""
         _set_github(monkeypatch, None)
