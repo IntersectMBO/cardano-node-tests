@@ -70,7 +70,7 @@ class GH:
             msg = f"Issue '{self.repo}#{self.issue}' doesn't exist"
             raise ValueError(msg)
 
-        # The issue is blocked if it is was not closed yet
+        # The issue is blocked if it was not closed yet
         if state != "closed":
             return True
 
