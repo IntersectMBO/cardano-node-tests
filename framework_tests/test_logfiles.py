@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib as pl
 import re
+from collections import deque
 
 import pytest
 
@@ -958,3 +959,80 @@ def test_search_cluster_logs_first_search_expiry(cluster_env: cluster_nodes.Clus
 
     errors = logfiles.search_cluster_logs()
     assert [e[1] for e in errors] == ["ignored error two"]
+
+
+def test_look_back_across_rotation(tmp_path: pl.Path):
+    """Check that the look-back context spans log file rotation.
+
+    The preceding message that makes a mapped error ignored can be at the end of
+    a rotated log file, while the error is at the beginning of the next version of
+    the log file.
+    """
+    rotated = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="foo\ntrigger msg\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="error mapped one\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    errors = _search_cluster_like_ignores(logfile=logfile)
+    assert errors == []
+
+
+def test_look_back_window_across_rotation(tmp_path: pl.Path):
+    """Check that the look-back window size applies also across log file rotation.
+
+    A preceding message that is further back than the look-back window doesn't make
+    the mapped error ignored, even when the window spans a rotated log file.
+    """
+    filler = "filler\n" * 10
+    rotated = _write_log(
+        state_dir=tmp_path, name="node1.stdout.1", content=f"trigger msg\n{filler}"
+    )
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="error mapped one\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    errors = _search_cluster_like_ignores(logfile=logfile)
+    assert [e[1] for e in errors] == ["error mapped one"]
+
+
+@pytest.mark.parametrize(
+    ("lookback_lines", "expected"),
+    (
+        pytest.param(["trigger two"], True, id="second_pair_trigger"),
+        pytest.param(["trigger one"], True, id="first_pair_trigger"),
+        pytest.param(["other line"], False, id="no_trigger"),
+    ),
+)
+def test_should_ignore_error_multiple_pairs(lookback_lines: list[str], expected: bool):
+    """Check that all look-back pairs are consulted for a line.
+
+    A line can match the 'error' key of multiple pairs. It is ignored when any of the
+    matching pairs has its preceding message in the look-back buffer, not just the
+    first one.
+    """
+    pairs = logfiles._compile_look_back_map_bytes(
+        m={"error one": "trigger one", "error": "trigger two"}
+    )
+    lookback = deque(line.encode("utf-8") for line in lookback_lines)
+
+    assert (
+        logfiles._should_ignore_error(line_b=b"error one happened", lookback=lookback, pairs=pairs)
+        is expected
+    )
+
+
+def test_rotated_logs_mtime_tiebreak(tmp_path: pl.Path):
+    """Check that log file versions with equal modification times are ordered correctly.
+
+    On filesystems with coarse timestamps, the modification times of rotated log files
+    can be equal. The rotation index breaks the tie - a higher index is an older file.
+    """
+    older = _write_log(state_dir=tmp_path, name="node1.stdout.2", content="two\n")
+    newer = _write_log(state_dir=tmp_path, name="node1.stdout.1", content="one\n")
+    logfile = _write_log(state_dir=tmp_path, name="node1.stdout", content="live\n")
+    mtime = logfile.stat().st_mtime
+    for f in (older, newer, logfile):
+        os.utime(f, (mtime, mtime))
+
+    records = logfiles._get_rotated_logs(logfile=logfile, seek=0, timestamp=0.0, inode=None)
+    assert [r.logfile for r in records] == [older, newer, logfile]

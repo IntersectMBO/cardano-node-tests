@@ -146,6 +146,16 @@ def _retry_search[T](search_func: tp.Callable[[], T]) -> T:
     raise RuntimeError  # Unreachable, here for linters instead of return
 
 
+def _rotation_index(logfile: pl.Path) -> int:
+    """Return the rotation index of the log file (0 for the live log file).
+
+    A higher index means an older version of the log file (e.g. "node.stdout.2" was
+    rotated before "node.stdout.1").
+    """
+    suffix = logfile.suffix[1:]
+    return int(suffix) if suffix.isdigit() else 0
+
+
 def _get_rotated_logs(
     logfile: pl.Path, *, seek: int = 0, timestamp: float = 0.0, inode: int | None = None
 ) -> list[RotableLog]:
@@ -185,7 +195,12 @@ def _get_rotated_logs(
         for r in _logfile_records
         if r.timestamp > timestamp or r.logfile == logfile or r.inode == inode
     ]
-    logfile_records = sorted(_logfile_records, key=lambda r: r.timestamp)
+    # Sort by modification time. On filesystems with coarse timestamps the times can be
+    # equal, so use the rotation index (descending - a higher index is an older file) as
+    # a tiebreaker to keep the order deterministic.
+    logfile_records = sorted(
+        _logfile_records, key=lambda r: (r.timestamp, -_rotation_index(r.logfile))
+    )
 
     if not logfile_records:
         return []
@@ -490,12 +505,15 @@ def _compile_look_back_map_bytes(
 def _should_ignore_error(
     line_b: bytes, lookback: deque[bytes], pairs: list[tuple[re.Pattern[bytes], re.Pattern[bytes]]]
 ) -> bool:
-    """Return True if line matches an 'error' key and a preceding regex is in the look-back."""
-    for err_pat_b, prev_pat_b in pairs:
-        if err_pat_b.search(line_b):
-            # Found a mapped error; require a preceding match in the buffer
-            return any(prev_pat_b.search(prev_b) for prev_b in lookback)
-    return False
+    """Return True if line matches an 'error' key and a preceding regex is in the look-back.
+
+    All pairs are checked - a line can match the 'error' key of multiple pairs, and it is
+    enough when any of them has its preceding message in the look-back buffer.
+    """
+    return any(
+        err_pat_b.search(line_b) and any(prev_pat_b.search(prev_b) for prev_b in lookback)
+        for err_pat_b, prev_pat_b in pairs
+    )
 
 
 def _validated_start(seek: int | None, size: int) -> int:
@@ -563,6 +581,13 @@ def _search_log_lines(  # noqa: C901
             line = line_b.decode(encoding, errors="surrogateescape")
             results.append((path, line))
 
+    # The look-back buffer is shared by all versions of the log file. The versions are
+    # sorted from oldest to newest, so lines at the end of a rotated log file are the
+    # look-back context for lines at the beginning of the next version of the log file.
+    # The buffer holds only lines read by this search - lines before the seek offset or
+    # in versions that were already fully searched are not part of the context.
+    look_back: deque[bytes] = deque(maxlen=look_back_lines)
+
     for rec in rotated_logs:
         path = rec.logfile
         size = path.stat().st_size
@@ -572,7 +597,6 @@ def _search_log_lines(  # noqa: C901
             _validate_inode(rec)
             _resume_at_line_boundary(fb=fb, pos=start, size=size)
 
-            look_back: deque[bytes] = deque(maxlen=look_back_lines)
             leftover = b""
 
             while True:
