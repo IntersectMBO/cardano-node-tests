@@ -1086,3 +1086,81 @@ def test_get_ignored_error_regexes(
     for extra in extra_regexes:
         assert extra in regexes
     assert len(regexes) == len(logfiles.ERRORS_IGNORED) + len(extra_regexes)
+
+
+@pytest.mark.parametrize(
+    ("buf", "lines", "leftover"),
+    (
+        pytest.param(b"a\nb\n", [b"a", b"b"], b"", id="lf"),
+        pytest.param(b"a\r\nb\r\n", [b"a", b"b"], b"", id="crlf"),
+        pytest.param(b"a\rb\n", [b"a", b"b"], b"", id="cr_mid_buffer"),
+        pytest.param(b"a\r\nb", [b"a"], b"b", id="incomplete_tail"),
+        pytest.param(b"a\r", [], b"a\r", id="cr_at_chunk_boundary"),
+        pytest.param(b"abc", [], b"abc", id="no_line_end"),
+        pytest.param(b"", [], b"", id="empty"),
+    ),
+)
+def test_split_complete_lines(buf: bytes, lines: list[bytes], leftover: bytes):
+    r"""Check the splitting of a buffer into complete lines and an incomplete tail.
+
+    A trailing "\r" can be the first half of a "\r\n" pair split across chunk
+    boundaries, so the line is treated as incomplete. A "\r" in the middle of the
+    buffer is a line ending.
+    """
+    assert logfiles._split_complete_lines(buf=buf) == (lines, leftover)
+
+
+def test_search_log_lines_crlf_chunk_boundary(tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch):
+    r"""Check the search of a log file with CRLF line endings split across chunks.
+
+    With a two byte read buffer, the "\r\n" pairs get split across chunk boundaries.
+    The lines must be reassembled without spurious empty lines - with a look-back window
+    of two lines, spurious empty lines would evict the trigger message from the window
+    and the mapped error would be wrongly reported.
+    """
+    monkeypatch.setattr(logfiles, "BUFFER_SIZE", 2)
+    logfile = _write_log(
+        state_dir=tmp_path,
+        name="node1.stdout",
+        content="trigger msg\r\nfiller\r\nerror mapped one\r\n",
+    )
+
+    errors = logfiles._search_log_lines(
+        logfile=logfile,
+        rotated_logs=logfiles._get_rotated_logs(logfile=logfile, seek=0, timestamp=0.0, inode=None),
+        errors_re=re.compile("error"),
+        look_back_map={"error mapped": "trigger msg"},
+        look_back_lines=2,
+    )
+    assert errors == []
+
+
+def test_rotated_logs_glob_metacharacters(tmp_path: pl.Path):
+    """Check that glob metacharacters in a log file name are matched literally.
+
+    A log file named e.g. "node[1].stdout" must match itself (and its rotated
+    versions), not a file named "node1.stdout".
+    """
+    logfile = _write_log(state_dir=tmp_path, name="node[1].stdout", content="content\n")
+    rotated = _write_log(state_dir=tmp_path, name="node[1].stdout.1", content="old\n")
+    _write_log(state_dir=tmp_path, name="node1.stdout", content="other\n")
+    live_mtime = logfile.stat().st_mtime
+    os.utime(rotated, (live_mtime - 10, live_mtime - 10))
+
+    records = logfiles._get_rotated_logs(logfile=logfile, seek=0, timestamp=0.0, inode=None)
+    assert [r.logfile for r in records] == [rotated, logfile]
+
+
+def test_check_msgs_metacharacters_in_state_dir(tmp_path: pl.Path):
+    """Check that glob metacharacters in the state dir path are matched literally."""
+    state_dir = tmp_path / "state[1]"
+    state_dir.mkdir()
+    logfile = _write_log(state_dir=state_dir, name="node1.stdout", content="expected msg\n")
+
+    errors = logfiles.check_msgs_presence_in_logs(
+        regex_pairs=[("*.stdout", "expected msg")],
+        seek_offsets={str(logfile): (0, logfile.stat().st_ino)},
+        state_dir=state_dir,
+        timestamp=0.0,
+    )
+    assert errors == []
