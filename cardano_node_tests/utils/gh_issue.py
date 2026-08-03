@@ -7,6 +7,13 @@ import github
 
 LOGGER = logging.getLogger(__name__)
 
+# State of a closed issue.
+STATE_CLOSED: tp.Final[str] = "closed"
+# State reported when the issue cannot be found, e.g. wrong issue number or repo name.
+STATE_UNKNOWN: tp.Final[str] = "unknown"
+# State reported when the issue state could not be retrieved, e.g. due to an API failure.
+STATE_FAILURE: tp.Final[str] = "get_state_failure"
+
 
 class GHIssue:
     """GitHub issue."""
@@ -51,11 +58,17 @@ class GHIssue:
     def url(self) -> str:
         return f"https://github.com/{self.repo}/issues/{self.number}"
 
-    def get_state(self) -> str | None:
-        """Get issue state."""
+    def get_state(self) -> str:
+        """Get issue state.
+
+        Returns:
+            The state as reported by GitHub, e.g. "open" or `STATE_CLOSED`; `STATE_UNKNOWN`
+            when the issue cannot be found, or `STATE_FAILURE` when the state could not
+            be retrieved.
+        """
         if not self.github:
             LOGGER.error("Failed to get GitHub instance")
-            return None
+            return STATE_FAILURE
 
         identifier = f"{self.repo}#{self.number}"
         cached_state = self.issue_cache.get(identifier)
@@ -65,17 +78,14 @@ class GHIssue:
                 cached_state = self.github.get_repo(self.repo).get_issue(self.number).state.lower()
             except github.UnknownObjectException:
                 LOGGER.exception("Unknown issue '%s'", identifier)
-                cached_state = "unknown"
+                cached_state = STATE_UNKNOWN
             except Exception:
                 LOGGER.exception("Failed to get issue '%s'", identifier)
-                cached_state = "get_state_failure"
+                # Don't cache the failure, the retrieval may succeed on the next call
+                return STATE_FAILURE
             self.issue_cache[identifier] = cached_state
 
         return cached_state
-
-    def is_closed(self) -> bool:
-        """Check if issue is closed."""
-        return self.get_state() == "closed"
 
     def __repr__(self) -> str:
         return f"<GHIssue: {self.repo}#{self.number}>"
