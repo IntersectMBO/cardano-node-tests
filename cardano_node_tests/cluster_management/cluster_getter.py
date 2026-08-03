@@ -263,14 +263,18 @@ class ClusterGetter:
                         f"c{self.cluster_instance_num}: failed to save start script coverage:"
                         f"\n{err}"
                     )
-                    LOGGER.exception("Failed to save start script coverage.")
+                    LOGGER.exception(
+                        f"Failed to save start script coverage for 'c{self.cluster_instance_num}'."
+                    )
                 try:
                     artifacts.save_cluster_artifacts(
                         save_dir=self.pytest_tmp_dir, state_dir=state_dir
                     )
                 except Exception as err:
                     self.log(f"c{self.cluster_instance_num}: failed to save artifacts:\n{err}")
-                    LOGGER.exception("Failed to save cluster artifacts.")
+                    LOGGER.exception(
+                        f"Failed to save cluster artifacts for 'c{self.cluster_instance_num}'."
+                    )
 
             shutil.rmtree(state_dir, ignore_errors=True)
 
