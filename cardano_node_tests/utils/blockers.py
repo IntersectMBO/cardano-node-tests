@@ -22,7 +22,9 @@ class GH:
     Attributes:
         issue: A GitHub issue number.
         repo: A repository where the issue belongs to. Default: `IntersectMBO/cardano-node`.
-        fixed_in: A version of the project where the issue is fixed. Ignored on unknown projects.
+        fixed_in: A version of the project where the issue is fixed. On projects other than
+            cardano-node, cardano-cli and cardano-db-sync, it is the cardano-node version
+            into which the fix was integrated.
         message: A message to be added to blocking outcome.
     """
 
