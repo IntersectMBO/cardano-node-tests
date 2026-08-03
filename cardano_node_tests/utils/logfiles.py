@@ -2,6 +2,7 @@ import contextlib
 import dataclasses
 import fnmatch
 import functools
+import glob
 import io
 import itertools
 import logging
@@ -194,8 +195,9 @@ def _get_rotated_logs(
     after the search start can get a modification time that is not newer than the recorded
     search start time.
     """
-    # Get logfile including rotated versions
-    logfiles = list(logfile.parent.glob(f"{logfile.name}*"))
+    # Get logfile including rotated versions. Escape the file name, so that glob
+    # metacharacters in it (e.g. "[") are matched literally.
+    logfiles = list(logfile.parent.glob(f"{glob.escape(logfile.name)}*"))
 
     # Get list of logfiles modified after `timestamp`, sorted by their last modification time
     # from oldest to newest. The live log file and the file matching `inode` are always
@@ -453,13 +455,20 @@ def _resume_at_line_boundary(fb: tp.BinaryIO, pos: int, size: int) -> None:
 
 
 def _split_complete_lines(buf: bytes) -> tuple[list[bytes], bytes]:
-    """Return (complete_lines_without_newline, leftover_tail). Handles LF/CRLF/CR."""
+    """Return (complete_lines_without_newline, leftover_tail).
+
+    Handles LF/CRLF/CR line endings. A trailing CR is deferred as an incomplete tail,
+    as it can be the first half of a CRLF pair split across chunk boundaries.
+    """
     parts = buf.splitlines(keepends=True)
     if not parts:
         return [], b""
-    # Determine if the last piece ends with a newline
+    # Determine if the last piece ends with a newline. A trailing "\r" can be the first
+    # half of a "\r\n" pair split across chunk boundaries, so treat the line as
+    # incomplete - the next chunk (or the end-of-file handling) completes it. Otherwise
+    # the second half of the pair would become a spurious empty line.
     last = parts[-1]
-    complete = parts if last.endswith((b"\n", b"\r")) else parts[:-1]
+    complete = parts if last.endswith(b"\n") else parts[:-1]
     leftover = b"" if complete is parts else last
 
     # Strip line endings
@@ -560,8 +569,9 @@ def _search_log_lines(  # noqa: C901
     - An unterminated final line of the live logfile is not searched. It is searched by
       a later search, once the line is complete or the file is rotated. When the line is
       never completed (e.g. the writer died mid-line and the file is never rotated), the
-      line is never searched. An unterminated final line of a rotated log file will never
-      be completed, so it is searched right away.
+      line is never searched. A final line terminated by a bare CR also counts as
+      unterminated. An unterminated final line of a rotated log file will never be
+      completed, so it is searched right away.
     """
     errs_b = _compile_bytes_from_pattern(pat=errors_re, encoding=encoding)
     if not errs_b:
@@ -637,9 +647,11 @@ def _search_log_lines(  # noqa: C901
                     _check_line(line_b=line_b, look_back=look_back, path=path)
 
             # An unterminated final line of a rotated log file will never be completed.
-            # Search it now, otherwise it would never be searched.
+            # Search it now, otherwise it would never be searched. A trailing CR is
+            # a line terminator here - at the end of a rotated file it can no longer be
+            # the first half of a CRLF pair.
             if leftover and path != logfile:
-                _check_line(line_b=leftover, look_back=look_back, path=path)
+                _check_line(line_b=leftover.rstrip(b"\r"), look_back=look_back, path=path)
 
             # Persist next offset for the "live" logfile at a line boundary
             if path == logfile:
@@ -796,11 +808,14 @@ def find_msgs_in_logs(
                                 return lines_found
 
                 # An unterminated final line of a rotated log file is its final content,
-                # so search it as well. An unterminated final line of the live log file
-                # is skipped - it is searched once complete, and a truncated line must
-                # not be returned to callers that parse the line content.
-                if leftover and path != logfile and regex_b.search(leftover):
-                    lines_found.append(leftover.decode(encoding, errors="surrogateescape"))
+                # so search it as well (a trailing CR is a line terminator here). An
+                # unterminated final line of the live log file is skipped - it is
+                # searched once complete, and a truncated line must not be returned to
+                # callers that parse the line content.
+                if leftover and path != logfile and regex_b.search(leftover.rstrip(b"\r")):
+                    lines_found.append(
+                        leftover.rstrip(b"\r").decode(encoding, errors="surrogateescape")
+                    )
                     if only_first:
                         return lines_found
         return lines_found
@@ -927,8 +942,9 @@ def check_msgs_presence_in_logs(  # noqa: C901
         regex_b = _compile_bytes_from_str(pat=regex)
 
         # Get list of candidate files by globbing keys of seek_offsets. Skip rotated file
-        # names here; `_get_rotated_logs` will include them appropriately.
-        pattern = f"{state_dir}/{files_glob}"
+        # names here; `_get_rotated_logs` will include them appropriately. Escape the
+        # state dir part, so that glob metacharacters in the path are matched literally.
+        pattern = f"{glob.escape(str(state_dir))}/{files_glob}"
         matching_files = [
             f
             for f in fnmatch.filter(seek_offsets, pattern)
