@@ -29,7 +29,7 @@ they have no idea a local `/path/to/cardonnay` clone exists.
    report success because the commands didn't error.
 4. Report back the resolved commit hash and version string so the user can
    see exactly what got pinned.
-5. Remind the user this is a temporary, local-only change (see step 7) and
+5. Remind the user this is a temporary, local-only change (see step 6) and
    confirm whether they want it left in place for an upcoming test run or
    reverted now.
 
@@ -49,21 +49,20 @@ checked out" are not sufficient by themselves.
 2. In `cardano-node-tests/pyproject.toml`, temporarily change the dependency
    line from a version pin to a git reference:
 
-   ```
+   ```toml
    "cardonnay @ git+https://github.com/IntersectMBO/cardonnay.git@<branch-or-master>",
    ```
 
-3. Regenerate the lock file so it actually resolves that ref. This needs
-   `uv`, which lives in the Nix dev shell, not necessarily on bare `PATH`:
+3. Regenerate the lock file so it actually resolves that ref:
 
    ```sh
-   nix develop --accept-flake-config . -c bash -c "make update-uv-lock"
+   uv lock
    ```
 
 4. Confirm the lock file actually changed, don't just assume the command
    succeeded silently. `uv` prints a line like:
 
-   ```
+   ```text
    Updated cardonnay v0.4.1 -> v0.4.2.dev8+gca7c6fb56 (ca7c6fb5)
    ```
 
@@ -71,20 +70,16 @@ checked out" are not sufficient by themselves.
    If the version number didn't change, the wiring didn't take, stop and find
    out why before running anything.
 
-5. Clear any previously-built test venv before the next run, otherwise a
-   stale one gets reused:
+5. Now run the actual test. This only exercises the synced ref if the whole
+   environment gets rebuilt from `pyproject.toml`/`uv.lock` — `runner/regression.sh`,
+   `runner/node_upgrade.sh`, `make test-env`, and `make install` all do this.
+   A plain `make cluster-scripts && make start-cluster` does **not**: it
+   reuses whatever `./.venv` already exists, so it will silently keep
+   running against the old dependency.
 
-   ```sh
-   rm -rf run_workdir/.venv
-   ```
-
-6. Now run the actual test (`runner/node_upgrade.sh`, or a plain
-   `make cluster-scripts && make start-cluster` for a quicker smoke check).
-   This is the first point where it's actually exercising the real change.
-
-7. Treat this `pyproject.toml`/`uv.lock` edit as strictly temporary, local
+6. Treat this `pyproject.toml`/`uv.lock` edit as strictly temporary, local
    only. Never commit or push it as part of a real PR. Once the cardonnay
    change is confirmed working and merged, revert both files back to the
    normal version-pin form (`git checkout -- pyproject.toml uv.lock`, or
-   re-run `make update-uv-lock` after reverting the dependency line). A real
+   re-run `uv lock` after reverting the dependency line). A real
    version bump only happens once cardonnay cuts an actual PyPI release.
