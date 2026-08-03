@@ -93,19 +93,33 @@ ERRORS_IGNORED = [
 # * Workaround for node issue https://github.com/IntersectMBO/cardano-node/issues/4369
 #   "MAIN THREAD FAILED"
 
-if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":
-    # We sometimes see this error on CI. It seems time is not synced properly on GitHub runners.
-    ERRORS_IGNORED.append("TraceBlockFromFuture")
 
-if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
-    ERRORS_IGNORED.extend(
-        (
-            # We can get this error when some clients are old, or are using wrong
-            # network magic.
-            "TrHandshakeClientError",
-            "TracePromoteWarmBigLedgerPeerAborted",
+def _get_ignored_error_regexes() -> list[str]:
+    """Return regexes of errors that are ignored in all log files.
+
+    The environment-specific regexes are added lazily, so the cluster type is
+    determined on first use rather than at import time, and the module doesn't
+    mutate `ERRORS_IGNORED` on import.
+    """
+    errors_ignored = list(ERRORS_IGNORED)
+
+    if (os.environ.get("GITHUB_ACTIONS") or "").lower() == "true":
+        # We sometimes see this error on CI. It seems time is not synced properly
+        # on GitHub runners.
+        errors_ignored.append("TraceBlockFromFuture")
+
+    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+        errors_ignored.extend(
+            (
+                # We can get this error when some clients are old, or are using wrong
+                # network magic.
+                "TrHandshakeClientError",
+                "TracePromoteWarmBigLedgerPeerAborted",
+            )
         )
-    )
+
+    return errors_ignored
+
 
 # Errors that are ignored if there are expected messages in the log file before the error
 ERRORS_LOOK_BACK_LINES = 10
@@ -1029,6 +1043,8 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
             look_back_map=ERRORS_LOOK_BACK_MAP,
         )
 
+    ignored_error_regexes = _get_ignored_error_regexes()
+
     with locking.FileLockIfXdist(lock_file):
         errors = []
         for logfile in cluster_env.state_dir.glob("*.std*"):
@@ -1045,7 +1061,7 @@ def search_cluster_logs() -> list[tuple[pl.Path, str]]:
             # the whole file is going to be searched and the rules apply to all of it.
             ignore_rules = _get_ignore_rules(cluster_env=cluster_env, timestamp=timestamp)
             errors_ignored = _get_ignore_regex(
-                ignore_rules=ignore_rules, regexes=ERRORS_IGNORED, logfile=logfile
+                ignore_rules=ignore_rules, regexes=ignored_error_regexes, logfile=logfile
             )
 
             # Search for errors in the log file

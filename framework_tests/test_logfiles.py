@@ -1036,3 +1036,53 @@ def test_rotated_logs_mtime_tiebreak(tmp_path: pl.Path):
 
     records = logfiles._get_rotated_logs(logfile=logfile, seek=0, timestamp=0.0, inode=None)
     assert [r.logfile for r in records] == [older, newer, logfile]
+
+
+@pytest.mark.parametrize(
+    ("github_actions", "cluster_type", "extra_regexes"),
+    (
+        pytest.param("", "local", [], id="local"),
+        pytest.param("true", "local", ["TraceBlockFromFuture"], id="github_actions"),
+        pytest.param(
+            "",
+            "testnet",
+            ["TrHandshakeClientError", "TracePromoteWarmBigLedgerPeerAborted"],
+            id="testnet",
+        ),
+        pytest.param(
+            "true",
+            "testnet",
+            [
+                "TraceBlockFromFuture",
+                "TrHandshakeClientError",
+                "TracePromoteWarmBigLedgerPeerAborted",
+            ],
+            id="github_actions_testnet",
+        ),
+    ),
+)
+def test_get_ignored_error_regexes(
+    monkeypatch: pytest.MonkeyPatch,
+    github_actions: str,
+    cluster_type: str,
+    extra_regexes: list[str],
+):
+    """Check that the ignored error regexes reflect the runtime environment.
+
+    The environment-specific regexes are added lazily based on the current environment,
+    not based on the environment seen when the module was imported.
+    """
+    monkeypatch.setenv("GITHUB_ACTIONS", github_actions)
+    cluster_type_obj = (
+        cluster_nodes.TestnetCluster()
+        if cluster_type == "testnet"
+        else cluster_nodes.LocalCluster()
+    )
+    monkeypatch.setattr(cluster_nodes, "get_cluster_type", lambda: cluster_type_obj)
+
+    regexes = logfiles._get_ignored_error_regexes()
+
+    assert set(logfiles.ERRORS_IGNORED).issubset(regexes)
+    for extra in extra_regexes:
+        assert extra in regexes
+    assert len(regexes) == len(logfiles.ERRORS_IGNORED) + len(extra_regexes)
