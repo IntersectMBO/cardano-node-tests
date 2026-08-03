@@ -168,11 +168,19 @@ class ClusterManager:
             if not self._is_valid_cluster_instance(work_dir=work_dir, instance_num=instance_num):
                 continue
 
-            artifacts.save_start_script_coverage(
-                log_file=state_dir / common.START_CLUSTER_LOG,
-                pytest_config=self.pytest_config,
-            )
-            artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
+            # Artifact collection is best-effort diagnostics, a failure on one cluster
+            # instance must not prevent saving artifacts of the remaining instances.
+            try:
+                artifacts.save_start_script_coverage(
+                    log_file=state_dir / common.START_CLUSTER_LOG,
+                    pytest_config=self.pytest_config,
+                )
+            except Exception:
+                LOGGER.exception(f"Failed to save start script coverage for 'c{instance_num}'.")
+            try:
+                artifacts.save_cluster_artifacts(save_dir=self.pytest_tmp_dir, state_dir=state_dir)
+            except Exception:
+                LOGGER.exception(f"Failed to save cluster artifacts for 'c{instance_num}'.")
 
     def stop_all_clusters(self) -> None:
         """Stop all cluster instances."""
