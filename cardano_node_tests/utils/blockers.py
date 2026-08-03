@@ -35,9 +35,6 @@ class GH:
         fixed_in: str = "",
         message: str = "",
     ) -> None:
-        self.issue = issue
-        self.repo = repo
-        self.fixed_in = fixed_in
         # Validate eagerly so an invalid version is reported already when the issue is defined
         if fixed_in:
             try:
@@ -45,6 +42,10 @@ class GH:
             except version.InvalidVersion as excp:
                 msg = f"Invalid `fixed_in` version for issue '{repo}#{issue}': '{fixed_in}'"
                 raise ValueError(msg) from excp
+
+        self.issue = issue
+        self.repo = repo
+        self.fixed_in = fixed_in
         self.message = message
         self.gh_issue = gh_issue.GHIssue(number=self.issue, repo=self.repo)
 
@@ -55,15 +56,6 @@ class GH:
             self.is_blocked = self._dbsync_issue_is_blocked
         else:
             self.is_blocked = self._issue_is_blocked
-
-    @property
-    def _fixed_in_version(self) -> version.Version | None:
-        """Parsed `fixed_in` version, or `None` when no `fixed_in` was set.
-
-        Parsed on access, so the check stays correct even when the `fixed_in`
-        attribute was changed after init.
-        """
-        return version.parse(self.fixed_in) if self.fixed_in else None
 
     def _issue_blocked_in_version(self, product_version: version.Version) -> bool:
         """Check if an issue is blocked in given product version.
@@ -77,12 +69,13 @@ class GH:
         Raises:
             ValueError: If the GitHub issue doesn't exist or is not accessible.
         """
+        issue_id = f"{self.repo}#{self.issue}"
+
         # Assume that the issue is blocked if no GitHub token was provided and so the check
         # cannot be performed.
         if not self.gh_issue.TOKEN:
             LOGGER.warning(
-                "No GitHub token provided, cannot check if issue '%s' is blocked",
-                f"{self.repo}#{self.issue}",
+                "No GitHub token provided, cannot check if issue '%s' is blocked", issue_id
             )
             return True
 
@@ -91,27 +84,26 @@ class GH:
         # Fail early when the issue cannot be found, e.g. because of a typo in the issue
         # number or repo name. Otherwise the test would be silently xfailed forever.
         if state == gh_issue.STATE_UNKNOWN:
-            msg = f"Issue '{self.repo}#{self.issue}' doesn't exist or is not accessible"
+            msg = f"Issue '{issue_id}' doesn't exist or is not accessible"
             raise ValueError(msg)
 
         # Assume that the issue is blocked when its state could not be determined,
         # e.g. due to an API failure or rate limiting.
-        if state is None or state == gh_issue.STATE_FAILURE:
+        if state == gh_issue.STATE_FAILURE:
             LOGGER.warning(
-                "Could not determine state of issue '%s', assuming it is blocked",
-                f"{self.repo}#{self.issue}",
+                "Could not determine state of issue '%s', assuming it is blocked", issue_id
             )
             return True
 
         # The issue is blocked if it was not closed yet
-        if state != "closed":
+        if state != gh_issue.STATE_CLOSED:
             return True
 
         # The issue is blocked if it was fixed or integrated into a product version that is greater
         # than the product version we are currently running.
-        if self._fixed_in_version is None:
+        if not self.fixed_in:
             return False
-        return self._fixed_in_version > product_version
+        return version.parse(self.fixed_in) > product_version
 
     def _cli_issue_is_blocked(self) -> bool:
         """Check if cardano-cli issue is blocked."""
@@ -128,11 +120,14 @@ class GH:
     def finish_test(self, force_blocked: bool = False) -> None:
         """Fail or Xfail test with GitHub issue reference.
 
+        Never returns - the test outcome is always set via `pytest.xfail` or `pytest.fail`.
+
         Args:
             force_blocked: Treat the issue as blocked without checking its state.
 
         Raises:
             ValueError: If the GitHub issue doesn't exist or is not accessible.
+                Cannot happen with `force_blocked`, as the issue state is not checked.
         """
         reason = f"{self.gh_issue}: {self.message}"
         log_message = f"{self.gh_issue.url} => {self.message}"
@@ -157,8 +152,10 @@ class GH:
         return f"<GH: issue='{self.repo}#{self.issue}', fixed_in='{self.fixed_in}'>"
 
 
-def finish_test(issues: tp.Iterable[GH]) -> None:
+def finish_test(issues: tp.Collection[GH]) -> None:
     """Fail or Xfail test with references to multiple GitHub issues.
+
+    Never returns - the test outcome is always set via `pytest.xfail` or `pytest.fail`.
 
     Args:
         issues: GitHub issues to report. Must not be empty.
@@ -167,6 +164,9 @@ def finish_test(issues: tp.Iterable[GH]) -> None:
         ValueError: If no issues were provided, or if a referenced GitHub issue doesn't
             exist or is not accessible.
     """
+    if not issues:
+        msg = "No issues were provided"
+        raise ValueError(msg)
 
     def _get_outcome(issue: GH) -> tuple[bool, str, str]:
         blocked = issue.is_blocked()
@@ -176,9 +176,6 @@ def finish_test(issues: tp.Iterable[GH]) -> None:
         return blocked, reason, log_message
 
     outcomes = [_get_outcome(i) for i in issues]
-    if not outcomes:
-        msg = "No issues were provided"
-        raise ValueError(msg)
 
     should_fail = False
     for blocked, __, log_message in outcomes:
