@@ -60,8 +60,16 @@ class GH:
             )
             return True
 
+        state = self.gh_issue.get_state()
+
+        # Fail early when the issue doesn't exist, e.g. because of a typo in the issue number.
+        # Otherwise the test would be silently xfailed forever.
+        if state == "unknown":
+            msg = f"Issue '{self.repo}#{self.issue}' doesn't exist"
+            raise ValueError(msg)
+
         # The issue is blocked if it is was not closed yet
-        if not self.gh_issue.is_closed():
+        if state != "closed":
             return True
 
         # The issue is blocked if it was fixed or integrated into a product version that is greater
