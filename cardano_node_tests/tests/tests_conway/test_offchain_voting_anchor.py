@@ -12,8 +12,8 @@ db-sync falls back to CIP-100 decoding, so a CIP-100 document on a DRep anchor i
 ``is_valid = TRUE`` (with an empty ``off_chain_vote_drep_data``).
 
 A hash mismatch is the one case not stored (retried, recorded in ``off_chain_vote_fetch_error``);
-it is covered for DReps by ``test_drep.py::TestDReps::test_register_wrong_metadata`` and cannot be
-reproduced for gov actions, as cardano-cli validates the hash at build time.
+it is covered by ``test_drep.py::TestDReps::test_register_wrong_metadata``. db-sync's fetch and
+hash check are anchor-type-agnostic, so the gov-action variant is not duplicated here.
 
 Gov-action variants live in :class:`TestGovActionAnchor`, DRep variants in :class:`TestDrepAnchor`.
 """
@@ -44,10 +44,11 @@ DATA_DIR = pl.Path(__file__).parent.parent / "data"
 
 pytestmark = [
     pytest.mark.skipif(
-        VERSIONS.transaction_era < VERSIONS.CONWAY,
+        VERSIONS.transaction_era < VERSIONS.CONWAY_FIRST,
         reason="runs only with Tx era >= Conway",
     ),
     pytest.mark.dbsync_config,
+    pytest.mark.needs_dbsync,
 ]
 
 # Each anchor is a committed data file served at a stable public raw URL. The hash and bytes are
@@ -58,35 +59,6 @@ NON_CONFORMANT_ANCHOR_FILE = DATA_DIR / "ga_anchor_nonconf.json"
 NON_CONFORMANT_ANCHOR_URL = common.PUBLIC_ACTION_ANCHOR_NONCONFORMANT_URL
 INVALID_ANCHOR_FILE = DATA_DIR / "ga_anchor_invalid.json"
 INVALID_ANCHOR_URL = common.PUBLIC_ACTION_ANCHOR_INVALID_URL
-
-
-def _wait_for_off_chain_vote_data(
-    *, data_hash: str, voting_anchor_id: int | None = None, timeout: int = 360
-) -> dbsync_types.OffChainVoteDataRecord:
-    """Wait until db-sync stores the off-chain vote data and return it.
-
-    db-sync's off-chain fetch loop sleeps 300s between passes, so the row can appear up to
-    ~5 minutes after the anchor is on-chain. A missing row once the timeout elapses is a real
-    failure (a regression of the PR #2005 behaviour).
-
-    The same content can be referenced by several anchors (e.g. a gov action and a DRep
-    registration share a ``data_hash``); pass ``voting_anchor_id`` to target a specific one.
-    """
-
-    def _query_func() -> dbsync_types.OffChainVoteDataRecord:
-        data = dbsync_utils.get_action_data(data_hash=data_hash, voting_anchor_id=voting_anchor_id)
-        if data is None:
-            msg = (
-                f"No off_chain_vote_data for anchor hash {data_hash} "
-                f"(voting_anchor_id={voting_anchor_id}) in db-sync yet"
-            )
-            raise dbsync_utils.DbSyncNoResponseError(msg)
-        return data
-
-    return tp.cast(
-        "dbsync_types.OffChainVoteDataRecord",
-        dbsync_utils.retry_query(query_func=_query_func, timeout=timeout),
-    )
 
 
 def _assert_unparsed_anchor_data(
@@ -117,7 +89,7 @@ def _assert_unparsed_anchor_data(
 
     # `warning` records *why* db-sync could not decode the body. For valid JSON that fails the
     # CIP schema (is_valid=FALSE) db-sync stores the decoder error here; for content that is not
-    # valid JSON at all (is_valid=NULL) there is nothing to decode, so it stays empty.
+    # valid JSON at all (is_valid=NULL) there is nothing to decode, so it stays NULL.
     if expected_is_valid is False:
         assert db_data.warning, f"Expected a decode warning, got: {db_data.warning!r}"
     else:
@@ -136,6 +108,19 @@ def _assert_unparsed_anchor_data(
     assert db_data.voting_anchor["url"] == url, "Unexpected voting anchor url"
     assert db_data.voting_anchor["data_hash"] == data_hash, "Unexpected voting anchor hash"
     assert db_data.voting_anchor["type"] == anchor_type, "Unexpected voting anchor type"
+
+
+def _assert_invalid_json_error(*, db_data: dbsync_types.OffChainVoteDataRecord) -> None:
+    """Assert the error object db-sync stores in ``json`` for content that is not valid JSON.
+
+    Asserts on stable substrings and key presence instead of the exact decoder message, which
+    can change between db-sync versions.
+    """
+    assert isinstance(db_data.json, dict), f"Stored JSON is not an error object: {db_data.json!r}"
+    assert "not valid JSON" in db_data.json.get("error", ""), (
+        f"Missing expected error in stored JSON: {db_data.json}"
+    )
+    assert "parse_error" in db_data.json, f"Missing parse_error in stored JSON: {db_data.json}"
 
 
 class TestGovActionAnchor:
@@ -162,8 +147,8 @@ class TestGovActionAnchor:
             min_amount=350_000_000,
         )
 
+    @staticmethod
     def _propose_info_action(
-        self,
         *,
         cluster: clusterlib.ClusterLib,
         pool_user: clusterlib.PoolUser,
@@ -225,26 +210,8 @@ class TestGovActionAnchor:
 
         return cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
 
-    def _get_gov_action_voting_anchor_id(self, *, action_txid: str) -> int:
-        """Return the ``voting_anchor_id`` db-sync assigned to the info action proposal.
-
-        The same anchor content can be shared with DRep tests, so callers that assert anchor
-        details use this to target the gov action's own ``off_chain_vote_data`` row.
-        """
-
-        def _query_func() -> int:
-            proposals = dbsync_utils.get_gov_action_proposals(txhash=action_txid)
-            if not proposals:
-                msg = f"Gov action proposal for tx {action_txid} not in db-sync yet"
-                raise dbsync_utils.DbSyncNoResponseError(msg)
-            return proposals[0].voting_anchor_id
-
-        return tp.cast("int", dbsync_utils.retry_query(query_func=_query_func, timeout=120))
-
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.dbsync
-    @pytest.mark.upgrade_step1
     def test_valid_voting_anchor_json(
         self,
         cluster_use_governance: governance_utils.GovClusterT,
@@ -253,7 +220,8 @@ class TestGovActionAnchor:
         """Test an info action with a valid, CIP-conformant anchor (is_valid=TRUE).
 
         * Propose an info action with a CIP-100/CIP-108 conformant anchor.
-        * Verify db-sync stores ``off_chain_vote_data`` with ``is_valid = TRUE``.
+        * Verify db-sync stores ``off_chain_vote_data`` with ``is_valid = TRUE``, the raw bytes
+          and no decode warning.
         * Verify the authors, references and external updates are populated and match the file.
         """
         cluster, __ = cluster_use_governance
@@ -272,22 +240,33 @@ class TestGovActionAnchor:
             anchor_url=CONFORMANT_ANCHOR_URL,
             anchor_data_hash=anchor_data_hash,
         )
-        voting_anchor_id = self._get_gov_action_voting_anchor_id(action_txid=action_txid)
+        voting_anchor_id = dbsync_utils.get_gov_action_voting_anchor_id(txhash=action_txid)
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.db007, reqc.db015, reqc.db017, reqc.db018, reqc.db020)]
-        _wait_for_off_chain_vote_data(data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id)
+        db_data = dbsync_utils.wait_for_off_chain_vote_data(
+            data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id
+        )
+
+        # `check_action_data` compares the decoded content; check the storage-level fields that
+        # the FALSE/NULL variants assert via `_assert_unparsed_anchor_data` here as well.
+        assert db_data.bytes == CONFORMANT_ANCHOR_FILE.read_bytes().hex(), (
+            "Stored bytes do not match the committed anchor file"
+        )
+        assert db_data.warning is None, f"Unexpected warning: {db_data.warning}"
+        assert db_data.voting_anchor["url"] == CONFORMANT_ANCHOR_URL, "Unexpected voting anchor url"
+        assert db_data.voting_anchor["type"] == "gov_action", "Unexpected voting anchor type"
+
         dbsync_utils.check_action_data(
             json_anchor_file=json_anchor_file,
             anchor_data_hash=anchor_data_hash,
+            action_txid=action_txid,
             voting_anchor_id=voting_anchor_id,
         )
         [r.success() for r in (reqc.db007, reqc.db015, reqc.db017, reqc.db018, reqc.db020)]
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.dbsync
-    @pytest.mark.upgrade_step1
     def test_valid_voting_anchor_json_not_conforming_to_cip_100(
         self,
         cluster_use_governance: governance_utils.GovClusterT,
@@ -315,11 +294,11 @@ class TestGovActionAnchor:
             anchor_url=NON_CONFORMANT_ANCHOR_URL,
             anchor_data_hash=anchor_data_hash,
         )
-        voting_anchor_id = self._get_gov_action_voting_anchor_id(action_txid=action_txid)
+        voting_anchor_id = dbsync_utils.get_gov_action_voting_anchor_id(txhash=action_txid)
 
         reqc.db007.start(url=helpers.get_vcs_link())
         reqc.db015.start(url=helpers.get_vcs_link())
-        db_data = _wait_for_off_chain_vote_data(
+        db_data = dbsync_utils.wait_for_off_chain_vote_data(
             data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id
         )
 
@@ -340,8 +319,6 @@ class TestGovActionAnchor:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.dbsync
-    @pytest.mark.upgrade_step1
     def test_invalid_voting_anchor_json(
         self,
         cluster_use_governance: governance_utils.GovClusterT,
@@ -367,20 +344,16 @@ class TestGovActionAnchor:
             anchor_url=INVALID_ANCHOR_URL,
             anchor_data_hash=anchor_data_hash,
         )
-        voting_anchor_id = self._get_gov_action_voting_anchor_id(action_txid=action_txid)
+        voting_anchor_id = dbsync_utils.get_gov_action_voting_anchor_id(txhash=action_txid)
 
         reqc.db007.start(url=helpers.get_vcs_link())
         reqc.db015.start(url=helpers.get_vcs_link())
-        db_data = _wait_for_off_chain_vote_data(
+        db_data = dbsync_utils.wait_for_off_chain_vote_data(
             data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id
         )
 
         # The `json` column holds a generated error object rather than the (unparseable) body.
-        # Assert on stable substrings instead of the exact decoder message, which can change.
-        assert "not valid JSON" in db_data.json.get("error", ""), (
-            f"Missing expected error in stored JSON: {db_data.json}"
-        )
-        assert "parse_error" in db_data.json, f"Missing parse_error in stored JSON: {db_data.json}"
+        _assert_invalid_json_error(db_data=db_data)
         _assert_unparsed_anchor_data(
             db_data=db_data,
             url=INVALID_ANCHOR_URL,
@@ -400,8 +373,9 @@ class TestDrepAnchor:
     according to its on-chain type, so the DRep path is exercised separately here. The
     valid-metadata DRep path (``is_valid=TRUE`` with a populated ``off_chain_vote_drep_data``)
     and the hash-mismatch path are already covered by ``test_drep.py``, so this class adds the
-    not-CIP-decodable (``is_valid=FALSE``) and invalid-JSON (``is_valid=NULL``) cases, both of
-    which leave ``off_chain_vote_drep_data`` empty.
+    CIP-100 fallback (``is_valid=TRUE``), not-CIP-decodable (``is_valid=FALSE``) and
+    invalid-JSON (``is_valid=NULL``) cases, all of which leave ``off_chain_vote_drep_data``
+    empty.
     """
 
     @pytest.fixture
@@ -420,8 +394,8 @@ class TestDrepAnchor:
             caching_key=key,
         )
 
+    @staticmethod
     def _register_drep_with_anchor(
-        self,
         *,
         cluster: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
@@ -456,19 +430,15 @@ class TestDrepAnchor:
             signing_key_files=[payment_addr.skey_file, reg_drep.key_pair.skey_file],
         )
 
-        tx_output_reg = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster,
-            name_template=f"{name_template}_reg",
-            src_address=payment_addr.address,
-            tx_files=tx_files_reg,
-            deposit=reg_drep.deposit,
-        )
-
-        reg_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
-        assert reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, "DRep was not registered"
-
         def _retire_drep() -> None:
             """Retire the DRep so it does not affect other tests."""
+            drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
+            if not drep_state:
+                LOGGER.warning(
+                    f"DRep '{reg_drep.drep_id}' is not registered at cleanup time "
+                    "(the registration tx may still be in the mempool), nothing to retire."
+                )
+                return
             ret_cert = cluster.g_governance.drep.gen_retirement_cert(
                 cert_name=f"{name_template}_cleanup",
                 deposit_amt=reg_drep.deposit,
@@ -486,7 +456,29 @@ class TestDrepAnchor:
                 deposit=-reg_drep.deposit,
             )
 
+            ret_drep_state = cluster.g_query.get_drep_state(
+                drep_vkey_file=reg_drep.key_pair.vkey_file
+            )
+            assert not ret_drep_state, "DRep was not retired"
+
+        # Register the finalizer before the registration tx is even submitted: the submit call
+        # can raise after the tx was in fact included, and the finalizer itself skips retirement
+        # when the DRep is not registered, so registering the finalizer early cannot hurt but
+        # prevents a leak.
         request.addfinalizer(_retire_drep)
+
+        tx_output_reg = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=f"{name_template}_reg",
+            src_address=payment_addr.address,
+            tx_files=tx_files_reg,
+            deposit=reg_drep.deposit,
+        )
+
+        reg_drep_state = cluster.g_query.get_drep_state(drep_vkey_file=reg_drep.key_pair.vkey_file)
+        assert reg_drep_state and reg_drep_state[0][0]["keyHash"] == reg_drep.drep_id, (
+            "DRep was not registered"
+        )
 
         reg_out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_reg)
         assert (
@@ -498,22 +490,34 @@ class TestDrepAnchor:
 
         return reg_drep
 
-    def _get_drep_voting_anchor_id(self, *, reg_drep: governance_utils.DRepRegistration) -> int:
+    @staticmethod
+    def _get_drep_voting_anchor_id(*, reg_drep: governance_utils.DRepRegistration) -> int:
         """Return the ``voting_anchor_id`` db-sync assigned to the DRep registration."""
 
         def _query_func() -> int:
             drep_data = dbsync_utils.get_drep(
                 drep_hash=reg_drep.drep_id, drep_deposit=reg_drep.deposit
             )
-            if drep_data is None or drep_data.voting_anchor_id is None:
+            if drep_data is None:
                 msg = f"DRep {reg_drep.drep_id} registration not in db-sync yet"
                 raise dbsync_utils.DbSyncNoResponseError(msg)
+            # db-sync writes each block in a single db transaction, so a registration row
+            # without its voting anchor is a deterministic defect - fail without retrying.
+            assert drep_data.voting_anchor_id is not None, (
+                f"DRep {reg_drep.drep_id} registration in db-sync has no voting anchor"
+            )
             return drep_data.voting_anchor_id
 
-        return tp.cast("int", dbsync_utils.retry_query(query_func=_query_func, timeout=120))
+        return tp.cast(int, dbsync_utils.retry_query(query_func=_query_func, timeout=120))
 
-    def _assert_empty_drep_data(self, *, voting_anchor_id: int) -> None:
-        """Assert that no ``off_chain_vote_drep_data`` rows were derived for the anchor."""
+    @staticmethod
+    def _assert_empty_drep_data(*, voting_anchor_id: int) -> None:
+        """Assert that no ``off_chain_vote_drep_data`` rows were derived for the anchor.
+
+        Relies on db-sync inserting ``off_chain_vote_data`` and any derived
+        ``off_chain_vote_drep_data`` rows in the same transaction, so once the vote-data row is
+        visible (callers wait for it first), the absence of drep-data rows is conclusive.
+        """
         drep_rows = list(
             dbsync_queries.query_off_chain_vote_drep_data(voting_anchor_id=voting_anchor_id)
         )
@@ -524,7 +528,65 @@ class TestDrepAnchor:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.dbsync
+    def test_drep_cip100_anchor(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        payment_addr: clusterlib.AddressRecord,
+        request: FixtureRequest,
+    ):
+        """Register a DRep whose anchor is a CIP-100/CIP-108 document (is_valid=TRUE).
+
+        db-sync decodes DRep anchors as CIP-119 and falls back to CIP-100. A CIP-100/CIP-108
+        document therefore still decodes (``is_valid = TRUE``), but carries no CIP-119 DRep
+        fields, so ``off_chain_vote_drep_data`` stays empty.
+
+        * Register a DRep whose anchor is the CIP-100/CIP-108 conformant gov-action document.
+        * Verify db-sync stores ``off_chain_vote_data`` with ``is_valid = TRUE``, the parsed
+          JSON, the raw bytes and no decode warning.
+        * Verify no ``off_chain_vote_drep_data`` rows were derived from it.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        drep_metadata_hash = cluster.g_governance.drep.get_metadata_hash(
+            drep_metadata_file=CONFORMANT_ANCHOR_FILE
+        )
+        with open(CONFORMANT_ANCHOR_FILE, encoding="utf-8") as anchor_fp:
+            json_anchor_file = json.load(anchor_fp)
+
+        reg_drep = self._register_drep_with_anchor(
+            cluster=cluster,
+            cluster_manager=cluster_manager,
+            payment_addr=payment_addr,
+            request=request,
+            name_template=temp_template,
+            drep_metadata_url=CONFORMANT_ANCHOR_URL,
+            drep_metadata_hash=drep_metadata_hash,
+        )
+
+        voting_anchor_id = self._get_drep_voting_anchor_id(reg_drep=reg_drep)
+
+        _url = helpers.get_vcs_link()
+        [r.start(url=_url) for r in (reqc.db015, reqc.db016)]
+        db_data = dbsync_utils.wait_for_off_chain_vote_data(
+            data_hash=drep_metadata_hash, voting_anchor_id=voting_anchor_id
+        )
+
+        assert db_data.is_valid is True, f"Unexpected is_valid: {db_data.is_valid}"
+        assert db_data.json == json_anchor_file, (
+            "Stored JSON does not match the anchor file content"
+        )
+        assert db_data.bytes == CONFORMANT_ANCHOR_FILE.read_bytes().hex(), (
+            "Stored bytes do not match the committed anchor file"
+        )
+        assert db_data.warning is None, f"Unexpected warning: {db_data.warning}"
+        assert db_data.voting_anchor["url"] == CONFORMANT_ANCHOR_URL, "Unexpected voting anchor url"
+        assert db_data.voting_anchor["type"] == "drep", "Unexpected voting anchor type"
+        self._assert_empty_drep_data(voting_anchor_id=voting_anchor_id)
+        [r.success() for r in (reqc.db015, reqc.db016)]
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.long
     def test_drep_anchor_json_not_conforming(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -560,7 +622,7 @@ class TestDrepAnchor:
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.db015, reqc.db016)]
-        db_data = _wait_for_off_chain_vote_data(
+        db_data = dbsync_utils.wait_for_off_chain_vote_data(
             data_hash=drep_metadata_hash, voting_anchor_id=voting_anchor_id
         )
 
@@ -580,7 +642,6 @@ class TestDrepAnchor:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.dbsync
     def test_drep_invalid_anchor_json(
         self,
         cluster_manager: cluster_management.ClusterManager,
@@ -614,13 +675,11 @@ class TestDrepAnchor:
 
         _url = helpers.get_vcs_link()
         [r.start(url=_url) for r in (reqc.db015, reqc.db016)]
-        db_data = _wait_for_off_chain_vote_data(
+        db_data = dbsync_utils.wait_for_off_chain_vote_data(
             data_hash=drep_metadata_hash, voting_anchor_id=voting_anchor_id
         )
 
-        assert "not valid JSON" in db_data.json.get("error", ""), (
-            f"Missing expected error in stored JSON: {db_data.json}"
-        )
+        _assert_invalid_json_error(db_data=db_data)
         _assert_unparsed_anchor_data(
             db_data=db_data,
             url=INVALID_ANCHOR_URL,

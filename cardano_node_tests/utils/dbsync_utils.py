@@ -30,6 +30,16 @@ class DbSyncNoResponseError(Exception):
         super().__init__(msg)
 
 
+class DbSyncTimeoutError(TimeoutError):
+    """Raised when data does not appear in db-sync within a timeout.
+
+    Subclasses `TimeoutError` so existing callers that catch `TimeoutError` keep working, while
+    letting new code catch db-sync waiting timeouts specifically (a low-level `socket.timeout`
+    is a `TimeoutError` too since Python 3.10). Note that `TimeoutError` subclasses `OSError`,
+    so a broad `except OSError` would absorb this error as well.
+    """
+
+
 class ActionTypes(enum.StrEnum):
     COMMITTEE = "committee"
     CONSTITUTION = "constitution"
@@ -499,7 +509,8 @@ def retry_query(*, query_func: tp.Callable, timeout: int = 20) -> tp.Any:
     """Wait a bit and retry a query until response is returned.
 
     A generic function that can be used by any query/check that raises `DbSyncNoResponseError`.
-    The query is repeated until the expected data is returned or timeout is reached.
+    The query is repeated until the expected data is returned, or `DbSyncTimeoutError` is
+    raised when the timeout is reached.
     """
     end_time = time.time() + timeout
     repeat = 0
@@ -516,7 +527,7 @@ def retry_query(*, query_func: tp.Callable, timeout: int = 20) -> tp.Any:
             if time.time() < end_time:
                 repeat += 1
                 continue
-            raise TimeoutError from exc
+            raise DbSyncTimeoutError(str(exc)) from exc
 
     return response
 
@@ -1035,6 +1046,33 @@ def get_gov_action_proposals(
     return gov_action_proposals
 
 
+def get_gov_action_voting_anchor_id(*, txhash: str, timeout: int = 120) -> int:
+    """Return the ``voting_anchor_id`` db-sync assigned to a gov action proposal.
+
+    The same anchor content can back several anchors (e.g. a gov action and a DRep
+    registration), so callers that assert anchor details use this to target the gov action's
+    own ``off_chain_vote_data`` row. The transaction is expected to carry a single proposal;
+    if it carries more, an arbitrary one is used.
+
+    Args:
+        txhash: Transaction hash of the transaction that submitted the proposal.
+        timeout: Lower bound on how long to wait for the proposal to appear in db-sync, in
+            seconds (`retry_query` backoff can overshoot it).
+
+    Raises:
+        DbSyncTimeoutError: When the proposal does not appear in db-sync within the timeout.
+    """
+
+    def _query_func() -> int:
+        proposals = get_gov_action_proposals(txhash=txhash)
+        if not proposals:
+            msg = f"Gov action proposal for tx {txhash} not in db-sync yet"
+            raise DbSyncNoResponseError(msg)
+        return proposals[0].voting_anchor_id
+
+    return tp.cast(int, retry_query(query_func=_query_func, timeout=timeout))
+
+
 def get_committee_member(*, cold_key: str) -> dbsync_types.CommitteeRegistrationRecord | None:
     """Get committee member data from db-sync."""
     cc_members = list(dbsync_queries.query_committee_registration(cold_key=cold_key))
@@ -1388,12 +1426,19 @@ def check_off_chain_drep_registration(  # noqa: C901
 def get_action_data(  # noqa: C901
     *,
     data_hash: str,
-    voting_anchor_id: int | None = None,
+    voting_anchor_id: int,
 ) -> dbsync_types.OffChainVoteDataRecord | None:
     """Get off chain action data from db-sync.
 
-    The same content (same ``data_hash``) can back several anchors of different types, each with
-    its own row; pass ``voting_anchor_id`` to select one, otherwise the most recent is used.
+    Args:
+        data_hash: Hash of the anchor content.
+        voting_anchor_id: Id of the anchor's ``voting_anchor`` row. The same content (same
+            ``data_hash``) can back several anchors of different types, each with its own row,
+            so the target anchor must be identified explicitly.
+
+    Returns:
+        The off-chain vote data record, or ``None`` when db-sync has no row for the hash /
+        ``voting_anchor_id`` combination (e.g. the anchor was not fetched yet).
     """
     votes = list(dbsync_queries.query_off_chain_vote_data(data_hash=data_hash))
     if not votes:
@@ -1403,10 +1448,7 @@ def get_action_data(  # noqa: C901
     references = []
     external_updates = []
 
-    target_vot_anchor_id = (
-        voting_anchor_id if voting_anchor_id is not None else votes[-1].data_vot_anchor_id
-    )
-    target_votes = [vote for vote in votes if vote.data_vot_anchor_id == target_vot_anchor_id]
+    target_votes = [vote for vote in votes if vote.data_vot_anchor_id == voting_anchor_id]
     if not target_votes:
         return None
 
@@ -1477,7 +1519,7 @@ def get_action_data(  # noqa: C901
         is_valid=vote.data_is_valid,
         authors=list(authors),
         references=list(references),
-        gov_action_data=tp.cast("dict[str, tp.Any]", gov_action or {}),
+        gov_action_data=tp.cast(dict[str, tp.Any], gov_action or {}),
         external_updates=list(external_updates),
         voting_anchor=voting_anchor,
     )
@@ -1485,27 +1527,133 @@ def get_action_data(  # noqa: C901
     return vote_data
 
 
+def wait_for_off_chain_vote_data(
+    *, data_hash: str, voting_anchor_id: int, timeout: int = 420
+) -> dbsync_types.OffChainVoteDataRecord:
+    """Wait until db-sync stores the off-chain vote data for an anchor and return it.
+
+    db-sync's off-chain fetch loop sleeps 300s between passes, so the row can appear up to
+    ~5 minutes after the anchor is on-chain.
+
+    A missing row can mean a db-sync regression (the PR #2005 behaviour), a failed download
+    (404, network trouble - recorded by db-sync in ``off_chain_vote_fetch_error``), or a wrong
+    ``voting_anchor_id``. On timeout, the failure message includes the recorded fetch errors
+    and a data-presence diagnostic (whether the data appeared late, which other anchor ids
+    hold data for the hash, or that none do), to tell the cases apart.
+
+    Args:
+        data_hash: Hash of the anchor content.
+        voting_anchor_id: Id of the anchor's ``voting_anchor`` row. The same content can be
+            referenced by several anchors (e.g. a gov action and a DRep registration share a
+            ``data_hash``), so the target anchor must be identified explicitly.
+        timeout: Lower bound on how long to wait for the row, in seconds. `retry_query` uses
+            quadratic backoff and checks the deadline only between polls, so the actual wait
+            can exceed this by up to one backoff interval (~25% at the default 420s).
+
+    Returns:
+        The stored off-chain vote data record.
+
+    Raises:
+        AssertionError: When the row is not stored within the timeout.
+    """
+
+    def _query_func() -> dbsync_types.OffChainVoteDataRecord:
+        data = get_action_data(data_hash=data_hash, voting_anchor_id=voting_anchor_id)
+        if data is None:
+            msg = (
+                f"No off_chain_vote_data for anchor hash {data_hash} "
+                f"(voting_anchor_id={voting_anchor_id}) in db-sync yet"
+            )
+            raise DbSyncNoResponseError(msg)
+        return data
+
+    start_time = time.monotonic()
+    try:
+        return tp.cast(
+            dbsync_types.OffChainVoteDataRecord,
+            retry_query(query_func=_query_func, timeout=timeout),
+        )
+    except DbSyncTimeoutError as exc:
+        elapsed = time.monotonic() - start_time
+        # Each diagnostic query is guarded separately, so a failure of one cannot discard the
+        # other's result or mask the timeout itself.
+        try:
+            fetch_errors = "; ".join(
+                r.fetch_error
+                for r in dbsync_queries.query_off_chain_vote_fetch_error(
+                    voting_anchor_id=voting_anchor_id
+                )
+            )
+        except Exception as fetch_exc:
+            fetch_errors = f"diagnostic failed: {fetch_exc!r}"
+        # Check whether data for the hash exists at all, and under which anchors, so a too
+        # short timeout, a wrong `voting_anchor_id`, a fetch failure and a db-sync regression
+        # are all distinguishable.
+        try:
+            present_ids = sorted(
+                {
+                    v.data_vot_anchor_id
+                    for v in dbsync_queries.query_off_chain_vote_data(data_hash=data_hash)
+                }
+            )
+            if voting_anchor_id in present_ids:
+                present = "the data appeared after the deadline - the timeout is too short"
+            elif present_ids:
+                present = f"data for the hash exists under voting_anchor ids {present_ids}"
+            else:
+                present = "no data for the hash exists under any anchor"
+        except Exception as present_exc:
+            present = f"data-presence check failed: {present_exc!r}"
+        msg = (
+            f"No off_chain_vote_data for anchor hash {data_hash} "
+            f"(voting_anchor_id={voting_anchor_id}) in db-sync after {elapsed:.0f}s "
+            f"(requested {timeout}s); "
+            f"fetch errors: {fetch_errors or 'none recorded'}; {present}"
+        )
+        raise AssertionError(msg) from exc
+
+
 def check_action_data(  # noqa: C901
     *,
     json_anchor_file: dict[str, tp.Any],
     anchor_data_hash: str,
+    action_txid: str,
     voting_anchor_id: int | None = None,
 ) -> None:
     """Compare anchor json file with off chain action's data from db-sync.
 
-    Only valid, CIP-conformant anchors are compared here; authors, references and external
-    updates are populated only for those. Pass ``voting_anchor_id`` when the same content backs
-    several anchors, to compare against the right ``off_chain_vote_data`` row.
+    The anchor is expected to be valid and CIP-conformant: ``is_valid = TRUE`` is verified, and
+    authors, references and external updates are populated only for such anchors.
+
+    The check targets the gov action's own ``off_chain_vote_data`` row, as the same content can
+    back several anchors. The function waits for the off-chain data row to appear (db-sync's
+    fetch loop runs every 300s) and is a no-op when db-sync is not available, so callers do not
+    need any db-sync related logic of their own.
+
+    Args:
+        json_anchor_file: Content of the anchor file, to compare the db-sync data against.
+        anchor_data_hash: Hash of the anchor content.
+        action_txid: Transaction hash of the transaction that submitted the proposal. Used to
+            resolve ``voting_anchor_id``, so it is consulted only when the id is not provided.
+        voting_anchor_id: Id of the anchor's ``voting_anchor`` row. Pass it when it is already
+            known, otherwise it is resolved from the proposal's transaction.
+
+    Raises:
+        AssertionError: When the data doesn't match or the row is not stored within the wait
+            timeout.
+        DbSyncTimeoutError: When the gov action proposal does not appear in db-sync while
+            resolving ``voting_anchor_id``.
     """
     if not configuration.HAS_DBSYNC:
         return
 
-    errors = []
-    db_action_data = get_action_data(data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id)
+    if voting_anchor_id is None:
+        voting_anchor_id = get_gov_action_voting_anchor_id(txhash=action_txid)
 
-    if db_action_data is None:
-        msg = f"No data for action with anchor hash: {anchor_data_hash} in db-sync"
-        raise AssertionError(msg)
+    errors = []
+    db_action_data = wait_for_off_chain_vote_data(
+        data_hash=anchor_data_hash, voting_anchor_id=voting_anchor_id
+    )
 
     if db_action_data.is_valid is not True:
         errors.append(f"Expected is_valid=True, got: {db_action_data.is_valid}")
@@ -1514,13 +1662,16 @@ def check_action_data(  # noqa: C901
         errors.append(
             "There are discrepancies between json file and its representation in db-sync."
         )
-    errors.extend(
-        helpers.validate_dict_values(
-            dict1=json_anchor_file["body"],
-            dict2=db_action_data.gov_action_data,
-            keys=["title", "abstract", "motivation", "rationale"],
+    if not db_action_data.gov_action_data:
+        errors.append("No gov action data row derived for the anchor.")
+    else:
+        errors.extend(
+            helpers.validate_dict_values(
+                dict1=json_anchor_file["body"],
+                dict2=db_action_data.gov_action_data,
+                keys=["title", "abstract", "motivation", "rationale"],
+            )
         )
-    )
     if len(json_anchor_file["authors"]) != len(db_action_data.authors):
         errors.append("Author lists must be of the same length.")
     else:

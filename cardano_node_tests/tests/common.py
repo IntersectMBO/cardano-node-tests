@@ -65,7 +65,8 @@ PUBLIC_ACTION_ANCHOR_URL = (
     "/cardano_node_tests/tests/data/ga_anchor.json"
 )
 # Off-chain voting anchor test vectors (valid-but-non-CIP and invalid-JSON). Short file names
-# keep the raw-content URL under the 128-byte on-chain anchor limit.
+# keep the raw-content URL under the 128-byte on-chain anchor limit. Like the URLs above, these
+# resolve only once the data files land on the master branch.
 PUBLIC_ACTION_ANCHOR_NONCONFORMANT_URL = (
     "https://raw.githubusercontent.com/IntersectMBO/cardano-node-tests/master"
     "/cardano_node_tests/tests/data/ga_anchor_nonconf.json"

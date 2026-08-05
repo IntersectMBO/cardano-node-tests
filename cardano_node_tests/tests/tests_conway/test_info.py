@@ -324,5 +324,7 @@ class TestInfo:
         )
         reqc.db013.success()
         dbsync_utils.check_action_data(
-            json_anchor_file=json_anchor_file, anchor_data_hash=anchor_data_hash
+            json_anchor_file=json_anchor_file,
+            anchor_data_hash=anchor_data_hash,
+            action_txid=action_txid,
         )
