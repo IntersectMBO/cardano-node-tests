@@ -18,7 +18,18 @@ readonly REPODIR
 cd "$REPODIR"
 
 export WORKDIR="$REPODIR/run_workdir"
-export PATH_PREPEND="${PWD}/.bin"
+
+# Usable executables present in `.bin` take priority over the binaries built
+# by this script, and their (nix) build is skipped. For db-sync, the repo is
+# still cloned (schema files are needed) and the release tarball path is
+# unaffected (`.bin` still wins in PATH).
+# The built bin dirs are appended to PATH_PREPEND in setup order. Their
+# relative order mostly doesn't matter, as each nix build output contains a
+# single executable; the db-sync release-tarball bin dir can contain several,
+# which is one reason why the db-sync setup runs last.
+BIN_DIR="${REPODIR}/.bin"
+readonly BIN_DIR
+export PATH_PREPEND="$BIN_DIR"
 
 # shellcheck disable=SC1091
 . scripts/common.sh
@@ -27,6 +38,44 @@ if is_venv_active; then
   echo "This script should be run outside of any virtual environment." >&2
   exit 1
 fi
+
+# Categorize `.bin` entries. Usable executables take priority on PATH. Entries
+# that PATH lookup cannot use (no exec bit, directories, dangling symlinks)
+# are merely ignored. An executable regular file that is not a usable binary
+# (e.g. an empty file) would still shadow the built binaries on PATH, so it is
+# a fatal error.
+_bin_usable=()
+_bin_ignored=()
+_bin_dangerous=()
+for _f in "$BIN_DIR"/*; do
+  { [ -e "$_f" ] || [ -L "$_f" ]; } || continue  # skip unmatched glob
+  if is_usable_binary "$_f"; then
+    _bin_usable+=("${_f##*/}")
+  elif [ -f "$_f" ] && [ -x "$_f" ]; then
+    _bin_dangerous+=("${_f##*/}")
+  else
+    _bin_ignored+=("${_f##*/}")
+  fi
+done
+if [ "${#_bin_dangerous[@]}" -gt 0 ]; then
+  {
+    echo "Error: executable but unusable entries in ${BIN_DIR} would shadow the built binaries on PATH:"
+    printf '%s\n' "${_bin_dangerous[@]}"
+  } >&2
+  exit 1
+fi
+if [ "${#_bin_usable[@]}" -gt 0 ]; then
+  echo
+  echo "WARNING: using following binaries from ${BIN_DIR}:"
+  printf '%s\n' "${_bin_usable[@]}"
+  echo
+fi
+if [ "${#_bin_ignored[@]}" -gt 0 ]; then
+  echo "WARNING: ignoring unusable entries in ${BIN_DIR} (not an executable regular file; invisible to PATH lookup):"
+  printf '%s\n' "${_bin_ignored[@]}"
+  echo
+fi
+unset _bin_usable _bin_ignored _bin_dangerous _f
 
 # Refuse to start if another testrun is already using this workdir.
 # `lock_fd` is set so background processes (e.g. monitor_system) can drop the
@@ -51,6 +100,10 @@ mkdir -p "$TMPDIR"
 export ARTIFACTS_DIR="${WORKDIR}/artifacts"
 export COVERAGE_DIR="${WORKDIR}/cli_coverage"
 export REPORTS_DIR="${WORKDIR}/reports"
+# Create the dirs upfront so that consumers like `grep_errors.sh` don't fail
+# (and mask the real exit code) when a setup error prevents the testrun from
+# ever starting.
+mkdir -p "$ARTIFACTS_DIR" "$COVERAGE_DIR" "$REPORTS_DIR"
 
 export SCHEDULING_LOG="${WORKDIR}/scheduling.log"
 : > "$SCHEDULING_LOG"
@@ -103,20 +156,8 @@ fi
 
 echo "### Dependencies setup ###"
 
-# setup dbsync (disabled by default)
-case "${DBSYNC_REV:-}" in
-  "" )
-    ;;
-  "none" )
-    unset DBSYNC_REV
-    ;;
-  * )
-    # shellcheck disable=SC1091
-    . runner/source_dbsync.sh
-    ;;
-esac
-
-# setup cardano-cli (use the built-in version by default)
+# setup cardano-cli (use the built-in version by default; a binary in `.bin`
+# takes priority over either)
 case "${CARDANO_CLI_REV:-}" in
   "" )
     ;;
@@ -124,11 +165,21 @@ case "${CARDANO_CLI_REV:-}" in
     unset CARDANO_CLI_REV
     ;;
   * )
-    # shellcheck disable=SC1091
-    . runner/source_cardano_cli.sh
-    cardano_cli_build "$CARDANO_CLI_REV"
-    PATH_PREPEND="$(cardano_cli_print_path_prepend "")${PATH_PREPEND}"
-    export PATH_PREPEND
+    if is_usable_binary "${BIN_DIR}/cardano-cli"; then
+      echo "Skipping build of 'cardano-cli'"
+      report_existing_binary "${BIN_DIR}/cardano-cli" || exit 1
+    else
+      # shellcheck disable=SC1091
+      . runner/source_cardano_cli.sh
+      cardano_cli_build "$CARDANO_CLI_REV"
+      _cli_bins="$(cardano_cli_print_path_prepend "")"
+      _cli_bins="${_cli_bins%:}"
+      if [ -n "$_cli_bins" ]; then
+        PATH_PREPEND="${PATH_PREPEND}:${_cli_bins}"
+      fi
+      export PATH_PREPEND
+      unset _cli_bins
+    fi
     ;;
 esac
 
@@ -140,18 +191,47 @@ case "${NODE_REV:-}" in
 esac
 # shellcheck disable=SC1091
 . runner/source_cardano_node.sh
-cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}"
-PATH_PREPEND="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}")${PATH_PREPEND}"
+cardano_bins_build_all "$NODE_REV" "${CARDANO_CLI_REV:-}" "" "$BIN_DIR"
+_node_bins="$(cardano_bins_print_path_prepend "${CARDANO_CLI_REV:-}" "" "$BIN_DIR")"
+_node_bins="${_node_bins%:}"
+if [ -n "$_node_bins" ]; then
+  PATH_PREPEND="${PATH_PREPEND}:${_node_bins}"
+fi
 export PATH_PREPEND
+unset _node_bins
 
 # setup tx-centrifuge (only when it is enabled); it lives on its own cardano-node ref
 if is_truthy "${ENABLE_TX_CENTRIFUGE:-}"; then
-  # shellcheck disable=SC1091
-  . runner/source_tx_centrifuge.sh
-  tx_centrifuge_build "${TX_CENTRIFUGE_REV:-bench/leios-11.0.1}"
-  PATH_PREPEND="$(tx_centrifuge_print_path_prepend "")${PATH_PREPEND}"
-  export PATH_PREPEND
+  if is_usable_binary "${BIN_DIR}/tx-centrifuge"; then
+    echo "Skipping build of 'tx-centrifuge'"
+    report_existing_binary "${BIN_DIR}/tx-centrifuge" || exit 1
+  else
+    # shellcheck disable=SC1091
+    . runner/source_tx_centrifuge.sh
+    tx_centrifuge_build "${TX_CENTRIFUGE_REV:-bench/leios-11.0.1}"
+    _centrifuge_bins="$(tx_centrifuge_print_path_prepend "")"
+    _centrifuge_bins="${_centrifuge_bins%:}"
+    if [ -n "$_centrifuge_bins" ]; then
+      PATH_PREPEND="${PATH_PREPEND}:${_centrifuge_bins}"
+    fi
+    export PATH_PREPEND
+    unset _centrifuge_bins
+  fi
 fi
+
+# setup dbsync (disabled by default); placed after the node/cli setup so its
+# bin dirs come after theirs in PATH_PREPEND
+case "${DBSYNC_REV:-}" in
+  "" )
+    ;;
+  "none" )
+    unset DBSYNC_REV
+    ;;
+  * )
+    # shellcheck disable=SC1091
+    . runner/source_dbsync.sh
+    ;;
+esac
 
 # optimize nix store if running in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
@@ -237,13 +317,6 @@ echo "::endgroup::"  # end group for "Script setup"
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
 
-if [ "$(echo "$PWD"/.bin/*)" != "${PWD}/.bin/*" ]; then
-  echo
-  echo "WARNING: using following binaries from ${PWD}/.bin:"
-  ls -1 "${PWD}/.bin"
-  echo
-fi
-
 # Function to monitor system resources and log them every 10 minutes
 monitor_system() {
   # Drop the inherited workdir lock FD so this background subshell does not
@@ -310,6 +383,21 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   df -h .
   export PATH="$PATH_PREPEND":"$PATH"
   export CARDANO_NODE_SOCKET_PATH="$CARDANO_NODE_SOCKET_PATH_CI"
+
+  # Source the helpers explicitly rather than relying on setup_venv.sh doing
+  # it transitively.
+  . scripts/common.sh
+
+  # Re-verify that all required binaries are available on the final PATH.
+  # Entries in `.bin` are user-managed and could have changed since the
+  # setup-time checks. Exit code 3 distinguishes this setup failure from
+  # pytest'\''s "some tests failed" (1).
+  _req_cmds=( cardano-node cardano-cli cardano-submit-api bech32 tx-generator )
+  if [ -n "${DBSYNC_REV:-}" ]; then _req_cmds+=( cardano-db-sync ); fi
+  if is_truthy "${SMASH:-}"; then _req_cmds+=( cardano-smash-server ); fi
+  if is_truthy "${ENABLE_TX_CENTRIFUGE:-}"; then _req_cmds+=( tx-centrifuge ); fi
+  assert_cmds_available "${_req_cmds[@]}" || exit 3
+
   retval=0
   ./runner/run_tests.sh "${RUN_TARGET:-"tests"}" || retval="$?"
   df -h .
@@ -331,7 +419,7 @@ if is_truthy "${KEEP_CLUSTERS_RUNNING:-}"; then
   echo
   echo "KEEP_CLUSTERS_RUNNING is set, leaving clusters running until any key is pressed."
   echo "Press any key to continue..."
-  read -r
+  read -r || :
 fi
 
 _last_cleanup

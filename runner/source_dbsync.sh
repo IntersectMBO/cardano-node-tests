@@ -2,6 +2,16 @@
 
 : "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
 : "${REPODIR:?"REPODIR must be set to the root of the cardano-node repository"}"
+
+# This script relies on helpers from `scripts/common.sh`, sourced by the
+# calling script.
+for _helper in is_truthy is_usable_binary report_existing_binary; do
+  if ! command -v "$_helper" >/dev/null 2>&1; then
+    echo "scripts/common.sh must be sourced before this script ('$_helper' is missing)" >&2
+    exit 1
+  fi
+done
+unset _helper
 TEST_THREADS="${TEST_THREADS:-15}"
 CLUSTERS_COUNT="${CLUSTERS_COUNT:-4}"
 export TEST_THREADS CLUSTERS_COUNT
@@ -59,8 +69,16 @@ if [[ -z "$DBSYNC_TAR_URL" && "$DBSYNC_REV" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
   fi
 fi
 
+# Whether the nix build of `cardano-db-sync` / `cardano-smash-server` was
+# skipped in favor of a `BIN_DIR` binary (build-from-source path only).
+# Controls the existence asserts and PATH_PREPEND appends below.
+_dbsync_from_bin_dir=0
+_smash_from_bin_dir=0
+
 if [ -n "${DBSYNC_TAR_URL:-}" ]; then
-  # Download db-sync
+  # Download db-sync. The tarball is always downloaded (it also provides the
+  # schema files), but binaries from the `BIN_DIR` directory still take PATH
+  # priority over the downloaded ones.
   dbsync_tar_file="${WORKDIR}/dbsync_bins.tar.gz"
   curl -sSL "$DBSYNC_TAR_URL" > "$dbsync_tar_file" || exit 1
   rm -rf dbsync_download
@@ -74,8 +92,20 @@ if [ -n "${DBSYNC_TAR_URL:-}" ]; then
   rm -f smash-server || rm -f smash-server/bin/cardano-smash-server
   mkdir -p smash-server/bin
   ln -s "${WORKDIR}/dbsync_download/bin/cardano-smash-server" smash-server/bin/cardano-smash-server || exit 1
+
+  # Report `BIN_DIR` binaries that will shadow the downloaded ones on PATH
+  if [ -n "${BIN_DIR:-}" ] && is_usable_binary "${BIN_DIR}/cardano-db-sync"; then
+    report_existing_binary "${BIN_DIR}/cardano-db-sync" || exit 1
+    echo "NOTE: db-sync schema files are taken from the release tarball;" \
+      "make sure they match the binary version above"
+  fi
+  if [ -n "${BIN_DIR:-}" ] && is_usable_binary "${BIN_DIR}/cardano-smash-server"; then
+    report_existing_binary "${BIN_DIR}/cardano-smash-server" || exit 1
+  fi
 else
-  # Build db-sync
+  # Build db-sync from source. The nix build may be skipped in favor of a
+  # binary from the `BIN_DIR` directory, but the repo is still cloned for the
+  # schema files.
   case "${DBSYNC_REV:-}" in
     "" )
       echo "The value for DBSYNC_REV cannot be empty" >&2
@@ -107,14 +137,31 @@ else
   git checkout "$DBSYNC_REV"
   git rev-parse HEAD
 
-  # Build cardano-db-sync
-  nix build --accept-flake-config .#cardano-db-sync -o "${WORKDIR}/db-sync-node" \
-    || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o "${WORKDIR}/db-sync-node" \
-    || exit 1
+  # Build cardano-db-sync, unless a usable executable is already present in the
+  # `BIN_DIR` directory. The repo above is cloned even when the build is
+  # skipped, as the schema files are needed in any case.
+  if [ -n "${BIN_DIR:-}" ] && is_usable_binary "${BIN_DIR}/cardano-db-sync"; then
+    echo "Skipping build of 'cardano-db-sync'"
+    report_existing_binary "${BIN_DIR}/cardano-db-sync" || exit 1
+    echo "NOTE: db-sync schema files are taken from DBSYNC_REV=${DBSYNC_REV};" \
+      "make sure they match the binary version above"
+    _dbsync_from_bin_dir=1
+  else
+    nix build --accept-flake-config .#cardano-db-sync -o "${WORKDIR}/db-sync-node" \
+      || nix build --accept-flake-config .#cardano-db-sync:exe:cardano-db-sync -o "${WORKDIR}/db-sync-node" \
+      || exit 1
+  fi
 
-  # Build cardano-smash-server
+  # Build cardano-smash-server, unless a usable executable is already present
+  # in the `BIN_DIR` directory
   if is_truthy "${SMASH:-}"; then
-    nix build --accept-flake-config .#cardano-smash-server -o "${WORKDIR}/smash-server" || exit 1
+    if [ -n "${BIN_DIR:-}" ] && is_usable_binary "${BIN_DIR}/cardano-smash-server"; then
+      echo "Skipping build of 'cardano-smash-server'"
+      report_existing_binary "${BIN_DIR}/cardano-smash-server" || exit 1
+      _smash_from_bin_dir=1
+    else
+      nix build --accept-flake-config .#cardano-smash-server -o "${WORKDIR}/smash-server" || exit 1
+    fi
   fi
 
   mv "$PWD/schema" "${WORKDIR}/db-sync-schema"
@@ -125,21 +172,27 @@ else
   rm -rf cardano-db-sync # Save space by removing the source code
 fi
 
-if [ ! -e "${WORKDIR}/db-sync-node/bin/cardano-db-sync" ]; then
+if [ "$_dbsync_from_bin_dir" -eq 0 ] && [ ! -e "${WORKDIR}/db-sync-node/bin/cardano-db-sync" ]; then
   echo "The \`cardano-db-sync\` binary not found, line $LINENO in sourced db-sync setup" >&2  # assert
   exit 1
 fi
-if is_truthy "${SMASH:-}" && [ ! -e "${WORKDIR}/smash-server/bin/cardano-smash-server" ]; then
+if is_truthy "${SMASH:-}" && [ "$_smash_from_bin_dir" -eq 0 ] \
+    && [ ! -e "${WORKDIR}/smash-server/bin/cardano-smash-server" ]; then
   echo "The \`cardano-smash-server\` binary not found, line $LINENO in sourced db-sync setup" >&2  # assert
   exit 1
 fi
 
-# Add `cardano-db-sync` and `cardano-smash-server` to PATH_PREPEND
-PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -f "${WORKDIR}/db-sync-node/bin")"
-if [ -e smash-server/bin/cardano-smash-server ]; then
+# Add `cardano-db-sync` and `cardano-smash-server` to PATH_PREPEND. Skipped for
+# binaries that come from the `BIN_DIR` directory, which the calling script is
+# expected to have put on PATH_PREPEND already.
+if [ "$_dbsync_from_bin_dir" -eq 0 ]; then
+  PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -f "${WORKDIR}/db-sync-node/bin")"
+fi
+if [ "$_smash_from_bin_dir" -eq 0 ] && [ -e smash-server/bin/cardano-smash-server ]; then
   PATH_PREPEND="${PATH_PREPEND:+"${PATH_PREPEND}:"}$(readlink -f "${WORKDIR}/smash-server/bin")"
 fi
 export PATH_PREPEND
+unset _dbsync_from_bin_dir _smash_from_bin_dir
 
 # Remove migration files that create indexes
 if [ -n "${DBSYNC_SKIP_INDEXES:-}" ]; then
