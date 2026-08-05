@@ -163,8 +163,10 @@ if [ "$UID" -eq 0 ]; then
 
   mkdir -p "$WORKDIR/postgres"
   chown postgres:postgres "$WORKDIR/postgres"
+  # Use `env` instead of prefix assignments, because REPODIR may be readonly
+  # in the sourcing script and a prefix assignment would fail.
   # shellcheck disable=SC2016
-  REPODIR="$REPODIR" WORKDIR="$WORKDIR" SU="$(command -v su)" nix develop \
+  env REPODIR="$REPODIR" WORKDIR="$WORKDIR" SU="$(command -v su)" nix develop \
     --accept-flake-config .#postgres -i -k PGHOST -k PGPORT -k PGUSER -k REPODIR -k WORKDIR -k SU --command bash -c '
     "$SU" postgres -c "PATH=\"$PATH\" \"$REPODIR/scripts/postgres-start.sh\" \"$WORKDIR/postgres\" -k"
   ' || {
