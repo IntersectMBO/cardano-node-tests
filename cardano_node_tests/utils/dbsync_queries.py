@@ -1639,12 +1639,11 @@ def delete_reserved_pool_tickers() -> int:
         return affected_rows
 
 
-def query_db_sync_progress() -> float:
+def query_db_sync_progress() -> float | None:
     """Calculate blockchain sync percentage (0-100).
 
     Returns:
-        float: Sync percentage (0-100) if blocks exist
-        None: If no blocks in database
+        Sync percentage (0-100), or `None` when there are no blocks in the database.
     """
     query = (
         "SELECT"
@@ -1658,7 +1657,10 @@ def query_db_sync_progress() -> float:
 
     with execute(query=query) as cur:
         result = cur.fetchone()
-        return min(100.0, float(result[0])) if result else 0.0
+        # On an empty `block` table the aggregate query returns a single `(None,)` row
+        if result is None or result[0] is None:
+            return None
+        return min(100.0, float(result[0]))
 
 
 def query_rows_count(
