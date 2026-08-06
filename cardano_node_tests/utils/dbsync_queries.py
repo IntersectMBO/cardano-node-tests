@@ -464,7 +464,7 @@ class GovActionProposalDBRow:
     voting_anchor_id: int
     type: str
     description: dict
-    param_proposal: int
+    param_proposal: int | None
     ratified_epoch: int | None
     enacted_epoch: int | None
     dropped_epoch: int | None
