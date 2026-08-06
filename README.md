@@ -1,4 +1,3 @@
-<!-- markdownlint-disable MD029 -->
 # cardano-node-tests
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -71,7 +70,7 @@ Or run the upgrade test suite:
 1. Create the `.bin` directory in the repo root and add your custom `cardano-cli` /
    `cardano-node` / `cardano-db-sync` binaries there.
 
-   > ℹ️ **Note:** When running in a container via `runner/runc.sh`, `.bin` entries
+   > ⚠️ When running in a container via `runner/runc.sh`, `.bin` entries
    > must be statically linked binaries, or - for containers that bind-mount the
    > host `/nix` store (the default when the host has `/nix`) - symlinks pointing
    > directly into `/nix` or binaries whose dynamic dependencies all live under
@@ -80,17 +79,17 @@ Or run the upgrade test suite:
 
 2. Run a specific test:
 
-  ```sh
-  ./runner/runc.sh -- TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./runner/regression.sh
-  ```
+   ```sh
+   ./runner/runc.sh -- TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k 'test_minting_and_burning_sign[asset_name-build_raw-submit_cli]'" ./runner/regression.sh
+   ```
 
 3. Clean up by removing binaries from `.bin` after tests complete.
 
 > ℹ️ **Pro Tip:** Enable full CLI command logging:
-
-  ```sh
-  PYTEST_ARGS="... --log-level=debug" ./runner/regression.sh
-  ```
+>
+> ```sh
+> PYTEST_ARGS="... --log-level=debug" ./runner/regression.sh
+> ```
 
 ---
 
@@ -100,41 +99,41 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 
 1. Start a Nix shell:
 
-  ```sh
-  nix flake update --accept-flake-config --override-input cardano-node github:IntersectMBO/cardano-node/master
-  nix develop --accept-flake-config
-  ```
+   ```sh
+   nix flake update --accept-flake-config --override-input cardano-node github:IntersectMBO/cardano-node/master
+   nix develop --accept-flake-config
+   ```
 
 2. Set up the local test environment:
 
-  ```sh
-  make test-env
-  ```
+   ```sh
+   make test-env
+   ```
 
 3. Activate the environment:
 
-  ```sh
-  source ./dev_workdir/activate
-  ```
+   ```sh
+   source ./dev_workdir/activate
+   ```
 
 4. Launch the local testnet cluster:
 
-  ```sh
-  make start-cluster
-  ```
+   ```sh
+   make start-cluster
+   ```
 
 5. Run your tests:
 
-  ```sh
-  pytest -s -k test_minting_one_token cardano_node_tests/tests/tests_plutus
-  pytest -s --log-level=debug -k test_minting_one_token cardano_node_tests/tests/tests_plutus
-  ```
+   ```sh
+   pytest -s -k test_minting_one_token cardano_node_tests/tests/tests_plutus
+   pytest -s --log-level=debug -k test_minting_one_token cardano_node_tests/tests/tests_plutus
+   ```
 
 6. Stop the testnet cluster:
 
-  ```sh
-  make stop-cluster
-  ```
+   ```sh
+   make stop-cluster
+   ```
 
 > ℹ️ **Pro Tip:** Next time, you can omit step 2 if the environment is already set up.
 
