@@ -1,5 +1,6 @@
 # Workdir for running tests
 /run_workdir/
+/run_workdir.lock
 /dev_workdir/
 
 # Legacy testing artifacts dirs (kept to ignore leftovers in existing checkouts)
