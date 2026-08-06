@@ -1751,24 +1751,25 @@ def check_off_chain_vote_fetch_error(*, voting_anchor_id: int) -> None:
 def wait_for_db_sync_completion(
     *, expected_progress: float = 99.0, timeout: int = 360, polling_interval: int = 5
 ) -> float:
-    """Wait for db-sync to reach at least 99% sync completion.
+    """Wait for db-sync to reach the expected sync completion.
 
     Args:
-        expected_progress: Expected completion as perctentage, 99% by default
-        timeout: Maximum time to wait in seconds
+        expected_progress: Expected completion as percentage, 99% by default
+        timeout: Maximum total time to wait in seconds
         polling_interval: Loop polling time in seconds
 
     Returns:
-        Final sync percentage achieved (>= 99)
+        Final sync percentage achieved (>= `expected_progress`)
 
     Raises:
-        TimeoutError: If sync doesn't reach 99% within timeout
+        DbSyncTimeoutError: If sync doesn't reach the expected progress within timeout
     """
     start_time = time.monotonic()
+    deadline = start_time + timeout
 
     def _query_func() -> float:
         dbsync_progress = dbsync_queries.query_db_sync_progress()
-        if not dbsync_progress:
+        if dbsync_progress is None:
             msg = "no result for query_db_sync_progress"
             raise DbSyncNoResponseError(msg)
         return dbsync_progress
@@ -1777,12 +1778,21 @@ def wait_for_db_sync_completion(
 
     # Poll until sync completes
     while dbsync_progress < expected_progress:
-        if time.monotonic() - start_time > timeout:
-            err_msg = f"db-sync only reached {dbsync_progress}% after {timeout} seconds"
-            raise TimeoutError(err_msg)
+        if time.monotonic() > deadline:
+            elapsed = round(time.monotonic() - start_time)
+            err_msg = (
+                f"db-sync only reached {dbsync_progress:.2f}% "
+                f"(expected >= {expected_progress:.2f}%) "
+                f"after {elapsed} seconds"
+            )
+            raise DbSyncTimeoutError(err_msg)
         time.sleep(polling_interval)
-        dbsync_progress = dbsync_queries.query_db_sync_progress()
-        LOGGER.info(f"Progress of db-sync: {dbsync_queries.query_db_sync_progress():.2f}%")
+        # A `None` progress means there are no blocks in the database yet. Keep polling
+        # with the last known progress until the deadline is reached.
+        new_progress = dbsync_queries.query_db_sync_progress()
+        if new_progress is not None:
+            dbsync_progress = new_progress
+        LOGGER.info(f"Progress of db-sync: {dbsync_progress:.2f}%")
 
     return dbsync_progress
 
