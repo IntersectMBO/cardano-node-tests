@@ -68,7 +68,15 @@ Or run the upgrade test suite:
 
 ## 🧪 Running Individual Tests with Custom Binaries
 
-1. Add your custom `cardano-cli` / `cardano-node` binaries to the `.bin` directory.
+1. Create the `.bin` directory in the repo root and add your custom `cardano-cli` /
+   `cardano-node` / `cardano-db-sync` binaries there.
+
+   > ℹ️ **Note:** When running in a container via `runner/runc.sh`, `.bin` entries
+   > must be statically linked binaries, or - for containers that bind-mount the
+   > host `/nix` store (the default when the host has `/nix`) - symlinks pointing
+   > directly into `/nix` or binaries whose dynamic dependencies all live under
+   > `/nix`. A NixOS container has its own `/nix` store, so only statically linked
+   > binaries work there.
 
 2. Run a specific test:
 

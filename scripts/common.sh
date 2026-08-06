@@ -18,6 +18,62 @@ is_venv_active() {
   [ -n "${VIRTUAL_ENV:-}" ]
 }
 
+# Check that the given path is a usable executable: a regular non-empty file
+# (or a symlink to one) with the executable bit set. Rules out directories,
+# dangling symlinks, empty files and symlinks to directories (e.g. a
+# `nix build -o` result pointing to a store output dir).
+is_usable_binary() {
+  local bin="${1:?Missing binary path}"
+  [ -f "$bin" ] && [ -s "$bin" ] && [ -x "$bin" ]
+}
+
+# Report that an existing binary (given as an absolute path, typically in the
+# `.bin` dir) will be used instead of a built one, and log its version
+# (best effort) for traceability.
+# Fails when the binary cannot run at all (e.g. wrong architecture, missing
+# dynamic libraries, or crashing on startup), because such a binary would
+# still shadow working ones on PATH.
+report_existing_binary() {
+  local bin="${1:?Missing binary path}"
+  local rc=0 ver
+  echo "Using existing binary '$bin'"
+  # Probe from `/` so a binary that writes state files to its cwd on startup
+  # cannot pollute the caller's working directory.
+  ver="$(cd / && timeout -k 5 10 "$bin" --version </dev/null 2>&1)" || rc="$?"
+  ver="${ver%%$'\n'*}"
+  # 124 is a `--version` timeout and 137 its SIGKILL escalation (both
+  # tolerated, same as a binary that doesn't support `--version`); other
+  # 125+ statuses mean the binary could not run (126/127) or died from
+  # a signal (128+N), or `timeout` itself failed (125).
+  if [ "$rc" -ge 125 ] && [ "$rc" -ne 137 ]; then
+    echo "Error: '$bin' is not runnable (exit status ${rc}): ${ver:-no output}" >&2
+    return 1
+  fi
+  if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+    ver="unknown ('--version' timed out)"
+  elif [ "$rc" -ne 0 ]; then
+    ver="unknown ('--version' exited ${rc}: ${ver:-no output})"
+  fi
+  echo "  version: ${ver:-unknown}"
+}
+
+# Assert that all given commands are available on PATH and resolve to usable
+# binaries.
+# Usage: assert_cmds_available <command> [<command> ...]
+assert_cmds_available() {
+  local cmd bin found_all=1
+  for cmd in "$@"; do
+    if ! bin="$(command -v "$cmd")"; then
+      echo "Error: required command '$cmd' not found on PATH." >&2
+      found_all=0
+    elif ! is_usable_binary "$bin"; then
+      echo "Error: required command '$cmd' resolves to unusable '$bin'." >&2
+      found_all=0
+    fi
+  done
+  [ "$found_all" -eq 1 ]
+}
+
 # Acquire an exclusive, non-blocking lock tied to the given workdir to prevent
 # concurrent testruns from clobbering each other's workdir. The lock is held
 # for the lifetime of the calling shell; it is released automatically on exit.
