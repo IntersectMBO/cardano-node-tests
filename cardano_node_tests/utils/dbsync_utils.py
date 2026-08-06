@@ -512,7 +512,7 @@ def retry_query(*, query_func: tp.Callable, timeout: int = 20) -> tp.Any:
     The query is repeated until the expected data is returned, or `DbSyncTimeoutError` is
     raised when the timeout is reached.
     """
-    end_time = time.time() + timeout
+    end_time = time.monotonic() + timeout
     repeat = 0
 
     while True:
@@ -524,7 +524,7 @@ def retry_query(*, query_func: tp.Callable, timeout: int = 20) -> tp.Any:
             response = query_func()
             break
         except DbSyncNoResponseError as exc:
-            if time.time() < end_time:
+            if time.monotonic() < end_time:
                 repeat += 1
                 continue
             raise DbSyncTimeoutError(str(exc)) from exc
@@ -1764,7 +1764,7 @@ def wait_for_db_sync_completion(
     Raises:
         TimeoutError: If sync doesn't reach 99% within timeout
     """
-    start_time = time.time()
+    start_time = time.monotonic()
 
     def _query_func() -> float:
         dbsync_progress = dbsync_queries.query_db_sync_progress()
@@ -1777,7 +1777,7 @@ def wait_for_db_sync_completion(
 
     # Poll until sync completes
     while dbsync_progress < expected_progress:
-        if time.time() - start_time > timeout:
+        if time.monotonic() - start_time > timeout:
             err_msg = f"db-sync only reached {dbsync_progress}% after {timeout} seconds"
             raise TimeoutError(err_msg)
         time.sleep(polling_interval)

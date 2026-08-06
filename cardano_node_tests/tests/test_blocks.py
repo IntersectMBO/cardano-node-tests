@@ -375,19 +375,19 @@ class TestCollectData:
         tip = cluster.g_query.get_tip()
         epoch_end = cluster.time_to_epoch_end(tip)
         curr_epoch = cluster.g_query.get_epoch(tip=tip)
-        curr_time = time.time()
-        epoch_end_timestamp = curr_time + epoch_end
-        test_end_timestamp = epoch_end_timestamp + (num_epochs * cluster.epoch_length_sec)
+        curr_time = time.monotonic()
+        epoch_end_deadline = curr_time + epoch_end
+        test_end_deadline = epoch_end_deadline + (num_epochs * cluster.epoch_length_sec)
 
         LOGGER.info(f"Checking blocks for {num_epochs} epochs.")
-        while curr_time < test_end_timestamp:
-            epoch_end = epoch_end_timestamp - curr_time
+        while curr_time < test_end_deadline:
+            epoch_end = epoch_end_deadline - curr_time
             if epoch_end < 15:
                 LOGGER.info(f"End of epoch {curr_epoch}, saving data.")
                 _save_state(curr_epoch)
 
                 curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-                epoch_end_timestamp = cluster.time_to_epoch_end() + time.time()
+                epoch_end_deadline = cluster.time_to_epoch_end() + time.monotonic()
 
             # Send tx
             src_addr, dst_addr = random.sample(payment_addrs, 2)
@@ -396,13 +396,13 @@ class TestCollectData:
 
             cluster.g_transaction.send_tx(
                 src_address=src_addr.address,
-                tx_name=f"{temp_template}_{int(curr_time)}",
+                tx_name=f"{temp_template}_{int(time.time())}",
                 txouts=txouts,
                 tx_files=tx_files,
             )
 
             time.sleep(2)
-            curr_time = time.time()
+            curr_time = time.monotonic()
 
         # Save also data for the last epoch
         _save_state(cluster.g_query.get_epoch())
@@ -537,14 +537,14 @@ class TestDynamicBlockProd:
         )
 
         epoch_end = cluster.time_to_epoch_end(tip)
-        curr_time = time.time()
-        epoch_end_timestamp = curr_time + epoch_end
-        test_end_timestamp = epoch_end_timestamp + (num_epochs * cluster.epoch_length_sec)
+        curr_time = time.monotonic()
+        epoch_end_deadline = curr_time + epoch_end
+        test_end_deadline = epoch_end_deadline + (num_epochs * cluster.epoch_length_sec)
 
         blocks_db = {}
         LOGGER.info(f"Checking blocks for {num_epochs} epochs.")
-        while curr_time < test_end_timestamp:
-            epoch_end = epoch_end_timestamp - curr_time
+        while curr_time < test_end_deadline:
+            epoch_end = epoch_end_deadline - curr_time
             if epoch_end < 15:
                 LOGGER.info(f"End of epoch {curr_epoch}, saving data.")
                 blocks_db[curr_epoch] = _save_state(curr_epoch)
@@ -558,7 +558,7 @@ class TestDynamicBlockProd:
                     )
 
                 curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-                epoch_end_timestamp = cluster.time_to_epoch_end() + time.time()
+                epoch_end_deadline = cluster.time_to_epoch_end() + time.monotonic()
 
                 # Replace the node
                 if curr_epoch == reconf_epoch + 1:
@@ -595,13 +595,13 @@ class TestDynamicBlockProd:
 
             cluster.g_transaction.send_tx(
                 src_address=src_addr.address,
-                tx_name=f"{temp_template}_{int(curr_time)}",
+                tx_name=f"{temp_template}_{int(time.time())}",
                 txouts=txouts,
                 tx_files=tx_files,
             )
 
             time.sleep(2)
-            curr_time = time.time()
+            curr_time = time.monotonic()
 
         # Save also data for the last epoch
         curr_epoch = cluster.g_query.get_epoch()

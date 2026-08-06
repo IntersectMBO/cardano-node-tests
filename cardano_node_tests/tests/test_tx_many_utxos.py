@@ -85,7 +85,7 @@ class TestManyUTXOs:
         temp_template = common.get_test_id(cluster)
 
         LOGGER.info("Generating lot of UTxO addresses, it will take a while.")
-        start = time.time()
+        start = time.monotonic()
         payment_addr = payment_addrs[0]
         out_addrs1 = [payment_addrs[1] for __ in range(200)]
         out_addrs2 = [payment_addrs[2] for __ in range(200)]
@@ -137,7 +137,7 @@ class TestManyUTXOs:
             out_addrs=out_addrs2,
             amount=10_000_000,
         )
-        end = time.time()
+        end = time.monotonic()
 
         retval = payment_addrs[1], payment_addrs[2]
 
