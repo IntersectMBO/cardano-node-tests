@@ -70,7 +70,7 @@ Or run the upgrade test suite:
 1. Create the `.bin` directory in the repo root and add your custom `cardano-cli` /
    `cardano-node` / `cardano-db-sync` binaries there.
 
-   > ℹ️ **Note:** When running in a container via `runner/runc.sh`, `.bin` entries
+   > ⚠️ When running in a container via `runner/runc.sh`, `.bin` entries
    > must be statically linked binaries, or - for containers that bind-mount the
    > host `/nix` store (the default when the host has `/nix`) - symlinks pointing
    > directly into `/nix` or binaries whose dynamic dependencies all live under
