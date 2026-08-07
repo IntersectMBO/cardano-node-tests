@@ -38,7 +38,7 @@ import typing as tp
 
 from cardano_node_tests.utils import temptools
 
-DB_NAME = "status.db"
+DB_NAME = "cm-status.db"
 
 # Flag types stored in the `flags` table
 GC_LAST_RUN = "gc_last_run"
