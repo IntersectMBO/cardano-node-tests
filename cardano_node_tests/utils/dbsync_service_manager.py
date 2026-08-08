@@ -449,6 +449,52 @@ class DBSyncManager:
             service_names=["dbsync"], action="start", instance_num=cluster_nodes.get_instance_num()
         )
 
+    def restart_db_sync(self) -> None:
+        """Restart `cardano-db-sync`, preserving already-synced data.
+
+        Unlike `restart_with_config`, this does not recreate the database. It just stops and
+        starts the service - so db-sync re-execs its launcher script - and waits for it to
+        catch up with the node.
+        """
+        with locking.FileLockIfXdist(f"{self.shared_tmp}/db_sync_config.lock"):
+            self.stop_db_sync()
+            self.start_db_sync()
+
+            if not self.is_db_sync_running():
+                err = "Error: db-sync service is not running!"
+                raise RuntimeError(err)
+
+            dbsync_utils.wait_for_db_sync_completion()
+
+    def set_allow_private_offchain_urls(self, *, enable: bool) -> None:
+        """Toggle db-sync's ``--allow-private-offchain-urls`` flag and restart the service.
+
+        The flag is a CLI argument that the ``run-cardano-dbsync`` launcher adds when the
+        ``DBSYNC_ALLOW_PRIVATE_OFFCHAIN_URLS`` env var is truthy. supervisord captured its
+        environment at cluster start and cannot be updated at runtime, so the setting is forced
+        by editing the launcher script in the cluster state dir and restarting db-sync so it
+        re-execs the script.
+
+        Args:
+            enable: Add the flag when True, remove it when False.
+        """
+        cluster_dir = cluster_nodes.get_cluster_env().state_dir
+        run_script = cluster_dir / "run-cardano-dbsync"
+
+        marker = "# cnt-tests: allow-private-offchain-urls"
+        export_line = f"export DBSYNC_ALLOW_PRIVATE_OFFCHAIN_URLS=true  {marker}"
+
+        lines = run_script.read_text(encoding="utf-8").splitlines()
+        # Drop any previously injected line so the edit is idempotent and reversible.
+        lines = [line for line in lines if marker not in line]
+        if enable:
+            # Insert right after the shebang (before `set -u`, so the export is always seen).
+            insert_at = 1 if lines and lines[0].startswith("#!") else 0
+            lines.insert(insert_at, export_line)
+        run_script.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        self.restart_db_sync()
+
     def restart_with_config(
         self, *, custom_config: dict | DBSyncConfigBuilder | None = None
     ) -> pl.Path:
