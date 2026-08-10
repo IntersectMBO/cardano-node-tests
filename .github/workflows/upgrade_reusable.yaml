@@ -172,6 +172,7 @@ jobs:
             run_workdir/scheduling.log
             run_workdir/errors_all.log
             run_workdir/failure_analysis.md
+            run_workdir/cm-status-*.db*
       - name: ↟ Upload CLI coverage
         uses: actions/upload-artifact@v7
         if: success() || failure()

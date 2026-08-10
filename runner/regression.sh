@@ -434,6 +434,9 @@ fi
 # Create results archive
 ./runner/create_results.sh "$REPORTS_DIR" "$WORKDIR" || :
 
+# Copy cluster status databases to workdir
+./runner/status_dbs.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
+
 # Save testing artifacts
 ./runner/save_artifacts.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
 
