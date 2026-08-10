@@ -12,6 +12,7 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 - `{RUN_DIR}/scheduling.log` — cluster instance manager log
 - `{RUN_DIR}/testrun-report.xml` — junit XML
 - `{RUN_DIR}/monitor.log` — system resource snapshots every 10 min
+- `{RUN_DIR}/cm-status-1.db` — cluster-management SQLite status database ("test running", resource and flag records as they were at the end of the run); query with `sqlite3 -readonly -header {RUN_DIR}/cm-status-1.db 'SELECT * FROM overview ORDER BY instance_num, kind'`
 
 Counting tests (IMPORTANT):
 
@@ -39,6 +40,7 @@ Steps:
 2. Group failures by likely root cause (same exception class + message head, same node crash, same infra symptom). Treat one node crash that flunks many tests as a single group.
 3. For each group: list affected tests (truncate to ~10 with a "+N more" tail), give the most informative 1–3 lines of error context, and classify as one of `node-bug | test-bug | infra-flake | env-issue | unknown` with a short justification.
 4. Skim `{RUN_DIR}/errors_all.log` and `{RUN_DIR}/monitor.log` for anything corroborating (OOM, disk pressure, repeated tracebacks).
+5. When failures look cluster-management related (dead cluster instances, tests stuck waiting for resources), query the `overview` view of `{RUN_DIR}/cm-status-1.db` — leftover records show which tests were running, which resources were locked and which flags (e.g. `cluster_dead`, `respin_needed`) were set when the run ended.
 
 Known patterns:
 
