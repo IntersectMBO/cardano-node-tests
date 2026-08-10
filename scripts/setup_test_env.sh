@@ -69,7 +69,6 @@ export CARDANO_NODE_SOCKET_PATH="$WORKDIR/state-cluster0/bft1.socket"
 export TMPDIR="$WORKDIR/tmp"
 export DEV_CLUSTER_RUNNING=true
 export FORBID_RESTART=true
-export NO_ARTIFACTS=true
 export CLUSTERS_COUNT=1
 export COMMAND_ERA="${COMMAND_ERA:-}"
 export PROTOCOL_VERSION="${PROTOCOL_VERSION:-}"

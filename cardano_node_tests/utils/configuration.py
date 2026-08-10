@@ -61,6 +61,12 @@ CLUSTERS_COUNT = CLUSTERS_COUNT or min(XDIST_WORKERS_COUNT, DEFAULT_MAX_CLUSTERS
 DEV_CLUSTER_RUNNING = helpers.is_truthy_env_var("DEV_CLUSTER_RUNNING")
 FORBID_RESTART = helpers.is_truthy_env_var("FORBID_RESTART")
 
+# Save cluster artifacts also when running on a dev cluster (has effect only together
+# with DEV_CLUSTER_RUNNING). By default the artifacts are not saved there, as a dev
+# cluster serves many pytest invocations and saving the artifacts (all the cluster logs
+# and configs) on each one is expensive. Set e.g. during node upgrade testing.
+FORCE_SAVE_CLUSTER_ARTIFACTS = helpers.is_truthy_env_var("FORCE_SAVE_CLUSTER_ARTIFACTS")
+
 BOOTSTRAP_DIR = helpers.get_env_path("BOOTSTRAP_DIR")
 if BOOTSTRAP_DIR and not (BOOTSTRAP_DIR / "genesis-shelley.json").exists():
     __msg = (

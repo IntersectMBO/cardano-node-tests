@@ -51,13 +51,6 @@ def pytest_addoption(parser: tp.Any) -> None:
         help="Path to directory for storing coverage info",
     )
     parser.addoption(
-        artifacts.ARTIFACTS_BASE_DIR_ARG,
-        action="store",
-        type=helpers.check_dir_arg,
-        default="",
-        help="Path to directory for storing artifacts",
-    )
-    parser.addoption(
         "--skipall",
         action="store_true",
         default=False,
@@ -324,20 +317,19 @@ def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> tp.Genera
             _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
 
             if configuration.DEV_CLUSTER_RUNNING:
-                # Save cluster artifacts
-                artifacts_base_dir = request.config.getoption(artifacts.ARTIFACTS_BASE_DIR_ARG)
-                if artifacts_base_dir:
+                # Save cluster artifacts only when requested - it is not desirable to
+                # save them on every pytest invocation on a dev cluster
+                if configuration.FORCE_SAVE_CLUSTER_ARTIFACTS:
                     state_dir = cluster_nodes.get_cluster_env().state_dir
                     artifacts.save_cluster_artifacts(save_dir=pytest_root_tmp, state_dir=state_dir)
+                else:
+                    LOGGER.info("Not saving cluster artifacts of the dev cluster.")
             elif configuration.KEEP_CLUSTERS_RUNNING:
                 # Keep cluster instances running. Stopping them would need to be handled manually.
                 _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
             else:
                 _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
                 _stop_all_cluster_instances(cluster_manager_obj=cluster_manager_obj)
-
-            # Copy collected artifacts to dir specified by `--artifacts-base-dir`
-            artifacts.copy_artifacts(pytest_tmp_dir=pytest_root_tmp, pytest_config=request.config)
 
 
 @pytest.fixture(scope="session", autouse=True)
