@@ -22,7 +22,7 @@ Filter arguments semantics used throughout this module:
 The current status can be inspected with the stock `sqlite3` CLI. The `overview` view
 combines all status records into one human-readable table:
 
-    db=/tmp/pytest-of-$USER/pytest-0/status.db
+    db=/tmp/pytest-of-$USER/pytest-0/cm-status.db
     sqlite3 -readonly -header "$db" 'SELECT * FROM overview ORDER BY instance_num, kind'
 
 The underlying tables (`test_running`, `resources`, `flags`) can be queried directly

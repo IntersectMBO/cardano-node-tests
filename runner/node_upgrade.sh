@@ -190,6 +190,9 @@ fi
 
 _last_cleanup
 
+# Copy cluster status databases to workdir
+./runner/status_dbs.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
+
 # prepare artifacts for upload in GitHub Actions
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
   # save testing artifacts
