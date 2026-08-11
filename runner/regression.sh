@@ -399,12 +399,16 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   assert_cmds_available "${_req_cmds[@]}" || exit 3
 
   retval=0
+  pytest_stamp="$(mktemp)" || exit 3
   ./runner/run_tests.sh "${RUN_TARGET:-"tests"}" || retval="$?"
   df -h .
   echo "::endgroup::"  # end group for "Testrun"
 
   echo "::group::Collect artifacts & teardown cluster"
   printf "start: %(%H:%M:%S)T\n" -1
+  # copy artifacts collected in the pytest temp dir
+  ./runner/copy_artifacts.sh "$ARTIFACTS_DIR" "$pytest_stamp" || :
+  rm -f "$pytest_stamp"
   ./runner/cli_coverage.sh "$COVERAGE_DIR" "${WORKDIR}/cli_coverage.json" || :
   ./runner/reqs_coverage.sh "$ARTIFACTS_DIR" "${WORKDIR}/requirements_coverage.json" || :
   exit "$retval"

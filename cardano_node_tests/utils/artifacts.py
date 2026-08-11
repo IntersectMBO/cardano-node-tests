@@ -13,7 +13,6 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 CLI_COVERAGE_ARG = "--cli-coverage-dir"
-ARTIFACTS_BASE_DIR_ARG = "--artifacts-base-dir"
 CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
 
 
@@ -135,20 +134,3 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
         # stay best-effort even when the setup I/O (reading the cluster instance id,
         # creating the destination dir) fails, not just the per-file copies.
         LOGGER.exception(f"Failed to save cluster artifacts from '{state_dir}'.")
-
-
-def copy_artifacts(*, pytest_tmp_dir: pl.Path, pytest_config: Config) -> None:
-    """Copy collected tests and cluster artifacts to artifacts dir."""
-    artifacts_base_dir = pytest_config.getoption(ARTIFACTS_BASE_DIR_ARG)
-    if not artifacts_base_dir:
-        return
-
-    artifacts_dir = pl.Path(artifacts_base_dir)
-
-    pytest_tmp_dir = pytest_tmp_dir.resolve()
-    if not pytest_tmp_dir.is_dir():
-        return
-
-    destdir = artifacts_dir / f"{pytest_tmp_dir.name}-{helpers.get_rand_str(8)}"
-    shutil.copytree(pytest_tmp_dir, destdir, symlinks=True)
-    LOGGER.info(f"Collected artifacts copied to '{destdir}'.")

@@ -10,11 +10,9 @@
 #
 # Env vars:
 #   TESTS_DIR: directory with tests to run (default: cardano_node_tests/)
-#   ARTIFACTS_DIR: directory to save artifacts into (default: run_workdir/artifacts)
 #   COVERAGE_DIR: directory to save CLI coverage data into (default: run_workdir/cli_coverage)
 #   REPORTS_DIR: directory to save Allure test reports into (default: run_workdir/reports)
 #   MARKEXPR: pytest mark expression to filter tests, without the `-m` flag
-#   NO_ARTIFACTS: if set to true, do not save artifacts
 #   PYTEST_ARGS: additional args to pass to pytest
 #   CI_ARGS: additional args to pass to pytest (for CI runs)
 #   TEST_THREADS: number of pytest workers (defaults vary per target)
@@ -26,20 +24,14 @@
 # Notes:
 # - If PYTEST_ARGS is provided, we disable cleanup and the initial "skip all" pass.
 # - If DESELECT_FROM_FILE is provided, we disable the initial "skip all" pass.
-# - If NO_ARTIFACTS is not set, we save artifacts under ARTIFACTS_DIR.
 # - HTML/JUnit reports are generated only when PYTEST_ARGS is unset.
 
 set -Eeuo pipefail
 
 # Defaults
 TESTS_DIR="${TESTS_DIR:-cardano_node_tests/}"
-ARTIFACTS_DIR="${ARTIFACTS_DIR:-run_workdir/artifacts}"
 COVERAGE_DIR="${COVERAGE_DIR:-run_workdir/cli_coverage}"
 REPORTS_DIR="${REPORTS_DIR:-run_workdir/reports}"
-
-_top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
-# shellcheck disable=SC1091
-. "$_top_dir/scripts/common.sh"
 
 # Helpers
 usage() {
@@ -68,7 +60,7 @@ run_pytest() {
 }
 
 ensure_dirs() {
-  mkdir -p "$ARTIFACTS_DIR" "$COVERAGE_DIR" "$REPORTS_DIR"
+  mkdir -p "$COVERAGE_DIR" "$REPORTS_DIR"
 }
 
 # Set common env vars that affect test runs.
@@ -102,14 +94,6 @@ compute_common_args() {
     markexpr_arr=( -m "$MARKEXPR" )
   else
     markexpr_arr=()
-  fi
-
-  # It may not be always necessary to save artifacts, e.g. when running tests on local cluster
-  # on local machine.
-  if is_truthy "${NO_ARTIFACTS:-}"; then
-    artifacts_arr=()
-  else
-    artifacts_arr=( "--artifacts-base-dir=$ARTIFACTS_DIR" )
   fi
 
   # Test run report args only when PYTEST_ARGS is unset.
@@ -152,7 +136,6 @@ run_real_tests() {
     "${markexpr_arr[@]}" \
     "${deselect_from_file_arr[@]}" \
     -n "${TEST_THREADS}" \
-    "${artifacts_arr[@]}" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$REPORTS_DIR" \
     "${testrun_report_arr[@]}" \

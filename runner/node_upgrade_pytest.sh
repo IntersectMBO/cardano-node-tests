@@ -81,16 +81,20 @@ if [ "$1" = "step1" ]; then
   # run smoke tests
   printf "STEP1 tests: %(%H:%M:%S)T\n" -1
   retval=0
-  pytest \
+  pytest_stamp="$(mktemp)" || exit 6
+  FORCE_SAVE_CLUSTER_ARTIFACTS=true pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
     -m "smoke or upgrade_step1" \
-    --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$reports_dir" \
     --html="$WORKDIR/testrun-report-step1.html" \
     --self-contained-html \
     || retval="$?"
+
+  # copy artifacts collected in the pytest temp dir
+  ./runner/copy_artifacts.sh "$ARTIFACTS_DIR" "$pytest_stamp" || :
+  rm -f "$pytest_stamp"
 
   # stop local cluster if tests failed unexpectedly
   [ "$retval" -le 1 ] || "$cluster_scripts_dir/stop-cluster"
@@ -239,16 +243,20 @@ elif [ "$1" = "step2" ]; then
   # run smoke tests
   printf "STEP2 tests: %(%H:%M:%S)T\n" -1
   retval=0
-  pytest \
+  pytest_stamp="$(mktemp)" || exit 6
+  FORCE_SAVE_CLUSTER_ARTIFACTS=true pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
     -m "smoke or upgrade_step2" \
-    --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$reports_dir" \
     --html="$WORKDIR/testrun-report-step2.html" \
     --self-contained-html \
     ||retval="$?"
+
+  # copy artifacts collected in the pytest temp dir
+  ./runner/copy_artifacts.sh "$ARTIFACTS_DIR" "$pytest_stamp" || :
+  rm -f "$pytest_stamp"
 
   # stop local cluster if tests failed unexpectedly
   [ "$retval" -le 1 ] || "$cluster_scripts_dir/stop-cluster"
@@ -396,16 +404,20 @@ elif [ "$1" = "step3" ]; then
   # Run smoke tests
   printf "STEP3 tests: %(%H:%M:%S)T\n" -1
   retval=0
-  pytest \
+  pytest_stamp="$(mktemp)" || exit 6
+  FORCE_SAVE_CLUSTER_ARTIFACTS=true pytest \
     cardano_node_tests \
     -n "$TEST_THREADS" \
     -m "smoke or upgrade_step3" \
-    --artifacts-base-dir="$ARTIFACTS_DIR" \
     --cli-coverage-dir="$COVERAGE_DIR" \
     --alluredir="$reports_dir" \
     --html="$WORKDIR/testrun-report-step3.html" \
     --self-contained-html \
     ||retval="$?"
+
+  # copy artifacts collected in the pytest temp dir
+  ./runner/copy_artifacts.sh "$ARTIFACTS_DIR" "$pytest_stamp" || :
+  rm -f "$pytest_stamp"
 
   # create results archive for step3
   ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step3
