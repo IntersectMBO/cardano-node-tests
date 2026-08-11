@@ -103,10 +103,8 @@ class TestPrometheus:
     }
 
     @allure.link(helpers.get_vcs_link())
-    def test_available_metrics(
-        self,
-        wait_epochs,  # noqa: ARG002
-    ):
+    @pytest.mark.usefixtures("wait_epochs")
+    def test_available_metrics(self):
         """Test that list of available Prometheus metrics equals list of expected metrics.
 
         Test Prometheus metrics endpoint to verify all expected metrics are exposed and
@@ -138,10 +136,8 @@ class TestEKG:
     """EKG metrics tests."""
 
     @allure.link(helpers.get_vcs_link())
-    def test_available_metrics(
-        self,
-        wait_epochs,  # noqa: ARG002
-    ):
+    @pytest.mark.usefixtures("wait_epochs")
+    def test_available_metrics(self):
         """Test that available EKG metrics matches the expected schema.
 
         Test EKG (Event-driven Key-value) metrics endpoint to verify metrics conform to
