@@ -570,12 +570,12 @@ For hash `f2b553839dee1ad1d16127179d4378a0c06a1fddce83409ad4b6f10b65bad395`, the
 
 It seems that for this pool, 4 metadata references have been registered (from **pool_metadata_ref** table), but 3 of them failed and only one succeeded.
 
-The **pool_offline_data** table shows different metadata - the one that matches the record with `id=290` in **pool_metadata_ref**
+The **off_chain_pool_data** table (previously called **pool_offline_data**) shows different metadata - the one that matches the record with `id=290` in **pool_metadata_ref**
 (homepage <https://llcj.com/> differs from JSON presented above <https://git.io/JUNOy>)
 
 
 ```sql
-select id, pool_id, json from pool_offline_data where pool_id=103;
+select id, pool_id, json from off_chain_pool_data where pool_id=103;
 ```
 
 | id  | pool_id | json
