@@ -1545,9 +1545,9 @@ class TestNegative:
 
         with common.allow_unstable_error_messages():
             assert (
-                "fee must be specified" in err_str
+                re.search(r"Missing:.* --fee LOVELACE", err_str)  # node >= 8.12.0
+                or "fee must be specified" in err_str
                 or "Implicit transaction fee not supported" in err_str
-                or "Missing: --fee LOVELACE" in err_str  # node >= 8.12.0
             ), err_str
 
     @allure.link(helpers.get_vcs_link())

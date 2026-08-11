@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import typing as tp
 
 import allure
@@ -54,15 +55,17 @@ def _setup_scenarios(
 
 def _assert_expected_err(env_scenario: str, socket_scenario: str, err_msg: str) -> None:
     """Check expected error message based on scenarios."""
-    expected_err = ["Network.Socket.connect:"]
+    expected_err = [re.escape("Network.Socket.connect:")]
     if socket_scenario == "socket_path_missing" and env_scenario == "env_missing":
         expected_err = [
-            "Missing: --socket-path SOCKET_PATH",
+            r"Missing: +--socket-path SOCKET_PATH",
             # TODO: In 8.0.0-untested the error message is different:
-            "Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH",
+            re.escape("Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH"),
         ]
 
-    assert any(msg in err_msg for msg in expected_err), f"{expected_err} not in {err_msg}"
+    assert any(re.search(msg, err_msg) for msg in expected_err), (
+        f"{expected_err} not found in `{err_msg}`"
+    )
 
 
 @pytest.fixture
