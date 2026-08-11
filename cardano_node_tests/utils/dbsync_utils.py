@@ -1902,9 +1902,8 @@ def check_epoch_state(*, epoch_no: int, txid: str, action_type: ActionTypes) -> 
         es_constitution_id = epoch_state_data[0].constitution_id
         tx_constitution_id = dbsync_constitution_info.id
         assert es_constitution_id == tx_constitution_id, (
-            f"Committee id mismatch between epoch_state {es_constitution_id} "
-            f"and committee table {tx_constitution_id}."
+            f"Constitution id mismatch between epoch_state {es_constitution_id} "
+            f"and constitution table {tx_constitution_id}."
         )
     else:
-        msg = f"Unsupported action type for epoch state check: {action_type.value}"
-        raise ValueError(msg)
+        tp.assert_never(action_type)
