@@ -110,9 +110,9 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("set_socket_path")
     def test_query_protocol_state(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
@@ -139,9 +139,9 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("set_socket_path")
     def test_query_stake_distribution(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
@@ -168,9 +168,9 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("set_socket_path")
     def test_query_protocol_params(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
@@ -197,9 +197,9 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("set_socket_path")
     def test_query_pool_state(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
@@ -224,9 +224,9 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("set_socket_path")
     def test_query_stake_addr_info(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
     ):
@@ -252,9 +252,9 @@ class TestSocketPath:
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("set_socket_path")
     def test_build_transfer_funds(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         env_scenario: str,
@@ -317,9 +317,9 @@ class TestNegativeSocketPath:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
+    @pytest.mark.usefixtures("set_socket_path")
     def test_neg_query_protocol_state(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         socket_scenario: str,
@@ -353,9 +353,9 @@ class TestNegativeSocketPath:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
+    @pytest.mark.usefixtures("set_socket_path")
     def test_neg_query_stake_distribution(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         socket_scenario: str,
@@ -389,9 +389,9 @@ class TestNegativeSocketPath:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
+    @pytest.mark.usefixtures("set_socket_path")
     def test_neg_query_protocol_params(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         socket_scenario: str,
@@ -425,9 +425,9 @@ class TestNegativeSocketPath:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
+    @pytest.mark.usefixtures("set_socket_path")
     def test_neg_query_pool_state(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         socket_scenario: str,
@@ -461,9 +461,9 @@ class TestNegativeSocketPath:
     @allure.link(helpers.get_vcs_link())
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
+    @pytest.mark.usefixtures("set_socket_path")
     def test_neg_query_stake_addr_info(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         socket_scenario: str,
@@ -498,9 +498,9 @@ class TestNegativeSocketPath:
     @common.SKIPIF_BUILD_UNUSABLE
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
+    @pytest.mark.usefixtures("set_socket_path")
     def test_neg_build_transfer_funds(
         self,
-        set_socket_path: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         env_scenario: str,
