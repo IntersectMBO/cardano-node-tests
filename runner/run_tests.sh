@@ -42,9 +42,9 @@ Targets:
   tests     Run all tests (default TEST_THREADS=20), DbSyncAbortOnPanic=1
   testpr    Run PR-level tests (default CLUSTERS_COUNT=5, TEST_THREADS=20, MARKEXPR="smoke")
   testnets  Run tests that can run on public testnets (CLUSTERS_COUNT=1, FORBID_RESTART=true,
-            default TEST_THREADS=15, MARKEXPR="testnets")
+            default TEST_THREADS=6, MARKEXPR="testnets")
 
-All targets respect the same env vars as the original Makefile.
+All targets respect the env vars documented at the top of this script.
 EOF
 }
 
