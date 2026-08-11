@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import time
 import typing as tp
 
@@ -16,7 +17,7 @@ from cardano_node_tests.utils import logfiles
 
 LOGGER = logging.getLogger(__name__)
 
-MISSING_ARG_ERR = "Missing: (--mainnet | --testnet-magic NATURAL)"
+MISSING_ARG_ERR = r"Missing: +\(--mainnet \| --testnet-magic NATURAL\)"
 
 POOL_ID = "pool1dlyzfcl25qwjjmpmp47dulwmp2fej8tw4qcezcnkdlsjkak5n89"
 STAKE_ADDR = "stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt"
@@ -55,11 +56,11 @@ def _setup_scenarios(
 
 def _assert_expected_err(env_scenario: str, arg_scenario: str, err_msg: str) -> None:
     """Check expected error message based on scenarios."""
-    expected_err = "HandshakeError (Refused NodeToClient"
+    expected_err = re.escape("HandshakeError (Refused NodeToClient")
     if arg_scenario == "arg_missing" and env_scenario == "env_missing":
         expected_err = MISSING_ARG_ERR
 
-    assert expected_err in err_msg, f"{expected_err} not in {err_msg}"
+    assert re.search(expected_err, err_msg), f"`{expected_err}` not found in `{err_msg}`"
 
 
 @pytest.fixture
@@ -71,7 +72,7 @@ def skip_on_no_env(
     try:
         cluster.g_query.get_tip()
     except clusterlib.CLIError as exc:
-        if MISSING_ARG_ERR in str(exc):
+        if re.search(MISSING_ARG_ERR, str(exc)):
             pytest.skip("Env variable `CARDANO_NODE_NETWORK_ID` is not available")
         raise
 
