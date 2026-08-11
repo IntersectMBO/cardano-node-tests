@@ -28,7 +28,7 @@ mkdir -p "$output_dir" || { echo "Cannot create $output_dir" >&2; exit 1; }
 # purpose, it is transient and not needed for an offline copy.
 found=0
 num=0
-while read -r db; do
+while IFS= read -r db; do
   # The file could disappear before it is copied
   [ -f "$db" ] || continue
   num=$((num + 1))
@@ -43,7 +43,7 @@ done < <(
   # Hidden dirs are excluded explicitly - a hidden dir can be a leftover staging dir
   # of an interrupted `copy_artifacts.sh` run
   find "$artifacts_dir" -mindepth 2 -maxdepth 2 ! -path '*/.*' \
-    -path '*/pytest-*/cm-status.db' -printf '%T@ %p\n' | sort -n | cut -d' ' -f2-
+    -path '*/pytest-*/cm-status.db' -printf '%T@\t%p\n' | sort -n | cut -f2-
 )
 
 if [ "$found" -eq 0 ]; then
