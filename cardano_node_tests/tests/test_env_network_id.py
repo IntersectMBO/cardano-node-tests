@@ -117,10 +117,9 @@ class TestNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_query_protocol_state(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
         """Query protocol state using CARDANO_NODE_NETWORK_ID environment variable.
@@ -141,10 +140,9 @@ class TestNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_query_stake_distribution(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
         """Query stake distribution using CARDANO_NODE_NETWORK_ID environment variable.
@@ -165,10 +163,9 @@ class TestNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_query_protocol_params(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
         """Query protocol parameters using CARDANO_NODE_NETWORK_ID environment variable.
@@ -189,10 +186,9 @@ class TestNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_query_pool_state(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
         """Query pool state using CARDANO_NODE_NETWORK_ID environment variable.
@@ -211,10 +207,9 @@ class TestNetworkIdEnv:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_query_stake_addr_info(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
     ):
         """Query stake address info using CARDANO_NODE_NETWORK_ID environment variable.
@@ -234,10 +229,9 @@ class TestNetworkIdEnv:
     @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_build_transfer_funds(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
     ):
@@ -300,10 +294,9 @@ class TestNegativeNetworkIdEnv:
     @PARAM_ARG_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_neg_query_protocol_state(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -340,10 +333,9 @@ class TestNegativeNetworkIdEnv:
     @PARAM_ARG_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_neg_query_stake_distribution(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -379,10 +371,9 @@ class TestNegativeNetworkIdEnv:
     @PARAM_ARG_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_neg_query_protocol_params(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -418,10 +409,9 @@ class TestNegativeNetworkIdEnv:
     @PARAM_ARG_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_neg_query_pool_state(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -457,10 +447,9 @@ class TestNegativeNetworkIdEnv:
     @PARAM_ARG_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_neg_query_stake_addr_info(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         env_scenario: str,
         arg_scenario: str,
@@ -497,10 +486,9 @@ class TestNegativeNetworkIdEnv:
     @PARAM_ARG_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
+    @pytest.mark.usefixtures("skip_on_no_env", "set_network_id_env")
     def test_neg_build_transfer_funds(
         self,
-        skip_on_no_env: None,  # noqa: ARG002
-        set_network_id_env: None,  # noqa: ARG002
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         env_scenario: str,

@@ -114,9 +114,9 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_transfer_to_treasury(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
@@ -196,9 +196,9 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_build_transfer_to_treasury(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
@@ -284,9 +284,9 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_transfer_to_reserves(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
@@ -366,9 +366,9 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @common.SKIPIF_BUILD_UNUSABLE
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_build_transfer_to_reserves(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
@@ -455,9 +455,9 @@ class TestMIRCerts:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_pay_stake_addr_from(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: list[clusterlib.PoolUser],
@@ -546,9 +546,9 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     @common.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_build_pay_stake_addr_from(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: list[clusterlib.PoolUser],
@@ -643,9 +643,9 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_pay_stake_addr_from_both(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: list[clusterlib.PoolUser],
@@ -775,9 +775,9 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_pay_multi_stake_addrs(
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         registered_users: list[clusterlib.PoolUser],
@@ -920,9 +920,9 @@ class TestMIRCerts:
     @pytest.mark.dbsync
     @pytest.mark.parametrize("addr_history", ("addr_known", "addr_unknown"))
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
+    @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_pay_unregistered_stake_addr_from(  # noqa: C901
         self,
-        skip_on_hf_shortcut: None,  # noqa: ARG002
         cluster_manager: cluster_management.ClusterManager,
         cluster_pots: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
