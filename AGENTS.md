@@ -49,6 +49,10 @@ Unit tests for the framework components are organized under:
    ./ai_run.sh make lint
    ```
 
+### Documentation
+
+When adding to `README.md`, keep it short, with no lengthy explanations. Instead of documenting every detail, the user-facing functionality (`make ...` targets, scripts in the runner, etc.) should handle incorrect usage itself and guide the user. Detailed guidance for AI agents belongs in `agent_docs/`.
+
 ---
 
 ## Running Tests

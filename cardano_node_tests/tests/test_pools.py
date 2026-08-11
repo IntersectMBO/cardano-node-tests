@@ -27,7 +27,6 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
@@ -766,18 +765,17 @@ class TestStakePool:
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=pool_creation_out.tx_raw_output)
 
-        # Check dbsync `PoolOfflineData` table
-        if configuration.HAS_DBSYNC:
-            pool_params = cluster.g_query.get_pool_state(
-                stake_pool_id=pool_creation_out.stake_pool_id
-            ).pool_params
+        pool_params = cluster.g_query.get_pool_state(
+            stake_pool_id=pool_creation_out.stake_pool_id
+        ).pool_params
 
-            def _query_func():
-                dbsync_utils.check_pool_off_chain_data(
-                    ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
-                )
+        # Check dbsync `OffChainPoolData` table
+        def _query_func():
+            dbsync_utils.check_pool_off_chain_data(
+                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
+            )
 
-            dbsync_utils.retry_query(query_func=_query_func, timeout=360)
+        dbsync_utils.retry_query(query_func=_query_func, timeout=360)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -852,24 +850,23 @@ class TestStakePool:
             build_method=clusterlib_utils.BuildMethods.BUILD_RAW,
         )
 
-        # Check dbsync `PoolOffChainFetchError` table
+        pool_params = cluster.g_query.get_pool_state(
+            stake_pool_id=pool_creation_out.stake_pool_id
+        ).pool_params
+
+        # Check dbsync `OffChainPoolFetchError` table
         # since the metadata url is invalid the dbsync dedicated thread will not fetch the data
         # and will insert an error on the specific table
         # https://github.com/IntersectMBO/cardano-db-sync/blob/master/doc/pool-offchain-data.md
-        if configuration.HAS_DBSYNC:
-            pool_params = cluster.g_query.get_pool_state(
-                stake_pool_id=pool_creation_out.stake_pool_id
-            ).pool_params
-
-            def _query_func():
-                dbsync_utils.check_pool_off_chain_fetch_error(
-                    ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
-                )
-
-            dbsync_utils.retry_query(query_func=_query_func, timeout=360)
-            smash_utils.check_smash_pool_errors(
-                pool_id=pool_creation_out.stake_pool_id, pool_metadata_hash=pool_metadata_hash
+        def _query_func():
+            dbsync_utils.check_pool_off_chain_fetch_error(
+                ledger_pool_data=pool_params, pool_id=pool_creation_out.stake_pool_id
             )
+
+        dbsync_utils.retry_query(query_func=_query_func, timeout=360)
+        smash_utils.check_smash_pool_errors(
+            pool_id=pool_creation_out.stake_pool_id, pool_metadata_hash=pool_metadata_hash
+        )
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_BUILD_METHOD_NO_EST
