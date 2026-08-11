@@ -79,11 +79,15 @@ def get_address_reward(
 
 def check_address_reward(
     address: str, *, epoch_from: int = 0, epoch_to: int = 99999999
-) -> dbsync_types.RewardRecord:
+) -> dbsync_types.RewardRecord | None:
     """Check reward data for stake address in db-sync.
 
     The `epoch_from` and `epoch_to` are epochs where the reward can be spent.
+    Return None if db-sync is not available.
     """
+    if not configuration.HAS_DBSYNC:
+        return None
+
     reward = get_address_reward(address=address, epoch_from=epoch_from, epoch_to=epoch_to)
     if not reward:
         return reward
@@ -763,8 +767,14 @@ def check_pool_data(  # noqa: C901
 
 def check_pool_off_chain_data(
     *, ledger_pool_data: dict, pool_id: str
-) -> dbsync_queries.PoolOffChainDataDBRow:
-    """Check comparison for pool off chain data between ledger and db-sync."""
+) -> dbsync_queries.PoolOffChainDataDBRow | None:
+    """Check comparison for pool off chain data between ledger and db-sync.
+
+    Return None if db-sync is not available.
+    """
+    if not configuration.HAS_DBSYNC:
+        return None
+
     db_pool_off_chain_data = list(dbsync_queries.query_off_chain_pool_data(pool_id_bech32=pool_id))
     if not db_pool_off_chain_data:
         msg = f"no off chain data for pool {pool_id}"
@@ -784,8 +794,14 @@ def check_pool_off_chain_data(
 
 def check_pool_off_chain_fetch_error(
     *, ledger_pool_data: dict, pool_id: str
-) -> dbsync_queries.PoolOffChainFetchErrorDBRow:
-    """Check expected error on `PoolOffChainFetchError`."""
+) -> dbsync_queries.PoolOffChainFetchErrorDBRow | None:
+    """Check expected error on `OffChainPoolFetchError`.
+
+    Return None if db-sync is not available.
+    """
+    if not configuration.HAS_DBSYNC:
+        return None
+
     db_pool_off_chain_fetch_error = list(
         dbsync_queries.query_off_chain_pool_fetch_error(pool_id_bech32=pool_id)
     )
@@ -811,7 +827,13 @@ def check_pool_off_chain_fetch_error(
 def check_plutus_cost(
     *, redeemer_record: dbsync_types.RedeemerRecord, cost_record: dict[str, tp.Any]
 ) -> None:
-    """Compare cost of Plutus script with data from db-sync."""
+    """Compare cost of Plutus script with data from db-sync.
+
+    The check is a no-op when db-sync is not available.
+    """
+    if not configuration.HAS_DBSYNC:
+        return
+
     errors = []
     if redeemer_record.unit_steps != cost_record["executionUnits"]["steps"]:
         errors.append(
@@ -833,7 +855,13 @@ def check_plutus_cost(
 def check_plutus_costs(
     *, redeemer_records: list[dbsync_types.RedeemerRecord], cost_records: list[dict[str, tp.Any]]
 ) -> None:
-    """Compare cost of multiple Plutus scripts with data from db-sync."""
+    """Compare cost of multiple Plutus scripts with data from db-sync.
+
+    The check is a no-op when db-sync is not available.
+    """
+    if not configuration.HAS_DBSYNC:
+        return
+
     # Sort records first by total cost, second by hash
     sorted_costs = sorted(
         cost_records,
@@ -1807,6 +1835,8 @@ def check_column_condition(
 ) -> None:
     """Validate that all/none rows meet a column condition atomically.
 
+    The check is a no-op when db-sync is not available.
+
     Args:
         table: Table to check
         column: Column to validate
@@ -1814,6 +1844,9 @@ def check_column_condition(
         expected_count: Require exactly this many matches (default: all must match)
         lock_timeout: Max wait for table lock
     """
+    if not configuration.HAS_DBSYNC:
+        return
+
     with dbsync_queries.db_transaction():
         # Get count of rows meeting condition
         matching_count = dbsync_queries.query_rows_count(

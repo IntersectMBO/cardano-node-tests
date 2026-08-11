@@ -8,6 +8,7 @@ import typing as tp
 from requests import auth as rauth
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import http_client
 
@@ -151,6 +152,8 @@ class SmashManager:
 
 def is_smash_running() -> bool:
     """Check if `cardano-smash-server` service is running."""
+    if not configuration.HAS_SMASH:
+        return False
     if not shutil.which("cardano-smash-server"):
         return False
     return cluster_nodes.services_status(service_names=["smash"])[0].status == "RUNNING"
