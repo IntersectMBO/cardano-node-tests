@@ -204,19 +204,20 @@ class CustomCardonnayScripts(cardonnay_local.LocalScripts):
         self._gen_topology_files(destdir=destdir, addr=addr, nodes=instance_ports.node_ports)
 
 
-class ScriptsTypes:
-    """Generic cluster scripts."""
+# Ruff's EM101 rule forbids passing a string literal directly to the exception, and its
+# usual fix (assigning to a local variable first) would add a second statement to the
+# method bodies. The bodies would then no longer be trivial and type checkers would stop
+# treating the protocol methods as abstract. A module-level constant satisfies both
+# constraints.
+_NOT_IMPLEMENTED_MSG: tp.Final[str] = "Not implemented for this cluster scripts type."
 
-    LOCAL: tp.Final[str] = "local"
-    TESTNET: tp.Final[str] = "testnet"
 
-    def __init__(self) -> None:
-        self.type = "unknown"
+class ScriptsTypes(tp.Protocol):
+    """Protocol for scripts of a given cluster instance type."""
 
     def get_instance_ports(self, *, instance_num: int) -> cardonnay_local.InstancePorts:
         """Return ports mapping for given cluster instance."""
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
     def copy_scripts_files(self, *, destdir: ttypes.FileType) -> StartupFiles:
         """Make copy of cluster scripts files.
@@ -224,30 +225,29 @@ class ScriptsTypes:
         Testnet files and scripts can be copied and modified by tests before using them.
         E.g. we might want to change KES period, pool cost, etc.
         """
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
     def prepare_scripts_files(
-        self, *, destdir: ttypes.FileType, instance_num: int, scriptsdir: ttypes.FileType = ""
+        self,
+        *,
+        destdir: ttypes.FileType,
+        instance_num: int,
+        scriptsdir: ttypes.FileType | None = None,
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
     def gen_split_topology_files(
         self, *, destdir: ttypes.FileType, instance_num: int, offset: int = 0
     ) -> None:
         """Generate topology files for split network."""
-        msg = f"Not implemented for cluster instance type '{self.type}'."
-        raise NotImplementedError(msg)
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
 
 class LocalScripts(ScriptsTypes):
     """Scripts for starting local cluster."""
 
     def __init__(self, num_pools: int = -1) -> None:
-        super().__init__()
-        self.type = ScriptsTypes.LOCAL
         self.num_pools = num_pools
         if num_pools == -1:
             self.num_pools = configuration.NUM_POOLS
@@ -295,13 +295,17 @@ class LocalScripts(ScriptsTypes):
         )
 
     def prepare_scripts_files(
-        self, *, destdir: ttypes.FileType, instance_num: int, scriptsdir: ttypes.FileType = ""
+        self,
+        *,
+        destdir: ttypes.FileType,
+        instance_num: int,
+        scriptsdir: ttypes.FileType | None = None,
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance."""
         return self.custom_cardonnay_scripts.prepare_scripts_files(
             destdir=pl.Path(destdir),
             instance_num=instance_num,
-            scriptsdir=scriptsdir,
+            scriptsdir=scriptsdir or "",
         )
 
     def gen_split_topology_files(
@@ -365,8 +369,6 @@ class TestnetScripts(ScriptsTypes):
     BOOTSTRAP_CONF: tp.Final[str] = "testnet_conf"
 
     def __init__(self) -> None:
-        super().__init__()
-        self.type = ScriptsTypes.TESTNET
         self.scripts_dir = get_testnet_variant_scriptdir2(
             testnet_variant=configuration.TESTNET_VARIANT
         )
@@ -539,7 +541,11 @@ class TestnetScripts(ScriptsTypes):
         return bootstrap_conf_dir
 
     def prepare_scripts_files(
-        self, *, destdir: ttypes.FileType, instance_num: int, scriptsdir: ttypes.FileType = ""
+        self,
+        *,
+        destdir: ttypes.FileType,
+        instance_num: int,
+        scriptsdir: ttypes.FileType | None = None,
     ) -> cardonnay_local.InstanceFiles:
         """Prepare scripts files for starting and stopping cluster instance.
 
@@ -568,3 +574,13 @@ class TestnetScripts(ScriptsTypes):
             start_script_args=[str(configuration.BOOTSTRAP_DIR)],
             dir=destdir,
         )
+
+    def gen_split_topology_files(
+        self, *, destdir: ttypes.FileType, instance_num: int, offset: int = 0
+    ) -> None:
+        """Generate topology files for split network.
+
+        Not supported on testnet, always raises `NotImplementedError`.
+        """
+        msg = "Not implemented for testnet cluster."
+        raise NotImplementedError(msg)

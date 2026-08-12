@@ -65,13 +65,10 @@ class ClusterType:
 
     NODES: tp.ClassVar[set[str]] = set()
 
+    cluster_scripts: cluster_scripts.ScriptsTypes
+
     def __init__(self) -> None:
         self.type = "unknown"
-        self.cluster_scripts: (
-            cluster_scripts.ScriptsTypes
-            | cluster_scripts.TestnetScripts
-            | cluster_scripts.LocalScripts
-        ) = cluster_scripts.ScriptsTypes()
 
     @property
     def testnet_type(self) -> str:
