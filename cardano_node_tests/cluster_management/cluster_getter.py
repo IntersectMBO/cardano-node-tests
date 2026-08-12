@@ -854,7 +854,7 @@ class ClusterGetter:
         self,
         lock_resources: resources_management.ResourcesType,
         use_resources: resources_management.ResourcesType,
-    ) -> list[str | resources_management.BaseFilter]:
+    ) -> list[str | resources_management.ResourceFilter]:
         """Add `resources.Resources.CLUSTER` to `use_resources`.
 
         Filter out `lock_resources` from the list of `use_resources`.

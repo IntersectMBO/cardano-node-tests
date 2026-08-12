@@ -371,7 +371,181 @@ def get_cc_member_auth_record(
     )
 
 
-def check_action_view(  # noqa: C901
+def _prev_action_ref(
+    action_data: clusterlib.ActionConstitution
+    | clusterlib.ActionNoConfidence
+    | clusterlib.ActionUpdateCommittee,
+) -> dict[str, tp.Any] | None:
+    """Get reference to previous governance action for `governance action view` output."""
+    if action_data.prev_action_txid:
+        return {"govActionIx": action_data.prev_action_ix, "txId": action_data.prev_action_txid}
+    return None
+
+
+@functools.singledispatch
+def _get_gov_action(
+    action_data: ActionsAllT,
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    recv_addr_vkey_hash: str,
+) -> dict[str, tp.Any]:
+    """Get expected "governance action" record for `governance action view` output."""
+    msg = f"Not implemented for action `{action_data}`"
+    raise NotImplementedError(msg)
+
+
+@_get_gov_action.register
+def _get_gov_action_treasury(
+    action_data: clusterlib.ActionTreasuryWithdrawal,
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    recv_addr_vkey_hash: str,
+) -> dict[str, tp.Any]:
+    """Get expected "governance action" record for treasury withdrawal action."""
+    if not recv_addr_vkey_hash:
+        if action_data.funds_receiving_stake_vkey_file:
+            recv_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+                stake_vkey_file=action_data.funds_receiving_stake_vkey_file
+            )
+        elif action_data.funds_receiving_stake_vkey:
+            recv_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
+                stake_vkey=action_data.funds_receiving_stake_vkey
+            )
+        elif action_data.funds_receiving_stake_key_hash:
+            recv_addr_vkey_hash = action_data.funds_receiving_stake_key_hash
+        else:
+            msg = "No funds receiving stake key was specified"
+            raise ValueError(msg)
+
+    return {
+        "contents": [
+            [
+                [
+                    {
+                        "credential": {"keyHash": recv_addr_vkey_hash},
+                        "network": "Testnet",
+                    },
+                    action_data.transfer_amt,
+                ],
+            ],
+            None,  # TODO 8.8: what is this?
+        ],
+        "tag": ActionTags.TREASURY_WITHDRAWALS.value,
+    }
+
+
+@_get_gov_action.register
+def _get_gov_action_info(
+    action_data: clusterlib.ActionInfo,  # noqa: ARG001
+    *,
+    cluster_obj: clusterlib.ClusterLib,  # noqa: ARG001
+    recv_addr_vkey_hash: str,  # noqa: ARG001
+) -> dict[str, tp.Any]:
+    """Get expected "governance action" record for info action."""
+    return {
+        "tag": ActionTags.INFO_ACTION.value,
+    }
+
+
+@_get_gov_action.register
+def _get_gov_action_constitution(
+    action_data: clusterlib.ActionConstitution,
+    *,
+    cluster_obj: clusterlib.ClusterLib,  # noqa: ARG001
+    recv_addr_vkey_hash: str,  # noqa: ARG001
+) -> dict[str, tp.Any]:
+    """Get expected "governance action" record for new constitution action."""
+    return {
+        "contents": [
+            _prev_action_ref(action_data),
+            {
+                "anchor": {
+                    "dataHash": action_data.constitution_hash,
+                    "url": action_data.constitution_url,
+                }
+            },
+        ],
+        "tag": ActionTags.NEW_CONSTITUTION.value,
+    }
+
+
+@_get_gov_action.register
+def _get_gov_action_committee(
+    action_data: clusterlib.ActionUpdateCommittee,
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    recv_addr_vkey_hash: str,  # noqa: ARG001
+) -> dict[str, tp.Any]:
+    """Get expected "governance action" record for update committee action."""
+
+    def _get_cvkey_hash(*, member: clusterlib.CCMember) -> str:
+        if member.cold_vkey_file:
+            cvkey_hash = cluster_obj.g_governance.committee.get_key_hash(
+                vkey_file=member.cold_vkey_file
+            )
+        elif member.cold_vkey:
+            cvkey_hash = cluster_obj.g_governance.committee.get_key_hash(vkey=member.cold_vkey)
+        elif member.cold_vkey_hash:
+            cvkey_hash = member.cold_vkey_hash
+        else:
+            msg = "No cold key was specified"
+            raise ValueError(msg)
+
+        return cvkey_hash
+
+    added_members = {}
+    for _m in action_data.add_cc_members:
+        cvkey_hash = _get_cvkey_hash(member=_m)
+        added_members[f"keyHash-{cvkey_hash}"] = _m.epoch
+
+    removed_members = [{"keyHash": _get_cvkey_hash(member=_m)} for _m in action_data.rem_cc_members]
+
+    return {
+        "contents": [
+            _prev_action_ref(action_data),
+            removed_members or [],
+            added_members,
+            float(action_data.threshold),
+        ],
+        "tag": ActionTags.UPDATE_COMMITTEE.value,
+    }
+
+
+@_get_gov_action.register
+def _get_gov_action_no_confidence(
+    action_data: clusterlib.ActionNoConfidence,
+    *,
+    cluster_obj: clusterlib.ClusterLib,  # noqa: ARG001
+    recv_addr_vkey_hash: str,  # noqa: ARG001
+) -> dict[str, tp.Any]:
+    """Get expected "governance action" record for no confidence action."""
+    return {
+        "contents": _prev_action_ref(action_data),
+        "tag": ActionTags.NO_CONFIDENCE.value,
+    }
+
+
+@_get_gov_action.register
+def _get_gov_action_hardfork(
+    action_data: clusterlib.ActionHardfork,
+    *,
+    cluster_obj: clusterlib.ClusterLib,  # noqa: ARG001
+    recv_addr_vkey_hash: str,  # noqa: ARG001
+) -> dict[str, tp.Any]:
+    """Get expected "governance action" record for hardfork action."""
+    return {
+        "contents": [
+            None,  # TODO 8.11: what is this?
+            {
+                "major": action_data.protocol_major_version,
+                "minor": action_data.protocol_minor_version,
+            },
+        ],
+        "tag": ActionTags.HARDFORK_INIT.value,
+    }
+
+
+def check_action_view(
     *,
     cluster_obj: clusterlib.ClusterLib,
     action_data: ActionsAllT,
@@ -394,119 +568,9 @@ def check_action_view(  # noqa: C901
             msg = "No return stake key was specified"
             raise ValueError(msg)
 
-    prev_action_txid = getattr(action_data, "prev_action_txid", None)
-    prev_action_ix = getattr(action_data, "prev_action_ix", None)
-
-    gov_action: dict[str, tp.Any]
-
-    if isinstance(action_data, clusterlib.ActionTreasuryWithdrawal):
-        if not recv_addr_vkey_hash:
-            if action_data.funds_receiving_stake_vkey_file:
-                recv_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
-                    stake_vkey_file=action_data.funds_receiving_stake_vkey_file
-                )
-            elif action_data.funds_receiving_stake_vkey:
-                recv_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
-                    stake_vkey=action_data.funds_receiving_stake_vkey
-                )
-            elif action_data.funds_receiving_stake_key_hash:
-                recv_addr_vkey_hash = action_data.funds_receiving_stake_key_hash
-            else:
-                msg = "No funds receiving stake key was specified"
-                raise ValueError(msg)
-
-        gov_action = {
-            "contents": [
-                [
-                    [
-                        {
-                            "credential": {"keyHash": recv_addr_vkey_hash},
-                            "network": "Testnet",
-                        },
-                        action_data.transfer_amt,
-                    ],
-                ],
-                None,  # TODO 8.8: what is this?
-            ],
-            "tag": ActionTags.TREASURY_WITHDRAWALS.value,
-        }
-    elif isinstance(action_data, clusterlib.ActionInfo):
-        gov_action = {
-            "tag": ActionTags.INFO_ACTION.value,
-        }
-    elif isinstance(action_data, clusterlib.ActionConstitution):
-        gov_action = {
-            "contents": [
-                {"govActionIx": prev_action_ix, "txId": prev_action_txid}
-                if prev_action_txid
-                else None,
-                {
-                    "anchor": {
-                        "dataHash": action_data.constitution_hash,
-                        "url": action_data.constitution_url,
-                    }
-                },
-            ],
-            "tag": ActionTags.NEW_CONSTITUTION.value,
-        }
-    elif isinstance(action_data, clusterlib.ActionUpdateCommittee):
-
-        def _get_cvkey_hash(*, member: clusterlib.CCMember) -> str:
-            if member.cold_vkey_file:
-                cvkey_hash = cluster_obj.g_governance.committee.get_key_hash(
-                    vkey_file=member.cold_vkey_file
-                )
-            elif member.cold_vkey:
-                cvkey_hash = cluster_obj.g_governance.committee.get_key_hash(vkey=member.cold_vkey)
-            elif member.cold_vkey_hash:
-                cvkey_hash = member.cold_vkey_hash
-            else:
-                msg = "No cold key was specified"
-                raise ValueError(msg)
-
-            return cvkey_hash
-
-        added_members = {}
-        for _m in action_data.add_cc_members:
-            cvkey_hash = _get_cvkey_hash(member=_m)
-            added_members[f"keyHash-{cvkey_hash}"] = _m.epoch
-
-        removed_members = [
-            {"keyHash": _get_cvkey_hash(member=_m)} for _m in action_data.rem_cc_members
-        ]
-
-        gov_action = {
-            "contents": [
-                {"govActionIx": prev_action_ix, "txId": prev_action_txid}
-                if prev_action_txid
-                else None,
-                removed_members or [],
-                added_members,
-                float(action_data.threshold),
-            ],
-            "tag": ActionTags.UPDATE_COMMITTEE.value,
-        }
-    elif isinstance(action_data, clusterlib.ActionNoConfidence):
-        gov_action = {
-            "contents": {"govActionIx": prev_action_ix, "txId": prev_action_txid}
-            if prev_action_txid
-            else None,
-            "tag": ActionTags.NO_CONFIDENCE.value,
-        }
-    elif isinstance(action_data, clusterlib.ActionHardfork):
-        gov_action = {
-            "contents": [
-                None,  # TODO 8.11: what is this?
-                {
-                    "major": action_data.protocol_major_version,
-                    "minor": action_data.protocol_minor_version,
-                },
-            ],
-            "tag": ActionTags.HARDFORK_INIT.value,
-        }
-    else:
-        msg = f"Not implemented for action `{action_data}`"
-        raise NotImplementedError(msg)
+    gov_action = _get_gov_action(
+        action_data, cluster_obj=cluster_obj, recv_addr_vkey_hash=recv_addr_vkey_hash
+    )
 
     expected_action_out = {
         "anchor": {
@@ -526,73 +590,86 @@ def check_action_view(  # noqa: C901
     assert action_view_out == expected_action_out, f"{action_view_out} != {expected_action_out}"
 
 
-def check_vote_view(  # noqa: C901
+@functools.singledispatch
+def _get_vote_key(vote_data: VotesAllT, *, cluster_obj: clusterlib.ClusterLib) -> str:
+    """Get vote key for `governance vote view` output."""
+    msg = f"Not implemented for vote `{vote_data}`"
+    raise NotImplementedError(msg)
+
+
+@_get_vote_key.register
+def _get_vote_key_cc(vote_data: clusterlib.VoteCC, *, cluster_obj: clusterlib.ClusterLib) -> str:
+    """Get vote key for Constitutional Committee vote."""
+    if vote_data.cc_hot_vkey_file:
+        cc_key_hash = cluster_obj.g_governance.committee.get_key_hash(
+            vkey_file=vote_data.cc_hot_vkey_file
+        )
+    elif vote_data.cc_hot_vkey:
+        cc_key_hash = cluster_obj.g_governance.committee.get_key_hash(vkey=vote_data.cc_hot_vkey)
+    elif vote_data.cc_hot_key_hash:
+        cc_key_hash = vote_data.cc_hot_key_hash
+    else:
+        msg = "No hot key was specified"
+        raise ValueError(msg)
+
+    return f"committee-keyHash-{cc_key_hash}"
+
+
+@_get_vote_key.register
+def _get_vote_key_drep(
+    vote_data: clusterlib.VoteDrep, *, cluster_obj: clusterlib.ClusterLib
+) -> str:
+    """Get vote key for DRep vote."""
+    if vote_data.drep_vkey_file:
+        drep_id = cluster_obj.g_governance.drep.get_id(
+            drep_vkey_file=vote_data.drep_vkey_file, out_format="hex"
+        )
+    elif vote_data.drep_vkey:
+        drep_id = cluster_obj.g_governance.drep.get_id(
+            drep_vkey=vote_data.drep_vkey, out_format="hex"
+        )
+    elif vote_data.drep_key_hash:
+        drep_id = vote_data.drep_key_hash
+    else:
+        msg = "No drep key was specified"
+        raise ValueError(msg)
+
+    if drep_id.startswith("drep1"):
+        drep_id = helpers.decode_bech32(bech32=drep_id)
+
+    return f"drep-keyHash-{drep_id}"
+
+
+@_get_vote_key.register
+def _get_vote_key_spo(vote_data: clusterlib.VoteSPO, *, cluster_obj: clusterlib.ClusterLib) -> str:
+    """Get vote key for SPO vote."""
+    if vote_data.cold_vkey_file:
+        pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(
+            cold_vkey_file=vote_data.cold_vkey_file
+        )
+    elif vote_data.stake_pool_vkey:
+        pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(
+            stake_pool_vkey=vote_data.stake_pool_vkey
+        )
+    elif vote_data.stake_pool_id:
+        pool_id = vote_data.stake_pool_id
+    else:
+        msg = "No stake pool key was specified"
+        raise ValueError(msg)
+
+    if pool_id.startswith("pool1"):
+        pool_id = helpers.decode_bech32(bech32=pool_id)
+
+    return f"stakepool-keyHash-{pool_id}"
+
+
+def check_vote_view(
     *,
     cluster_obj: clusterlib.ClusterLib,
     vote_data: VotesAllT,
 ) -> None:
     """Check `governance vote view` output."""
-    vote_key = ""
-
-    if isinstance(vote_data, clusterlib.VoteCC):
-        if vote_data.cc_hot_vkey_file:
-            cc_key_hash = cluster_obj.g_governance.committee.get_key_hash(
-                vkey_file=vote_data.cc_hot_vkey_file
-            )
-        elif vote_data.cc_hot_vkey:
-            cc_key_hash = cluster_obj.g_governance.committee.get_key_hash(
-                vkey=vote_data.cc_hot_vkey
-            )
-        elif vote_data.cc_hot_key_hash:
-            cc_key_hash = vote_data.cc_hot_key_hash
-        else:
-            msg = "No hot key was specified"
-            raise ValueError(msg)
-
-        vote_key = f"committee-keyHash-{cc_key_hash}"
-    elif isinstance(vote_data, clusterlib.VoteDrep):
-        if vote_data.drep_vkey_file:
-            drep_id = cluster_obj.g_governance.drep.get_id(
-                drep_vkey_file=vote_data.drep_vkey_file, out_format="hex"
-            )
-        elif vote_data.drep_vkey:
-            drep_id = cluster_obj.g_governance.drep.get_id(
-                drep_vkey=vote_data.drep_vkey, out_format="hex"
-            )
-        elif vote_data.drep_key_hash:
-            drep_id = vote_data.drep_key_hash
-        else:
-            msg = "No drep key was specified"
-            raise ValueError(msg)
-
-        if drep_id.startswith("drep1"):
-            drep_id = helpers.decode_bech32(bech32=drep_id)
-
-        vote_key = f"drep-keyHash-{drep_id}"
-    elif isinstance(vote_data, clusterlib.VoteSPO):
-        if vote_data.cold_vkey_file:
-            pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(
-                cold_vkey_file=vote_data.cold_vkey_file
-            )
-        elif vote_data.stake_pool_vkey:
-            pool_id = cluster_obj.g_stake_pool.get_stake_pool_id(
-                stake_pool_vkey=vote_data.stake_pool_vkey
-            )
-        elif vote_data.stake_pool_id:
-            pool_id = vote_data.stake_pool_id
-        else:
-            msg = "No stake pool key was specified"
-            raise ValueError(msg)
-
-        if pool_id.startswith("pool1"):
-            pool_id = helpers.decode_bech32(bech32=pool_id)
-
-        vote_key = f"stakepool-keyHash-{pool_id}"
-    else:
-        msg = f"Not implemented for vote `{vote_data}`"
-        raise NotImplementedError(msg)
-
-    assert vote_key, "No vote key was specified"
+    vote_key = _get_vote_key(vote_data, cluster_obj=cluster_obj)
 
     anchor = (
         {"dataHash": vote_data.anchor_data_hash, "url": vote_data.anchor_url}
