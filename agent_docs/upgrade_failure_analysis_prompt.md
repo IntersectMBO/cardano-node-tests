@@ -21,15 +21,14 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 
 Steps:
 
-1. Enumerate failed/broken tests per step:
-   `for s in step1 step2 step3; do grep -l -E '"status": "(failed|broken)"' {RUN_DIR}/allure-results-$s/*result.json 2>/dev/null | sed "s|^|$s: |"; done`
+1. Get per-step counts and failed/broken test lists (with `statusDetails.message` heads):
+   `scripts/count_test_results.py {RUN_DIR}/allure-results-step1 {RUN_DIR}/allure-results-step2 {RUN_DIR}/allure-results-step3`
+   Run it exactly as shown, as a single plain command - do not wrap it in pipes, command substitution or other compound shell constructs, those are rejected by the CI command allowlist.
    (`broken` = pytest error in setup/teardown; `failed` = assertion failure.)
-2. For each failing test, extract `statusDetails.message` head with:
-   `grep -E '"status": "(failed|broken)"' {RUN_DIR}/allure-results-step*/*result.json | cut -c1-200`.
-3. Group failures by likely root cause (same exception class + message head, same node crash, same infra symptom). **Note which step(s) each group hits** — a failure that appears only in step2 or step3 is much more interesting than one that already fails in step1. Treat one node crash that flunks many tests as a single group.
-4. For each group: list affected tests (truncate to ~10 with a "+N more" tail), give the most informative 1–3 lines of error context, mark the step(s) affected, and classify as one of `node-bug | test-bug | infra-flake | env-issue | upgrade-regression | unknown` with a short justification. Use `upgrade-regression` when a test passes in step1 but fails in step2 or step3 — that is the signal this workflow exists to catch.
-5. Skim `{RUN_DIR}/errors_all.log` and `{RUN_DIR}/scheduling.log` for anything corroborating (node crash on restart, hard-fork failure, supervisord errors, OOM, repeated tracebacks). When failures look cluster-management related (dead cluster instances, tests stuck waiting for resources), query the `overview` view of the affected step's status database.
-6. If a whole step is missing its `allure-results-stepN/` dir, that step likely failed before pytest ran — call this out explicitly and check `errors_all.log` / the workflow log group output for the cause (commonly a `start-cluster` / `supervisord` / hard-fork failure).
+2. Group failures by likely root cause (same exception class + message head, same node crash, same infra symptom). **Note which step(s) each group hits** — a failure that appears only in step2 or step3 is much more interesting than one that already fails in step1. Treat one node crash that flunks many tests as a single group.
+3. For each group: list affected tests (truncate to ~10 with a "+N more" tail), give the most informative 1–3 lines of error context, mark the step(s) affected, and classify as one of `node-bug | test-bug | infra-flake | env-issue | upgrade-regression | unknown` with a short justification. Use `upgrade-regression` when a test passes in step1 but fails in step2 or step3 — that is the signal this workflow exists to catch.
+4. Skim `{RUN_DIR}/errors_all.log` and `{RUN_DIR}/scheduling.log` for anything corroborating (node crash on restart, hard-fork failure, supervisord errors, OOM, repeated tracebacks). When failures look cluster-management related (dead cluster instances, tests stuck waiting for resources), query the `overview` view of the affected step's status database.
+5. If a whole step is missing its `allure-results-stepN/` dir, that step likely failed before pytest ran — call this out explicitly and check `errors_all.log` / the workflow log group output for the cause (commonly a `start-cluster` / `supervisord` / hard-fork failure).
 
 Known patterns:
 

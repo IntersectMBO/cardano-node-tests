@@ -97,20 +97,37 @@ jobs:
         id: analyze-failures
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_OAUTH_TOKEN == 'true'
         continue-on-error: true
+        # The action has its own internal timeout, this is insurance against
+        # the action itself hanging - without it a stuck step would run into
+        # the job timeout, and a job timeout is a cancellation that skips the
+        # artifact upload and mail steps.
+        timeout-minutes: 30
         uses: anthropics/claude-code-base-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           model: claude-sonnet-5
-          max_turns: "40"
-          allowed_tools: "Read,Write,Glob,Grep,Bash(ls:*),Bash(wc:*),Bash(head:*),Bash(tail:*),Bash(grep:*),Bash(find:*),Bash(cut:*),Bash(sort:*),Bash(uniq:*),Bash(awk:*),Bash(jq:*),Bash(sqlite3:*)"
+          max_turns: "80"
+          allowed_tools: "Read,Write,Glob,Grep,Bash(scripts/count_test_results.py:*),Bash(ls:*),Bash(wc:*),Bash(head:*),Bash(tail:*),Bash(grep:*),Bash(find:*),Bash(cut:*),Bash(sort:*),Bash(uniq:*),Bash(awk:*),Bash(jq:*),Bash(sqlite3:*)"
           prompt: ${{ env.ANALYSIS_PROMPT }}
       - name: Read failure analysis into env
         id: read-analysis
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_OAUTH_TOKEN == 'true'
+        env:
+          EXECUTION_FILE: ${{ steps.analyze-failures.outputs.execution_file }}
+          ANALYZE_OUTCOME: ${{ steps.analyze-failures.outcome }}
         run: |
+          # When the analyze step did not finish cleanly (e.g. ran out of
+          # turns mid-write), the analysis file may be a partial draft - mark
+          # it as such everywhere it is surfaced.
+          partial_note=""
+          if [ "$ANALYZE_OUTCOME" != "success" ]; then
+            partial_note="**Note: the analyze step did not finish cleanly (outcome: ${ANALYZE_OUTCOME}) - the analysis below may be incomplete.**"
+          fi
+
           if [ -s run_workdir/failure_analysis.md ]; then
             {
               echo 'FAILURE_ANALYSIS<<__EOF_ANALYSIS42__'
+              if [ -n "$partial_note" ]; then echo "$partial_note"; echo; fi
               cat run_workdir/failure_analysis.md
               # ensure delimiter is on its own line even if the file lacks a trailing newline
               printf '\n__EOF_ANALYSIS42__\n'
@@ -119,14 +136,28 @@ jobs:
             # Surface the analysis in the workflow run UI itself: full content
             # in a foldable log group, and a copy in the run summary so it's
             # reachable without downloading the testrun-files artifact.
+            if [ -n "$partial_note" ]; then
+              echo "::warning::Analyze step outcome: ${ANALYZE_OUTCOME} - failure_analysis.md may be partial."
+              { echo "$partial_note"; echo; } >> "$GITHUB_STEP_SUMMARY"
+            fi
             echo "::group::Preliminary failure analysis"
             cat run_workdir/failure_analysis.md
             echo
             echo "::endgroup::"
             cat run_workdir/failure_analysis.md >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "FAILURE_ANALYSIS=(no analysis produced)" >> "$GITHUB_ENV"
-            echo "::warning::No run_workdir/failure_analysis.md produced by the analyze step."
+            echo "FAILURE_ANALYSIS=(no analysis produced; analyze step outcome: ${ANALYZE_OUTCOME})" >> "$GITHUB_ENV"
+            echo "::error::No run_workdir/failure_analysis.md produced by the analyze step (outcome: ${ANALYZE_OUTCOME})."
+          fi
+
+          # Keep the Claude execution log with the testrun files so failed or
+          # incomplete analysis runs can be debugged from the artifact alone.
+          # The testing step can die before it creates run_workdir.
+          if [ -f "${EXECUTION_FILE:-}" ]; then
+            mkdir -p run_workdir
+            cp "$EXECUTION_FILE" run_workdir/claude-execution-output.json
+          else
+            echo "::warning::No Claude execution log available (execution_file: '${EXECUTION_FILE:-}')."
           fi
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7
@@ -172,6 +203,7 @@ jobs:
             run_workdir/scheduling.log
             run_workdir/errors_all.log
             run_workdir/failure_analysis.md
+            run_workdir/claude-execution-output.json
       - name: ↟ Upload CLI coverage
         uses: actions/upload-artifact@v7
         if: success() || failure()
