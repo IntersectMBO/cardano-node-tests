@@ -16,26 +16,17 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 
 Counting tests (IMPORTANT):
 
-Run following code snippet to get the correct counts:
+Run following command to get the correct counts and the list of failed/broken tests:
 
 ```sh
-passed=$(grep -l '"status": "passed"' {RUN_DIR}/allure-results/*result.json | wc -l)
-failed=$(grep -l '"status": "failed"' {RUN_DIR}/allure-results/*result.json | wc -l)
-broken=$(grep -l '"status": "broken"' {RUN_DIR}/allure-results/*result.json | wc -l)
-total=$(grep -l '"message": "Skipped: collected, not run"' {RUN_DIR}/allure-results/*result.json | wc -l)
-if [ "$total" -gt 0 ]; then
-  skipped=$(( total - passed - failed - broken ))
-else
-  skipped=$(grep -l '"status": "skipped"' {RUN_DIR}/allure-results/*result.json | wc -l)
-  total=$(( passed + failed + broken + skipped ))
-fi
-echo "Total: $total, Passed: $passed, Failed: $failed, Broken: $broken, Skipped: $skipped"
+scripts/count_test_results.py {RUN_DIR}/allure-results
 ```
+
+Run it exactly as shown, as a single plain command - do not wrap it in pipes, command substitution or other compound shell constructs, those are rejected by the CI command allowlist.
 
 Steps:
 
-1. Enumerate failed/broken tests:
-   `grep -E '"status": "(failed|broken)"' {RUN_DIR}/allure-results/*result.json | cut -c1-200`.
+1. Enumerate failed/broken tests from the `count_test_results.py` output above.
    (`broken` = pytest error in setup/teardown; `failed` = assertion failure.)
 2. Group failures by likely root cause (same exception class + message head, same node crash, same infra symptom). Treat one node crash that flunks many tests as a single group.
 3. For each group: list affected tests (truncate to ~10 with a "+N more" tail), give the most informative 1–3 lines of error context, and classify as one of `node-bug | test-bug | infra-flake | env-issue | unknown` with a short justification.
