@@ -2,11 +2,11 @@
 
 Resources can be requested by name (string).
 
-It is also possible to use filters. A filter is a class that gets a list of all unavailable
+It is also possible to use filters. A filter is an object that gets a list of all unavailable
 resources and returns a list of resources that should be used. An example is `OneOf`, which returns
 one usable resource from a given list of resources. The unavailable resources passed to the filter
-include resources that are unavailable because they are locked, and also resources that were
-already selected by preceding filters in the same request.
+include resources that are locked, resources that were requested by name in the same request, and
+resources that were already selected by preceding filters in the same request.
 
 It is possible to use multiple `OneOf` filters in a single request. For example, using `OneOf`
 filter with the same set of resources twice will result in selecting two different resources from
@@ -17,31 +17,32 @@ import random
 import typing as tp
 
 
-class BaseFilter:
-    """Base class for resource filters."""
+class ResourceFilter(tp.Protocol):
+    """Protocol for resource filters."""
+
+    def filter(self, unavailable: tp.Iterable[str]) -> list[str]:
+        """Return resources to use, given the currently unavailable resources.
+
+        The `unavailable` resources include resources that are locked, resources that were
+        requested by name in the same request, and resources that were already selected by
+        preceding filters in the same request.
+
+        Returning an empty list means the request cannot be satisfied.
+        """
+        raise NotImplementedError
+
+
+class OneOf(ResourceFilter):
+    """Filter that returns one usable resource out of list of resources."""
 
     def __init__(self, resources: tp.Iterable[str]) -> None:
         if isinstance(resources, str):
             msg = "`resources` cannot be a string"
             raise TypeError(msg)
-        self.resources = resources
+        self.resources = tuple(resources)
 
-    def filter(self, unavailable: tp.Iterable[str], **kwargs: tp.Any) -> list[str]:
-        """Filter resources."""
-        raise NotImplementedError
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.resources})"
-
-
-class OneOf(BaseFilter):
-    """Filter that returns one usable resource out of list of resources."""
-
-    def filter(
-        self,
-        unavailable: tp.Iterable[str],
-        **kwargs: tp.Any,  # noqa: ARG002
-    ) -> list[str]:
+    def filter(self, unavailable: tp.Iterable[str]) -> list[str]:
+        """Return one randomly selected usable resource, or an empty list if none is usable."""
         if isinstance(unavailable, str):
             msg = "`unavailable` cannot be a string"
             raise TypeError(msg)
@@ -52,8 +53,11 @@ class OneOf(BaseFilter):
 
         return [random.choice(usable)]
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.resources})"
 
-ResourcesType = tp.Iterable[str | BaseFilter]
+
+ResourcesType = tp.Iterable[str | ResourceFilter]
 
 
 def get_resources(
