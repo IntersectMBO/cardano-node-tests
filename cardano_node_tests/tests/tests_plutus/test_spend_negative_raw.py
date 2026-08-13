@@ -164,7 +164,10 @@ class TestNegative:
 
         assert err, "Expected failure did not happen"
         with common.allow_unstable_error_messages():
-            assert "ValidationTagMismatch (IsValid True)" in err, err
+            assert (
+                "ValidationTagMismatch Phase2Valid" in err  # In cardano-node >= 11.1.0
+                or "ValidationTagMismatch (IsValid True)" in err
+            ), err
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS_VERSION
@@ -1027,7 +1030,10 @@ class TestNegativeRedeemer:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "ValidationTagMismatch (IsValid True)" in exc_value, exc_value
+            assert (
+                "ValidationTagMismatch Phase2Valid" in exc_value  # In cardano-node >= 11.1.0
+                or "ValidationTagMismatch (IsValid True)" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
@@ -1237,7 +1243,10 @@ class TestNegativeRedeemer:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed)
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "ValidationTagMismatch (IsValid True)" in exc_value, exc_value
+            assert (
+                "ValidationTagMismatch Phase2Valid" in exc_value  # In cardano-node >= 11.1.0
+                or "ValidationTagMismatch (IsValid True)" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(min_size=65))
