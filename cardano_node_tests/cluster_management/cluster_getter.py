@@ -120,7 +120,7 @@ class ClusterGetter:
         self.pytest_tmp_dir = temptools.get_pytest_root_tmp()
         self.cluster_lock = common.get_cluster_lock_file()
 
-        if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:
+        if cluster_nodes.get_cluster_type().is_local:
             # Soft timeout (seconds): applies when no cluster is selected.
             self.grace_period_soft = 3600
             # Hard timeout (seconds): always applies, regardless of cluster selection.

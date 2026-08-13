@@ -50,61 +50,83 @@ class Testnets(enum.StrEnum):
     mainnet = "mainnet"
 
 
-class ClusterType:
-    """Generic cluster type."""
+class ClusterKind(enum.StrEnum):
+    LOCAL = "local"
+    TESTNET = "testnet"
 
-    LOCAL: tp.Final[str] = "local"
-    TESTNET: tp.Final[str] = "testnet"
-    test_addr_records: tp.ClassVar[tuple[str, ...]] = (
-        "user1",
-        "user2",
-        "user3",
-        "user4",
-        "user5",
-    )
 
-    NODES: tp.ClassVar[set[str]] = set()
+TEST_ADDR_RECORDS: tp.Final[tuple[str, ...]] = (
+    "user1",
+    "user2",
+    "user3",
+    "user4",
+    "user5",
+)
 
+# The message is a module-level constant so that each abstract protocol method body stays
+# a single `raise` statement and type checkers keep treating the methods as abstract (see
+# the same pattern in `cluster_scripts`).
+_NOT_IMPLEMENTED_MSG: tp.Final[str] = "Not implemented for this cluster type."
+
+
+class ClusterType(tp.Protocol):
+    """Protocol for cluster types."""
+
+    NODES: tp.ClassVar[frozenset[str]]
+
+    type: ClusterKind
     cluster_scripts: cluster_scripts.ScriptsTypes
 
-    def __init__(self) -> None:
-        self.type = "unknown"
+    @property
+    def is_local(self) -> bool:
+        """Check if the cluster runs on a local testnet."""
+        return self.type is ClusterKind.LOCAL
+
+    @property
+    def is_testnet(self) -> bool:
+        """Check if the cluster runs on a long-running public network (preview, mainnet, etc.)."""
+        return self.type is ClusterKind.TESTNET
 
     @property
     def testnet_type(self) -> str:
-        return ""
+        """Return testnet type (preview, preprod, etc.).
+
+        Returns an empty string on local cluster and "unknown" when the testnet is not
+        recognized.
+        """
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
     @property
     def uses_shortcut(self) -> bool:
         """Check if cluster uses shortcut to go from Byron to last supported era."""
-        msg = f"Not implemented for cluster type '{self.type}'."
-        raise NotImplementedError(msg)
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
     def get_cluster_obj(self, *, command_era: str = "") -> clusterlib.ClusterLib:
         """Return instance of `ClusterLib` (cluster_obj)."""
-        msg = f"Not implemented for cluster type '{self.type}'."
-        raise NotImplementedError(msg)
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
     def create_addrs_data(
         self, *, cluster_obj: clusterlib.ClusterLib, destination_dir: clusterlib.FileType = "."
     ) -> dict[str, dict[str, tp.Any]]:
         """Create addresses and their keys for usage in tests."""
-        msg = f"Not implemented for cluster type '{self.type}'."
-        raise NotImplementedError(msg)
+        raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
 
 
 class LocalCluster(ClusterType):
     """Local cluster type (full cardano mode)."""
 
-    NODES: tp.ClassVar[set[str]] = {
-        "bft1",
-        *(f"pool{i}" for i in range(1, configuration.NUM_POOLS + 1)),
-    }
+    NODES: tp.ClassVar[frozenset[str]] = frozenset(
+        {"bft1", *(f"pool{i}" for i in range(1, configuration.NUM_POOLS + 1))}
+    )
 
     def __init__(self) -> None:
-        super().__init__()
-        self.type = ClusterType.LOCAL
+        self.type = ClusterKind.LOCAL
         self.cluster_scripts = cluster_scripts.LocalScripts()
+
+    @property
+    def testnet_type(self) -> str:
+        """Return empty string, local cluster is not a testnet."""
+        return ""
 
     @property
     def uses_shortcut(self) -> bool:
@@ -143,7 +165,7 @@ class LocalCluster(ClusterType):
 
         # Create new addresses
         new_addrs_data: dict[str, dict[str, tp.Any]] = {}
-        for addr_name in self.test_addr_records:
+        for addr_name in TEST_ADDR_RECORDS:
             addr_name_instance = f"{addr_name}_ci{instance_num}"
             payment = cluster_obj.g_address.gen_payment_addr_and_keys(
                 name=addr_name_instance,
@@ -177,7 +199,7 @@ class LocalCluster(ClusterType):
         # Fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
         to_fund = [d["payment"] for d in new_addrs_data.values()]
-        amount_per_address = 100_000_000_000_000 // len(self.test_addr_records)
+        amount_per_address = 100_000_000_000_000 // len(TEST_ADDR_RECORDS)
         faucet.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
@@ -200,11 +222,10 @@ class TestnetCluster(ClusterType):
         1666656000: {"type": Testnets.preview, "byron_epochs": 0},
     }
 
-    NODES: tp.ClassVar[set[str]] = {"relay1"}
+    NODES: tp.ClassVar[frozenset[str]] = frozenset({"relay1"})
 
     def __init__(self) -> None:
-        super().__init__()
-        self.type = ClusterType.TESTNET
+        self.type = ClusterKind.TESTNET
         self.cluster_scripts = cluster_scripts.TestnetScripts()
 
         # Cached values
@@ -217,7 +238,7 @@ class TestnetCluster(ClusterType):
 
     @property
     def testnet_type(self) -> str:
-        """Return testnet type (shelley_qa, etc.)."""
+        """Return testnet type (preview, preprod, etc.)."""
         if self._testnet_type:
             return self._testnet_type
 
@@ -258,12 +279,12 @@ class TestnetCluster(ClusterType):
             skey_file=shelley_dir / "faucet.skey",
         )
         faucet_addrs_data: dict[str, dict[str, tp.Any]] = {
-            self.test_addr_records[1]: {"payment": faucet_rec}
+            TEST_ADDR_RECORDS[1]: {"payment": faucet_rec}
         }
 
         # Create new addresses
         new_addrs_data: dict[str, dict[str, tp.Any]] = {}
-        for addr_name in self.test_addr_records[1:]:
+        for addr_name in TEST_ADDR_RECORDS[1:]:
             payment = cluster_obj.g_address.gen_payment_addr_and_keys(
                 name=addr_name,
                 destination_dir=destination_dir,
@@ -278,11 +299,11 @@ class TestnetCluster(ClusterType):
         # Fund new addresses from faucet address
         LOGGER.debug("Funding created addresses.")
         to_fund = [d["payment"] for d in new_addrs_data.values()]
-        amount_per_address = faucet_balance // len(self.test_addr_records)
+        amount_per_address = faucet_balance // len(TEST_ADDR_RECORDS)
         faucet.fund_from_faucet(
             *to_fund,
             cluster_obj=cluster_obj,
-            faucet_data=faucet_addrs_data[self.test_addr_records[1]],
+            faucet_data=faucet_addrs_data[TEST_ADDR_RECORDS[1]],
             amount=amount_per_address,
             destination_dir=destination_dir,
             force=True,

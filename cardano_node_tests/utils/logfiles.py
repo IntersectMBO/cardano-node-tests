@@ -109,7 +109,7 @@ def _get_ignored_error_regexes() -> list[str]:
         # on GitHub runners.
         errors_ignored.append("TraceBlockFromFuture")
 
-    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+    if cluster_nodes.get_cluster_type().is_testnet:
         errors_ignored.extend(
             (
                 # We can get this error when some clients are old, or are using wrong

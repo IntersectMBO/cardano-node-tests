@@ -102,10 +102,8 @@ def skip_on_hf_shortcut(
     cluster_pots: clusterlib.ClusterLib,  # noqa: ARG001
 ) -> None:
     """Skip test if HF shortcut is used."""
-    if (
-        cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
-        and cluster_nodes.get_cluster_type().uses_shortcut
-    ):
+    cluster_type = cluster_nodes.get_cluster_type()
+    if cluster_type.is_local and cluster_type.uses_shortcut:
         pytest.skip("MIR certs testing is not supported on local cluster with HF shortcut.")
 
 
