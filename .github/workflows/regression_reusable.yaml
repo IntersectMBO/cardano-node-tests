@@ -133,6 +133,8 @@ jobs:
         if: success() || failure()
         run: |
           if [ -f deselected_tests.txt ]; then
+            # The testing step can die before it creates run_workdir.
+            mkdir -p run_workdir
             mv deselected_tests.txt run_workdir/
           fi
       - name: Load failure-analysis prompt
@@ -163,11 +165,19 @@ jobs:
           prompt: ${{ env.ANALYSIS_PROMPT }}
       - name: Read failure analysis into env
         id: read-analysis
-        if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_OAUTH_TOKEN == 'true'
+        # No `env.HAS_OAUTH_TOKEN` condition here - without the token, this step still has to
+        # set the FAILURE_ANALYSIS placeholder that the mail body renders.
+        if: (success() || failure()) && steps.testing-step.outcome != 'success'
         env:
           EXECUTION_FILE: ${{ steps.analyze-failures.outputs.execution_file }}
           ANALYZE_OUTCOME: ${{ steps.analyze-failures.outcome }}
         run: |
+          if [ "$HAS_OAUTH_TOKEN" != "true" ]; then
+            echo "FAILURE_ANALYSIS=(AI failure analysis not configured - the CLAUDE_CODE_OAUTH_TOKEN secret is not set)" >> "$GITHUB_ENV"
+            echo "::notice::AI failure analysis skipped - the CLAUDE_CODE_OAUTH_TOKEN secret is not set."
+            exit 0
+          fi
+
           # When the analyze step did not finish cleanly (e.g. ran out of
           # turns mid-write), the analysis file may be a partial draft - mark
           # it as such everywhere it is surfaced.
