@@ -12,9 +12,12 @@ Result files are grouped per test (by Allure `historyId`, which identifies a
 test together with its parameters), so tests with multiple result files are
 counted once. Multiple files per test are normal: the initial `--skipall`
 pass of `runner/run_tests.sh` registers every collected test with a
-"Skipped: collected, not run" result file, and tests skipped via `skipif`
-markers are recorded under their own skip reason even during that pass. The
-newest non-registration result of a test wins.
+"Skipped: collected, not run" result file, and the real testrun then adds a
+result file with the real status. The newest non-registration result of a
+test wins. (Result directories produced before the `--skipall` fix may also
+contain registration files carrying a test's own `skipif` or `skip` reason -
+those are treated as real results, which the newest-wins rule resolves
+correctly.)
 
 This is a standalone script so that AI failure analysis in CI can get the
 counts with a single allowlisted command - the CI allowlist permits only
