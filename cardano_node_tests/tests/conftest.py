@@ -137,7 +137,7 @@ def pytest_configure(config: tp.Any) -> None:
         LOGGER.warning(" WARNING: Using `cardano-node` from custom path!")
 
 
-def _skip_all_tests(config: tp.Any, items: list) -> bool:
+def _skip_all_tests(config: tp.Any, items: list) -> None:
     """Skip all tests if specified on command line.
 
     Can be used for collecting all tests and having "skipped" result before running them for real.
@@ -145,25 +145,23 @@ def _skip_all_tests(config: tp.Any, items: list) -> bool:
     just tests that were not run yet.
     """
     if not config.getvalue("skipall"):
-        return False
+        return
 
-    marker = pytest.mark.skip(reason="collected, not run")
+    # A `skipif` marker, because pytest evaluates `skipif` markers before plain `skip` markers.
+    # A plain `skip` marker would lose to a `skipif` marker the test already has (e.g.
+    # `SKIPIF_BUILD_EST_1199`) and the test would be registered under that marker's reason
+    # instead of "collected, not run". Prepended (`append=False`) so it also takes precedence
+    # over the test's own `skipif` markers.
+    marker = pytest.mark.skipif(True, reason="collected, not run")
 
     for item in items:
-        item.add_marker(marker)
-
-    return True
+        item.add_marker(marker, append=False)
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa: C901
-    # Prevent on slave nodes (xdist)
-    if hasattr(config, "slaveinput"):
-        return
-
-    if _skip_all_tests(config=config, items=items):
-        return
-
+def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:
+    # This hook must also run on xdist worker nodes - with xdist, only the workers collect
+    # tests, and MARKEXPR filtering relies on the markers added here.
     skip_dbsync_marker = pytest.mark.skip(reason="db-sync not available")
 
     def _mark_needs_dbsync(item: tp.Any) -> None:
@@ -195,6 +193,12 @@ def pytest_collection_modifyitems(config: tp.Any, items: list) -> None:  # noqa:
     for item in items:
         _mark_needs_dbsync(item)
         _skip_disabled(item)
+
+    # This hook must never return before the dynamic markers above are added: MARKEXPR
+    # filtering runs in a later `pytest_collection_modifyitems` implementation and may rely
+    # on dynamically added markers such as `dbsync`, so the `--skipall` pass has to add them
+    # too in order to collect exactly the same set of tests as the real run.
+    _skip_all_tests(config=config, items=items)
 
 
 @pytest.hookimpl(tryfirst=True)
