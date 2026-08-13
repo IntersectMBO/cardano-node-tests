@@ -251,7 +251,7 @@ def _stop_all_cluster_instances(cluster_manager_obj: cluster_management.ClusterM
 
 def _testnet_cleanup(pytest_root_tmp: pl.Path) -> None:
     """Perform testnet cleanup at the end of session."""
-    if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.TESTNET:
+    if not cluster_nodes.get_cluster_type().is_testnet:
         return
 
     # There's only one cluster instance for testnets, so we don't need to use cluster manager
@@ -411,7 +411,7 @@ def respin_on_large_db(
     if (
         os.environ.get("GITHUB_ACTIONS")
         and configuration.HAS_DBSYNC
-        and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+        and cluster_nodes.get_cluster_type().is_local
         and cluster_manager._cluster_instance_num != -1
     ):
         db_size = dbsync_queries.query_db_size()

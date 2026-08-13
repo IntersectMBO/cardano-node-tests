@@ -187,7 +187,7 @@ def cluster_with_constitution(
         if cur_constitution.get("script") != constitution_script_hash:
             if conway_common.is_in_bootstrap(cluster_obj=cluster):
                 pytest.skip("Cannot run update constitution during bootstrap period.")
-            if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
+            if not cluster_nodes.get_cluster_type().is_local:
                 pytest.skip("Cannot run update constitution on non-local testnet.")
 
             _url = helpers.get_vcs_link()

@@ -95,7 +95,7 @@ def get_custom_drep(
     caching_key: str,
 ) -> governance_utils.DRepRegistration:
     """Create a custom DRep and cache it."""
-    if cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL:
+    if not cluster_nodes.get_cluster_type().is_local:
         pytest.skip("runs only on local cluster")
 
     fixture_cache: cluster_management.FixtureCache[governance_utils.DRepRegistration | None]
@@ -1087,7 +1087,7 @@ class TestDelegDReps:
         check_delegation = (
             build_method == clusterlib_utils.BuildMethods.BUILD
             and submit_method == submit_utils.SubmitMethods.CLI
-            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+            and cluster_nodes.get_cluster_type().is_local
             and "smoke" not in request.config.getoption("-m")
         )
 
@@ -1302,7 +1302,7 @@ class TestDelegDReps:
         check_delegation = (
             build_method == clusterlib_utils.BuildMethods.BUILD
             and submit_method == submit_utils.SubmitMethods.CLI
-            and cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL
+            and cluster_nodes.get_cluster_type().is_local
             and "smoke" not in request.config.getoption("-m")
         )
 

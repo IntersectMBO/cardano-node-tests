@@ -163,12 +163,12 @@ SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
 )
 
 SKIPIF_ON_TESTNET = pytest.mark.skipif(
-    cluster_nodes.get_cluster_type().type != cluster_nodes.ClusterType.LOCAL,
+    not cluster_nodes.get_cluster_type().is_local,
     reason="not supposed to run on long-running testnet",
 )
 
 SKIPIF_ON_LOCAL = pytest.mark.skipif(
-    cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL,
+    cluster_nodes.get_cluster_type().is_local,
     reason="supposed to run on long-running testnet",
 )
 
@@ -239,7 +239,7 @@ PARAM_COMPAT_ERAS = pytest.mark.parametrize("era", COMPAT_ERAS)
 
 
 # Intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)
-if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:
+if cluster_nodes.get_cluster_type().is_local:
     # Time buffer at the end of an epoch, enough to do something that takes several transactions
     EPOCH_STOP_SEC_BUFFER = -40
     # Time when all ledger state info is available for the current epoch
@@ -400,7 +400,7 @@ def detect_fork(
 
     # Forked nodes are the ones that differ from the majority of nodes
     if forked_nodes and len(forked_nodes) > (len(known_nodes) // 2):
-        forked_nodes = known_nodes - forked_nodes
+        forked_nodes = set(known_nodes - forked_nodes)
 
     return forked_nodes, unsynced_nodes
 
@@ -677,7 +677,7 @@ def is_fee_in_interval(fee: float, expected_fee: float, frac: float = 0.1) -> bo
     range.
     """
     # We have the fees calibrated only for local testnet
-    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+    if cluster_nodes.get_cluster_type().is_testnet:
         return True
     return helpers.is_in_interval(fee, expected_fee, frac=frac)
 

@@ -81,7 +81,7 @@ def cluster_and_pool(
     single fixture.
     """
     cluster_type = cluster_nodes.get_cluster_type()
-    if cluster_type.type == cluster_nodes.ClusterType.TESTNET:
+    if cluster_type.is_testnet:
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get(use_resources=use_resources)
 
         # Getting ledger state on official testnet is too expensive,

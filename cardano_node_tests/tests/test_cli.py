@@ -1217,7 +1217,7 @@ class TestAdvancedQueries:
         expected_pool_ids_mapping = {p: helpers.decode_bech32(bech32=p) for p in expected_pool_ids}
 
         def _dump_on_error():
-            if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.LOCAL:
+            if cluster_nodes.get_cluster_type().is_local:
                 clusterlib_utils.save_ledger_state(
                     cluster_obj=cluster_obj, state_name=temp_template
                 )

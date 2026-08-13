@@ -649,7 +649,7 @@ def check_plutus_costs(
 
     units: the time is in picoseconds and the space is in bytes.
     """
-    if cluster_nodes.get_cluster_type().type == cluster_nodes.ClusterType.TESTNET:
+    if cluster_nodes.get_cluster_type().is_testnet:
         # We have the costs calibrated only for local testnet
         return
 
