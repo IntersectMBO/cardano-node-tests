@@ -160,21 +160,20 @@ def test_on_marked_test_stop_no_respin_promise():
 
 
 @pytest.mark.usefixtures("db_dir")
-def test_cleanup_dead_clusters_removes_marks():
+def test_cleanup_dead_cluster_removes_marks():
     """Check that dead cluster instance cleanup removes marks and marked resources."""
     getter = _get_cluster_getter()
     cget_status = _get_cget_status(instance_num=0)
     cget_status.selected_instance = 0
-    cget_status.respin_here = True
-    cget_status.respin_ready = True
+    # The state a worker is in when its respin attempt failed and killed the instance
+    cget_status.respin_state = cluster_getter._RespinState.RESPUN
 
     _populate_marked(instance_num=0, mark="markA")
 
-    getter._cleanup_dead_clusters(cget_status)
+    getter._cleanup_dead_cluster(cget_status)
 
     assert cget_status.selected_instance == -1
-    assert cget_status.respin_here is False
-    assert cget_status.respin_ready is False
+    assert cget_status.respin_state is cluster_getter._RespinState.NONE
     assert status_db.list_curr_mark(instance_num=0) == []
     assert status_db.get_resource_names(mode=status_db.MODE_LOCK, instance_num=0) == []
     assert status_db.get_resource_names(mode=status_db.MODE_USE, instance_num=0) == []
@@ -203,7 +202,7 @@ def test_init_respin_own_mark():
     assert getter._init_respin(cget_status) is False
 
     assert cget_status.marked_ready_rows == ()
-    assert cget_status.respin_here is True
+    assert cget_status.respin_state is cluster_getter._RespinState.CLAIMED
     assert cget_status.selected_instance == 0
     assert len(status_db.list_respin_progress(instance_num=0)) == 1
     # The respin stays scheduled even when the re-evaluation gets delayed
@@ -212,13 +211,20 @@ def test_init_respin_own_mark():
     assert status_db.get_resource_names(mode=status_db.MODE_LOCK, instance_num=0) == []
     assert status_db.get_resource_names(mode=status_db.MODE_USE, instance_num=0) == []
 
-    # The re-evaluation re-creates the mark's records; the second `_init_respin` call
-    # must short-circuit on `respin_here` and not wipe them again
+    # The re-evaluation re-creates the mark's records; later `_init_respin` calls
+    # must short-circuit on the owned respin and not wipe them again. The short-circuit
+    # must hold in every owning phase, incl. the post-respin re-entry.
     _populate_marked(instance_num=0, mark="markA")
-    assert getter._init_respin(cget_status) is True
-    assert len(status_db.list_curr_mark(instance_num=0)) == 1
-    assert status_db.get_resource_names(mode=status_db.MODE_LOCK, instance_num=0) != []
-    assert len(status_db.list_respin_progress(instance_num=0)) == 1
+    for own_state in (
+        cluster_getter._RespinState.CLAIMED,
+        cluster_getter._RespinState.ARMED,
+        cluster_getter._RespinState.RESPUN,
+    ):
+        cget_status.respin_state = own_state
+        assert getter._init_respin(cget_status) is True
+        assert len(status_db.list_curr_mark(instance_num=0)) == 1
+        assert status_db.get_resource_names(mode=status_db.MODE_LOCK, instance_num=0) != []
+        assert len(status_db.list_respin_progress(instance_num=0)) == 1
 
 
 @pytest.mark.usefixtures("db_dir")
@@ -240,8 +246,8 @@ def test_marked_select_instance_respinner_not_blocked():
     assert getter._marked_select_instance(cget_status) is False
 
     # The respinning worker proceeds as the first test of the mark
-    cget_status.respin_here = True
-    cget_status.selected_instance = 0  # `respin_here` always comes with the pinned instance
+    cget_status.respin_state = cluster_getter._RespinState.CLAIMED
+    cget_status.selected_instance = 0  # A claimed respin always comes with the pinned instance
     assert getter._marked_select_instance(cget_status) is True
 
 
@@ -262,7 +268,7 @@ def test_init_respin_tests_running():
 
     assert getter._init_respin(cget_status) is False
 
-    assert cget_status.respin_here is False
+    assert cget_status.respin_state is cluster_getter._RespinState.NONE
     assert status_db.list_respin_progress(instance_num=0) == []
     assert len(status_db.list_curr_mark(instance_num=0)) == 1
     assert status_db.get_resource_names(mode=status_db.MODE_LOCK, instance_num=0) != []
@@ -283,7 +289,7 @@ def test_init_respin_foreign_marks():
 
     assert getter._init_respin(cget_status) is True
 
-    assert cget_status.respin_here is True
+    assert cget_status.respin_state is cluster_getter._RespinState.CLAIMED
     assert status_db.list_curr_mark(instance_num=0) == []
     assert status_db.get_resource_names(mode=status_db.MODE_LOCK, instance_num=0) == []
 
@@ -713,20 +719,25 @@ class TestPrio:
 
 
 @pytest.mark.usefixtures("db_dir")
-def test_respun_by_other_worker():
+def test_being_respun_by_other_worker():
     """Check the detection of a respin done by another worker."""
     getter = _get_cluster_getter()
     cget_status = _get_cget_status(instance_num=0)
 
-    assert getter._respun_by_other_worker(cget_status) is False
+    assert getter._being_respun_by_other_worker(cget_status) is False
 
     status_db.create_respin_progress(instance_num=0, worker_id="gw1")
     getter.snap.refresh()
-    assert getter._respun_by_other_worker(cget_status) is True
+    assert getter._being_respun_by_other_worker(cget_status) is True
 
-    # The worker doing the respin is not blocked by its own respin
-    cget_status.respin_here = True
-    assert getter._respun_by_other_worker(cget_status) is False
+    # The worker doing the respin is not blocked by its own respin, in any phase
+    for own_state in (
+        cluster_getter._RespinState.CLAIMED,
+        cluster_getter._RespinState.ARMED,
+        cluster_getter._RespinState.RESPUN,
+    ):
+        cget_status.respin_state = own_state
+        assert getter._being_respun_by_other_worker(cget_status) is False
 
 
 @pytest.mark.usefixtures("db_dir")
@@ -745,34 +756,64 @@ def test_is_already_running():
 
 
 @pytest.mark.usefixtures("db_dir")
-def test_finish_respin_phases():
-    """Check the two-phase respin finishing.
+def test_respin_arm_and_cleanup():
+    """Check respin arming and the cleanup after the respin.
 
-    The first call only signals that the cluster instance is ready to be respun (the
-    actual respin runs outside of the global lock). The second call cleans up the
-    respin status records.
+    Arming only signals that the cluster instance is ready to be respun (the actual
+    respin runs outside of the global lock). The cleanup afterwards removes the respin
+    status records.
     """
     getter = _get_cluster_getter()
     cget_status = _get_cget_status(instance_num=0)
 
-    # No respin on this worker - nothing to do
-    assert getter._finish_respin(cget_status) is True
-
-    cget_status.respin_here = True
+    cget_status.respin_state = cluster_getter._RespinState.CLAIMED
     status_db.create_respin_progress(instance_num=0, worker_id="gw0")
     status_db.create_respin_needed(instance_num=0, worker_id="gw0")
 
-    # First call - ready to respin, cannot continue in this iteration
-    assert getter._finish_respin(cget_status) is False
-    assert cget_status.respin_ready is True
+    # Arm the respin - the status records must stay until the respin is performed
+    getter._arm_respin(cget_status)
+    assert cget_status.respin_state is cluster_getter._RespinState.ARMED
     assert len(status_db.list_respin_progress(instance_num=0)) == 1
+    assert len(status_db.list_respin_needed(instance_num=0)) == 1
 
-    # Second call - respin done, clean up
-    assert getter._finish_respin(cget_status) is True
-    assert cget_status.respin_ready is False
-    assert cget_status.respin_here is False
+    # The respin itself runs in `get_cluster_instance`, outside of the global lock
+    cget_status.respin_state = cluster_getter._RespinState.RESPUN
+
+    # Respin done - clean up
+    getter._cleanup_after_respin(cget_status)
+    assert cget_status.respin_state is cluster_getter._RespinState.NONE
     assert status_db.list_respin_progress(instance_num=0) == []
     assert status_db.list_respin_needed(instance_num=0) == []
+
+
+@pytest.mark.usefixtures("db_dir")
+def test_respin_wrong_state_rejected():
+    """Check that arming and cleanup fail fast when called in a wrong respin state."""
+    getter = _get_cluster_getter()
+    cget_status = _get_cget_status(instance_num=0)
+
+    # Arming is valid only for a claimed respin
+    for state in (
+        cluster_getter._RespinState.NONE,
+        cluster_getter._RespinState.ARMED,
+        cluster_getter._RespinState.RESPUN,
+    ):
+        cget_status.respin_state = state
+        with pytest.raises(RuntimeError, match="Cannot arm respin"):
+            getter._arm_respin(cget_status)
+
+    # Cleanup is valid only for a performed respin - a premature call would delete
+    # another worker's respin status records
+    status_db.create_respin_progress(instance_num=0, worker_id="gw1")
+    for state in (
+        cluster_getter._RespinState.NONE,
+        cluster_getter._RespinState.CLAIMED,
+        cluster_getter._RespinState.ARMED,
+    ):
+        cget_status.respin_state = state
+        with pytest.raises(RuntimeError, match="Cannot clean up after respin"):
+            getter._cleanup_after_respin(cget_status)
+    assert len(status_db.list_respin_progress(instance_num=0)) == 1
 
 
 @pytest.mark.usefixtures("db_dir")
