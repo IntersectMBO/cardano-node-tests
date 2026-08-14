@@ -8,6 +8,7 @@ from cardano_node_tests.cluster_management import cluster_getter
 from cardano_node_tests.cluster_management import resources
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.cluster_management import status_db
+from cardano_node_tests.utils import configuration
 
 
 def _get_cluster_getter(num_of_instances: int = 1) -> cluster_getter.ClusterGetter:
@@ -922,3 +923,401 @@ class TestDeadFraction:
         # Within the strict check window - 2 of 3 dead fails the run
         with pytest.raises(RuntimeError, match="Too many cluster instances are dead"):
             getter._fail_on_dead_clusters(remaining_time_sec=getter.strict_check_window)
+
+
+@pytest.mark.usefixtures("db_dir")
+def test_respin_if_armed(monkeypatch: pytest.MonkeyPatch):
+    """Check that the armed respin runs exactly once per claim.
+
+    The respin runs only in the ARMED phase and the move to RESPUN right after
+    the run prevents another restart when the instance loop is re-entered before
+    the cleanup.
+    """
+    getter = _get_cluster_getter()
+    cget_status = _get_cget_status(instance_num=0)
+    cget_status.scriptsdir = "custom"
+
+    respin_calls: list[str] = []
+    monkeypatch.setattr(getter, "_respin", lambda scriptsdir: respin_calls.append(scriptsdir))
+
+    # Nothing runs while the respin is not armed
+    for state in (
+        cluster_getter._RespinState.NONE,
+        cluster_getter._RespinState.CLAIMED,
+        cluster_getter._RespinState.RESPUN,
+    ):
+        cget_status.respin_state = state
+        getter._respin_if_armed(cget_status)
+        assert respin_calls == []
+        assert cget_status.respin_state is state
+
+    # The armed respin runs with the test's custom scripts and moves to RESPUN
+    cget_status.respin_state = cluster_getter._RespinState.ARMED
+    getter._respin_if_armed(cget_status)
+    assert respin_calls == ["custom"]
+    assert cget_status.respin_state is cluster_getter._RespinState.RESPUN
+
+    # Re-entering must not run the respin again
+    getter._respin_if_armed(cget_status)
+    assert respin_calls == ["custom"]
+
+
+@pytest.mark.usefixtures("db_dir")
+def test_respin_if_armed_failure(monkeypatch: pytest.MonkeyPatch):
+    """Check that a failed respin still moves to RESPUN and is not retried.
+
+    A failed `_respin` marks the cluster instance dead and the recovery is
+    handled by the dead cluster check on the next iteration - not by running
+    the respin again.
+    """
+    getter = _get_cluster_getter()
+    cget_status = _get_cget_status(instance_num=0)
+    cget_status.respin_state = cluster_getter._RespinState.ARMED
+
+    respin_calls: list[str] = []
+
+    def _failing_respin(scriptsdir: str = "") -> bool:
+        respin_calls.append(scriptsdir)
+        status_db.set_cluster_dead(instance_num=0)
+        return False
+
+    monkeypatch.setattr(getter, "_respin", _failing_respin)
+
+    getter._respin_if_armed(cget_status)
+
+    assert respin_calls == [""]
+    assert cget_status.respin_state is cluster_getter._RespinState.RESPUN
+
+    # Re-entering must not retry the failed respin
+    getter._respin_if_armed(cget_status)
+    assert respin_calls == [""]
+
+
+@pytest.mark.usefixtures("db_dir")
+class TestEvaluateInstance:
+    """Check the evaluation of a single cluster instance for the current test."""
+
+    def test_dead_instance(self):
+        """Check that a dead instance is skipped and the worker state is reset."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+        cget_status.selected_instance = 0
+        cget_status.respin_state = cluster_getter._RespinState.RESPUN
+        status_db.set_cluster_dead(instance_num=0)
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.instance_num == 0
+        assert cget_status.selected_instance == -1
+        assert cget_status.respin_state is cluster_getter._RespinState.NONE
+
+    def test_respun_elsewhere(self):
+        """Check that an instance being respun by another worker is skipped."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+        status_db.create_respin_progress(instance_num=0, worker_id="gw1")
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.sleep_delay == 5
+
+    def test_too_many_tests(self):
+        """Check that a full instance is skipped when there are more instances."""
+        getter = _get_cluster_getter(num_of_instances=2)
+        cget_status = _get_cget_status(instance_num=-1)
+        status_db.set_cluster_running(instance_num=0)
+        for tno in range(configuration.MAX_TESTS_PER_CLUSTER):
+            status_db.create_test_running(instance_num=0, worker_id=f"gw{tno}", test_id=f"t{tno}")
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.sleep_delay == 2
+
+    def test_needs_respin_try_next(self):
+        """Check that an instance that needs respin is skipped while others remain untried."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+
+        # The cluster instance was never started, so it needs respin
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.cluster_needs_respin is True
+        assert cget_status.respin_state is cluster_getter._RespinState.NONE
+
+    def test_needs_respin_claimed_last_resort(self):
+        """Check that the respin is claimed once all instances were tried."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+        cget_status.tried_all_instances = True
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+        assert cget_status.respin_state is cluster_getter._RespinState.CLAIMED
+        assert cget_status.selected_instance == 0
+        assert len(status_db.list_respin_progress(instance_num=0)) == 1
+
+    def test_resource_conflict(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that an instance without free resources is skipped."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+        cget_status.lock_resources = ["pool1"]
+        status_db.set_cluster_running(instance_num=0)
+        status_db.create_resources(
+            instance_num=0, worker_id="gw1", names=["pool1"], mode=status_db.MODE_USE
+        )
+        monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.sleep_delay == 5
+
+    def test_all_clear(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that a healthy running instance with free resources can start the test."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+        cget_status.lock_resources = ["pool1"]
+        status_db.set_cluster_running(instance_num=0)
+        monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+        assert cget_status.respin_state is cluster_getter._RespinState.NONE
+        assert cget_status.final_lock_resources == ["pool1"]
+
+    def test_needs_respin_custom_scripts(self):
+        """Check that a test with custom scripts claims the respin right away.
+
+        The respin is needed by the test itself, so the worker doesn't try other
+        instances first.
+        """
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+        cget_status.scriptsdir = "custom"
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+        assert cget_status.respin_state is cluster_getter._RespinState.CLAIMED
+        assert cget_status.selected_instance == 0
+
+    def test_max_tests_single_instance(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that the tests-per-cluster cap does not apply with a single instance.
+
+        With a single instance there is nowhere else to go, so the cap would only
+        deadlock the run.
+        """
+        getter = _get_cluster_getter(num_of_instances=1)
+        cget_status = _get_cget_status(instance_num=-1)
+        status_db.set_cluster_running(instance_num=0)
+        for tno in range(configuration.MAX_TESTS_PER_CLUSTER):
+            status_db.create_test_running(instance_num=0, worker_id=f"gw{tno}", test_id=f"t{tno}")
+        monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+
+    def test_marked_ready_inherits_resources(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that a non-initial marked test inherits the group's resources.
+
+        The initial test of the mark already resolved and locked the resources.
+        Re-resolving them would conflict with the group's own records and block
+        the test forever.
+        """
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1, mark="markA")
+        cget_status.lock_resources = ["pool1"]
+        status_db.set_cluster_running(instance_num=0)
+        status_db.create_curr_mark(instance_num=0, worker_id="gw1", mark="markA")
+        # The group's already-locked resource would block re-resolution
+        status_db.create_resources(
+            instance_num=0,
+            worker_id="gw1",
+            names=["pool1"],
+            mode=status_db.MODE_LOCK,
+            mark="markA",
+        )
+        monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+        # Pinned to the instance that has the mark
+        assert cget_status.selected_instance == 0
+        # Resources were not re-resolved
+        assert cget_status.final_lock_resources == ()
+
+    def test_respin_postponed_while_tests_run(self):
+        """Check that a last-resort respin claim is postponed while tests are running."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=-1)
+        cget_status.tried_all_instances = True
+        status_db.create_test_running(instance_num=0, worker_id="gw1", test_id="test_y")
+        getter.snap.refresh()
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.respin_state is cluster_getter._RespinState.NONE
+        assert status_db.list_respin_progress(instance_num=0) == []
+
+    def test_mark_running_elsewhere(self):
+        """Check that a marked test waits when its mark runs on another instance."""
+        getter = _get_cluster_getter(num_of_instances=2)
+        cget_status = _get_cget_status(instance_num=-1, mark="markA")
+        status_db.create_curr_mark(instance_num=1, worker_id="gw1", mark="markA")
+        getter.snap.refresh()
+        cget_status.marked_running_my_anywhere = getter.snap.list_curr_mark(mark="markA")
+
+        verdict = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.sleep_delay == 2
+
+
+@pytest.mark.usefixtures("db_dir")
+class TestPrepareSelectedInstance:
+    """Check the selection of an evaluated cluster instance."""
+
+    def _get_getter_status(
+        self, monkeypatch: pytest.MonkeyPatch, mark: str = ""
+    ) -> tuple[cluster_getter.ClusterGetter, cluster_getter._ClusterGetStatus, list[int]]:
+        """Return getter, status and env setup calls record for selecting instance 0."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(instance_num=0, mark=mark)
+        env_calls: list[int] = []
+        monkeypatch.setattr(
+            cluster_getter.cluster_nodes,
+            "set_cluster_env",
+            lambda instance_num: env_calls.append(instance_num),
+        )
+        return getter, cget_status, env_calls
+
+    def test_no_respin(self, monkeypatch: pytest.MonkeyPatch):
+        """Check plain selection - instance pinned, no respin-related actions."""
+        getter, cget_status, env_calls = self._get_getter_status(monkeypatch)
+
+        verdict = getter._prepare_selected_instance(cget_status)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+        assert cget_status.selected_instance == 0
+        assert getter._cluster_instance_num == 0
+        assert env_calls == [0]
+
+    def test_claimed_respin_armed(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that a claimed respin is armed while the instance stays pinned.
+
+        The SKIP verdict defers the test start - the respin runs first and the
+        pinned instance is re-entered afterwards.
+        """
+        getter, cget_status, _env_calls = self._get_getter_status(monkeypatch)
+        cget_status.respin_state = cluster_getter._RespinState.CLAIMED
+
+        verdict = getter._prepare_selected_instance(cget_status)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.respin_state is cluster_getter._RespinState.ARMED
+        assert cget_status.selected_instance == 0
+
+    def test_claimed_respin_marked(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that the mark record is created before the claimed respin is armed.
+
+        Other tests of the marked group must see the mark on this instance during
+        the respin window, so they don't prepare another cluster instance.
+        """
+        getter, cget_status, _env_calls = self._get_getter_status(monkeypatch, mark="markA")
+        cget_status.respin_state = cluster_getter._RespinState.CLAIMED
+
+        verdict = getter._prepare_selected_instance(cget_status)
+
+        assert verdict is cluster_getter._InstanceVerdict.SKIP
+        assert cget_status.respin_state is cluster_getter._RespinState.ARMED
+        assert len(status_db.list_curr_mark(instance_num=0, mark="markA")) == 1
+
+    def test_armed_respin_rejected(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that selection fails fast when the armed respin was not performed yet."""
+        getter, cget_status, _env_calls = self._get_getter_status(monkeypatch)
+        cget_status.respin_state = cluster_getter._RespinState.ARMED
+
+        with pytest.raises(RuntimeError, match="Cannot select instance"):
+            getter._prepare_selected_instance(cget_status)
+
+        # The guard precedes all mutations - nothing was selected
+        assert cget_status.selected_instance == -1
+
+    def test_respun_cleaned_up(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that the performed respin is cleaned up and the selection finishes."""
+        getter, cget_status, _env_calls = self._get_getter_status(monkeypatch)
+        cget_status.respin_state = cluster_getter._RespinState.RESPUN
+        status_db.create_respin_progress(instance_num=0, worker_id="gw0")
+        status_db.create_respin_needed(instance_num=0, worker_id="gw0")
+
+        verdict = getter._prepare_selected_instance(cget_status)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+        assert cget_status.respin_state is cluster_getter._RespinState.NONE
+        assert status_db.list_respin_progress(instance_num=0) == []
+        assert status_db.list_respin_needed(instance_num=0) == []
+
+    def test_mark_and_prio_records(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that selection creates the mark record and removes the prio record."""
+        getter, cget_status, _env_calls = self._get_getter_status(monkeypatch, mark="markA")
+        cget_status.prio = True
+        status_db.create_prio_in_progress(worker_id="gw0")
+
+        verdict = getter._prepare_selected_instance(cget_status)
+
+        assert verdict is cluster_getter._InstanceVerdict.START
+        assert len(status_db.list_curr_mark(instance_num=0, mark="markA")) == 1
+        assert status_db.list_prio_in_progress() == []
+
+
+@pytest.mark.usefixtures("db_dir")
+def test_get_cluster_instance_respin_cycle(monkeypatch: pytest.MonkeyPatch):
+    """Check the full respin cycle driven by `get_cluster_instance`.
+
+    The cluster instance was never started, so the worker claims the respin, arms
+    it, performs it outside of the global lock and cleans up the respin records,
+    all in successive iterations of the top-level loop, and finally starts the
+    test on the freshly started instance.
+    """
+    getter = _get_cluster_getter()
+
+    respin_calls: list[str] = []
+
+    def _fake_respin(scriptsdir: str = "") -> bool:
+        respin_calls.append(scriptsdir)
+        status_db.set_cluster_running(instance_num=0)
+        return True
+
+    monkeypatch.setattr(getter, "_respin", _fake_respin)
+    monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
+    monkeypatch.setattr(cluster_getter.cluster_nodes, "set_cluster_env", lambda **_kwargs: None)
+    # Make the test independent of the environment it runs in
+    monkeypatch.setattr(configuration, "DEV_CLUSTER_RUNNING", False)
+    monkeypatch.setattr(configuration, "FORBID_RESTART", False)
+
+    instance_num = getter.get_cluster_instance()
+
+    assert instance_num == 0
+    assert getter.cluster_instance_num == 0
+    # The respin ran exactly once
+    assert respin_calls == [""]
+    # The respin records were cleaned up and the test is running
+    assert status_db.list_respin_progress(instance_num=0) == []
+    assert status_db.list_respin_needed(instance_num=0) == []
+    assert len(status_db.list_test_running(instance_num=0, worker_id="gw0")) == 1
