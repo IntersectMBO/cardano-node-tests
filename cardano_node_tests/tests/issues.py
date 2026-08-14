@@ -14,7 +14,7 @@ api_829 = blockers.GH(
 api_1261 = blockers.GH(
     issue=1261,
     repo="IntersectMBO/cardano-api",
-    fixed_in="11.0.2",  # Fixed in a release after 11.0.1
+    fixed_in="11.1.0",  # The fix (cardano-api >= 11.4.0.0) is bundled with the node 11.1.0 release
     message="`transaction build` does not validate min UTxO for the collateral return output.",
 )
 

@@ -14,6 +14,8 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_build
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -159,7 +161,14 @@ class TestNegativeCollateralOutput:
     ):
         """Test minting a token with a Plutus script with return collateral < min UTxO.
 
-        Expect failure.
+        In cardano-node >= 11.1.0 (cardano-api >= 11.4.0.0), `transaction build` fails when
+        the too small return collateral output is specified explicitly (the
+        `with_total_collateral` parametrization). When it is not specified explicitly,
+        `transaction build` omits the return collateral output, uses the whole collateral
+        input as total collateral, and the transaction succeeds.
+
+        On older versions, `transaction build` doesn't validate the return collateral output
+        and the transaction fails on submit with `BabbageOutputTooSmallUTxO`.
         """
         temp_template = common.get_test_id(cluster)
         payment_addr = payment_addrs[0]
@@ -217,36 +226,79 @@ class TestNegativeCollateralOutput:
             *mint_txouts,
         ]
 
-        # TODO: `transaction build` will fail once
-        # https://github.com/IntersectMBO/cardano-api/issues/1261 is fixed.
-        tx_output_step2 = cluster.g_transaction.build_tx(
-            src_address=payment_addr.address,
-            tx_name=f"{temp_template}_step2",
-            tx_files=tx_files_step2,
-            txins=mint_utxos,
-            txouts=txouts_step2,
-            return_collateral_txouts=[
-                clusterlib.TxOut(payment_addr.address, amount=collateral_diff)
-            ]
-            if with_total_collateral
-            else (),
-            total_collateral_amount=minting_cost.collateral - collateral_diff
-            if with_total_collateral
-            else None,
-            mint=plutus_mint_data,
-        )
+        try:
+            tx_output_step2 = cluster.g_transaction.build_tx(
+                src_address=payment_addr.address,
+                tx_name=f"{temp_template}_step2",
+                tx_files=tx_files_step2,
+                txins=mint_utxos,
+                txouts=txouts_step2,
+                return_collateral_txouts=[
+                    clusterlib.TxOut(payment_addr.address, amount=collateral_diff)
+                ]
+                if with_total_collateral
+                else (),
+                total_collateral_amount=minting_cost.collateral - collateral_diff
+                if with_total_collateral
+                else None,
+                mint=plutus_mint_data,
+            )
+        except clusterlib.CLIError as exc:
+            # In cardano-node >= 11.1.0 (cardano-api >= 11.4.0.0) the `transaction build`
+            # command fails when the explicitly specified return collateral output is below
+            # the min UTxO value (cardano-api issue #1261).
+            exc_value = str(exc)
+            assert with_total_collateral, exc_value
+            assert "return collateral" in exc_value, exc_value
+            with common.allow_unstable_error_messages():
+                assert "return collateral output does not meet the minimum UTxO" in exc_value, (
+                    exc_value
+                )
+            return
+
         tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_step2.out_file,
             signing_key_files=tx_files_step2.signing_key_files,
             tx_name=f"{temp_template}_step2",
         )
 
-        # It should NOT be possible to mint with return collateral < min UTxO
-        with pytest.raises(clusterlib.CLIError) as excinfo:
+        try:
             cluster.g_transaction.submit_tx(tx_file=tx_signed_step2, txins=mint_utxos)
-        exc_value = str(excinfo.value)
-        with common.allow_unstable_error_messages():
-            assert "BabbageOutputTooSmallUTxO" in exc_value, exc_value
+        except clusterlib.CLIError as exc:
+            # In cardano-node < 11.1.0 the `transaction build` command doesn't validate
+            # the min UTxO value for the return collateral output (whether specified
+            # explicitly or auto-created by the command) and the transaction fails
+            # on submit.
+            exc_value = str(exc)
+            assert "OutputTooSmall" in exc_value, exc_value
+            with common.allow_unstable_error_messages():
+                assert "BabbageOutputTooSmallUTxO" in exc_value, exc_value
+            issues.api_1261.finish_test()
+        else:
+            # In cardano-node >= 11.1.0 (cardano-api >= 11.4.0.0), when the return collateral
+            # output is not specified explicitly and it would be below the min UTxO value,
+            # the `transaction build` command omits the output and uses the whole collateral
+            # input as total collateral. The transaction is then valid and submit succeeds.
+            assert not with_total_collateral, (
+                "Transaction with explicit return collateral < min UTxO was submitted"
+            )
 
-        # TODO: move to the `build_tx` check after the issue is fixed
-        issues.api_1261.finish_test()
+            # `transaction view` is not implemented on Dijkstra yet
+            if VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST:
+                tx_loaded = tx_view.load_tx_view(
+                    cluster_obj=cluster, tx_body_file=tx_output_step2.out_file
+                )
+                assert tx_loaded.get("return collateral") is None, (
+                    "The return collateral output was not omitted"
+                )
+                assert tx_loaded.get("total collateral") == clusterlib.calculate_utxos_balance(
+                    utxos=collateral_utxos
+                ), "Unexpected total collateral amount"
+
+            out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step2)
+            token_utxo = clusterlib.filter_utxos(
+                utxos=out_utxos, address=issuer_addr.address, coin=token
+            )
+            assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
+
+            common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
