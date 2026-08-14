@@ -21,6 +21,7 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_conn
 from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dev_session
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import submit_utils
@@ -288,6 +289,10 @@ def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> tp.Genera
     session_basetemp = temptools.get_basetemp()
     running_session_glob = ".running_session"
 
+    # Make sure the dev cluster is not used by multiple pytest invocations at the same time
+    if configuration.DEV_CLUSTER_RUNNING:
+        dev_session.claim_session()
+
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
         # Save environment info for Allure
         if not list(pytest_root_tmp.glob(f"{running_session_glob}_*")):
@@ -302,38 +307,56 @@ def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> tp.Genera
     yield
 
     with locking.FileLockIfXdist(f"{pytest_root_tmp}/{cluster_management.CLUSTER_LOCK}"):
-        # Remove file indicating that testing session on this worker is running
-        (pytest_root_tmp / f"{running_session_glob}_{worker_id}").unlink()
+        try:
+            # Remove file indicating that testing session on this worker is running
+            (pytest_root_tmp / f"{running_session_glob}_{worker_id}").unlink()
 
-        # Save CLI coverage to dir specified by `--cli-coverage-dir`
-        cluster_manager_obj = cluster_management.ClusterManager(
-            worker_id=worker_id, pytest_config=request.config
-        )
-        cluster_manager_obj.save_worker_cli_coverage()
+            # Save CLI coverage to dir specified by `--cli-coverage-dir`
+            cluster_manager_obj = cluster_management.ClusterManager(
+                worker_id=worker_id, pytest_config=request.config
+            )
+            cluster_manager_obj.save_worker_cli_coverage()
 
-        # Don't do any cleanup on keyboard interrupt
-        if (session_basetemp / INTERRUPTED_NAME).exists():
-            return None
+            last_worker = not list(pytest_root_tmp.glob(f"{running_session_glob}_*"))
 
-        # Perform cleanup if this is the last running pytest worker
-        if not list(pytest_root_tmp.glob(f"{running_session_glob}_*")):
-            # Perform testnet cleanup
-            _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
+            # Don't do any testnet / artifacts cleanup on keyboard interrupt (the dev
+            # cluster session is still released in the `finally` block)
+            if (session_basetemp / INTERRUPTED_NAME).exists():
+                return None
 
-            if configuration.DEV_CLUSTER_RUNNING:
-                # Save cluster artifacts only when requested - it is not desirable to
-                # save them on every pytest invocation on a dev cluster
-                if configuration.FORCE_SAVE_CLUSTER_ARTIFACTS:
-                    state_dir = cluster_nodes.get_cluster_env().state_dir
-                    artifacts.save_cluster_artifacts(save_dir=pytest_root_tmp, state_dir=state_dir)
+            # Perform cleanup if this is the last running pytest worker
+            if last_worker:
+                # Perform testnet cleanup
+                _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
+
+                if configuration.DEV_CLUSTER_RUNNING:
+                    # Save cluster artifacts only when requested - it is not desirable to
+                    # save them on every pytest invocation on a dev cluster
+                    if configuration.FORCE_SAVE_CLUSTER_ARTIFACTS:
+                        state_dir = cluster_nodes.get_cluster_env().state_dir
+                        artifacts.save_cluster_artifacts(
+                            save_dir=pytest_root_tmp, state_dir=state_dir
+                        )
+                    else:
+                        LOGGER.info("Not saving cluster artifacts of the dev cluster.")
+                elif configuration.KEEP_CLUSTERS_RUNNING:
+                    # Keep cluster instances running. Stopping them would need to be
+                    # handled manually.
+                    _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
                 else:
-                    LOGGER.info("Not saving cluster artifacts of the dev cluster.")
-            elif configuration.KEEP_CLUSTERS_RUNNING:
-                # Keep cluster instances running. Stopping them would need to be handled manually.
-                _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
-            else:
-                _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
-                _stop_all_cluster_instances(cluster_manager_obj=cluster_manager_obj)
+                    _save_all_cluster_instances_artifacts(cluster_manager_obj=cluster_manager_obj)
+                    _stop_all_cluster_instances(cluster_manager_obj=cluster_manager_obj)
+        finally:
+            # Release the dev cluster only after all cleanup is done (this pytest invocation
+            # is still using the cluster while saving its artifacts). Runs also on graceful
+            # interrupt (the `return` above) and when the teardown fails. If the process dies
+            # without reaching teardown, the stale-PID check in `dev_session.claim_session`
+            # unblocks the cluster. The "last worker" state is checked here and not reused
+            # from the `try` block, as the block may fail before computing it.
+            if configuration.DEV_CLUSTER_RUNNING and not list(
+                pytest_root_tmp.glob(f"{running_session_glob}_*")
+            ):
+                dev_session.release_session()
 
 
 @pytest.fixture(scope="session", autouse=True)
