@@ -67,6 +67,13 @@ MARK_STALENESS_SEC = 60
 # so pollers don't write to the database on every scheduler iteration.
 MARK_REFRESH_SEC = 15
 
+# Back-off (seconds) before the next attempt to obtain a cluster instance. The longer
+# back-off is used when the wait depends on other workers finishing their work (a cluster
+# respin, a test holding resources, a "prio" test setup), the shorter one when only the
+# scheduling of tests over the cluster instances blocks the start.
+LONG_BACKOFF_SEC = 5
+SHORT_BACKOFF_SEC = 2
+
 if configuration.IS_XDIST:
     _xdist_sleep = time.sleep
 else:
@@ -75,12 +82,11 @@ else:
         """No need to sleep if tests are running on a single worker."""
 
 
-class _RespinState(enum.Enum):
-    """State of the cluster respin lifecycle on this worker.
+class _RespinPhase(enum.Enum):
+    """Phase of a cluster respin claimed by this worker.
 
-    The respinning worker moves through the states:
+    The claim moves through the phases:
 
-    * NONE - no respin claimed by this worker.
     * CLAIMED - this worker claimed the respin of the selected cluster instance
       (`_init_respin`) and is pinned to it. The claim is armed once all other
       conditions for the respin are met - usually later in the same iteration,
@@ -88,41 +94,112 @@ class _RespinState(enum.Enum):
       mark's resources must be resolved again).
     * ARMED - the actual `_respin` will run at the start of the next iteration,
       outside of the global lock so other workers don't need to wait.
-    * RESPUN - `_respin` has finished (successfully or not). The state moves here
+    * RESPUN - `_respin` has finished (successfully or not). The phase moves here
       right after the `_respin` call, so the respin runs exactly once per claim
       even when later conditions delay the cleanup. The respin status records are
       cleaned up under the lock afterwards (`_cleanup_after_respin`), which
-      returns the state to NONE.
+      discards the claim.
 
-    When the cluster instance dies, `_cleanup_dead_cluster` resets any state
-    directly back to NONE and the respin is abandoned.
+    When the cluster instance dies, `_cleanup_dead_cluster` discards the claim in
+    any phase and the respin is abandoned.
     """
 
-    NONE = enum.auto()
     CLAIMED = enum.auto()
     ARMED = enum.auto()
     RESPUN = enum.auto()
 
 
+@dataclasses.dataclass
+class _RespinClaim:
+    """A respin of a cluster instance claimed by this worker.
+
+    The claim exists only for as long as this worker owns the respin - no claim
+    (`None`) means no respin is being done by this worker. The claim pins the worker
+    to the cluster instance it was made for, so the two are always established and
+    discarded together (`_ClusterGetStatus.claim_respin`, respectively
+    `_ClusterGetStatus.release_instance`).
+    """
+
+    instance_num: int
+    phase: _RespinPhase = _RespinPhase.CLAIMED
+
+
 class _InstanceVerdict(enum.Enum):
     """Verdict on a cluster instance for running the current test.
 
-    Returned by both `_evaluate_instance` and `_prepare_selected_instance`:
-
     * START - proceed with the instance (the checks passed, respectively the
       selection is finished).
-    * SKIP - the test cannot start on the instance in this iteration; the loop
-      moves on (possibly re-entering the pinned instance later).
+    * SKIP - the test cannot start on the instance; the loop moves on to the next
+      cluster instance.
+    * DEFER - the test cannot start yet and no other cluster instance is an option,
+      as the worker is pinned to this one; the loop returns to the top level and
+      re-enters this instance on a later iteration.
     """
 
     START = enum.auto()
     SKIP = enum.auto()
+    DEFER = enum.auto()
+
+
+@dataclasses.dataclass(frozen=True)
+class _InstanceDecision:
+    """Verdict on a cluster instance together with the back-off it asks for.
+
+    The back-off is applied to the sticky `_ClusterGetStatus.sleep_delay` by the
+    instance loop, so that the checks producing the verdict don't write the
+    cross-iteration worker state themselves.
+    """
+
+    verdict: _InstanceVerdict
+    backoff_sec: int = 0
+
+    @classmethod
+    def start(cls) -> tp.Self:
+        """Return a START decision."""
+        return cls(verdict=_InstanceVerdict.START)
+
+    @classmethod
+    def skip(cls, backoff_sec: int = 0) -> tp.Self:
+        """Return a SKIP decision, optionally asking for a back-off."""
+        return cls(verdict=_InstanceVerdict.SKIP, backoff_sec=backoff_sec)
+
+    @classmethod
+    def defer(cls) -> tp.Self:
+        """Return a DEFER decision."""
+        return cls(verdict=_InstanceVerdict.DEFER)
+
+
+@dataclasses.dataclass
+class _InstanceScratch:
+    """What the evaluation found out about a single cluster instance.
+
+    Created for one evaluation of one cluster instance (`_evaluate_instance`) and
+    discarded once the loop moves on, so findings about one instance cannot leak
+    into decisions taken about another instance or on a later iteration.
+    """
+
+    instance_num: int
+    # Tests already running on the cluster instance
+    started_tests_rows: tp.Sequence[status_db.StatusRow] = ()
+    # "marked tests" = group of tests marked with my mark
+    marked_ready_rows: tp.Sequence[status_db.StatusRow] = ()
+    # Whether the cluster instance needs a respin. Cached, as the check can be expensive.
+    cluster_needs_respin: bool = False
+    # Resources resolved for the test on this cluster instance
+    final_lock_resources: tp.Iterable[str] = ()
+    final_use_resources: tp.Iterable[str] = ()
 
 
 @dataclasses.dataclass
 class _ClusterGetStatus:
-    """Intermediate status while trying to `get` suitable cluster instance."""
+    """Worker state while trying to `get` suitable cluster instance.
 
+    Lives for the whole `get_cluster_instance` call, i.e. across all iterations of
+    its loop. Findings about a single cluster instance belong to `_InstanceScratch`
+    instead.
+    """
+
+    # Requirements of the test, set once
     mark: str
     lock_resources: resources_management.ResourcesType
     use_resources: resources_management.ResourcesType
@@ -130,20 +207,43 @@ class _ClusterGetStatus:
     cleanup: bool
     scriptsdir: ttypes.FileType
     current_test: str
+    # Cluster instance this worker is pinned to, -1 when not pinned to any
     selected_instance: int = -1
-    instance_num: int = -1
+    # Respin claimed by this worker, `None` when this worker claimed none
+    respin: _RespinClaim | None = None
     sleep_delay: int = 0
-    respin_state: _RespinState = _RespinState.NONE
-    cluster_needs_respin: bool = False
     prio_here: bool = False
     tried_all_instances: bool = False
-    instance_dir: pl.Path = pl.Path("/nonexistent")
-    final_lock_resources: tp.Iterable[str] = ()
-    final_use_resources: tp.Iterable[str] = ()
-    # Status records
-    started_tests_rows: tp.Sequence[status_db.StatusRow] = ()
-    marked_ready_rows: tp.Sequence[status_db.StatusRow] = ()
+    # Status records of my mark on any cluster instance, re-read on every iteration
     marked_running_my_anywhere: tp.Sequence[status_db.StatusRow] = ()
+
+    @property
+    def respin_phase_name(self) -> str:
+        """Return name of the respin phase, for log and error messages."""
+        return self.respin.phase.name if self.respin else "NONE"
+
+    def owns_respin(self, instance_num: int) -> bool:
+        """Return whether this worker holds a respin claim on the cluster instance."""
+        return self.respin is not None and self.respin.instance_num == instance_num
+
+    def pin_instance(self, instance_num: int) -> None:
+        """Pin this worker to the cluster instance."""
+        self.selected_instance = instance_num
+
+    def claim_respin(self, instance_num: int) -> None:
+        """Claim the respin of the cluster instance and pin this worker to it."""
+        self.respin = _RespinClaim(instance_num=instance_num)
+        self.pin_instance(instance_num)
+
+    def release_instance(self) -> None:
+        """Unpin this worker from its cluster instance, abandoning any claimed respin.
+
+        The pin and the claim are discarded together, so the worker cannot stay pinned
+        to an instance it gave up on, nor keep a claim on an instance it is not
+        pinned to.
+        """
+        self.selected_instance = -1
+        self.respin = None
 
 
 class ClusterGetter:
@@ -455,11 +555,11 @@ class ClusterGetter:
 
         return False
 
-    def _test_needs_respin(self, cget_status: _ClusterGetStatus) -> bool:
+    def _test_needs_respin(self, cget_status: _ClusterGetStatus, scratch: _InstanceScratch) -> bool:
         """Check if it is necessary to respin cluster for the test."""
         # If this is non-initial marked test, we can ignore custom start command,
         # as it was handled by the initial marked test
-        noninitial_marked_test = cget_status.mark and cget_status.marked_ready_rows
+        noninitial_marked_test = cget_status.mark and scratch.marked_ready_rows
         if noninitial_marked_test:
             return False
 
@@ -477,7 +577,7 @@ class ClusterGetter:
             self.log(f"c{instance_num}: in `_on_marked_test_stop`, creating 'respin needed' record")
             status_db.create_respin_needed(instance_num=instance_num, worker_id=self.worker_id)
 
-    def _update_marked_tests(self, cget_status: _ClusterGetStatus) -> None:
+    def _update_marked_tests(self, instance_num: int) -> None:
         """Update status about running of marked test.
 
         When marked test is finished, we can't clear the mark right away. There might be a test
@@ -491,18 +591,16 @@ class ClusterGetter:
         as the cleanup deletes the mark's status records.
         """
         # No need to continue if there are no marked tests
-        curr_mark_rows = self.snap.list_curr_mark(instance_num=cget_status.instance_num)
+        curr_mark_rows = self.snap.list_curr_mark(instance_num=instance_num)
         if not curr_mark_rows:
             return
 
         # Marked tests don't need to be running yet if the cluster is being respun
-        respin_in_progress = self.snap.list_respin_progress(instance_num=cget_status.instance_num)
+        respin_in_progress = self.snap.list_respin_progress(instance_num=instance_num)
         if respin_in_progress:
             return
 
-        marks_in_progress = set(
-            self.snap.get_marks_in_progress(instance_num=cget_status.instance_num)
-        )
+        marks_in_progress = set(self.snap.get_marks_in_progress(instance_num=instance_num))
 
         # A mark can have one record per worker and the records age together - the newest
         # one tells when a test with the mark was last seen running.
@@ -517,28 +615,31 @@ class ClusterGetter:
             # reload) on every iteration.
             if mark in marks_in_progress:
                 if now_ts - newest >= MARK_REFRESH_SEC:
-                    status_db.refresh_curr_mark(instance_num=cget_status.instance_num, mark=mark)
+                    status_db.refresh_curr_mark(instance_num=instance_num, mark=mark)
                 continue
 
             # Clean the stale status records if no marked test was running for too long
             if now_ts - newest >= MARK_STALENESS_SEC:
                 self.log(
-                    f"c{cget_status.instance_num}: no '{mark}' marked tests running "
+                    f"c{instance_num}: no '{mark}' marked tests running "
                     "for a while, cleaning the mark status record"
                 )
-                self._on_marked_test_stop(instance_num=cget_status.instance_num, mark=mark)
+                self._on_marked_test_stop(instance_num=instance_num, mark=mark)
 
-    def _resolve_resources_availability(self, cget_status: _ClusterGetStatus) -> bool:
+    def _resolve_resources_availability(
+        self, cget_status: _ClusterGetStatus, scratch: _InstanceScratch
+    ) -> bool:
         """Resolve availability of required "use" and "lock" resources."""
+        instance_num = scratch.instance_num
         resources_locked = self.snap.get_resource_names(
-            mode=status_db.MODE_LOCK, instance_num=cget_status.instance_num
+            mode=status_db.MODE_LOCK, instance_num=instance_num
         )
 
         # This test wants to lock some resources, check if these are not in use
         res_lockable = []
         if cget_status.lock_resources:
             resources_used = self.snap.get_resource_names(
-                mode=status_db.MODE_USE, instance_num=cget_status.instance_num
+                mode=status_db.MODE_USE, instance_num=instance_num
             )
             unlockable_resources = {*resources_locked, *resources_used}
             res_lockable = resources_management.get_resources(
@@ -547,7 +648,7 @@ class ClusterGetter:
             )
             if not res_lockable:
                 self.log(
-                    f"c{cget_status.instance_num}: want to lock '{cget_status.lock_resources}' and "
+                    f"c{instance_num}: want to lock '{cget_status.lock_resources}' and "
                     f"'{unlockable_resources}' are unavailable, cannot start"
                 )
                 return False
@@ -561,7 +662,7 @@ class ClusterGetter:
             )
             if not res_usable:
                 self.log(
-                    f"c{cget_status.instance_num}: want to use '{cget_status.use_resources}' and "
+                    f"c{instance_num}: want to use '{cget_status.use_resources}' and "
                     f"'{resources_locked}' are locked, cannot start"
                 )
                 return False
@@ -569,11 +670,11 @@ class ClusterGetter:
         # Resources that are locked are also in use
         use_minus_lock = list(set(res_usable) - set(res_lockable))
 
-        cget_status.final_use_resources = use_minus_lock
-        cget_status.final_lock_resources = res_lockable
+        scratch.final_use_resources = use_minus_lock
+        scratch.final_lock_resources = res_lockable
 
         self.log(
-            f"c{cget_status.instance_num}: can start, resources '{use_minus_lock}' usable, "
+            f"c{instance_num}: can start, resources '{use_minus_lock}' usable, "
             f"resources '{res_lockable}' lockable"
         )
 
@@ -617,27 +718,33 @@ class ClusterGetter:
         cget_status.prio_here = True
         self.log(f"setting 'prio' for '{cget_status.current_test}'")
 
-    def _being_respun_by_other_worker(self, cget_status: _ClusterGetStatus) -> bool:
+    def _being_respun_by_other_worker(
+        self, cget_status: _ClusterGetStatus, instance_num: int
+    ) -> bool:
         """Check if the cluster is currently being respun by worker other than this one."""
-        if cget_status.respin_state is not _RespinState.NONE:
+        if cget_status.owns_respin(instance_num):
             return False
 
-        respin_in_progress = self.snap.list_respin_progress(instance_num=cget_status.instance_num)
+        respin_in_progress = self.snap.list_respin_progress(instance_num=instance_num)
         return bool(respin_in_progress)
 
-    def _marked_select_instance(self, cget_status: _ClusterGetStatus) -> bool:
+    def _marked_select_instance(
+        self, cget_status: _ClusterGetStatus, scratch: _InstanceScratch
+    ) -> bool:
         """Select this cluster instance for running marked tests if possible."""
-        if cget_status.marked_ready_rows:
-            cget_status.selected_instance = cget_status.instance_num
+        instance_num = scratch.instance_num
+
+        if scratch.marked_ready_rows:
+            cget_status.pin_instance(instance_num)
             self.log(
-                f"c{cget_status.instance_num}: locking to this cluster instance, "
+                f"c{instance_num}: locking to this cluster instance, "
                 f"it has my mark '{cget_status.mark}'"
             )
             return True
 
-        if cget_status.marked_running_my_anywhere and cget_status.respin_state is _RespinState.NONE:
+        if cget_status.marked_running_my_anywhere and not cget_status.owns_respin(instance_num):
             self.log(
-                f"c{cget_status.instance_num}: tests marked with my mark '{cget_status.mark}' "
+                f"c{instance_num}: tests marked with my mark '{cget_status.mark}' "
                 "already running on other cluster instance, cannot start"
             )
             return False
@@ -733,33 +840,43 @@ class ClusterGetter:
 
         return respin_after_mark
 
-    def _cleanup_dead_cluster(self, cget_status: _ClusterGetStatus) -> None:
+    def _cleanup_dead_cluster(self, cget_status: _ClusterGetStatus, instance_num: int) -> None:
         """Cleanup if the selected cluster instance failed to start."""
         # Move on to other cluster instance.
         # Respin status records ("respin in progress", "respin needed") may stay
         # behind on the dead instance. They are never read - dead instances are never
         # revived and workers skip them before checking the respin records.
-        cget_status.selected_instance = -1
-        cget_status.respin_state = _RespinState.NONE
+        cget_status.release_instance()
 
         # Remove status records that are checked by other workers
-        self._rm_marks(instance_num=cget_status.instance_num)
+        self._rm_marks(instance_num=instance_num)
 
-    def _init_respin(self, cget_status: _ClusterGetStatus) -> bool:
-        """Initialize respin of this cluster instance on this worker."""
+    def _init_respin(
+        self, cget_status: _ClusterGetStatus, scratch: _InstanceScratch
+    ) -> _InstanceDecision:
+        """Initialize respin of this cluster instance on this worker.
+
+        Returns:
+            The decision on the instance. START when the evaluation of the instance can
+            continue, DEFER when the respin was claimed but the instance must be
+            re-evaluated before the test can start on it, SKIP when the needed respin
+            cannot be done right now.
+        """
+        instance_num = scratch.instance_num
+
         # Respin already claimed by this worker
-        if cget_status.respin_state is not _RespinState.NONE:
-            return True
+        if cget_status.owns_respin(instance_num):
+            return _InstanceDecision.start()
 
-        if not (cget_status.cluster_needs_respin or self._test_needs_respin(cget_status)):
-            return True
+        if not (scratch.cluster_needs_respin or self._test_needs_respin(cget_status, scratch)):
+            return _InstanceDecision.start()
 
         # If tests are running on the instance, we cannot respin, therefore we cannot continue
-        if cget_status.started_tests_rows:
-            self.log(f"c{cget_status.instance_num}: tests are running, cannot respin")
-            return False
+        if scratch.started_tests_rows:
+            self.log(f"c{instance_num}: tests are running, cannot respin")
+            return _InstanceDecision.skip()
 
-        self.log(f"c{cget_status.instance_num}: setting 'respin in progress'")
+        self.log(f"c{instance_num}: setting 'respin in progress'")
 
         # Cluster respin will be performed by this worker.
         # By claiming the respin, we make sure this worker continues on this cluster instance
@@ -767,47 +884,42 @@ class ClusterGetter:
         # cluster instance might be specific for the test.
         # The durable record is created first, the in-memory state is updated only after
         # that succeeded - same convention as in `_cleanup_after_respin`.
-        status_db.create_respin_progress(
-            instance_num=cget_status.instance_num, worker_id=self.worker_id
-        )
-        cget_status.respin_state = _RespinState.CLAIMED
-        cget_status.selected_instance = cget_status.instance_num
+        status_db.create_respin_progress(instance_num=instance_num, worker_id=self.worker_id)
+        cget_status.claim_respin(instance_num)
 
         # Remove mark status records and marked resource records as these will not be
         # valid after respin
-        self._rm_marks(instance_num=cget_status.instance_num)
+        self._rm_marks(instance_num=instance_num)
 
-        if cget_status.marked_ready_rows:
+        if scratch.marked_ready_rows:
             # This test's own mark was just removed and the group's resource records went
             # with it. Return back to the retry loop, so that this cluster instance is
-            # re-evaluated and this test resolves its resources again, as the initial
+            # re-evaluated - the findings of this evaluation are discarded with the
+            # scratch object - and this test resolves its resources again, as the initial
             # test of the mark.
             # Record that the instance needs the respin: the re-evaluation happens on a
             # later iteration, after the global lock was released, and it can be delayed
             # e.g. by a resource conflict. The durable record keeps the respin scheduled
             # even when this worker doesn't get to it right away.
-            status_db.create_respin_needed(
-                instance_num=cget_status.instance_num, worker_id=self.worker_id
-            )
-            cget_status.marked_ready_rows = ()
-            return False
+            status_db.create_respin_needed(instance_num=instance_num, worker_id=self.worker_id)
+            return _InstanceDecision.defer()
 
-        return True
+        return _InstanceDecision.start()
 
-    def _arm_respin(self, cget_status: _ClusterGetStatus) -> None:
+    def _arm_respin(self, claim: _RespinClaim) -> None:
         """Arm the claimed respin so `_respin` runs on the next iteration.
 
         The actual `_respin` function will be called outside of global lock so other
         workers don't need to wait.
         """
-        if cget_status.respin_state is not _RespinState.CLAIMED:
-            msg = f"Cannot arm respin in the '{cget_status.respin_state.name}' state."
+        if claim.phase is not _RespinPhase.CLAIMED:
+            msg = f"Cannot arm respin in the '{claim.phase.name}' state."
             raise RuntimeError(msg)
 
         # NOTE: when `_respin` is called, the env variables needed for cluster start scripts need
         # to be already set (e.g. CARDANO_NODE_SOCKET_PATH)
-        self.log(f"c{cget_status.instance_num}: ready to respin cluster")
-        cget_status.respin_state = _RespinState.ARMED
+        self.log(f"c{claim.instance_num}: ready to respin cluster")
+        claim.phase = _RespinPhase.ARMED
 
     def _respin_if_armed(self, cget_status: _ClusterGetStatus) -> None:
         """Run the armed respin and record that it was performed.
@@ -819,54 +931,60 @@ class ClusterGetter:
         failure marks the cluster dead and the dead cluster check handles the
         recovery on the next iteration.
         """
-        if cget_status.respin_state is not _RespinState.ARMED:
+        claim = cget_status.respin
+        if claim is None or claim.phase is not _RespinPhase.ARMED:
             return
 
         self._respin(scriptsdir=cget_status.scriptsdir)
-        cget_status.respin_state = _RespinState.RESPUN
+        claim.phase = _RespinPhase.RESPUN
 
     def _cleanup_after_respin(self, cget_status: _ClusterGetStatus) -> None:
         """Clean up after the respin of this cluster instance was performed.
 
-        Must be called only in the RESPUN state, after `_respin` has run: the respin
+        Must be called only in the RESPUN phase, after `_respin` has run: the respin
         status records are removed for the whole instance, so a premature call would
         delete another worker's records and break the cross-worker coordination.
         """
-        if cget_status.respin_state is not _RespinState.RESPUN:
-            msg = f"Cannot clean up after respin in the '{cget_status.respin_state.name}' state."
+        claim = cget_status.respin
+        if claim is None or claim.phase is not _RespinPhase.RESPUN:
+            msg = f"Cannot clean up after respin in the '{cget_status.respin_phase_name}' state."
             raise RuntimeError(msg)
 
         # Remove status records that are no longer valid after respin
-        status_db.rm_respin_progress(instance_num=cget_status.instance_num)
-        status_db.rm_respin_needed(instance_num=cget_status.instance_num)
+        status_db.rm_respin_progress(instance_num=claim.instance_num)
+        status_db.rm_respin_needed(instance_num=claim.instance_num)
 
-        cget_status.respin_state = _RespinState.NONE
+        cget_status.respin = None
 
-    def _init_marked_test(self, cget_status: _ClusterGetStatus) -> None:
+    def _init_marked_test(self, cget_status: _ClusterGetStatus, instance_num: int) -> None:
         """Create status record for marked test."""
         if not cget_status.mark:
             return
 
         status_db.create_curr_mark(
-            instance_num=cget_status.instance_num, worker_id=self.worker_id, mark=cget_status.mark
+            instance_num=instance_num, worker_id=self.worker_id, mark=cget_status.mark
         )
 
-    def _create_test_status_records(self, cget_status: _ClusterGetStatus) -> None:
+    def _create_test_status_records(
+        self, cget_status: _ClusterGetStatus, scratch: _InstanceScratch
+    ) -> None:
         """Create status records for test that is about to start on this cluster instance."""
+        instance_num = scratch.instance_num
+
         # Create status record for each in-use resource
         status_db.create_resources(
-            instance_num=cget_status.instance_num,
+            instance_num=instance_num,
             worker_id=self.worker_id,
-            names=cget_status.final_use_resources,
+            names=scratch.final_use_resources,
             mode=status_db.MODE_USE,
             mark=cget_status.mark,
         )
 
         # Create status record for each locked resource
         status_db.create_resources(
-            instance_num=cget_status.instance_num,
+            instance_num=instance_num,
             worker_id=self.worker_id,
-            names=cget_status.final_lock_resources,
+            names=scratch.final_lock_resources,
             mode=status_db.MODE_LOCK,
             mark=cget_status.mark,
         )
@@ -875,18 +993,16 @@ class ClusterGetter:
         if cget_status.cleanup:
             # Cleanup after group of test that are marked with a marker
             if cget_status.mark:
-                self.log(f"c{cget_status.instance_num}: cleanup and mark")
+                self.log(f"c{instance_num}: cleanup and mark")
                 status_db.create_respin_after_mark(
-                    instance_num=cget_status.instance_num,
+                    instance_num=instance_num,
                     worker_id=self.worker_id,
                     mark=cget_status.mark,
                 )
             # Cleanup after single test (e.g. singleton)
             else:
-                self.log(f"c{cget_status.instance_num}: cleanup and not mark")
-                status_db.create_respin_needed(
-                    instance_num=cget_status.instance_num, worker_id=self.worker_id
-                )
+                self.log(f"c{instance_num}: cleanup and not mark")
+                status_db.create_respin_needed(instance_num=instance_num, worker_id=self.worker_id)
 
         self.log(f"c{self.cluster_instance_num}: creating 'test running' status record")
         status_db.create_test_running(
@@ -949,47 +1065,46 @@ class ClusterGetter:
 
     def _evaluate_instance(  # noqa: PLR0911
         self, cget_status: _ClusterGetStatus, instance_num: int
-    ) -> _InstanceVerdict:
+    ) -> tuple[_InstanceDecision, _InstanceScratch]:
         """Evaluate if the cluster instance is suitable for running the current test.
 
         Runs the checks in order and rules the instance out on the first failed one.
-        Besides the per-instance fields of `cget_status`, the checks can also modify
-        durable status records - e.g. wipe records of a dead instance, or claim a
-        needed respin. A SKIP verdict can therefore leave the worker pinned to this
-        instance with a claimed respin, to be re-evaluated on a later iteration.
-        Sets `cget_status.sleep_delay` where the blocking condition warrants
-        a back-off of the top-level loop.
+        Besides recording what they found out in the returned scratch object, the checks
+        can also modify durable status records - e.g. wipe records of a dead instance, or
+        claim a needed respin - as well as the worker state. A non-START verdict can
+        therefore leave the worker pinned to this instance with a claimed respin, to be
+        re-evaluated on a later iteration.
 
         Must be called under the global lock.
 
         Returns:
-            The verdict - START when the test can start on this instance, SKIP
-            when the loop should move on to the next instance or iteration.
+            The decision on the instance and the findings of the evaluation. The
+            decision is START when the test can start on this instance, SKIP when the
+            loop should move on to the next instance, DEFER when it should return to the
+            top-level loop and re-enter this pinned instance later.
         """
-        cget_status.instance_num = instance_num
-        cget_status.instance_dir = status_files.get_instance_dir(instance_num=instance_num)
-        cget_status.instance_dir.mkdir(exist_ok=True)
+        scratch = _InstanceScratch(instance_num=instance_num)
+        status_files.get_instance_dir(instance_num=instance_num).mkdir(exist_ok=True)
 
         # Cleanup cluster instance where attempt to start cluster failed repeatedly
         if self.snap.is_cluster_dead(instance_num=instance_num):
-            self._cleanup_dead_cluster(cget_status)
-            return _InstanceVerdict.SKIP
+            self._cleanup_dead_cluster(cget_status, instance_num=instance_num)
+            return _InstanceDecision.skip(), scratch
 
         # Cluster respin planned or in progress, so no new tests can start
-        if self._being_respun_by_other_worker(cget_status):
-            cget_status.sleep_delay = 5
-            return _InstanceVerdict.SKIP
+        if self._being_respun_by_other_worker(cget_status, instance_num=instance_num):
+            return _InstanceDecision.skip(LONG_BACKOFF_SEC), scratch
 
         # If marked tests are already running, update their status.
         # Must be done before the mark state is read below, as stale marks
         # get cleaned up here.
-        self._update_marked_tests(cget_status=cget_status)
+        self._update_marked_tests(instance_num=instance_num)
 
         # Are there tests already running on this cluster instance?
-        cget_status.started_tests_rows = self.snap.list_test_running(instance_num=instance_num)
+        scratch.started_tests_rows = self.snap.list_test_running(instance_num=instance_num)
 
         # "marked tests" = group of tests marked with my mark
-        cget_status.marked_ready_rows = self.snap.list_curr_mark(
+        scratch.marked_ready_rows = self.snap.list_curr_mark(
             instance_num=instance_num, mark=cget_status.mark
         )
 
@@ -997,20 +1112,18 @@ class ClusterGetter:
         # we need to wait.
         if (
             self.num_of_instances > 1
-            and (tnum := len(cget_status.started_tests_rows)) >= configuration.MAX_TESTS_PER_CLUSTER
+            and (tnum := len(scratch.started_tests_rows)) >= configuration.MAX_TESTS_PER_CLUSTER
         ):
-            cget_status.sleep_delay = 2
             self.log(f"c{instance_num}: {tnum} tests are already running, cannot start")
-            return _InstanceVerdict.SKIP
+            return _InstanceDecision.skip(SHORT_BACKOFF_SEC), scratch
 
         # Does the cluster instance need respin to continue?
         # Cache the result as the check itself can be expensive.
-        cget_status.cluster_needs_respin = self._cluster_needs_respin(instance_num)
+        scratch.cluster_needs_respin = self._cluster_needs_respin(instance_num)
 
         # Select this instance for running marked tests if possible
-        if cget_status.mark and not self._marked_select_instance(cget_status):
-            cget_status.sleep_delay = 2
-            return _InstanceVerdict.SKIP
+        if cget_status.mark and not self._marked_select_instance(cget_status, scratch):
+            return _InstanceDecision.skip(SHORT_BACKOFF_SEC), scratch
 
         # Try next cluster instance when the current one needs respin.
         # Respin only if:
@@ -1018,12 +1131,12 @@ class ClusterGetter:
         # * respin is needed by the current test anyway
         # * we already tried all cluster instances and there's no other option
         if (
-            cget_status.cluster_needs_respin
+            scratch.cluster_needs_respin
             and cget_status.selected_instance != instance_num
-            and not self._test_needs_respin(cget_status)
+            and not self._test_needs_respin(cget_status, scratch)
             and not cget_status.tried_all_instances
         ):
-            return _InstanceVerdict.SKIP
+            return _InstanceDecision.skip(), scratch
 
         # We don't need to resolve resources availability if there was already a test
         # with this mark before (the first test already resolved the resources
@@ -1031,21 +1144,21 @@ class ClusterGetter:
         # It is responsibility of tests to make sure that the same resources are
         # requested for all the tests with the same mark (e.g. specific pool and
         # not "any pool").
-        need_resolve_resources = not cget_status.marked_ready_rows
+        need_resolve_resources = not scratch.marked_ready_rows
 
         # Check availability of the required resources
-        if need_resolve_resources and not self._resolve_resources_availability(cget_status):
-            cget_status.sleep_delay = 5
-            return _InstanceVerdict.SKIP
+        if need_resolve_resources and not self._resolve_resources_availability(
+            cget_status, scratch
+        ):
+            return _InstanceDecision.skip(LONG_BACKOFF_SEC), scratch
 
         # If respin is needed, indicate that the cluster will be re-spun
         # (after all currently running tests are finished)
-        if not self._init_respin(cget_status):
-            return _InstanceVerdict.SKIP
+        return self._init_respin(cget_status, scratch), scratch
 
-        return _InstanceVerdict.START
-
-    def _prepare_selected_instance(self, cget_status: _ClusterGetStatus) -> _InstanceVerdict:
+    def _prepare_selected_instance(
+        self, cget_status: _ClusterGetStatus, scratch: _InstanceScratch
+    ) -> _InstanceDecision:
         """Select the evaluated cluster instance and finish respin-related actions.
 
         Pins the worker to the instance, sets the cluster env variables, removes the
@@ -1055,20 +1168,22 @@ class ClusterGetter:
         Must be called under the global lock.
 
         Returns:
-            START when the selection is finished and the test can start. SKIP when
+            START when the selection is finished and the test can start. DEFER when
             the claimed respin was just armed - the instance stays pinned and is
             re-entered on a later iteration, after the respin was performed.
         """
+        claim = cget_status.respin
+
         # An armed respin must run (`_respin_if_armed`) before the instance can be
         # selected - finishing the selection here would skip the promised respin
-        if cget_status.respin_state is _RespinState.ARMED:
-            msg = f"Cannot select instance in the '{cget_status.respin_state.name}' respin state."
+        if claim is not None and claim.phase is _RespinPhase.ARMED:
+            msg = f"Cannot select instance in the '{claim.phase.name}' respin state."
             raise RuntimeError(msg)
 
-        instance_num = cget_status.instance_num
+        instance_num = scratch.instance_num
 
         # We've found suitable cluster instance
-        cget_status.selected_instance = instance_num
+        cget_status.pin_instance(instance_num)
         self._cluster_instance_num = instance_num
         self.log(f"c{instance_num}: can run test '{cget_status.current_test}'")
         # Set environment variables that are needed when respinning the cluster
@@ -1082,19 +1197,65 @@ class ClusterGetter:
         # Create status record for marked tests.
         # This must be done before the cluster is re-spun, so that other marked tests
         # don't try to prepare another cluster instance.
-        self._init_marked_test(cget_status)
+        self._init_marked_test(cget_status, instance_num=instance_num)
 
         # Arm the claimed respin and return to the top-level loop, where
         # `_respin` runs outside of the global lock
-        if cget_status.respin_state is _RespinState.CLAIMED:
-            self._arm_respin(cget_status)
-            return _InstanceVerdict.SKIP
+        if claim is not None and claim.phase is _RespinPhase.CLAIMED:
+            self._arm_respin(claim)
+            return _InstanceDecision.defer()
 
         # The respin was already performed, clean up the respin status records
-        if cget_status.respin_state is _RespinState.RESPUN:
+        if claim is not None and claim.phase is _RespinPhase.RESPUN:
             self._cleanup_after_respin(cget_status)
 
-        return _InstanceVerdict.START
+        return _InstanceDecision.start()
+
+    def _try_instances(
+        self, cget_status: _ClusterGetStatus, instances_order: tp.Iterable[int]
+    ) -> _InstanceDecision:
+        """Try the cluster instances in the given order until the test can start on one.
+
+        Sets up the test on the first suitable cluster instance. Records that all
+        instances were tried when none of them is usable in this iteration.
+
+        Must be called under the global lock.
+
+        Returns:
+            START when the test was set up and can start, SKIP or DEFER when the
+            top-level loop needs to wait and try again.
+        """
+        for instance_num in instances_order:
+            # If instance to run the test on was already decided, skip all other instances
+            if cget_status.selected_instance not in (-1, instance_num):
+                continue
+
+            # Check if the test can start on this instance
+            decision, scratch = self._evaluate_instance(cget_status, instance_num=instance_num)
+
+            # Select the instance. A freshly claimed respin is only armed here
+            # and the instance is re-entered after the respin was performed.
+            if decision.verdict is _InstanceVerdict.START:
+                decision = self._prepare_selected_instance(cget_status, scratch)
+
+            if decision.verdict is _InstanceVerdict.START:
+                # From this point on, all conditions needed to start the test are met
+                self._create_test_status_records(cget_status, scratch)
+                return decision
+
+            # The worker is pinned to this instance, no other one is an option
+            if decision.verdict is _InstanceVerdict.DEFER:
+                return decision
+
+            # Back off before the next attempt as the verdict asks. The delay is sticky -
+            # it stays in effect until another verdict asks for a different one - and this
+            # is the only place where a verdict on an instance sets it.
+            if decision.backoff_sec:
+                cget_status.sleep_delay = decision.backoff_sec
+
+        # The test cannot start on any instance, return to the top-level loop
+        cget_status.tried_all_instances = True
+        return _InstanceDecision.skip()
 
     def get_cluster_instance(  # noqa: C901
         self,
@@ -1244,7 +1405,7 @@ class ClusterGetter:
                 # A "prio" test has priority in obtaining cluster instance. Check if it is needed
                 # to wait until earlier "prio" test obtains a cluster instance.
                 if self._wait_for_prio(cget_status):
-                    cget_status.sleep_delay = 5
+                    cget_status.sleep_delay = LONG_BACKOFF_SEC
                     continue
 
                 # Set "prio" for this test if indicated
@@ -1253,30 +1414,9 @@ class ClusterGetter:
                 self._cluster_instance_num = -1
 
                 # Try all existing cluster instances in the precomputed order
-                for instance_num in instances_order:
-                    # If instance to run the test on was already decided, skip all other instances
-                    if cget_status.selected_instance not in (-1, instance_num):
-                        continue
-
-                    # Check if the test can start on this instance
-                    verdict = self._evaluate_instance(cget_status, instance_num=instance_num)
-                    if verdict is _InstanceVerdict.SKIP:
-                        continue
-
-                    # Select the instance. A freshly claimed respin is only armed here
-                    # and the instance is re-entered after the respin was performed.
-                    verdict = self._prepare_selected_instance(cget_status)
-                    if verdict is _InstanceVerdict.SKIP:
-                        continue
-
-                    # From this point on, all conditions needed to start the test are met
-                    break
-                else:
-                    # If the test cannot start on any instance, return to top-level loop
-                    cget_status.tried_all_instances = True
+                decision = self._try_instances(cget_status, instances_order=instances_order)
+                if decision.verdict is not _InstanceVerdict.START:
                     continue
-
-                self._create_test_status_records(cget_status)
 
                 # Cluster instance is ready, we can start the test
                 break
