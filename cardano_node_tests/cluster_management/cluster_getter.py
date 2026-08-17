@@ -842,14 +842,17 @@ class ClusterGetter:
 
     def _cleanup_dead_cluster(self, cget_status: _ClusterGetStatus, instance_num: int) -> None:
         """Cleanup if the selected cluster instance failed to start."""
-        # Move on to other cluster instance.
-        # Respin status records ("respin in progress", "respin needed") may stay
-        # behind on the dead instance. They are never read - dead instances are never
-        # revived and workers skip them before checking the respin records.
+        # Release this worker's claim on the instance and move on to another one
         cget_status.release_instance()
 
-        # Remove status records that are checked by other workers
         self._rm_marks(instance_num=instance_num)
+
+        # Remove the respin status records of the whole instance. The instance is dead
+        # and stays dead, so the records are of no use to any worker - the respin was
+        # abandoned and no new one can be started on a dead instance. Removing records
+        # of other workers is safe for the same reason.
+        status_db.rm_respin_progress(instance_num=instance_num)
+        status_db.rm_respin_needed(instance_num=instance_num)
 
     def _init_respin(
         self, cget_status: _ClusterGetStatus, scratch: _InstanceScratch
