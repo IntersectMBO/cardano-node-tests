@@ -3,94 +3,210 @@
 # An environment setup script for cardano-node-tests local development.
 #
 # This script is idempotent and can be sourced multiple times without side effects. Let's keep
-# it that way!
+# it that way! If sourcing fails partway, the shell may be left partially configured - fix the
+# reported problem and source again.
+#
+# Internal variables use the '_cnt' (cardano-node-tests) suffix so they don't clobber
+# variables of the interactive shell, and are unset on every exit path. The only exception
+# is `_smash_owned_cnt`, which deliberately persists between sourcings (see below).
 #
 # Optional: Define additional environment variables in .env.sh
-# (e.g. DBSYNC_SCHEMA_DIR, GITHUB_TOKEN).
+# (e.g. DBSYNC_SCHEMA_DIR, GITHUB_TOKEN). The .env.sh is sourced on every run, so it must be
+# idempotent and it must finish with a zero exit status. Failures of individual commands
+# inside it are not detected here - anything important there needs its own error handling.
 
 [ -n "${BASH_VERSION:-}" ] || {
   echo "This script must be sourced from bash." >&2
   return 1
 }
 
-_root_dir_cnt="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || { echo "Cannot determine root dir, returning." >&2; return 1; }
+# `return` outside a function works only when sourced; catch direct execution early.
+(return 0 2>/dev/null) || {
+  echo "This script must be sourced, not executed." >&2
+  exit 1
+}
 
-# Source additional environment variables from .env.sh
-if [ -e "$_root_dir_cnt/.env.sh" ]; then
-  # shellcheck disable=SC1091
-  source "$_root_dir_cnt/.env.sh"
+# Bash in POSIX mode (e.g. invoked as 'sh') rejects the hyphenated function name in the
+# cardano-cli completion script - that error aborts non-interactive shells entirely and
+# leaves interactive shells without completion.
+if shopt -qo posix; then
+  echo "This script cannot be sourced from bash running in POSIX mode." >&2
+  return 1
 fi
 
+# 'CDPATH= cd -P' prevents CDPATH interference and canonicalizes symlinked repo paths, so
+# PATH entries derived from the root dir always have a single spelling.
+_root_dir_cnt="$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)" \
+  || { echo "Cannot determine root dir, returning." >&2; unset _root_dir_cnt; return 1; }
+
+# Source additional environment variables from .env.sh
+if [ -f "$_root_dir_cnt/.env.sh" ]; then
+  # shellcheck disable=SC1091
+  source "$_root_dir_cnt/.env.sh" || {
+    echo "Sourcing '$_root_dir_cnt/.env.sh' failed (it must finish with a zero exit status), returning." >&2
+    unset _root_dir_cnt
+    return 1
+  }
+fi
+
+# Cardonnay supports cluster instances 0-9. Leading zeros are stripped (e.g. '00' -> '0') so
+# string comparisons and path suffixes agree. Validation uses string operations only:
+# `$((10#$INSTANCE_NUM))` would silently wrap on absurdly long input and the wrapped value
+# can land back in the valid range (e.g. '18446744073709551617' becomes 1).
 INSTANCE_NUM="${INSTANCE_NUM:-0}"
+_instance_cnt="${INSTANCE_NUM%%[!0]*}"            # the leading zeros
+_instance_cnt="${INSTANCE_NUM#"$_instance_cnt"}"  # the value without them
+[ -n "$_instance_cnt" ] || _instance_cnt=0        # the value was all zeros
+case "$_instance_cnt" in
+  [0-9]) ;;
+  *)
+    echo "INSTANCE_NUM must be an integer in the range 0-9, got '$INSTANCE_NUM'." >&2
+    unset _instance_cnt _root_dir_cnt
+    return 1
+    ;;
+esac
+INSTANCE_NUM="$_instance_cnt"
+unset _instance_cnt
 
 # Activate python virtual environment
 if [ -z "${VIRTUAL_ENV:-}" ]; then
+  if [ ! -f "$_root_dir_cnt/.venv/bin/activate" ]; then
+    echo "No python virtual env found at '$_root_dir_cnt/.venv', run 'make install' first." >&2
+    unset _root_dir_cnt
+    return 1
+  fi
   # shellcheck disable=SC1091
-  source "$_root_dir_cnt/.venv/bin/activate"
+  source "$_root_dir_cnt/.venv/bin/activate" || {
+    echo "Failed to activate virtual env at '$_root_dir_cnt/.venv', returning." >&2
+    unset _root_dir_cnt
+    return 1
+  }
 fi
 
-# Check that correct virtual env is activated (compare canonicalized paths)
-_expected_venv="$(readlink -f -- "$_root_dir_cnt/.venv" 2>/dev/null || echo "$_root_dir_cnt/.venv")"
-_actual_venv="$(readlink -f -- "${VIRTUAL_ENV:-}" 2>/dev/null || echo "${VIRTUAL_ENV:-}")"
-if [ "$_actual_venv" != "$_expected_venv" ]; then
-  echo "Wrong virtual env activated: VIRTUAL_ENV='${VIRTUAL_ENV:-}', expected '$_root_dir_cnt/.venv'." >&2
-  unset _expected_venv _actual_venv
+# Check that correct virtual env is activated (compare canonicalized paths).
+# Deliberate near-copy of `assert_correct_venv` from scripts/common.sh - sourcing common.sh
+# at top level would leak its functions into the interactive shell.
+_expected_venv_cnt="$(readlink -f -- "$_root_dir_cnt/.venv" 2>/dev/null || echo "$_root_dir_cnt/.venv")"
+_actual_venv_cnt="$(readlink -f -- "${VIRTUAL_ENV:-}" 2>/dev/null || echo "${VIRTUAL_ENV:-}")"
+if [ "$_actual_venv_cnt" != "$_expected_venv_cnt" ]; then
+  echo "Wrong virtual env activated: VIRTUAL_ENV='${VIRTUAL_ENV:-}', expected '$_root_dir_cnt/.venv'. Run 'deactivate' first." >&2
+  unset _expected_venv_cnt _actual_venv_cnt _root_dir_cnt
   return 1
 fi
-unset _expected_venv _actual_venv
+unset _expected_venv_cnt _actual_venv_cnt
 
-PYTHONPATH="$(
+# Filter nix python packages out of PYTHONPATH. The common.sh is sourced in a subshell so
+# its helper functions don't leak into the interactive shell; the filtered value is passed
+# out on stdout. Everything else in the subshell writes to stderr, so that output of the
+# sourced code cannot end up in PYTHONPATH. The export/unset logic of `filter_out_nix` is
+# repeated below because the subshell cannot affect this shell.
+if ! _pythonpath_cnt="$(
   # shellcheck disable=SC1091
-  source "$_root_dir_cnt/scripts/common.sh"
-  filter_out_nix
+  source "$_root_dir_cnt/scripts/common.sh" >&2 || exit 1
+  filter_out_nix >&2 || exit 1
   echo "${PYTHONPATH:-}"
-)"
-if [ -n "${PYTHONPATH:-}" ]; then
-  export PYTHONPATH
+)"; then
+  echo "Failed to filter PYTHONPATH using '$_root_dir_cnt/scripts/common.sh', returning." >&2
+  unset _pythonpath_cnt _root_dir_cnt
+  return 1
+fi
+if [ -n "$_pythonpath_cnt" ]; then
+  # shellcheck disable=SC2031  # the subshell modification is deliberately discarded
+  export PYTHONPATH="$_pythonpath_cnt"
 else
   unset PYTHONPATH
 fi
+unset _pythonpath_cnt
 
-# Set Cardano Node socket path and other environment variables
-export CARDANO_NODE_SOCKET_PATH="/var/tmp/cardonnay-of-${USER}/state-cluster${INSTANCE_NUM}/bft1.socket"
+# Determine user name the same way cardonnay does (from the effective UID); LOGNAME/USER
+# are only a fallback, as they can be stale or wrong under 'su', 'sudo -u' or in containers
+_user_cnt="$(id -un 2>/dev/null || :)"
+if [ -z "$_user_cnt" ]; then
+  _user_cnt="${LOGNAME:-${USER:-}}"
+fi
+if [ -z "$_user_cnt" ]; then
+  echo "Cannot determine user name, returning." >&2
+  unset _user_cnt _root_dir_cnt
+  return 1
+fi
+
+# Set Cardano Node socket path. The path follows the layout used by cardonnay (the tool
+# that starts the local dev cluster): the state dir is
+# /var/tmp/cardonnay-of-<user>/state-cluster<N> and 'bft1' is its first node.
+# The directories are deliberately NOT pre-created here. They live in the shared, world
+# writable /var/tmp and will hold cluster signing keys, so their creation is left to
+# cardonnay, which creates them with mode 0700 and rejects a hijacked path (a symlink, a
+# non-directory or a foreign-owned directory). A plain `mkdir -p` here would happily
+# traverse a symlink planted by another user and accept a foreign-owned directory,
+# defeating that check.
+export CARDANO_NODE_SOCKET_PATH="/var/tmp/cardonnay-of-${_user_cnt}/state-cluster${INSTANCE_NUM}/bft1.socket"
+unset _user_cnt
+
+# Set temporary directory for this instance. Unlike the cluster state dir, this one lives
+# inside the repo, so it is safe to create here. TMPDIR is exported only after the dir was
+# successfully created, so a failure cannot leave it pointing to a nonexistent path.
+_tmpdir_cnt="$_root_dir_cnt/tmp"
+if [ "$INSTANCE_NUM" != 0 ]; then
+  _tmpdir_cnt="$_root_dir_cnt/tmp${INSTANCE_NUM}"
+fi
+mkdir -p "$_tmpdir_cnt" || {
+  echo "Cannot create '$_tmpdir_cnt', returning." >&2
+  unset _tmpdir_cnt _root_dir_cnt
+  return 1
+}
+export TMPDIR="$_tmpdir_cnt"
+unset _tmpdir_cnt
+
+# Point the tests at the externally started dev cluster and forbid the framework from
+# restarting it
 export DEV_CLUSTER_RUNNING=true FORBID_RESTART=true CLUSTERS_COUNT=1
+
+# BOOTSTRAP_DIR must not be set when running against the local dev cluster
+if [ -n "${BOOTSTRAP_DIR:-}" ]; then
+  echo "Note: unsetting BOOTSTRAP_DIR, it cannot be used with the local dev cluster." >&2
+fi
 unset BOOTSTRAP_DIR
 
-mkdir -p "${CARDANO_NODE_SOCKET_PATH%/*}"
-
-# Set temporary directory for this instance
-TMPDIR="$_root_dir_cnt/tmp"
-if [ "$INSTANCE_NUM" != 0 ]; then
-  TMPDIR="$_root_dir_cnt/tmp${INSTANCE_NUM}"
-fi
-mkdir -p "$TMPDIR"
-export TMPDIR
-
-# Remove ghcup from PATH to avoid conflicts with nix environment
-if [[ :"$PATH": == */.ghcup/bin:* ]]; then
-  PATH="$(echo "$PATH" | tr ":" "\n" | grep -v "ghcup" | tr "\n" ":" | sed 's/:*$//' || :)"
+# Remove all ghcup directories from PATH to avoid conflicts with nix environment
+if [[ "$PATH" == *ghcup* ]]; then
+  _path_cnt="$(printf '%s\n' "$PATH" | tr ":" "\n" | grep -v "ghcup" | paste -sd: - || :)"
+  # Never install an empty PATH
+  if [ -n "$_path_cnt" ]; then
+    PATH="$_path_cnt"
+  else
+    echo "Note: filtering ghcup out of PATH would leave it empty, leaving PATH unchanged." >&2
+  fi
+  unset _path_cnt
 fi
 
-PREPEND_PATH=""
+_prepend_path_cnt=""
 # Prepend instance-specific .bin directory to PATH if it exists and if not already present
-if [ -e "$_root_dir_cnt/.bin${INSTANCE_NUM}" ] \
+if [ -d "$_root_dir_cnt/.bin${INSTANCE_NUM}" ] \
   && [[ ":$PATH:" != *":$_root_dir_cnt/.bin${INSTANCE_NUM}:"* ]]; then
-  PREPEND_PATH="$_root_dir_cnt/.bin${INSTANCE_NUM}${PREPEND_PATH:+:$PREPEND_PATH}"
+  _prepend_path_cnt="$_root_dir_cnt/.bin${INSTANCE_NUM}"
 fi
 
-# Prepend default .bin directory to PATH for instance 0 if it exists and if not already present
+# Prepend default .bin directory to PATH for instance 0 if it exists and if not already
+# present. When both dirs are prepended in the same sourcing, it goes in front of '.bin0',
+# so the default '.bin' takes precedence. (A .bin* directory created between sourcings
+# lands in front of previously added ones.)
 if [ "$INSTANCE_NUM" = 0 ] \
-  && [ -e "$_root_dir_cnt/.bin" ] \
+  && [ -d "$_root_dir_cnt/.bin" ] \
   && [[ ":$PATH:" != *":$_root_dir_cnt/.bin:"* ]]; then
-  PREPEND_PATH="$_root_dir_cnt/.bin${PREPEND_PATH:+:$PREPEND_PATH}"
+  _prepend_path_cnt="$_root_dir_cnt/.bin${_prepend_path_cnt:+:$_prepend_path_cnt}"
 fi
 
-if [ -n "$PREPEND_PATH" ]; then
-  # Always add .bin_node directory to PATH *after* .bin directories to prioritize local binaries,
-  # even if the .bin_node directory doesn't exist yet.
-  PATH="$PREPEND_PATH:$_root_dir_cnt/.bin_node:$PATH"
-elif [ -e "$_root_dir_cnt/.bin_node" ] \
+if [ -n "$_prepend_path_cnt" ]; then
+  # When prepending .bin directories, also add .bin_node after them so binaries in
+  # .bin/.binN shadow the node binaries in .bin_node. The .bin_node directory is added
+  # even before it exists, so binaries placed there later are found without re-sourcing.
+  if [[ ":$PATH:" != *":$_root_dir_cnt/.bin_node:"* ]]; then
+    _prepend_path_cnt="$_prepend_path_cnt:$_root_dir_cnt/.bin_node"
+  fi
+  PATH="$_prepend_path_cnt:$PATH"
+elif [ -d "$_root_dir_cnt/.bin_node" ] \
   && [[ ":$PATH:" != *":$_root_dir_cnt/.bin_node:"* ]]; then
+  # No .bin directory is being prepended - add .bin_node only if it already exists
   PATH="$_root_dir_cnt/.bin_node:$PATH"
 fi
 
@@ -102,15 +218,48 @@ hash -r
 # Set database connection environment variables for db-sync
 export PGHOST=localhost PGUSER=postgres
 
-# Enable SMASH server if available
+# Enable SMASH server when db-sync is configured (DBSYNC_SCHEMA_DIR is set) and
+# cardano-smash-server is available on PATH. A SMASH set by this script is unset otherwise,
+# so that re-sourcing after a config change doesn't keep a stale value. The value set here
+# is remembered in `_smash_owned_cnt`, which - unlike the other internal variables - has to
+# survive until the next sourcing. A SMASH that the user set (e.g. in .env.sh) or changed
+# between sourcings differs from the remembered value and is never clobbered.
 if [ -n "${DBSYNC_SCHEMA_DIR:-}" ] && command -v cardano-smash-server >/dev/null 2>&1; then
   export SMASH=true
+  _smash_owned_cnt="$SMASH"
+else
+  if [ -n "${DBSYNC_SCHEMA_DIR:-}" ]; then
+    echo "Note: DBSYNC_SCHEMA_DIR is set but cardano-smash-server was not found on PATH, SMASH not enabled." >&2
+  fi
+  if [ -n "${_smash_owned_cnt:-}" ]; then
+    if [ "${SMASH:-}" = "$_smash_owned_cnt" ]; then
+      unset SMASH
+    fi
+    unset _smash_owned_cnt
+  fi
 fi
 
-unset INSTANCE_NUM PREPEND_PATH _root_dir_cnt
+# Clean up internal variables. INSTANCE_NUM is deliberately NOT unset here - re-sourcing
+# must stay on the same instance instead of silently falling back to instance 0. The
+# `_smash_owned_cnt` marker is kept for the same reason, see above.
+unset _prepend_path_cnt _root_dir_cnt
 
-# Enable cardano-cli bash completion
+# Enable cardano-cli bash completion. The completion script is generated, syntax-checked
+# and only then sourced, so broken cardano-cli output cannot inject partial code into the
+# interactive shell or kill a caller running under 'set -e'.
 if ! command -v _cardano-cli >/dev/null 2>&1 && command -v cardano-cli >/dev/null 2>&1; then
-  # shellcheck disable=SC1090
-  . <(cardano-cli --bash-completion-script cardano-cli)
+  if _cli_comp_cnt="$(cardano-cli --bash-completion-script cardano-cli)" \
+    && [ -n "$_cli_comp_cnt" ] \
+    && printf '%s\n' "$_cli_comp_cnt" | bash -n 2>/dev/null; then
+    # The exit status of `.` is the status of the last command of the completion script,
+    # which says nothing about whether the completion was installed - check for the
+    # function instead.
+    # shellcheck disable=SC1090
+    . <(printf '%s\n' "$_cli_comp_cnt") || :
+    command -v _cardano-cli >/dev/null 2>&1 \
+      || echo "Note: cardano-cli bash completion failed to load, skipping." >&2
+  else
+    echo "Note: cannot generate cardano-cli bash completion, skipping." >&2
+  fi
+  unset _cli_comp_cnt
 fi
