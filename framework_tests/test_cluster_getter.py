@@ -193,6 +193,29 @@ def test_cleanup_dead_cluster_removes_marks():
 
 
 @pytest.mark.usefixtures("db_dir")
+def test_cleanup_dead_cluster_removes_respin_records():
+    """Check that dead cluster instance cleanup removes respin records of all workers.
+
+    The instance is dead for good, so no worker can respin it and the records are of
+    no use to anyone. Records of other cluster instances must not be touched.
+    """
+    getter = _get_cluster_getter()
+    cget_status = _get_cget_status()
+    cget_status.selected_instance = 0
+    cget_status.respin = _get_claim(instance_num=0, phase=cluster_getter._RespinPhase.RESPUN)
+
+    status_db.create_respin_progress(instance_num=0, worker_id="gw0")
+    status_db.create_respin_needed(instance_num=0, worker_id="gw1")
+    status_db.create_respin_needed(instance_num=1, worker_id="gw1")
+
+    getter._cleanup_dead_cluster(cget_status, instance_num=0)
+
+    assert status_db.list_respin_progress(instance_num=0) == []
+    assert status_db.list_respin_needed(instance_num=0) == []
+    assert len(status_db.list_respin_needed(instance_num=1)) == 1
+
+
+@pytest.mark.usefixtures("db_dir")
 def test_init_respin_own_mark():
     """Check that a marked test that triggers respin re-resolves its resources.
 
