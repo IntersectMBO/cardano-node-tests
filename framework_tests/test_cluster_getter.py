@@ -1,6 +1,7 @@
 """Tests for `cluster_management.cluster_getter`."""
 
 import time
+import typing as tp
 
 import pytest
 
@@ -9,6 +10,7 @@ from cardano_node_tests.cluster_management import resources
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.cluster_management import status_db
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import types as ttypes
 
 
 def _get_cluster_getter(num_of_instances: int = 1) -> cluster_getter.ClusterGetter:
@@ -48,6 +50,18 @@ def _get_claim(
 ) -> cluster_getter._RespinClaim:
     """Return a `_RespinClaim` instance suitable for unit testing."""
     return cluster_getter._RespinClaim(instance_num=instance_num, phase=phase)
+
+
+def _make_successful_respin() -> tuple[list[ttypes.FileType], tp.Callable[..., bool]]:
+    """Return a record of the respin calls and a fake `_respin` that starts instance 0."""
+    respin_calls: list[ttypes.FileType] = []
+
+    def _successful_respin(scriptsdir: ttypes.FileType = "") -> bool:
+        respin_calls.append(scriptsdir)
+        status_db.set_cluster_running(instance_num=0)
+        return True
+
+    return respin_calls, _successful_respin
 
 
 def _populate_marked(instance_num: int = 0, mark: str = "markA") -> None:
@@ -990,8 +1004,13 @@ def test_respin_if_armed(monkeypatch: pytest.MonkeyPatch):
     cget_status = _get_cget_status()
     cget_status.scriptsdir = "custom"
 
-    respin_calls: list[str] = []
-    monkeypatch.setattr(getter, "_respin", lambda scriptsdir: respin_calls.append(scriptsdir))
+    respin_calls: list[ttypes.FileType] = []
+
+    def _noop_respin(scriptsdir: ttypes.FileType = "") -> bool:
+        respin_calls.append(scriptsdir)
+        return True
+
+    monkeypatch.setattr(getter, "_respin", _noop_respin)
 
     # Nothing runs while no respin is claimed
     getter._respin_if_armed(cget_status)
@@ -1028,9 +1047,9 @@ def test_respin_if_armed_failure(monkeypatch: pytest.MonkeyPatch):
     cget_status = _get_cget_status()
     cget_status.respin = _get_claim(instance_num=0, phase=cluster_getter._RespinPhase.ARMED)
 
-    respin_calls: list[str] = []
+    respin_calls: list[ttypes.FileType] = []
 
-    def _failing_respin(scriptsdir: str = "") -> bool:
+    def _failing_respin(scriptsdir: ttypes.FileType = "") -> bool:
         respin_calls.append(scriptsdir)
         status_db.set_cluster_dead(instance_num=0)
         return False
@@ -1217,6 +1236,31 @@ class TestEvaluateInstance:
         assert cget_status.selected_instance == 0
         # Resources were not re-resolved
         assert scratch.final_lock_resources == ()
+
+    def test_marked_respinner_resolves_resources(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that the initial marked test resolves resources after its own respin.
+
+        The worker created the "current mark" record itself when it selected the
+        instance for the respin, so on the re-entry after the respin it must not be
+        mistaken for a non-initial marked test - it would start with no resource
+        records and other workers would see its locked resources as free.
+        """
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status(mark="markA")
+        cget_status.lock_resources = ["pool1"]
+        cget_status.selected_instance = 0
+        cget_status.respin = _get_claim(instance_num=0, phase=cluster_getter._RespinPhase.RESPUN)
+        status_db.set_cluster_running(instance_num=0)
+        # The records created by this worker when it selected the instance for the respin
+        status_db.create_respin_progress(instance_num=0, worker_id="gw0")
+        status_db.create_curr_mark(instance_num=0, worker_id="gw0", mark="markA")
+        monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
+        getter.snap.refresh()
+
+        decision, scratch = getter._evaluate_instance(cget_status, instance_num=0)
+
+        assert decision.verdict is cluster_getter._InstanceVerdict.START
+        assert scratch.final_lock_resources == ["pool1"]
 
     def test_respin_postponed_while_tests_run(self):
         """Check that a last-resort respin claim is postponed while tests are running."""
@@ -1442,14 +1486,9 @@ def test_get_cluster_instance_respin_cycle(monkeypatch: pytest.MonkeyPatch):
     """
     getter = _get_cluster_getter()
 
-    respin_calls: list[str] = []
+    respin_calls, fake_respin = _make_successful_respin()
 
-    def _fake_respin(scriptsdir: str = "") -> bool:
-        respin_calls.append(scriptsdir)
-        status_db.set_cluster_running(instance_num=0)
-        return True
-
-    monkeypatch.setattr(getter, "_respin", _fake_respin)
+    monkeypatch.setattr(getter, "_respin", fake_respin)
     monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
     monkeypatch.setattr(cluster_getter.cluster_nodes, "set_cluster_env", lambda **_kwargs: None)
     # Make the test independent of the environment it runs in
@@ -1465,4 +1504,49 @@ def test_get_cluster_instance_respin_cycle(monkeypatch: pytest.MonkeyPatch):
     # The respin records were cleaned up and the test is running
     assert status_db.list_respin_progress(instance_num=0) == []
     assert status_db.list_respin_needed(instance_num=0) == []
+    assert len(status_db.list_test_running(instance_num=0, worker_id="gw0")) == 1
+
+
+@pytest.mark.usefixtures("db_dir")
+def test_get_cluster_instance_marked_respin_locks_resources(monkeypatch: pytest.MonkeyPatch):
+    """Check that the initial marked test locks its resources after respinning the cluster.
+
+    A marked test with custom start scripts claims the respin, creates the "current
+    mark" record and re-enters the instance after the respin was performed. The
+    "current mark" record it sees then is its own, so it must still create the
+    resource records - without them other workers would start tests on the cluster
+    instance that this test locked.
+    """
+    getter = _get_cluster_getter()
+
+    respin_calls, fake_respin = _make_successful_respin()
+
+    monkeypatch.setattr(getter, "_respin", fake_respin)
+    monkeypatch.setattr(getter, "_is_healthy", lambda _instance_num: True)
+    monkeypatch.setattr(cluster_getter.cluster_nodes, "set_cluster_env", lambda **_kwargs: None)
+    # Make the test independent of the environment it runs in
+    monkeypatch.setattr(configuration, "DEV_CLUSTER_RUNNING", False)
+    monkeypatch.setattr(configuration, "FORBID_RESTART", False)
+
+    instance_num = getter.get_cluster_instance(
+        mark="markA",
+        lock_resources=[resources.Resources.CLUSTER],
+        use_resources=["pool1"],
+        cleanup=True,
+        scriptsdir="custom",
+    )
+
+    assert instance_num == 0
+    # The respin ran exactly once, with the scripts requested by the test
+    assert respin_calls == ["custom"]
+    assert sorted(status_db.get_resource_names(mode=status_db.MODE_LOCK, instance_num=0)) == [
+        resources.Resources.CLUSTER
+    ]
+    # `CLUSTER` is locked only, so only the requested `use_resources` are recorded as in-use
+    assert sorted(status_db.get_resource_names(mode=status_db.MODE_USE, instance_num=0)) == [
+        "pool1"
+    ]
+    assert len(status_db.list_curr_mark(instance_num=0, mark="markA")) == 1
+    # `cleanup` of a marked test promises a respin after the marked group is finished
+    assert len(status_db.list_respin_after_mark(instance_num=0)) == 1
     assert len(status_db.list_test_running(instance_num=0, worker_id="gw0")) == 1

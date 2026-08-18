@@ -1147,7 +1147,15 @@ class ClusterGetter:
         # It is responsibility of tests to make sure that the same resources are
         # requested for all the tests with the same mark (e.g. specific pool and
         # not "any pool").
-        need_resolve_resources = not scratch.marked_ready_rows
+        # A worker that owns the respin claim on this instance is the initial test of the
+        # mark, even when it sees a "current mark" record - the record is the one it
+        # created itself when it selected the instance for the respin (see
+        # `_init_marked_test`). It must resolve its resources here, otherwise it would
+        # start with no resource records at all and other workers would see the resources
+        # it locked as free.
+        need_resolve_resources = not scratch.marked_ready_rows or cget_status.owns_respin(
+            instance_num
+        )
 
         # Check availability of the required resources
         if need_resolve_resources and not self._resolve_resources_availability(
