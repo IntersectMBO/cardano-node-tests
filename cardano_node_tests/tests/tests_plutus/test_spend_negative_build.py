@@ -159,7 +159,13 @@ class TestNegative:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "(MissingScriptWitnessesUTXOW" in exc_value, exc_value
+            # cardano-cli >= 11.2.1.0 rejects a Plutus-less tx with collateral already
+            # during `transaction build`, before the ledger gets to raise
+            # `MissingScriptWitnessesUTXOW`.
+            assert (
+                "collateral inputs, but no Plutus scripts" in exc_value  # cardano-cli >= 11.2.1.0
+                or "(MissingScriptWitnessesUTXOW" in exc_value
+            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.PARAM_PLUTUS3_VERSION
