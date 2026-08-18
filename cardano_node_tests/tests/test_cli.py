@@ -7,6 +7,7 @@ import os
 import pathlib as pl
 import string
 import time
+import typing as tp
 
 import allure
 import hypothesis
@@ -1498,7 +1499,54 @@ class TestAdvancedQueries:
 
 
 class TestPing:
-    """Tests for `cardano-cli ping`."""
+    """Tests for `cardano-cli ping`.
+
+    The `_*_args`/`_last_pong`/`_tip_slot_no` helpers below branch on `VERSIONS.cli` to support
+    both the pre- and post-11.2.1.0 `ping` CLI interface and output format.
+    """
+
+    _NEW_CLI: tp.ClassVar[bool] = VERSIONS.cli >= version.parse("11.2.1.0")
+
+    @classmethod
+    def _magic_args(cls, magic: int) -> list[str]:
+        return ["--network-magic" if cls._NEW_CLI else "--magic", str(magic)]
+
+    @classmethod
+    def _addr_args(cls, host: str = "", port: int = 0, unixsock: str = "") -> list[str]:
+        """Return CLI args for the ping target - either `host:port` or a Unix socket path."""
+        if not (unixsock or host):
+            msg = "Either `host` or `unixsock` must be given."
+            raise ValueError(msg)
+        if cls._NEW_CLI:
+            return [unixsock or f"{host}:{port}"]
+        if unixsock:
+            return ["--unixsock", unixsock]
+        return ["--host", host, "--port", str(port)]
+
+    @classmethod
+    def _mode_args(cls, mode: str) -> list[str]:
+        if cls._NEW_CLI:
+            return ["--mode", mode]
+        return {"tip": ["--tip"], "query": ["--query-versions"]}[mode]
+
+    @classmethod
+    def _last_pong(cls, out_str: str) -> dict:
+        """Parse the last pong record, regardless of the cardano-cli ping output format."""
+        try:
+            last_pong: dict = (
+                json.loads(out_str.split("\n")[-1])
+                if cls._NEW_CLI
+                else json.loads(out_str)["pongs"][-1]
+            )
+        except Exception as exc:
+            msg = f"Failed to parse ping output: {exc}\nFull output: {out_str}"
+            raise AssertionError(msg) from exc
+        return last_pong
+
+    @classmethod
+    def _tip_slot_no(cls, ping_json: dict) -> int:
+        slot_no: int = ping_json["slotNo"] if cls._NEW_CLI else ping_json["tip"][-1]["slotNo"]
+        return slot_no
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1512,9 +1560,10 @@ class TestPing:
         Test that cardano-cli ping command successfully connects to local node via TCP.
 
         * Get pool1 or relay1 port from cluster instance configuration
-        * Execute `cardano-cli ping` command with --host localhost and --port
+        * Execute `cardano-cli ping` command addressing the node via TCP
         * Send 5 ping requests with JSON output
-        * Verify JSON response contains pongs array
+        * Parse the last pong record (old CLI: single `pongs`-wrapped JSON doc;
+          new CLI: newline-delimited JSON records)
         * Check that last pong has cookie value matching request count minus 1 (4)
         """
         common.get_test_id(cluster)
@@ -1531,14 +1580,10 @@ class TestPing:
                 "ping",
                 "--count",
                 str(count),
-                "--host",
-                "localhost",
-                "--port",
-                str(port),
-                "--magic",
-                str(cluster.network_magic),
+                *self._magic_args(cluster.network_magic),
                 "--json",
                 "--quiet",
+                *self._addr_args(host="127.0.0.1", port=port),
             ],
             timeout=30,
             add_default_args=False,
@@ -1548,9 +1593,8 @@ class TestPing:
         if "UnknownVersionInRsp" in err_str:
             issues.node_5324.finish_test()
 
-        ping_data = json.loads(cli_out.stdout.rstrip().decode("utf-8"))
-
-        last_pong = ping_data["pongs"][-1]
+        out_str = cli_out.stdout.rstrip().decode("utf-8")
+        last_pong = self._last_pong(out_str)
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
     @allure.link(helpers.get_vcs_link())
@@ -1565,10 +1609,11 @@ class TestPing:
         Test that cardano-cli ping command successfully connects to local node via Unix socket.
 
         * Add log ignore rule for expected MuxUnknownMiniProtocol errors (ping protocol)
-        * Execute `cardano-cli ping` command with --unixsock and CARDANO_NODE_SOCKET_PATH
+        * Execute `cardano-cli ping` command with CARDANO_NODE_SOCKET_PATH as the address
         * Send 5 ping requests with JSON output
         * Handle expected "Unix sockets only support queries" error on newer CLI versions
-        * Verify JSON response contains pongs array
+        * Parse the last pong record (old CLI: single `pongs`-wrapped JSON doc;
+          new CLI: newline-delimited JSON records)
         * Check that last pong has cookie value matching request count minus 1 (4)
         """
         common.get_test_id(cluster)
@@ -1590,12 +1635,10 @@ class TestPing:
                     "ping",
                     "--count",
                     str(count),
-                    "--unixsock",
-                    os.environ.get("CARDANO_NODE_SOCKET_PATH") or "",
-                    "--magic",
-                    str(cluster.network_magic),
+                    *self._magic_args(cluster.network_magic),
                     "--json",
                     "--quiet",
+                    *self._addr_args(unixsock=os.environ.get("CARDANO_NODE_SOCKET_PATH") or ""),
                 ],
                 timeout=30,
                 add_default_args=False,
@@ -1619,9 +1662,7 @@ class TestPing:
         if not (out_str and out_str[0] == "{"):
             issues.cli_49.finish_test()
 
-        ping_data = json.loads(out_str)
-
-        last_pong = ping_data["pongs"][-1]
+        last_pong = self._last_pong(out_str)
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
     @allure.link(helpers.get_vcs_link())
@@ -1633,10 +1674,10 @@ class TestPing:
     ):
         """Query blockchain tip using cardano-cli ping command.
 
-        Test that ping --tip flag returns current blockchain tip information.
+        Test that ping tip mode returns current blockchain tip information.
 
         * Get pool1 or relay1 port from cluster instance configuration
-        * Execute `cardano-cli ping --tip` command with --host and --port
+        * Execute `cardano-cli ping` command in tip mode, addressing the node via TCP
         * Parse JSON output and extract slotNo from last tip entry
         * Query current tip using standard query tip command
         * Verify ping tip slotNo is within 100 slots of cluster tip
@@ -1652,14 +1693,10 @@ class TestPing:
             [
                 "cardano-cli",
                 "ping",
-                "--host",
-                "localhost",
-                "--port",
-                str(port),
-                "--magic",
-                str(cluster.network_magic),
+                *self._magic_args(cluster.network_magic),
                 "--json",
-                "--tip",
+                *self._mode_args("tip"),
+                *self._addr_args(host="127.0.0.1", port=port),
             ],
             timeout=30,
             add_default_args=False,
@@ -1668,7 +1705,7 @@ class TestPing:
         ping_data = cli_out.stdout.rstrip().decode("utf-8")
         ping_json = json.loads(ping_data.split("\n")[-1])
 
-        tip_ping = ping_json["tip"][-1]["slotNo"]
+        tip_ping = self._tip_slot_no(ping_json)
         tip_cluster = cluster.g_query.get_slot_no()
         assert abs(tip_ping - tip_cluster) <= 100, (
             f"Expected tip close to {tip_cluster}, got {tip_ping}"
@@ -1683,12 +1720,12 @@ class TestPing:
     ):
         """Query node-to-node protocol version using cardano-cli ping.
 
-        Test that ping --query-versions returns protocol version information.
+        Test that ping query mode returns protocol version information.
 
         * Get pool1 or relay1 port from cluster instance configuration
-        * Execute `cardano-cli ping --query-versions` command with --host and --port
+        * Execute `cardano-cli ping` command in query mode, addressing the node via TCP
         * Handle expected UnknownVersionInRsp error when CLI and node versions mismatch
-        * Verify output contains "NodeToNodeVersion" when versions match
+        * Verify output contains "NodeToNodeV" when versions match
         * Check for known issue network_5281 if versions match but error occurs
         """
         common.get_test_id(cluster)
@@ -1705,13 +1742,9 @@ class TestPing:
                 [
                     "cardano-cli",
                     "ping",
-                    "--host",
-                    "localhost",
-                    "--port",
-                    str(port),
-                    "--magic",
-                    str(cluster.network_magic),
-                    "--query-versions",
+                    *self._magic_args(cluster.network_magic),
+                    *self._mode_args("query"),
+                    *self._addr_args(host="127.0.0.1", port=port),
                 ],
                 timeout=30,
                 add_default_args=False,
@@ -1732,7 +1765,9 @@ class TestPing:
 
         assert cli_out is not None
         ping_data = cli_out.stdout.rstrip().decode("utf-8")
-        assert "NodeToNodeVersion" in ping_data, ping_data
+        # Old CLI prints e.g. "NodeToNodeVersionV15", new CLI prints e.g. "NodeToNodeV_15" -
+        # "NodeToNodeV" is the common prefix of both.
+        assert "NodeToNodeV" in ping_data, ping_data
 
 
 class TestQuerySlotNumber:
