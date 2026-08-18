@@ -245,7 +245,7 @@ jobs:
         # failure()-only per Martin's own PR #14 review comment: "We want to
         # store the junit.xml only when we choose to do that, typically for
         # failed nightly."
-        if: failure() && inputs.testrun_name && inputs.report-history
+        if: (success() || failure()) && inputs.testrun_name && inputs.report-history # TEMP-SMOKE-TEST: revert to failure() before merge
         env:
           TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
           TCACHE_URL: ${{ secrets.TCACHE_URL }}
