@@ -66,6 +66,15 @@ ERRORS_IGNORED = [
     "BenchTxSubDebug",
     "BenchTxSubSummary",
     "QRT Last Message",
+    # tx-firehose allowed errors - it is a load generator, not the system under test.
+    # A chain switch can drop its in-flight tx and invalidate its fund set. It then
+    # rejects until `--max-consecutive-errors` is reached, exits, and is restarted
+    # with a freshly queried fund set.
+    "TxFirehose.Submit.Reject",
+    "TxFirehose.Build.Fail",
+    "TxFirehose.Exit.MaxErrors",
+    "tx-firehose: [0-9]+ consecutive rejects",
+    "tx-firehose failed, retrying",
     # Can happen when single postgres instance is used for multiple db-sync services
     "db-sync-node.*could not serialize access",
     # Can happen on p2p when node is shutting down
@@ -88,6 +97,10 @@ ERRORS_IGNORED = [
     "DiffusionError thread killed",
     # TODO: connection to other node before the other node is started
     r"AcquireConnectionError Network\.Socket\.connect",
+    # TODO: Leios announcement past the forecast horizon of our immutable tip, which
+    # tears down the connection. The horizon is 3k/f slots, and on a testnet with a low
+    # `k` the immutable tip can legitimately lag further behind than that by chance.
+    "ReactToAnnouncementError .*OutsideHorizon",
     "expected change in the serialization format",
 ]
 # Already removed from the list above:

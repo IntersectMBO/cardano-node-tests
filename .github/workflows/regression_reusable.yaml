@@ -43,6 +43,10 @@ on:
         required: false
         type: boolean
         default: false
+      skip_deselect:
+        required: false
+        type: boolean
+        default: false
       testrun_name:
         required: false
         type: string
@@ -109,6 +113,11 @@ jobs:
           ENV_PATH: ${{ inputs.env-path }}
         run: |
           if [ -e "$ENV_PATH" ]; then cat "$ENV_PATH" >> "$GITHUB_ENV"; fi
+      - name: Clear deselect file
+        # Undo a `DESELECT_FROM_FILE` that came from the env file. Runs before
+        # the tcache step below, so `skip_passed` still wins if both are used.
+        if: inputs.skip_deselect
+        run: echo "DESELECT_FROM_FILE=" >> "$GITHUB_ENV"
       - name: Get previous test results
         if: inputs.testrun_name && inputs.skip_passed
         env:
@@ -117,8 +126,23 @@ jobs:
         run: |
           if [ -n "$TCACHE_BASIC_AUTH" ] && [ -n "$TCACHE_URL" ]; then
             testrun_name_strip="${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}"
-            curl -s -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/${testrun_name_strip}/pypassed" > deselected_tests.txt
-            echo "DESELECT_FROM_FILE=deselected_tests.txt" >> "$GITHUB_ENV"
+            # The tcache is best effort - on failure the testrun just doesn't skip
+            # any previously passed tests. `-f` so that an HTTP error body is not
+            # handed to pytest-select as a list of test names.
+            if ! curl -sf -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/${testrun_name_strip}/pypassed" \
+                   > deselected_tests.txt; then
+              # `DESELECT_FROM_FILE` is left alone here, so a value coming from
+              # the env file still applies.
+              echo "::warning::Could not fetch previous test results from the" \
+                   "tcache, not skipping previously passed tests."
+              rm -f deselected_tests.txt
+            elif [ -s deselected_tests.txt ]; then
+              echo "DESELECT_FROM_FILE=deselected_tests.txt" >> "$GITHUB_ENV"
+            else
+              # Expected on the first run of a testrun. The empty file is kept so
+              # that it is still archived with the other artifacts.
+              echo "The tcache reports no previously passed tests."
+            fi
           fi
       - name: ▶️ Run Regression Tests
         id: testing-step
