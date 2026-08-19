@@ -18,6 +18,18 @@ cluster_scripts_dir="$WORKDIR/cluster0_${cluster_era}"
 # init dir for step1 binaries
 readonly STEP1_BIN="$WORKDIR/step1-bin"
 
+# Protocol versions we are currently testing
+readonly BASE_PROT_VER=11
+readonly TARGET_PROT_VER=11
+
+# A single hard fork bumps the protocol version by one, so the target version can be at most
+# one version ahead of the base version.
+if [ "$TARGET_PROT_VER" -ne "$BASE_PROT_VER" ] \
+  && [ "$TARGET_PROT_VER" -ne "$((BASE_PROT_VER + 1))" ]; then
+  echo "Target protocol version $TARGET_PROT_VER must be $BASE_PROT_VER or $((BASE_PROT_VER + 1))" >&2
+  exit 6
+fi
+
 # shellcheck disable=SC1091
 . scripts/common.sh
 
@@ -29,7 +41,7 @@ if [ "$1" = "step1" ]; then
   printf "STEP1 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=1
-  export PROTOCOL_VERSION=10
+  export PROTOCOL_VERSION="$BASE_PROT_VER"
 
   reports_dir="${WORKDIR}/reports-step1"
   mkdir -p "$reports_dir"
@@ -113,7 +125,7 @@ elif [ "$1" = "step2" ]; then
   printf "STEP2 start: %(%H:%M:%S)T\n" -1
 
   export UPGRADE_TESTS_STEP=2
-  export PROTOCOL_VERSION=10
+  export PROTOCOL_VERSION="$BASE_PROT_VER"
 
   reports_dir="${WORKDIR}/reports-step2"
   mkdir -p "$reports_dir"
@@ -126,7 +138,7 @@ elif [ "$1" = "step2" ]; then
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step2/state-cluster0/bft1.socket" \
-    PROTOCOL_VERSION=11 \
+    PROTOCOL_VERSION="$TARGET_PROT_VER" \
     DRY_RUN=true \
     "$cluster_scripts_dir/start-cluster"
 
@@ -286,7 +298,7 @@ elif [ "$1" = "step3" ]; then
 
   # re-generate config and topology files
   CARDANO_NODE_SOCKET_PATH="$WORKDIR/dry_config_step3/state-cluster0/bft1.socket" \
-    PROTOCOL_VERSION=11 \
+    PROTOCOL_VERSION="$TARGET_PROT_VER" \
     DRY_RUN=true \
     "$cluster_scripts_dir/start-cluster"
 
@@ -398,8 +410,12 @@ elif [ "$1" = "step3" ]; then
   pytest cardano_node_tests/tests/test_node_upgrade.py -k test_ignore_log_errors || err_retval="$?"
 
   # Hard fork
-  pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 6
-  export PROTOCOL_VERSION=11
+  if [ "$TARGET_PROT_VER" -gt "$BASE_PROT_VER" ]; then
+    pytest cardano_node_tests/tests/test_node_upgrade.py -k test_hardfork || exit 6
+  else
+    echo "Base and target protocol version are the same ($BASE_PROT_VER), skipping hard fork"
+  fi
+  export PROTOCOL_VERSION="$TARGET_PROT_VER"
 
   # Run smoke tests
   printf "STEP3 tests: %(%H:%M:%S)T\n" -1
