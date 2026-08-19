@@ -334,6 +334,22 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
 
 
 @pytest.hookimpl(tryfirst=True)
+def pytest_configure(config: tp.Any) -> None:
+    # `pytest_xdist_make_scheduler` always returns `OneLongScheduling`, so `--dist` is
+    # ignored and xdist's own `loadgroup` scheduling never runs. Its worker-side nodeid
+    # suffixing would still fire though, adding a second group suffix in front of ours
+    # (`...@a_b@b@long`) and making `_split_scope` use xdist's group name (all
+    # `xdist_group` markers of the item, joined) instead of the closest one. Turn it
+    # off, so this module is the only producer of nodeid suffixes.
+    # The option exists only on xdist workers, and is set before `pytest_configure`.
+    if getattr(config.option, "loadgroup", False):
+        config.option.loadgroup = False
+
+
+# Must run as late as possible: the nodeid suffixes added here would break every
+# consumer that matches on the original nodeid, e.g. `pytest-select`, whose
+# `--deselect-from-file` compares the file entries against `item.nodeid`.
+@pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(items: list) -> None:
     for item in items:
         group_marker = item.get_closest_marker(GROUP_MARKER)
