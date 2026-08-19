@@ -39,6 +39,11 @@ if is_venv_active; then
   exit 1
 fi
 
+# `run_tests.sh` runs the same check, but only after the whole dependency setup,
+# so a typo would be reported ~an hour later. Exit code 3 matches the one used
+# there.
+assert_deselect_file || exit 3
+
 # Categorize `.bin` entries. Usable executables take priority on PATH. Entries
 # that PATH lookup cannot use (no exec bit, directories, dangling symlinks)
 # are merely ignored. An executable regular file that is not a usable binary

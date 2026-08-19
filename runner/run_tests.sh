@@ -16,17 +16,23 @@
 #   PYTEST_ARGS: additional args to pass to pytest
 #   CI_ARGS: additional args to pass to pytest (for CI runs)
 #   TEST_THREADS: number of pytest workers (defaults vary per target)
-#   DESELECT_FROM_FILE: path to file with tests to deselect
+#   DESELECT_FROM_FILE: path to file with tests to deselect (one test per line;
+#     `#` comments, blank lines and surrounding whitespace are stripped before the
+#     file is handed to pytest)
 #   CLUSTERS_COUNT: number of local testnet clusters to launch
 #   FORBID_RESTART: if set to true, do not restart clusters between tests
 #   SESSION_TIMEOUT: timeout for the test session (e.g. 3h for 3 hours)
 #
 # Notes:
 # - If PYTEST_ARGS is provided, we disable cleanup and the initial "skip all" pass.
-# - If DESELECT_FROM_FILE is provided, we disable the initial "skip all" pass.
+# - If any tests are deselected, we disable the initial "skip all" pass.
 # - HTML/JUnit reports are generated only when PYTEST_ARGS is unset.
 
 set -Eeuo pipefail
+
+_top_dir="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine top dir, exiting." >&2; exit 1; }
+# shellcheck disable=SC1091
+. "$_top_dir/scripts/common.sh"
 
 # Defaults
 TESTS_DIR="${TESTS_DIR:-cardano_node_tests/}"
@@ -75,16 +81,13 @@ set_common_env() {
     export PYTEST_ADDOPTS="${PYTEST_ADDOPTS:+$PYTEST_ADDOPTS }${PYTEST_ARGS}"
   fi
 
-  if [[ -n "${DESELECT_FROM_FILE:-}" ]]; then
-    RUN_SKIPS="no"
-  fi
-
   if [[ -n "${CI_ARGS:-}" ]]; then
     export PYTEST_ADDOPTS="${PYTEST_ADDOPTS:+$PYTEST_ADDOPTS }${CI_ARGS}"
   fi
 
+  # RUN_SKIPS can still be turned off by `compute_common_args`, so it is not
+  # made readonly here.
   readonly CLEANUP
-  readonly RUN_SKIPS
 }
 
 # Compute args that depend on current environment.
@@ -108,11 +111,39 @@ compute_common_args() {
   fi
 
   # Deselect-from-file
+  deselect_from_file_arr=()
   if [[ -n "${DESELECT_FROM_FILE:-}" ]]; then
-    deselect_from_file_arr=( "--deselect-from-file=$DESELECT_FROM_FILE" )
-  else
-    deselect_from_file_arr=()
+    # Only a typo can get us here - every caller that wants no deselection sets
+    # `DESELECT_FROM_FILE` to an empty value, which skips this whole block.
+    # Exit code 3 distinguishes this setup failure from pytest's "some tests
+    # failed" (1).
+    assert_deselect_file || exit 3
+
+    # `pytest-select` has no comment syntax - it reads every line of the file
+    # as a test name. Hand it a stripped copy so that annotated lists (e.g.
+    # `scripts/deselected_leios_tests.txt`, which groups the tests by cause)
+    # don't end up in its "Not all deselected tests exist" warning.
+    stripped_deselect="$(mktemp -t deselected_tests.XXXXXX.txt)"
+    trap 'rm -f "$stripped_deselect"' EXIT
+    sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^#/d' -e '/^$/d' \
+      "$DESELECT_FROM_FILE" > "$stripped_deselect"
+
+    if [[ -s "$stripped_deselect" ]]; then
+      # `grep -c ''` and not `wc -l`, so that a file without a trailing newline
+      # is not undercounted by one.
+      echo "Deselecting $(grep -c '' "$stripped_deselect") tests listed in '$DESELECT_FROM_FILE'"
+      deselect_from_file_arr=( "--deselect-from-file=$stripped_deselect" )
+      # The initial "skip all" pass would register the deselected tests with
+      # Allure as skipped, which is not what the deselection is for.
+      RUN_SKIPS="no"
+    else
+      # An empty list is not an error - e.g. the tcache "already passed" list
+      # is empty on the first run of a testrun.
+      echo "No tests to deselect in '$DESELECT_FROM_FILE'"
+    fi
   fi
+
+  readonly RUN_SKIPS
 }
 
 cleanup_previous_run() {

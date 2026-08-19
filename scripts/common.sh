@@ -74,6 +74,18 @@ assert_cmds_available() {
   [ "$found_all" -eq 1 ]
 }
 
+# Assert that `DESELECT_FROM_FILE`, if set to a non-empty value, points to an
+# existing file. An unset or empty value means "deselect nothing" and is not an
+# error, so only a typo can make this fail.
+assert_deselect_file() {
+  [ -n "${DESELECT_FROM_FILE:-}" ] || return 0
+  if [ ! -f "$DESELECT_FROM_FILE" ]; then
+    echo "Error: deselect file '$DESELECT_FROM_FILE' not found." >&2
+    echo "Use 'DESELECT_FROM_FILE=' to run without deselecting any tests." >&2
+    return 1
+  fi
+}
+
 # Acquire an exclusive, non-blocking lock tied to the given workdir to prevent
 # concurrent testruns from clobbering each other's workdir. The lock is held
 # for the lifetime of the calling shell; it is released automatically on exit.
