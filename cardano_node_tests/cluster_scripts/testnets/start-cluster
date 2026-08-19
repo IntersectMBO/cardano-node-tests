@@ -8,7 +8,7 @@ readonly RELAY1_EKG="%%EKG_PORT_RELAY1%%"
 readonly RELAY1_PROMETHEUS="%%PROMETHEUS_PORT_RELAY1%%"
 readonly WEBSERVER_PORT="%%WEBSERVER_PORT%%"
 
-initialize_globals() {
+tn_initialize_globals() {
   TESTNET_DIR="${1:?"Testnet dir needed"}"
   readonly TESTNET_DIR
 
@@ -62,7 +62,7 @@ initialize_globals() {
   fi
 }
 
-setup_state_cluster() {
+tn_setup_state_cluster() {
   if ! rm_retry "$STATE_CLUSTER"; then
     echo "Could not remove existing '$STATE_CLUSTER'" >&2
     exit 1
@@ -103,7 +103,7 @@ setup_state_cluster() {
   cp -r "${TESTNET_DIR}/relay1-db" "${STATE_CLUSTER}/db-relay1"
 }
 
-configure_supervisor() {
+tn_configure_supervisor() {
   cat > "${STATE_CLUSTER}/supervisor.conf" <<EoF
 [unix_http_server]
 file = ${SUPERVISORD_SOCKET_PATH}
@@ -174,7 +174,7 @@ pidfile=./${STATE_CLUSTER_NAME}/supervisord.pid
 EoF
 }
 
-start_node() {
+tn_start_node() {
   supervisord --config "${STATE_CLUSTER}/supervisor.conf"
 
   echo "Waiting until replay is finished"
@@ -205,7 +205,7 @@ start_node() {
   [ "$sync_progress" = "100.00" ] || { echo "Failed to sync the relay node, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
 }
 
-start_optional_services() {
+tn_start_optional_services() {
   if [ "$ENABLE_SUBMIT_API" -eq 1 ]; then
     echo "Starting cardano-submit-api"
     supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" start submit_api
@@ -230,7 +230,7 @@ start_optional_services() {
   fi
 }
 
-log_faucet_balance() {
+tn_log_faucet_balance() {
   local faucet_init_balance
   faucet_init_balance="$(get_address_balance \
     --address "$(<"${STATE_CLUSTER}/shelley/faucet.addr")")"
@@ -238,13 +238,13 @@ log_faucet_balance() {
 }
 
 main() {
-  initialize_globals "$@"
-  setup_state_cluster
-  configure_supervisor
+  tn_initialize_globals "$@"
+  tn_setup_state_cluster
+  tn_configure_supervisor
   create_cluster_scripts
-  start_node
-  start_optional_services
-  log_faucet_balance
+  tn_start_node
+  tn_start_optional_services
+  tn_log_faucet_balance
 
   : > "$START_CLUSTER_STATUS"
   echo "Cluster started 🚀"
