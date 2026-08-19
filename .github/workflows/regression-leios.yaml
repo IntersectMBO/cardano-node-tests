@@ -1,0 +1,41 @@
+name: 04 Regression tests with Leios
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_rev:
+        description: "cardano-node revision"
+        required: true
+        default: leios-prototype
+      cli_rev:
+        description: "cardano-cli revision (optional)"
+        default: ""
+      allow_unstable_error_msgs:
+        type: boolean
+        default: true
+        description: "Allow unstable error messages"
+      skip_deselect:
+        type: boolean
+        default: false
+        description: "Run also the tests that are known to fail on Leios"
+
+permissions:
+  contents: read
+
+jobs:
+  regression_tests:
+    # reusable workflow from local repo and same branch as this config
+    uses: ./.github/workflows/regression_reusable.yaml
+    with:
+      # Defaulted here as well, because `required: true` is enforced only by the
+      # dispatch form - an API or `gh workflow run` dispatch can still pass an
+      # empty value, which `regression.sh` would turn into `master`.
+      node_rev: ${{ inputs.node_rev || 'leios-prototype' }}
+      cli_rev: ${{ inputs.cli_rev }}
+      cluster_era: dijkstra 12
+      markexpr: testnets
+      allow_unstable_error_msgs: ${{ inputs.allow_unstable_error_msgs }}
+      skip_deselect: ${{ inputs.skip_deselect }}
+      env-path: runner/env_leios
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

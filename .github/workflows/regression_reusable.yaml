@@ -43,6 +43,10 @@ on:
         required: false
         type: boolean
         default: false
+      skip_deselect:
+        required: false
+        type: boolean
+        default: false
       testrun_name:
         required: false
         type: string
@@ -109,6 +113,11 @@ jobs:
           ENV_PATH: ${{ inputs.env-path }}
         run: |
           if [ -e "$ENV_PATH" ]; then cat "$ENV_PATH" >> "$GITHUB_ENV"; fi
+      - name: Clear deselect file
+        # Undo a `DESELECT_FROM_FILE` that came from the env file. Runs before
+        # the tcache step below, so `skip_passed` still wins if both are used.
+        if: inputs.skip_deselect
+        run: echo "DESELECT_FROM_FILE=" >> "$GITHUB_ENV"
       - name: Get previous test results
         if: inputs.testrun_name && inputs.skip_passed
         env:
