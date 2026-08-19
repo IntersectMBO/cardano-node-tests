@@ -200,24 +200,47 @@ fi
 export PATH_PREPEND
 unset _node_bins
 
-# setup tx-centrifuge (only when it is enabled); it lives on its own cardano-node ref
-if is_truthy "${ENABLE_TX_CENTRIFUGE:-}"; then
-  if is_usable_binary "${BIN_DIR}/tx-centrifuge"; then
-    echo "Skipping build of 'tx-centrifuge'"
-    report_existing_binary "${BIN_DIR}/tx-centrifuge" || exit 1
-  else
-    # shellcheck disable=SC1091
-    . runner/source_tx_centrifuge.sh
-    tx_centrifuge_build "${TX_CENTRIFUGE_REV:-bench/leios-11.0.1}"
-    _centrifuge_bins="$(tx_centrifuge_print_path_prepend "")"
-    _centrifuge_bins="${_centrifuge_bins%:}"
-    if [ -n "$_centrifuge_bins" ]; then
-      PATH_PREPEND="${PATH_PREPEND}:${_centrifuge_bins}"
-    fi
-    export PATH_PREPEND
-    unset _centrifuge_bins
+# setup the standalone tx tools (each disabled by default); every tool lives on
+# its own cardano-node ref, so each is built from its own revision.
+# Table fields: <tool name>:<enable var>:<revision var>:<default revision>.
+# Git refs cannot contain ":", so it is safe as the field separator.
+# The names of the enabled tools are recorded in ENABLED_TX_TOOLS, so that the
+# testrun step doesn't need to repeat the list of enable variables. The list is
+# space-separated, so tool names must not contain whitespace; this is enforced
+# below.
+# shellcheck disable=SC1091
+. runner/source_tx_tool.sh
+_tx_tools=(
+  "tx-centrifuge:ENABLE_TX_CENTRIFUGE:TX_CENTRIFUGE_REV:bench/leios-11.0.1"
+  "tx-firehose:ENABLE_TX_FIREHOSE:TX_FIREHOSE_REV:leios-prototype"
+)
+export ENABLED_TX_TOOLS=""
+for _tx_tool_spec in "${_tx_tools[@]}"; do
+  IFS=":" read -r _tx_tool _tx_enable_var _tx_rev_var _tx_rev_default <<< "$_tx_tool_spec"
+  case "$_tx_tool" in
+    *[[:space:]]* )
+      echo "Tool name '${_tx_tool}' contains whitespace, cannot be recorded in ENABLED_TX_TOOLS." >&2
+      exit 1
+      ;;
+  esac
+  is_truthy "${!_tx_enable_var:-}" || continue
+  ENABLED_TX_TOOLS="${ENABLED_TX_TOOLS:+"${ENABLED_TX_TOOLS} "}${_tx_tool}"
+  if is_usable_binary "${BIN_DIR}/${_tx_tool}"; then
+    echo "Skipping build of '${_tx_tool}'"
+    report_existing_binary "${BIN_DIR}/${_tx_tool}" || exit 1
+    continue
   fi
-fi
+  # Use the no-colon default so an explicitly empty revision is reported as an
+  # error instead of being silently replaced by the default.
+  tx_tool_build "$_tx_tool" "${!_tx_rev_var-$_tx_rev_default}"
+  _tx_bins="$(tx_tool_print_path_prepend "$_tx_tool")"
+  if [ -n "$_tx_bins" ]; then
+    PATH_PREPEND="${PATH_PREPEND}:${_tx_bins}"
+  fi
+  export PATH_PREPEND
+  unset _tx_bins
+done
+unset _tx_tools _tx_tool_spec _tx_tool _tx_enable_var _tx_rev_var _tx_rev_default
 
 # setup dbsync (disabled by default); placed after the node/cli setup so its
 # bin dirs come after theirs in PATH_PREPEND
@@ -395,7 +418,9 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   _req_cmds=( cardano-node cardano-cli cardano-submit-api bech32 tx-generator )
   if [ -n "${DBSYNC_REV:-}" ]; then _req_cmds+=( cardano-db-sync ); fi
   if is_truthy "${SMASH:-}"; then _req_cmds+=( cardano-smash-server ); fi
-  if is_truthy "${ENABLE_TX_CENTRIFUGE:-}"; then _req_cmds+=( tx-centrifuge ); fi
+  # Word splitting is intended, ENABLED_TX_TOOLS is a space-separated list.
+  # shellcheck disable=SC2206
+  if [ -n "${ENABLED_TX_TOOLS:-}" ]; then _req_cmds+=( ${ENABLED_TX_TOOLS} ); fi
   assert_cmds_available "${_req_cmds[@]}" || exit 3
 
   retval=0
