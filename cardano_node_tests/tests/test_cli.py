@@ -3,7 +3,6 @@
 import datetime
 import json
 import logging
-import os
 import pathlib as pl
 import string
 import time
@@ -1501,15 +1500,18 @@ class TestAdvancedQueries:
 class TestPing:
     """Tests for `cardano-cli ping`.
 
-    The `_*_args`/`_last_pong`/`_tip_slot_no` helpers below branch on `VERSIONS.cli` to support
-    both the pre- and post-11.2.1.0 `ping` CLI interface and output format.
+    The tests target the `ping` CLI interface and output format of cardano-cli 11.2.1.0+.
+    Everything guarded by `_OLD_CLI` is backwards compatibility for older cardano-cli versions
+    and can be deleted once those are no longer under test.
     """
 
-    _NEW_CLI: tp.ClassVar[bool] = VERSIONS.cli >= version.parse("11.2.1.0")
+    _OLD_CLI: tp.ClassVar[bool] = VERSIONS.cli < version.parse("11.2.1.0")
 
     @classmethod
     def _magic_args(cls, magic: int) -> list[str]:
-        return ["--network-magic" if cls._NEW_CLI else "--magic", str(magic)]
+        if cls._OLD_CLI:
+            return ["--magic", str(magic)]
+        return ["--network-magic", str(magic)]
 
     @classmethod
     def _addr_args(cls, host: str = "", port: int = 0, unixsock: str = "") -> list[str]:
@@ -1517,26 +1519,26 @@ class TestPing:
         if not (unixsock or host):
             msg = "Either `host` or `unixsock` must be given."
             raise ValueError(msg)
-        if cls._NEW_CLI:
-            return [unixsock or f"{host}:{port}"]
-        if unixsock:
-            return ["--unixsock", unixsock]
-        return ["--host", host, "--port", str(port)]
+        if cls._OLD_CLI:
+            if unixsock:
+                return ["--unixsock", unixsock]
+            return ["--host", host, "--port", str(port)]
+        return [unixsock or f"{host}:{port}"]
 
     @classmethod
     def _mode_args(cls, mode: str) -> list[str]:
-        if cls._NEW_CLI:
-            return ["--mode", mode]
-        return {"tip": ["--tip"], "query": ["--query-versions"]}[mode]
+        if cls._OLD_CLI:
+            return {"tip": ["--tip"], "query": ["--query-versions"]}[mode]
+        return ["--mode", mode]
 
     @classmethod
     def _last_pong(cls, out_str: str) -> dict:
         """Parse the last pong record, regardless of the cardano-cli ping output format."""
         try:
             last_pong: dict = (
-                json.loads(out_str.split("\n")[-1])
-                if cls._NEW_CLI
-                else json.loads(out_str)["pongs"][-1]
+                json.loads(out_str)["pongs"][-1]
+                if cls._OLD_CLI
+                else json.loads(out_str.split("\n")[-1])
             )
         except Exception as exc:
             msg = f"Failed to parse ping output: {exc}\nFull output: {out_str}"
@@ -1545,8 +1547,75 @@ class TestPing:
 
     @classmethod
     def _tip_slot_no(cls, ping_json: dict) -> int:
-        slot_no: int = ping_json["slotNo"] if cls._NEW_CLI else ping_json["tip"][-1]["slotNo"]
+        slot_no: int = ping_json["tip"][-1]["slotNo"] if cls._OLD_CLI else ping_json["slotNo"]
         return slot_no
+
+    @classmethod
+    def _ping_unix_socket_old_cli(
+        cls,
+        cluster: clusterlib.ClusterLib,
+        socket_path: str,
+    ) -> None:
+        """Run the `test_ping_unix_socket` body for cardano-cli older than 11.2.1.0.
+
+        * Add log ignore rule for expected MuxUnknownMiniProtocol errors (ping protocol)
+        * Execute `cardano-cli ping` command with `--unixsock`, sending 5 ping requests
+        * Handle expected "Unix sockets only support queries" error on cardano-cli 9.4.1.1+
+        * Check that last pong has cookie value matching request count minus 1 (4)
+        """
+        count = 5
+        cli_timeout = 30
+        # `cluster.cli` re-runs the command on "resource vanished", which is what a failing ping
+        # errors with, so the worst case is this many attempts, each capped at `cli_timeout`.
+        # Keep in sync with the retry loop in `ClusterLib.cli`.
+        cli_attempts = 3
+        # The node writes the error asynchronously, it can take several seconds to appear in the
+        # log file after the CLI has exited
+        log_grace = 20
+
+        # The rule has to outlive the whole command, hence no cleanup here - the rules file is
+        # left behind on purpose, the expired rule in it is skipped by the log search.
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="MuxError MuxUnknownMiniProtocol .* MiniProtocolNum 8",
+            ignore_file_id="ping_unix_socket",
+            skip_after=time.time() + cli_timeout * cli_attempts + log_grace,
+        )
+
+        try:
+            cli_out = cluster.cli(
+                [
+                    "cardano-cli",
+                    "ping",
+                    "--count",
+                    str(count),
+                    *cls._magic_args(cluster.network_magic),
+                    "--json",
+                    "--quiet",
+                    *cls._addr_args(unixsock=socket_path),
+                ],
+                timeout=cli_timeout,
+                add_default_args=False,
+            )
+        except clusterlib.CLIError as exc:
+            exc_str = str(exc)
+            if "MuxError MuxBearerClosed" in exc_str:
+                issues.node_5245.finish_test()
+            # cardano-ping reports user friendly error on misconfiguration on cardano-cli 9.4.1.1+
+            if "Unix sockets only support queries" in exc_str:
+                return
+            raise
+
+        err_str = cli_out.stderr.rstrip().decode("utf-8")
+        if "UnknownVersionInRsp" in err_str:
+            issues.node_5324.finish_test()
+
+        out_str = cli_out.stdout.rstrip().decode("utf-8")
+        if not (out_str and out_str[0] == "{"):
+            issues.cli_49.finish_test()
+
+        last_pong = cls._last_pong(out_str)
+        assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1562,8 +1631,7 @@ class TestPing:
         * Get pool1 or relay1 port from cluster instance configuration
         * Execute `cardano-cli ping` command addressing the node via TCP
         * Send 5 ping requests with JSON output
-        * Parse the last pong record (old CLI: single `pongs`-wrapped JSON doc;
-          new CLI: newline-delimited JSON records)
+        * Parse the last pong record from the newline-delimited JSON output
         * Check that last pong has cookie value matching request count minus 1 (4)
         """
         common.get_test_id(cluster)
@@ -1608,62 +1676,43 @@ class TestPing:
 
         Test that cardano-cli ping command successfully connects to local node via Unix socket.
 
-        * Add log ignore rule for expected MuxUnknownMiniProtocol errors (ping protocol)
-        * Execute `cardano-cli ping` command with CARDANO_NODE_SOCKET_PATH as the address
-        * Send 5 ping requests with JSON output
-        * Handle expected "Unix sockets only support queries" error on newer CLI versions
-        * Parse the last pong record (old CLI: single `pongs`-wrapped JSON doc;
-          new CLI: newline-delimited JSON records)
-        * Check that last pong has cookie value matching request count minus 1 (4)
+        Ping mode runs over the node-to-node protocol only, so it is not available over a Unix
+        socket. The node-to-client query mode is used instead.
+
+        On cardano-cli older than 11.2.1.0, the legacy `--unixsock` ping flow runs instead.
+
+        * Execute `cardano-cli ping` command in query mode with CARDANO_NODE_SOCKET_PATH
+          as the address
+        * Verify the handshake reports a NodeToClient protocol version
         """
         common.get_test_id(cluster)
-        count = 5
-        ignore_file_id = "ping_unix_socket"
+        socket_path = str(cluster_nodes.get_cluster_env().socket_path)
 
-        logfiles.add_ignore_rule(
-            files_glob="*.stdout",
-            regex="MuxError MuxUnknownMiniProtocol .* MiniProtocolNum 8",
-            ignore_file_id=ignore_file_id,
-            # Ignore errors for next 20 seconds
-            skip_after=time.time() + 20,
+        if self._OLD_CLI:
+            self._ping_unix_socket_old_cli(cluster=cluster, socket_path=socket_path)
+            return
+
+        # Unlike `test_ping_version`, a handshake failure needs no blocker attribution here -
+        # every other `cardano-cli` command talks to the node over node-to-client as well, so a
+        # version mismatch would break the whole test run, not just this test.
+        cli_out = cluster.cli(
+            [
+                "cardano-cli",
+                "ping",
+                *self._magic_args(cluster.network_magic),
+                "--json",
+                "--quiet",
+                *self._mode_args("query"),
+                *self._addr_args(unixsock=socket_path),
+            ],
+            timeout=30,
+            add_default_args=False,
         )
 
-        try:
-            cli_out = cluster.cli(
-                [
-                    "cardano-cli",
-                    "ping",
-                    "--count",
-                    str(count),
-                    *self._magic_args(cluster.network_magic),
-                    "--json",
-                    "--quiet",
-                    *self._addr_args(unixsock=os.environ.get("CARDANO_NODE_SOCKET_PATH") or ""),
-                ],
-                timeout=30,
-                add_default_args=False,
-            )
-        except clusterlib.CLIError as exc:
-            exc_str = str(exc)
-            if "MuxError MuxBearerClosed" in exc_str:
-                issues.node_5245.finish_test()
-            # cardano-ping reports user friendly error on misconfiguration on cardano-cli 9.4.1.1+
-            if "Unix sockets only support queries" in exc_str:
-                return
-            raise
-        else:
-            logfiles.clean_ignore_rules(ignore_file_id=ignore_file_id)
-
-        err_str = cli_out.stderr.rstrip().decode("utf-8")
-        if "UnknownVersionInRsp" in err_str:
-            issues.node_5324.finish_test()
-
         out_str = cli_out.stdout.rstrip().decode("utf-8")
-        if not (out_str and out_str[0] == "{"):
-            issues.cli_49.finish_test()
-
-        last_pong = self._last_pong(out_str)
-        assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
+        # The CLI prints e.g. "NodeToClientV_16" (older versions print "NodeToClientVersion...") -
+        # "NodeToClientV" is the common prefix of both.
+        assert "NodeToClientV" in out_str, out_str
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1765,7 +1814,7 @@ class TestPing:
 
         assert cli_out is not None
         ping_data = cli_out.stdout.rstrip().decode("utf-8")
-        # Old CLI prints e.g. "NodeToNodeVersionV15", new CLI prints e.g. "NodeToNodeV_15" -
+        # The CLI prints e.g. "NodeToNodeV_15" (older versions print "NodeToNodeVersionV15") -
         # "NodeToNodeV" is the common prefix of both.
         assert "NodeToNodeV" in ping_data, ping_data
 
