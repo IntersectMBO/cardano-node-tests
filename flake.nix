@@ -46,6 +46,7 @@
                 nodePkgs.bech32
                 nodePkgs.tx-generator
                 centrifugePkgs.tx-centrifuge
+                pkgs.libfaketime
                 pkgs.bashInteractive
               ];
             };
