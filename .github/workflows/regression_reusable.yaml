@@ -236,15 +236,8 @@ jobs:
             curl -s -X PUT --fail-with-body -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@run_workdir/testrun-report.xml"
           fi
       - name: Report nightly history
-        # Separate from "Report test results" above - that PUTs to /import
-        # (the pre-existing skip-passed/retry-cache feature). This PUTs to
-        # /history, a distinct route added specifically for nightly
-        # persistent-failure tracking. Gated on `report-history`, not just
-        # `testrun_name`, so manual regression/regression-dbsync dispatches
-        # never write here - only the three nightly workflows set this flag.
-        # failure()-only per Martin's own PR #14 review comment: "We want to
-        # store the junit.xml only when we choose to do that, typically for
-        # failed nightly."
+        # PUTs to /history, separate from /import above. Gated on
+        # report-history so only nightly runs persist JUnit XML.
         if: (success() || failure()) && inputs.testrun_name && inputs.report-history # TEMP-SMOKE-TEST: revert to failure() before merge
         env:
           TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
@@ -254,6 +247,16 @@ jobs:
             testrun_name_strip="${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}"
             curl -s -X PUT --fail-with-body -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/history/${testrun_name_strip}/${{ github.run_number }}" -F "junitxml=@run_workdir/testrun-report.xml"
           fi
+      - name: TEMP-SMOKE-TEST verify tcache history
+        # Remove before merge. Prints the /history listing so we can confirm
+        # the PUT above actually landed, from the job log alone.
+        if: (success() || failure()) && inputs.testrun_name && inputs.report-history
+        env:
+          TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+          TCACHE_URL: ${{ secrets.TCACHE_URL }}
+        run: |
+          testrun_name_strip="${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}"
+          curl -s -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/history/${testrun_name_strip}?days=1"
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7
         if: failure()
