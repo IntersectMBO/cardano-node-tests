@@ -145,6 +145,7 @@ markers = [
     "upgrade_step3: test(s) for upgrade testing in step3",
     "plutus: test(s) for plutus",
     "team_plutus: test(s) from Plutus dev team",
+    "leios: test(s) for Leios",
     "disabled: temporarily disabled test(s)",
     "noop: placeholder marker",
 ]

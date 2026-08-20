@@ -35,6 +35,7 @@ elif not (configuration.ENABLE_TX_FIREHOSE or configuration.ENABLE_TX_CENTRIFUGE
     )
 
 pytestmark = [
+    pytest.mark.leios,
     common.SKIPIF_ON_TESTNET,
     pytest.mark.skipif(bool(_SKIP_REASON), reason=_SKIP_REASON),
 ]
