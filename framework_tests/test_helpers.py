@@ -497,6 +497,34 @@ class TestIsInInterval:
         assert helpers.is_in_interval(79, 100, frac=0.2) is False
 
 
+class TestIsInputsSpentErr:
+    """Tests for `is_inputs_spent_err`."""
+
+    @pytest.mark.parametrize(
+        "err_str",
+        (
+            'ConwayApplyTxError (ConwayMempoolFailure "All inputs are spent." :| [])',
+            "DijkstraApplyTxError (AllInputsAreSpent :| [])",
+            "ShelleyTxValidationError (UtxowFailure (UtxoFailure (BadInputsUTxO ...",
+        ),
+    )
+    def test_known_variants(self, err_str: str):
+        """Recognize the error variant of each era."""
+        assert helpers.is_inputs_spent_err(err_str) is True
+
+    @pytest.mark.parametrize(
+        "err_str",
+        (
+            "",
+            'ConwayApplyTxError (ConwayMempoolFailure "Insufficient collateral" :| [])',
+            "ValueNotConservedUTxO",
+        ),
+    )
+    def test_unrelated_errors(self, err_str: str):
+        """Don't match errors with an unrelated cause."""
+        assert helpers.is_inputs_spent_err(err_str) is False
+
+
 class TestToolHas:
     """Tests for `tool_has`.
 

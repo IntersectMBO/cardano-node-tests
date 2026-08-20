@@ -14,6 +14,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import custom_clusterlib
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import http_client
 
 LOGGER = logging.getLogger(__name__)
@@ -150,12 +151,7 @@ def submit_tx(
                 err = None
             except SubmitApiError as exc:
                 # Check if resubmitting failed because an input UTxO was already spent
-                exc_str = str(exc)
-                inputs_spent = (
-                    "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
-                    or "BadInputsUTxO" in exc_str
-                )
-                if not inputs_spent:
+                if not helpers.is_inputs_spent_err(str(exc)):
                     raise
                 err = exc
                 # If here, the TX is likely still in mempool and we need to wait

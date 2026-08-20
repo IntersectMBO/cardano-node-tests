@@ -342,6 +342,26 @@ def is_in_interval(num1: float, num2: float, *, frac: float = 0.1) -> bool:
     return _min <= num1 <= _max
 
 
+def is_inputs_spent_err(err_str: str) -> bool:
+    """Check if the error message indicates that the Tx inputs were already spent.
+
+    The ledger reports this condition with a different error in each era, so all the known
+    variants are accepted. In the Dijkstra era the Conway mempool failure is injected as the
+    dedicated `AllInputsAreSpent` failure.
+
+    Args:
+        err_str: An error message to check.
+
+    Returns:
+        bool: `True` if the error was caused by already spent Tx inputs.
+    """
+    return (
+        "All inputs are spent" in err_str  # Conway era, in cardano-node >= 10.6.0
+        or "AllInputsAreSpent" in err_str  # Dijkstra era
+        or "BadInputsUTxO" in err_str
+    )
+
+
 @functools.lru_cache(maxsize=100)
 def tool_has(command: str) -> bool:
     """Check if a tool has a subcommand or argument available.

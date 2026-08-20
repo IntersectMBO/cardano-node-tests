@@ -171,11 +171,7 @@ class TestCollateralOutput:
             ):
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
-            inputs_spent = (
-                "All inputs are spent" in str_exc  # In cardano-node >= 10.6.0
-                or "BadInputsUTxO" in str_exc
-            )
-            if not inputs_spent:
+            if not helpers.is_inputs_spent_err(str_exc):
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
@@ -336,11 +332,7 @@ class TestCollateralOutput:
             ):
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
-            inputs_spent = (
-                "All inputs are spent" in str_exc  # In cardano-node >= 10.6.0
-                or "BadInputsUTxO" in str_exc
-            )
-            if not inputs_spent:
+            if not helpers.is_inputs_spent_err(str_exc):
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
