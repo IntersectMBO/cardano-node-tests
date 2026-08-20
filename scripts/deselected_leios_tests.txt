@@ -5,6 +5,7 @@
 # surrounding whitespace before passing this file to `--deselect-from-file`.
 
 # cardano-cli `transaction assemble` rejects `TxWitness DijkstraEra` produced by `transaction witness`
+# <https://github.com/IntersectMBO/cardano-cli/issues/1422>
 cardano_node_tests/tests/test_addr_registration.py::TestRegisterAddr::test_multisig_deregister_registered[payment-build]
 cardano_node_tests/tests/test_addr_registration.py::TestRegisterAddr::test_multisig_deregister_registered[payment-build_raw]
 cardano_node_tests/tests/test_addr_registration.py::TestRegisterAddr::test_multisig_deregister_registered[stake-build]
@@ -86,6 +87,7 @@ cardano_node_tests/tests/test_tx_basic.py::TestIncrementalSigning::test_incremen
 cardano_node_tests/tests/test_tx_basic.py::TestIncrementalSigning::test_incremental_signing[witnessed-submit_cli-build_raw]
 
 # No PlutusV2 cost model in Dijkstra genesis (pparams costModels has only PlutusV1, PlutusV3)
+# <https://github.com/IntersectMBO/cardano-ledger/issues/6018>
 cardano_node_tests/tests/tests_plutus/test_mint_build.py::TestBuildMinting::test_minting_missing_txout[plutus_v2-submit_cli]
 cardano_node_tests/tests/tests_plutus/test_mint_build.py::TestBuildMinting::test_minting_one_token[plutus_v2-submit_cli]
 cardano_node_tests/tests/tests_plutus/test_mint_build.py::TestBuildMinting::test_two_scripts_minting[mix_v2_v1-submit_cli]
@@ -191,6 +193,7 @@ cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_raw.py::TestSECP25
 cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_raw.py::TestSECP256k1::test_use_secp_builtin_functions[schnorr]
 
 # Required signers are missing from the Plutus ScriptContext (`Signatories: []`) in Dijkstra
+# <https://github.com/IntersectMBO/cardano-api/issues/1306>
 cardano_node_tests/tests/tests_plutus/test_mint_build.py::TestBuildMinting::test_witness_redeemer[plutus_v1-extended-submit_cli]
 cardano_node_tests/tests/tests_plutus/test_mint_build.py::TestBuildMinting::test_witness_redeemer[plutus_v1-normal-submit_cli]
 cardano_node_tests/tests/tests_plutus/test_mint_build.py::TestBuildMinting::test_witness_redeemer[plutus_v3-extended-submit_cli]
