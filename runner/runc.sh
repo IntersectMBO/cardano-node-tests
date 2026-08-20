@@ -142,7 +142,9 @@ add_worktree_git_mount() {
   local gitdir main_git_dir
 
   [ -f "$repo_dir/.git" ] || return 0
-  gitdir="$(sed -n 's/^gitdir: //p' "$repo_dir/.git" | head -n 1)"
+  # `exit` after the first match keeps this to the first `gitdir:` line. One process, so the
+  # status is awk's own and an unreadable `.git` still aborts under `errexit`.
+  gitdir="$(awk '/^gitdir: /{print substr($0, 9); exit}' "$repo_dir/.git")"
   if [ -z "$gitdir" ]; then
     echo "Warning: '$repo_dir/.git' has no 'gitdir:' line; git will not work inside the container." >&2
     return 0

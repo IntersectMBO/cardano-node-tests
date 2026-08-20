@@ -23,8 +23,9 @@ is_postgres_pid() {
   local cmdline
   cmdline="$(ps -o args= -p "$pid" 2>/dev/null || echo "")"
   # verify process is postgres serving expected data directory
-  # use grep -F for literal string match (glob metacharacters in pg_dir are safe)
-  [[ "$cmdline" == *postgres* ]] && printf '%s' "$cmdline" | grep -qF "$pg_dir/data"
+  # the quoted right-hand side makes this a literal match, so glob metacharacters in
+  # pg_dir are safe
+  [[ "$cmdline" == *postgres* && "$cmdline" == *"$pg_dir/data"* ]]
 }
 
 kill_postgres() {
