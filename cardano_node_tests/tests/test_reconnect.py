@@ -24,6 +24,14 @@ LOGGER = logging.getLogger(__name__)
 TEST_RECONNECT = helpers.is_truthy_env_var("TEST_RECONNECT")
 TEST_METRICS_RECONNECT = helpers.is_truthy_env_var("TEST_METRICS_RECONNECT")
 
+# Number of node restarts performed by the `test_reconnect` test.
+RESTARTS_NUM = 10
+# Amount of Lovelace in each of the UTxOs that are pre-created for the `test_reconnect` test.
+# One UTxO on each payment address is spent in each restart iteration.
+UTXO_AMOUNT = 5_000_000
+# Amount of Lovelace on top of the pre-created UTxOs, to cover the fee of the splitting Tx.
+FEE_SLACK = 10_000_000
+
 
 @common.SKIPIF_ON_TESTNET
 @pytest.mark.skipif(
@@ -46,9 +54,50 @@ class TestNodeReconnect:
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             num=2,
+            min_amount=RESTARTS_NUM * UTXO_AMOUNT + FEE_SLACK,
             caching_key=helpers.get_current_line_str(),
         )
         return addrs
+
+    @pytest.fixture
+    def payment_utxos(
+        self,
+        cluster_singleton: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+    ) -> list[list[clusterlib.UTXOData]]:
+        """Split funds on each payment address into one UTxO per restart iteration.
+
+        Each restart iteration spends its own UTxO, so a transaction that is still waiting in
+        a mempool cannot block the transaction that is submitted in the next iteration.
+        """
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+        utxos: list[list[clusterlib.UTXOData]] = []
+
+        for idx, addr in enumerate(payment_addrs, start=1):
+            txouts = [
+                clusterlib.TxOut(address=addr.address, amount=UTXO_AMOUNT)
+                for __ in range(RESTARTS_NUM)
+            ]
+            tx_output = cluster.g_transaction.send_tx(
+                src_address=addr.address,
+                tx_name=f"{temp_template}_split_addr{idx}",
+                txouts=txouts,
+                tx_files=clusterlib.TxFiles(signing_key_files=[addr.skey_file]),
+                # Create a separate UTxO for each txout instead of joining them into one
+                join_txouts=False,
+            )
+            # Any of the outputs of the splitting Tx can be used - all of them belong to
+            # `addr` and hold at least `UTXO_AMOUNT`, the change txout included. There's no
+            # need to tell the change txout apart from the requested txouts.
+            out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
+            addr_utxos = out_utxos[:RESTARTS_NUM]
+            assert len(addr_utxos) == RESTARTS_NUM and all(
+                u.amount >= UTXO_AMOUNT for u in addr_utxos
+            ), f"Unexpected UTxOs on '{addr.address}': {addr_utxos}"
+            utxos.append(addr_utxos)
+
+        return utxos
 
     def node_query_utxo(
         self,
@@ -93,43 +142,31 @@ class TestNodeReconnect:
         temp_template: str,
         src_addr: clusterlib.AddressRecord,
         dst_addr: clusterlib.AddressRecord,
+        txin: clusterlib.UTXOData,
     ) -> clusterlib.TxRawOutput:
-        """Submit transaction on given node."""
+        """Submit transaction on given node.
+
+        The `txin` is specified explicitly, so the transaction doesn't depend on the UTxO state
+        as seen by the node. Automatic input selection would keep selecting an input that is
+        already spent by a previous transaction that is still waiting in a mempool.
+        """
         orig_socket = os.environ.get("CARDANO_NODE_SOCKET_PATH")
         assert orig_socket
         new_socket = pl.Path(orig_socket).parent / f"{node}.socket"
 
-        curr_time = time.time()
         txouts = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
         tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
         try:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = str(new_socket)
-            # Repeat transaction submission in case the selected inputs were already spent
-            # by one of the previous transactions that are still in the mempool.
-            for r in range(3):
-                try:
-                    tx_raw_output = cluster_obj.g_transaction.send_tx(
-                        src_address=src_addr.address,
-                        tx_name=f"{temp_template}_r{r}_{int(curr_time)}",
-                        txouts=txouts,
-                        tx_files=tx_files,
-                        verify_tx=False,
-                    )
-                except clusterlib.CLIError as exc:
-                    exc_str = str(exc)
-                    inputs_spent = (
-                        "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
-                        or "BadInputsUTxO" in exc_str
-                    )
-                    if inputs_spent:
-                        time.sleep(2)
-                        continue
-                    raise
-                break
-            else:
-                msg = "Transaction submission failed, all inputs are spent."
-                raise RuntimeError(msg)
+            tx_raw_output = cluster_obj.g_transaction.send_tx(
+                src_address=src_addr.address,
+                tx_name=temp_template,
+                txins=[txin],
+                txouts=txouts,
+                tx_files=tx_files,
+                verify_tx=False,
+            )
         finally:
             os.environ["CARDANO_NODE_SOCKET_PATH"] = orig_socket
         return tx_raw_output
@@ -162,9 +199,11 @@ class TestNodeReconnect:
         cluster_manager: cluster_management.ClusterManager,
         cluster_singleton: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        payment_utxos: list[list[clusterlib.UTXOData]],
     ):
         """Test that node reconnects after it was stopped.
 
+        * Split funds into one UTxO per iteration
         * Stop the node2
         * Submit Tx number 1 on node1
         * Start the stopped node2
@@ -177,6 +216,8 @@ class TestNodeReconnect:
 
         node1 = "pool1"
         node2 = "pool2"
+        # There's one list of UTxOs for each of the two payment addresses
+        utxos1, utxos2 = payment_utxos
 
         def _assert(tx_outputs: list[clusterlib.TxRawOutput]) -> None:
             tx1_node2 = self.node_query_utxo(
@@ -189,11 +230,11 @@ class TestNodeReconnect:
             # If node1 knows about Tx number 2, and/or node2 knows about Tx number 1,
             # the connection must have been established.
             assert tx2_node1 or tx1_node2, (
-                f"Connection failed?\ntx1_node2: {tx2_node1}\ntx2_node1: {tx2_node1}"
+                f"Connection failed?\ntx1_node2: {tx1_node2}\ntx2_node1: {tx2_node1}"
             )
 
         with cluster_manager.respin_on_failure():
-            for restart_no in range(1, 11):
+            for restart_no, (txin1, txin2) in enumerate(zip(utxos1, utxos2, strict=True), start=1):
                 LOGGER.info(f"Running restart number {restart_no}")
 
                 tx_outputs = []
@@ -209,6 +250,7 @@ class TestNodeReconnect:
                         temp_template=f"{temp_template}_{restart_no}_node1",
                         src_addr=payment_addrs[0],
                         dst_addr=payment_addrs[0],
+                        txin=txin1,
                     )
                 )
 
@@ -225,6 +267,7 @@ class TestNodeReconnect:
                         temp_template=f"{temp_template}_{restart_no}_node2",
                         src_addr=payment_addrs[1],
                         dst_addr=payment_addrs[1],
+                        txin=txin2,
                     )
                 )
 
