@@ -96,7 +96,7 @@ class TestManyUTXOs:
                 less_than_1_ada = int(float(multiple / 20) * 1_000_000)
                 amount = less_than_1_ada + 1_000_000
 
-                # Repeat transaction when "BadInputsUTxO" error happens
+                # Repeat transaction when the Tx inputs were already spent
                 excp: clusterlib.CLIError | None = None
                 for r in range(2):
                     if r > 0:
@@ -110,16 +110,11 @@ class TestManyUTXOs:
                             amount=amount,
                         )
                     except clusterlib.CLIError as err:
-                        # The "BadInputsUTxO" error happens when a single UTxO is used in two
-                        # transactions. This can happen from time to time, we stress
+                        # The "inputs already spent" error happens when a single UTxO is used
+                        # in two transactions. This can happen from time to time, we stress
                         # the network here and waiting for 2 blocks may not be enough to get a
                         # transaction through.
-                        exc_str = str(err)
-                        inputs_spent = (
-                            "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
-                            or "BadInputsUTxO" in exc_str
-                        )
-                        if not inputs_spent:
+                        if not helpers.is_inputs_spent_err(str(err)):
                             raise
                         excp = err
                     else:

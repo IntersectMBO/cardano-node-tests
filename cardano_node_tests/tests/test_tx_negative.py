@@ -773,8 +773,7 @@ class TestNegative:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert (
-                "All inputs are spent" in exc_value  # In cardano-node >= 10.6.0
-                or "(ValueNotConservedUTxO" in exc_value
+                helpers.is_inputs_spent_err(exc_value) or "(ValueNotConservedUTxO" in exc_value
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
@@ -1310,7 +1309,7 @@ class TestNegative:
         * Get valid UTxO from payment address
         * Modify UTxO index to nonexistent value (5)
         * Attempt to build or submit transaction using invalid UTxO index
-        * Check that transaction fails with empty UTxO or BadInputsUTxO error
+        * Check that transaction fails with empty UTxO or inputs already spent error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1336,10 +1335,7 @@ class TestNegative:
                 ), err_str
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             with common.allow_unstable_error_messages():
-                assert (
-                    "All inputs are spent" in err_str  # In cardano-node >= 10.6.0
-                    or "BadInputsUTxO" in err_str
-                ), err_str
+                assert helpers.is_inputs_spent_err(err_str), err_str
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
@@ -1363,7 +1359,7 @@ class TestNegative:
         * Get valid UTxO from payment address
         * Modify last 4 characters of UTxO hash to create nonexistent hash
         * Attempt to build or submit transaction using invalid UTxO hash
-        * Check that transaction fails with empty UTxO or BadInputsUTxO error
+        * Check that transaction fails with empty UTxO or inputs already spent error
         """
         temp_template = common.get_test_id(cluster)
 
@@ -1390,10 +1386,7 @@ class TestNegative:
                 ), err_str
         elif build_method == clusterlib_utils.BuildMethods.BUILD_RAW:
             with common.allow_unstable_error_messages():
-                assert (
-                    "All inputs are spent" in err_str  # In cardano-node >= 10.6.0
-                    or "BadInputsUTxO" in err_str
-                ), err_str
+                assert helpers.is_inputs_spent_err(err_str), err_str
         else:
             msg = f"Unsupported build method: {build_method}"
             raise ValueError(msg)
