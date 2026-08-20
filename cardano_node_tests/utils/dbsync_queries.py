@@ -1547,6 +1547,15 @@ def query_off_chain_vote_fetch_error(
             yield OffChainVoteFetchErrorDBRow(*result)
 
 
+def query_voting_anchor_id(*, url: str) -> int | None:
+    """Return the id of the most recent voting_anchor with the given url, or None."""
+    query = "SELECT id FROM voting_anchor WHERE url = %s ORDER BY id DESC LIMIT 1;"
+
+    with execute(query=query, vars=(url,)) as cur:
+        result = cur.fetchone()
+        return result[0] if result else None
+
+
 def query_off_chain_vote_drep_data(
     *, voting_anchor_id: int
 ) -> tp.Generator[OffChainVoteDrepDataDBRow]:
