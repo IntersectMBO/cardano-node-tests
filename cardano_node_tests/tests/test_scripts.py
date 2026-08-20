@@ -2659,6 +2659,12 @@ class TestReferenceUTxO:
             signing_key_files=[reference_addr.skey_file],
         )
 
+        # The reference script is pulled into the Tx by spending the UTxO that holds it, so its
+        # size must be accounted for in the fee.
+        reference_script_size = clusterlib_utils.get_reference_script_size(
+            script_file=multisig_script
+        )
+
         # The `tx_out_spend`
         clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
@@ -2671,6 +2677,7 @@ class TestReferenceUTxO:
             tx_files=tx_files,
             witness_override=3,
             byron_witness_count=1 if address_type == "byron" else 0,
+            reference_script_size=reference_script_size,
         )
 
         # Check that the reference UTxO was spent
