@@ -44,7 +44,7 @@ done
 # the values in the env file, an already exported value wins here, so the node
 # branch can be switched without touching the setup.
 export NODE_REV="${NODE_REV:-leios-prototype}"
-export MARKEXPR="${MARKEXPR:-testnets}"
+export MARKEXPR="${MARKEXPR:-testnets or leios}"
 export ALLOW_UNSTABLE_ERROR_MESSAGES="${ALLOW_UNSTABLE_ERROR_MESSAGES:-true}"
 
 exec runner/load-gh-env.sh runner/env_leios "$@" -- runner/regression.sh
