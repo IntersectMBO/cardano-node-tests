@@ -91,6 +91,11 @@ ALLOW_UNSTABLE_ERROR_MESSAGES = helpers.is_truthy_env_var("ALLOW_UNSTABLE_ERROR_
 # Cluster instances are kept running after tests finish
 KEEP_CLUSTERS_RUNNING = helpers.is_truthy_env_var("KEEP_CLUSTERS_RUNNING")
 
+# Standalone Tx load generators (see `runner/regression.sh`). They are needed to fill
+# the mempool, so that the node has something to put into Leios endorser blocks.
+ENABLE_TX_CENTRIFUGE = helpers.is_truthy_env_var("ENABLE_TX_CENTRIFUGE")
+ENABLE_TX_FIREHOSE = helpers.is_truthy_env_var("ENABLE_TX_FIREHOSE")
+
 # Determine what scripts to use to start the cluster
 TESTNET_VARIANT = os.environ.get("TESTNET_VARIANT") or (
     "testnets" if BOOTSTRAP_DIR else "local_fast"
