@@ -1,0 +1,135 @@
+1.35.3
+======
+
+* tag link - <https://github.com/IntersectMBO/cardano-node/releases/tag/1.35.3-rc1>
+* tag PR - <https://github.com/IntersectMBO/cardano-node/pull/4269>
+* tag scope - <https://github.com/IntersectMBO/cardano-node/issues/4257>
+
+
+Changelogs
+----------
+
+* cardano-api: <https://github.com/IntersectMBO/cardano-node/blob/release/1.35/cardano-api/ChangeLog.md>
+* cardano-cli: <https://github.com/IntersectMBO/cardano-node/blob/release/1.35/cardano-cli/ChangeLog.md>
+* cardano-node: <https://github.com/IntersectMBO/cardano-node/blob/release/1.35/cardano-node/ChangeLog.md>
+* submit-api:
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: only with costModelV1
+   :widths: 64 7
+   :header-rows: 0
+
+   * - CDDL OFF, P2P OFF - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL OFF, P2P OFF - `Babbage with Alonzo TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_alonzo_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9>`__
+     - |:heavy_check_mark:|
+   * - CDDL OFF, P2P OFF - `Alonzo with Alonzo TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/alonzo_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P ON - `Alonzo with Alonzo TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/alonzo_cddl_p2p_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P ON - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_cddl_p2p_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P ON - `Babbage with Alonzo TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_alonzo_cddl_p2p_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P OFF - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_cddl_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P OFF - `Babbage with Alonzo TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_alonzo_cddl_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P OFF - `Alonzo with Alonzo TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/alonzo_cddl_v1_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+
+
+.. list-table:: both with costModelV1 and costModelV2
+   :widths: 64 7
+   :header-rows: 0
+
+   * - CDDL OFF, P2P OFF - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_v2_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL OFF, P2P OFF - `Babbage with Alonzo TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_alonzo_v2_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P OFF - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_cddl_v2_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P ON - `Babbage with Babbage TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_cddl_p2p_v2_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL ON, P2P OFF - `Babbage with Mary TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_mary_cddl_v2_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - CDDL OFF, P2P OFF - `Babbage with Shelley TX <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/babbage_shelley_v2_dbsync/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: other testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - upgrade job (1.34.1 to 1.35.3)
+     - |:heavy_check_mark:|
+   * - sanity check `submit-api REST service <https://github.com/IntersectMBO/cardano-node/tree/master/cardano-submit-api>`__
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+----------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `1.35.3-rc1` pushed to `shelley-qa`
+     - |:heavy_check_mark:|
+   * - Grafana metrics OK
+     - |:heavy_check_mark:|
+   * - Regression testing against `shelley-qa` - `results <https://mkoura.github.io/cardano-node-tests-reports/1.35.3-rc1/shelley_qa/reports/1.35.3/950c4e222086fed5ca53564e642434ce9307b0b9/>`__
+     - |:heavy_check_mark:|
+   * - `Sync testing ran against shelley_qa & Staging & TestNet & Mainnet (Windows, Linux, macOS) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html/>`__
+     - |:heavy_check_mark:|
+   * - `DB re-validation testing (ledger snapshots compatibility) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html/>`__
+     - |:heavy_check_mark:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
+   * - Benchmarking - Report
+     - |:heavy_check_mark:|
+   * - sanity check release notes
+     - |:heavy_check_mark:|
+
+
+New functionalities in this tag
+-------------------------------
+
+* Protocol in header to announce 7.2 (`#4260 <https://github.com/IntersectMBO/cardano-node/pull/4260>`__) |:heavy_check_mark:|
+* `build` and `build-raw` commands to accept simple reference minting scripts (`#4087 <https://github.com/IntersectMBO/cardano-node/pull/4087>`__) |:heavy_check_mark:|
+* Fix `protocol-state` (`#4102 <https://github.com/IntersectMBO/cardano-node/pull/4102>`__) |:heavy_check_mark:|
+* Render reference script hashes when using `--calculate-plutus-script-cost` (`#4204 <https://github.com/IntersectMBO/cardano-node/pull/4204>`__) |:heavy_check_mark:|
+* Building Alonzo transactions from Babbage era (`#4135 <https://github.com/IntersectMBO/cardano-node/pull/4135>`__) |:heavy_check_mark:|
+* Fix building of Alonzo transaction in Babbage (`#4166 <https://github.com/IntersectMBO/cardano-node/pull/4166>`__) |:heavy_check_mark:|
+* Fix `kes-period-info` (`#3945 <https://github.com/IntersectMBO/cardano-node/pull/3945>`__) |:heavy_check_mark:|
+* Fix leadership schedule for current on Babbage (`#4106 <https://github.com/IntersectMBO/cardano-node/pull/4106>`__) |:heavy_check_mark:|
+* `build` to allow all invalid scripts (`#4088 <https://github.com/IntersectMBO/cardano-node/pull/4088>`__) |:heavy_check_mark:|
+* Add utxoCostPerByte protocol parameter (`#4141 <https://github.com/IntersectMBO/cardano-node/pull/4141>`__) |:heavy_check_mark:|
+* Fix the Alonzo UTXO rule to use Alonzo minfee function (`#2938 <https://github.com/IntersectMBO/cardano-ledger/pull/2938>`__) |:heavy_check_mark:|
+* Condition SECP256k1 to the protocol version 8 (`#4795 <https://github.com/IntersectMBO/plutus/pull/4795>`__) |:heavy_check_mark:|
+
+
+New issues
+----------
+
+* `[BUG] - cannot use transaction build command to build Shelley/Allegra era Tx in Babbage <https://github.com/IntersectMBO/cardano-node/issues/4286>`__
+* `[BUG] - cannot use transaction build command to build Mary era Tx in Babbage <https://github.com/IntersectMBO/cardano-node/issues/4287>`__
+* (not reported before and) already discussed in <https://input-output-rnd.slack.com/archives/CCRB7BU8Y/p1658835200064609>
+
+
+Breaking changes
+----------------
+
+* `"decentralisationParam"` will not be supported after the Vasil HF (= from Babbage onwards, the protocol no longer supports BFT.) |:exclamation:|
+* the new OpCerts should be created using the previous cold.counter +1
+* Change to minUTxO Formula (`link to discussion <https://input-output-rnd.slack.com/archives/C02CHLB0BU4/p1654004520104929>`__)
+
+
+Relevant existing issues
+------------------------
+
+* `[BUG] - Shelley era Tx body in CDDL format is not supported by some CLI commands <https://github.com/IntersectMBO/cardano-node/issues/3688>`__ - not a regression in 1.35.3
