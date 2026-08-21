@@ -1159,6 +1159,25 @@ def save_ledger_state(
     return json_file
 
 
+def get_stability_window(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Return the stability window (`3k/f`) in slots.
+
+    Rounded down, so that the result is never above the window the ledger itself uses. A
+    caller that uses it as a limit therefore stays inside the window. The division is
+    exact on every testnet variant, so the rounding only guards against a variant that
+    picks a `securityParam` and `activeSlotsCoeff` that don't divide.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        int: The number of slots in the stability window.
+    """
+    security_param = int(cluster_obj.genesis["securityParam"])
+    active_slots_coeff = float(cluster_obj.genesis["activeSlotsCoeff"])
+    return math.floor(3 * security_param / active_slots_coeff)
+
+
 def wait_for_epoch_interval(
     *,
     cluster_obj: clusterlib.ClusterLib,
