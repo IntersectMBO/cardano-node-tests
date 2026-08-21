@@ -8,3 +8,6 @@ The sync tests evaluate the performance of syncing the Cardano mainnet from gene
 - **Node resource usage** – including CPU and memory utilization
 
 The source code for these tests is available in the `cardano-sync-tests <https://github.com/IntersectMBO/cardano-sync-tests>`__ repository.
+
+Results for each `cardano-node` release are linked from the corresponding report in
+:doc:`tag_tests`.
