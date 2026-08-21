@@ -14,6 +14,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import mint_raw
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -422,7 +423,7 @@ class TestMinting:
         # Step 2: mint the "qacoin"
 
         slot_step2 = cluster.g_query.get_slot_no()
-        slots_offset = 300
+        slots_offset = plutus_common.get_timerange_slots_offset(cluster_obj=cluster)
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         # POSIX timestamp + offset
@@ -625,7 +626,7 @@ class TestMinting:
         ]
 
         # "timerange" qacoin
-        slots_offset = 300
+        slots_offset = plutus_common.get_timerange_slots_offset(cluster_obj=cluster)
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         # POSIX timestamp + offset
@@ -1117,10 +1118,7 @@ class TestMinting:
             *mint_txouts,
         ]
 
-        # Calculate 3k/f
-        offset_3kf = round(
-            3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"]
-        )
+        offset_3kf = clusterlib_utils.get_stability_window(cluster_obj=cluster)
 
         # Use 3k/f + `epoch_length` slots for ttl - this will not meet the `expect_pass` condition
         if ttl_offset == -1:
