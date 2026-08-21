@@ -1,0 +1,46 @@
+11.1.0
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/11.1.0>
+
+
+Release Testing Checklists
+--------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.0-conway11_default_01/>`__
+     - |:heavy_check_mark:|
+   * - `LSM disk UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.0-conway11_disk_genesis_01/>`__
+     - |:heavy_check_mark:|
+   * - `Genesis consensus mode <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.0-conway11_disk_genesis_01/>`__
+     - |:heavy_check_mark:|
+   * - Testing on `Preview`
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (11.0.1 to 11.1.0)
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Reconnection testing
+     - |:heavy_check_mark:|
+   * - Block-production testing
+     - |:heavy_check_mark:|
+   * - Testing on Ubuntu, Debian, Mint
+     - |:heavy_check_mark:|
+   * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C)
+     - |:heavy_check_mark:|
+   * - `Sync testing on Mainnet (Linux) <https://docs.google.com/document/d/e/2PACX-1vTujvaT-knCY4ZTUVqUelUIww8n9LJhbd8ZnBjMsUxAp4fvpfmcVFux-qENSzL057vXPxON5LC8_UMk/pub>`__
+     - |:question:|\ :sup:`1`
+   * - Byron to Conway 11 hard-fork testing
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
+
+| \ :sup:`1` - Memory regression observed during sync testing on Mainnet.
