@@ -94,7 +94,7 @@ On a failed testrun the workflow runs the analysis automatically and surfaces it
 
 * the **run summary** of the workflow run, and a foldable `Preliminary failure analysis`
   group in the log of the `Read failure analysis into env` step,
-* `failure_analysis.md` in the **`testrun-files`** artifact.
+* `failure_analysis.md` in the `testrun-files` artifact.
 
 ## Known Failures
 
