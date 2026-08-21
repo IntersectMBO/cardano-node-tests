@@ -63,6 +63,10 @@ Or run the upgrade test suite:
 ./runner/load-gh-env.sh runner/env_nightly_upgrade CI_BYRON_CLUSTER=false ./runner/node_upgrade.sh
 ```
 
+### Analyzing Failures
+
+In Claude Code, `/analyze-failures [run_dir]` triages a finished run (`run_workdir` by default, also artifacts downloaded from a CI run) and answers where a run's logs and artifacts live.
+
 ---
 
 ## 🧪 Running Individual Tests with Custom Binaries
