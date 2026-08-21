@@ -22,11 +22,11 @@ class GHIssue:
 
     issue_cache: tp.ClassVar[dict[str, str]] = {}
 
-    _github_instance: tp.ClassVar[github.Github | None] = None
+    _github_instance: tp.ClassVar["github.Github | None"] = None
     _github_instance_error: tp.ClassVar[bool] = False
 
     @classmethod
-    def _get_github(cls) -> github.Github | None:
+    def _get_github(cls) -> "github.Github | None":
         """Get GitHub instance."""
         if cls._github_instance is not None:
             return cls._github_instance
@@ -51,7 +51,7 @@ class GHIssue:
         self.repo = repo
 
     @property
-    def github(self) -> github.Github | None:
+    def github(self) -> "github.Github | None":
         return self._get_github()
 
     @property

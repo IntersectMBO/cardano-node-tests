@@ -75,7 +75,7 @@ class ClusterType(tp.Protocol):
     NODES: tp.ClassVar[frozenset[str]]
 
     type: ClusterKind
-    cluster_scripts: cluster_scripts.ScriptsTypes
+    cluster_scripts: "cluster_scripts.ScriptsTypes"
 
     @property
     def is_local(self) -> bool:
