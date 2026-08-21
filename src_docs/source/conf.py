@@ -16,16 +16,15 @@ if not os.environ.get("CARDANO_NODE_SOCKET_PATH"):
     mockdir = Path(__file__).parent / "mocks"
     os.environ["PATH"] = f"{mockdir}:{os.environ['PATH']}"
 
-
-import cardano_node_tests
-
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(".."))  # noqa: PTH100
+# add these directories to sys.path here. Prepend the repo root so that the
+# checkout this doc is built from wins over any installed (e.g. editable)
+# version of the package. Must happen before `cardano_node_tests` is imported.
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
+import cardano_node_tests
 
 # -- Project information -----------------------------------------------------
 
