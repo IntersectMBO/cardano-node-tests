@@ -7,8 +7,9 @@ The run directory is `{RUN_DIR}` (path is relative to the current working direct
 Inputs available under `{RUN_DIR}/` (use only what exists):
 
 - `{RUN_DIR}/allure-results/` — one JSON per test (status, statusDetails.message, statusDetails.trace, stdout/stderr attachments listed by name)
-- `{RUN_DIR}/testing_artifacts/` — per-test artifact dirs with cluster logs, node stdouts, etc.
-- `{RUN_DIR}/errors_all.log` — output of `runner/grep_errors.sh` over cluster logs
+- `{RUN_DIR}/testing_artifacts/` — per-test artifact dirs, cluster instance artifacts and scripts
+- `{RUN_DIR}/testing_artifacts/pytest-*/cluster_artifacts/state-cluster<N>_<instance-id>/` — saved state dir of one cluster instance: node `*.stdout`/`*.stderr` (`bft1`, `pool1`..`pool3`), `start-cluster.log`, `supervisord.log`, `config-*.json`, `topology-*.json`, `pparams.json`. There is one such dir per instance start, so a respun instance number has several; `<instance-id>` matches the `started cluster instance '<id>'` line in `scheduling.log`
+- `{RUN_DIR}/errors_all.log` — output of `runner/grep_errors.sh`: case-insensitive grep for `:error:|failed|failure` in every `*.stdout`/`*.stderr` under `testing_artifacts/`, with paths relative to that dir
 - `{RUN_DIR}/scheduling.log` — cluster instance manager log
 - `{RUN_DIR}/testrun-report.xml` — junit XML
 - `{RUN_DIR}/monitor.log` — system resource snapshots every 10 min
@@ -35,7 +36,8 @@ Steps:
 
 Known patterns:
 
-- `All cluster instances are dead.` — no cluster instance could start; usually caused by a `cardano-cli` argument change or a `cardano-node` configuration change. Inspect `scheduling.log` for the cluster startup failure details.
+- `All cluster instances are dead.` — no cluster instance could start; usually caused by a `cardano-cli` argument change or a `cardano-node` configuration change. Inspect `scheduling.log` and the `start-cluster.log` / `supervisord.log` / node `*.stderr` of the newest `cluster_artifacts/state-cluster*` dir for the startup failure details.
+- **Testnet under constant load** — if `tx-firehose.stderr`, `tx-centrifuge.stdout` or `tx-generator.stdout` are present in a `cluster_artifacts/state-cluster*` dir, a load generator was submitting transactions for the whole run. Expect timing-sensitive failures (tx submission timeouts, full mempool, slower block/epoch progress), and attribute errors these tools log to the load generator, not to the node under test.
 
 Constraints:
 
