@@ -60,6 +60,10 @@ on:
         type: boolean
         default: false
         description: "Skip tests that already passed (internal)"
+      report-history:
+        type: boolean
+        default: false
+        description: "TEMP-SMOKE-TEST: revert before merge"
 
 run-name: ${{ inputs.testrun_name && 'Run:' || ''}} ${{ inputs.testrun_name }} ${{ (inputs.testrun_name && inputs.skip_passed) && ':repeat:' || '' }}
 
@@ -81,6 +85,7 @@ jobs:
       byron_cluster: ${{ inputs.byron_cluster }}
       testrun_name: ${{ inputs.testrun_name }}
       skip_passed: ${{ inputs.skip_passed }}
+      report-history: ${{ inputs.report-history }}
       env-path: runner/env_regression
     secrets:
       TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
