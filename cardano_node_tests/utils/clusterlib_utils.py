@@ -1159,6 +1159,25 @@ def save_ledger_state(
     return json_file
 
 
+def get_stability_window(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Return the stability window (`3k/f`) in slots.
+
+    Rounded down, so that the result is never above the window the ledger itself uses. A
+    caller that uses it as a limit therefore stays inside the window. The division is
+    exact on every testnet variant, so the rounding only guards against a variant that
+    picks a `securityParam` and `activeSlotsCoeff` that don't divide.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        int: The number of slots in the stability window.
+    """
+    security_param = int(cluster_obj.genesis["securityParam"])
+    active_slots_coeff = float(cluster_obj.genesis["activeSlotsCoeff"])
+    return math.floor(3 * security_param / active_slots_coeff)
+
+
 def wait_for_epoch_interval(
     *,
     cluster_obj: clusterlib.ClusterLib,
@@ -1370,6 +1389,64 @@ def create_reference_utxo(
     reference_utxo = reference_utxos[0]
 
     return reference_utxo, tx_raw_output
+
+
+def _encode_simple_script(*, script: dict) -> list:
+    """Encode a simple (native) script into the structure the ledger serializes.
+
+    Args:
+        script: A dict with the JSON representation of a simple script.
+
+    Returns:
+        list: A structure that is CBOR encoded the same way as the ledger encodes the script.
+    """
+    script_type = script["type"]
+
+    if script_type == "sig":
+        return [0, bytes.fromhex(script["keyHash"])]
+    if script_type == clusterlib.MultiSigTypeArgs.ALL:
+        return [1, [_encode_simple_script(script=s) for s in script["scripts"]]]
+    if script_type == clusterlib.MultiSigTypeArgs.ANY:
+        return [2, [_encode_simple_script(script=s) for s in script["scripts"]]]
+    if script_type == clusterlib.MultiSigTypeArgs.AT_LEAST:
+        return [
+            3,
+            script["required"],
+            [_encode_simple_script(script=s) for s in script["scripts"]],
+        ]
+    if script_type == clusterlib.MultiSlotTypeArgs.AFTER:
+        return [4, script["slot"]]
+    if script_type == clusterlib.MultiSlotTypeArgs.BEFORE:
+        return [5, script["slot"]]
+
+    err = f"Unsupported simple script type: {script_type}"
+    raise ValueError(err)
+
+
+def get_reference_script_size(*, script_file: cl_types.FileType) -> int:
+    """Get the size of a script as it is accounted for when used as a reference script.
+
+    Since Conway, the ledger charges `minFeeRefScriptCostPerByte` for every byte of every
+    reference script a transaction pulls in, be it through a reference input or through a spent
+    UTxO that holds the script. The size is the size of the script as serialized by the ledger,
+    which is the bare script for Plutus scripts and the CBOR encoded structure for simple
+    scripts.
+
+    Args:
+        script_file: A path to the script file.
+
+    Returns:
+        int: A size of the reference script in bytes.
+    """
+    with open(script_file, encoding="utf-8") as fp_in:
+        script: dict = json.load(fp_in)
+
+    # A Plutus script file is a text envelope that carries the script in `cborHex`
+    cbor_hex = script.get("cborHex")
+    if cbor_hex:
+        return len(cbor2.loads(bytes.fromhex(cbor_hex)))
+
+    return len(cbor2.dumps(_encode_simple_script(script=script)))
 
 
 def get_utxo_ix_offset(*, utxos: list[clusterlib.UTXOData], txouts: list[clusterlib.TxOut]) -> int:

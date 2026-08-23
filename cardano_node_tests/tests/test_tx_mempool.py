@@ -97,11 +97,7 @@ class TestMempool:
             try:
                 cluster.g_transaction.submit_tx_bare(tx_file=out_file_signed)
             except clusterlib.CLIError as exc:
-                exc_str = str(exc)
-                inputs_spent = (
-                    "All inputs are spent" in exc_str  # In cardano-node >= 10.6.0
-                    or "BadInputsUTxO" in exc_str
-                )
+                inputs_spent = helpers.is_inputs_spent_err(str(exc))
                 if r == 0 or not inputs_spent:
                     raise
                 break

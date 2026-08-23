@@ -8,6 +8,7 @@ from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -302,11 +303,7 @@ def _build_spend_locked_txin(  # noqa: C901
             ):
                 issues.ledger_4198.finish_test()
             # Check if resubmitting failed because an input UTxO was already spent
-            inputs_spent = (
-                "All inputs are spent" in str_exc  # In cardano-node >= 10.6.0
-                or "BadInputsUTxO" in str_exc
-            )
-            if not inputs_spent:
+            if not helpers.is_inputs_spent_err(str_exc):
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")

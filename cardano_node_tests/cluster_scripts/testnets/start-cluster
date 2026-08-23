@@ -179,7 +179,11 @@ tn_start_node() {
 
   echo "Waiting until replay is finished"
   sleep 10
-  while tail -n 10 "${STATE_CLUSTER}/relay1.stdout" | grep -E -q "replay progress|IPSubscriptionTarget"; do
+  # No `-q`: it exits on the first match, leaving `tail` writing into a closed pipe, and
+  # `pipefail` would promote that SIGPIPE status and end the wait early. Plain `grep` scans
+  # all of its input, so `tail` always finishes writing.
+  while tail -n 10 "${STATE_CLUSTER}/relay1.stdout" |
+    grep -E "replay progress|IPSubscriptionTarget" > /dev/null; do
     sleep 10
   done
 

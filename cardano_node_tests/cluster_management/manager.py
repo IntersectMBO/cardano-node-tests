@@ -96,7 +96,7 @@ class ClusterManager:
         return self._cluster_instance_num
 
     @property
-    def cache(self) -> cache.ClusterManagerCache:
+    def cache(self) -> "cache.ClusterManagerCache":
         return cache.CacheManager.get_instance_cache(instance_num=self.cluster_instance_num)
 
     @property

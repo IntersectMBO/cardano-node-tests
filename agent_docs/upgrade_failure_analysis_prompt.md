@@ -14,8 +14,9 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 
 - `{RUN_DIR}/allure-results-step1/`, `{RUN_DIR}/allure-results-step2/`, `{RUN_DIR}/allure-results-step3/` — one JSON per test per step (`status`, `statusDetails.message`, `statusDetails.trace`, stdout/stderr attachments listed by name)
 - `{RUN_DIR}/testrun-report-step1.html`, `…-step2.html`, `…-step3.html` — self-contained HTML reports (large; prefer the per-step allure JSON above)
-- `{RUN_DIR}/testing_artifacts/` — per-test artifact dirs with cluster logs, node stdouts, etc. (shared across all steps)
-- `{RUN_DIR}/errors_all.log` — output of `runner/grep_errors.sh` over cluster logs (covers all steps)
+- `{RUN_DIR}/testing_artifacts/` — per-test artifact dirs, cluster instance artifacts and scripts (shared across all steps)
+- `{RUN_DIR}/testing_artifacts/pytest-*/cluster_artifacts/state-cluster<N>_<instance-id>/` — saved state dir of one cluster instance: per-node `*.stdout`/`*.stderr` and their rotated `*.stdout.<n>`/`*.stderr.<n>` (`bft1` for the first node, `pool<N>` for the rest; the pool count comes from the testnet config, don't assume three), `start-cluster.log`, `supervisord.log`, `config-*.json`, `topology-*.json`, `pparams.json`, plus the `nodes/` and `shelley/` subdirs (per-node dirs, genesis files and keys). There is one such dir per instance start, so a respun instance number has several; `<instance-id>` matches the `started cluster instance '<id>'` line in `scheduling.log` - a name carrying an extra random suffix, or one with no matching `scheduling.log` line, is a fallback name used when the instance id was unavailable or the dir name already existed. Each step has its own `pytest-*` dir, so use the same oldest-first ordering as for `cm-status.db` to tell which step a dir belongs to
+- `{RUN_DIR}/errors_all.log` — output of `runner/grep_errors.sh`: case-insensitive grep for `:error:|failed|failure` in `*.stdout`/`*.stderr` files under `testing_artifacts/`, with paths relative to that dir (covers all steps). Rotated logs (`*.stdout.<n>`, `*.stderr.<n>`) are **not** grepped, so a thin or empty `errors_all.log` doesn't prove there were no errors - grep the rotated logs directly when an early crash is suspected
 - `{RUN_DIR}/scheduling.log` — cluster instance manager log
 - `{RUN_DIR}/testing_artifacts/pytest-*/cm-status.db` — cluster-management SQLite status databases, one per step ("test running", resource and flag records as they were at the end of that step); the `pytest-N` dir numbers don't map to steps, order the databases by modification time instead (oldest = step1); there should normally be three - when fewer are present, don't assume positions and correlate with which `allure-results-stepN/` dirs exist to decide which steps the databases belong to; query with `sqlite3 -readonly -header <db_file> 'SELECT * FROM overview ORDER BY instance_num, kind'`
 
@@ -28,7 +29,7 @@ Steps:
 2. Group failures by likely root cause (same exception class + message head, same node crash, same infra symptom). **Note which step(s) each group hits** — a failure that appears only in step2 or step3 is much more interesting than one that already fails in step1. Treat one node crash that flunks many tests as a single group.
 3. For each group: list affected tests (truncate to ~10 with a "+N more" tail), give the most informative 1–3 lines of error context, mark the step(s) affected, and classify as one of `node-bug | test-bug | infra-flake | env-issue | upgrade-regression | unknown` with a short justification. Use `upgrade-regression` when a test passes in step1 but fails in step2 or step3 — that is the signal this workflow exists to catch.
 4. Skim `{RUN_DIR}/errors_all.log` and `{RUN_DIR}/scheduling.log` for anything corroborating (node crash on restart, hard-fork failure, supervisord errors, OOM, repeated tracebacks). When failures look cluster-management related (dead cluster instances, tests stuck waiting for resources), query the `overview` view of the affected step's status database.
-5. If a whole step is missing its `allure-results-stepN/` dir, that step likely failed before pytest ran — call this out explicitly and check `errors_all.log` / the workflow log group output for the cause (commonly a `start-cluster` / `supervisord` / hard-fork failure).
+5. If a whole step is missing its `allure-results-stepN/` dir, that step likely failed before pytest ran — call this out explicitly and check `errors_all.log`, that step's `cluster_artifacts/state-cluster*/start-cluster.log` and `supervisord.log`, and the workflow log group output for the cause (commonly a `start-cluster` / `supervisord` / hard-fork failure).
 
 Known patterns:
 
@@ -36,6 +37,7 @@ Known patterns:
 - **Step3 hard-fork test failure** — `test_hardfork` fails or never raises the protocol version; later tests in step3 all then fail with stale protocol params.
 - **Sync stalls after restart** — `Failed to sync node` in workflow log; check whether pool1/pool3 PIDs are 0 or whether `syncProgress` never reaches `100.00`.
 - **`All cluster instances are dead.`** — no cluster instance could start; usually caused by a `cardano-cli` argument change or a `cardano-node` configuration change.
+- **Testnet under constant load** — if `tx-firehose.stderr`, `tx-centrifuge.stdout` or `tx-generator.stdout` are present in a `cluster_artifacts/state-cluster*` dir, a load generator was submitting transactions for the whole run. Expect timing-sensitive failures (tx submission timeouts, full mempool, slower block/epoch progress), and attribute errors these tools log to the load generator, not to the node under test.
 
 Constraints:
 

@@ -33,7 +33,7 @@ jobs:
       node_rev: ${{ inputs.node_rev || 'leios-prototype' }}
       cli_rev: ${{ inputs.cli_rev }}
       cluster_era: dijkstra 12
-      markexpr: testnets
+      markexpr: testnets or leios
       allow_unstable_error_msgs: ${{ inputs.allow_unstable_error_msgs }}
       skip_deselect: ${{ inputs.skip_deselect }}
       env-path: runner/env_leios

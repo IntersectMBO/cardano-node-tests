@@ -14,7 +14,9 @@ api_829 = blockers.GH(
 api_1261 = blockers.GH(
     issue=1261,
     repo="IntersectMBO/cardano-api",
-    fixed_in="11.1.0",  # The fix (cardano-api >= 11.4.0.0) is bundled with the node 11.1.0 release
+    # The fix (cardano-api >= 11.4.0.0) is bundled with the node 11.1.0 release, but
+    # 'leios-prototype' claims it is 11.1.0.164, but doesn't have the fix included.
+    fixed_in="11.1.1",
     message="`transaction build` does not validate min UTxO for the collateral return output.",
 )
 
@@ -200,6 +202,7 @@ ledger_4349 = blockers.GH(
 ledger_4566 = blockers.GH(
     issue=4566,
     repo="IntersectMBO/cardano-ledger",
+    fixed_in="11.2.0",  # Unknown yet, will be fixed/changed sometime in the future
     message="Repeated certificates stripped from Conway transaction.",
 )
 ledger_4772 = blockers.GH(

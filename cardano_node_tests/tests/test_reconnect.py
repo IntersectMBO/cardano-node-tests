@@ -32,6 +32,18 @@ UTXO_AMOUNT = 5_000_000
 # Amount of Lovelace on top of the pre-created UTxOs, to cover the fee of the splitting Tx.
 FEE_SLACK = 10_000_000
 
+# Prometheus metric names, listed from the most recent to the oldest. Newer node versions
+# append the `_int` suffix to integer metrics and capitalize the `peerSelection` counters,
+# older node versions use the plain lowercase names.
+INBOUND_GOVERNOR_HOT_METRICS: tp.Final[tuple[str, ...]] = (
+    "cardano_node_metrics_inboundGovernor_hot_int",
+    "cardano_node_metrics_inboundGovernor_hot",
+)
+PEER_SELECTION_COLD_METRICS: tp.Final[tuple[str, ...]] = (
+    "cardano_node_metrics_peerSelection_Cold_int",
+    "cardano_node_metrics_peerSelection_cold",
+)
+
 
 @common.SKIPIF_ON_TESTNET
 @pytest.mark.skipif(
@@ -176,6 +188,71 @@ class TestNodeReconnect:
         assert response, f"Request failed, status code {response.status_code}"
         return response
 
+    @staticmethod
+    def parse_prometheus_metrics(response_text: str) -> dict[str, float]:
+        """Parse a Prometheus response into a metric name to value mapping.
+
+        A metric line is `name[{labels}] value [timestamp]`. Comment lines are skipped,
+        labels are stripped from the metric names and the values of all the series of a
+        labelled metric are summed, so that the counts the tests are interested in are
+        totals and not an arbitrary series.
+
+        Args:
+            response_text: Body of the response from the Prometheus endpoint.
+
+        Returns:
+            dict: Metric names and their values.
+        """
+        metrics: dict[str, float] = {}
+
+        for metric_line in response_text.splitlines():
+            line = metric_line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            # Strip the labels, they can contain whitespace
+            name, brace, remainder = line.partition("{")
+            if brace:
+                remainder = remainder.partition("}")[2]
+            else:
+                name, __, remainder = line.partition(" ")
+
+            # Ignore the optional timestamp that can follow the value
+            value_str = remainder.split()
+            if not value_str:
+                continue
+            try:
+                value = float(value_str[0])
+            except ValueError:
+                continue
+
+            name = name.strip()
+            metrics[name] = metrics.get(name, 0.0) + value
+
+        return metrics
+
+    @staticmethod
+    def get_metric_value(metrics: dict[str, float], names: tuple[str, ...]) -> int:
+        """Return value of the first metric that is present under one of its known names.
+
+        Metric names differ between node versions, so several aliases of the same metric
+        are checked.
+
+        Args:
+            metrics: Metrics parsed from the Prometheus endpoint.
+            names: Known names of the metric, from the most recent to the oldest.
+
+        Returns:
+            int: Value of the metric.
+        """
+        for name in names:
+            value = metrics.get(name)
+            if value is not None:
+                return int(value)
+
+        msg = f"None of the metrics {names} was found"
+        raise AssertionError(msg)
+
     def _node_synced(self, cluster_obj: clusterlib.ClusterLib, node: str) -> None:
         sprogress = 0.0
         old_sprogress = 0.0
@@ -306,8 +383,8 @@ class TestNodeReconnect:
           - Wait for node to sync with chain
           - Fetch Prometheus metrics from node HTTP endpoint
           - Parse metrics response into key-value pairs
-          - Check inboundGovernor_hot metric > 1 (active inbound connections)
-          - Check peerSelection_cold metric == 0 (no cold peers)
+          - Check inboundGovernor hot metric > 1 (active inbound connections)
+          - Check peerSelection cold metric == 0 (no cold peers)
           - Retry up to 10 times with 5 second delays if assertions fail
           - Fail test if metrics don't match after 10 attempts
         """
@@ -325,11 +402,10 @@ class TestNodeReconnect:
         def _assert() -> None:
             response = self.get_prometheus_metrics(prometheus_port)
 
-            metrics_pairs = [m.split() for m in response.text.strip().split("\n")]
-            metrics = {m[0]: m[1] for m in metrics_pairs}
+            metrics = self.parse_prometheus_metrics(response.text)
 
-            assert int(metrics["cardano_node_metrics_inboundGovernor_hot"]) > 1
-            assert int(metrics["cardano_node_metrics_peerSelection_cold"]) == 0
+            assert self.get_metric_value(metrics, INBOUND_GOVERNOR_HOT_METRICS) > 1
+            assert self.get_metric_value(metrics, PEER_SELECTION_COLD_METRICS) == 0
 
         with cluster_manager.respin_on_failure():
             for restart_no in range(1, 200):

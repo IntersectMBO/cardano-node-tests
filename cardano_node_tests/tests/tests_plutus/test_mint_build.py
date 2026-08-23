@@ -405,7 +405,7 @@ class TestBuildMinting:
         # Step 2: mint the "qacoin"
 
         slot_step2 = cluster.g_query.get_slot_no()
-        slots_offset = 300
+        slots_offset = plutus_common.get_timerange_slots_offset(cluster_obj=cluster)
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         # POSIX timestamp + offset
@@ -653,7 +653,7 @@ class TestBuildMinting:
         ]
 
         # "time range" qacoin
-        slots_offset = 300
+        slots_offset = plutus_common.get_timerange_slots_offset(cluster_obj=cluster)
         timestamp_offset_ms = int(slots_offset * cluster.slot_length + 5) * 1_000
 
         # POSIX timestamp + offset
@@ -997,10 +997,7 @@ class TestBuildMinting:
             *mint_txouts,
         ]
 
-        # Calculate 3k/f
-        offset_3kf = round(
-            3 * cluster.genesis["securityParam"] / cluster.genesis["activeSlotsCoeff"]
-        )
+        offset_3kf = clusterlib_utils.get_stability_window(cluster_obj=cluster)
 
         # Use 3k/f + `epoch_length` slots for ttl - this will not meet the `expect_pass` condition
         if ttl_offset == -1:

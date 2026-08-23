@@ -304,6 +304,33 @@ _ROTATE_SHIFT_SCRIPTS_V3 = (
 )
 
 
+# Slots between the tip and the end of the validity interval of a transaction that runs
+# a "time range" script. Long enough for the transaction to get submitted and land in a
+# block, and capped by `get_timerange_slots_offset`.
+TIMERANGE_SLOTS_OFFSET = 300
+
+
+def get_timerange_slots_offset(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Return the slot offset to use for the validity interval of a "time range" script.
+
+    A script that looks at the transaction validity interval makes the ledger translate
+    the end of the interval to a time, which it can do only up to its forecast horizon:
+    the end of the first epoch that starts at or after the stability window from the tip.
+    An interval reaching past that fails the script with `TimeTranslationPastHorizon`, so
+    `TIMERANGE_SLOTS_OFFSET` is capped with the stability window, which is by definition
+    always inside the horizon.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        int: The number of slots to set the validity interval to, counted from the tip.
+    """
+    return min(
+        TIMERANGE_SLOTS_OFFSET, clusterlib_utils.get_stability_window(cluster_obj=cluster_obj)
+    )
+
+
 def rotate_shift_bitwise_fails(protocol_version: int) -> bool:
     """Check if the rotate/shift bitwise builtin scripts fail on the given protocol version.
 
