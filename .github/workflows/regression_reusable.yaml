@@ -55,6 +55,12 @@ on:
         required: false
         type: boolean
         default: false
+      history_name:
+        # Deliberately not `testrun_name`: that one also switches on the
+        # `/results` import below, which nightly runs must stay out of.
+        required: false
+        type: string
+        default: ""
     secrets:
       TCACHE_BASIC_AUTH:
         required: false
@@ -254,6 +260,109 @@ jobs:
           if [ -n "$TCACHE_BASIC_AUTH" ] && [ -n "$TCACHE_URL" ] && [ -e run_workdir/testrun-report.xml ]; then
             testrun_name_strip="${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}"
             curl -s -X PUT --fail-with-body -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@run_workdir/testrun-report.xml"
+          fi
+      - name: Report nightly history
+        # Keeps a failed nightly's raw XML, so the failure analysis can tell a
+        # new failure from a recurring one.
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && inputs.history_name
+        env:
+          TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+          TCACHE_URL: ${{ secrets.TCACHE_URL }}
+          HISTORY_NAME: ${{ inputs.history_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          if [ -z "$TCACHE_BASIC_AUTH" ] || [ -z "$TCACHE_URL" ]; then
+            echo "::warning::TCACHE_BASIC_AUTH or TCACHE_URL is empty," \
+                 "not reporting the nightly history."
+            exit 0
+          fi
+          report=run_workdir/testrun-report.xml
+          # Non-empty as well as present: `/history` never overwrites an entry,
+          # so an empty report would take this run's slot for good.
+          if [ ! -f "$report" ] || [ ! -s "$report" ]; then
+            echo "::warning::No usable $report, not reporting the nightly history."
+            exit 0
+          fi
+          # Validated, not stripped like the steps above: a silent strip would
+          # store the entry under a name no reader asks for. Both limits are
+          # the tcache's own.
+          case "$HISTORY_NAME" in
+            *[!A-Za-z0-9_.-]*)
+              echo "::error::history_name '$HISTORY_NAME' must hold only [A-Za-z0-9_.-]."
+              exit 1 ;;
+          esac
+          if [ "${#HISTORY_NAME}" -gt 200 ]; then
+            echo "::error::history_name '$HISTORY_NAME' is over the tcache's 200-character limit."
+            exit 1
+          fi
+          # `TCACHE_URL` ends in `/results`; `/history` is a sibling route.
+          tcache_root="${TCACHE_URL%/}"
+          entry="${tcache_root%/results}/history/${HISTORY_NAME}/${RUN_NUMBER}"
+          response="${RUNNER_TEMP:-/tmp}/tcache_history_response.txt"
+          show_response() {
+            if [ -s "$response" ]; then
+              head -c 2000 "$response" || true
+              echo
+            fi
+          }
+          # No `--fail-with-body`, unlike the step above: the 400 below is an
+          # expected outcome. `|| rc=$?` keeps `bash -e` from aborting before
+          # the diagnostics.
+          rc=0
+          put_status="$(curl -s -o "$response" -w '%{http_code}' -X PUT -m 600 \
+                          -u "$TCACHE_BASIC_AUTH" "$entry" \
+                          -F "junitxml=@$report")" || rc=$?
+          case "$rc" in
+            0) ;;
+            23) echo "::error::Could not write curl's output to $response (curl 23)." \
+                     "The upload may still have been stored: check $entry/xml." ; exit 1 ;;
+            26) echo "::error::Could not read $report (curl 26)." ; exit 1 ;;
+            *) echo "::error::Could not reach the tcache, curl exited with $rc." ; exit 1 ;;
+          esac
+          # Believe the read-back, not the reply: Caddy with no `/history` route
+          # answers 200 with an empty body, so a nightly would report success
+          # and store nothing. Its status matters as much as its size, because
+          # a 404 body has a byte count too.
+          read_back="$(curl -s -o /dev/null -m 120 --retry 3 --retry-connrefused \
+                         -w '%{http_code} %{size_download}' \
+                         -u "$TCACHE_BASIC_AUTH" "$entry/xml")" || read_back="000 0"
+          get_status="${read_back%% *}"
+          stored="${read_back##* }"
+          sent="$(stat -c%s "$report")" || {
+            echo "::error::Could not read the size of $report."
+            exit 1
+          }
+          show_response
+          if [ "$put_status" = "200" ] && [ "$get_status" = "200" ] && [ "$stored" = "$sent" ]; then
+            echo "Reported the nightly history for run $RUN_NUMBER ($sent bytes)."
+          elif [ "$put_status" = "200" ] && [ "$get_status" = "000" ]; then
+            # The tcache took the upload; only the confirmation could not be made.
+            echo "::warning::Uploaded the nightly history for run $RUN_NUMBER," \
+                 "but could not reach $entry/xml to confirm it."
+          elif [ "$put_status" = "400" ] && [ "$get_status" = "200" ] && [ "$stored" != "0" ]; then
+            # A re-run keeps the same run_number, so the first attempt's report
+            # is the one kept, and its size differs from this one legitimately.
+            echo "::warning::The tcache already holds history for run $RUN_NUMBER" \
+                 "($stored bytes). This attempt's report was not stored."
+          elif [ "$get_status" = "404" ]; then
+            echo "::error::The tcache has no entry at $entry/xml after an HTTP" \
+                 "$put_status upload. Is /history routed to the service?"
+            exit 1
+          elif [ "$get_status" != "200" ]; then
+            echo "::error::Could not confirm $entry/xml: the read-back returned HTTP $get_status."
+            exit 1
+          elif [ "$put_status" = "200" ]; then
+            echo "::error::The tcache serves back $stored bytes for run $RUN_NUMBER," \
+                 "expected $sent."
+            exit 1
+          else
+            case "$put_status" in
+              3??) echo "::error::The tcache redirected (HTTP $put_status)." \
+                        "Check the scheme and any trailing slash in TCACHE_URL." ;;
+              *) echo "::error::Reporting the nightly history failed with HTTP $put_status" \
+                      "(the tcache holds $stored bytes for this run)." ;;
+            esac
+            exit 1
           fi
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7
