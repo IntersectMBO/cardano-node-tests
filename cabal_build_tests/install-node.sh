@@ -3,9 +3,7 @@
 # Builds 'cardano-node' and 'cardano-cli' on Ubuntu or Fedora using Cabal and verifies
 # successful installation.
 #
-# Based on instructions from
-# <https://github.com/cardano-foundation/developer-portal/blob/staging/docs/get-started/infrastructure/node/installing-cardano-node.md#building-via-cabal>
-# (<https://developers.cardano.org/docs/get-started/infrastructure/node/installing-cardano-node/#building-via-cabal>)
+# Based on instructions from <https://developers.cardano.org/docs/operators/node/installing-cardano-node/>
 #
 # Please note: sudo is not used because user is root
 # Please note: 'source ~/.bashrc' cmd is not used because Docker runs this script as subscript
@@ -124,7 +122,9 @@ echo "Using sodium version: $libsodium_version"
 git clone https://github.com/IntersectMBO/libsodium
 cd libsodium || exit 1
 git checkout "$libsodium_version"
-./autogen.sh
+
+# Skip autogen.sh's config.guess/config.sub refresh; git.savannah.gnu.org is down and breaks the build.
+DO_NOT_UPDATE_CONFIG_SCRIPTS=1 ./autogen.sh
 ./configure
 make
 make check
