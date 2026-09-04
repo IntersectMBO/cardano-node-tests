@@ -11,6 +11,7 @@ import pathlib as pl
 import random
 import time
 import typing as tp
+from collections import abc
 
 import cardano_clusterlib.types as cl_types
 import cbor2
@@ -1249,8 +1250,41 @@ def wait_for_epoch_interval(
         raise RuntimeError(msg)
 
 
+def _cbor_to_mutable(data: tp.Any) -> tp.Any:
+    """Convert immutable containers created by `cbor2` into their mutable counterparts.
+
+    `cbor2` decodes the content of a CBOR tag into `frozendict`, `tuple` and `frozenset`
+    instances. Those are not JSON serializable and don't compare equal to the `dict` and
+    `list` values loaded from the original metadata files.
+
+    Map keys are left as they are, as they need to stay hashable. The metadata CDDL allows
+    a map or a list as a map key, and such a key stays immutable (and not JSON
+    serializable) even after the conversion.
+
+    Args:
+        data: Any value decoded by `cbor2`.
+
+    Returns:
+        The value with every mapping turned into a `dict` and every tuple or set into
+        a `list`.
+    """
+    if isinstance(data, cbor2.CBORTag):
+        return cbor2.CBORTag(data.tag, _cbor_to_mutable(data.value))
+    if isinstance(data, abc.Mapping):
+        return {k: _cbor_to_mutable(v) for k, v in data.items()}
+    if isinstance(data, (set, frozenset)):
+        return [_cbor_to_mutable(i) for i in data]
+    if isinstance(data, (list, tuple)):
+        return [_cbor_to_mutable(i) for i in data]
+    return data
+
+
 def load_body_metadata(*, tx_body_file: pl.Path) -> tp.Any:
-    """Load metadata from file containing transaction body."""
+    """Load metadata from file containing transaction body.
+
+    Containers are converted to their mutable counterparts, so the result can be
+    modified and serialized to JSON.
+    """
     with open(tx_body_file, encoding="utf-8") as body_fp:
         tx_body_json = json.load(body_fp)
 
@@ -1261,7 +1295,7 @@ def load_body_metadata(*, tx_body_file: pl.Path) -> tp.Any:
     if not metadata:
         return []
 
-    return metadata
+    return _cbor_to_mutable(metadata)
 
 
 def load_tx_metadata(*, tx_body_file: pl.Path) -> TxMetadata:
