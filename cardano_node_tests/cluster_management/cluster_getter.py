@@ -74,12 +74,12 @@ MARK_REFRESH_SEC = 15
 LONG_BACKOFF_SEC = 5
 SHORT_BACKOFF_SEC = 2
 
-if configuration.IS_XDIST:
-    _xdist_sleep = time.sleep
-else:
 
-    def _xdist_sleep(seconds: float, /) -> None:
-        """No need to sleep if tests are running on a single worker."""
+def _no_sleep(seconds: float, /) -> None:
+    """No need to sleep if tests are running on a single worker."""
+
+
+_xdist_sleep: tp.Callable[[float], None] = time.sleep if configuration.IS_XDIST else _no_sleep
 
 
 class _RespinPhase(enum.Enum):
