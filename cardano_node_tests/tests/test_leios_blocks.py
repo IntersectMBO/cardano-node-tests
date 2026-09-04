@@ -533,9 +533,11 @@ class TestLeios:
             pytest.skip(
                 "; ".join(
                     [
-                        "No pool declined to vote with `NotOnCommittee` in "
-                        f"{', '.join(no_evidence)}, so the absence of votes in epoch "
-                        f"{search_epoch} is inconclusive",
+                        (
+                            "No pool declined to vote with `NotOnCommittee` in "
+                            f"{', '.join(no_evidence)}, so the absence of votes in epoch "
+                            f"{search_epoch} is inconclusive"
+                        ),
                         *search_problems,
                     ]
                 )

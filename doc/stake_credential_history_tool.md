@@ -21,7 +21,9 @@ First, let's place a breakpoint
 
 
 ```python
-from IPython import embed; embed()
+from IPython import embed
+
+embed()
 ```
 
 in one of the tests in `test_mir_certs.py` named `test_pay_stake_addr_from_both` that sends funds from the reserves and treasury pots to a stake address, and run it with:

@@ -51,7 +51,7 @@ def cluster_lock_pool_and_pots(
         use_resources=[
             resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
             cluster_management.Resources.REWARDS,
-        ]
+        ],
     )
     locked_pools_names = cluster_manager.get_locked_resources(
         from_set=cluster_management.Resources.ALL_POOLS

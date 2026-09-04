@@ -6,3 +6,10 @@
 rules:
   unpinned-uses:
     disable: true
+
+# Deliberate: local reusable workflows keep the workspace-relative `./...` form.
+# zizmor >= 1.30 prefers GitHub's newer self-repository `$/...` syntax, but
+# actionlint (<= 1.7.12) rejects it as a malformed reusable workflow call.
+# Nothing here clones actions at runtime, so `./...` carries no added risk.
+  self-repository:
+    disable: true
