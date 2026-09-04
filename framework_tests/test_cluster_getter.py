@@ -1328,7 +1328,7 @@ class TestPrepareSelectedInstance:
         monkeypatch.setattr(
             cluster_getter.cluster_nodes,
             "set_cluster_env",
-            lambda instance_num: env_calls.append(instance_num),
+            lambda *, instance_num: env_calls.append(instance_num),
         )
         return getter, cget_status, scratch, env_calls
 

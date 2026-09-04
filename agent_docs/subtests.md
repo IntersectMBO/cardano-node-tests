@@ -117,6 +117,5 @@ def cluster_mincost(
 
 
 @pytest.mark.xdist_group("minPoolCost")
-class TestPoolCost:
-    ...
+class TestPoolCost: ...
 ```

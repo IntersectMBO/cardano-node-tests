@@ -601,18 +601,30 @@ class TestAddressBuild:
         expected_address = {
             "addr_test1vqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycc95yzhp",
             "addr_test1wzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2ggggmzy",
-            "addr_test1qqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycaghrqnes"
-            "9cvw7qwlstcm40m3hn9ap6g5fmwqmckvxwk7usca596d",
-            "addr_test1zzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2dghrqnes"
-            "9cvw7qwlstcm40m3hn9ap6g5fmwqmckvxwk7ustneaan",
-            "addr_test1yqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycufm5hdxq"
-            "4k2703gp5067jvm4js7q7ps7gys0svl7965z5sdkur7k",
-            "addr_test1xzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2vfm5hdxq"
-            "4k2703gp5067jvm4js7q7ps7gys0svl7965z5s7c3meg",
-            "addr_test1qqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycafhqkrpv"
-            "fwrse6u4n87nvwnmfdrrfsz6l7j943wmfs5vrsr9mps4",
-            "addr_test1zzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2dfhqkrpv"
-            "fwrse6u4n87nvwnmfdrrfsz6l7j943wmfs5vrsstkeht",
+            (
+                "addr_test1qqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycaghrqnes"
+                "9cvw7qwlstcm40m3hn9ap6g5fmwqmckvxwk7usca596d"
+            ),
+            (
+                "addr_test1zzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2dghrqnes"
+                "9cvw7qwlstcm40m3hn9ap6g5fmwqmckvxwk7ustneaan"
+            ),
+            (
+                "addr_test1yqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycufm5hdxq"
+                "4k2703gp5067jvm4js7q7ps7gys0svl7965z5sdkur7k"
+            ),
+            (
+                "addr_test1xzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2vfm5hdxq"
+                "4k2703gp5067jvm4js7q7ps7gys0svl7965z5s7c3meg"
+            ),
+            (
+                "addr_test1qqxu3ct3ykqk2ycag4z3h70z5xlyf2tadpxw9am4kae5ycafhqkrpv"
+                "fwrse6u4n87nvwnmfdrrfsz6l7j943wmfs5vrsr9mps4"
+            ),
+            (
+                "addr_test1zzya6tknq2m908c5q68a0fxd6eg0q0qc0yzg8cx0lza2p2dfhqkrpv"
+                "fwrse6u4n87nvwnmfdrrfsz6l7j943wmfs5vrsstkeht"
+            ),
         }
 
         assert address in expected_address, "The generated address doesn't have the expected value"
@@ -1003,8 +1015,10 @@ class TestQueryUTxO:
             "TxHash",
             "TxIx",
             "Amount",
-            "--------------------------------------------------------------------------------"
-            "------",
+            (
+                "----------------------------------------------------------------------------"
+                "----------"
+            ),
             txid,
             "0",
             str(amount1),
@@ -1538,7 +1552,7 @@ class TestPing:
             last_pong: dict = (
                 json.loads(out_str)["pongs"][-1]
                 if cls._OLD_CLI
-                else json.loads(out_str.split("\n")[-1])
+                else json.loads(out_str.rsplit("\n", maxsplit=1)[-1])
             )
         except Exception as exc:
             msg = f"Failed to parse ping output: {exc}\nFull output: {out_str}"

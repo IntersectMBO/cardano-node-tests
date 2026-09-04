@@ -100,9 +100,7 @@ class DBSyncSnapshotService:
             err_msg = "No version folders found in S3 response."
             raise RuntimeError(err_msg)
 
-        latest_version = sorted(
-            version_folders, key=lambda v: [int(part) for part in v.split(".")]
-        )[-1]
+        latest_version = max(version_folders, key=lambda v: [int(part) for part in v.split(".")])
         return latest_version
 
     def get_latest_snapshot(self, version: str) -> SnapshotFile:
