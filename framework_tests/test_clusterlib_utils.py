@@ -5,6 +5,7 @@ The tests must not depend on project-specific binaries (`cardano-cli`, ...) bein
 
 import json
 import pathlib as pl
+import typing as tp
 
 import cbor2
 import pytest
@@ -21,6 +22,59 @@ def write_script(*, script: dict, dest_dir: pl.Path) -> pl.Path:
     with open(script_file, "w", encoding="utf-8") as fp_out:
         json.dump(script, fp_out, indent=4)
     return script_file
+
+
+def write_tx_body(*, aux_data: tp.Any, dest_dir: pl.Path) -> pl.Path:
+    """Write a Tx body file with the given auxiliary data and return its path."""
+    # A Tx body is a 4-element array - body, witnesses, validity flag and auxiliary data
+    cbor_body = cbor2.dumps([{}, {}, True, aux_data])
+    body_file = dest_dir / "tx.body"
+    with open(body_file, "w", encoding="utf-8") as fp_out:
+        json.dump(
+            {"type": "Unwitnessed Tx ConwayEra", "description": "", "cborHex": cbor_body.hex()},
+            fp_out,
+        )
+    return body_file
+
+
+class TestLoadTxMetadata:
+    """Tests for `load_tx_metadata`.
+
+    The metadata map is stored under CBOR tag 259, whose content `cbor2` decodes into
+    immutable containers. The loaded metadata must still be mutable and JSON serializable.
+    """
+
+    def test_metadata(self, tmp_path: pl.Path):
+        """Load metadata that nests a map and a list."""
+        metadata = {1: "foo", 2: [1, 2, {3: "bar"}]}
+        body_file = write_tx_body(aux_data=cbor2.CBORTag(259, {0: metadata}), dest_dir=tmp_path)
+
+        loaded = clusterlib_utils.load_tx_metadata(tx_body_file=body_file)
+
+        assert loaded.metadata == metadata
+        assert isinstance(loaded.metadata, dict)
+        assert isinstance(loaded.metadata[2], list)
+        assert isinstance(loaded.metadata[2][2], dict)
+        # The metadata must be JSON serializable, so keys can be converted to strings
+        assert json.loads(json.dumps(loaded.metadata)) == {"1": "foo", "2": [1, 2, {"3": "bar"}]}
+
+    def test_metadata_with_set(self, tmp_path: pl.Path):
+        """Load metadata that nests a set, which is converted to a list."""
+        body_file = write_tx_body(aux_data=cbor2.CBORTag(259, {0: {1: {"foo"}}}), dest_dir=tmp_path)
+
+        loaded = clusterlib_utils.load_tx_metadata(tx_body_file=body_file)
+
+        assert loaded.metadata == {1: ["foo"]}
+        assert json.dumps(loaded.metadata)
+
+    def test_no_metadata(self, tmp_path: pl.Path):
+        """Load metadata from a Tx body that has no auxiliary data."""
+        body_file = write_tx_body(aux_data=None, dest_dir=tmp_path)
+
+        loaded = clusterlib_utils.load_tx_metadata(tx_body_file=body_file)
+
+        assert loaded.metadata == {}
+        assert loaded.aux_data == []
 
 
 class TestGetReferenceScriptSize:
