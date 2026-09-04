@@ -71,7 +71,7 @@ dev = [
 ]
 docs = [
     "Sphinx>=9.1.0,<10",
-    "m2r2 (>=0.3.4,<0.4.0)",
+    "sphinx-mdinclude (>=0.6.2,<0.7.0)",
     "sphinx-rtd-theme (>=3.1.0,<4.0.0)",
     "sphinxemoji (>=0.3.2,<0.4.0)",
 ]

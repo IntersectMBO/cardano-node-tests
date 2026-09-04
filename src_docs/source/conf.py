@@ -10,6 +10,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from docutils import nodes
+
 # Mock testing environment if needed
 if not os.environ.get("CARDANO_NODE_SOCKET_PATH"):
     os.environ["CARDANO_NODE_SOCKET_PATH"] = "/nonexistent"
@@ -49,7 +51,7 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx.ext.napoleon",
     "sphinxemoji.sphinxemoji",
-    "m2r2",
+    "sphinx_mdinclude",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -60,10 +62,10 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-# source_suffix = '.rst'
+# `sphinx_mdinclude` provides only the `mdinclude` directive, it doesn't register
+# a parser for markdown source files.
 source_suffix = {
     ".rst": "restructuredtext",
-    ".md": "markdown",
 }
 
 
@@ -172,3 +174,44 @@ def linkcode_resolve(domain, info):
         f"https://github.com/IntersectMBO/cardano-node-tests/blob/"
         f"{cardano_node_tests._git_rev}/{filename}"
     )
+
+
+# -- Markdown heading anchors ------------------------------------------------
+
+# `mdinclude` turns a markdown link like `[text](#anchor)` into a `:ref:` on the
+# label `anchor`, but the sections it generates only carry implicit docutils ids.
+# Register the ids of every section as `std` labels, under both the docutils id
+# and the GitHub-flavored slug of the title, so that anchors that work in the
+# markdown files as rendered by GitHub also resolve in the built documentation.
+
+
+def _github_slug(title):
+    """Return the anchor GitHub generates for a markdown heading."""
+    slug = "".join(c for c in title.lower() if c.isalnum() or c in " -_")
+    return slug.replace(" ", "-")
+
+
+def _register_section_labels(app, document):
+    """Add a `std` domain label for each section anchor in `document`."""
+    docname = app.env.docname
+    labels = app.env.domaindata["std"]["labels"]
+    anonlabels = app.env.domaindata["std"]["anonlabels"]
+
+    for section in document.findall(nodes.section):
+        if not section["ids"]:
+            continue
+        title = section.next_node(nodes.title)
+        if title is None:
+            continue
+        section_id = section["ids"][0]
+        title_text = title.astext()
+        for name in {section_id, _github_slug(title_text)}:
+            if name in labels:
+                continue
+            labels[name] = (docname, section_id, title_text)
+            anonlabels[name] = (docname, section_id)
+
+
+def setup(app):
+    """Register the Sphinx extension points defined in this file."""
+    app.connect("doctree-read", _register_section_labels)
