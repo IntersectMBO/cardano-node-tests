@@ -903,6 +903,7 @@ class TestNegative:
 
         * Prepare transaction from pool_users[0] to pool_users[1] with 1.5 ADA
         * Use cluster instance configured for era > current network era
+        * Pass a hardcoded fee to skip fee calculation
         * Attempt to submit transaction built for future era
         * Check that transaction fails with era mismatch error
         """
@@ -911,13 +912,19 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
         txouts = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_500_000)]
 
-        # It should NOT be possible to submit a transaction when TX era > network era
+        # It should NOT be possible to submit a transaction when TX era > network era.
+        # The fee is hardcoded on purpose - fee calculation would make `cardano-cli` parse the
+        # protocol parameters of the current network era under the future era, and the parser
+        # of the future era can require protocol parameters that the current era doesn't emit.
+        # The transaction is expected to be rejected when it is submitted, not when its fee
+        # is calculated.
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster_wrong_tx_era.g_transaction.send_tx(
                 src_address=pool_users[0].payment.address,
                 tx_name=temp_template,
                 txouts=txouts,
                 tx_files=tx_files,
+                fee=400_000,
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
