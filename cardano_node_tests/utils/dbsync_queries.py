@@ -1211,6 +1211,18 @@ def query_view_names() -> list[str]:
         return view_names
 
 
+def query_column_data_type(*, table: str, column: str) -> str | None:
+    """Query the SQL data type of a column, or `None` if the column does not exist."""
+    query = (
+        "SELECT data_type FROM information_schema.columns "
+        "WHERE table_name = %s AND column_name = %s;"
+    )
+
+    with execute(query=query, vars=(table, column)) as cur:
+        result = cur.fetchone()
+        return result[0] if result is not None else None
+
+
 def query_datum(*, datum_hash: str) -> tp.Generator[DatumDBRow]:
     """Query datum record in db-sync."""
     query = "SELECT id, hash, tx_id, value, bytes FROM datum WHERE hash = %s;"
