@@ -2,6 +2,10 @@
 
 TESTNET_VARIANT ?= local_fast
 VENV := .venv
+VENV_ABS := $(abspath $(VENV))
+# Equivalent of activating the venv: needed by pre-commit hooks with
+# "language: system", which resolve their entry point from PATH.
+VENV_ENV := PATH="$(VENV_ABS)/bin:$$PATH" VIRTUAL_ENV="$(VENV_ABS)"
 
 .PHONY: .check-venv-exists
 .check-venv-exists:
@@ -96,20 +100,20 @@ stop-cluster: .check-venv-activated ## Stop local testnet cluster (variant: TEST
 
 .PHONY: init-lint
 init-lint: .check-venv-exists ## Initialize linters
-	$(VENV)/bin/pre-commit clean
-	$(VENV)/bin/pre-commit gc
+	$(VENV_ENV) $(VENV)/bin/pre-commit clean
+	$(VENV_ENV) $(VENV)/bin/pre-commit gc
 	find . -path '*/.mypy_cache/*' -delete
-	$(VENV)/bin/pre-commit uninstall
-	$(VENV)/bin/pre-commit install --install-hooks
+	$(VENV_ENV) $(VENV)/bin/pre-commit uninstall
+	$(VENV_ENV) $(VENV)/bin/pre-commit install --install-hooks
 
 .PHONY: lint
 lint: .check-venv-exists ## Run linters
-	$(VENV)/bin/pre-commit run -a --show-diff-on-failure --color=always
+	$(VENV_ENV) $(VENV)/bin/pre-commit run -a --show-diff-on-failure --color=always
 
 .PHONY: fmt
 fmt: .check-venv-exists ## Format code with ruff
-	$(VENV)/bin/pre-commit run ruff-check -a
-	$(VENV)/bin/pre-commit run ruff-format -a
+	$(VENV_ENV) $(VENV)/bin/pre-commit run ruff-check -a
+	$(VENV_ENV) $(VENV)/bin/pre-commit run ruff-format -a
 
 ## ---------------------------------------------------------------------------
 ## Documentation
