@@ -50,3 +50,12 @@ repos:
     entry: mypy
     language: system
     types: [python]
+    # Run mypy once on all sources instead of letting pre-commit shard the files
+    # over parallel processes. mypy 2.x enables the SQLite cache by default,
+    # and concurrent processes sharing `.mypy_cache` fail to acquire its lock:
+    # `sqlite3.OperationalError: database is locked` surfaces as an intermittent
+    # mypy `INTERNAL ERROR`. Sharding is also slower, as every shard re-analyzes
+    # the full dependency graph.
+    pass_filenames: false
+    require_serial: true
+    args: [cardano_node_tests, framework_tests, scripts/count_test_results.py, src_docs/source/conf.py]
