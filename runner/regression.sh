@@ -420,7 +420,8 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   # Entries in `.bin` are user-managed and could have changed since the
   # setup-time checks. Exit code 3 distinguishes this setup failure from
   # pytest'\''s "some tests failed" (1).
-  _req_cmds=( cardano-node cardano-cli cardano-submit-api bech32 tx-generator )
+  _req_cmds=( cardano-node cardano-cli cardano-submit-api bech32 )
+  if is_truthy "${ENABLE_TX_GENERATOR:-}"; then _req_cmds+=( tx-generator ); fi
   if [ -n "${DBSYNC_REV:-}" ]; then _req_cmds+=( cardano-db-sync ); fi
   if is_truthy "${SMASH:-}"; then _req_cmds+=( cardano-smash-server ); fi
   # Word splitting is intended, ENABLED_TX_TOOLS is a space-separated list.

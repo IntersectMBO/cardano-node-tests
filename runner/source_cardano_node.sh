@@ -1,9 +1,11 @@
 #!/bin/bash
 
 # Build all required binaries into $WORKDIR/*-build<postfix>.
+# The `tx-generator` is built only when `ENABLE_TX_GENERATOR` is truthy.
 # When `skip_bindir` (absolute path) is given, usable executables already
-# present there are not built. The `skip_bindir` support requires
-# `is_usable_binary` and `report_existing_binary` from `scripts/common.sh`.
+# present there are not built. Requires `is_truthy` and, for `skip_bindir`
+# support, `is_usable_binary` and `report_existing_binary` from
+# `scripts/common.sh`.
 cardano_bins_build_all() {
   : "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
   local node_rev="${1:?}"
@@ -42,7 +44,10 @@ cardano_bins_build_all() {
   _cardano_bins_build_one "cardano-node" "cardano-node" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_build_one "cardano-submit-api" "cardano-submit-api" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_build_one "bech32" "bech32" || { cd "$origpwd" || true; return 1; }
-  _cardano_bins_build_one "tx-generator" "tx-generator" || { cd "$origpwd" || true; return 1; }
+
+  if is_truthy "${ENABLE_TX_GENERATOR:-}"; then
+    _cardano_bins_build_one "tx-generator" "tx-generator" || { cd "$origpwd" || true; return 1; }
+  fi
 
   if [ -z "$cli_rev" ]; then
     _cardano_bins_build_one "cardano-cli" "cardano-cli" || { cd "$origpwd" || true; return 1; }
@@ -52,10 +57,12 @@ cardano_bins_build_all() {
 }
 
 # Print PATH to prepend based on previously built outputs.
+# The `tx-generator` entry is included only when `ENABLE_TX_GENERATOR` is truthy,
+# matching what `cardano_bins_build_all` built.
 # When `skip_bindir` (absolute path) is given, entries for usable executables
 # already present there are omitted (their build was skipped in
-# `cardano_bins_build_all`). The `skip_bindir` support requires
-# `is_usable_binary` from `scripts/common.sh`.
+# `cardano_bins_build_all`). Requires `is_truthy` and, for `skip_bindir`
+# support, `is_usable_binary` from `scripts/common.sh`.
 # The output may be empty when all binaries are present in `skip_bindir`.
 cardano_bins_print_path_prepend() {
   : "${WORKDIR:?"WORKDIR must be set to a writable directory"}"
@@ -88,7 +95,10 @@ cardano_bins_print_path_prepend() {
   _cardano_bins_add_bin_dir "cardano-node" "cardano-node" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_add_bin_dir "cardano-submit-api" "cardano-submit-api" || { cd "$origpwd" || true; return 1; }
   _cardano_bins_add_bin_dir "bech32" "bech32" || { cd "$origpwd" || true; return 1; }
-  _cardano_bins_add_bin_dir "tx-generator" "tx-generator" || { cd "$origpwd" || true; return 1; }
+
+  if is_truthy "${ENABLE_TX_GENERATOR:-}"; then
+    _cardano_bins_add_bin_dir "tx-generator" "tx-generator" || { cd "$origpwd" || true; return 1; }
+  fi
 
   if [ -z "$cli_rev" ]; then
     _cardano_bins_add_bin_dir "cardano-cli" "cardano-cli" || { cd "$origpwd" || true; return 1; }
