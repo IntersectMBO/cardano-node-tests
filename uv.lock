@@ -207,7 +207,7 @@ docs = [
 requires-dist = [
     { name = "allure-pytest", specifier = ">=2.16.0,<3.0.0" },
     { name = "cardano-clusterlib", specifier = ">=0.10.5,<0.11.0" },
-    { name = "cardonnay", specifier = ">=0.4.4,<0.5.0" },
+    { name = "cardonnay", specifier = ">=0.4.6,<0.5.0" },
     { name = "cbor2", specifier = ">=6.1.4,<7.0.0" },
     { name = "filelock", specifier = ">=3.32.5,<4.0.0" },
     { name = "hypothesis", specifier = ">=6.167.1,<7.0.0" },
@@ -245,7 +245,7 @@ docs = [
 
 [[package]]
 name = "cardonnay"
-version = "0.4.4"
+version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -255,9 +255,9 @@ dependencies = [
     { name = "setuptools" },
     { name = "supervisor" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/2b/290f2615bec116b30756ba248bf388cc919c9098d9b25941bb891aabd8be/cardonnay-0.4.4.tar.gz", hash = "sha256:50e02ea987f74bb9ec18fb2905e5bca1a044c6a7edf1a9b4b949bfb9fa29776e", size = 101541, upload-time = "2026-08-20T20:25:43.285Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/59/01f6b6baeffd1c3ce7a1b5b9f1ee1e45c72355c850a063c4e09ec81dd39a/cardonnay-0.4.6.tar.gz", hash = "sha256:6a4cb098ebce9c40af4b4347b5d659e9a0232a7957291933a4a08d5a87741ca2", size = 104585, upload-time = "2026-09-07T12:17:32.857Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/d2/93b6b349c055ed89bba79c4f69f45a94c7ccae2003296e2c713d08f60417/cardonnay-0.4.4-py3-none-any.whl", hash = "sha256:f3e95e7937cb5fadba4b9d6b3e6e77c1422d7cfc21eb88874e7c0a1214ad3800", size = 106211, upload-time = "2026-08-20T20:25:41.767Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/49/aef88c2b9ff4ccaebbb0da63ee820670d2f27b2efabf12abf885f2f49faa/cardonnay-0.4.6-py3-none-any.whl", hash = "sha256:c8cf324e9b6ceae227c07ab1e0faa3f38f94ab55866a87e4f1898c6b7c40966d", size = 109512, upload-time = "2026-09-07T12:17:31.463Z" },
 ]
 
 [[package]]
