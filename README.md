@@ -129,7 +129,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 4. Launch the local testnet cluster:
 
    ```sh
-   make start-cluster
+   ./dev_workdir/local_fast/start-cluster
    ```
 
 5. Run your tests:
@@ -142,7 +142,7 @@ For workflows requiring repeated test runs on a persistent testnet cluster:
 6. Stop the testnet cluster:
 
    ```sh
-   make stop-cluster
+   ./dev_workdir/local_fast/stop-cluster
    ```
 
 > ℹ️ **Pro Tip:** Next time, you can omit step 2 if the environment is already set up.
