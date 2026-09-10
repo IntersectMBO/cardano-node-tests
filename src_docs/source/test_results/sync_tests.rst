@@ -11,3 +11,12 @@ The source code for these tests is available in the `cardano-sync-tests <https:/
 
 Results for each `cardano-node` release are linked from the corresponding report in
 :doc:`tag_tests`.
+
+
+Sync Reports
+------------
+
+.. toctree::
+   :maxdepth: 4
+
+   sync_reports/mainnet_11_1_1.rst
