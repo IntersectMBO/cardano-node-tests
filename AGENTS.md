@@ -67,6 +67,12 @@ Before writing a new E2E test from scratch, you must first open `agent_docs/new_
 
 ---
 
+## Tag Testing
+
+Tag testing is the release testing of a `cardano-node` tag. Before explaining the tag testing process or any of its items, and before writing or extending a tag testing report under `src_docs/source/test_results/node/`, you must first open `agent_docs/tag_testing.md` and follow the instructions.
+
+---
+
 ## Commits
 
 Any time the user asks for a commit, you must first open `agent_docs/commits.md` and confirm compliance before committing.
