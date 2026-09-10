@@ -260,7 +260,7 @@ skewed block distribution, not as a failing assertion elsewhere.
 ### 9. Testing on Ubuntu, Debian, Mint
 
 **What it is:** a regression run inside a container based on a mainstream Linux distribution,
-instead of the usual Nix/Alpine environment.
+instead of the usual Alpine/NixOS container.
 
 **How it runs:**
 
@@ -270,12 +270,23 @@ instead of the usual Nix/Alpine environment.
 ./runner/runc.sh --mint-container -- NODE_REV=11.1.1 ./runner/regression.sh
 ```
 
-These images require `/nix` on the host (it is bind-mounted in); `--nixos-container` is the
-self-contained fallback. Narrow the run with `MARKEXPR` or `PYTEST_ARGS` when a full suite is
-not needed.
+These images require `/nix` on the host - `runner/runc.sh` bind-mounts it into the container.
+`--nixos-container` is the self-contained fallback (its own `/nix` store, no host Nix needed).
+Narrow the run with `MARKEXPR` or `PYTEST_ARGS` when a full suite is not needed.
 
-**Value:** catches issues caused by the distribution's glibc, system libraries, locale or
-filesystem behaviour, which the Nix environment hides.
+**What is *not* varied:** the binaries. `cardano-node` and `cardano-cli` are still built or
+fetched with Nix, and `runner/regression.sh` executes inside `nix develop`, so the node, the
+Python environment and the rest of the toolchain come from the same Nix store in every
+distribution. The node is therefore *not* linked against the distribution's glibc or system
+libraries.
+
+**What the distribution actually supplies:** the surrounding userland - the container image's
+`/etc`, CA certificates, locale, shell and base utilities, user and permission setup,
+filesystem and `/tmp` behaviour, and how the container runtime and kernel interact with it.
+
+**Value:** confirms the node and the test framework run correctly on those base environments.
+Building the node *against* a distribution's own system libraries is a separate item - see
+item 13 (`cabal_build_tests`), which installs the distro dev packages and builds from source.
 
 ### 10. Shutdown testing
 

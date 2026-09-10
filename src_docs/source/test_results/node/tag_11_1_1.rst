@@ -162,8 +162,10 @@ number of blocks. A configuration that silently slows down forging shows up here
 skewed block distribution rather than as a failing assertion elsewhere.
 
 **Testing on Ubuntu, Debian, Mint** - a regression run inside a container based on a
-mainstream Linux distribution instead of the usual Nix-based environment, to catch problems
-caused by the distribution's system libraries, locale or filesystem behaviour.
+mainstream Linux distribution. The node binaries themselves are still built with Nix and are
+the same in every distribution; what varies is the surrounding environment - the system
+configuration, certificates, locale, shell utilities and filesystem behaviour the node and the
+test framework run on top of.
 
 **Shutdown testing** - the node is shut down through every supported mechanism (slot-based,
 block-based, inter-process communication, Ctrl+C) and must exit promptly, log a clean
