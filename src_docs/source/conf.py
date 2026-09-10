@@ -4,6 +4,7 @@
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import builtins
 import inspect
 import os
 import subprocess
@@ -11,6 +12,7 @@ import sys
 from pathlib import Path
 
 from docutils import nodes
+from sphinx import addnodes
 
 # Mock testing environment if needed
 if not os.environ.get("CARDANO_NODE_SOCKET_PATH"):
@@ -212,6 +214,30 @@ def _register_section_labels(app, document):
             anonlabels[name] = (docname, section_id)
 
 
+# -- Cross-references to builtin types ---------------------------------------
+
+# Autodoc emits type annotations as "specific" cross-references, which means that
+# a target with no exact match is looked up by suffix: any object whose name ends
+# with `.<target>` matches. Classes with fields named after builtin types (`int`
+# in `utils.model_ekg`, `bytes` and `type` in `utils.dbsync_queries`) are matched
+# this way by an annotation as plain as `int`. That produces a "more than one
+# target found" warning and links the annotation to an unrelated attribute.
+# Builtin types are never documented here, so drop the `refspecific` flag from
+# their cross-references (the python domain tests for the presence of the flag,
+# not for its value) - the suffix search is then skipped and the annotation is
+# rendered as plain text.
+
+_BUILTIN_TYPES = frozenset(name for name, obj in vars(builtins).items() if isinstance(obj, type))
+
+
+def _unspecify_builtin_xrefs(_app, document):
+    """Disable suffix matching for cross-references to builtin types."""
+    for node in document.findall(addnodes.pending_xref):
+        if node.get("refdomain") == "py" and node.get("reftarget") in _BUILTIN_TYPES:
+            node.attributes.pop("refspecific", None)
+
+
 def setup(app):
     """Register the Sphinx extension points defined in this file."""
     app.connect("doctree-read", _register_section_labels)
+    app.connect("doctree-read", _unspecify_builtin_xrefs)
