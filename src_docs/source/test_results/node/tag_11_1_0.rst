@@ -37,10 +37,10 @@ Release Testing Checklists
    * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C)
      - |:heavy_check_mark:|
    * - `Sync testing on Mainnet (Linux) <https://docs.google.com/document/d/e/2PACX-1vTujvaT-knCY4ZTUVqUelUIww8n9LJhbd8ZnBjMsUxAp4fvpfmcVFux-qENSzL057vXPxON5LC8_UMk/pub>`__
-     - |:question:|\ :sup:`1`
+     - |:x:|\ :sup:`1`
    * - Byron to Conway 11 hard-fork testing
      - |:heavy_check_mark:|
    * - Check build instructions changes
      - |:heavy_check_mark:|
 
-| \ :sup:`1` - Memory regression observed during sync testing on Mainnet.
+| \ :sup:`1` - Memory regression observed during sync testing on Mainnet, see `issue #3669 <https://github.com/IntersectMBO/cardano-node-tests/issues/3669>`__
