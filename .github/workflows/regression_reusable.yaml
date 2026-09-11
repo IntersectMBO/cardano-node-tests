@@ -55,6 +55,12 @@ on:
         required: false
         type: boolean
         default: false
+      history_name:
+        # Deliberately not `testrun_name`: that one also switches on the
+        # `/results` import below, which nightly runs must stay out of.
+        required: false
+        type: string
+        default: ""
     secrets:
       TCACHE_BASIC_AUTH:
         required: false
@@ -254,6 +260,28 @@ jobs:
           if [ -n "$TCACHE_BASIC_AUTH" ] && [ -n "$TCACHE_URL" ] && [ -e run_workdir/testrun-report.xml ]; then
             testrun_name_strip="${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}"
             curl -s -X PUT --fail-with-body -u "$TCACHE_BASIC_AUTH" "$TCACHE_URL/${testrun_name_strip}/${{ github.run_number }}/import" -F "junitxml=@run_workdir/testrun-report.xml"
+          fi
+      - name: Report nightly history
+        # Keeps a failed nightly's XML for the failure analysis to compare against.
+        if: (success() || failure()) && steps.testing-step.outcome != 'success' && inputs.history_name
+        env:
+          TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+          TCACHE_URL: ${{ secrets.TCACHE_URL }}
+          HISTORY_NAME: ${{ inputs.history_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          report=run_workdir/testrun-report.xml
+          if [ -n "$TCACHE_BASIC_AUTH" ] && [ -n "$TCACHE_URL" ] && [ -f "$report" ]; then
+            # `TCACHE_URL` ends in `/results`; `/history` is a sibling route.
+            root="${TCACHE_URL%/}"
+            entry="${root%/results}/history/${HISTORY_NAME}/${RUN_NUMBER}"
+            curl -s -X PUT --fail-with-body -u "$TCACHE_BASIC_AUTH" "$entry" -F "junitxml=@$report"
+            # A proxy with no `/history` route answers 200 with an empty body.
+            stored="$(curl -s -o /dev/null -w '%{size_download}' -u "$TCACHE_BASIC_AUTH" "$entry/xml")"
+            if [ "$stored" != "$(stat -c%s "$report")" ]; then
+              echo "::error::The tcache holds $stored bytes for run $RUN_NUMBER; is /history routed?"
+              exit 1
+            fi
           fi
       - name: ↟ Upload testing artifacts on failure
         uses: actions/upload-artifact@v7
