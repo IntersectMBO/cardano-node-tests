@@ -115,19 +115,23 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
         request: SubRequest,
     ) -> clusterlib.ClusterLib:
+        """Return a cluster instance that uses the default Tx era for CLI commands.
+
+        The default Tx era is the era that the implicit `latest` CLI era group points to. With
+        `request.param` set, the era is named explicitly on the command line instead of relying
+        on the `latest` era group.
+        """
         is_era_explicit = request.param
-        cluster_default = cluster
+        wanted_command_era = (
+            VERSIONS.MAP[VERSIONS.DEFAULT_TX_ERA]
+            if is_era_explicit
+            else clusterlib.CommandEras.LATEST
+        )
 
-        if is_era_explicit:
-            default_tx_era = VERSIONS.MAP[VERSIONS.DEFAULT_TX_ERA]
-            if cluster.command_era != default_tx_era:
-                cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(
-                    command_era=default_tx_era
-                )
-        elif cluster.command_era:
-            cluster_default = cluster_nodes.get_cluster_type().get_cluster_obj(command_era="")
+        if cluster.command_era == wanted_command_era:
+            return cluster
 
-        return cluster_default
+        return cluster_nodes.get_cluster_type().get_cluster_obj(command_era=wanted_command_era)
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
@@ -1295,6 +1299,10 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_WRONG_ERA
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era_name != VERSIONS.MAP[VERSIONS.DEFAULT_TX_ERA],
+        reason="the era of the `latest` CLI era group doesn't match the cluster era",
+    )
     @submit_utils.PARAM_SUBMIT_METHOD
     @common.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
@@ -1315,8 +1323,11 @@ class TestBasicTransactions:
     ):
         """Test default Tx era.
 
-        * Check that default Tx era is implicit as `latest`
-        * Check that default Tx era can be specified explicitly by its name
+        The default Tx era is the era that the `latest` CLI era group points to, so the test
+        runs only on a cluster that is in that era.
+
+        * Check that the default Tx era is implicit as `latest`
+        * Check that the default Tx era can be specified explicitly by its name
         """
         temp_template = common.get_test_id(cluster)
 

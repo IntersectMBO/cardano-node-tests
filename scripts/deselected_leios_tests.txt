@@ -113,12 +113,6 @@ cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_raw.py::TestSECP25
 
 # Test issues
 
-# Explicit Conway tx era vs Dijkstra node: 'The era of the node and the tx do not match' on `build`,
-# `ValidationTagMismatch Phase2Invalid PassedUnexpectedly` on submit for the other build methods
-cardano_node_tests/tests/test_tx_basic.py::TestBasicTransactions::test_default_tx_era[explicit_tx_era-build-submit_cli]
-cardano_node_tests/tests/test_tx_basic.py::TestBasicTransactions::test_default_tx_era[explicit_tx_era-build_estimate-submit_cli]
-cardano_node_tests/tests/test_tx_basic.py::TestBasicTransactions::test_default_tx_era[explicit_tx_era-build_raw-submit_cli]
-
 # `cardano-cli ping` arguments changed: `--network-magic` and `--mode` were replaced by `--magic`,
 # `--host`/`--port`/`--unixsock` and `--tip`/`--query-versions`
 cardano_node_tests/tests/test_cli.py::TestPing::test_ping_localhost
