@@ -110,12 +110,3 @@ cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_build.py::TestSECP
 cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_build.py::TestSECP256k1::test_use_secp_builtin_functions[schnorr]
 cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_raw.py::TestSECP256k1::test_use_secp_builtin_functions[ecdsa]
 cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_raw.py::TestSECP256k1::test_use_secp_builtin_functions[schnorr]
-
-# Test issues
-
-# `cardano-cli ping` arguments changed: `--network-magic` and `--mode` were replaced by `--magic`,
-# `--host`/`--port`/`--unixsock` and `--tip`/`--query-versions`
-cardano_node_tests/tests/test_cli.py::TestPing::test_ping_localhost
-cardano_node_tests/tests/test_cli.py::TestPing::test_ping_tip
-cardano_node_tests/tests/test_cli.py::TestPing::test_ping_unix_socket
-cardano_node_tests/tests/test_cli.py::TestPing::test_ping_version

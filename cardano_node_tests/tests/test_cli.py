@@ -1,12 +1,12 @@
 """Tests for cardano-cli that doesn't fit into any other test file."""
 
 import datetime
+import functools
 import json
 import logging
 import pathlib as pl
 import string
 import time
-import typing as tp
 
 import allure
 import hypothesis
@@ -1511,19 +1511,42 @@ class TestAdvancedQueries:
         assert hasattr(pool_params, "retiring")
 
 
+@functools.cache
+def _has_old_ping_iface() -> bool:
+    """Check whether `cardano-cli ping` uses the interface from before cardano-cli 11.2.1.0.
+
+    Old interface: `--magic`, `--host` + `--port` / `--unixsock`, `--tip`, `--query-versions`.
+    Reworked interface: `--network-magic`, a positional `host:port` or socket path, `--mode`.
+    So `--mode` is present only on the reworked interface and its absence marks the old one.
+
+    The interface cannot be derived from the reported cardano-cli version. Experimental node
+    builds pin cardano-cli forks that report a version that already includes the rework while
+    still shipping the old `ping` interface, so the help text is inspected instead.
+
+    The command is not allowed to fail. A failure would mean `ping` is unusable altogether,
+    and swallowing it would just pick an interface at random and report the problem later as
+    an unrelated error.
+
+    Raises:
+        RuntimeError: When `cardano-cli ping --help` cannot be run or fails.
+    """
+    helptext = helpers.run_command("cardano-cli ping --help").decode("utf-8")
+    return "--mode" not in helptext
+
+
 class TestPing:
     """Tests for `cardano-cli ping`.
 
-    The tests target the `ping` CLI interface and output format of cardano-cli 11.2.1.0+.
-    Everything guarded by `_OLD_CLI` is backwards compatibility for older cardano-cli versions
-    and can be deleted once those are no longer under test.
+    The `ping` command interface and its output format were reworked in cardano-cli 11.2.1.0,
+    but the two axes are handled independently here, because builds exist that ship the old
+    options with the new output format. The options are picked by `_has_old_ping_iface`, the
+    output format is detected from the data. Both compatibility paths can be deleted once
+    cardano-cli builds with the old `ping` interface are no longer under test.
     """
-
-    _OLD_CLI: tp.ClassVar[bool] = VERSIONS.cli < version.parse("11.2.1.0")
 
     @classmethod
     def _magic_args(cls, magic: int) -> list[str]:
-        if cls._OLD_CLI:
+        if _has_old_ping_iface():
             return ["--magic", str(magic)]
         return ["--network-magic", str(magic)]
 
@@ -1533,7 +1556,7 @@ class TestPing:
         if not (unixsock or host):
             msg = "Either `host` or `unixsock` must be given."
             raise ValueError(msg)
-        if cls._OLD_CLI:
+        if _has_old_ping_iface():
             if unixsock:
                 return ["--unixsock", unixsock]
             return ["--host", host, "--port", str(port)]
@@ -1541,27 +1564,38 @@ class TestPing:
 
     @classmethod
     def _mode_args(cls, mode: str) -> list[str]:
-        if cls._OLD_CLI:
+        if _has_old_ping_iface():
             return {"tip": ["--tip"], "query": ["--query-versions"]}[mode]
         return ["--mode", mode]
 
     @classmethod
-    def _last_pong(cls, out_str: str) -> dict:
-        """Parse the last pong record, regardless of the cardano-cli ping output format."""
+    def _last_record(cls, out_str: str) -> dict:
+        """Parse the last record of a ping output, regardless of its format.
+
+        The output format is detected from the data, not from the CLI interface - the two
+        changed independently, so a CLI can ship the old options with the new output format.
+        """
         try:
-            last_pong: dict = (
-                json.loads(out_str)["pongs"][-1]
-                if cls._OLD_CLI
-                else json.loads(out_str.rsplit("\n", maxsplit=1)[-1])
-            )
+            # The newer cardano-cli prints newline-delimited JSON records, the older one
+            # a single JSON document with all the pongs under the "pongs" key.
+            try:
+                parsed = json.loads(out_str)
+            except json.JSONDecodeError:
+                last_record: dict = json.loads(out_str.rsplit("\n", maxsplit=1)[-1])
+            else:
+                last_record = parsed["pongs"][-1] if "pongs" in parsed else parsed
         except Exception as exc:
             msg = f"Failed to parse ping output: {exc}\nFull output: {out_str}"
             raise AssertionError(msg) from exc
-        return last_pong
+        return last_record
 
     @classmethod
     def _tip_slot_no(cls, ping_json: dict) -> int:
-        slot_no: int = ping_json["tip"][-1]["slotNo"] if cls._OLD_CLI else ping_json["slotNo"]
+        """Return the tip slot number from a ping record of either output format."""
+        # The older cardano-cli nests the tips under the "tip" key, the newer one prints
+        # a flat record per tip.
+        tip_records = ping_json.get("tip")
+        slot_no: int = tip_records[-1]["slotNo"] if tip_records else ping_json["slotNo"]
         return slot_no
 
     @classmethod
@@ -1570,7 +1604,7 @@ class TestPing:
         cluster: clusterlib.ClusterLib,
         socket_path: str,
     ) -> None:
-        """Run the `test_ping_unix_socket` body for cardano-cli older than 11.2.1.0.
+        """Run the `test_ping_unix_socket` body for the old `cardano-cli ping` interface.
 
         * Add log ignore rule for expected MuxUnknownMiniProtocol errors (ping protocol)
         * Execute `cardano-cli ping` command with `--unixsock`, sending 5 ping requests
@@ -1628,7 +1662,7 @@ class TestPing:
         if not (out_str and out_str[0] == "{"):
             issues.cli_49.finish_test()
 
-        last_pong = cls._last_pong(out_str)
+        last_pong = cls._last_record(out_str)
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
     @allure.link(helpers.get_vcs_link())
@@ -1676,7 +1710,7 @@ class TestPing:
             issues.node_5324.finish_test()
 
         out_str = cli_out.stdout.rstrip().decode("utf-8")
-        last_pong = self._last_pong(out_str)
+        last_pong = self._last_record(out_str)
         assert last_pong["cookie"] == count - 1, f"Expected cookie {count - 1}, got {last_pong}"
 
     @allure.link(helpers.get_vcs_link())
@@ -1693,7 +1727,8 @@ class TestPing:
         Ping mode runs over the node-to-node protocol only, so it is not available over a Unix
         socket. The node-to-client query mode is used instead.
 
-        On cardano-cli older than 11.2.1.0, the legacy `--unixsock` ping flow runs instead.
+        On cardano-cli builds with the old ping interface, the legacy `--unixsock` ping flow
+        runs instead.
 
         * Execute `cardano-cli ping` command in query mode with CARDANO_NODE_SOCKET_PATH
           as the address
@@ -1702,7 +1737,7 @@ class TestPing:
         common.get_test_id(cluster)
         socket_path = str(cluster_nodes.get_cluster_env().socket_path)
 
-        if self._OLD_CLI:
+        if _has_old_ping_iface():
             self._ping_unix_socket_old_cli(cluster=cluster, socket_path=socket_path)
             return
 
@@ -1766,7 +1801,7 @@ class TestPing:
         )
 
         ping_data = cli_out.stdout.rstrip().decode("utf-8")
-        ping_json = json.loads(ping_data.split("\n")[-1])
+        ping_json = self._last_record(ping_data)
 
         tip_ping = self._tip_slot_no(ping_json)
         tip_cluster = cluster.g_query.get_slot_no()
