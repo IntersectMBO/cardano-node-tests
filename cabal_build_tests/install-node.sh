@@ -10,13 +10,15 @@
 # Please note: sudo is not used because user is root
 # Please note: 'source ~/.bashrc' cmd is not used because Docker runs this script as subscript
 
+set -euo pipefail
+
 # Versions
 readonly GHC_VERSION="9.6.7"
 readonly CABAL_VERSION="3.12.1.0"
 
 echo ""
 
-if [[ -z "${GIT_OBJECT}" ]]; then
+if [[ -z "${GIT_OBJECT:-}" ]]; then
   >&2 printf "Please specify 'GIT_OBJECT' on docker run.\ne.g. '-e GIT_OBJECT=10.6.1' for tags, or '-e GIT_OBJECT=78ab9c3a87ef' for commits."
   exit 1
 fi
@@ -90,8 +92,10 @@ echo "Install GHCup"
 curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_MINIMAL=1 BOOTSTRAP_HASKELL_ADJUST_BASHRC=P sh
 
 # Source changes in order to use GHCup in current terminal session
+set +u
 # shellcheck source=/dev/null
 source /root/.ghcup/env
+set -u
 
 # Download, unpack, install and update Cabal
 echo "Download, unpack, install Cabal and GHC"
@@ -125,15 +129,35 @@ git clone https://github.com/IntersectMBO/libsodium
 cd libsodium || exit 1
 git checkout "$libsodium_version"
 ./autogen.sh
+
+# 'autogen.sh' overwrites the config scripts installed by autoreconf with unchecked
+# 'curl -sL' downloads from git.savannah.gnu.org. Verify them here, so that a failed
+# download is not reported later as a 'configure' or dependency resolution failure.
+# The scripts are run through a shell, the same way 'configure' runs them, because
+# curl leaves the downloaded files non-executable.
+check_config_script() {
+  local script="$1"
+  shift
+  if ! /bin/bash "./build-aux/$script" "$@" | grep -Eq '^[[:alnum:]_]+-'; then
+    >&2 echo "libsodium 'build-aux/$script' is broken, likely a failed download in 'autogen.sh'"
+    >&2 ls -l "./build-aux/$script"
+    >&2 head -c 300 "./build-aux/$script"
+    exit 1
+  fi
+}
+check_config_script config.guess
+check_config_script config.sub x86_64-pc-linux-gnu
 ./configure
 make
 make check
 make install
 
-export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
-export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}"
+export LD_LIBRARY_PATH="/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+set +u
 # shellcheck source=/dev/null
 source ~/.bashrc
+set -u
 
 # Install Secp256k1
 echo "Install Secp256k1"
