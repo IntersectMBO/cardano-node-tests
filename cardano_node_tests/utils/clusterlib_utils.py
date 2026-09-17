@@ -22,6 +22,7 @@ from cardano_node_tests.utils import custom_clusterlib
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.faucet import fund_from_faucet  # noqa: F401 # for compatibility
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -538,6 +539,72 @@ def get_chain_account_state(*, ledger_state: dict) -> ChainAccount:
         err = "Neither 'esChainAccountState' nor 'esAccountState' found in ledger state"
         raise KeyError(err)
     return ChainAccount(reserves=account_state["reserves"], treasury=account_state["treasury"])
+
+
+def gen_bls_key_pair(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    node_name: str,
+    destination_dir: clusterlib.FileType = ".",
+) -> clusterlib.KeyPair | None:
+    """Generate a node BLS key pair when the cluster era needs it.
+
+    BLS keys exist only in the Dijkstra+ eras, where the stake pool registration
+    certificate requires a BLS signing key.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        node_name: A name of the node the key pair is generated for.
+        destination_dir: A path to directory for storing artifacts (optional).
+
+    Returns:
+        clusterlib.KeyPair | None: The key pair, or `None` in eras without BLS keys.
+    """
+    if VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST:
+        return None
+    return cluster_obj.g_node.gen_bls_key_pair(node_name=node_name, destination_dir=destination_dir)
+
+
+def gen_bls_skey_file(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    node_name: str,
+    destination_dir: clusterlib.FileType = ".",
+) -> pl.Path | None:
+    """Generate a node BLS signing key file when the cluster era needs it.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        node_name: A name of the node the key is generated for.
+        destination_dir: A path to directory for storing artifacts (optional).
+
+    Returns:
+        pl.Path | None: The signing key file, or `None` in eras without BLS keys.
+    """
+    bls_key_pair = gen_bls_key_pair(
+        cluster_obj=cluster_obj, node_name=node_name, destination_dir=destination_dir
+    )
+    return bls_key_pair.skey_file if bls_key_pair else None
+
+
+def get_bls_skey_file(*, key_pair: clusterlib.KeyPair | None) -> pl.Path | None:
+    """Return the BLS signing key file of an already existing BLS key pair.
+
+    Args:
+        key_pair: A BLS key pair, or `None` when the era has no BLS keys.
+
+    Returns:
+        pl.Path | None: The signing key file, or `None` when the era has no BLS keys.
+
+    Raises:
+        ValueError: When the era needs a BLS key and there's no key pair.
+    """
+    if key_pair:
+        return key_pair.skey_file
+    if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST:
+        msg = "A BLS key pair is needed in the Dijkstra+ eras, but none was provided."
+        raise ValueError(msg)
+    return None
 
 
 def load_registered_pool_data(

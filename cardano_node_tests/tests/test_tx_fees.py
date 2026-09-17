@@ -13,6 +13,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import web
 from cardano_node_tests.utils.versions import VERSIONS
@@ -269,6 +270,9 @@ class TestExpectedFees:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
+            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+                cluster_obj=cluster_obj, node_name=pool_data.pool_name
+            ),
         )
 
         src_address = pool_owners[0].payment.address

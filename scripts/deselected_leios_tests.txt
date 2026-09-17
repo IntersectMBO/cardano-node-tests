@@ -113,27 +113,6 @@ cardano_node_tests/tests/tests_plutus_v2/test_spend_secp256k1_raw.py::TestSECP25
 
 # Test issues
 
-# `stake-pool registration-certificate` requires the new mandatory `--bls-signing-key-file` (Leios BLS keys)
-cardano_node_tests/tests/test_pools.py::TestNegative::test_pool_registration_missing_cold_skey
-cardano_node_tests/tests/test_pools.py::TestNegative::test_pool_registration_missing_payment_skey
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_cancel_stake_pool_deregistration
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_create_stake_pool[1-build]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_create_stake_pool[1-build_raw]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_create_stake_pool[3-build]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_create_stake_pool[3-build_raw]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_deregister_stake_pool[build]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_deregister_stake_pool[build_raw]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_pool_registration_deregistration
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_reregister_stake_pool
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_sign_in_multiple_stages
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_stake_pool_metadata[build]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_stake_pool_metadata[build_raw]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_stake_pool_not_avail_metadata
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_update_stake_pool_metadata[build]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_update_stake_pool_metadata[build_raw]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_update_stake_pool_parameters[build]
-cardano_node_tests/tests/test_pools.py::TestStakePool::test_update_stake_pool_parameters[build_raw]
-
 # New Dijkstra protocol params: maxEndorserBlockExecutionUnits, maxEndorserBlockReferencesSize,
 # maxEndorserBlockTxsSize, maxPledgeLeverage, maxRefScriptSizePerBlock,
 # maxRefScriptSizePerEndorserBlock, maxRefScriptSizePerTx, minPoolMargin, refScriptCostMultiplier,

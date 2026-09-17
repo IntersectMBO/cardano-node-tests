@@ -117,6 +117,9 @@ class TestNoRewards:
             cold_key_pair=pool_rec["cold_key_pair"],
             tx_name=f"{temp_template}_update_param",
             reward_account_vkey_file=pool_rec["reward"].vkey_file,
+            bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                key_pair=pool_rec.get("bls_key_pair")
+            ),
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
@@ -173,6 +176,9 @@ class TestNoRewards:
                 cold_key_pair=pool_rec["cold_key_pair"],
                 tx_name=f"{temp_template}_update_to_orig",
                 reward_account_vkey_file=pool_rec["reward"].vkey_file,
+                bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                    key_pair=pool_rec.get("bls_key_pair")
+                ),
                 deposit=0,  # no additional deposit, the pool is already registered
             )
 
