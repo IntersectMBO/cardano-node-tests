@@ -14,6 +14,7 @@ import pathlib as pl
 import typing as tp
 
 import allure
+import cbor2
 import hypothesis
 import hypothesis.strategies as st
 import pytest
@@ -75,8 +76,8 @@ def _check_pool(
     cluster_obj: clusterlib.ClusterLib,
     stake_pool_id: str,
     pool_data: clusterlib.PoolData,
-):
-    """Check and return ledger state of the pool, and optionally also db-sync records."""
+) -> dict:
+    """Check and return ledger state of the pool, and optionally also check db-sync records."""
     pool_params: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=stake_pool_id).pool_params
 
     assert pool_params, (
@@ -90,6 +91,8 @@ def _check_pool(
 
     # Check pool data in db-sync if available
     dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=stake_pool_id)
+
+    return pool_params
 
 
 def _check_staking(
@@ -2996,3 +2999,198 @@ class TestPoolVoteDeleg:
         for subt in self.get_subtests():
             with subtests.test(scenario=getattr(subt, "__name__", "")):
                 subt(cluster=cluster, pools=pools)
+
+
+@pytest.mark.skipif(
+    VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
+    reason="runs only with cluster era >= Dijkstra",
+)
+class TestCompatibility:
+    """Tests for compatibility of pool registration with previous eras."""
+
+    @staticmethod
+    def _get_cluster_for_cmd_era(
+        cluster_obj: clusterlib.ClusterLib, command_era: str
+    ) -> clusterlib.ClusterLib:
+        """Return a `ClusterLib` instance that uses the given command era."""
+        if cluster_obj.command_era == command_era:
+            return cluster_obj
+        return cluster_nodes.get_cluster_type().get_cluster_obj(command_era=command_era)
+
+    @pytest.fixture
+    def cluster_conway_cmd(self, cluster: clusterlib.ClusterLib) -> clusterlib.ClusterLib:
+        """Return a `ClusterLib` instance that uses the `conway` command era."""
+        return self._get_cluster_for_cmd_era(
+            cluster_obj=cluster, command_era=clusterlib.CommandEras.CONWAY
+        )
+
+    @pytest.fixture
+    def cluster_dijkstra_cmd(self, cluster: clusterlib.ClusterLib) -> clusterlib.ClusterLib:
+        """Return a `ClusterLib` instance that uses the `dijkstra` command era."""
+        return self._get_cluster_for_cmd_era(
+            cluster_obj=cluster, command_era=clusterlib.CommandEras.DIJKSTRA
+        )
+
+    @pytest.fixture
+    def pool_user(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> clusterlib.PoolUser:
+        """Create a pool user with a registered stake address."""
+        registered_user = common.get_registered_pool_user(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            caching_key=helpers.get_current_line_str(),
+            amount=900_000_000,
+            min_amount=600_000_000,
+        )
+        return registered_user
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_pool_registration_conway_cert(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_conway_cmd: clusterlib.ClusterLib,
+        pool_user: clusterlib.PoolUser,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
+    ):
+        """Register a stake pool using a Conway-era pool registration certificate.
+
+        The `cardano-cli conway stake-pool registration-certificate` command has no
+        `--bls-signing-key-file` argument, so the certificate it produces carries no BLS
+        key. The BLS key is optional on the ledger level, so such certificate is still
+        valid in the Dijkstra+ eras and the pool is registered without a BLS key.
+
+        * Generate the pool registration certificate using the `conway` command era
+        * Check that the certificate has no BLS key
+        * Submit the pool registration certificate
+        * Check that the pool deposit was taken from the source address
+        * Check that the pool was registered and that it has no BLS key
+        """
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=5,
+            pool_cost=500_000_000,
+            pool_margin=0.01,
+        )
+
+        # Create the pool registration certificate using the `conway` command era, so the
+        # certificate has no BLS key
+        pool_reg_cert_file = cluster_conway_cmd.g_stake_pool.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_user.stake.vkey_file],
+        )
+
+        # Check that the certificate really has no BLS key. The Conway pool registration
+        # certificate is a CBOR array with 10 items, the Dijkstra one has the BLS key as
+        # an extra item.
+        with open(pool_reg_cert_file, encoding="utf-8") as in_fp:
+            cert_cbor = cbor2.loads(bytes.fromhex(json.load(in_fp)["cborHex"]))
+        assert len(cert_cbor) == 10, f"Unexpected pool registration certificate: {cert_cbor}"
+
+        # Register the pool using the Conway-era certificate
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                pool_user.stake.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        src_address = pool_user.payment.address
+        src_init_balance = cluster.g_query.get_address_balance(src_address)
+
+        tx_output = cluster.g_transaction.send_tx(
+            src_address=src_address,
+            tx_name=f"{temp_template}_reg_pool",
+            tx_files=tx_files,
+        )
+
+        def _deregister():
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            with helpers.change_cwd(testfile_temp_dir):
+                cluster.g_stake_pool.deregister_stake_pool(
+                    pool_owners=[pool_user],
+                    cold_key_pair=node_cold,
+                    epoch=cluster.g_query.get_epoch() + depoch,
+                    pool_name=pool_data.pool_name,
+                    tx_name=f"{temp_template}_cleanup",
+                )
+
+        request.addfinalizer(_deregister)
+
+        # Check that the balance for source address was correctly updated
+        assert (
+            cluster.g_query.get_address_balance(src_address)
+            == src_init_balance - tx_output.fee - cluster.g_query.get_pool_deposit()
+        ), f"Incorrect balance for source address `{src_address}`"
+
+        stake_pool_id = cluster.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
+
+        # Check that the pool was registered with the expected parameters
+        pool_params = _check_pool(
+            cluster_obj=cluster, stake_pool_id=stake_pool_id, pool_data=pool_data
+        )
+
+        # Check that the pool has no BLS key
+        assert helpers.get_pool_param("spsBlsKey", pool_params=pool_params) is None, (
+            f"The pool has a BLS key: {pool_params}"
+        )
+
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_pool_registration_cert_missing_bls_key(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_dijkstra_cmd: clusterlib.ClusterLib,
+    ):
+        """Try to generate a pool registration certificate without a BLS key.
+
+        The `--bls-signing-key-file` argument is mandatory for the
+        `cardano-cli dijkstra stake-pool registration-certificate` command.
+
+        Expect failure.
+        """
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
+        owner_stake = cluster.g_stake_address.gen_stake_key_pair(key_name=f"{temp_template}_owner")
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=5,
+            pool_cost=500_000_000,
+            pool_margin=0.01,
+        )
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_dijkstra_cmd.g_stake_pool.gen_pool_registration_cert(
+                pool_data=pool_data,
+                vrf_vkey_file=node_vrf.vkey_file,
+                cold_vkey_file=node_cold.vkey_file,
+                owner_stake_vkey_files=[owner_stake.vkey_file],
+                # Missing `bls_signing_key_file`
+            )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Missing: --bls-signing-key-file" in exc_value, exc_value
