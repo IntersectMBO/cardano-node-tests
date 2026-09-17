@@ -10,6 +10,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -58,6 +59,26 @@ PROTOCOL_PARAM_KEYS = frozenset(
         "txFeeFixed",
         "txFeePerByte",
         "utxoCostPerByte",
+    )
+)
+# Protocol params that were added in the Dijkstra era
+DIJKSTRA_PROTOCOL_PARAM_KEYS = frozenset(
+    (
+        "leiosAnnouncementPeriodLength",
+        "leiosCommitteeSize",
+        "leiosDiffusionPeriodLength",
+        "leiosQuorumStakeThreshold",
+        "leiosVotePeriodLength",
+        "maxEndorserBlockExecutionUnits",
+        "maxEndorserBlockReferencesSize",
+        "maxEndorserBlockTxsSize",
+        "maxPledgeLeverage",
+        "maxRefScriptSizePerBlock",
+        "maxRefScriptSizePerEndorserBlock",
+        "maxRefScriptSizePerTx",
+        "minPoolMargin",
+        "refScriptCostMultiplier",
+        "refScriptCostStride",
     )
 )
 
@@ -136,13 +157,19 @@ class TestProtocol:
           collateralPercentage, dRepDeposit, govActionDeposit, maxBlockBodySize, maxTxSize,
           minPoolCost, stakeAddressDeposit, stakePoolDeposit, txFeeFixed, txFeePerByte,
           utxoCostPerByte, and other protocol parameters
+        * In Dijkstra+ eras, check that output contains also the new Dijkstra protocol parameter
+          keys, e.g. the Leios ones and the reference script cost ones
         * Verify no extra or missing keys in protocol parameters output
         """
         common.get_test_id(cluster)
         protocol_params = cluster.g_query.get_protocol_params()
 
-        # The sets were updated for Conway, so there's nothing to add or remove at the moment.
-        union_with: frozenset[str] = frozenset()
+        # The base set is the Conway set, Dijkstra only adds new params.
+        union_with: frozenset[str] = (
+            DIJKSTRA_PROTOCOL_PARAM_KEYS
+            if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST
+            else frozenset()
+        )
         rem: frozenset[str] = frozenset()
 
         assert set(protocol_params) == PROTOCOL_PARAM_KEYS.union(union_with).difference(rem)
