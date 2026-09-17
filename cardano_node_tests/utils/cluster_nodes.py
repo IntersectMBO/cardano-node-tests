@@ -563,6 +563,13 @@ def load_pools_data(*, cluster_obj: clusterlib.ClusterLib) -> dict:
                 vkey_file=pool_data_dir / "kes.vkey",
                 skey_file=pool_data_dir / "kes.skey",
             ),
+            # BLS keys are created only in the Dijkstra+ eras
+            "bls_key_pair": clusterlib.KeyPair(
+                vkey_file=pool_data_dir / "bls.vkey",
+                skey_file=pool_data_dir / "bls.skey",
+            )
+            if (pool_data_dir / "bls.skey").exists()
+            else None,
         }
 
     return pools_data

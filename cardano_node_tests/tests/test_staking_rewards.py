@@ -1170,6 +1170,9 @@ class TestRewards:
             cold_vkey_file=pool2_rec["cold_key_pair"].vkey_file,
             owner_stake_vkey_files=[pool2_owner.stake.vkey_file],
             reward_account_vkey_file=pool1_rec["reward"].vkey_file,
+            bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                key_pair=pool2_rec.get("bls_key_pair")
+            ),
         )
         tx_files = clusterlib.TxFiles(
             certificate_files=[pool_reg_cert_file],
