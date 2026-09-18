@@ -955,7 +955,8 @@ class TestNegativeDReps:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "ConwayDRepNotRegistered" in exc_value, exc_value
+            # The failure is prefixed with the era name, e.g. `DijkstraDRepNotRegistered`
+            assert "DRepNotRegistered" in exc_value, exc_value
         reqc.cip089.success()
 
     @allure.link(helpers.get_vcs_link())
@@ -976,7 +977,7 @@ class TestNegativeDReps:
         * Generate DRep keys
         * Create a DRep registration certificate
         * Submit the registration certificate twice
-        * Expect ConwayDRepAlreadyRegistered on the second time
+        * Expect the `DRepAlreadyRegistered` ledger failure on the second time
         """
         temp_template = common.get_test_id(cluster)
         deposit_drep_amt = cluster.g_query.get_drep_deposit()
@@ -1038,7 +1039,8 @@ class TestNegativeDReps:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "ConwayDRepAlreadyRegistered" in exc_value, exc_value
+            # The failure is prefixed with the era name, e.g. `DijkstraDRepAlreadyRegistered`
+            assert "DRepAlreadyRegistered" in exc_value, exc_value
         reqc.cip090.success()
 
 

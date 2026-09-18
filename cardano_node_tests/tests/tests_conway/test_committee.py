@@ -135,7 +135,7 @@ class TestCommittee:
         * Generate CC member cold and hot key pairs
         * Create hot credential authorization certificate
         * Attempt to submit authorization certificate without being CC member
-        * Check that transaction fails with ConwayCommitteeIsUnknown error
+        * Check that transaction fails with the `CommitteeIsUnknown` ledger failure
         """
         temp_template = common.get_test_id(cluster)
 
@@ -161,7 +161,8 @@ class TestCommittee:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "ConwayCommitteeIsUnknown" in exc_value, exc_value
+            # The failure is prefixed with the era name, e.g. `DijkstraCommitteeIsUnknown`
+            assert "CommitteeIsUnknown" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
