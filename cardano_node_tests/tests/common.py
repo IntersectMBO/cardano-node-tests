@@ -7,10 +7,12 @@ import time
 import typing as tp
 
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import issues
+from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -301,6 +303,34 @@ def get_test_id(
     cm.log(f"c{cinstance}: got ID `{test_id}` for '{curr_test.full}'")
 
     return test_id
+
+
+def get_fixture_cluster_obj(
+    *, request: FixtureRequest, command_era: str = ""
+) -> clusterlib.ClusterLib:
+    """Create a `ClusterLib` instance for a test fixture and save its CLI coverage.
+
+    Intended for test code only - it must be called from a pytest fixture, as it uses the
+    fixture request for registering the teardown that saves the CLI coverage. Don't use it
+    in framework code outside of fixtures.
+
+    Use when a test needs its own `ClusterLib` instance, e.g. an instance that uses
+    a different command era than the one provided by the `cluster` fixture. CLI coverage of
+    instances created by `ClusterManager` is saved by the manager itself.
+
+    Args:
+        request: A pytest fixture request, used for registering the teardown and for
+            accessing the pytest config.
+        command_era: An era name to be used for CLI commands.
+
+    Returns:
+        A new `ClusterLib` instance.
+    """
+    cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj(command_era=command_era)
+    request.addfinalizer(
+        lambda: artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=request.config)
+    )
+    return cluster_obj
 
 
 def get_nodes_missing_utxos(

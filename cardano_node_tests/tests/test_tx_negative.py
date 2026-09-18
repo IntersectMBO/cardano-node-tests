@@ -14,6 +14,7 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 from packaging import version
 
@@ -21,7 +22,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import tx_common
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -72,12 +72,13 @@ class TestNegative:
         self,
         future_tx_era: int,
         cluster: clusterlib.ClusterLib,  # noqa: ARG002
+        request: FixtureRequest,
     ) -> clusterlib.ClusterLib:
         # The `cluster` argument (representing the `cluster` fixture) needs to be present
         # in order to have an actual cluster instance assigned at the time this fixture
         # is executed
-        return cluster_nodes.get_cluster_type().get_cluster_obj(
-            command_era=VERSIONS.MAP[future_tx_era]
+        return common.get_fixture_cluster_obj(
+            request=request, command_era=VERSIONS.MAP[future_tx_era]
         )
 
     @pytest.fixture

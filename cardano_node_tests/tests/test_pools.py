@@ -3006,25 +3006,29 @@ class TestCompatibility:
 
     @staticmethod
     def _get_cluster_for_cmd_era(
-        cluster_obj: clusterlib.ClusterLib, command_era: str
+        cluster_obj: clusterlib.ClusterLib, command_era: str, request: FixtureRequest
     ) -> clusterlib.ClusterLib:
         """Return a `ClusterLib` instance that uses the given command era."""
         if cluster_obj.command_era == command_era:
             return cluster_obj
-        return cluster_nodes.get_cluster_type().get_cluster_obj(command_era=command_era)
+        return common.get_fixture_cluster_obj(request=request, command_era=command_era)
 
     @pytest.fixture
-    def cluster_conway_cmd(self, cluster: clusterlib.ClusterLib) -> clusterlib.ClusterLib:
+    def cluster_conway_cmd(
+        self, cluster: clusterlib.ClusterLib, request: FixtureRequest
+    ) -> clusterlib.ClusterLib:
         """Return a `ClusterLib` instance that uses the `conway` command era."""
         return self._get_cluster_for_cmd_era(
-            cluster_obj=cluster, command_era=clusterlib.CommandEras.CONWAY
+            cluster_obj=cluster, command_era=clusterlib.CommandEras.CONWAY, request=request
         )
 
     @pytest.fixture
-    def cluster_dijkstra_cmd(self, cluster: clusterlib.ClusterLib) -> clusterlib.ClusterLib:
+    def cluster_dijkstra_cmd(
+        self, cluster: clusterlib.ClusterLib, request: FixtureRequest
+    ) -> clusterlib.ClusterLib:
         """Return a `ClusterLib` instance that uses the `dijkstra` command era."""
         return self._get_cluster_for_cmd_era(
-            cluster_obj=cluster, command_era=clusterlib.CommandEras.DIJKSTRA
+            cluster_obj=cluster, command_era=clusterlib.CommandEras.DIJKSTRA, request=request
         )
 
     @pytest.fixture

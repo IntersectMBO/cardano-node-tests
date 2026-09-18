@@ -15,7 +15,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import tx_common
-from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import defragment_utxos
@@ -131,7 +130,7 @@ class TestBasicTransactions:
         if cluster.command_era == wanted_command_era:
             return cluster
 
-        return cluster_nodes.get_cluster_type().get_cluster_obj(command_era=wanted_command_era)
+        return common.get_fixture_cluster_obj(request=request, command_era=wanted_command_era)
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD

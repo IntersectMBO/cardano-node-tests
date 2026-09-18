@@ -1,5 +1,6 @@
 """Unit tests for `cardano_node_tests.utils.artifacts`."""
 
+import json
 import pathlib as pl
 import shutil
 import typing as tp
@@ -8,18 +9,7 @@ import pytest
 from _pytest.config import Config
 
 from cardano_node_tests.utils import artifacts
-
-
-class _PytestConfigStub:
-    """Minimal stub of pytest `Config` that provides only `getoption`."""
-
-    def __init__(self, cli_coverage_dir: str) -> None:
-        self._cli_coverage_dir = cli_coverage_dir
-
-    def getoption(self, name: str) -> str:
-        """Return the configured CLI coverage dir."""
-        assert name == artifacts.CLI_COVERAGE_ARG
-        return self._cli_coverage_dir
+from framework_tests import stubs
 
 
 @pytest.fixture
@@ -52,6 +42,97 @@ def _get_saved_dirs(save_dir: pl.Path) -> list[pl.Path]:
     return sorted((save_dir / "cluster_artifacts").glob("*"))
 
 
+class TestSaveCliCoverage:
+    """Tests for `save_cli_coverage`."""
+
+    def test_saves_coverage(self, tmp_path: pl.Path):
+        """Save the collected coverage data to the coverage dir."""
+        coverage_dir = tmp_path / "coverage"
+        coverage_dir.mkdir()
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(str(coverage_dir)))
+        cluster_obj = stubs.ClusterObjStub(cli_coverage={"cardano-cli": {"_count": 1}})
+
+        json_file = artifacts.save_cli_coverage(
+            cluster_obj=tp.cast(tp.Any, cluster_obj), pytest_config=pytest_config
+        )
+
+        assert json_file is not None
+        assert json_file.parent == coverage_dir
+        assert json.loads(json_file.read_text()) == {"cardano-cli": {"_count": 1}}
+
+    def test_second_save_is_noop(self, tmp_path: pl.Path):
+        """Don't save the same coverage data twice."""
+        coverage_dir = tmp_path / "coverage"
+        coverage_dir.mkdir()
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(str(coverage_dir)))
+        cluster_obj = stubs.ClusterObjStub(cli_coverage={"cardano-cli": {"_count": 1}})
+
+        assert (
+            artifacts.save_cli_coverage(
+                cluster_obj=tp.cast(tp.Any, cluster_obj), pytest_config=pytest_config
+            )
+            is not None
+        )
+        assert not cluster_obj.cli_coverage
+        assert (
+            artifacts.save_cli_coverage(
+                cluster_obj=tp.cast(tp.Any, cluster_obj), pytest_config=pytest_config
+            )
+            is None
+        )
+        assert len(list(coverage_dir.glob("*.json"))) == 1
+
+    def test_disabled_coverage(self):
+        """Return `None` when CLI coverage collection is not enabled."""
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(""))
+        cluster_obj = stubs.ClusterObjStub(cli_coverage={"cardano-cli": {"_count": 1}})
+
+        assert (
+            artifacts.save_cli_coverage(
+                cluster_obj=tp.cast(tp.Any, cluster_obj), pytest_config=pytest_config
+            )
+            is None
+        )
+
+    def test_no_coverage_data(self, tmp_path: pl.Path):
+        """Return `None` when there's no coverage data to save."""
+        coverage_dir = tmp_path / "coverage"
+        coverage_dir.mkdir()
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(str(coverage_dir)))
+        cluster_obj = stubs.ClusterObjStub(cli_coverage={})
+
+        assert (
+            artifacts.save_cli_coverage(
+                cluster_obj=tp.cast(tp.Any, cluster_obj), pytest_config=pytest_config
+            )
+            is None
+        )
+        assert not list(coverage_dir.glob("*.json"))
+
+    def test_save_failure_returns_none(self, tmp_path: pl.Path, caplog: pytest.LogCaptureFixture):
+        """Don't raise when saving the coverage data fails.
+
+        The coverage info is saved in `finally` blocks and in fixture teardowns, so an
+        exception would mask the original error.
+        """
+        coverage_dir = tmp_path / "coverage"
+        coverage_dir.mkdir()
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(str(coverage_dir)))
+        # A value that is not JSON serializable makes `json.dump` raise
+        cluster_obj = stubs.ClusterObjStub(cli_coverage={"cardano-cli": object()})
+
+        json_file = artifacts.save_cli_coverage(
+            cluster_obj=tp.cast(tp.Any, cluster_obj), pytest_config=pytest_config
+        )
+
+        assert json_file is None
+        assert "Failed to save coverage file" in caplog.text
+        # The incomplete file was removed
+        assert not list(coverage_dir.glob("*.json"))
+        # The data was not cleared, so it can be saved by a later attempt
+        assert cluster_obj.cli_coverage
+
+
 class TestSaveStartScriptCoverage:
     """Tests for `save_start_script_coverage`."""
 
@@ -61,7 +142,7 @@ class TestSaveStartScriptCoverage:
         log_file.write_text("cli commands")
         coverage_dir = tmp_path / "coverage"
         coverage_dir.mkdir()
-        pytest_config = tp.cast(Config, _PytestConfigStub(str(coverage_dir)))
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(str(coverage_dir)))
 
         dest_file = artifacts.save_start_script_coverage(
             log_file=log_file, pytest_config=pytest_config
@@ -75,15 +156,17 @@ class TestSaveStartScriptCoverage:
         """Return `None` when CLI coverage collection is not enabled."""
         log_file = tmp_path / "start_cluster.log"
         log_file.write_text("cli commands")
-        pytest_config = tp.cast(Config, _PytestConfigStub(""))
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(""))
 
         assert (
             artifacts.save_start_script_coverage(log_file=log_file, pytest_config=pytest_config)
             is None
         )
 
+    @pytest.mark.parametrize("err_type", (OSError, RuntimeError))
     def test_copy_failure_returns_none(
         self,
+        err_type: type[Exception],
         tmp_path: pl.Path,
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
@@ -93,11 +176,11 @@ class TestSaveStartScriptCoverage:
         log_file.write_text("cli commands")
         coverage_dir = tmp_path / "coverage"
         coverage_dir.mkdir()
-        pytest_config = tp.cast(Config, _PytestConfigStub(str(coverage_dir)))
+        pytest_config = tp.cast(Config, stubs.PytestConfigStub(str(coverage_dir)))
 
         def _failing_copy(*_args: object, **_kwargs: object) -> str:
             err = "Simulated copy failure"
-            raise OSError(err)
+            raise err_type(err)
 
         monkeypatch.setattr(artifacts.shutil, "copy", _failing_copy)
 
@@ -243,6 +326,19 @@ class TestSaveClusterArtifacts:
         # A directory in place of the instance id file makes `open()` raise
         # `IsADirectoryError` before any file copy starts.
         (state_dir / artifacts.CLUSTER_INSTANCE_ID_FILENAME).mkdir()
+
+        artifacts.save_cluster_artifacts(save_dir=save_dir, state_dir=state_dir)
+
+        assert not _get_saved_dirs(save_dir)
+        assert "Failed to save cluster artifacts" in caplog.text
+
+    def test_non_oserror_tolerated(
+        self, save_dir: pl.Path, state_dir: pl.Path, caplog: pytest.LogCaptureFixture
+    ):
+        """Log the failure instead of raising when the setup fails with a non-`OSError`."""
+        # Invalid UTF-8 content of the instance id file makes `read()` raise
+        # `UnicodeDecodeError` before any file copy starts.
+        (state_dir / artifacts.CLUSTER_INSTANCE_ID_FILENAME).write_bytes(b"\xff")
 
         artifacts.save_cluster_artifacts(save_dir=save_dir, state_dir=state_dir)
 

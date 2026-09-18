@@ -1,5 +1,6 @@
 """Functionality for collecting testing artifacts."""
 
+import contextlib
 import json
 import logging
 import pathlib as pl
@@ -19,7 +20,17 @@ CLUSTER_INSTANCE_ID_FILENAME = "cluster_instance_id.log"
 def save_cli_coverage(
     *, cluster_obj: clusterlib.ClusterLib, pytest_config: Config
 ) -> pl.Path | None:
-    """Save CLI coverage info."""
+    """Save CLI coverage info.
+
+    The saved data is cleared from the `cluster_obj` instance, so it cannot be saved twice
+    and inflate the coverage counts. Data recorded after the save is accumulated from
+    scratch, and merging the resulting coverage files gives the same counts as a single
+    save would.
+
+    Returns:
+        Path to the saved coverage file, or `None` when coverage collection is disabled,
+        there's no coverage data, or saving the data failed.
+    """
     cli_coverage_dir = pytest_config.getoption(CLI_COVERAGE_ARG)
     if not (cli_coverage_dir and hasattr(cluster_obj, "cli_coverage") and cluster_obj.cli_coverage):  # pyright: ignore [reportAttributeAccessIssue]
         return None
@@ -27,8 +38,19 @@ def save_cli_coverage(
     json_file = (
         pl.Path(cli_coverage_dir) / f"cli_coverage_{helpers.get_timestamped_rand_str()}.json"
     )
-    with open(json_file, "w", encoding="utf-8") as out_json:
-        json.dump(cluster_obj.cli_coverage, out_json, indent=4)  # pyright: ignore [reportAttributeAccessIssue]
+    # Never raise, the coverage info is saved in `finally` blocks and in fixture teardowns,
+    # where an exception would mask the original error
+    try:
+        with open(json_file, "w", encoding="utf-8") as out_json:
+            json.dump(cluster_obj.cli_coverage, out_json, indent=4)  # pyright: ignore [reportAttributeAccessIssue]
+    except Exception as err:
+        LOGGER.warning(f"Failed to save coverage file '{json_file}': {err}")
+        # Remove the incomplete file so it cannot break the coverage report
+        with contextlib.suppress(OSError):
+            json_file.unlink(missing_ok=True)
+        return None
+    # Clear the data that was just saved, so it cannot be saved twice
+    cluster_obj.cli_coverage.clear()  # pyright: ignore [reportAttributeAccessIssue]
     LOGGER.info(f"Coverage file saved to '{json_file}'.")
     return json_file
 
@@ -49,9 +71,10 @@ def save_start_script_coverage(*, log_file: pl.Path, pytest_config: Config) -> p
     )
     try:
         shutil.copy(log_file, dest_file)
-    except OSError as err:
-        # The log file may disappear between the check above and the copy, or the
-        # destination may not be writable.
+    except Exception as err:
+        # The function runs in teardown paths, it must stay best-effort. The log file may
+        # disappear between the check above and the copy, or the destination may not be
+        # writable.
         LOGGER.warning(f"Failed to copy '{log_file}' to '{dest_file}': {err}")
         return None
     LOGGER.info(f"Start script coverage log file saved to '{dest_file}'.")
@@ -129,8 +152,8 @@ def save_cluster_artifacts(*, save_dir: pl.Path, state_dir: pl.Path) -> None:
             return
 
         LOGGER.info(f"Cluster artifacts saved to '{destdir}'.")
-    except OSError:
+    except Exception:
         # The function runs in teardown paths, some of which don't guard it. It must
-        # stay best-effort even when the setup I/O (reading the cluster instance id,
-        # creating the destination dir) fails, not just the per-file copies.
+        # stay best-effort even when the setup (reading the cluster instance id, creating
+        # the destination dir) fails, not just the per-file copies.
         LOGGER.exception(f"Failed to save cluster artifacts from '{state_dir}'.")
