@@ -840,7 +840,7 @@ class TestNegative:
         * Generate a stake address registration certificate using the compatible CLI
           for a legacy era.
         * Attempt to submit the legacy certificate in a Conway-era transaction.
-        * Expect the transaction submission to fail with a TextEnvelope type error.
+        * Expect the transaction submission to fail with a TextEnvelope error.
         """
         temp_template = common.get_test_id(cluster)
 
@@ -873,4 +873,8 @@ class TestNegative:
         assert err_str, "Expected transaction submission to fail, but it succeeded"
 
         with common.allow_unstable_error_messages():
-            assert "TextEnvelope type error" in err_str, err_str
+            assert (
+                # Dijkstra era, where the legacy certificate cannot be decoded at all
+                "Certificates without deposits are no longer supported" in err_str
+                or "TextEnvelope type error" in err_str  # Conway era
+            ), err_str
