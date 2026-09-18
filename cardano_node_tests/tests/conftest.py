@@ -250,7 +250,7 @@ def _stop_all_cluster_instances(cluster_manager_obj: cluster_management.ClusterM
         cluster_manager_obj.stop_all_clusters()
 
 
-def _testnet_cleanup(pytest_root_tmp: pl.Path) -> None:
+def _testnet_cleanup(pytest_root_tmp: pl.Path, pytest_config: Config) -> None:
     """Perform testnet cleanup at the end of session."""
     if not cluster_nodes.get_cluster_type().is_testnet:
         return
@@ -261,8 +261,12 @@ def _testnet_cleanup(pytest_root_tmp: pl.Path) -> None:
     destdir = pytest_root_tmp.parent / f"cleanup-{pytest_root_tmp.stem}-{helpers.get_rand_str(8)}"
     destdir.mkdir(parents=True, exist_ok=True)
 
-    with helpers.change_cwd(dir_path=destdir):
-        testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=pytest_root_tmp)
+    try:
+        with helpers.change_cwd(dir_path=destdir):
+            testnet_cleanup.cleanup(cluster_obj=cluster_obj, location=pytest_root_tmp)
+    finally:
+        # Save CLI coverage collected by this `cluster_obj` instance
+        artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=pytest_config)
 
 
 def _save_env_for_allure(pytest_config: Config) -> None:
@@ -327,7 +331,7 @@ def testenv_setup_teardown(worker_id: str, request: FixtureRequest) -> tp.Genera
             # Perform cleanup if this is the last running pytest worker
             if last_worker:
                 # Perform testnet cleanup
-                _testnet_cleanup(pytest_root_tmp=pytest_root_tmp)
+                _testnet_cleanup(pytest_root_tmp=pytest_root_tmp, pytest_config=request.config)
 
                 if configuration.DEV_CLUSTER_RUNNING:
                     # Save cluster artifacts only when requested - it is not desirable to

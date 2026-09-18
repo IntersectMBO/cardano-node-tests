@@ -501,6 +501,9 @@ class ClusterGetter:
                 )
             status_db.set_cluster_dead(instance_num=self.cluster_instance_num)
             return False
+        finally:
+            # Save CLI coverage collected by this `cluster_obj` instance
+            artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.pytest_config)
 
         # Create record that indicates that the cluster is running
         status_db.set_cluster_running(instance_num=self.cluster_instance_num)
@@ -524,7 +527,11 @@ class ClusterGetter:
         addr_data_dir = cluster_env.state_dir / common.ADDRS_DATA_DIRNAME
         addr_data_dir.mkdir(exist_ok=True, parents=True)
         cluster_obj = cluster_nodes.get_cluster_type().get_cluster_obj()
-        cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=addr_data_dir)
+        try:
+            cluster_nodes.setup_test_addrs(cluster_obj=cluster_obj, destination_dir=addr_data_dir)
+        finally:
+            # Save CLI coverage collected by this `cluster_obj` instance
+            artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.pytest_config)
 
     def _is_healthy(self, instance_num: int) -> bool:
         """Check health of cluster services."""
