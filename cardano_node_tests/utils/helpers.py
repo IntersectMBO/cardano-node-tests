@@ -356,8 +356,8 @@ def is_inputs_spent_err(err_str: str) -> bool:
         bool: `True` if the error was caused by already spent Tx inputs.
     """
     return (
-        "All inputs are spent" in err_str  # Conway era, in cardano-node >= 10.6.0
-        or "AllInputsAreSpent" in err_str  # Dijkstra era
+        "AllInputsAreSpent" in err_str  # Dijkstra era
+        or "All inputs are spent" in err_str  # Conway era, in cardano-node >= 10.6.0
         or "BadInputsUTxO" in err_str
     )
 
