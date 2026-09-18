@@ -27,6 +27,12 @@ DATA_DIR = pl.Path(__file__).parent / "data"
 
 COST_PROPOSAL_FILE = DATA_DIR / "cost_models_list_332_350_v2_v3.json"
 
+# Layout of a stake pool registration certificate, which is a CBOR array. The Dijkstra
+# certificate has one item more than the Conway one - the BLS key with its proof of possession.
+POOL_REG_CERT_CONWAY_ITEMS = 10
+POOL_REG_CERT_DIJKSTRA_ITEMS = 11
+POOL_REG_CERT_BLS_IX = 3
+
 MAX_INT64 = (2**63) - 1
 MAX_UINT64 = (2**64) - 1
 

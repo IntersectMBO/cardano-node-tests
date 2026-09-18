@@ -14,7 +14,6 @@ import pathlib as pl
 import typing as tp
 
 import allure
-import cbor2
 import hypothesis
 import hypothesis.strategies as st
 import pytest
@@ -3004,33 +3003,6 @@ class TestPoolVoteDeleg:
 class TestCompatibility:
     """Tests for compatibility of pool registration with previous eras."""
 
-    @staticmethod
-    def _get_cluster_for_cmd_era(
-        cluster_obj: clusterlib.ClusterLib, command_era: str, request: FixtureRequest
-    ) -> clusterlib.ClusterLib:
-        """Return a `ClusterLib` instance that uses the given command era."""
-        if cluster_obj.command_era == command_era:
-            return cluster_obj
-        return common.get_fixture_cluster_obj(request=request, command_era=command_era)
-
-    @pytest.fixture
-    def cluster_conway_cmd(
-        self, cluster: clusterlib.ClusterLib, request: FixtureRequest
-    ) -> clusterlib.ClusterLib:
-        """Return a `ClusterLib` instance that uses the `conway` command era."""
-        return self._get_cluster_for_cmd_era(
-            cluster_obj=cluster, command_era=clusterlib.CommandEras.CONWAY, request=request
-        )
-
-    @pytest.fixture
-    def cluster_dijkstra_cmd(
-        self, cluster: clusterlib.ClusterLib, request: FixtureRequest
-    ) -> clusterlib.ClusterLib:
-        """Return a `ClusterLib` instance that uses the `dijkstra` command era."""
-        return self._get_cluster_for_cmd_era(
-            cluster_obj=cluster, command_era=clusterlib.CommandEras.DIJKSTRA, request=request
-        )
-
     @pytest.fixture
     def pool_user(
         self,
@@ -3102,9 +3074,10 @@ class TestCompatibility:
         # Check that the certificate really has no BLS key. The Conway pool registration
         # certificate is a CBOR array with 10 items, the Dijkstra one has the BLS key as
         # an extra item.
-        with open(pool_reg_cert_file, encoding="utf-8") as in_fp:
-            cert_cbor = cbor2.loads(bytes.fromhex(json.load(in_fp)["cborHex"]))
-        assert len(cert_cbor) == 10, f"Unexpected pool registration certificate: {cert_cbor}"
+        cert_cbor = clusterlib_utils.load_envelope_cbor(envelope_file=pool_reg_cert_file)
+        assert len(cert_cbor) == common.POOL_REG_CERT_CONWAY_ITEMS, (
+            f"Unexpected pool registration certificate: {cert_cbor}"
+        )
 
         # Register the pool using the Conway-era certificate
         tx_files = clusterlib.TxFiles(
