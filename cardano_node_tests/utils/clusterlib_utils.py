@@ -1346,6 +1346,45 @@ def _cbor_to_mutable(data: tp.Any) -> tp.Any:
     return data
 
 
+def load_envelope(*, envelope_file: cl_types.FileType) -> dict[str, str]:
+    """Load a text envelope file.
+
+    Args:
+        envelope_file: A path to the text envelope file.
+
+    Returns:
+        dict[str, str]: The parsed text envelope.
+    """
+    with open(envelope_file, encoding="utf-8") as in_fp:
+        envelope: dict[str, str] = json.load(in_fp)
+
+    return envelope
+
+
+def decode_envelope_cbor(*, envelope: dict[str, str]) -> tp.Any:
+    """Decode the CBOR content of a text envelope.
+
+    Args:
+        envelope: A parsed text envelope.
+
+    Returns:
+        tp.Any: The decoded content of the `cborHex` field.
+    """
+    return cbor2.loads(bytes.fromhex(envelope["cborHex"]))
+
+
+def load_envelope_cbor(*, envelope_file: cl_types.FileType) -> tp.Any:
+    """Load the CBOR content of a text envelope file.
+
+    Args:
+        envelope_file: A path to the text envelope file.
+
+    Returns:
+        tp.Any: The decoded content of the `cborHex` field.
+    """
+    return decode_envelope_cbor(envelope=load_envelope(envelope_file=envelope_file))
+
+
 def load_body_metadata(*, tx_body_file: pl.Path) -> tp.Any:
     """Load metadata from file containing transaction body.
 

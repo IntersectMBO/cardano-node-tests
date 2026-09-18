@@ -16,6 +16,7 @@ from xdist import workermanage
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.tests import common
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
@@ -461,6 +462,35 @@ def cluster(
 ) -> clusterlib.ClusterLib:
     """Return instance of `clusterlib.ClusterLib`."""
     return cluster_manager.get()
+
+
+def _get_cluster_for_cmd_era(
+    cluster_obj: clusterlib.ClusterLib, command_era: str, request: FixtureRequest
+) -> clusterlib.ClusterLib:
+    """Return a `ClusterLib` instance that uses the given command era."""
+    if cluster_obj.command_era == command_era:
+        return cluster_obj
+    return common.get_fixture_cluster_obj(request=request, command_era=command_era)
+
+
+@pytest.fixture
+def cluster_conway_cmd(
+    cluster: clusterlib.ClusterLib, request: FixtureRequest
+) -> clusterlib.ClusterLib:
+    """Return instance of `clusterlib.ClusterLib` that uses the `conway` command era."""
+    return _get_cluster_for_cmd_era(
+        cluster_obj=cluster, command_era=clusterlib.CommandEras.CONWAY, request=request
+    )
+
+
+@pytest.fixture
+def cluster_dijkstra_cmd(
+    cluster: clusterlib.ClusterLib, request: FixtureRequest
+) -> clusterlib.ClusterLib:
+    """Return instance of `clusterlib.ClusterLib` that uses the `dijkstra` command era."""
+    return _get_cluster_for_cmd_era(
+        cluster_obj=cluster, command_era=clusterlib.CommandEras.DIJKSTRA, request=request
+    )
 
 
 @pytest.fixture
