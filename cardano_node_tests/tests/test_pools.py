@@ -3001,10 +3001,6 @@ class TestPoolVoteDeleg:
                 subt(cluster=cluster, pools=pools)
 
 
-@pytest.mark.skipif(
-    VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
-    reason="runs only with cluster era >= Dijkstra",
-)
 class TestCompatibility:
     """Tests for compatibility of pool registration with previous eras."""
 
@@ -3049,6 +3045,10 @@ class TestCompatibility:
         return registered_user
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="runs only with cluster era >= Dijkstra",
+    )
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -3155,6 +3155,10 @@ class TestCompatibility:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="runs only with cluster era >= Dijkstra",
+    )
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_pool_registration_cert_missing_bls_key(
