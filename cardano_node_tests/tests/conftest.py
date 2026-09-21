@@ -484,16 +484,6 @@ def cluster_conway_cmd(
 
 
 @pytest.fixture
-def cluster_dijkstra_cmd(
-    cluster: clusterlib.ClusterLib, request: FixtureRequest
-) -> clusterlib.ClusterLib:
-    """Return instance of `clusterlib.ClusterLib` that uses the `dijkstra` command era."""
-    return _get_cluster_for_cmd_era(
-        cluster_obj=cluster, command_era=clusterlib.CommandEras.DIJKSTRA, request=request
-    )
-
-
-@pytest.fixture
 def cluster_singleton(
     cluster_manager: cluster_management.ClusterManager,
 ) -> clusterlib.ClusterLib:

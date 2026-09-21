@@ -3142,7 +3142,6 @@ class TestCompatibility:
     def test_pool_registration_cert_missing_bls_key(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
     ):
         """Try to generate a pool registration certificate without a BLS key.
 
@@ -3166,7 +3165,7 @@ class TestCompatibility:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_dijkstra_cmd.g_stake_pool.gen_pool_registration_cert(
+            cluster.g_stake_pool.gen_pool_registration_cert(
                 pool_data=pool_data,
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
@@ -3188,7 +3187,6 @@ class TestCompatibility:
         self,
         cluster: clusterlib.ClusterLib,
         cluster_conway_cmd: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
         pool_user: clusterlib.PoolUser,
     ):
         """Try to use a Dijkstra-era pool registration certificate in a Conway-era transaction.
@@ -3203,7 +3201,7 @@ class TestCompatibility:
 
         node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
         node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
-        node_bls = cluster_dijkstra_cmd.g_node.gen_bls_key_pair(node_name=f"{temp_template}_bls")
+        node_bls = cluster.g_node.gen_bls_key_pair(node_name=f"{temp_template}_bls")
 
         pool_data = clusterlib.PoolData(
             pool_name=f"pool_{rand_str}",
@@ -3212,9 +3210,8 @@ class TestCompatibility:
             pool_margin=0.01,
         )
 
-        # Create the pool registration certificate using the `dijkstra` command era, so the
-        # certificate has a BLS key
-        pool_reg_cert_file = cluster_dijkstra_cmd.g_stake_pool.gen_pool_registration_cert(
+        # The default command era is Dijkstra here, so the certificate has a BLS key
+        pool_reg_cert_file = cluster.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,

@@ -98,7 +98,6 @@ class TestBlsKeys:
     def test_gen_bls_key_pair(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
     ):
         """Generate a node BLS key pair.
 
@@ -109,7 +108,7 @@ class TestBlsKeys:
         """
         temp_template = common.get_test_id(cluster)
 
-        key_pair = cluster_dijkstra_cmd.g_node.gen_bls_key_pair(node_name=temp_template)
+        key_pair = cluster.g_node.gen_bls_key_pair(node_name=temp_template)
 
         assert key_pair.vkey_file == pl.Path(f"{temp_template}_bls.vkey"), key_pair
         assert key_pair.skey_file == pl.Path(f"{temp_template}_bls.skey"), key_pair
@@ -125,7 +124,6 @@ class TestBlsKeys:
     def test_gen_bls_key_pair_unique(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
     ):
         """Check that each generated BLS key pair is unique.
 
@@ -137,7 +135,7 @@ class TestBlsKeys:
         num_keys = 3
 
         key_pairs = [
-            cluster_dijkstra_cmd.g_node.gen_bls_key_pair(node_name=f"{temp_template}_{i}")
+            cluster.g_node.gen_bls_key_pair(node_name=f"{temp_template}_{i}")
             for i in range(num_keys)
         ]
 
@@ -154,7 +152,6 @@ class TestBlsKeys:
     def test_gen_bls_key_pair_out_format(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
         out_format: str,
     ):
         """Generate a BLS key pair in the parametrized output format.
@@ -168,7 +165,7 @@ class TestBlsKeys:
         vkey_file = pl.Path(f"{temp_template}_bls.vkey")
         skey_file = pl.Path(f"{temp_template}_bls.skey")
 
-        cluster_dijkstra_cmd.cli(
+        cluster.cli(
             [
                 "node",
                 "key-gen-BLS",
@@ -190,7 +187,6 @@ class TestBlsKeys:
     def test_gen_bls_key_pair_matching_keys(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
     ):
         """Check that the generated BLS verification key matches the signing key.
 
@@ -205,7 +201,7 @@ class TestBlsKeys:
         """
         temp_template = common.get_test_id(cluster)
 
-        bls_key_pair = cluster_dijkstra_cmd.g_node.gen_bls_key_pair(node_name=temp_template)
+        bls_key_pair = cluster.g_node.gen_bls_key_pair(node_name=temp_template)
         vkey = check_envelope_key(key_file=bls_key_pair.vkey_file, spec=VKEY_SPEC)
         check_envelope_key(key_file=bls_key_pair.skey_file, spec=SKEY_SPEC)
 
@@ -220,7 +216,7 @@ class TestBlsKeys:
             pool_margin=0.01,
         )
 
-        pool_reg_cert_file = cluster_dijkstra_cmd.g_stake_pool.gen_pool_registration_cert(
+        pool_reg_cert_file = cluster.g_stake_pool.gen_pool_registration_cert(
             pool_data=pool_data,
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
@@ -255,7 +251,6 @@ class TestNegativeBlsKeys:
     def test_missing_key_file_arg(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
         missing_arg: str,
     ):
         """Try to generate a BLS key pair without one of the mandatory output file arguments.
@@ -271,7 +266,7 @@ class TestNegativeBlsKeys:
         )
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_dijkstra_cmd.cli(
+            cluster.cli(
                 [
                     "node",
                     "key-gen-BLS",
@@ -289,7 +284,6 @@ class TestNegativeBlsKeys:
     def test_nonexistent_out_dir(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
     ):
         """Try to generate a BLS key pair into a dir that doesn't exist.
 
@@ -301,7 +295,7 @@ class TestNegativeBlsKeys:
         assert not out_dir.exists(), f"The dir `{out_dir}` already exists"
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_dijkstra_cmd.cli(
+            cluster.cli(
                 [
                     "node",
                     "key-gen-BLS",
@@ -353,7 +347,6 @@ class TestNegativeBlsKeys:
     def test_bls_skey_not_accepted_as_ed25519(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_dijkstra_cmd: clusterlib.ClusterLib,
     ):
         """Try to derive a verification key from a BLS signing key using `key verification-key`.
 
@@ -364,10 +357,10 @@ class TestNegativeBlsKeys:
         """
         temp_template = common.get_test_id(cluster)
 
-        bls_key_pair = cluster_dijkstra_cmd.g_node.gen_bls_key_pair(node_name=temp_template)
+        bls_key_pair = cluster.g_node.gen_bls_key_pair(node_name=temp_template)
 
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_dijkstra_cmd.cli(
+            cluster.cli(
                 [
                     "key",
                     "verification-key",
