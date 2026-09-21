@@ -43,15 +43,23 @@ class Versions:
         an era. Both sets of constants must stay consistent with ``MAP``.
 
         ``transaction_era_name`` is the era whose ``cardano-cli`` command group
-        is used for building transactions, and ``transaction_era`` is the
-        latest protocol version of that era. It is *not* derived from the
-        cluster protocol version: by default tests use the CLI ``latest``
-        command group, which points to the current mainnet era
-        (``DEFAULT_TX_ERA``). So on a cluster running a newer development era,
-        the CLI still builds transactions and certificates for the mainnet era
-        unless the ``COMMAND_ERA`` env var explicitly selects the newer era.
-        Setting ``COMMAND_ERA`` to an era name (e.g. ``dijkstra``) overrides
-        both attributes; ``latest`` and an unset value keep the defaults.
+        is used for building transactions. It is *not* derived from the cluster
+        protocol version: by default tests use the CLI ``latest`` command
+        group, which points to the current mainnet era (``DEFAULT_TX_ERA``).
+        So on a cluster running a newer development era, the CLI still builds
+        transactions and certificates for the mainnet era unless the
+        ``COMMAND_ERA`` env var explicitly selects the newer era. Setting
+        ``COMMAND_ERA`` to an era name (e.g. ``dijkstra``) overrides it;
+        ``latest`` and an unset value keep the default.
+
+        ``transaction_era`` is the protocol version that corresponds to
+        ``transaction_era_name``. When the Tx era is the era the cluster runs
+        in, it is the cluster protocol version, so that ``transaction_era ==
+        cluster_era`` holds for every protocol version of that era (e.g.
+        ``PROTOCOL_VERSION=10`` with the Conway CLI group). Otherwise it is the
+        latest protocol version of the Tx era, and the resulting mismatch with
+        ``cluster_era`` is what makes tests that require Tx era == cluster era
+        skip.
     """
 
     # Latest protocol version associated with each era
@@ -109,9 +117,15 @@ class Versions:
         self.command_era_name = configuration.COMMAND_ERA
 
         self.transaction_era_name: EraName = self.MAP[self.DEFAULT_TX_ERA]
-        self.transaction_era = self.DEFAULT_TX_ERA
         if self.command_era_name and self.command_era_name in self.MAP.values():
             self.transaction_era_name = EraName(self.command_era_name)
+
+        if self.transaction_era_name == self.cluster_era_name:
+            # The Tx era is the era the cluster runs in, so use the cluster protocol
+            # version. Otherwise `transaction_era` and `cluster_era` would differ
+            # numerically for non-latest protocol versions of the same era.
+            self.transaction_era = self.cluster_era
+        else:
             self.transaction_era = getattr(self, self.transaction_era_name.upper())
 
         node_version_db = self.get_cardano_node_version()
