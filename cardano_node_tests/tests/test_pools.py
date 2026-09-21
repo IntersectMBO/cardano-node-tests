@@ -11,6 +11,7 @@ import dataclasses
 import json
 import logging
 import pathlib as pl
+import re
 import typing as tp
 
 import allure
@@ -3174,4 +3175,4 @@ class TestCompatibility:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "Missing: --bls-signing-key-file" in exc_value, exc_value
+            assert re.search(r"Missing: +--bls-signing-key-file", exc_value), exc_value

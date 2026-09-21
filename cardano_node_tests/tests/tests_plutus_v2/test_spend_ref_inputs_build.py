@@ -691,4 +691,4 @@ class TestNegativeReadonlyReferenceInputs:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert re.search(r"Missing: *\(--tx-in TX[_-]IN", exc_value), exc_value
+            assert re.search(r"Missing: +\(--tx-in TX[_-]IN", exc_value), exc_value

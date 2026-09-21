@@ -3,6 +3,7 @@
 import dataclasses
 import logging
 import pathlib as pl
+import re
 
 import allure
 import pytest
@@ -280,7 +281,7 @@ class TestNegativeBlsKeys:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert f"Missing:  --{missing_arg}" in exc_value, exc_value
+            assert re.search(rf"Missing: +--{missing_arg}", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets

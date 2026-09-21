@@ -859,7 +859,7 @@ class TestBasic:
                 script_utxos=script_utxos,
             )
         except clusterlib.CLIError as err:
-            if "Missing: (--witness-file FILE)" in str(err):
+            if re.search(r"Missing: +\(--witness-file FILE\)", str(err)):
                 issues.node_3835.finish_test()
                 return
             raise

@@ -5,6 +5,7 @@ import functools
 import json
 import logging
 import pathlib as pl
+import re
 import string
 import time
 
@@ -156,7 +157,7 @@ class TestCLI:
                 .strip()
             )
         except clusterlib.CLIError as err:
-            if "Missing: --reference-script-size" in str(err):
+            if re.search(r"Missing: +--reference-script-size", str(err)):
                 issues.cli_715.finish_test()
             raise
 

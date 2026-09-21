@@ -1546,7 +1546,7 @@ class TestNegative:
 
         with common.allow_unstable_error_messages():
             assert (
-                re.search(r"Missing:.* --fee LOVELACE", err_str)  # node >= 8.12.0
+                re.search(r"Missing: +--fee LOVELACE", err_str)  # node >= 8.12.0
                 or "fee must be specified" in err_str
                 or "Implicit transaction fee not supported" in err_str
             ), err_str
@@ -1655,7 +1655,7 @@ class TestNegative:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert re.search(r"Missing: *\(--tx-in TX[_-]IN", exc_value), exc_value
+            assert re.search(r"Missing: +\(--tx-in TX[_-]IN", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
@@ -1754,7 +1754,7 @@ class TestNegative:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert re.search(r"Missing: *\(--tx-in TX[_-]IN", exc_value), exc_value
+            assert re.search(r"Missing: +\(--tx-in TX[_-]IN", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
@@ -1803,7 +1803,7 @@ class TestNegative:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert re.search(r"Missing:.* --change-address ADDRESS", exc_value), exc_value
+            assert re.search(r"Missing: +--change-address ADDRESS", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @common.SKIPIF_BUILD_UNUSABLE
