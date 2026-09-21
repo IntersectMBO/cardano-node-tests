@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import pathlib as pl
+import re
 import shutil
 import time
 import typing as tp
@@ -819,7 +820,7 @@ class TestKES:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert "Missing: --kes-period NATURAL" in exc_value, exc_value
+            assert re.search(r"Missing: +--kes-period NATURAL", exc_value), exc_value
 
         assert not out_file.exists(), "New operational certificate was generated"
 
