@@ -41,6 +41,17 @@ class Versions:
         (e.g. ``transaction_era >= VERSIONS.CONWAY_FIRST`` for "in Conway era
         or later"), so the checks keep working for all protocol versions of
         an era. Both sets of constants must stay consistent with ``MAP``.
+
+        ``transaction_era_name`` is the era whose ``cardano-cli`` command group
+        is used for building transactions, and ``transaction_era`` is the
+        latest protocol version of that era. It is *not* derived from the
+        cluster protocol version: by default tests use the CLI ``latest``
+        command group, which points to the current mainnet era
+        (``DEFAULT_TX_ERA``). So on a cluster running a newer development era,
+        the CLI still builds transactions and certificates for the mainnet era
+        unless the ``COMMAND_ERA`` env var explicitly selects the newer era.
+        Setting ``COMMAND_ERA`` to an era name (e.g. ``dijkstra``) overrides
+        both attributes; ``latest`` and an unset value keep the defaults.
     """
 
     # Latest protocol version associated with each era
@@ -97,13 +108,11 @@ class Versions:
 
         self.command_era_name = configuration.COMMAND_ERA
 
-        self.transaction_era = protocol_version
+        self.transaction_era_name: EraName = self.MAP[self.DEFAULT_TX_ERA]
+        self.transaction_era = self.DEFAULT_TX_ERA
         if self.command_era_name and self.command_era_name in self.MAP.values():
-            self.transaction_era_name: EraName = EraName(self.command_era_name)
-            if self.MAP[self.transaction_era] != self.transaction_era_name:
-                self.transaction_era = getattr(self, self.transaction_era_name.upper())
-        else:
-            self.transaction_era_name = self.MAP[self.transaction_era]
+            self.transaction_era_name = EraName(self.command_era_name)
+            self.transaction_era = getattr(self, self.transaction_era_name.upper())
 
         node_version_db = self.get_cardano_node_version()
         self.node = version.parse(node_version_db["version"])
