@@ -13,6 +13,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
@@ -45,7 +46,7 @@ PEER_SELECTION_COLD_METRICS: tp.Final[tuple[str, ...]] = (
 )
 
 
-@common.SKIPIF_ON_TESTNET
+@markers.SKIPIF_ON_TESTNET
 @pytest.mark.skipif(
     VERSIONS.cluster_era != VERSIONS.transaction_era,
     reason="runs only with same cluster and Tx era",

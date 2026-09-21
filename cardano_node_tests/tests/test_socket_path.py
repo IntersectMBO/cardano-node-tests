@@ -12,6 +12,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 
@@ -251,7 +252,7 @@ class TestSocketPath:
         cluster.g_query.get_stake_addr_info(stake_addr=STAKE_ADDR)
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -498,7 +499,7 @@ class TestNegativeSocketPath:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
     @pytest.mark.usefixtures("set_socket_path")

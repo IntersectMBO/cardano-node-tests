@@ -14,6 +14,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -134,7 +135,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
@@ -202,7 +203,7 @@ class TestBasicTransactions:
             ), f"Unexpected balance for source address `{src_addr.address}` in db-sync"
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -252,7 +253,7 @@ class TestBasicTransactions:
             issues.node_4752.finish_test()
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -548,7 +549,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -609,7 +610,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1118,7 +1119,7 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_multiple_same_txins(
@@ -1297,13 +1298,13 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
+    @markers.SKIPIF_WRONG_ERA
     @pytest.mark.skipif(
         VERSIONS.cluster_era_name != VERSIONS.MAP[VERSIONS.DEFAULT_TX_ERA],
         reason="the era of the `latest` CLI era group doesn't match the cluster era",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "cluster_default_tx_era",
         (True, False),
@@ -1534,7 +1535,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1566,7 +1567,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1598,7 +1599,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1630,7 +1631,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1683,7 +1684,7 @@ class TestIncrementalSigning:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
     @pytest.mark.smoke

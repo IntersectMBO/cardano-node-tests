@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -81,7 +82,7 @@ class TestMetadata:
             assert "The JSON metadata top level must be a map" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_tx_wrong_json_metadata_format(
@@ -156,7 +157,7 @@ class TestMetadata:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_tx_invalid_json_metadata(
@@ -233,7 +234,7 @@ class TestMetadata:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_tx_too_long_metadata_json(
@@ -319,7 +320,7 @@ class TestMetadata:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -422,7 +423,7 @@ class TestMetadata:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -538,7 +539,7 @@ class TestMetadata:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync

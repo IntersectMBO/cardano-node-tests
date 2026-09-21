@@ -10,6 +10,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
 from cardano_node_tests.utils import dbsync_utils
@@ -20,7 +21,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUSV2_UNUSABLE,
+    markers.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.plutus,
 ]
 

@@ -12,6 +12,7 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -135,7 +136,7 @@ class TestDelegateAddr:
     """Tests for stake address delegation."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -185,7 +186,7 @@ class TestDelegateAddr:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_delegate_using_vkey(
@@ -884,7 +885,7 @@ class TestDelegateAddr:
             assert still_rewards_epoch in db_reward_epochs
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.parametrize(
         "stake_cert",
@@ -1120,7 +1121,7 @@ class TestNegative:
             assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_unknown_addr(
@@ -1180,7 +1181,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_deregistered_addr(
@@ -1323,7 +1324,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_stake_delegation_rejected_in_conway(

@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -162,7 +163,7 @@ class TestConway:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     def test_action_build_unreg_deposit_addr(
         self,
@@ -213,7 +214,7 @@ class TestConway:
 
 class TestNegativeLegacyGovernance:
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.smoke
     def test_mixed_legacy_govaction_and_conway_vote_cert_fails(
         self,

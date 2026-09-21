@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_build
 from cardano_node_tests.utils import clusterlib_utils
@@ -19,8 +20,8 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_BUILD_UNUSABLE,
-    common.SKIPIF_PLUTUSV2_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -96,7 +97,7 @@ class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_ref_one_token(
@@ -255,7 +256,7 @@ class TestBuildMinting:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_ref_missing_txout(

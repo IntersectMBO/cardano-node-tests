@@ -14,6 +14,7 @@ from cardano_clusterlib import txtools
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
 from cardano_node_tests.utils import clusterlib_utils
@@ -24,8 +25,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_BUILD_UNUSABLE,
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -104,7 +105,7 @@ class TestDatum:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_embed_datum_without_pparams(
@@ -199,7 +200,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_no_datum_txout(
         self,
@@ -305,7 +306,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
@@ -356,7 +357,7 @@ class TestNegativeDatum:
             assert "JSON object expected. Unexpected value" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_unlock_tx_wrong_datum(
         self,
@@ -426,7 +427,7 @@ class TestNegativeDatum:
             ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_unlock_non_script_utxo(
         self,
@@ -525,7 +526,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=100)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_too_big(

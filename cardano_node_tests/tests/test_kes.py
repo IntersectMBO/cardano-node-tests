@@ -17,6 +17,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import kes
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -29,7 +30,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = common.SKIPIF_WRONG_ERA
+pytestmark = markers.SKIPIF_WRONG_ERA
 
 # Slot number where KES expires when using `cluster_kes`
 KES_EXPIRE_SLOT = 2100
@@ -135,7 +136,7 @@ class TestKES:
         reason="Runs only on local cluster with HF shortcut.",
     )
     @pytest.mark.order(5)
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.long
     def test_expired_kes(
         self,
@@ -350,7 +351,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.long
     def test_opcert_invalid_kes_period(
         self,
@@ -605,7 +606,7 @@ class TestKES:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(7)
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.long
     def test_update_valid_opcert(
         self,

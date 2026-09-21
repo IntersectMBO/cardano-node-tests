@@ -8,7 +8,7 @@ import pytest
 import requests
 from cardano_clusterlib import clusterlib
 
-from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import http_client
@@ -41,7 +41,7 @@ def get_ekg_metrics(port: int) -> requests.Response:
     return response
 
 
-@common.SKIPIF_WRONG_ERA
+@markers.SKIPIF_WRONG_ERA
 class TestPrometheus:
     """Prometheus metrics tests."""
 
@@ -131,7 +131,7 @@ class TestPrometheus:
         assert metrics_keys == self.EXPECTED_METRICS, "Metrics differ"
 
 
-@common.SKIPIF_WRONG_ERA
+@markers.SKIPIF_WRONG_ERA
 class TestEKG:
     """EKG metrics tests."""
 

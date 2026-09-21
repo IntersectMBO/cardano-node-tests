@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
@@ -193,7 +194,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_build_transfer_to_treasury(
         self,
@@ -363,7 +364,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_build_transfer_to_reserves(
         self,
@@ -542,7 +543,7 @@ class TestMIRCerts:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.parametrize("fund_src", (RESERVES, TREASURY))
     @pytest.mark.usefixtures("skip_on_hf_shortcut")
     def test_build_pay_stake_addr_from(

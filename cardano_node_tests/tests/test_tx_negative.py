@@ -21,6 +21,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -359,7 +360,7 @@ class TestNegative:
         return loaded_invalid_before, loaded_invalid_hereafter
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_past_ttl(
@@ -392,7 +393,7 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_negative_overflow(
@@ -452,7 +453,7 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_positive_overflow(
@@ -513,7 +514,7 @@ class TestNegative:
         VERSIONS.transaction_era < VERSIONS.ALLEGRA_FIRST,
         reason="runs only with Allegra+ TX",
     )
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_before_too_high(
@@ -560,7 +561,7 @@ class TestNegative:
     @hypothesis.example(before_value=1)
     @hypothesis.example(before_value=common.MAX_INT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_negative_overflow(
@@ -614,7 +615,7 @@ class TestNegative:
     @hypothesis.example(before_value=common.MAX_INT64 + 1)
     @hypothesis.example(before_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_positive_overflow(
@@ -669,7 +670,7 @@ class TestNegative:
     @hypothesis.example(before_value=common.MAX_INT64 + 1)
     @hypothesis.example(before_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pbt_before_too_high(
@@ -935,7 +936,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_reward_address(
@@ -966,7 +967,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_utxo_address(
@@ -999,7 +1000,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
@@ -1035,7 +1036,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_invalid_length_address(
@@ -1071,7 +1072,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_to_invalid_chars_address(
@@ -1105,7 +1106,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_address(
@@ -1139,7 +1140,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_length_address(
@@ -1175,7 +1176,7 @@ class TestNegative:
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
     @common.hypothesis_settings(300)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_send_funds_from_invalid_chars_address(
@@ -1207,7 +1208,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=98, max_size=98))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
@@ -1237,7 +1238,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(
         addr=st.text(alphabet=st.characters(blacklist_categories=["C"]), min_size=98, max_size=98)
     )
@@ -1269,7 +1270,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(addr=st.text(alphabet=common.ADDR_ALPHABET, min_size=50, max_size=250))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
@@ -1299,7 +1300,7 @@ class TestNegative:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_nonexistent_utxo_ix(
@@ -1349,7 +1350,7 @@ class TestNegative:
             raise ValueError(msg)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_nonexistent_utxo_hash(
@@ -1402,7 +1403,7 @@ class TestNegative:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(utxo_hash=st.text(alphabet=common.ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_invalid_length_utxo_hash(
@@ -1444,7 +1445,7 @@ class TestNegative:
             ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @hypothesis.given(utxo_hash=st.text(alphabet=common.ADDR_ALPHABET, min_size=10, max_size=550))
     @common.hypothesis_settings(300)
     @pytest.mark.smoke
@@ -1707,7 +1708,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_missing_tx_in(
@@ -1757,7 +1758,7 @@ class TestNegative:
             assert re.search(r"Missing:[^\n]*\(--tx-in TX[_-]IN", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_missing_change_address(
@@ -1806,7 +1807,7 @@ class TestNegative:
             assert re.search(r"Missing:[^\n]*--change-address ADDRESS", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_multiple_change_addresses(

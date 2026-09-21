@@ -14,6 +14,7 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import kes
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -627,7 +628,7 @@ class TestNoRewards:
 
         # Withdraw pool rewards to payment address
         # use `transaction build` if possible
-        if common.BUILD_UNUSABLE:
+        if markers.BUILD_UNUSABLE:
             cluster.g_stake_address.withdraw_reward(
                 stake_addr_record=pool_reward.stake,
                 dst_addr_record=pool_reward.payment,

@@ -14,6 +14,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
 from cardano_node_tests.utils import clusterlib_utils
@@ -26,7 +27,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -119,7 +120,7 @@ class TestLocking:
     """Tests for Tx output locking using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -186,7 +187,7 @@ class TestLocking:
             "untyped_cbor",
         ),
     )
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -284,9 +285,9 @@ class TestLocking:
         "plutus_version",
         (
             "plutus_v1",
-            pytest.param("mix_v1_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-            pytest.param("mix_v2_v1", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-            pytest.param("plutus_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v1_v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v2_v1", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("plutus_v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
         ),
     )
     @pytest.mark.smoke
@@ -515,7 +516,7 @@ class TestLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     def test_always_fails(
         self,
@@ -577,7 +578,7 @@ class TestLocking:
             assert "PlutusFailure" in err, err
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     def test_script_invalid(
         self,
@@ -631,7 +632,7 @@ class TestLocking:
             issues.consensus_947.finish_test()
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -695,7 +696,7 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_partial_spending(
@@ -786,7 +787,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_collaterals(

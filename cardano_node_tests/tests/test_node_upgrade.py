@@ -11,6 +11,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
@@ -312,7 +313,7 @@ class TestUpgrade:
     @pytest.mark.upgrade_step1
     @pytest.mark.upgrade_step2
     @pytest.mark.upgrade_step3
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize(
         "for_step",
         (
@@ -431,7 +432,7 @@ class TestUpgrade:
     @pytest.mark.upgrade_step1
     @pytest.mark.upgrade_step2
     @pytest.mark.upgrade_step3
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize(
         "for_step",
         (

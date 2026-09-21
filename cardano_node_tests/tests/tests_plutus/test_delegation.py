@@ -20,6 +20,7 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -33,7 +34,7 @@ LOGGER = logging.getLogger(__name__)
 CLI_WITH_ISSUE_942 = version.parse("10.0.0.0")
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -502,13 +503,13 @@ def deregister_stake_addr(
 
 # Don't run these tests on testnets as a stake address corresponding to the Plutus script
 # might be already in use.
-@common.SKIPIF_BUILD_UNUSABLE
+@markers.SKIPIF_BUILD_UNUSABLE
 class TestRegisterAddr:
     """Tests for address registration."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     def test_register_deregister(
         self,
@@ -666,8 +667,8 @@ class TestDelegateAddr:
     @pytest.mark.parametrize(
         "use_reference_script", (True, False), ids=("reference_script", "script_file")
     )
-    @common.PARAM_PLUTUS_VERSION
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.long
     @pytest.mark.dbsync
     def test_delegate_deregister(  # noqa: C901
@@ -890,8 +891,8 @@ class TestDelegateAddr:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(8)
-    @common.PARAM_PLUTUS_VERSION
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.long
     @pytest.mark.dbsync
     def test_register_delegate_deregister(

@@ -8,6 +8,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
@@ -69,7 +70,7 @@ class TestTreasuryDonation:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     def test_transfer_treasury_donation(
         self,
@@ -122,7 +123,7 @@ class TestTreasuryDonation:
         common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.needs_dbsync
     def test_dbsync_transfer_treasury_donation(
         self,

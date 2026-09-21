@@ -14,6 +14,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
@@ -251,7 +252,7 @@ class TestRewards:
     """Tests for checking expected rewards."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_ON_LOCAL
+    @markers.SKIPIF_ON_LOCAL
     @pytest.mark.order(6)
     @pytest.mark.long
     @pytest.mark.testnets

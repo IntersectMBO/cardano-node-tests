@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
@@ -125,17 +126,17 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
     assert epoch + 1 == cluster_obj.g_query.get_epoch()
 
 
-@common.SKIPIF_WRONG_ERA
+@markers.SKIPIF_WRONG_ERA
 # It takes long time to setup the cluster instance (when starting from Byron).
 # We mark the tests as "long" and set the highest priority, so the setup is done at the
 # beginning of the testrun, instead of needing to respin a cluster that is already running.
-@common.ORDER5_BYRON
-@common.LONG_BYRON
+@markers.ORDER5_BYRON
+@markers.LONG_BYRON
 class TestBasic:
     """Basic tests for node configuration."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     def test_epoch_length(self, cluster_epoch_length: clusterlib.ClusterLib):
         """Test the *epochLength* configuration.
 
@@ -158,7 +159,7 @@ class TestBasic:
         check_epoch_length(cluster)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     def test_slot_length(self, cluster_slot_length: clusterlib.ClusterLib):
         """Test the *slotLength* configuration.
 

@@ -9,6 +9,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -736,7 +737,7 @@ class TestMIRCerts:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.parametrize(
         "mir_cert",
         ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr"),

@@ -11,6 +11,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -57,7 +58,7 @@ class TestRegisterAddr:
     """Tests for stake address registration and deregistration."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -160,7 +161,7 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record_dereg.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -241,7 +242,7 @@ class TestRegisterAddr:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -348,7 +349,7 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("key_type", ("stake", "payment"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -599,7 +600,7 @@ class TestNegative:
             assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_deregister_not_registered_addr(
@@ -674,7 +675,7 @@ class TestNegative:
             assert "StakeKeyNotRegisteredDELEG" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("issue", ("missing_script", "missing_skey"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -825,7 +826,7 @@ class TestNegative:
             raise ValueError(err)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_stake_addr_registration_rejected_in_conway(

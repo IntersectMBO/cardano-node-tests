@@ -26,6 +26,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -720,7 +721,7 @@ class TestStakePool:
     """General tests for stake pools."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -890,7 +891,7 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("no_of_addr", (1, 3))
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -947,7 +948,7 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     @pytest.mark.smash
@@ -1417,7 +1418,7 @@ class TestStakePool:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_update_stake_pool_metadata(
@@ -1564,7 +1565,7 @@ class TestStakePool:
             issues.ledger_5365.finish_test()
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_update_stake_pool_parameters(
@@ -1942,8 +1943,8 @@ class TestStakePool:
 # scheduled together on a single pytest worker, so they run back-to-back and reuse the
 # assigned "marked" cluster instance regardless of the testnet variant.
 @pytest.mark.xdist_group("minPoolCost")
-@common.ORDER5_BYRON
-@common.LONG_BYRON
+@markers.ORDER5_BYRON
+@markers.LONG_BYRON
 class TestPoolCost:
     """Tests for stake pool cost."""
 
@@ -2323,7 +2324,7 @@ class TestNegative:
             assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pool_deregistration_not_registered(
@@ -2675,7 +2676,7 @@ class TestNegative:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_pool_registration_rejected_in_conway(
