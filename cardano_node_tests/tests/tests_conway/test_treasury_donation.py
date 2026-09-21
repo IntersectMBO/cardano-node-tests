@@ -7,11 +7,14 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -37,7 +40,7 @@ def payment_addr_treasury(
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster = cluster_treasury
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -56,7 +59,7 @@ def payment_addr_singleton(
     This fixture is used by single test, so it is not cached.
     """
     cluster = cluster_singleton
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -69,7 +72,7 @@ class TestTreasuryDonation:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     def test_transfer_treasury_donation(
         self,
@@ -119,10 +122,10 @@ class TestTreasuryDonation:
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
         ), f"Incorrect balance for source address `{payment_addr_treasury.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.needs_dbsync
     def test_dbsync_transfer_treasury_donation(
         self,
@@ -171,7 +174,7 @@ class TestTreasuryDonation:
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
         ), f"Incorrect balance for source address `{payment_addr_singleton.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         assert (

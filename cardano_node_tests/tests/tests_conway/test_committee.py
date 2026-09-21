@@ -15,8 +15,10 @@ from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -45,7 +47,7 @@ def payment_addr_comm(
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster, __ = cluster_use_committee
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -62,7 +64,7 @@ def pool_user(
     """Create a pool user."""
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -81,7 +83,7 @@ def pool_user_lg(
     cluster, __ = cluster_lock_governance
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -100,7 +102,7 @@ def pool_user_ug(
     cluster, __ = cluster_use_governance
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -115,7 +117,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_register_hot_key_no_cc_member(
@@ -432,7 +434,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("threshold_type", ("fraction", "decimal"))
     @pytest.mark.dbsync
     @pytest.mark.smoke
@@ -567,7 +569,7 @@ class TestCommittee:
         [r.success() for r in (reqc.db010, reqc.db011)]
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     @pytest.mark.dbsync
     @pytest.mark.dbsync_config
@@ -1357,7 +1359,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     def test_empty_committee(
         self,
@@ -1720,7 +1722,7 @@ class TestCommittee:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     def test_committee_zero_threshold(
         self,

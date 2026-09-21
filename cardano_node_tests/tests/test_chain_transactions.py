@@ -9,6 +9,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
@@ -134,7 +135,7 @@ class TestTxChaining:
             next_try = False
             tx_raw_outputs.clear()
 
-            payment_addr = common.get_payment_addr(
+            payment_addr = addrs_common.get_payment_addr(
                 name_template=temp_template,
                 cluster_manager=cluster_manager,
                 cluster_obj=cluster,

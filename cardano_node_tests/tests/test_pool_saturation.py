@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
@@ -205,7 +206,7 @@ def _check_pool_records(pool_records: dict[int, PoolRecord]) -> None:
 class TestPoolSaturation:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.long
     def test_oversaturated(  # noqa: C901
         self,

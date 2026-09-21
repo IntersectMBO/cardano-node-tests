@@ -8,7 +8,9 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_raw
@@ -17,7 +19,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUSV2_UNUSABLE,
+    markers.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -28,7 +30,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -43,7 +45,7 @@ class TestNegativeCollateralOutput:
     """Tests for collateral output that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_with_limited_collateral(
@@ -155,7 +157,7 @@ class TestNegativeCollateralOutput:
         (True, False),
         ids=("with_return_collateral", "without_return_collateral"),
     )
-    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_with_unbalanced_total_collateral(
@@ -255,7 +257,7 @@ class TestNegativeCollateralOutput:
         (True, False),
         ids=("with_total_collateral", "without_total_collateral"),
     )
-    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_with_small_return_collateral(

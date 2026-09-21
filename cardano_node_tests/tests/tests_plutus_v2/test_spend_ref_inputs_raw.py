@@ -9,18 +9,21 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import spend_raw
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUSV2_UNUSABLE,
+    markers.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -31,7 +34,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -302,7 +305,7 @@ class TestReadonlyReferenceInputs:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)

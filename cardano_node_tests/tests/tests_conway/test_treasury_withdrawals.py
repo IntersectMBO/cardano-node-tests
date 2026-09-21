@@ -8,7 +8,9 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -60,7 +62,7 @@ def pool_user_ug(
     cluster, __ = cluster_use_governance
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -78,7 +80,7 @@ def pool_user_ug_treasury(
     cluster, __ = cluster_use_governance_lock_treasury
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -727,7 +729,7 @@ class TestMIRCerts:
 
     @pytest.fixture
     def payment_addr(self, cluster_manager, cluster):
-        return common.get_payment_addr(
+        return addrs_common.get_payment_addr(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -736,7 +738,7 @@ class TestMIRCerts:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.parametrize(
         "mir_cert",
         ("to_treasury", "to_rewards", "treasury_to_addr", "reserves_to_addr"),

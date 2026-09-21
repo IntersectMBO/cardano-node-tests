@@ -8,7 +8,9 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_raw
 from cardano_node_tests.utils import configuration
@@ -34,7 +36,7 @@ def pool_user_lgp(
     cluster, __ = cluster_lock_governance_plutus
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -49,7 +51,7 @@ def payment_addrs_lgp(
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
     cluster, __ = cluster_lock_governance_plutus
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -65,7 +67,7 @@ class TestUpdateBuiltIns:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     @pytest.mark.upgrade_step1
     def test_update_in_pv9(

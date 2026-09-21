@@ -21,12 +21,15 @@ from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
@@ -170,7 +173,7 @@ def multisig_tx(
         f"Incorrect balance for script address `{dst_address}`"
     )
 
-    common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+    node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
     return tx_output
 
@@ -185,7 +188,7 @@ class TestBasic:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -232,7 +235,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -307,7 +310,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -388,7 +391,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -502,7 +505,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -596,7 +599,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_normal_tx_to_script_addr(
@@ -653,7 +656,7 @@ class TestBasic:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -884,7 +887,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1136,7 +1139,7 @@ class TestTimeLocking:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1247,7 +1250,7 @@ class TestTimeLocking:
         return multisig_script, script_address, script_utxos, tx_output, after_slot
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
     )
@@ -1323,7 +1326,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "use_tx_validity", (True, False), ids=("tx_validity", "no_tx_validity")
     )
@@ -1397,7 +1400,7 @@ class TestTimeLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_from)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("slot_type", ("before", "after"))
     @pytest.mark.smoke
     def test_tx_missing_validity(
@@ -1470,7 +1473,7 @@ class TestTimeLocking:
             assert "ScriptWitnessNotValidatingUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     def test_tx_negative_validity(
         self,
@@ -1551,7 +1554,7 @@ class TestTimeLocking:
         "fund_script_before_slot_in_past",
         (
             clusterlib_utils.BuildMethods.BUILD_RAW,
-            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=markers.SKIPIF_BUILD_UNUSABLE),
             clusterlib_utils.BuildMethods.BUILD_EST,
         ),
         indirect=True,
@@ -1630,7 +1633,7 @@ class TestTimeLocking:
         "fund_script_before_slot_in_future",
         (
             clusterlib_utils.BuildMethods.BUILD_RAW,
-            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=markers.SKIPIF_BUILD_UNUSABLE),
             clusterlib_utils.BuildMethods.BUILD_EST,
         ),
         indirect=True,
@@ -1688,7 +1691,7 @@ class TestTimeLocking:
         "fund_script_after_slot_in_future",
         (
             clusterlib_utils.BuildMethods.BUILD_RAW,
-            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=markers.SKIPIF_BUILD_UNUSABLE),
             clusterlib_utils.BuildMethods.BUILD_EST,
         ),
         indirect=True,
@@ -1767,7 +1770,7 @@ class TestTimeLocking:
         "fund_script_after_slot_in_past",
         (
             clusterlib_utils.BuildMethods.BUILD_RAW,
-            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=common.SKIPIF_BUILD_UNUSABLE),
+            pytest.param(clusterlib_utils.BuildMethods.BUILD, marks=markers.SKIPIF_BUILD_UNUSABLE),
             clusterlib_utils.BuildMethods.BUILD_EST,
         ),
         indirect=True,
@@ -1838,7 +1841,7 @@ class TestAuxiliaryScripts:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1850,7 +1853,7 @@ class TestAuxiliaryScripts:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1907,7 +1910,7 @@ class TestAuxiliaryScripts:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1965,7 +1968,7 @@ class TestAuxiliaryScripts:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -2013,7 +2016,7 @@ class TestAuxiliaryScripts:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_tx_script_invalid(
@@ -2074,7 +2077,7 @@ class TestIncrementalSigning:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -2090,7 +2093,7 @@ class TestIncrementalSigning:
         reason="runs only with Allegra+ TX",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -2290,7 +2293,7 @@ class TestDatum:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -2302,7 +2305,7 @@ class TestDatum:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -2371,7 +2374,7 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=script_address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -2390,7 +2393,7 @@ class TestReferenceUTxO:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -2402,7 +2405,7 @@ class TestReferenceUTxO:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -2547,7 +2550,7 @@ class TestReferenceUTxO:
             f"Incorrect balance for destination address `{dst_addr.address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
         assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"
@@ -2576,7 +2579,7 @@ class TestReferenceUTxO:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.parametrize("address_type", ("shelley", "byron"))
     @pytest.mark.smoke
@@ -2706,7 +2709,7 @@ class TestNested:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -2718,7 +2721,7 @@ class TestNested:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("type_top", ("all", "any"))
     @pytest.mark.parametrize("type_nested", ("all", "any"))
     @pytest.mark.smoke
@@ -2827,7 +2830,7 @@ class TestNested:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -2914,7 +2917,7 @@ class TestNested:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "scenario", ("all1", "all2", "all3", "all4", "all5", "all6", "any1", "any2", "any3", "any4")
     )
@@ -3135,7 +3138,7 @@ class TestCompatibility:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

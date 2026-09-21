@@ -24,8 +24,10 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -498,7 +500,7 @@ def _create_register_pool_delegate_stake_tx(
     stake_addr_reg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template_reg_deleg}_addr{i}",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
             stake_vkey_file=p.stake.vkey_file,
         )
         for i, p in enumerate(pool_owners)
@@ -509,7 +511,7 @@ def _create_register_pool_delegate_stake_tx(
         stake_addr_reg_cert_files.append(
             cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template_reg_deleg}_reward_addr",
-                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+                deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
                 stake_vkey_file=reward_account_key_pair.vkey_file,
             )
         )
@@ -644,7 +646,7 @@ def _create_register_pool_tx_delegate_stake_tx(
     stake_addr_reg_cert_files = [
         cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr{i}",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
             stake_vkey_file=p.stake.vkey_file,
         )
         for i, p in enumerate(pool_owners)
@@ -655,7 +657,7 @@ def _create_register_pool_tx_delegate_stake_tx(
         stake_addr_reg_cert_files.append(
             cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_reward_addr",
-                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+                deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
                 stake_vkey_file=reward_account_key_pair.vkey_file,
             )
         )
@@ -720,7 +722,7 @@ class TestStakePool:
     """General tests for stake pools."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -763,7 +765,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -851,7 +853,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -890,7 +892,7 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("no_of_addr", (1, 3))
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -926,7 +928,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -947,7 +949,7 @@ class TestStakePool:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     @pytest.mark.smash
@@ -1000,7 +1002,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1156,7 +1158,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1317,7 +1319,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1417,7 +1419,7 @@ class TestStakePool:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_update_stake_pool_metadata(
@@ -1481,7 +1483,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1564,7 +1566,7 @@ class TestStakePool:
             issues.ledger_5365.finish_test()
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.dbsync
     def test_update_stake_pool_parameters(
@@ -1614,7 +1616,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1726,7 +1728,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1861,7 +1863,7 @@ class TestStakePool:
         )
 
         # Create pool owners
-        pool_owner = common.get_pool_user(
+        pool_owner = addrs_common.get_pool_user(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1942,8 +1944,8 @@ class TestStakePool:
 # scheduled together on a single pytest worker, so they run back-to-back and reuse the
 # assigned "marked" cluster instance regardless of the testnet variant.
 @pytest.mark.xdist_group("minPoolCost")
-@common.ORDER5_BYRON
-@common.LONG_BYRON
+@markers.ORDER5_BYRON
+@markers.LONG_BYRON
 class TestPoolCost:
     """Tests for stake pool cost."""
 
@@ -1969,7 +1971,7 @@ class TestPoolCost:
         cluster = cluster_mincost
         temp_template = common.get_test_id(cluster)
 
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -2049,7 +2051,7 @@ class TestPoolCost:
             )
 
             # Create pool owners
-            pool_owners = common.get_pool_users(
+            pool_owners = addrs_common.get_pool_users(
                 name_template=name_template,
                 cluster_manager=cluster_manager,
                 cluster_obj=cluster,
@@ -2083,7 +2085,7 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.PoolUser]:
         """Create pool users."""
-        created_users = common.get_pool_users(
+        created_users = addrs_common.get_pool_users(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -2323,7 +2325,7 @@ class TestNegative:
             assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_pool_deregistration_not_registered(
@@ -2675,7 +2677,7 @@ class TestNegative:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_pool_registration_rejected_in_conway(
@@ -2776,7 +2778,7 @@ class TestPoolVoteDeleg:
         num_pools = 4
 
         # Create pool owners
-        pool_owners = common.get_pool_users(
+        pool_owners = addrs_common.get_pool_users(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -3011,7 +3013,7 @@ class TestCompatibility:
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.PoolUser:
         """Create a pool user with a registered stake address."""
-        registered_user = common.get_registered_pool_user(
+        registered_user = addrs_common.get_registered_pool_user(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

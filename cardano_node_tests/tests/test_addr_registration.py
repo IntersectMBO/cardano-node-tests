@@ -9,8 +9,10 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -28,7 +30,7 @@ def pool_users(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.PoolUser]:
     """Create pool users."""
-    created_users = common.get_pool_users(
+    created_users = addrs_common.get_pool_users(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -57,7 +59,7 @@ class TestRegisterAddr:
     """Tests for stake address registration and deregistration."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -84,7 +86,7 @@ class TestRegisterAddr:
         src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # Create stake address registration cert
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -160,7 +162,7 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record_dereg.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -187,7 +189,7 @@ class TestRegisterAddr:
         src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # Create stake address registration cert
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -241,7 +243,7 @@ class TestRegisterAddr:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -270,7 +272,7 @@ class TestRegisterAddr:
         src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
         # Create stake address registration cert
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -348,7 +350,7 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("key_type", ("stake", "payment"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -404,7 +406,7 @@ class TestRegisterAddr:
         )
 
         # Create stake address registration cert
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -548,7 +550,7 @@ class TestNegative:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr0",
-                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+                deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
                 stake_vkey_file=pool_users[0].payment.vkey_file,
             )
         exc_value = str(excinfo.value)
@@ -580,7 +582,7 @@ class TestNegative:
         # Create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=user_registered.stake.vkey_file,
         )
 
@@ -599,7 +601,7 @@ class TestNegative:
             assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_deregister_not_registered_addr(
@@ -628,7 +630,7 @@ class TestNegative:
         # Files for deregistering stake address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=user_registered.stake.vkey_file,
         )
         tx_files = clusterlib.TxFiles(
@@ -674,7 +676,7 @@ class TestNegative:
             assert "StakeKeyNotRegisteredDELEG" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("issue", ("missing_script", "missing_skey"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -714,7 +716,7 @@ class TestNegative:
         )
 
         # Create stake address registration cert
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
@@ -825,7 +827,7 @@ class TestNegative:
             raise ValueError(err)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_stake_addr_registration_rejected_in_conway(

@@ -11,19 +11,22 @@ from cardano_clusterlib import clusterlib_helpers
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import mint_raw
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -34,7 +37,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -97,7 +100,7 @@ class TestMinting:
     """Tests for minting using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -216,7 +219,7 @@ class TestMinting:
             "The 'token b' was not minted"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -240,7 +243,7 @@ class TestMinting:
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
@@ -359,7 +362,7 @@ class TestMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -372,7 +375,7 @@ class TestMinting:
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
@@ -485,7 +488,7 @@ class TestMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -498,8 +501,8 @@ class TestMinting:
         "plutus_version",
         (
             "plutus_v1",
-            pytest.param("mix_v2_v1", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-            pytest.param("mix_v3_v1", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("mix_v2_v1", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v3_v1", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
     )
     @pytest.mark.smoke
@@ -713,7 +716,7 @@ class TestMinting:
             "The 'timerange' token was not minted"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -870,7 +873,7 @@ class TestMinting:
             f"The '{asset_name_b_dec}' token was not minted"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -975,7 +978,7 @@ class TestMinting:
         ]
 
         plutus_costs = []
-        if not common.BUILD_UNUSABLE:
+        if not markers.BUILD_UNUSABLE:
             plutus_costs = cluster.g_transaction.calculate_plutus_script_cost(
                 src_address=payment_addr.address,
                 tx_name=f"{temp_template}_step2",
@@ -1020,7 +1023,7 @@ class TestMinting:
             f"The '{asset_name_b_dec}' was not minted"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         if plutus_costs:
             plutus_common.check_plutus_costs(
@@ -1043,7 +1046,7 @@ class TestMinting:
         "ttl_offset",
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     def test_ttl_horizon(
         self,
@@ -1183,7 +1186,7 @@ class TestCollateralOutput:
     """Tests for collateral output."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_duplicated_collateral(
@@ -1296,4 +1299,4 @@ class TestCollateralOutput:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)

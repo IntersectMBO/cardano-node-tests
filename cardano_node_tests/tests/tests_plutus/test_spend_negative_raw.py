@@ -14,8 +14,10 @@ from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
 from cardano_node_tests.utils import clusterlib_utils
@@ -24,7 +26,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -43,7 +45,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -98,7 +100,7 @@ class TestNegative:
             "43_43",  # wrong datum and redeemer
         ),
     )
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_invalid_guessing_game(
         self,
@@ -170,7 +172,7 @@ class TestNegative:
             ), err
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_wrong_script(
@@ -229,7 +231,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_no_script(
@@ -283,7 +285,7 @@ class TestNegative:
             assert "MissingScriptWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_collateral_w_tokens(
@@ -350,7 +352,7 @@ class TestNegative:
             assert "CollateralContainsNonADA" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_same_collateral_txin(
@@ -406,7 +408,7 @@ class TestNegative:
             assert "ScriptsNotPaidUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_collateral_percent(
@@ -466,7 +468,7 @@ class TestNegative:
             assert "InsufficientCollateral" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     def test_two_scripts_spending_one_fail(
         self,
@@ -633,7 +635,7 @@ class TestNegative:
     @common.hypothesis_settings(100)
     @pytest.mark.parametrize(
         "fund_execution_units_above_limit",
-        ("v1", pytest.param("v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE)),
+        ("v1", pytest.param("v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE)),
         ids=("plutus_v1", "plutus_v2"),
         indirect=True,
     )
@@ -716,7 +718,7 @@ class TestNegativeRedeemer:
         plutus_version: str,
     ) -> FundTupleT:
         """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
-        payment_addrs = common.get_payment_addrs(
+        payment_addrs = addrs_common.get_payment_addrs(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster_obj,
@@ -928,7 +930,7 @@ class TestNegativeRedeemer:
     @hypothesis.example(redeemer_value=MIN_INT_VAL)
     @hypothesis.example(redeemer_value=common.MAX_UINT64)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_wrong_value_inside_range(
         self,
@@ -1039,7 +1041,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.integers(max_value=MIN_INT_VAL - 1))
     @hypothesis.example(redeemer_value=MIN_INT_VAL - 1)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_wrong_value_bellow_range(
         self,
@@ -1094,7 +1096,7 @@ class TestNegativeRedeemer:
     @hypothesis.given(redeemer_value=st.integers(min_value=common.MAX_UINT64 + 1))
     @hypothesis.example(redeemer_value=common.MAX_UINT64 + 1)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_wrong_value_above_range(
         self,
@@ -1148,7 +1150,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_wrong_type(
         self,
@@ -1251,7 +1253,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_too_big(
         self,
@@ -1340,7 +1342,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_json_schema_typed_int_bytes_declared(
         self,
@@ -1393,7 +1395,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.binary(max_size=64))
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_json_schema_untyped_int_bytes_declared(
         self,
@@ -1445,7 +1447,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_json_schema_typed_bytes_int_declared(
         self,
@@ -1497,7 +1499,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.integers())
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_json_schema_untyped_bytes_int_declared(
         self,
@@ -1549,7 +1551,7 @@ class TestNegativeRedeemer:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(redeemer_value=st.text())
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_invalid_json(
         self,
@@ -1608,7 +1610,7 @@ class TestNegativeRedeemer:
         )
     )
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_json_schema_typed_invalid_type(
         self,
@@ -1677,7 +1679,7 @@ class TestNegativeRedeemer:
         )
     )
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_json_schema_untyped_invalid_type(
         self,

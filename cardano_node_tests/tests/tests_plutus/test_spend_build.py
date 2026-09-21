@@ -9,20 +9,23 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_BUILD_UNUSABLE,
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -33,7 +36,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -50,7 +53,7 @@ def pool_users(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.PoolUser]:
     """Create new pool users."""
-    created_users = common.get_pool_users(
+    created_users = addrs_common.get_pool_users(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -65,7 +68,7 @@ class TestBuildLocking:
     """Tests for Tx output locking using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -136,7 +139,7 @@ class TestBuildLocking:
         "variant",
         ("typed_json", "typed_cbor", "untyped_value", "untyped_json", "untyped_cbor"),
     )
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -246,9 +249,9 @@ class TestBuildLocking:
         "plutus_version",
         (
             "plutus_v1",
-            pytest.param("mix_v1_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-            pytest.param("mix_v2_v1", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-            pytest.param("plutus_v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v1_v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v2_v1", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("plutus_v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
         ),
     )
     @pytest.mark.smoke
@@ -517,7 +520,7 @@ class TestBuildLocking:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     def test_always_fails(
         self,
@@ -578,7 +581,7 @@ class TestBuildLocking:
         assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     def test_script_invalid(
         self,
@@ -644,7 +647,7 @@ class TestBuildLocking:
             assert common.is_fee_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -724,7 +727,7 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_partial_spending(
@@ -815,7 +818,7 @@ class TestBuildLocking:
         # TODO: change UTxO used to be first, now it's last
         build_change_utxo = out_utxos[0] if utxo_ix_offset else out_utxos[-1]
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Lovelace balance on original script UTxOs
         script_lovelace_balance = clusterlib.calculate_utxos_balance(utxos=script_utxos)
@@ -853,7 +856,7 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync

@@ -19,6 +19,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
@@ -32,7 +33,7 @@ from cardano_node_tests.utils.versions import EraName
 LOGGER = logging.getLogger(__name__)
 DATA_DIR = pl.Path(__file__).parent / "data"
 
-pytestmark = common.SKIPIF_WRONG_ERA
+pytestmark = markers.SKIPIF_WRONG_ERA
 
 
 class TestCLI:
@@ -1395,7 +1396,7 @@ class TestAdvancedQueries:
             "multiple_pools",
             pytest.param(
                 "all_pools",
-                marks=common.SKIPIF_ON_TESTNET,
+                marks=markers.SKIPIF_ON_TESTNET,
             ),
         ),
     )

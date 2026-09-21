@@ -12,13 +12,16 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import defragment_utxos
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
@@ -37,7 +40,7 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -83,7 +86,7 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=f"{common.get_test_id(cluster)}_disposable",
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -99,7 +102,7 @@ class TestBasicTransactions:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for `test_build_no_change`."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=f"{common.get_test_id(cluster)}_no_change",
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -134,7 +137,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.parametrize(
         "dst_addr_type", ("shelley", "byron"), ids=("dst_shelley", "dst_byron")
@@ -192,7 +195,7 @@ class TestBasicTransactions:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
@@ -202,7 +205,7 @@ class TestBasicTransactions:
             ), f"Unexpected balance for source address `{src_addr.address}` in db-sync"
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -252,7 +255,7 @@ class TestBasicTransactions:
             issues.node_4752.finish_test()
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -343,7 +346,7 @@ class TestBasicTransactions:
             == src_init_balance - fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -410,7 +413,7 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -470,7 +473,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -539,7 +542,7 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -548,7 +551,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -599,7 +602,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check min UTxO value
         min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=txouts)
@@ -609,7 +612,7 @@ class TestBasicTransactions:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -731,7 +734,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -801,7 +804,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -896,7 +899,7 @@ class TestBasicTransactions:
         """
         temp_template = common.get_test_id(cluster)
 
-        src_record = common.get_payment_addr(
+        src_record = addrs_common.get_payment_addr(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1038,7 +1041,7 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1113,12 +1116,12 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_multiple_same_txins(
@@ -1297,13 +1300,13 @@ class TestBasicTransactions:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_WRONG_ERA
+    @markers.SKIPIF_WRONG_ERA
     @pytest.mark.skipif(
         VERSIONS.cluster_era_name != VERSIONS.MAP[VERSIONS.DEFAULT_TX_ERA],
         reason="the era of the `latest` CLI era group doesn't match the cluster era",
     )
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize(
         "cluster_default_tx_era",
         (True, False),
@@ -1362,7 +1365,7 @@ class TestMultiInOut:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 201 new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1474,7 +1477,7 @@ class TestMultiInOut:
                 f"Incorrect balance for destination address `{addr}`"
             )
 
-        common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
@@ -1534,7 +1537,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1566,7 +1569,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1598,7 +1601,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 10_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1630,7 +1633,7 @@ class TestMultiInOut:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD
+    @markers.PARAM_BUILD_METHOD
     @pytest.mark.parametrize("amount", (1_500_000, 2_000_000, 5_000_000))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1671,7 +1674,7 @@ class TestIncrementalSigning:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1683,7 +1686,7 @@ class TestIncrementalSigning:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.parametrize("tx_is", ("witnessed", "signed"))
     @pytest.mark.smoke
@@ -1835,6 +1838,6 @@ class TestIncrementalSigning:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)

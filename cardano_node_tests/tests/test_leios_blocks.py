@@ -18,6 +18,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
@@ -37,7 +38,7 @@ elif not (configuration.ENABLE_TX_FIREHOSE or configuration.ENABLE_TX_CENTRIFUGE
 
 pytestmark = [
     pytest.mark.leios,
-    common.SKIPIF_ON_TESTNET,
+    markers.SKIPIF_ON_TESTNET,
     pytest.mark.skipif(bool(_SKIP_REASON), reason=_SKIP_REASON),
 ]
 

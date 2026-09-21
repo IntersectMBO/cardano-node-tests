@@ -11,9 +11,11 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import kes
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -440,7 +442,7 @@ class TestNoRewards:
         # Deregister stake address - owner's stake is lower than pledge
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=pool_owner.stake.vkey_file,
         )
         tx_files_deregister = clusterlib.TxFiles(
@@ -627,7 +629,7 @@ class TestNoRewards:
 
         # Withdraw pool rewards to payment address
         # use `transaction build` if possible
-        if common.BUILD_UNUSABLE:
+        if markers.BUILD_UNUSABLE:
             cluster.g_stake_address.withdraw_reward(
                 stake_addr_record=pool_reward.stake,
                 dst_addr_record=pool_reward.payment,
@@ -644,7 +646,7 @@ class TestNoRewards:
         # Deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=pool_reward.stake.vkey_file,
         )
         tx_files_deregister = clusterlib.TxFiles(
@@ -822,7 +824,7 @@ class TestNoRewards:
         # Deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=pool_reward.stake.vkey_file,
         )
         tx_files_deregister = clusterlib.TxFiles(

@@ -14,6 +14,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -289,7 +290,7 @@ def _materialize_case(tmp_dir: pl.Path, case: BadMnemonicCase) -> pl.Path:
     return path
 
 
-@common.SKIPIF_WRONG_ERA
+@markers.SKIPIF_WRONG_ERA
 class TestMnemonic:
     """Tests for mnemonic sentence."""
 
@@ -448,7 +449,7 @@ class TestMnemonic:
         assert key_file.exists()
 
 
-@common.SKIPIF_WRONG_ERA
+@markers.SKIPIF_WRONG_ERA
 class TestNegativeMnemonic:
     """Tests with invalid arguments."""
 

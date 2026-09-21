@@ -10,13 +10,16 @@ from cardano_clusterlib import clusterlib
 from cardano_clusterlib import clusterlib_helpers
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import mint_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
@@ -25,8 +28,8 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_BUILD_UNUSABLE,
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -39,7 +42,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -92,7 +95,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -211,7 +214,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check expected fees
         expected_fee_step1 = 168_977
@@ -233,7 +236,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_missing_txout(
@@ -339,14 +342,14 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize(
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
@@ -480,7 +483,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check expected fees
         expected_fee_step1 = 167_349
@@ -506,8 +509,8 @@ class TestBuildMinting:
         "plutus_version",
         (
             "plutus_v1",
-            pytest.param("mix_v2_v1", marks=common.SKIPIF_PLUTUSV2_UNUSABLE),
-            pytest.param("mix_v3_v1", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("mix_v2_v1", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("mix_v3_v1", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
     )
     @pytest.mark.smoke
@@ -780,7 +783,7 @@ class TestBuildMinting:
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
@@ -917,7 +920,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check expected fees
         expected_fee_step1 = 167_349
@@ -943,7 +946,7 @@ class TestBuildMinting:
         "ttl_offset",
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     def test_ttl_horizon(
         self,
@@ -1056,7 +1059,7 @@ class TestCollateralOutput:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_duplicated_collateral(
@@ -1179,7 +1182,7 @@ class TestCollateralOutput:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check return collateral amount, this is only available on Babbage+ TX
 

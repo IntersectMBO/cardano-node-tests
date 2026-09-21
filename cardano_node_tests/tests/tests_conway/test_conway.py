@@ -8,7 +8,9 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -34,7 +36,7 @@ def pool_user(
     """Create a pool user for "use governance"."""
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         cluster_manager=cluster_manager,
         name_template=name_template,
         cluster_obj=cluster,
@@ -162,7 +164,7 @@ class TestConway:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     def test_action_build_unreg_deposit_addr(
         self,
@@ -213,7 +215,7 @@ class TestConway:
 
 class TestNegativeLegacyGovernance:
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.smoke
     def test_mixed_legacy_govaction_and_conway_vote_cert_fails(
         self,

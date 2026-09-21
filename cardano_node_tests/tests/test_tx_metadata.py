@@ -10,7 +10,9 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -37,7 +39,7 @@ class TestMetadata:
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""
-        addr = common.get_payment_addr(
+        addr = addrs_common.get_payment_addr(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -81,7 +83,7 @@ class TestMetadata:
             assert "The JSON metadata top level must be a map" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_tx_wrong_json_metadata_format(
@@ -156,7 +158,7 @@ class TestMetadata:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_tx_invalid_json_metadata(
@@ -233,7 +235,7 @@ class TestMetadata:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_build_tx_too_long_metadata_json(
@@ -319,7 +321,7 @@ class TestMetadata:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -422,7 +424,7 @@ class TestMetadata:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -538,7 +540,7 @@ class TestMetadata:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -680,7 +682,7 @@ class TestMetadata:
         """
         temp_template = common.get_test_id(cluster)
 
-        src_record = common.get_payment_addr(
+        src_record = addrs_common.get_payment_addr(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

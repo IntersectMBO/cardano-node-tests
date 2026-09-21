@@ -12,16 +12,19 @@ from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_BUILD_UNUSABLE,
-    common.SKIPIF_PLUTUSV2_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -34,7 +37,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -120,7 +123,7 @@ class TestSECP256k1:
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
         assert collateral_utxos, "No collateral UTxO"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         fee_txin = next(
             r

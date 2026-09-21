@@ -15,6 +15,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
@@ -344,7 +345,7 @@ class TestDBSync:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.testnets
     def test_reconnect_dbsync(
         self,

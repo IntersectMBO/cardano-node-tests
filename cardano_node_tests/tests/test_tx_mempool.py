@@ -7,7 +7,9 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ class TestMempool:
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses for 'test_query_mempool_txin'."""
         cluster = cluster_singleton
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -34,7 +36,7 @@ class TestMempool:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.testnets
     def test_query_mempool_txin(
         self,

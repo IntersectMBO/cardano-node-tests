@@ -9,8 +9,10 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -38,7 +40,7 @@ def pool_user_lg(
     cluster, __ = cluster_lock_governance
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -52,7 +54,7 @@ class TestNoConfidence:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     def test_no_confidence_action(
         self,
@@ -321,7 +323,7 @@ class TestNoConfidence:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(not configuration.HAS_CC, reason="Runs only on setup with CC")
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     def test_committee_min_size(
         self,

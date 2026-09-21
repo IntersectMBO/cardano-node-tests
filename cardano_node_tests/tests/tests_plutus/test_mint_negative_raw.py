@@ -12,7 +12,9 @@ from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import mint_raw
 from cardano_node_tests.utils import helpers
@@ -20,7 +22,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -31,7 +33,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -90,7 +92,7 @@ class TestMintingNegative:
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
@@ -190,7 +192,7 @@ class TestMintingNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_low_budget(
@@ -289,7 +291,7 @@ class TestMintingNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_low_fee(
@@ -390,7 +392,7 @@ class TestMintingNegative:
     @common.hypothesis_settings(100)
     @pytest.mark.parametrize(
         "fund_execution_units_above_limit",
-        ("v1", pytest.param("v2", marks=common.SKIPIF_PLUTUSV2_UNUSABLE)),
+        ("v1", pytest.param("v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE)),
         ids=("plutus_v1", "plutus_v2"),
         indirect=True,
     )
@@ -509,7 +511,7 @@ class TestMintingNegative:
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
@@ -617,7 +619,7 @@ class TestNegativeCollateral:
     """Tests for collaterals that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_with_invalid_collaterals(
@@ -719,7 +721,7 @@ class TestNegativeCollateral:
             assert "NoCollateralInputs" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS3_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_with_insufficient_collateral(

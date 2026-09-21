@@ -9,6 +9,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -83,7 +84,7 @@ DIJKSTRA_PROTOCOL_PARAM_KEYS = frozenset(
 )
 
 
-@common.SKIPIF_WRONG_ERA
+@markers.SKIPIF_WRONG_ERA
 class TestProtocol:
     """Basic tests for protocol."""
 

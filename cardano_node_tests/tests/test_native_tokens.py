@@ -22,13 +22,16 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
@@ -79,7 +82,7 @@ def issuers_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new issuers addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -131,13 +134,13 @@ def multisig_script_policyid(
     return multisig_script, policyid
 
 
-@common.SKIPIF_TOKENS_UNUSABLE
+@markers.SKIPIF_TOKENS_UNUSABLE
 class TestMinting:
     """Tests for minting and burning tokens."""
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -243,7 +246,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("aname_type", ("asset_name", "empty_asset_name"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -338,7 +341,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -462,7 +465,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -576,7 +579,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -708,7 +711,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("tokens_db", MINT_BURN_WITNESS_PARAMS)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -863,7 +866,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("tokens_db", MINT_BURN_SIGN_PARAMS)
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -1015,7 +1018,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1114,7 +1117,7 @@ class TestMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1200,12 +1203,12 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
 
-@common.SKIPIF_TOKENS_UNUSABLE
+@markers.SKIPIF_TOKENS_UNUSABLE
 class TestPolicies:
     """Tests for minting and burning tokens using minting policies."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1311,7 +1314,7 @@ class TestPolicies:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_out_burn)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -1747,7 +1750,7 @@ class TestPolicies:
 
 # These tests should not run on long running testnets, because they leave large amounts of ADA
 # on UTxOs with tokens, and ADA on such UTxOs is not currently reclaimed.
-@common.SKIPIF_TOKENS_UNUSABLE
+@markers.SKIPIF_TOKENS_UNUSABLE
 class TestTransfer:
     """Tests for transferring tokens."""
 
@@ -1760,7 +1763,7 @@ class TestTransfer:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1801,7 +1804,7 @@ class TestTransfer:
         return new_token
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("amount", (1, 10, 200, 2_000, 100_000))
     @pytest.mark.smoke
     @pytest.mark.dbsync
@@ -1946,7 +1949,7 @@ class TestTransfer:
             == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1954,7 +1957,7 @@ class TestTransfer:
             blockers.finish_test(issues=xfail_issues)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_transfer_multiple_tokens(
@@ -2144,7 +2147,7 @@ class TestTransfer:
                 == amount
             ), f"Incorrect token #{idx} balance for destination address `{dst_address2}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -2152,8 +2155,8 @@ class TestTransfer:
             blockers.finish_test(issues=xfail_issues)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
-    @common.SKIPIF_ON_TESTNET
+    @markers.PARAM_BUILD_METHOD_NO_EST
+    @markers.SKIPIF_ON_TESTNET
     @pytest.mark.smoke
     def test_transfer_no_ada(
         self,
@@ -2229,7 +2232,7 @@ class TestTransfer:
     @hypothesis.example(token_amount=NEW_TOKENS_NUM + 1)
     @hypothesis.example(token_amount=MAX_TOKEN_AMOUNT)
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     def test_transfer_invalid_token_amount(
         self,
@@ -2336,7 +2339,7 @@ class TestTransfer:
             raise ValueError(msg)
 
 
-@common.SKIPIF_TOKENS_UNUSABLE
+@markers.SKIPIF_TOKENS_UNUSABLE
 class TestNegative:
     """Negative tests for minting tokens."""
 
@@ -2498,7 +2501,7 @@ class TestNegative:
             assert "the number exceeds the max bound" in exc_value, exc_value
 
 
-@common.SKIPIF_WRONG_ERA
+@markers.SKIPIF_WRONG_ERA
 class TestCLITxOutSyntax:
     """Tests of syntax for specifying muti-asset values and txouts."""
 
@@ -2649,7 +2652,7 @@ class TestReferenceUTxO:
     """Tests for Simple Scripts V1 and V2 on reference UTxOs."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("script_version", ("simple_v1", "simple_v2"))
     @pytest.mark.smoke
     @pytest.mark.testnets

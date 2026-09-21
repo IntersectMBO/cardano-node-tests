@@ -9,18 +9,21 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_BUILD_UNUSABLE,
-    common.SKIPIF_PLUTUSV2_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUSV2_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -31,7 +34,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -87,7 +90,7 @@ def _build_reference_txin(
     reference_txin = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
     assert reference_txin, "UTxO not created"
 
-    common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+    node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
     return reference_txin
 
@@ -96,7 +99,7 @@ class TestBuildMinting:
     """Tests for minting using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_ref_one_token(
@@ -209,7 +212,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -255,7 +258,7 @@ class TestBuildMinting:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2ONWARDS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_ref_missing_txout(
@@ -357,7 +360,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -503,7 +506,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -632,7 +635,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -776,7 +779,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (

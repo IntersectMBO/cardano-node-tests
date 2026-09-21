@@ -10,8 +10,10 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import helpers
 
@@ -95,7 +97,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -251,7 +253,7 @@ class TestSocketPath:
         cluster.g_query.get_stake_addr_info(stake_addr=STAKE_ADDR)
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @PARAM_ENV_SCENARIO
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -498,7 +500,7 @@ class TestNegativeSocketPath:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_BUILD_UNUSABLE
+    @markers.SKIPIF_BUILD_UNUSABLE
     @PARAM_ENV_SCENARIO
     @PARAM_SOCKET_SCENARIO
     @pytest.mark.usefixtures("set_socket_path")

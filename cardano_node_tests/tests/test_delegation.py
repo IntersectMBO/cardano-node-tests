@@ -9,9 +9,11 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -68,7 +70,7 @@ def pool_users(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.PoolUser]:
     """Create pool users."""
-    created_users = common.get_pool_users(
+    created_users = addrs_common.get_pool_users(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -105,7 +107,7 @@ def pool_users_cluster_and_pool(
        The pool can be different every time the fixture is called.
     """
     cluster, *__ = cluster_and_pool
-    created_users = common.get_pool_users(
+    created_users = addrs_common.get_pool_users(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -135,7 +137,7 @@ class TestDelegateAddr:
     """Tests for stake address delegation."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -185,7 +187,7 @@ class TestDelegateAddr:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.smoke
     def test_delegate_using_vkey(
@@ -317,7 +319,7 @@ class TestDelegateAddr:
         stake_addr_reg_cert_files = [
             cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_{i}_addr",
-                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+                deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
                 stake_vkey_file=pu.stake.vkey_file,
             )
             for i, pu in enumerate(pool_users)
@@ -499,7 +501,7 @@ class TestDelegateAddr:
         # Files for deregistering stake address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
             stake_vkey_file=delegation_out.pool_user.stake.vkey_file,
         )
         tx_files_deregister = clusterlib.TxFiles(
@@ -671,7 +673,7 @@ class TestDelegateAddr:
         # Files for deregistering stake address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
             stake_script_file=delegation_out.pool_user.stake.script_file,
         )
         dereg_cert_script = clusterlib.ComplexCert(
@@ -810,7 +812,7 @@ class TestDelegateAddr:
         ).reward_account_balance, f"User of pool '{pool_id}' hasn't received any rewards"
 
         # Files for deregistering / re-registering stake address
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         stake_addr_dereg_cert_file = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
             addr_name=f"{temp_template}_undeleg_addr0",
@@ -884,7 +886,7 @@ class TestDelegateAddr:
             assert still_rewards_epoch in db_reward_epochs
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.parametrize(
         "stake_cert",
@@ -922,7 +924,7 @@ class TestDelegateAddr:
         stake_vkey_file = user_registered.stake.vkey_file if stake_cert == "vkey_file" else None
         stake_address = user_registered.stake.address if stake_cert == "stake_address" else None
 
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         # Create stake address registration cert
         stake_addr_reg_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
@@ -1092,7 +1094,7 @@ class TestNegative:
             cluster_obj=cluster,
             pool_user=clusterlib.PoolUser(payment=user_payment, stake=user_registered.stake),
             name_template=temp_template,
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
         )
 
         # Create stake address delegation cert
@@ -1120,7 +1122,7 @@ class TestNegative:
             assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_unknown_addr(
@@ -1180,7 +1182,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_delegate_deregistered_addr(
@@ -1209,7 +1211,7 @@ class TestNegative:
         user_registered = pool_users_disposable_cluster_and_pool[0]
         user_payment = pool_users_cluster_and_pool[0].payment
 
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
         certs_pool_user = clusterlib.PoolUser(payment=user_payment, stake=user_registered.stake)
 
         # Register stake address
@@ -1289,7 +1291,7 @@ class TestNegative:
             cluster_obj=cluster,
             pool_user=clusterlib.PoolUser(payment=user_payment, stake=user_registered.stake),
             name_template=temp_template,
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
         )
 
         # Create pool cold keys and ceritifcate, but don't register the pool
@@ -1323,7 +1325,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_legacy_stake_delegation_rejected_in_conway(

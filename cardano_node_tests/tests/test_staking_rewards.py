@@ -12,8 +12,10 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
@@ -251,7 +253,7 @@ class TestRewards:
     """Tests for checking expected rewards."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.SKIPIF_ON_LOCAL
+    @markers.SKIPIF_ON_LOCAL
     @pytest.mark.order(6)
     @pytest.mark.long
     @pytest.mark.testnets
@@ -870,7 +872,7 @@ class TestRewards:
 
                 # Undelegate rewards address
                 if this_epoch == init_epoch + 5:
-                    address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+                    address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
                     # Create stake address deregistration cert
                     reward_addr_dereg_cert_file = (
                         cluster.g_stake_address.gen_stake_addr_deregistration_cert(
@@ -1368,7 +1370,7 @@ class TestRewards:
         cluster, pool1_name, pool2_name = cluster_use_two_pools_and_rewards
 
         temp_template = common.get_test_id(cluster)
-        address_deposit = common.get_conway_address_deposit(cluster_obj=cluster)
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
 
         pool1_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool1_name

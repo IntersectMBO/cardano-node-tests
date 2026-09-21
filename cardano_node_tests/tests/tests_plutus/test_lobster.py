@@ -12,7 +12,9 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -20,7 +22,7 @@ from cardano_node_tests.utils import helpers
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -40,7 +42,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -242,7 +244,7 @@ def _deploy_lobster_nft(
     return script_address, token_utxos, tx_output
 
 
-@common.SKIPIF_BUILD_UNUSABLE
+@markers.SKIPIF_BUILD_UNUSABLE
 class TestLobsterChallenge:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.dbsync

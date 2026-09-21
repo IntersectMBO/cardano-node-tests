@@ -12,6 +12,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 
@@ -35,7 +36,7 @@ class TestLedgerState:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(-1)
-    @common.SKIPIF_WRONG_ERA
+    @markers.SKIPIF_WRONG_ERA
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_stake_snapshot(self, cluster: clusterlib.ClusterLib):  # noqa: C901

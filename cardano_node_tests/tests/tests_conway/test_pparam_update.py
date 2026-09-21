@@ -11,8 +11,10 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import clusterlib_utils
@@ -217,7 +219,7 @@ def payment_addr(
     cluster: clusterlib.ClusterLib,
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -233,7 +235,7 @@ def pool_user_ug(
 ) -> clusterlib.PoolUser:
     """Create a registered pool user for "use governance"."""
     cluster, __ = cluster_use_governance
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -249,7 +251,7 @@ def pool_user_lgp(
 ) -> clusterlib.PoolUser:
     """Create a registered pool user for "lock governance and plutus"."""
     cluster, __ = cluster_lock_governance_plutus
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -262,7 +264,7 @@ class TestPParamUpdate:
     """Tests for protocol parameters update."""
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     @pytest.mark.dbsync
     def test_pparam_update(  # noqa: C901
@@ -1491,7 +1493,7 @@ class TestLegacyProposals:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_COMPAT_ERAS
+    @markers.PARAM_COMPAT_ERAS
     @pytest.mark.smoke
     def test_legacy_proposal_submit(
         self,

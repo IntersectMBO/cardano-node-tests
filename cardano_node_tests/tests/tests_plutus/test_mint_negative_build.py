@@ -12,7 +12,9 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import mint_build
 from cardano_node_tests.tests.tests_plutus.mint_build import _fund_issuer
@@ -23,8 +25,8 @@ from cardano_node_tests.utils import submit_utils
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_PLUTUS_UNUSABLE,
-    common.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -39,7 +41,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment address."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -83,7 +85,7 @@ class TestBuildMintingNegative:
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )
@@ -382,7 +384,7 @@ class TestBuildMintingNegative:
         "plutus_version",
         (
             "v1",
-            pytest.param("v3", marks=common.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
         ),
         ids=("plutus_v1", "plutus_v3"),
     )

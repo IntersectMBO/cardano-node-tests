@@ -12,20 +12,23 @@ from cardano_clusterlib import clusterlib
 from cardano_clusterlib import txtools
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    common.SKIPIF_BUILD_UNUSABLE,
-    common.SKIPIF_PLUTUS_UNUSABLE,
+    markers.SKIPIF_BUILD_UNUSABLE,
+    markers.SKIPIF_PLUTUS_UNUSABLE,
     pytest.mark.plutus,
 ]
 
@@ -36,7 +39,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -99,12 +102,12 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_embed_datum_without_pparams(
@@ -199,7 +202,7 @@ class TestNegativeDatum:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_no_datum_txout(
         self,
@@ -262,7 +265,7 @@ class TestNegativeDatum:
             utxos=out_utxos, txouts=tx_output_fund.txouts
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
@@ -305,7 +308,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings(max_examples=200)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
@@ -356,7 +359,7 @@ class TestNegativeDatum:
             assert "JSON object expected. Unexpected value" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_unlock_tx_wrong_datum(
         self,
@@ -426,7 +429,7 @@ class TestNegativeDatum:
             ), err_str
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     def test_unlock_non_script_utxo(
         self,
@@ -525,7 +528,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=100)
-    @common.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_too_big(

@@ -16,9 +16,11 @@ from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
+from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import blockers
@@ -136,7 +138,7 @@ def payment_addr(
 ) -> clusterlib.AddressRecord:
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_payment_addr(
+    return addrs_common.get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -151,7 +153,7 @@ def pool_user(
 ) -> clusterlib.PoolUser:
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -181,7 +183,7 @@ def payment_addr_wpr(
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_payment_addr(
+    return addrs_common.get_payment_addr(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -194,7 +196,7 @@ def pool_user_wpr(
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -224,7 +226,7 @@ def payment_addr_rewards(
 ) -> clusterlib.AddressRecord:
     test_id = common.get_test_id(cluster_rewards)
     key = helpers.get_current_line_str()
-    return common.get_payment_addr(
+    return addrs_common.get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_rewards,
@@ -239,7 +241,7 @@ def pool_user_rewards(
 ) -> clusterlib.PoolUser:
     test_id = common.get_test_id(cluster_rewards)
     key = helpers.get_current_line_str()
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_rewards,
@@ -316,7 +318,7 @@ class TestDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.dbsync
     @pytest.mark.dbsync_config
     @pytest.mark.testnets
@@ -604,7 +606,7 @@ class TestNegativeDReps:
     """Tests for DReps where we test failing condition."""
 
     @allure.link(helpers.get_vcs_link())
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_no_witness_register_and_retire(  # noqa: C901
@@ -908,7 +910,7 @@ class TestNegativeDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_drep_no_retirement_before_register(
@@ -961,7 +963,7 @@ class TestNegativeDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.testnets
     @pytest.mark.smoke
     def test_drep_no_multiple_registration(
@@ -1049,7 +1051,7 @@ class TestDelegDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("drep", ("always_abstain", "always_no_confidence", "custom"))
     @pytest.mark.dbsync
     @pytest.mark.testnets
@@ -1265,7 +1267,7 @@ class TestDelegDReps:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @common.PARAM_BUILD_METHOD_NO_EST
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.parametrize("drep", ("always_abstain", "always_no_confidence", "custom"))
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -1625,7 +1627,7 @@ class TestDRepActivity:
         """
         cluster, __ = cluster_lock_governance
         name_template = common.get_test_id(cluster)
-        return common.get_registered_pool_user(
+        return addrs_common.get_registered_pool_user(
             name_template=name_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -1634,7 +1636,7 @@ class TestDRepActivity:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(5)
-    @pytest.mark.xdist_split(common.XdSplits.governance, common.XdSplits.heavy)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     def test_drep_inactivity(  # noqa: C901
         self,
