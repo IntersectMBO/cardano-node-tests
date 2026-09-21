@@ -3176,3 +3176,75 @@ class TestCompatibility:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert re.search(r"Missing: +--bls-signing-key-file", exc_value), exc_value
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="runs only with cluster era >= Dijkstra",
+    )
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    def test_pool_registration_dijkstra_cert_conway_tx(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_conway_cmd: clusterlib.ClusterLib,
+        cluster_dijkstra_cmd: clusterlib.ClusterLib,
+        pool_user: clusterlib.PoolUser,
+    ):
+        """Try to use a Dijkstra-era pool registration certificate in a Conway-era transaction.
+
+        The Dijkstra pool registration certificate carries a BLS key, which doesn't exist in
+        Conway, so the certificate cannot be decoded by the `conway` command era.
+
+        Expect failure.
+        """
+        rand_str = clusterlib.get_rand_str(4)
+        temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
+
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
+        node_bls = cluster_dijkstra_cmd.g_node.gen_bls_key_pair(node_name=f"{temp_template}_bls")
+
+        pool_data = clusterlib.PoolData(
+            pool_name=f"pool_{rand_str}",
+            pool_pledge=5,
+            pool_cost=500_000_000,
+            pool_margin=0.01,
+        )
+
+        # Create the pool registration certificate using the `dijkstra` command era, so the
+        # certificate has a BLS key
+        pool_reg_cert_file = cluster_dijkstra_cmd.g_stake_pool.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=node_vrf.vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_user.stake.vkey_file],
+            bls_signing_key_file=node_bls.skey_file,
+        )
+
+        cert_cbor = clusterlib_utils.load_envelope_cbor(envelope_file=pool_reg_cert_file)
+        assert len(cert_cbor) == common.POOL_REG_CERT_DIJKSTRA_ITEMS, (
+            f"Unexpected pool registration certificate: {cert_cbor}"
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file],
+            signing_key_files=[
+                pool_user.payment.skey_file,
+                pool_user.stake.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        # Try to build a Conway-era transaction with the Dijkstra-era certificate
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster_conway_cmd.g_transaction.build_raw_tx(
+                src_address=pool_user.payment.address,
+                tx_name=f"{temp_template}_reg_pool",
+                tx_files=tx_files,
+                fee=400_000,
+            )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "TextEnvelope decode error" in exc_value, exc_value
+            assert 'DecoderErrorDeserialiseFailure "ConwayTxCert ConwayEra"' in exc_value, exc_value
