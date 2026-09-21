@@ -547,10 +547,10 @@ def gen_bls_key_pair(
     node_name: str,
     destination_dir: clusterlib.FileType = ".",
 ) -> clusterlib.KeyPair | None:
-    """Generate a node BLS key pair when the cluster era needs it.
+    """Generate a node BLS key pair when the Tx era needs it.
 
-    BLS keys exist only in the Dijkstra+ eras, where the stake pool registration
-    certificate requires a BLS signing key.
+    The Dijkstra+ `cardano-cli` command groups require a BLS signing key in the stake
+    pool registration certificate.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
@@ -560,7 +560,7 @@ def gen_bls_key_pair(
     Returns:
         clusterlib.KeyPair | None: The key pair, or `None` in eras without BLS keys.
     """
-    if VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST:
+    if VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST:
         return None
     return cluster_obj.g_node.gen_bls_key_pair(node_name=node_name, destination_dir=destination_dir)
 
@@ -571,7 +571,7 @@ def gen_bls_skey_file(
     node_name: str,
     destination_dir: clusterlib.FileType = ".",
 ) -> pl.Path | None:
-    """Generate a node BLS signing key file when the cluster era needs it.
+    """Generate a node BLS signing key file when the Tx era needs it.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
@@ -591,20 +591,20 @@ def get_bls_skey_file(*, key_pair: clusterlib.KeyPair | None) -> pl.Path | None:
     """Return the BLS signing key file of an already existing BLS key pair.
 
     Args:
-        key_pair: A BLS key pair, or `None` when the era has no BLS keys.
+        key_pair: A BLS key pair, or `None` when the Tx era has no BLS keys.
 
     Returns:
-        pl.Path | None: The signing key file, or `None` when the era has no BLS keys.
+        pl.Path | None: The signing key file, or `None` when the Tx era has no BLS keys.
 
     Raises:
-        ValueError: When the era needs a BLS key and there's no key pair.
+        ValueError: When the Tx era needs a BLS key and there's no key pair.
     """
+    if VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST:
+        return None
     if key_pair:
         return key_pair.skey_file
-    if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST:
-        msg = "A BLS key pair is needed in the Dijkstra+ eras, but none was provided."
-        raise ValueError(msg)
-    return None
+    msg = "A BLS key pair is needed in the Dijkstra+ eras, but none was provided."
+    raise ValueError(msg)
 
 
 def load_registered_pool_data(

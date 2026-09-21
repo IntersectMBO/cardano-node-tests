@@ -17,7 +17,7 @@ from cardano_node_tests.utils.versions import VERSIONS
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.skipif(
-    VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
+    VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
     reason="BLS keys are available only in Dijkstra+ eras",
 )
 
