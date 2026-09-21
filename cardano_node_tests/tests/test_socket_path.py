@@ -58,7 +58,7 @@ def _assert_expected_err(env_scenario: str, socket_scenario: str, err_msg: str) 
     expected_err = [re.escape("Network.Socket.connect:")]
     if socket_scenario == "socket_path_missing" and env_scenario == "env_missing":
         expected_err = [
-            r"Missing: +--socket-path SOCKET_PATH",
+            r"Missing:[^\n]*--socket-path SOCKET_PATH",
             # TODO: In 8.0.0-untested the error message is different:
             re.escape("Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH"),
         ]

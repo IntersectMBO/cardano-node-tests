@@ -3175,7 +3175,7 @@ class TestCompatibility:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert re.search(r"Missing: +--bls-signing-key-file", exc_value), exc_value
+            assert re.search(r"Missing:[^\n]*--bls-signing-key-file", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(

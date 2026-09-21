@@ -820,7 +820,7 @@ class TestKES:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert re.search(r"Missing: +--kes-period NATURAL", exc_value), exc_value
+            assert re.search(r"Missing:[^\n]*--kes-period NATURAL", exc_value), exc_value
 
         assert not out_file.exists(), "New operational certificate was generated"
 

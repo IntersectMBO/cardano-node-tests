@@ -17,7 +17,7 @@ from cardano_node_tests.utils import logfiles
 
 LOGGER = logging.getLogger(__name__)
 
-MISSING_ARG_ERR = r"Missing: +\(--mainnet \| --testnet-magic NATURAL\)"
+MISSING_ARG_ERR = r"Missing:[^\n]*\(--mainnet \| --testnet-magic NATURAL\)"
 
 POOL_ID = "pool1dlyzfcl25qwjjmpmp47dulwmp2fej8tw4qcezcnkdlsjkak5n89"
 STAKE_ADDR = "stake_test1uzy5myemjnne3gr0jp7yhtznxx2lvx4qgv730jktsu46v5gaw7rmt"
