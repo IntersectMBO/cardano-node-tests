@@ -281,7 +281,7 @@ class TestNegativeBlsKeys:
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
-            assert re.search(rf"Missing: +--{missing_arg}", exc_value), exc_value
+            assert re.search(rf"Missing:[^\n]*--{missing_arg}", exc_value), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets

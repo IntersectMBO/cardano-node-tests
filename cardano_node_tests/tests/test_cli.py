@@ -157,7 +157,7 @@ class TestCLI:
                 .strip()
             )
         except clusterlib.CLIError as err:
-            if re.search(r"Missing: +--reference-script-size", str(err)):
+            if re.search(r"Missing:[^\n]*--reference-script-size", str(err)):
                 issues.cli_715.finish_test()
             raise
 
