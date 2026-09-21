@@ -18,6 +18,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -416,7 +417,7 @@ class TestNegativeDatum:
             f"UTxO should have datum hash '{datum_hash}': {datum_utxo}"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         tx_files_redeem = clusterlib.TxFiles(
             signing_key_files=[payment_addr.skey_file, dst_addr.skey_file]

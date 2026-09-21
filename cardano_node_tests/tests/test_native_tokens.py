@@ -31,6 +31,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
@@ -1948,7 +1949,7 @@ class TestTransfer:
             == amount
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -2146,7 +2147,7 @@ class TestTransfer:
                 == amount
             ), f"Incorrect token #{idx} balance for destination address `{dst_address2}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 

@@ -25,6 +25,7 @@ from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import http_client
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -554,7 +555,7 @@ class TestKES:
                     break
             else:
                 try:
-                    common.fail_on_fork(
+                    node_consistency.fail_on_fork(
                         cluster_manager=cluster_manager,
                         cluster_obj=cluster,
                         temp_template=temp_template,
@@ -722,7 +723,7 @@ class TestKES:
                     break
             else:
                 try:
-                    common.fail_on_fork(
+                    node_consistency.fail_on_fork(
                         cluster_manager=cluster_manager,
                         cluster_obj=cluster,
                         temp_template=temp_template,

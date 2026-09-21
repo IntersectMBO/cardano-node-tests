@@ -21,6 +21,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import defragment_utxos
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
@@ -194,7 +195,7 @@ class TestBasicTransactions:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         if tx_db_record:
@@ -345,7 +346,7 @@ class TestBasicTransactions:
             == src_init_balance - fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -412,7 +413,7 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -472,7 +473,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -541,7 +542,7 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for destination address `{dst_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check `transaction view` command
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output)
@@ -601,7 +602,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check min UTxO value
         min_value = cluster.g_transaction.calculate_min_req_utxo(txouts=txouts)
@@ -733,7 +734,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -803,7 +804,7 @@ class TestBasicTransactions:
             f"Incorrect balance for destination address `{dst_address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1040,7 +1041,7 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1115,7 +1116,7 @@ class TestBasicTransactions:
             == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee
         ), f"Incorrect balance for source address `{src_address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
@@ -1476,7 +1477,7 @@ class TestMultiInOut:
                 f"Incorrect balance for destination address `{addr}`"
             )
 
-        common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
@@ -1837,6 +1838,6 @@ class TestIncrementalSigning:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)

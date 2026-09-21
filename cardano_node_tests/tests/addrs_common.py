@@ -8,6 +8,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
+
 def get_conway_address_deposit(cluster_obj: clusterlib.ClusterLib) -> int:
     """Get stake address deposit amount - is required in Conway+."""
     stake_deposit_amt = -1

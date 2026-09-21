@@ -17,6 +17,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_raw
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
@@ -128,7 +129,7 @@ class TestSECP256k1:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
     @markers.PARAM_PLUTUS2ONWARDS_VERSION

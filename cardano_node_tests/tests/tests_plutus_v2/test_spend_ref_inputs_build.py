@@ -17,6 +17,7 @@ from cardano_node_tests.tests.tests_plutus_v2 import spend_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -422,7 +423,7 @@ class TestReadonlyReferenceInputs:
             clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0].amount == amount
         ), f"Incorrect balance for destination address `{dst_addr.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check "transaction view"
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)

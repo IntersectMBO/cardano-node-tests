@@ -29,6 +29,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import tx_view
@@ -172,7 +173,7 @@ def multisig_tx(
         f"Incorrect balance for script address `{dst_address}`"
     )
 
-    common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+    node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
     return tx_output
 
@@ -2373,7 +2374,7 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=script_address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -2549,7 +2550,7 @@ class TestReferenceUTxO:
             f"Incorrect balance for destination address `{dst_addr.address}`"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         # Check that reference UTxO was NOT spent
         assert cluster.g_query.get_utxo(utxo=reference_utxo), "Reference input was spent"

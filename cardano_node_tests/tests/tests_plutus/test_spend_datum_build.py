@@ -21,6 +21,7 @@ from cardano_node_tests.tests.tests_plutus import spend_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -264,7 +265,7 @@ class TestNegativeDatum:
             utxos=out_utxos, txouts=tx_output_fund.txouts
         )
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)

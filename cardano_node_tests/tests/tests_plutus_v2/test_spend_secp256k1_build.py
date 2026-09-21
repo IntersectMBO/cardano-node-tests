@@ -18,6 +18,7 @@ from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class TestSECP256k1:
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
         assert collateral_utxos, "No collateral UTxO"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         fee_txin = next(
             r

@@ -16,6 +16,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests import tx_common
 from cardano_node_tests.tests.tests_plutus_v2 import mint_build
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -303,4 +304,4 @@ class TestNegativeCollateralOutput:
             )
             assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-            common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+            node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)

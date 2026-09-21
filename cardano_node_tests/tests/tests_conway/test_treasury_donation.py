@@ -14,6 +14,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -121,7 +122,7 @@ class TestTreasuryDonation:
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
         ), f"Incorrect balance for source address `{payment_addr_treasury.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.xdist_split(markers.XdSplits.heavy)
@@ -173,7 +174,7 @@ class TestTreasuryDonation:
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
         ), f"Incorrect balance for source address `{payment_addr_singleton.address}`"
 
-        common.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         assert (

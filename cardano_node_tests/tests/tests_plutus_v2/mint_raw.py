@@ -5,6 +5,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
@@ -203,7 +204,7 @@ def check_missing_builtin(
             "The 'token a' was not minted"
         )
 
-        common.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+        node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
 
     prot_params = cluster_obj.g_query.get_protocol_params()
     prot_ver = prot_params["protocolVersion"]["major"]
