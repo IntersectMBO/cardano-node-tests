@@ -14,6 +14,7 @@ from _pytest.fixtures import SubRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
@@ -44,7 +45,7 @@ def payment_addrs(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -717,7 +718,7 @@ class TestNegativeRedeemer:
         plutus_version: str,
     ) -> FundTupleT:
         """Fund a Plutus script and create the locked UTxO and collateral UTxO."""
-        payment_addrs = common.get_payment_addrs(
+        payment_addrs = addrs_common.get_payment_addrs(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster_obj,

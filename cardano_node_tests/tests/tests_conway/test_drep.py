@@ -16,6 +16,7 @@ from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
@@ -137,7 +138,7 @@ def payment_addr(
 ) -> clusterlib.AddressRecord:
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_payment_addr(
+    return addrs_common.get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -152,7 +153,7 @@ def pool_user(
 ) -> clusterlib.PoolUser:
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -182,7 +183,7 @@ def payment_addr_wpr(
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_payment_addr(
+    return addrs_common.get_payment_addr(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -195,7 +196,7 @@ def pool_user_wpr(
     cluster, __ = cluster_and_pool_and_rewards
     test_id = common.get_test_id(cluster)
     key = helpers.get_current_line_str()
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         name_template=test_id, cluster_manager=cluster_manager, cluster_obj=cluster, caching_key=key
     )
 
@@ -225,7 +226,7 @@ def payment_addr_rewards(
 ) -> clusterlib.AddressRecord:
     test_id = common.get_test_id(cluster_rewards)
     key = helpers.get_current_line_str()
-    return common.get_payment_addr(
+    return addrs_common.get_payment_addr(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_rewards,
@@ -240,7 +241,7 @@ def pool_user_rewards(
 ) -> clusterlib.PoolUser:
     test_id = common.get_test_id(cluster_rewards)
     key = helpers.get_current_line_str()
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         name_template=test_id,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_rewards,
@@ -1626,7 +1627,7 @@ class TestDRepActivity:
         """
         cluster, __ = cluster_lock_governance
         name_template = common.get_test_id(cluster)
-        return common.get_registered_pool_user(
+        return addrs_common.get_registered_pool_user(
             name_template=name_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

@@ -10,6 +10,7 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests.tests_conway import conway_common
@@ -38,7 +39,7 @@ def payment_addr_locked(
 ) -> clusterlib.AddressRecord:
     """Create new payment addresses."""
     cluster = cluster_singleton
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -52,7 +53,7 @@ def payment_addrs_disposable(
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
     """Create new disposable payment addresses."""
-    addrs = common.get_payment_addrs(
+    addrs = addrs_common.get_payment_addrs(
         name_template=f"{common.get_test_id(cluster)}_disposable",
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -76,7 +77,7 @@ class TestSetup:
     ) -> clusterlib.PoolUser:
         """Create a pool user for singleton."""
         name_template = common.get_test_id(cluster_singleton)
-        return common.get_registered_pool_user(
+        return addrs_common.get_registered_pool_user(
             name_template=name_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster_singleton,

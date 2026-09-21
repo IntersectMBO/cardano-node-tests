@@ -7,6 +7,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
@@ -38,7 +39,7 @@ def payment_addr_treasury(
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster = cluster_treasury
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -57,7 +58,7 @@ def payment_addr_singleton(
     This fixture is used by single test, so it is not cached.
     """
     cluster = cluster_singleton
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,

@@ -8,6 +8,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
@@ -64,7 +65,7 @@ def pool_users(
 ) -> list[clusterlib.PoolUser]:
     """Create pool user."""
     cluster = cluster_pots
-    created_users = common.get_pool_users(
+    created_users = addrs_common.get_pool_users(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,

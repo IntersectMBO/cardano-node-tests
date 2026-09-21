@@ -15,6 +15,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
@@ -46,7 +47,7 @@ class TestRollback:
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
         cluster = cluster_singleton
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

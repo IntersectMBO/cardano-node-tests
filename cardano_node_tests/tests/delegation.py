@@ -10,7 +10,7 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
-from cardano_node_tests.tests import common
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_types
@@ -182,7 +182,7 @@ def delegate_stake_addr(
     else:
         stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
             stake_vkey_file=pool_user.stake.vkey_file,
         )
 
@@ -255,7 +255,7 @@ def delegate_multisig_stake_addr(
     else:
         stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
             addr_name=f"{temp_template}_addr0",
-            deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+            deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
             stake_script_file=pool_user.stake.script_file,
         )
 

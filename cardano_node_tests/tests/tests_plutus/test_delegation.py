@@ -17,6 +17,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.cluster_management import resources_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
@@ -132,7 +133,7 @@ def register_delegate_stake_addr(
     # Create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
         addr_name=f"{temp_template}_addr0",
-        deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+        deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
         stake_script_file=pool_user.stake.script_file,
     )
 
@@ -233,7 +234,7 @@ def register_stake_addr(
     # Create stake address registration cert
     stake_addr_reg_cert_file = cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
         addr_name=f"{temp_template}_addr0",
-        deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+        deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
         stake_script_file=pool_user.stake.script_file,
     )
 
@@ -409,7 +410,7 @@ def deregister_stake_addr(
     # Create stake address deregistration cert
     stake_addr_dereg_cert = cluster_obj.g_stake_address.gen_stake_addr_deregistration_cert(
         addr_name=f"{temp_template}_addr0",
-        deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+        deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
         stake_script_file=pool_user.stake.script_file,
     )
 

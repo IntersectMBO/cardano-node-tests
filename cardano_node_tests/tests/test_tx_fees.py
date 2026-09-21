@@ -12,6 +12,7 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -49,7 +50,7 @@ class TestFee:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create 2 new payment addresses."""
-        addrs = common.get_payment_addrs(
+        addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -221,7 +222,7 @@ class TestExpectedFees:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.PoolUser]:
         """Create pool users."""
-        created_users = common.get_pool_users(
+        created_users = addrs_common.get_pool_users(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -248,7 +249,7 @@ class TestExpectedFees:
         stake_addr_reg_cert_files = [
             cluster_obj.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr{i}",
-                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster_obj),
+                deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster_obj),
                 stake_vkey_file=p.stake.vkey_file,
             )
             for i, p in enumerate(pool_owners)
@@ -496,7 +497,7 @@ class TestExpectedFees:
         stake_addr_reg_certs = [
             cluster.g_stake_address.gen_stake_addr_registration_cert(
                 addr_name=f"{temp_template}_addr{i}",
-                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+                deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
                 stake_vkey_file=p.stake.vkey_file,
             )
             for i, p in enumerate(selected_users)
@@ -545,7 +546,7 @@ class TestExpectedFees:
         stake_addr_dereg_certs = [
             cluster.g_stake_address.gen_stake_addr_deregistration_cert(
                 addr_name=f"{temp_template}_addr{i}",
-                deposit_amt=common.get_conway_address_deposit(cluster_obj=cluster),
+                deposit_amt=addrs_common.get_conway_address_deposit(cluster_obj=cluster),
                 stake_vkey_file=p.stake.vkey_file,
             )
             for i, p in enumerate(selected_users)

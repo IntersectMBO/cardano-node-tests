@@ -8,6 +8,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import reqs_conway as reqc
@@ -35,7 +36,7 @@ def pool_user(
     """Create a pool user for "use governance"."""
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
-    return common.get_pool_user(
+    return addrs_common.get_pool_user(
         cluster_manager=cluster_manager,
         name_template=name_template,
         cluster_obj=cluster,

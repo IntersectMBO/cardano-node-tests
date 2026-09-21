@@ -29,6 +29,7 @@ from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.utils import clusterlib_utils
@@ -138,7 +139,7 @@ class TestGovActionAnchor:
         name_template = common.get_test_id(cluster)
         # Re-fund when the balance drops below `min_amount` so each proposal can cover the gov
         # action deposit (it is never returned here). Cf. test_committee.pool_user_lg.
-        return common.get_registered_pool_user(
+        return addrs_common.get_registered_pool_user(
             name_template=name_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -387,7 +388,7 @@ class TestDrepAnchor:
         """Create a payment address with funds."""
         test_id = common.get_test_id(cluster)
         key = helpers.get_current_line_str()
-        return common.get_payment_addr(
+        return addrs_common.get_payment_addr(
             name_template=test_id,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

@@ -11,6 +11,7 @@ import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
@@ -87,7 +88,7 @@ def update_cost_model(
         )
         return
 
-    pool_user = common.get_registered_pool_user(
+    pool_user = addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,
@@ -114,7 +115,7 @@ def run_scenario(
     is_prot_version_ok: bool,
 ):
     """Run an e2e test for a Plutus builtin."""
-    payment_addrs = common.get_payment_addrs(
+    payment_addrs = addrs_common.get_payment_addrs(
         name_template=temp_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster_obj,

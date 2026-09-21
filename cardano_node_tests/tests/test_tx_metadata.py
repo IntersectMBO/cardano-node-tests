@@ -10,6 +10,7 @@ import pytest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
@@ -38,7 +39,7 @@ class TestMetadata:
         cluster: clusterlib.ClusterLib,
     ) -> clusterlib.AddressRecord:
         """Create new payment address."""
-        addr = common.get_payment_addr(
+        addr = addrs_common.get_payment_addr(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
@@ -681,7 +682,7 @@ class TestMetadata:
         """
         temp_template = common.get_test_id(cluster)
 
-        src_record = common.get_payment_addr(
+        src_record = addrs_common.get_payment_addr(
             name_template=temp_template,
             cluster_manager=cluster_manager,
             cluster_obj=cluster,

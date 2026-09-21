@@ -14,6 +14,7 @@ import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
@@ -71,7 +72,7 @@ def pool_user(
     """Create a pool user for "lock governance"."""
     cluster, __ = cluster_guardrails
     name_template = common.get_test_id(cluster)
-    return common.get_registered_pool_user(
+    return addrs_common.get_registered_pool_user(
         name_template=name_template,
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
@@ -85,7 +86,7 @@ def payment_addr(
 ) -> clusterlib.AddressRecord:
     """Create new payment address."""
     cluster, __ = cluster_guardrails
-    addr = common.get_payment_addr(
+    addr = addrs_common.get_payment_addr(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
         cluster_obj=cluster,
