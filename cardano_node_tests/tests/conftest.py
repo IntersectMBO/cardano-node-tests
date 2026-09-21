@@ -60,6 +60,88 @@ def pytest_addoption(parser: tp.Any) -> None:
     )
 
 
+def _set_metadata(config: tp.Any) -> None:
+    """Record test run metadata for the HTML report."""
+    metadata = config.stash[metadata_key]
+
+    gha_server = os.environ.get("GITHUB_SERVER_URL")
+    gha_repo = os.environ.get("GITHUB_REPOSITORY")
+    gha_run_id = os.environ.get("GITHUB_RUN_ID")
+    metadata["github actions url"] = (
+        f"{gha_server}/{gha_repo}/actions/runs/{gha_run_id}"
+        if gha_server and gha_repo and gha_run_id
+        else ""
+    )
+
+    metadata["cardano-node"] = str(VERSIONS.node)
+    metadata["cardano-node rev"] = VERSIONS.git_rev
+    metadata["cardano-node ghc"] = VERSIONS.ghc
+    metadata["cardano-cli"] = str(VERSIONS.cli)
+    metadata["cardano-cli rev"] = VERSIONS.cli_git_rev
+    metadata["cardano-cli ghc"] = VERSIONS.cli_ghc
+    metadata["COMMAND_ERA"] = configuration.COMMAND_ERA
+    metadata["TESTNET_VARIANT"] = configuration.TESTNET_VARIANT
+    metadata["NUM_POOLS"] = str(configuration.NUM_POOLS)
+    metadata["UTXO_BACKEND"] = configuration.UTXO_BACKEND
+    metadata["MIXED_UTXO_BACKENDS"] = configuration.MIXED_UTXO_BACKENDS
+    metadata["MAX_TESTS_PER_CLUSTER"] = configuration.MAX_TESTS_PER_CLUSTER
+    # If not explicitly specified, the `CLUSTERS_COUNT` is calculated based on number of xdist
+    # workers, which is not known yet by the time this fixture runs.
+    if os.environ.get("CLUSTERS_COUNT") is not None:
+        metadata["CLUSTERS_COUNT"] = configuration.CLUSTERS_COUNT
+    if configuration.CONFIRM_BLOCKS_NUM:
+        metadata["CONFIRM_BLOCKS_NUM"] = str(configuration.CONFIRM_BLOCKS_NUM)
+    metadata["HAS_CC"] = str(configuration.HAS_CC)
+    commit = helpers.get_current_commit()
+    metadata["cardano-node-tests rev"] = commit
+    metadata["cardano-node-tests url"] = f"{helpers.GITHUB_URL}/tree/{commit}"
+    metadata["CARDANO_NODE_SOCKET_PATH"] = os.environ.get("CARDANO_NODE_SOCKET_PATH")
+    metadata["cardano-cli exe"] = shutil.which("cardano-cli") or ""
+    metadata["cardano-node exe"] = shutil.which("cardano-node") or ""
+    metadata["cardano-submit-api exe"] = shutil.which("cardano-submit-api") or ""
+
+    testrun_name = os.environ.get("CI_TESTRUN_NAME")
+    if testrun_name:
+        metadata["CI_TESTRUN_NAME"] = testrun_name
+        metadata["CI_SKIP_PASSED"] = str(helpers.is_truthy_env_var("CI_SKIP_PASSED"))
+
+    network_magic = configuration.NETWORK_MAGIC_LOCAL
+    if configuration.BOOTSTRAP_DIR:
+        with open(configuration.BOOTSTRAP_DIR / "genesis-shelley.json", encoding="utf-8") as in_fp:
+            genesis = json.load(in_fp)
+        network_magic = genesis["networkMagic"]
+    metadata["network magic"] = network_magic
+
+    metadata["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
+    if configuration.HAS_DBSYNC:
+        metadata["db-sync"] = str(VERSIONS.dbsync)
+        metadata["db-sync rev"] = VERSIONS.dbsync_git_rev
+        metadata["db-sync ghc"] = VERSIONS.dbsync_ghc
+        metadata["db-sync exe"] = shutil.which("cardano-db-sync") or ""
+
+    metadata["HAS_SMASH"] = str(configuration.HAS_SMASH)
+    if configuration.HAS_SMASH:
+        metadata["smash"] = str(VERSIONS.smash)
+        metadata["smash rev"] = VERSIONS.smash_git_rev
+        metadata["smash ghc"] = VERSIONS.smash_ghc
+        metadata["smash exe"] = shutil.which("cardano-smash-server") or ""
+
+
+def _warn_on_setup() -> None:
+    """Warn about unusual or unsupported test run setup."""
+    if "nix/store" not in (shutil.which("cardano-cli") or ""):
+        LOGGER.warning(" WARNING: Using `cardano-cli` from custom path!")
+    if "nix/store" not in (shutil.which("cardano-node") or ""):
+        LOGGER.warning(" WARNING: Using `cardano-node` from custom path!")
+    if VERSIONS.transaction_era_name != VERSIONS.cluster_era_name:
+        LOGGER.warning(
+            " WARNING: Using cluster era '%s' with different transaction era '%s' "
+            "is not supported!",
+            VERSIONS.cluster_era_name,
+            VERSIONS.transaction_era_name,
+        )
+
+
 def pytest_configure(config: tp.Any) -> None:
     helpers.check_cardano_node_socket_path()
 
@@ -67,76 +149,11 @@ def pytest_configure(config: tp.Any) -> None:
     if config.getvalue("skipall"):
         return
 
-    gha_server = os.environ.get("GITHUB_SERVER_URL")
-    gha_repo = os.environ.get("GITHUB_REPOSITORY")
-    gha_run_id = os.environ.get("GITHUB_RUN_ID")
-    config.stash[metadata_key]["github actions url"] = (
-        f"{gha_server}/{gha_repo}/actions/runs/{gha_run_id}"
-        if gha_server and gha_repo and gha_run_id
-        else ""
-    )
+    _set_metadata(config=config)
 
-    config.stash[metadata_key]["cardano-node"] = str(VERSIONS.node)
-    config.stash[metadata_key]["cardano-node rev"] = VERSIONS.git_rev
-    config.stash[metadata_key]["cardano-node ghc"] = VERSIONS.ghc
-    config.stash[metadata_key]["cardano-cli"] = str(VERSIONS.cli)
-    config.stash[metadata_key]["cardano-cli rev"] = VERSIONS.cli_git_rev
-    config.stash[metadata_key]["cardano-cli ghc"] = VERSIONS.cli_ghc
-    config.stash[metadata_key]["COMMAND_ERA"] = configuration.COMMAND_ERA
-    config.stash[metadata_key]["TESTNET_VARIANT"] = configuration.TESTNET_VARIANT
-    config.stash[metadata_key]["NUM_POOLS"] = str(configuration.NUM_POOLS)
-    config.stash[metadata_key]["UTXO_BACKEND"] = configuration.UTXO_BACKEND
-    config.stash[metadata_key]["MIXED_UTXO_BACKENDS"] = configuration.MIXED_UTXO_BACKENDS
-    config.stash[metadata_key]["MAX_TESTS_PER_CLUSTER"] = configuration.MAX_TESTS_PER_CLUSTER
-    # If not explicitly specified, the `CLUSTERS_COUNT` is calculated based on number of xdist
-    # workers, which is not known yet by the time this fixture runs.
-    if os.environ.get("CLUSTERS_COUNT") is not None:
-        config.stash[metadata_key]["CLUSTERS_COUNT"] = configuration.CLUSTERS_COUNT
-    if configuration.CONFIRM_BLOCKS_NUM:
-        config.stash[metadata_key]["CONFIRM_BLOCKS_NUM"] = str(configuration.CONFIRM_BLOCKS_NUM)
-    config.stash[metadata_key]["HAS_CC"] = str(configuration.HAS_CC)
-    config.stash[metadata_key]["cardano-node-tests rev"] = helpers.get_current_commit()
-    config.stash[metadata_key]["cardano-node-tests url"] = (
-        f"{helpers.GITHUB_URL}/tree/{helpers.get_current_commit()}"
-    )
-    config.stash[metadata_key]["CARDANO_NODE_SOCKET_PATH"] = os.environ.get(
-        "CARDANO_NODE_SOCKET_PATH"
-    )
-    config.stash[metadata_key]["cardano-cli exe"] = shutil.which("cardano-cli") or ""
-    config.stash[metadata_key]["cardano-node exe"] = shutil.which("cardano-node") or ""
-    config.stash[metadata_key]["cardano-submit-api exe"] = shutil.which("cardano-submit-api") or ""
-
-    testrun_name = os.environ.get("CI_TESTRUN_NAME")
-    if testrun_name:
-        skip_passed = helpers.is_truthy_env_var("CI_SKIP_PASSED")
-        config.stash[metadata_key]["CI_TESTRUN_NAME"] = testrun_name
-        config.stash[metadata_key]["CI_SKIP_PASSED"] = str(skip_passed)
-
-    network_magic = configuration.NETWORK_MAGIC_LOCAL
-    if configuration.BOOTSTRAP_DIR:
-        with open(configuration.BOOTSTRAP_DIR / "genesis-shelley.json", encoding="utf-8") as in_fp:
-            genesis = json.load(in_fp)
-        network_magic = genesis["networkMagic"]
-    config.stash[metadata_key]["network magic"] = network_magic
-
-    config.stash[metadata_key]["HAS_DBSYNC"] = str(configuration.HAS_DBSYNC)
-    if configuration.HAS_DBSYNC:
-        config.stash[metadata_key]["db-sync"] = str(VERSIONS.dbsync)
-        config.stash[metadata_key]["db-sync rev"] = VERSIONS.dbsync_git_rev
-        config.stash[metadata_key]["db-sync ghc"] = VERSIONS.dbsync_ghc
-        config.stash[metadata_key]["db-sync exe"] = shutil.which("cardano-db-sync") or ""
-
-    config.stash[metadata_key]["HAS_SMASH"] = str(configuration.HAS_SMASH)
-    if configuration.HAS_SMASH:
-        config.stash[metadata_key]["smash"] = str(VERSIONS.smash)
-        config.stash[metadata_key]["smash rev"] = VERSIONS.smash_git_rev
-        config.stash[metadata_key]["smash ghc"] = VERSIONS.smash_ghc
-        config.stash[metadata_key]["smash exe"] = shutil.which("cardano-smash-server") or ""
-
-    if "nix/store" not in config.stash[metadata_key]["cardano-cli exe"]:
-        LOGGER.warning(" WARNING: Using `cardano-cli` from custom path!")
-    if "nix/store" not in config.stash[metadata_key]["cardano-node exe"]:
-        LOGGER.warning(" WARNING: Using `cardano-node` from custom path!")
+    # Warn only on the xdist controller, so the warnings are not repeated by every worker
+    if not hasattr(config, "workerinput"):
+        _warn_on_setup()
 
 
 def _skip_all_tests(config: tp.Any, items: list) -> None:
