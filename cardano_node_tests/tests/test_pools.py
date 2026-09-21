@@ -3023,8 +3023,8 @@ class TestCompatibility:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
-        reason="runs only with cluster era >= Dijkstra",
+        VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="runs only with Tx era >= Dijkstra",
     )
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -3134,8 +3134,8 @@ class TestCompatibility:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
-        reason="runs only with cluster era >= Dijkstra",
+        VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="runs only with Tx era >= Dijkstra",
     )
     @pytest.mark.testnets
     @pytest.mark.smoke
@@ -3179,8 +3179,8 @@ class TestCompatibility:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
-        VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
-        reason="runs only with cluster era >= Dijkstra",
+        VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="runs only with Tx era >= Dijkstra",
     )
     @pytest.mark.testnets
     @pytest.mark.smoke
