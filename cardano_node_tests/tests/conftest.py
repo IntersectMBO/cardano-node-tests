@@ -138,6 +138,14 @@ def pytest_configure(config: tp.Any) -> None:
     if "nix/store" not in config.stash[metadata_key]["cardano-node exe"]:
         LOGGER.warning(" WARNING: Using `cardano-node` from custom path!")
 
+    if VERSIONS.transaction_era_name != VERSIONS.cluster_era_name:
+        LOGGER.warning(
+            " WARNING: Using cluster era '%s' with different transaction era '%s' "
+            "is not supported!",
+            VERSIONS.cluster_era_name,
+            VERSIONS.transaction_era_name,
+        )
+
 
 def _skip_all_tests(config: tp.Any, items: list) -> None:
     """Skip all tests if specified on command line.
