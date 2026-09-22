@@ -23,6 +23,22 @@ repos:
   rev: v0.11.0.1-1
   hooks:
   - id: shellcheck
+    # The upstream `types: [shell]` selection relies on `identify`, which tags a file as
+    # shell by its extension, or by its shebang only when the file is executable. Scripts
+    # that are meant to be sourced are not executable and some of them have no `.sh`
+    # extension, so they would be silently skipped. Select the files by path instead, so
+    # they all end up in the single `shellcheck` invocation (the hook is `require_serial`
+    # upstream, which also lets shellcheck follow `source` between the files).
+    # The cluster scripts and the binary mocks are extension-less shell scripts, matched
+    # here by their location; `[^./]+` keeps the data files (e.g. `testnet.json`) out.
+    types: [text]
+    files: |
+      (?x)^(
+        .*\.(sh|bash)
+        |\.source\.dev
+        |cardano_node_tests/cluster_scripts/[^/]+/[^./]+
+        |(framework_tests|src_docs/source)/mocks/[^./]+
+      )$
 - repo: https://github.com/igorshubovych/markdownlint-cli
   rev: v0.49.1
   hooks:
