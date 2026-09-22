@@ -116,11 +116,12 @@ WAIT_BLOCKS_STEP = 5
 # rate of the `local_fast` variant (and its 4x shorter epoch) drains the mempool.
 MIN_BLOCK_INTERVAL_SEC = 10
 
-# The first epoch in which a pool can be a member of the Leios voting committee. The
-# committee is drawn from a stake distribution snapshot that is empty for the whole
-# lifetime of a freshly started cluster instance until this epoch, so up to then every
-# pool answers every EB announcement with `NotOnCommittee` and no EB can be voted on or
-# certified.
+# The first epoch in which a pool registered by a transaction can be a member of the
+# Leios voting committee. The committee is drawn from a stake distribution snapshot
+# that is empty for the whole lifetime of a freshly started cluster instance until this
+# epoch, so up to then every pool answers every EB announcement with `NotOnCommittee`
+# and no EB can be voted on or certified. It doesn't apply to a testnet whose pools
+# come with their BLS key straight from the genesis, see `_is_committee_seated_in_genesis`.
 VOTING_START_EPOCH = 3
 
 # Number of seconds between two searches of the logs while waiting for the pools to
@@ -395,6 +396,34 @@ def _collect_pre_voting_msgs(
     return {p: s.found for p, s in searches.items()}, list(log_errors.values())
 
 
+def _is_committee_seated_in_genesis(*, genesis: dict) -> bool:
+    """Check whether the Leios voting committee is seated from epoch 0.
+
+    A pool can vote once its BLS key is in a stake distribution snapshot the committee
+    is drawn from. A pool registered by a transaction on a freshly started cluster
+    instance gets there only in `VOTING_START_EPOCH`, while a pool whose parameters,
+    BLS key included, are already in the genesis is in the initial ledger state and so
+    on the committee from the first slot.
+
+    The genesis always lists the pools created by `genesis create-staked --gen-pools`,
+    but their entries carry a BLS key only when the cluster start script wrote the real
+    pool parameters into them instead of submitting a registration transaction. The key
+    is therefore what tells the two setups apart, not the presence of the pools. The
+    entries live under `extraConfig` since cardano-cli 11.2 and under `staking` before
+    that.
+
+    Args:
+        genesis: The Shelley genesis of the cluster instance.
+
+    Returns:
+        `True` when a pool is on the voting committee from epoch 0.
+    """
+    pools: dict = genesis.get("extraConfig", {}).get("stakePools", {}).get("data") or genesis.get(
+        "staking", {}
+    ).get("pools", {})
+    return any(p.get("blsKey") for p in pools.values())
+
+
 class TestLeios:
     """Tests for Leios endorser blocks."""
 
@@ -446,6 +475,8 @@ class TestLeios:
     ):
         """Check that no EB is voted on before the voting committee becomes active.
 
+        * Skip when the genesis seats the voting committee from epoch 0, as there is
+          then no epoch in which a vote would be premature
         * Skip when no epoch before `VOTING_START_EPOCH` has room left for the whole
           search window
         * Wait for a point in an epoch where the window fits before the next epoch
@@ -457,6 +488,12 @@ class TestLeios:
         """
         cluster = cluster_leios
         common.get_test_id(cluster)
+
+        if _is_committee_seated_in_genesis(genesis=cluster.genesis):
+            pytest.skip(
+                "The pools are on the Leios voting committee from epoch 0, as their BLS keys "
+                "come from the genesis, so there is no epoch in which a vote is premature"
+            )
 
         state_dir = cluster_nodes.get_cluster_env().state_dir
         pool_logs = sorted(state_dir.glob("pool*.stdout"))

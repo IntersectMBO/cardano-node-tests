@@ -14,6 +14,7 @@ from cardano_node_tests.utils import clusterlib_utils
 
 KEY_HASH1 = "9e1156acae8bd72bc1815d0be9fcb64e2d50e61f4204c45b901dad6b"
 KEY_HASH2 = "7c2086ea4ebaa880c6e6c70604c0deb37ffbaa0567aec0bea8564055"
+POOL_ID1 = "2e35bc3cae0fa3b642932a8e45602318027772192a2e215a537a6a8a"
 
 
 def write_script(*, script: dict, dest_dir: pl.Path) -> pl.Path:
@@ -166,3 +167,86 @@ class TestGetReferenceScriptSize:
         script_file = write_script(script={"type": "unknown"}, dest_dir=tmp_path)
         with pytest.raises(ValueError, match="Unsupported simple script type: unknown"):
             clusterlib_utils.get_reference_script_size(script_file=script_file)
+
+
+class TestLedgerStateSnapshot:
+    """Tests for reading the stake distribution snapshots of the ledger state.
+
+    The `esSnapshots` entries have three formats to support: the `swd*` records of
+    cardano-node 10.7+, the flat records before that, and the `snapShot` wrapper that
+    a Leios enabled node puts around either of them.
+    """
+
+    ACTIVE_STAKE: tp.ClassVar[dict] = {
+        f"keyHash-{KEY_HASH1}": {"swdDelegation": POOL_ID1, "swdStake": 10},
+        f"keyHash-{KEY_HASH2}": {"swdDelegation": POOL_ID1, "swdStake": 20},
+    }
+    LEIOS_SNAPSHOT: tp.ClassVar[dict] = {
+        "epochNo": 6,
+        "leiosCommitteeSize": 900,
+        "snapShot": {"activeStake": ACTIVE_STAKE, "stakePoolsSnapShot": {}},
+    }
+
+    def test_unwrap_leios(self):
+        """Strip the `snapShot` wrapper of a Leios enabled node."""
+        assert clusterlib_utils.unwrap_snapshot(ledger_snapshot=self.LEIOS_SNAPSHOT) == {
+            "activeStake": self.ACTIVE_STAKE,
+            "stakePoolsSnapShot": {},
+        }
+
+    def test_unwrap_unwrapped(self):
+        """Keep a snapshot that has no `snapShot` wrapper as it is."""
+        snapshot = {"activeStake": self.ACTIVE_STAKE}
+        assert clusterlib_utils.unwrap_snapshot(ledger_snapshot=snapshot) == snapshot
+
+    def test_stake_rec_leios(self):
+        """Get the stake record from a wrapped snapshot."""
+        stake_rec = clusterlib_utils.get_stake_rec(stake_snapshot=self.LEIOS_SNAPSHOT)
+        assert stake_rec == self.ACTIVE_STAKE
+
+    def test_stake_rec_active_stake(self):
+        """Get the stake record from an unwrapped cardano-node 10.7+ snapshot."""
+        stake_rec = clusterlib_utils.get_stake_rec(
+            stake_snapshot={"activeStake": self.ACTIVE_STAKE}
+        )
+        assert stake_rec == self.ACTIVE_STAKE
+
+    def test_stake_rec_legacy(self):
+        """Get the stake record from a snapshot that predates `activeStake`."""
+        stake = {f"keyHash-{KEY_HASH1}": 10}
+        assert clusterlib_utils.get_stake_rec(stake_snapshot={"stake": stake}) == stake
+
+    def test_stake_rec_unknown(self):
+        """Fail on a snapshot that holds no stake record."""
+        with pytest.raises(KeyError, match="Neither 'activeStake' nor 'stake' found"):
+            clusterlib_utils.get_stake_rec(stake_snapshot={"epochNo": 6})
+
+    def test_delegations_leios(self):
+        """Get the delegations from a wrapped snapshot."""
+        delegations = clusterlib_utils.get_snapshot_delegations(ledger_snapshot=self.LEIOS_SNAPSHOT)
+        assert delegations == {POOL_ID1: [KEY_HASH1, KEY_HASH2]}
+
+    def test_delegations_active_stake(self):
+        """Get the delegations from an unwrapped cardano-node 10.7+ snapshot."""
+        delegations = clusterlib_utils.get_snapshot_delegations(
+            ledger_snapshot={"activeStake": self.ACTIVE_STAKE}
+        )
+        assert delegations == {POOL_ID1: [KEY_HASH1, KEY_HASH2]}
+
+    def test_delegations_legacy(self):
+        """Get the delegations from a snapshot that predates `activeStake`."""
+        delegations = clusterlib_utils.get_snapshot_delegations(
+            ledger_snapshot={"delegations": {f"keyHash-{KEY_HASH1}": POOL_ID1}}
+        )
+        assert delegations == {POOL_ID1: [KEY_HASH1]}
+
+    def test_delegations_unknown(self):
+        """Fail on a snapshot that holds no delegations."""
+        with pytest.raises(KeyError, match="Neither 'stakePoolsSnapShot' nor 'delegations' found"):
+            clusterlib_utils.get_snapshot_delegations(ledger_snapshot={"epochNo": 6})
+
+    def test_snapshot_rec_leios(self):
+        """Sum the stake amounts of a wrapped snapshot."""
+        stake_rec = clusterlib_utils.get_stake_rec(stake_snapshot=self.LEIOS_SNAPSHOT)
+        hashes = clusterlib_utils.get_snapshot_rec(ledger_snapshot=stake_rec)
+        assert hashes == {KEY_HASH1: 10, KEY_HASH2: 20}

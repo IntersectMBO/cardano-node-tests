@@ -3,14 +3,10 @@
 # Launcher for a regression run on the experimental Dijkstra era with the
 # experimental Leios feature.
 #
-# The test setup lives in `runner/env_leios`, which also deselects the tests
-# that are known to fail in this setup (see `scripts/deselected_leios_tests.txt`).
+# The test setup lives in `runner/env_leios`.
 #
 # Any variable from the env file can be overridden on the command line:
 #   ./scripts/test_leios.sh TX_TPS=30
-#
-# Use `DESELECT_FROM_FILE=` to run without deselecting the known failures, or
-# point it to a different file to use your own list.
 
 set -Eeuo pipefail
 
@@ -22,7 +18,6 @@ usage() {
 Usage: $0 [VAR=VALUE ...]
 
 Any variable from 'runner/env_leios' can be overridden, e.g. TX_TPS=30.
-Use 'DESELECT_FROM_FILE=' to run also the tests that are known to fail here.
 EOF
 }
 

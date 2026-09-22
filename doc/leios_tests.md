@@ -15,7 +15,6 @@ The setup lives in [`runner/env_leios`](https://github.com/IntersectMBO/cardano-
 | `PROTOCOL_VERSION`    | `12`                                   | Dijkstra protocol version.                              |
 | `ENABLE_TX_FIREHOSE`  | `true`                                 | Tx load generator, needed to fill the mempool.          |
 | `TX_TPS`              | `15`                                   | Tx rate ceiling of the load generator.                  |
-| `DESELECT_FROM_FILE`  | `scripts/deselected_leios_tests.txt`   | Skips the tests that are known to fail here.            |
 
 ## Running in CI
 
@@ -68,13 +67,6 @@ already exported value wins, so the node branch can be switched without touching
 NODE_REV=my-leios-branch ./scripts/test_leios.sh
 ```
 
-To run also the tests that are known to fail on Leios, clear the deselect file (or point it
-to your own list):
-
-```sh
-./scripts/test_leios.sh DESELECT_FROM_FILE=
-```
-
 Only `VAR=VALUE` arguments are accepted; anything else is rejected with a usage message.
 Results land in `run_workdir`.
 
@@ -95,11 +87,3 @@ On a failed testrun the workflow runs the analysis automatically and surfaces it
 * the **run summary** of the workflow run, and a foldable `Preliminary failure analysis`
   group in the log of the `Read failure analysis into env` step,
 * `failure_analysis.md` in the `testrun-files` artifact.
-
-## Known Failures
-
-`scripts/deselected_leios_tests.txt` lists the tests that are known to fail in this setup,
-grouped by cause, each group with the upstream issue link (missing PlutusV2 cost model in
-Dijkstra genesis, `transaction assemble` rejecting a Dijkstra `TxWitness`, missing required
-signers in the Plutus script context, new Dijkstra protocol params, mandatory Leios BLS
-signing keys, ...).

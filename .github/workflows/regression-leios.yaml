@@ -14,10 +14,6 @@ on:
         type: boolean
         default: false
         description: "Allow unstable error messages"
-      skip_deselect:
-        type: boolean
-        default: false
-        description: "Run also the tests that are known to fail on Leios"
 
 permissions:
   contents: read
@@ -35,7 +31,6 @@ jobs:
       cluster_era: dijkstra 12
       markexpr: testnets or leios
       allow_unstable_error_msgs: ${{ inputs.allow_unstable_error_msgs }}
-      skip_deselect: ${{ inputs.skip_deselect }}
       env-path: runner/env_leios
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
