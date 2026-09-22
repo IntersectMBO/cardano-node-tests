@@ -6,4 +6,3 @@ COMMAND_ERA=dijkstra
 PROTOCOL_VERSION=12
 CI_ARGS=-k 'not submit_api'
 SESSION_TIMEOUT=4h
-DESELECT_FROM_FILE=scripts/deselected_leios_tests.txt

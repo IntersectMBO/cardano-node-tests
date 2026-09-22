@@ -120,9 +120,9 @@ compute_common_args() {
     assert_deselect_file || exit 3
 
     # `pytest-select` has no comment syntax - it reads every line of the file
-    # as a test name. Hand it a stripped copy so that annotated lists (e.g.
-    # `scripts/deselected_leios_tests.txt`, which groups the tests by cause)
-    # don't end up in its "Not all deselected tests exist" warning.
+    # as a test name. Hand it a stripped copy, so that a list annotated with
+    # comments and blank lines doesn't end up in its "Not all deselected tests
+    # exist" warning.
     stripped_deselect="$(mktemp -t deselected_tests.XXXXXX.txt)"
     trap 'rm -f "$stripped_deselect"' EXIT
     sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^#/d' -e '/^$/d' \
