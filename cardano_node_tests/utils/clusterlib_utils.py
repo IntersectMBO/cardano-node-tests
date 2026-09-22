@@ -1698,13 +1698,33 @@ def get_snapshot_rec(*, ledger_snapshot: dict) -> dict[str, int | list]:
     return hashes
 
 
+def unwrap_snapshot(*, ledger_snapshot: dict) -> dict:
+    """Get the stake distribution out of an `esSnapshots` entry of the ledger state.
+
+    On a Leios enabled node the entry is a record that holds the stake distribution
+    under `snapShot`, next to `epochNo` and `leiosCommitteeSize`. On older nodes the
+    entry is the stake distribution itself.
+
+    Args:
+        ledger_snapshot: A `pstakeMark`, `pstakeSet` or `pstakeGo` entry of the
+            `esSnapshots` record of the ledger state.
+
+    Returns:
+        The stake distribution, with the `snapShot` wrapper removed when there is one.
+    """
+    snapshot = ledger_snapshot.get("snapShot")
+    return snapshot if isinstance(snapshot, dict) else ledger_snapshot
+
+
 def get_stake_rec(*, stake_snapshot: dict) -> dict:
     """Get uniform record for stake key snapshot."""
+    unwrapped = unwrap_snapshot(ledger_snapshot=stake_snapshot)
+
     stake_rec: dict
-    if "activeStake" in stake_snapshot:
-        stake_rec = stake_snapshot["activeStake"]  # In cardano-node 10.7.0+
-    elif "stake" in stake_snapshot:
-        stake_rec = stake_snapshot["stake"]
+    if "activeStake" in unwrapped:
+        stake_rec = unwrapped["activeStake"]  # In cardano-node 10.7.0+
+    elif "stake" in unwrapped:
+        stake_rec = unwrapped["stake"]
     else:
         err = "Neither 'activeStake' nor 'stake' found in stake snapshot"
         raise KeyError(err)
@@ -1714,9 +1734,10 @@ def get_stake_rec(*, stake_snapshot: dict) -> dict:
 def get_snapshot_delegations(*, ledger_snapshot: dict) -> dict[str, list[str]]:
     """Get delegations data from ledger state snapshot."""
     delegations: dict[str, list[str]] = {}
+    unwrapped = unwrap_snapshot(ledger_snapshot=ledger_snapshot)
 
-    if "activeStake" in ledger_snapshot:
-        deleg_rec = ledger_snapshot["activeStake"]
+    if "activeStake" in unwrapped:
+        deleg_rec = unwrapped["activeStake"]
 
         for rk, rv in deleg_rec.items():
             # In node 10.7+ the format is a dict like
@@ -1732,8 +1753,8 @@ def get_snapshot_delegations(*, ledger_snapshot: dict) -> dict[str, list[str]]:
             else:
                 delegations[r_pool_id] = [r_hash]
 
-    elif "delegations" in ledger_snapshot:
-        deleg_rec = ledger_snapshot["delegations"]
+    elif "delegations" in unwrapped:
+        deleg_rec = unwrapped["delegations"]
 
         for rk, rv in deleg_rec.items():
             # In node 8.4+ the format is a dict like
