@@ -96,6 +96,9 @@ KEEP_CLUSTERS_RUNNING = helpers.is_truthy_env_var("KEEP_CLUSTERS_RUNNING")
 ENABLE_TX_CENTRIFUGE = helpers.is_truthy_env_var("ENABLE_TX_CENTRIFUGE")
 ENABLE_TX_FIREHOSE = helpers.is_truthy_env_var("ENABLE_TX_FIREHOSE")
 
+# A Tx load generator is running alongside the tests.
+HAS_TX_LOAD_GENERATOR = ENABLE_TX_CENTRIFUGE or ENABLE_TX_FIREHOSE
+
 # Determine what scripts to use to start the cluster
 TESTNET_VARIANT = os.environ.get("TESTNET_VARIANT") or (
     "testnets" if BOOTSTRAP_DIR else "local_fast"

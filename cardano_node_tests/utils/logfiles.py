@@ -16,6 +16,7 @@ import typing as tp
 from collections import deque
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import framework_log
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import temptools
@@ -121,6 +122,18 @@ def _get_ignored_error_regexes() -> list[str]:
         # We sometimes see this error on CI. It seems time is not synced properly
         # on GitHub runners.
         errors_ignored.append("TraceBlockFromFuture")
+
+    if configuration.HAS_TX_LOAD_GENERATOR:
+        # The forge loop forecasts the ledger view from the tip of the chain the node has
+        # selected, and the forecast reaches only `3k/f` slots past that tip. A node that
+        # is busy with the Tx load can fall further behind than that, and then it just
+        # skips the slot it was about to forge and recovers as soon as it catches up.
+        errors_ignored.extend(
+            (
+                r"Forge\.Loop\.NoLedgerView",
+                "TraceNoLedgerView",
+            )
+        )
 
     if cluster_nodes.get_cluster_type().is_testnet:
         errors_ignored.extend(

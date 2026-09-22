@@ -9,6 +9,7 @@ from collections import deque
 import pytest
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 
@@ -1039,18 +1040,27 @@ def test_rotated_logs_mtime_tiebreak(tmp_path: pl.Path):
 
 
 @pytest.mark.parametrize(
-    ("github_actions", "cluster_type", "extra_regexes"),
+    ("github_actions", "tx_load_generator", "cluster_type", "extra_regexes"),
     (
-        pytest.param("", "local", [], id="local"),
-        pytest.param("true", "local", ["TraceBlockFromFuture"], id="github_actions"),
+        pytest.param("", False, "local", [], id="local"),
+        pytest.param("true", False, "local", ["TraceBlockFromFuture"], id="github_actions"),
         pytest.param(
             "",
+            True,
+            "local",
+            [r"Forge\.Loop\.NoLedgerView", "TraceNoLedgerView"],
+            id="tx_load_generator",
+        ),
+        pytest.param(
+            "",
+            False,
             "testnet",
             ["TrHandshakeClientError", "TracePromoteWarmBigLedgerPeerAborted"],
             id="testnet",
         ),
         pytest.param(
             "true",
+            False,
             "testnet",
             [
                 "TraceBlockFromFuture",
@@ -1064,6 +1074,7 @@ def test_rotated_logs_mtime_tiebreak(tmp_path: pl.Path):
 def test_get_ignored_error_regexes(
     monkeypatch: pytest.MonkeyPatch,
     github_actions: str,
+    tx_load_generator: bool,
     cluster_type: str,
     extra_regexes: list[str],
 ):
@@ -1073,6 +1084,7 @@ def test_get_ignored_error_regexes(
     not based on the environment seen when the module was imported.
     """
     monkeypatch.setenv("GITHUB_ACTIONS", github_actions)
+    monkeypatch.setattr(configuration, "HAS_TX_LOAD_GENERATOR", tx_load_generator)
     cluster_type_obj = (
         cluster_nodes.TestnetCluster()
         if cluster_type == "testnet"
