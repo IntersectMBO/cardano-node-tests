@@ -200,24 +200,12 @@ class TestKES:
 
         def _refresh_opcerts() -> dict[str, int]:
             """Refresh opcert on pools that are not supposed to expire."""
-            refreshed_nodes_kes_period = {}
-
-            for n in refreshed_nodes:
-                refreshed_pool_rec = cluster_manager.cache.addrs_data[f"node-{n}"]
-                kes_period = cluster.g_query.get_kes_period()
-
-                refreshed_opcert_file = cluster.g_node.gen_node_operational_cert(
-                    node_name=f"{n}_refreshed_opcert",
-                    kes_vkey_file=refreshed_pool_rec["kes_key_pair"].vkey_file,
-                    cold_skey_file=refreshed_pool_rec["cold_key_pair"].skey_file,
-                    cold_counter_file=refreshed_pool_rec["cold_key_pair"].counter_file,
-                    kes_period=kes_period,
-                )
-                shutil.copy(refreshed_opcert_file, refreshed_pool_rec["pool_operational_cert"])
-                refreshed_nodes_kes_period[n] = kes_period
-
-            cluster_nodes.restart_all_nodes(delay=5)
-            return refreshed_nodes_kes_period
+            return kes.refresh_opcerts(
+                cluster_obj=cluster,
+                cluster_manager=cluster_manager,
+                node_names=refreshed_nodes,
+                name_template=temp_template,
+            )
 
         def _check_kes_period_info(
             refreshed_nodes_kes_period: dict[str, int],
