@@ -1,6 +1,5 @@
 """Tests for node BLS key generation."""
 
-import dataclasses
 import logging
 import pathlib as pl
 import re
@@ -9,6 +8,7 @@ import allure
 import pytest
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import bls
 from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
@@ -20,73 +20,6 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
     reason="BLS keys are available only in Dijkstra+ eras",
 )
-
-# Size of the proof of possession that accompanies the BLS key in a pool registration certificate
-POP_LEN = 48
-
-
-@dataclasses.dataclass(frozen=True)
-class KeySpec:
-    """Expected properties of a generated BLS key."""
-
-    envelope_type: str
-    envelope_desc: str
-    bech32_prefix: str
-    # Size of the raw key material, in bytes
-    key_len: int
-
-
-VKEY_SPEC = KeySpec(
-    envelope_type="BlsVerificationKey_bls12-381-BLS-Signature-Minimal-Signature-Size",
-    envelope_desc="BLS12-381 verification key",
-    bech32_prefix="bls_vk1",
-    key_len=96,
-)
-SKEY_SPEC = KeySpec(
-    envelope_type="BlsSigningKey_bls12-381-BLS-Signature-Minimal-Signature-Size",
-    envelope_desc="BLS12-381 signing key",
-    bech32_prefix="bls_sk1",
-    key_len=32,
-)
-
-
-def check_envelope_key(*, key_file: pl.Path, spec: KeySpec) -> bytes:
-    """Check that the file is a BLS key text envelope of the expected kind.
-
-    Args:
-        key_file: A path to the key file.
-        spec: The expected properties of the key.
-
-    Returns:
-        bytes: The raw key material.
-    """
-    envelope = clusterlib_utils.load_envelope(envelope_file=key_file)
-    assert envelope["type"] == spec.envelope_type, envelope
-    assert envelope["description"] == spec.envelope_desc, envelope
-
-    key: bytes = clusterlib_utils.decode_envelope_cbor(envelope=envelope)
-    assert len(key) == spec.key_len, f"Unexpected key length: {len(key)}"
-
-    return key
-
-
-def check_bech32_key(*, key_file: pl.Path, spec: KeySpec) -> bytes:
-    """Check that the file is a bech32 encoded BLS key of the expected kind.
-
-    Args:
-        key_file: A path to the key file.
-        spec: The expected properties of the key.
-
-    Returns:
-        bytes: The raw key material.
-    """
-    key_bech32 = key_file.read_text().strip()
-    assert key_bech32.startswith(spec.bech32_prefix), key_bech32
-
-    key = bytes.fromhex(helpers.decode_bech32(bech32=key_bech32))
-    assert len(key) == spec.key_len, f"Unexpected key length: {len(key)}"
-
-    return key
 
 
 class TestBlsKeys:
@@ -115,8 +48,8 @@ class TestBlsKeys:
         assert key_pair.vkey_file.exists(), f"The file `{key_pair.vkey_file}` doesn't exist"
         assert key_pair.skey_file.exists(), f"The file `{key_pair.skey_file}` doesn't exist"
 
-        check_envelope_key(key_file=key_pair.vkey_file, spec=VKEY_SPEC)
-        check_envelope_key(key_file=key_pair.skey_file, spec=SKEY_SPEC)
+        bls.check_envelope_key(key_file=key_pair.vkey_file, spec=bls.VKEY_SPEC)
+        bls.check_envelope_key(key_file=key_pair.skey_file, spec=bls.SKEY_SPEC)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -139,8 +72,12 @@ class TestBlsKeys:
             for i in range(num_keys)
         ]
 
-        vkeys = {check_envelope_key(key_file=k.vkey_file, spec=VKEY_SPEC) for k in key_pairs}
-        skeys = {check_envelope_key(key_file=k.skey_file, spec=SKEY_SPEC) for k in key_pairs}
+        vkeys = {
+            bls.check_envelope_key(key_file=k.vkey_file, spec=bls.VKEY_SPEC) for k in key_pairs
+        }
+        skeys = {
+            bls.check_envelope_key(key_file=k.skey_file, spec=bls.SKEY_SPEC) for k in key_pairs
+        }
 
         assert len(vkeys) == num_keys, "The generated verification keys are not unique"
         assert len(skeys) == num_keys, "The generated signing keys are not unique"
@@ -177,9 +114,11 @@ class TestBlsKeys:
             ]
         )
 
-        check_key = check_envelope_key if out_format == "text-envelope" else check_bech32_key
-        check_key(key_file=vkey_file, spec=VKEY_SPEC)
-        check_key(key_file=skey_file, spec=SKEY_SPEC)
+        check_key = (
+            bls.check_envelope_key if out_format == "text-envelope" else bls.check_bech32_key
+        )
+        check_key(key_file=vkey_file, spec=bls.VKEY_SPEC)
+        check_key(key_file=skey_file, spec=bls.SKEY_SPEC)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -202,8 +141,8 @@ class TestBlsKeys:
         temp_template = common.get_test_id(cluster)
 
         bls_key_pair = cluster.g_node.gen_bls_key_pair(node_name=temp_template)
-        vkey = check_envelope_key(key_file=bls_key_pair.vkey_file, spec=VKEY_SPEC)
-        check_envelope_key(key_file=bls_key_pair.skey_file, spec=SKEY_SPEC)
+        vkey = bls.check_envelope_key(key_file=bls_key_pair.vkey_file, spec=bls.VKEY_SPEC)
+        bls.check_envelope_key(key_file=bls_key_pair.skey_file, spec=bls.SKEY_SPEC)
 
         node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
         node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
@@ -236,7 +175,7 @@ class TestBlsKeys:
             f"The certificate BLS key `{cert_bls_key.hex()}` doesn't match the generated "
             f"verification key `{vkey.hex()}`"
         )
-        assert len(cert_bls_pop) == POP_LEN, (
+        assert len(cert_bls_pop) == bls.POP_LEN, (
             f"Unexpected proof of possession length: {len(cert_bls_pop)}"
         )
 
@@ -344,6 +283,45 @@ class TestNegativeBlsKeys:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.smoke
+    def test_bls_vkey_not_accepted_as_signing_key(
+        self,
+        cluster: clusterlib.ClusterLib,
+    ):
+        """Try to build a pool registration certificate with a BLS verification key.
+
+        The certificate carries a proof of possession, which the CLI can derive only from
+        the signing key, so there is no command that takes the verification key instead.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
+        owner_stake = cluster.g_stake_address.gen_stake_key_pair(key_name=f"{temp_template}_owner")
+        bls_key_pair = cluster.g_node.gen_bls_key_pair(node_name=temp_template)
+
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_stake_pool.gen_pool_registration_cert(
+                pool_data=clusterlib.PoolData(
+                    pool_name=f"pool_{temp_template}",
+                    pool_pledge=5,
+                    pool_cost=500_000_000,
+                    pool_margin=0.01,
+                ),
+                vrf_vkey_file=node_vrf.vkey_file,
+                cold_vkey_file=node_cold.vkey_file,
+                owner_stake_vkey_files=[owner_stake.vkey_file],
+                bls_signing_key_file=bls_key_pair.vkey_file,
+            )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "TextEnvelope type error" in exc_value, exc_value
+            assert bls.SKEY_SPEC.envelope_type in exc_value, exc_value
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
     def test_bls_skey_not_accepted_as_ed25519(
         self,
         cluster: clusterlib.ClusterLib,
@@ -373,4 +351,4 @@ class TestNegativeBlsKeys:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert "TextEnvelope type error" in exc_value, exc_value
-            assert SKEY_SPEC.envelope_type in exc_value, exc_value
+            assert bls.SKEY_SPEC.envelope_type in exc_value, exc_value

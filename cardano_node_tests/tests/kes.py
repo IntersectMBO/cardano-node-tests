@@ -2,17 +2,67 @@
 
 import datetime
 import logging
+import shutil
 import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import blockers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import http_client
 
 LOGGER = logging.getLogger(__name__)
+
+
+def refresh_opcerts(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    cluster_manager: cluster_management.ClusterManager,
+    node_names: tp.Iterable[str],
+    name_template: str,
+) -> dict[str, int]:
+    """Issue a new operational certificate for each node and restart the cluster nodes.
+
+    A KES key is only good for `maxKESEvolutions` KES periods, so a test that runs on a
+    cluster with a short KES setup has to re-issue the operational certificates to keep
+    the pools forging. All the nodes are restarted, so that the connections between them
+    are established again.
+
+    The nodes are not waited for afterwards: a caller that is about to read the node
+    state, rather than to wait for an epoch, should wait for a new block itself.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        cluster_manager: An instance of `cluster_management.ClusterManager`.
+        node_names: Names of the nodes to refresh, e.g. ``pool1``.
+        name_template: A test identifier used for naming the created files.
+
+    Returns:
+        dict[str, int]: The KES period each node's new certificate starts at.
+    """
+    kes_periods = {}
+
+    for node_name in node_names:
+        pool_rec = cluster_manager.cache.addrs_data[f"node-{node_name}"]
+        kes_period = cluster_obj.g_query.get_kes_period()
+
+        opcert_file = cluster_obj.g_node.gen_node_operational_cert(
+            node_name=f"{name_template}_{node_name}_refreshed_opcert",
+            kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
+            cold_skey_file=pool_rec["cold_key_pair"].skey_file,
+            cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+            kes_period=kes_period,
+        )
+        shutil.copy(opcert_file, pool_rec["pool_operational_cert"])
+        kes_periods[node_name] = kes_period
+
+    LOGGER.info(f"Refreshed operational certificates of {', '.join(kes_periods)}.")
+    cluster_nodes.restart_all_nodes(delay=5)
+
+    return kes_periods
 
 
 # Valid scenarios when we are testing the kes-period-info cli command
