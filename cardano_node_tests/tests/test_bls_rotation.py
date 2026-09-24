@@ -417,8 +417,10 @@ def create_test_pool(
         amount=POOL_OWNERS_FUNDS,
     )
 
+    # A pool name is limited to 50 characters, which a test ID can eat on its own, so the
+    # pool is named after a random string instead
     pool_data = clusterlib.PoolData(
-        pool_name=f"pool_{temp_template}",
+        pool_name=f"pool_{clusterlib.get_rand_str(4)}",
         pool_pledge=1_000,
         pool_cost=cluster_obj.g_query.get_protocol_params().get("minPoolCost", 0),
         pool_margin=0.01,
@@ -640,6 +642,7 @@ def rotate_bls_key(
     pool_creation_out: clusterlib.PoolCreationOutput,
     bls_skey_file: pl.Path | None,
     tx_name: str,
+    cert_suffix: str,
 ) -> None:
     """Re-register a pool with a different BLS signing key, leaving everything else as is.
 
@@ -648,12 +651,15 @@ def rotate_bls_key(
         pool_creation_out: The output of the original pool registration.
         bls_skey_file: A path to the BLS signing key file to register, or `None` to
             submit a certificate that carries no BLS key at all.
-        tx_name: A name of the transaction, also used for naming the certificate.
+        tx_name: A name of the transaction.
+        cert_suffix: A short name of this rotation, added to the pool name. The
+            certificate file is named after the pool, so a rotation needs a name of its
+            own to avoid overwriting the certificate of the original registration. It is
+            kept short because a pool name is limited to 50 characters.
     """
-    # The certificate file is named after the pool, so a rotation needs a name of its
-    # own to avoid overwriting the certificate of the original registration
     pool_data = dataclasses.replace(
-        pool_creation_out.pool_data, pool_name=f"{pool_creation_out.pool_data.pool_name}_{tx_name}"
+        pool_creation_out.pool_data,
+        pool_name=f"{pool_creation_out.pool_data.pool_name}_{cert_suffix}",
     )
 
     cluster_obj.g_stake_pool.register_stake_pool(
@@ -754,6 +760,7 @@ class TestBlsKeyRotation:
             pool_creation_out=pool_creation_out,
             bls_skey_file=new_bls_key_pair.skey_file,
             tx_name=f"{temp_template}_rotate",
+            cert_suffix="rotate",
         )
 
         assert cluster_obj.g_query.get_epoch() == rotate_epoch, (
@@ -873,6 +880,7 @@ class TestBlsKeyRotation:
             pool_creation_out=pool_creation_out,
             bls_skey_file=get_pool_bls_key_pair(pool_creation_out=pool_creation_out).skey_file,
             tx_name=f"{temp_template}_renew",
+            cert_suffix="renew",
         )
 
         assert cluster_obj.g_query.get_epoch() == renew_epoch, (
@@ -1006,6 +1014,7 @@ class TestBlsKeyRotation:
             pool_creation_out=pool_creation_out,
             bls_skey_file=new_bls_key_pair.skey_file,
             tx_name=f"{temp_template}_restore",
+            cert_suffix="restore",
         )
 
         assert cluster_obj.g_query.get_epoch() == restore_epoch, (

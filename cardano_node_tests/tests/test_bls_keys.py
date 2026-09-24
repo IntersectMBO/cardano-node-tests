@@ -156,7 +156,7 @@ class TestBlsKeys:
         owner_stake = cluster.g_stake_address.gen_stake_key_pair(key_name=f"{temp_template}_owner")
 
         pool_data = clusterlib.PoolData(
-            pool_name=f"pool_{temp_template}",
+            pool_name=f"pool_{clusterlib.get_rand_str(4)}",
             pool_pledge=5,
             pool_cost=500_000_000,
             pool_margin=0.01,
@@ -311,7 +311,7 @@ class TestNegativeBlsKeys:
         with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_stake_pool.gen_pool_registration_cert(
                 pool_data=clusterlib.PoolData(
-                    pool_name=f"pool_{temp_template}",
+                    pool_name=f"pool_{clusterlib.get_rand_str(4)}",
                     pool_pledge=5,
                     pool_cost=500_000_000,
                     pool_margin=0.01,
@@ -402,8 +402,10 @@ def register_pool_with_mismatched_pop(
     node_vrf = cluster_obj.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
     node_cold = cluster_obj.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
 
+    # A pool name is limited to 50 characters, which a test ID can eat on its own, so the
+    # pool is named after a random string instead
     pool_data = clusterlib.PoolData(
-        pool_name=f"pool_{temp_template}",
+        pool_name=f"pool_{clusterlib.get_rand_str(4)}",
         pool_pledge=5,
         pool_cost=cluster_obj.g_query.get_protocol_params().get("minPoolCost", 0),
         pool_margin=0.01,
