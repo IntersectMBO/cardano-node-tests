@@ -1,4 +1,8 @@
-"""Properties of the node BLS (Leios voting) keys, shared by the BLS tests.
+"""The node BLS (Leios voting) keys, shared by the BLS tests.
+
+Holds what the key files look like, what the ledger reports for a registered key, and
+the two facts that follow from the key being registered on chain - how long it stays
+honoured, and when the Leios committee starts holding it.
 
 The scheme is BLS12-381 in its minimal signature size variant, so the verification key is
 96 bytes in G2 and a signature is 48 bytes in G1. CIP-0164 fixes the on-chain encodings
@@ -13,6 +17,7 @@ about it.
 """
 
 import dataclasses
+import math
 import pathlib as pl
 
 from cardano_clusterlib import clusterlib
@@ -24,6 +29,12 @@ from cardano_node_tests.utils import helpers
 # certificate. It is mandatory: BLS aggregate signatures are otherwise open to rogue-key
 # attacks, so only a key with a valid proof of possession may occupy a committee seat.
 POP_LEN = 48
+
+# Number of epoch boundaries between the transaction that registers a BLS key and the
+# epoch in which the Leios committee holds it. The first boundary applies the pool
+# update, the second seats the committee from the snapshot that saw the update. That is
+# the VRF key schedule, which CIP-0164 aligns voting keys with.
+BLS_ACTIVATION_EPOCHS = 2
 
 
 @dataclasses.dataclass(frozen=True)
@@ -135,3 +146,36 @@ def get_registered_bls_key(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) 
     """
     pool_params = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
     return helpers.get_pool_param("spsBlsKey", pool_params=pool_params) or {}
+
+
+def get_committee_seat(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> dict:
+    """Return the Leios committee seat of a pool in the current epoch.
+
+    The committee is reported as a whole regardless of the queried pool, so a single
+    pool ID is enough to get it.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
+
+    Returns:
+        dict: The seat of the pool, or an empty dict when the pool holds no seat.
+    """
+    pool_id_dec = helpers.decode_bech32(pool_id) if pool_id.startswith("pool") else pool_id
+    snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=[pool_id_dec])
+    committee: list[dict] = snapshot.get("leiosCommittee") or []
+    return next((s for s in committee if s["poolId"] == pool_id_dec), {})
+
+
+def get_max_key_age(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Return the BLS key lifetime in epochs, as the ledger derives it from genesis.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        int: The number of epochs a registered BLS key is honoured for.
+    """
+    genesis = cluster_obj.genesis
+    kes_lifetime = int(genesis["maxKESEvolutions"]) * int(genesis["slotsPerKESPeriod"])
+    return math.ceil(kes_lifetime / int(genesis["epochLength"])) + 2
