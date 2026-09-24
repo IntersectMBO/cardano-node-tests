@@ -45,6 +45,11 @@ LOGGER = logging.getLogger(__name__)
 DEREG_BUFFER_SEC = 30
 TWO_HOURS_SEC = 2 * 60 * 60
 
+# The first protocol version that rejects a duplicated VRF key. Below it the ledger
+# doesn't even keep the occurrence map the rule is enforced against - see
+# `hardforkConwayDisallowDuplicatedVRFKeys`, which is `pvMajor pv > natVersion @10`.
+VRF_UNIQUENESS_PV = 11
+
 
 @pytest.fixture(scope="module")
 def pool_cost_start_cluster() -> pl.Path:
@@ -2233,6 +2238,112 @@ class TestNegative:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert "Expected: StakeVerificationKeyShelley" in exc_value, exc_value
+
+    @allure.link(helpers.get_vcs_link())
+    # The test takes the VRF key of a cluster pool, which exists only on a local cluster.
+    # The `leios` marker is what selects it for the regression that runs a cluster
+    # starting in Dijkstra, which is the setup the xfail below is about.
+    @pytest.mark.leios
+    @pytest.mark.smoke
+    def test_pool_registration_used_vrf_key(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+        pool_users: list[clusterlib.PoolUser],
+        pool_data: clusterlib.PoolData,
+        testfile_temp_dir: pl.Path,
+        request: FixtureRequest,
+    ):
+        """Try to register a pool with the VRF key of a pool that is already registered.
+
+        A VRF key hash identifies the pool that a block was forged by, so the ledger
+        keeps an occurrence count of every registered one in `psVRFKeyHashes` and rejects
+        a registration that reuses a key another pool holds.
+
+        The rule is enforced against that map, not against the registered pools, so it
+        only covers pools the map knows about. A pool that entered the ledger state
+        through the genesis is not one of them: genesis staking injection fills
+        `psStakePools` and records no VRF occurrence, and the map is otherwise populated
+        only by the Conway PV11 hardfork and the Conway to Dijkstra translation. On a
+        cluster that starts in Dijkstra at slot 0 neither runs, the map stays empty, and
+        this registration is accepted - a pool ends up sharing the VRF key of a cluster
+        pool.
+
+        Conclusive only while the key is unclaimed: the registration this test's failure
+        mode creates is itself recorded, so a run against the same instance while the
+        pool still exists is rejected and passes for a reason that has nothing to do
+        with the genesis gap. `POOLREAP` drops the occurrence again when a pool retires,
+        so the deregistration this test schedules puts the state back.
+
+        Expect failure.
+        """
+        temp_template = common.get_test_id(cluster)
+
+        protocol_ver = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
+        if protocol_ver < VRF_UNIQUENESS_PV:
+            pytest.skip(
+                f"A duplicated VRF key is allowed below protocol version "
+                f"{VRF_UNIQUENESS_PV}, the cluster runs {protocol_ver}"
+            )
+
+        # The VRF key of an already registered pool, taken from the cluster itself. The
+        # pool needs no lock: only its VRF verification key is read, and the pool this
+        # test may create out of it has no stake and so never forges a block.
+        used_pool_rec = cluster_manager.cache.addrs_data[cluster_management.Resources.POOL1]
+        used_vrf_vkey_file = used_pool_rec["vrf_key_pair"].vkey_file
+
+        node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=pool_data.pool_name)
+
+        pool_reg_cert_file = cluster.g_stake_pool.gen_pool_registration_cert(
+            pool_data=pool_data,
+            vrf_vkey_file=used_vrf_vkey_file,
+            cold_vkey_file=node_cold.vkey_file,
+            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+                cluster_obj=cluster, node_name=pool_data.pool_name
+            ),
+        )
+
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[pool_reg_cert_file],
+            signing_key_files=[
+                pool_users[0].payment.skey_file,
+                pool_users[0].stake.skey_file,
+                node_cold.skey_file,
+            ],
+        )
+
+        try:
+            cluster.g_transaction.send_tx(
+                src_address=pool_users[0].payment.address,
+                tx_name=f"{temp_template}_used_vrf_key",
+                tx_files=tx_files,
+            )
+        except clusterlib.CLIError as exc:
+            exc_value = str(exc)
+            with common.allow_unstable_error_messages():
+                assert "VRFKeyHashAlreadyRegistered" in exc_value, exc_value
+            return
+
+        # The registration went through, so there are now two pools with the same VRF
+        # key. Retire the one this test made, which is also what takes the occurrence it
+        # recorded back out of `psVRFKeyHashes`. A pool that comes and goes is normal on
+        # a shared instance, and this one has no stake and so never forges, so the
+        # retirement is cleanup enough and no respin is needed.
+        def _deregister() -> None:
+            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+            with helpers.change_cwd(testfile_temp_dir):
+                cluster.g_stake_pool.deregister_stake_pool(
+                    pool_owners=[pool_users[0]],
+                    cold_key_pair=node_cold,
+                    epoch=cluster.g_query.get_epoch() + depoch,
+                    pool_name=pool_data.pool_name,
+                    tx_name=f"{temp_template}_cleanup",
+                )
+
+        request.addfinalizer(_deregister)
+
+        issues.ledger_6102.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
