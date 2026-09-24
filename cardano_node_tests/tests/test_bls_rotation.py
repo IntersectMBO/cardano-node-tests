@@ -52,7 +52,6 @@ See CIP-0164 and the Leios testnet guide for the operator side of this.
 import dataclasses
 import json
 import logging
-import math
 import pathlib as pl
 import shutil
 import time
@@ -91,12 +90,6 @@ pytestmark = [
         reason="BLS keys and the Leios voting committee are available only in Dijkstra+ eras",
     ),
 ]
-
-# Number of epoch boundaries between the transaction that registers a BLS key and the
-# epoch in which the Leios committee holds it. The first boundary applies the pool
-# update, the second seats the committee from the snapshot that saw the update. That is
-# the VRF key schedule, which CIP-0164 aligns voting keys with.
-BLS_ACTIVATION_EPOCHS = 2
 
 # Number of pool owner addresses created for a test pool
 POOL_OWNERS_NUM = 2
@@ -252,39 +245,6 @@ def get_future_bls_key(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> d
     """
     future_params = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).future_pool_params
     return future_params.get("blsKey") or {}
-
-
-def get_committee_seat(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> dict:
-    """Return the Leios committee seat of a pool in the current epoch.
-
-    The committee is reported as a whole regardless of the queried pool, so a single
-    pool ID is enough to get it.
-
-    Args:
-        cluster_obj: An instance of `clusterlib.ClusterLib`.
-        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
-
-    Returns:
-        dict: The seat of the pool, or an empty dict when the pool holds no seat.
-    """
-    pool_id_dec = helpers.decode_bech32(pool_id) if pool_id.startswith("pool") else pool_id
-    snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=[pool_id_dec])
-    committee: list[dict] = snapshot.get("leiosCommittee") or []
-    return next((s for s in committee if s["poolId"] == pool_id_dec), {})
-
-
-def get_max_key_age(*, cluster_obj: clusterlib.ClusterLib) -> int:
-    """Return the BLS key lifetime in epochs, as the ledger derives it from genesis.
-
-    Args:
-        cluster_obj: An instance of `clusterlib.ClusterLib`.
-
-    Returns:
-        int: The number of epochs a registered BLS key is honoured for.
-    """
-    genesis = cluster_obj.genesis
-    kes_lifetime = int(genesis["maxKESEvolutions"]) * int(genesis["slotsPerKESPeriod"])
-    return math.ceil(kes_lifetime / int(genesis["epochLength"])) + 2
 
 
 def write_bls_key_bundle(*, key_files: list[pl.Path], out_file: pl.Path) -> pl.Path:
@@ -569,7 +529,7 @@ def check_seat_voting(
         expected_vkey: The hex encoded BLS key the seat is expected to hold (optional).
         context: Added to the reported message, to say why the pool should be voting.
     """
-    seat = get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+    seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
 
     if not seat:
         errors.append(
@@ -608,7 +568,7 @@ def check_seat_keyless(
         epoch: The epoch the seat is checked in, for the reported message.
         errors: Collects the failures, appended to in place.
     """
-    seat = get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+    seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
 
     if not seat:
         errors.append(
@@ -830,7 +790,7 @@ class TestBlsKeyRotation:
 
         # The committee of this epoch was seated before the update, so it still holds
         # the old key
-        seat = get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+        seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
         assert seat, f"The pool holds no Leios committee seat in epoch {this_epoch}"
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == orig_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the original BLS key: {seat}"
@@ -842,9 +802,9 @@ class TestBlsKeyRotation:
         # One more boundary and the committee is seated from the snapshot that saw the
         # update
         this_epoch = cluster_obj.wait_for_epoch(
-            epoch_no=rotate_epoch + BLS_ACTIVATION_EPOCHS, padding_seconds=5
+            epoch_no=rotate_epoch + bls.BLS_ACTIVATION_EPOCHS, padding_seconds=5
         )
-        seat = get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+        seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
         assert seat, f"The pool holds no Leios committee seat in epoch {this_epoch}"
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == new_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the rotated BLS key: {seat}"
@@ -1020,9 +980,9 @@ class TestBlsKeyRotation:
 
         # A pool with no key is still seated, it just cannot vote with its weight
         this_epoch = cluster_obj.wait_for_epoch(
-            epoch_no=reg_epoch + BLS_ACTIVATION_EPOCHS, padding_seconds=5
+            epoch_no=reg_epoch + bls.BLS_ACTIVATION_EPOCHS, padding_seconds=5
         )
-        seat = get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+        seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
         assert seat, f"The pool holds no Leios committee seat in epoch {this_epoch}"
         assert seat.get("key") is None, (
             f"The keyless pool got a key on the Leios committee of epoch {this_epoch}: {seat}"
@@ -1100,7 +1060,7 @@ class TestBlsKeyExpiration:
         cluster = cluster_short_bls_keyage
         temp_template = common.get_test_id(cluster)
 
-        max_key_age = get_max_key_age(cluster_obj=cluster)
+        max_key_age = bls.get_max_key_age(cluster_obj=cluster)
         assert max_key_age == SHORT_MAX_KEY_AGE, (
             f"The cluster instance gives BLS keys a lifetime of {max_key_age} epochs, "
             f"expected {SHORT_MAX_KEY_AGE}"
@@ -1129,8 +1089,8 @@ class TestBlsKeyExpiration:
         expire_epoch = orig_bls_key["bksRegisteredIn"] + max_key_age
 
         # The rotated key has to be seated before `expire_epoch`, and the rotation needs
-        # `BLS_ACTIVATION_EPOCHS` epoch boundaries to get there
-        rotate_epoch = expire_epoch - BLS_ACTIVATION_EPOCHS - 1
+        # `bls.BLS_ACTIVATION_EPOCHS` epoch boundaries to get there
+        rotate_epoch = expire_epoch - bls.BLS_ACTIVATION_EPOCHS - 1
         # The operational certificates are refreshed before the rotation, while the KES
         # keys of the pools are still valid
         refresh_epoch = rotate_epoch - 1
@@ -1394,7 +1354,7 @@ class TestBlsKeyRotationVoting:
         this_epoch = cluster.wait_for_epoch(
             epoch_no=rotate_epoch + 1, padding_seconds=5, future_is_ok=False
         )
-        seat = get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
+        seat = bls.get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == orig_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the original BLS key "
             f"of '{pool_name}': {seat}"
@@ -1410,9 +1370,9 @@ class TestBlsKeyRotationVoting:
 
         # One more boundary and the rotated key is the seated one
         this_epoch = cluster.wait_for_epoch(
-            epoch_no=rotate_epoch + BLS_ACTIVATION_EPOCHS, padding_seconds=5
+            epoch_no=rotate_epoch + bls.BLS_ACTIVATION_EPOCHS, padding_seconds=5
         )
-        seat = get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
+        seat = bls.get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == new_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the rotated BLS key "
             f"of '{pool_name}': {seat}"
