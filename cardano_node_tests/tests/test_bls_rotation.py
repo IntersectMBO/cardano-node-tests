@@ -41,6 +41,11 @@ today: re-registration through the pool certificate, with the key time-to-live d
 from the KES setup. The CIP requires rotation and a corresponding time-to-live, but
 neither the certificate route nor the formula is settled there.
 
+The two tests that rotate the key of a *cluster* pool need that pool to be
+re-registrable, which a pool whose parameters come from the genesis is not - see
+`reregister_cluster_pool`. They xfail on such an instance, so today they run for real
+only on a testnet variant that starts before Dijkstra and hard-forks into it.
+
 See CIP-0164 and the Leios testnet guide for the operator side of this.
 """
 
@@ -63,6 +68,7 @@ from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import bls
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import kes
 from cardano_node_tests.tests import leios
 from cardano_node_tests.tests import markers
@@ -189,12 +195,13 @@ def cluster_short_bls_keyage(
             f"{wait_sec:.0f} sec on the '{configuration.TESTNET_VARIANT}' testnet variant"
         )
 
-    return cluster_manager.get(
+    cluster_obj = cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
         cleanup=True,
         scriptsdir=short_bls_keyage_start_cluster,
     )
+    return cluster_obj
 
 
 @pytest.fixture
@@ -620,6 +627,51 @@ def check_seat_keyless(
             f"The pool '{pool_name}' is still voting in epoch {epoch}, although its BLS key "
             f"expired: {seat}"
         )
+
+
+def reregister_cluster_pool(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    pool_rec: dict,
+    pool_name: str,
+    pool_id: str,
+    bls_skey_file: pl.Path,
+    tx_name: str,
+) -> None:
+    """Re-register a cluster pool with a new BLS key, keeping everything else as it is.
+
+    Xfails on a cluster instance whose pools came from the genesis: the ledger records no
+    occurrence of their VRF key hash, so the Dijkstra `POOL` rule rejects the update with
+    `VRFKeyHashAlreadyRegistered` even though the VRF key does not change. Once the ledger
+    populates the map on genesis injection, the rejection stops and the tests run.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        pool_rec: The addresses and keys of the pool, from the cluster manager cache.
+        pool_name: A name of the pool, e.g. ``node-pool1``.
+        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
+        bls_skey_file: A path to the BLS signing key file to register.
+        tx_name: A name of the transaction.
+    """
+    pool_data = clusterlib_utils.load_registered_pool_data(
+        cluster_obj=cluster_obj, pool_name=f"rotated_{pool_name}", pool_id=pool_id
+    )
+
+    try:
+        cluster_obj.g_stake_pool.register_stake_pool(
+            pool_data=pool_data,
+            pool_owners=[clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])],
+            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
+            cold_key_pair=pool_rec["cold_key_pair"],
+            tx_name=tx_name,
+            reward_account_vkey_file=pool_rec["reward"].vkey_file,
+            bls_signing_key_file=bls_skey_file,
+            deposit=0,  # no additional deposit, the pool is already registered
+        )
+    except clusterlib.CLIError as excinfo:
+        if "VRFKeyHashAlreadyRegistered" not in str(excinfo):
+            raise
+        issues.ledger_6102.finish_test()
 
 
 def rotate_bls_key(
@@ -1136,20 +1188,13 @@ class TestBlsKeyExpiration:
             force=True,
         )
 
-        pool_data = clusterlib_utils.load_registered_pool_data(
+        reregister_cluster_pool(
             cluster_obj=cluster,
-            pool_name=f"rotated_{rotated_pool_name}",
+            pool_rec=rotated_pool_rec,
+            pool_name=rotated_pool_name,
             pool_id=rotated_pool_id,
-        )
-        cluster.g_stake_pool.register_stake_pool(
-            pool_data=pool_data,
-            pool_owners=[pool_owner],
-            vrf_vkey_file=rotated_pool_rec["vrf_key_pair"].vkey_file,
-            cold_key_pair=rotated_pool_rec["cold_key_pair"],
+            bls_skey_file=new_bls_key_pair.skey_file,
             tx_name=f"{temp_template}_rotate",
-            reward_account_vkey_file=rotated_pool_rec["reward"].vkey_file,
-            bls_signing_key_file=new_bls_key_pair.skey_file,
-            deposit=0,  # no additional deposit, the pool is already registered
         )
 
         assert cluster.g_query.get_epoch() == rotate_epoch, (
@@ -1315,19 +1360,13 @@ class TestBlsKeyRotationVoting:
             force=True,
         )
 
-        cluster.g_stake_pool.register_stake_pool(
-            pool_data=clusterlib_utils.load_registered_pool_data(
-                cluster_obj=cluster,
-                pool_name=f"rotated_{pool_name}",
-                pool_id=pool_id,
-            ),
-            pool_owners=[pool_owner],
-            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
-            cold_key_pair=pool_rec["cold_key_pair"],
+        reregister_cluster_pool(
+            cluster_obj=cluster,
+            pool_rec=pool_rec,
+            pool_name=pool_name,
+            pool_id=pool_id,
+            bls_skey_file=new_bls_key_pair.skey_file,
             tx_name=f"{temp_template}_rotate",
-            reward_account_vkey_file=pool_rec["reward"].vkey_file,
-            bls_signing_key_file=new_bls_key_pair.skey_file,
-            deposit=0,  # no additional deposit, the pool is already registered
         )
 
         assert cluster.g_query.get_epoch() == rotate_epoch, (

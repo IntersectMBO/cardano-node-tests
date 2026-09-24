@@ -222,6 +222,11 @@ ledger_5788 = blockers.GH(
     repo="IntersectMBO/cardano-ledger",
     message="queryStakeSnapshots returns 1 for empty snapshots instead of 0.",
 )
+ledger_6102 = blockers.GH(
+    issue=6102,
+    repo="IntersectMBO/cardano-ledger",
+    message="Genesis staking injection leaves `psVRFKeyHashes` empty.",
+)
 
 network_5281 = blockers.GH(
     issue=5281,
