@@ -26,6 +26,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import pytest_utils
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
@@ -203,6 +204,8 @@ def register_delegate_stake_addr(
         raw_fee=raw_fee,
     )
 
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
+
     # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit()
     assert (
@@ -287,6 +290,8 @@ def register_stake_addr(
             complex_certs=[reg_cert_script],
             fee=300_000,
         )
+
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output_reg)
 
     # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit()
@@ -374,6 +379,10 @@ def delegate_stake_addr(
             complex_certs=[deleg_cert_script],
             fee=300_000,
         )
+
+    node_consistency.check_tx_on_all_nodes(
+        cluster_obj=cluster_obj, tx_raw_output=tx_raw_output_deleg
+    )
 
     # Check that the balance for source address was correctly updated
     assert (
@@ -475,6 +484,8 @@ def deregister_stake_addr(
             script_withdrawals=[withdrawal_script],
             fee=400_000,
         )
+
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_output)
 
     # Check that the key deposit was returned and rewards withdrawn
     assert (
@@ -748,6 +759,7 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_step1",
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_step1)
 
         step1_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step1)
         utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(
@@ -978,6 +990,7 @@ class TestDelegateAddr:
             tx_name=f"{temp_template}_step1",
         )
         cluster.g_transaction.submit_tx(tx_file=tx_signed_step1, txins=tx_output_step1.txins)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_step1)
 
         step1_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output_step1)
         utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(

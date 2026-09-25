@@ -122,7 +122,7 @@ class TestTreasuryDonation:
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
         ), f"Incorrect balance for source address `{payment_addr_treasury.address}`"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.xdist_split(markers.XdSplits.heavy)
@@ -174,7 +174,7 @@ class TestTreasuryDonation:
             == clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee - amount
         ), f"Incorrect balance for source address `{payment_addr_singleton.address}`"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
         assert (

@@ -11,6 +11,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
@@ -78,6 +79,7 @@ def _cast_vote(
         build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     expected_balance = clusterlib.calculate_utxos_balance(tx_output.txins) - tx_output.fee
@@ -429,6 +431,7 @@ def auth_cc_members(
         build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     reg_out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     filtered_utxos = clusterlib.filter_utxos(utxos=reg_out_utxos, address=payment_addr.address)
@@ -498,6 +501,7 @@ def reinstate_committee(  # noqa: C901
         build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files_action,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output_action)
 
     out_utxos_action = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_action)
     filtered_utxos = clusterlib.filter_utxos(

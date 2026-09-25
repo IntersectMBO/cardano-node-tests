@@ -17,6 +17,7 @@ from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 from cardano_node_tests.utils.versions import EraName
@@ -361,6 +362,7 @@ class TestDelegateAddr:
             tx_files=tx_files,
         )
 
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         assert cluster.g_query.get_epoch() == init_epoch, (
             "Delegation took longer than expected and would affect other checks"
         )
@@ -542,6 +544,9 @@ class TestDelegateAddr:
                 clusterlib.TxOut(address=delegation_out.pool_user.stake.address, amount=-1)
             ],
         )
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
+        )
 
         # Check that the key deposit was returned and rewards withdrawn
         assert (
@@ -719,6 +724,9 @@ class TestDelegateAddr:
                 clusterlib.TxOut(address=delegation_out.pool_user.stake.address, amount=-1)
             ],
         )
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
+        )
 
         # Check that the key deposit was returned and rewards withdrawn
         assert (
@@ -846,6 +854,7 @@ class TestDelegateAddr:
                 clusterlib.TxOut(address=delegation_out.pool_user.stake.address, amount=-1)
             ],
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_undeleg)
 
         # Check that the key deposit was NOT returned and rewards were withdrawn
         assert (

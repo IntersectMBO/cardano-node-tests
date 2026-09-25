@@ -38,6 +38,7 @@ from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -209,6 +210,7 @@ class TestGovActionAnchor:
             - deposit_amt
         ), f"Incorrect balance for source address `{pool_user.payment.address}`"
 
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_action)
         return cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
 
     @allure.link(helpers.get_vcs_link())

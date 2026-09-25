@@ -13,6 +13,7 @@ from cardano_clusterlib import clusterlib
 import cardano_node_tests.utils.types as ttypes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import web
 
 LOGGER = logging.getLogger(__name__)
@@ -808,7 +809,7 @@ def create_dreps(
         ],
     )
 
-    clusterlib_utils.build_and_submit_tx(
+    tx_output = clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster_obj,
         name_template=f"{name_template}_reg",
         src_address=payment_addr.address,
@@ -817,6 +818,7 @@ def create_dreps(
         deposit=(drep_reg_records[0].deposit + stake_deposit) * len(drep_reg_records),
         destination_dir=destination_dir,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     return drep_reg_records, drep_users
 
@@ -907,7 +909,7 @@ def create_script_dreps(
         ],
     )
 
-    clusterlib_utils.build_and_submit_tx(
+    tx_output = clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster_obj,
         name_template=f"{name_template}_reg",
         src_address=payment_addr.address,
@@ -921,6 +923,7 @@ def create_script_dreps(
         deposit=(drep_reg_records[0].deposit + stake_deposit) * len(drep_reg_records),
         destination_dir=destination_dir,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     return drep_script_data, drep_users
 
