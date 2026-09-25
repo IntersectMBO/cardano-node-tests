@@ -1092,10 +1092,25 @@ class TestBlsKeyExpiration:
             if p != rotated_pool_name
         }
 
-        # The keys the pools registered on cluster startup all expire at the same epoch
-        orig_bls_key = bls.get_registered_bls_key(cluster_obj=cluster, pool_id=rotated_pool_id)
-        assert orig_bls_key, f"The pool '{rotated_pool_name}' has no registered BLS key"
-        expire_epoch = orig_bls_key["bksRegisteredIn"] + max_key_age
+        # The keys the pools registered on cluster startup all expire at the same epoch.
+        # The test puts every pool on that one schedule, which holds only while they
+        # really do share a registration epoch: the check that every pool still votes in
+        # `expire_epoch - 1` and the check that none of them does in `expire_epoch` are
+        # contradictory as soon as the stamps differ, so it is asserted and not assumed.
+        reg_epochs: dict[str, int] = {}
+        for pool_name, pool_id in (
+            (rotated_pool_name, rotated_pool_id),
+            *expired_pool_ids.items(),
+        ):
+            pool_bls_key = bls.get_registered_bls_key(cluster_obj=cluster, pool_id=pool_id)
+            assert pool_bls_key, f"The pool '{pool_name}' has no registered BLS key"
+            reg_epochs[pool_name] = pool_bls_key["bksRegisteredIn"]
+
+        assert len(set(reg_epochs.values())) == 1, (
+            "The pools registered their BLS keys in different epochs, so their keys don't "
+            f"all expire in the same one: {reg_epochs}"
+        )
+        expire_epoch = reg_epochs[rotated_pool_name] + max_key_age
 
         # The rotated key has to be seated before `expire_epoch`, and the rotation needs
         # `bls.BLS_ACTIVATION_EPOCHS` epoch boundaries to get there

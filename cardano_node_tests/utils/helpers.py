@@ -297,6 +297,22 @@ def encode_bech32(*, prefix: str, data: str) -> str:
     return run_command(["bech32", prefix], stdin_data=f"{data}\n".encode()).decode().strip()
 
 
+def get_pool_id_hex(pool_id: str) -> str:
+    """Return a stake pool ID hex encoded.
+
+    The ledger reports a pool ID as hex, while the CLI hands it out Bech32-encoded, so a
+    pool ID that comes from one side has to be normalized before it is matched against
+    the other.
+
+    Args:
+        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
+
+    Returns:
+        str: The hex encoded pool ID.
+    """
+    return decode_bech32(pool_id) if pool_id.startswith("pool") else pool_id
+
+
 def check_dir_arg(dir_path: str) -> pl.Path | None:
     """Check that the dir passed as argparse parameter is a valid existing dir."""
     if not dir_path:
