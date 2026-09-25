@@ -161,7 +161,7 @@ def get_committee_seat(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> d
     Returns:
         dict: The seat of the pool, or an empty dict when the pool holds no seat.
     """
-    pool_id_dec = helpers.decode_bech32(pool_id) if pool_id.startswith("pool") else pool_id
+    pool_id_dec = helpers.get_pool_id_hex(pool_id)
     snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=[pool_id_dec])
     committee: list[dict] = snapshot.get("leiosCommittee") or []
     return next((s for s in committee if s["poolId"] == pool_id_dec), {})

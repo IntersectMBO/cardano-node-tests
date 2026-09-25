@@ -96,6 +96,14 @@ NOT_VOTED_KEY_MSGS = (
     r"Consensus\.LeiosKernel\.NotVoted\].*Leios not voted for .*: SignerHasNoKey",
 )
 
+# Every reason a pool can report for being unable to vote on an EB announcement it
+# received - the pool is off the committee, or the key its node holds matches no seat.
+# They are not interchangeable: a pool the committee has no room for reports
+# `NotOnCommittee`, and only a pool that does hold a seat gets one of the key messages.
+# Grouped for a check that has to notice a pool declining without caring which of these
+# it was, e.g. because any of them is wrong in the situation being checked.
+NOT_VOTED_MSGS = (NOT_ON_COMMITTEE_MSG, *NOT_VOTED_KEY_MSGS)
+
 # The first epoch in which a pool registered by a transaction can be a member of the
 # Leios voting committee. The committee is drawn from a stake distribution snapshot
 # that is empty for the whole lifetime of a freshly started cluster instance until this
@@ -161,6 +169,30 @@ def is_committee_seated_in_genesis(*, genesis: dict) -> bool:
     return any(p.get("blsKey") for p in pools.values())
 
 
+def skip_if_no_ebs_in_genesis(*, genesis: dict) -> None:
+    """Skip the test when the genesis settings don't allow an EB to be forged.
+
+    Takes the genesis instead of a cluster instance, so that a test which starts a
+    cluster of its own can be ruled out before paying for the startup.
+
+    Args:
+        genesis: The Shelley genesis of the cluster instance, or the genesis spec the
+            instance is started from.
+    """
+    slot_length = float(genesis["slotLength"])
+    block_interval = slot_length / float(genesis["activeSlotsCoeff"])
+    if block_interval >= MIN_BLOCK_INTERVAL_SEC:
+        return
+
+    epoch_length_sec = float(genesis["epochLength"]) * slot_length
+    pytest.skip(
+        f"Cannot observe EBs on the '{configuration.TESTNET_VARIANT}' testnet variant: "
+        f"a block is produced every {block_interval} sec (epoch is "
+        f"{epoch_length_sec:.0f} sec), which is too fast for a mempool backlog to "
+        f"build up for an EB; needs at least {MIN_BLOCK_INTERVAL_SEC} sec per block"
+    )
+
+
 def skip_if_no_ebs(*, cluster_obj: clusterlib.ClusterLib) -> None:
     """Skip the test when the cluster settings don't allow an EB to be forged.
 
@@ -170,14 +202,7 @@ def skip_if_no_ebs(*, cluster_obj: clusterlib.ClusterLib) -> None:
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
     """
-    block_interval = cluster_obj.slot_length / float(cluster_obj.genesis["activeSlotsCoeff"])
-    if block_interval < MIN_BLOCK_INTERVAL_SEC:
-        pytest.skip(
-            f"Cannot observe EBs on the '{configuration.TESTNET_VARIANT}' testnet variant: "
-            f"a block is produced every {block_interval} sec (epoch is "
-            f"{cluster_obj.epoch_length_sec} sec), which is too fast for a mempool backlog to "
-            f"build up for an EB; needs at least {MIN_BLOCK_INTERVAL_SEC} sec per block"
-        )
+    skip_if_no_ebs_in_genesis(genesis=cluster_obj.genesis)
 
 
 @dataclasses.dataclass
