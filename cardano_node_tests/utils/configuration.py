@@ -68,15 +68,23 @@ FORBID_RESTART = helpers.is_truthy_env_var("FORBID_RESTART")
 FORCE_SAVE_CLUSTER_ARTIFACTS = helpers.is_truthy_env_var("FORCE_SAVE_CLUSTER_ARTIFACTS")
 
 BOOTSTRAP_DIR = helpers.get_env_path("BOOTSTRAP_DIR")
-if BOOTSTRAP_DIR and not (BOOTSTRAP_DIR / "genesis-shelley.json").exists():
-    __msg = (
-        f"The `BOOTSTRAP_DIR` is set to '{BOOTSTRAP_DIR}'"
-        ", but the 'genesis-shelley.json' file is not found."
-    )
-    raise RuntimeError(__msg)
-
 NUM_POOLS = helpers.get_env_int("NUM_POOLS", 3)
-if not BOOTSTRAP_DIR and NUM_POOLS < 3:
+
+if BOOTSTRAP_DIR:
+    if not (BOOTSTRAP_DIR / "genesis-shelley.json").exists():
+        __msg = (
+            f"The `BOOTSTRAP_DIR` is set to '{BOOTSTRAP_DIR}'"
+            ", but the 'genesis-shelley.json' file is not found."
+        )
+        raise RuntimeError(__msg)
+
+    if CLUSTERS_COUNT != 1:
+        __msg = (
+            f"Invalid CLUSTERS_COUNT '{CLUSTERS_COUNT}': must be 1 when BOOTSTRAP_DIR is set"
+            " (set CLUSTERS_COUNT=1 explicitly)"
+        )
+        raise RuntimeError(__msg)
+elif NUM_POOLS < 3:
     __msg = f"Invalid NUM_POOLS '{NUM_POOLS}': must be >= 3"
     raise RuntimeError(__msg)
 
