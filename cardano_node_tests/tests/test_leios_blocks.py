@@ -512,7 +512,7 @@ class TestLeios:
         cluster = cluster_leios
         common.get_test_id(cluster)
 
-        if leios.is_committee_seated_in_genesis(genesis=cluster.genesis):
+        if leios.is_committee_seated_in_genesis(cluster_obj=cluster):
             pytest.skip(
                 "The pools are on the Leios voting committee from epoch 0, as their BLS keys "
                 "come from the genesis, so there is no epoch in which a vote is premature"
@@ -671,7 +671,7 @@ class TestLeiosCommitteeRank:
         # A pool registered by a transaction is on no committee until this epoch. The
         # wait is a no-op when the pools come with their BLS key straight from the
         # genesis, which is the setup this test normally runs on.
-        if not leios.is_committee_seated_in_genesis(genesis=cluster.genesis):
+        if not leios.is_committee_seated_in_genesis(cluster_obj=cluster):
             cluster.wait_for_epoch(epoch_no=leios.VOTING_START_EPOCH, padding_seconds=5)
 
         # Start the search early enough in an epoch for the whole window to fit into it

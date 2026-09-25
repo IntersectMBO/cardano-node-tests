@@ -141,7 +141,7 @@ MIN_SEARCH_SEC = 120
 MIN_BLOCK_INTERVAL_SEC = 10
 
 
-def is_committee_seated_in_genesis(*, genesis: dict) -> bool:
+def is_committee_seated_in_genesis(*, cluster_obj: clusterlib.ClusterLib) -> bool:
     """Check whether the Leios voting committee is seated from epoch 0.
 
     A pool can vote once its BLS key is in a stake distribution snapshot the committee
@@ -158,14 +158,16 @@ def is_committee_seated_in_genesis(*, genesis: dict) -> bool:
     that.
 
     Args:
-        genesis: The Shelley genesis of the cluster instance.
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
 
     Returns:
         `True` when a pool is on the voting committee from epoch 0.
     """
-    pools: dict = genesis.get("extraConfig", {}).get("stakePools", {}).get("data") or genesis.get(
-        "staking", {}
-    ).get("pools", {})
+    # `ClusterLib.genesis` doesn't have the pool entries
+    genesis = cluster_obj.load_full_genesis()
+    pools: dict = (genesis.get("extraConfig") or {}).get("stakePools", {}).get(
+        "data"
+    ) or genesis.get("staking", {}).get("pools", {})
     return any(p.get("blsKey") for p in pools.values())
 
 
