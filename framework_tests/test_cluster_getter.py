@@ -1494,7 +1494,7 @@ def test_get_cluster_instance_respin_cycle(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(cluster_getter.cluster_nodes, "set_cluster_env", lambda **_kwargs: None)
     # Make the test independent of the environment it runs in
     monkeypatch.setattr(configuration, "DEV_CLUSTER_RUNNING", False)
-    monkeypatch.setattr(configuration, "FORBID_RESTART", False)
+    monkeypatch.setattr(configuration, "FORBID_RESPIN", False)
 
     instance_num = getter.get_cluster_instance()
 
@@ -1527,7 +1527,7 @@ def test_get_cluster_instance_marked_respin_locks_resources(monkeypatch: pytest.
     monkeypatch.setattr(cluster_getter.cluster_nodes, "set_cluster_env", lambda **_kwargs: None)
     # Make the test independent of the environment it runs in
     monkeypatch.setattr(configuration, "DEV_CLUSTER_RUNNING", False)
-    monkeypatch.setattr(configuration, "FORBID_RESTART", False)
+    monkeypatch.setattr(configuration, "FORBID_RESPIN", False)
 
     instance_num = getter.get_cluster_instance(
         mark="markA",

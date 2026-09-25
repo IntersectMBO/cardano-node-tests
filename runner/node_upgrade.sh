@@ -85,7 +85,7 @@ mkdir -p "$COVERAGE_DIR"
 export SCHEDULING_LOG="${WORKDIR}/scheduling.log"
 : > "$SCHEDULING_LOG"
 
-export DEV_CLUSTER_RUNNING=true FORBID_RESTART=true CLUSTERS_COUNT=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
+export DEV_CLUSTER_RUNNING=true FORBID_RESPIN=true CLUSTERS_COUNT=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
 
 echo "::endgroup::"  # end group for "Script setup"
 

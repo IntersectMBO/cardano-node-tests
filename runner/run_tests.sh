@@ -20,7 +20,7 @@
 #     `#` comments, blank lines and surrounding whitespace are stripped before the
 #     file is handed to pytest)
 #   CLUSTERS_COUNT: number of local testnet clusters to launch
-#   FORBID_RESTART: if set to true, do not restart clusters between tests
+#   FORBID_RESPIN: if set to true, do not respin clusters between tests
 #   SESSION_TIMEOUT: timeout for the test session (e.g. 3h for 3 hours)
 #
 # Notes:
@@ -47,7 +47,7 @@ Usage: "$0" [tests|testpr|testnets]
 Targets:
   tests     Run all tests (default TEST_THREADS=20), DbSyncAbortOnPanic=1
   testpr    Run PR-level tests (default CLUSTERS_COUNT=5, TEST_THREADS=20, MARKEXPR="smoke")
-  testnets  Run tests that can run on public testnets (CLUSTERS_COUNT=1, FORBID_RESTART=true,
+  testnets  Run tests that can run on public testnets (CLUSTERS_COUNT=1, FORBID_RESPIN=true,
             default TEST_THREADS=6, MARKEXPR="testnets")
 
 All targets respect the env vars documented at the top of this script.
@@ -211,7 +211,7 @@ target_testpr() {
 }
 
 target_testnets() {
-  export FORBID_RESTART=true
+  export FORBID_RESPIN=true
   export CLUSTERS_COUNT=1
   TEST_THREADS="${TEST_THREADS:-6}"
   SESSION_TIMEOUT="${SESSION_TIMEOUT:-24h}"

@@ -150,7 +150,7 @@ NODE_REV=11.1.1 BOOTSTRAP_DIR=~/tmp/preview_config/ ./runner/regression.sh
 ```
 
 Setting `BOOTSTRAP_DIR` switches `TESTNET_VARIANT` to `testnets` and the run target to
-`testnets`: `CLUSTERS_COUNT=1`, `FORBID_RESTART=true` (the cluster can never be restarted),
+`testnets`: `CLUSTERS_COUNT=1`, `FORBID_RESPIN=true` (the cluster can never be respun),
 6 workers, 24 hour session timeout, `-m testnets`.
 
 **Why only a subset:** only tests marked `@pytest.mark.testnets` are selected. Preview epochs
@@ -169,7 +169,7 @@ mixed versions.
 **How it runs:** workflow `03 Upgrade tests` (`.github/workflows/upgrade.yaml`), or
 `runner/node_upgrade.sh` with `BASE_TAR_URL` (a released binary tarball; see
 `runner/env_nightly_upgrade`) or `BASE_REVISION`, plus `UPGRADE_REVISION=<tag>`. One cluster,
-4 pools, 10 workers, `FORBID_RESTART=true`.
+4 pools, 10 workers, `FORBID_RESPIN=true`.
 
 Three steps, driven by `runner/node_upgrade_pytest.sh`, each producing its own report:
 
