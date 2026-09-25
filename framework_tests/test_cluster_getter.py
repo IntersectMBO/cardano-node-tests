@@ -9,6 +9,7 @@ from cardano_node_tests.cluster_management import cluster_getter
 from cardano_node_tests.cluster_management import resources
 from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.cluster_management import status_db
+from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import types as ttypes
 
@@ -1550,3 +1551,62 @@ def test_get_cluster_instance_marked_respin_locks_resources(monkeypatch: pytest.
     # `cleanup` of a marked test promises a respin after the marked group is finished
     assert len(status_db.list_respin_after_mark(instance_num=0)) == 1
     assert len(status_db.list_test_running(instance_num=0, worker_id="gw0")) == 1
+
+
+@pytest.mark.usefixtures("db_dir")
+class TestIsHealthy:
+    """Tests for `ClusterGetter._is_healthy`."""
+
+    @staticmethod
+    def _status(name: str, status: str = "RUNNING") -> cluster_nodes.ServiceStatus:
+        return cluster_nodes.ServiceStatus(name=name, status=status, pid=None, uptime=None)
+
+    def _patch(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        statuses: list[cluster_nodes.ServiceStatus],
+        stalled: tp.Collection[str] = (),
+    ) -> list[list[cluster_nodes.ServiceStatus]]:
+        """Patch the services and stall checks, return the statuses passed to the latter."""
+        checked: list[list[cluster_nodes.ServiceStatus]] = []
+
+        def _fake_get_stalled_nodes(
+            statuses: tp.Iterable[cluster_nodes.ServiceStatus], **_kwargs: tp.Any
+        ) -> list[str]:
+            statuses = list(statuses)
+            checked.append(statuses)
+            return [s.name for s in statuses if s.name in stalled]
+
+        monkeypatch.setattr(cluster_nodes, "services_status", lambda **_kwargs: statuses)
+        monkeypatch.setattr(cluster_nodes, "get_stalled_nodes", _fake_get_stalled_nodes)
+        return checked
+
+    def test_healthy(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that an instance with no failed service and no stalled node is healthy."""
+        statuses = [
+            self._status("nodes:pool1"),
+            self._status("nodes:pool2", status="STOPPED"),
+            self._status("submit_api"),
+        ]
+        checked = self._patch(monkeypatch, statuses=statuses)
+
+        assert _get_cluster_getter()._is_healthy(0)
+        assert checked == [statuses]
+
+    def test_failed_service(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that an instance with a failed service is unhealthy."""
+        checked = self._patch(
+            monkeypatch,
+            statuses=[self._status("nodes:pool1"), self._status("submit_api", status="FATAL")],
+        )
+
+        assert not _get_cluster_getter()._is_healthy(0)
+        assert not checked
+
+    def test_stalled_node(self, monkeypatch: pytest.MonkeyPatch):
+        """Check that an instance with a stalled node is unhealthy."""
+        statuses = [self._status("nodes:pool1"), self._status("nodes:pool3")]
+        checked = self._patch(monkeypatch, statuses=statuses, stalled={"nodes:pool3"})
+
+        assert not _get_cluster_getter()._is_healthy(0)
+        assert checked == [statuses]
