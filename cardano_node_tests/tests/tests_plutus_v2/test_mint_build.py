@@ -90,7 +90,7 @@ def _build_reference_txin(
     reference_txin = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
     assert reference_txin, "UTxO not created"
 
-    node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output)
 
     return reference_txin
 
@@ -212,7 +212,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -360,7 +360,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -506,7 +506,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -635,7 +635,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (
@@ -779,7 +779,7 @@ class TestBuildMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_step2)
 
         # Check that reference UTxO was NOT spent
         assert not reference_utxo or cluster.g_query.get_utxo(utxo=reference_utxo), (

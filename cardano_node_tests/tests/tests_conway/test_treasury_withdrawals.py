@@ -19,6 +19,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -230,6 +231,7 @@ class TestTreasuryWithdrawals:
             tx_files=tx_files_action,
             deposit=actions_deposit_combined + stake_deposit_amt,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_action)
 
         assert cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).address, (
             f"Stake address is not registered: {recv_stake_addr_rec.address}"
@@ -537,6 +539,7 @@ class TestTreasuryWithdrawals:
             tx_files=tx_files_action,
             deposit=actions_deposit_combined + stake_deposit_amt,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_action)
         reqc.cli025.success()
 
         assert cluster.g_query.get_stake_addr_info(recv_stake_addr_rec.address).address, (

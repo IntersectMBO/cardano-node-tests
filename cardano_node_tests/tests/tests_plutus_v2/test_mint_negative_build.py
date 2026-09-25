@@ -304,4 +304,6 @@ class TestNegativeCollateralOutput:
             )
             assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-            node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_output_step2
+            )

@@ -27,6 +27,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import web
@@ -722,6 +723,9 @@ class TestCommittee:
                 build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files_auth,
             )
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_output_auth
+            )
 
             out_utxos_auth = cluster.g_query.get_utxo(tx_raw_output=tx_output_auth)
             assert (
@@ -787,6 +791,9 @@ class TestCommittee:
                 build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files_action_add,
             )
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_output_action
+            )
 
             out_utxos_action_add = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
             assert (
@@ -850,6 +857,7 @@ class TestCommittee:
                 src_address=pool_user_lg.payment.address,
                 tx_files=tx_files_res,
             )
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_res)
 
             cluster.wait_for_new_block(new_blocks=2)
             res_committee_state = cluster.g_query.get_committee_state()
@@ -902,6 +910,9 @@ class TestCommittee:
                 src_address=pool_user_lg.payment.address,
                 build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files_action_rem,
+            )
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_output_action
             )
 
             out_utxos_action_rem = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
@@ -979,12 +990,15 @@ class TestCommittee:
                     ],
                 )
 
-                clusterlib_utils.build_and_submit_tx(
+                tx_output_res = clusterlib_utils.build_and_submit_tx(
                     cluster_obj=cluster,
                     name_template=f"{temp_template}_res_active",
                     src_address=pool_user_lg.payment.address,
                     build_method=clusterlib_utils.BuildMethods.BUILD,
                     tx_files=tx_files_res,
+                )
+                node_consistency.check_tx_on_all_nodes(
+                    cluster_obj=cluster, tx_raw_output=tx_output_res
                 )
 
         def _check_cc_member1_expired(committee_state: dict[str, tp.Any], curr_epoch: int) -> None:
@@ -1458,6 +1472,9 @@ class TestCommittee:
                 build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files_action_rem,
             )
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_output_action
+            )
 
             out_utxos_action_rem = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
             assert (
@@ -1810,6 +1827,7 @@ class TestCommittee:
             build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output)
 
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         assert (

@@ -14,6 +14,7 @@ from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_types
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
@@ -222,6 +223,7 @@ def delegate_stake_addr(
         build_method=build_method,
         witness_override=len(tx_files.signing_key_files),
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit() if stake_addr_reg_cert_file else 0
@@ -348,6 +350,7 @@ def delegate_multisig_stake_addr(
 
     # Submit signed TX
     cluster_obj.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_output.txins)
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     # Check that the balance for source address was correctly updated
     deposit = cluster_obj.g_query.get_address_deposit() if stake_addr_reg_cert_file else 0

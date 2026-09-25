@@ -204,7 +204,9 @@ def check_missing_builtin(
             "The 'token a' was not minted"
         )
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster_obj, tx_raw_output=tx_raw_output_step2
+        )
 
     prot_params = cluster_obj.g_query.get_protocol_params()
     prot_ver = prot_params["protocolVersion"]["major"]
