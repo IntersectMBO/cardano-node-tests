@@ -1,6 +1,7 @@
 """Functionality for cluster setup and interaction with cluster nodes."""
 
 import dataclasses
+import datetime
 import enum
 import functools
 import json
@@ -23,6 +24,8 @@ LOGGER = logging.getLogger(__name__)
 
 ADDRS_DATA = "addrs_data.pickle"
 STATE_CLUSTER = "state-cluster"
+# Prefix of the supervisor names of cardano-node services (e.g. "nodes:pool1")
+NODES_SERVICE_PREFIX = "nodes:"
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -379,17 +382,19 @@ def get_cluster_env() -> ClusterEnv:
     return cluster_env
 
 
+def get_instance_state_dir(*, instance_num: int | None = None) -> pl.Path:
+    """Return the state dir of the cluster instance (the current one by default)."""
+    if instance_num is None:
+        return get_cluster_env().state_dir
+    socket_path = pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
+    return socket_path.parent.parent / f"{STATE_CLUSTER}{instance_num}"
+
+
 def run_supervisorctl(
     args: list[str], *, instance_num: int | None = None, ignore_fail: bool = False
 ) -> bytes:
     """Run `supervisorctl` command."""
-    if instance_num is None:
-        state_dir = get_cluster_env().state_dir
-    else:
-        socket_path = pl.Path(os.environ["CARDANO_NODE_SOCKET_PATH"])
-        state_cluster_dirname = f"{STATE_CLUSTER}{instance_num}"
-        state_dir = socket_path.parent.parent / state_cluster_dirname
-    script = state_dir / "supervisorctl_local"
+    script = get_instance_state_dir(instance_num=instance_num) / "supervisorctl_local"
     return helpers.run_command([str(script), *args], ignore_fail=ignore_fail)
 
 
@@ -517,6 +522,140 @@ def services_status(
         )
 
     return statuses
+
+
+def _get_uptime_sec(service_status: ServiceStatus) -> float | None:
+    """Return the uptime of a running service in seconds, None when it is not known.
+
+    Supervisor reports the uptime as "H:MM:SS", or "N day(s), H:MM:SS" - the day count
+    then ends up in `uptime` and the rest in `message`.
+    """
+    uptime, message = service_status.uptime or "", service_status.message
+    try:
+        if message.startswith("day"):
+            days, hms = int(uptime), message.split()[-1]
+        else:
+            days, hms = 0, uptime
+        hours, minutes, seconds = (int(p) for p in hms.split(":"))
+    except ValueError:
+        return None
+    return float(((days * 24 + hours) * 60 + minutes) * 60 + seconds)
+
+
+@functools.lru_cache(maxsize=configuration.CLUSTERS_COUNT)
+def _read_stall_params(genesis_file: pl.Path, _mtime_ns: int) -> tuple[float, float]:
+    """Return the forecast horizon in seconds and the system start as a Unix timestamp.
+
+    The file mtime is part of the cache key, so a respun instance with a new genesis
+    is read again.
+    """
+    with open(genesis_file, encoding="utf-8") as in_json:
+        genesis = json.load(in_json)
+    horizon_sec = (
+        3
+        * int(genesis["securityParam"])
+        / float(genesis["activeSlotsCoeff"])
+        * float(genesis["slotLength"])
+    )
+    system_start = datetime.datetime.fromisoformat(genesis["systemStart"]).timestamp()
+    return horizon_sec, system_start
+
+
+def _get_last_write(volatile_dir: pl.Path) -> float | None:
+    """Return the time of the newest write to the volatile DB.
+
+    The node creates the volatile DB dir right when it opens its DB, so a missing dir
+    means the DB is elsewhere (e.g. `--volatile-database-path`), not that it is empty.
+
+    Returns:
+        float | None: The time as a Unix timestamp, None when the DB cannot be found
+            or read.
+    """
+    try:
+        # The dir mtime changes when a new blocks file is created or an old one is removed
+        last_write = volatile_dir.stat().st_mtime
+        files = list(volatile_dir.iterdir())
+    except FileNotFoundError:
+        LOGGER.debug(f"Cannot check node for stall, '{volatile_dir}' doesn't exist.")
+        return None
+    except OSError as exc:
+        LOGGER.warning(f"Cannot check node for stall, failed to read '{volatile_dir}': {exc}")
+        return None
+
+    for f in files:
+        try:
+            last_write = max(last_write, f.stat().st_mtime)
+        except FileNotFoundError:
+            # Removed by the volatile DB garbage collection meanwhile
+            continue
+        except OSError as exc:
+            LOGGER.warning(f"Cannot check node for stall, failed to read '{f}': {exc}")
+            return None
+
+    return last_write
+
+
+def get_stalled_nodes(
+    statuses: tp.Iterable[ServiceStatus], *, state_dir: pl.Path, now: float | None = None
+) -> list[str]:
+    """Return names of nodes whose chain stopped growing for longer than the forecast horizon.
+
+    Once the tip of a node is older than the forecast horizon (`3k/f` slots), the node has
+    no ledger view for the current slot and cannot forge anymore. When that happens to all
+    the nodes, the chain is halted for good. A single node in that state is usually stuck on
+    a fork deeper than `k`, which it cannot switch away from.
+
+    The time of the last block is the newest write to the node's volatile DB, which covers
+    both forged and received blocks, including the blocks downloaded during a sync. A node
+    is measured at the earliest from the system start, and from the start of its process,
+    so a node that was restarted after a long stop has time to replay its ledger and catch
+    up.
+
+    Only running nodes are checked, a node that was stopped on purpose is not stalled.
+
+    Args:
+        statuses: Statuses of the cluster services (see `services_status`).
+        state_dir: The state dir of the cluster instance.
+        now: Current time as a Unix timestamp (optional, the current time by default).
+
+    Returns:
+        list[str]: Names of the stalled nodes. Empty when the genesis file can't be read. A node
+            whose volatile DB can't be found at `<state_dir>/db-<node>/volatile`, or can't be
+            read, is not reported.
+    """
+    genesis_file = state_dir / "shelley" / "genesis.json"
+    try:
+        horizon_sec, system_start = _read_stall_params(
+            genesis_file, genesis_file.stat().st_mtime_ns
+        )
+    except FileNotFoundError:
+        # Not a local cluster instance, or it was not started yet
+        return []
+    except (OSError, ValueError, KeyError, ZeroDivisionError) as exc:
+        LOGGER.warning(f"Cannot check nodes for stall, failed to read '{genesis_file}': {exc}")
+        return []
+
+    now = time.time() if now is None else now
+
+    stalled = []
+    for service_status in statuses:
+        if service_status.status != "RUNNING" or not service_status.name.startswith(
+            NODES_SERVICE_PREFIX
+        ):
+            continue
+        node_name = service_status.name.removeprefix(NODES_SERVICE_PREFIX)
+
+        uptime_sec = _get_uptime_sec(service_status)
+        started = now - uptime_sec if uptime_sec is not None else 0.0
+        last_write = _get_last_write(state_dir / f"db-{node_name}" / "volatile")
+        # The time of the last block is not known, don't guess
+        if last_write is None:
+            continue
+
+        if now - max(last_write, started, system_start) > horizon_sec:
+            stalled.append(node_name)
+
+    return stalled
 
 
 def load_pools_data(*, cluster_obj: clusterlib.ClusterLib) -> dict:

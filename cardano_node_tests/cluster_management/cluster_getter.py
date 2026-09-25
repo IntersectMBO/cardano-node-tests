@@ -534,15 +534,32 @@ class ClusterGetter:
             artifacts.save_cli_coverage(cluster_obj=cluster_obj, pytest_config=self.pytest_config)
 
     def _is_healthy(self, instance_num: int) -> bool:
-        """Check health of cluster services."""
+        """Check health of cluster services and of the chain.
+
+        The cluster instance is unhealthy when a service failed, or when a running node
+        stopped adding blocks for longer than the forecast horizon - such node doesn't
+        recover on its own (see `cluster_nodes.get_stalled_nodes`). Nodes that are not
+        running are not checked for stall, as tests stop nodes on purpose.
+        """
         statuses = cluster_nodes.services_status(instance_num=instance_num)
+
         failed_services = [s.name for s in statuses if s.status == "FATAL"]
-        not_running_services = [(s.name, s.status) for s in statuses if s.status != "RUNNING"]
         if failed_services:
             self.log(f"c{instance_num}: found failed services {failed_services}")
-        elif not_running_services:
+            return False
+
+        not_running_services = [(s.name, s.status) for s in statuses if s.status != "RUNNING"]
+        if not_running_services:
             self.log(f"c{instance_num}: found not running services {not_running_services}")
-        return not failed_services
+
+        stalled_nodes = cluster_nodes.get_stalled_nodes(
+            statuses, state_dir=cluster_nodes.get_instance_state_dir(instance_num=instance_num)
+        )
+        if stalled_nodes:
+            self.log(f"c{instance_num}: found stalled nodes {stalled_nodes}")
+            return False
+
+        return True
 
     def _cluster_needs_respin(self, instance_num: int) -> bool:
         """Check if it is necessary to respin cluster."""
@@ -554,7 +571,7 @@ class ClusterGetter:
         if self.snap.list_respin_needed(instance_num=instance_num):
             return True
 
-        # If a service failed on cluster instance.
+        # If a service failed on cluster instance, or the chain stalled.
         # Check only if we are really able to restart the cluster instance, because the check
         # is expensive.
         if not (configuration.FORBID_RESTART or self._is_healthy(instance_num)):  # noqa:SIM103
