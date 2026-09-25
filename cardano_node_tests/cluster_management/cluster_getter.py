@@ -334,8 +334,8 @@ class ClusterGetter:
             return True
 
         # Fail if cluster respin is forbidden and the cluster was already started
-        if configuration.FORBID_RESTART and cluster_running:
-            msg = "Cannot respin cluster when 'FORBID_RESTART' is set."
+        if configuration.FORBID_RESPIN and cluster_running:
+            msg = "Cannot respin cluster when 'FORBID_RESPIN' is set."
             raise RuntimeError(msg)
 
         self.log(f"c{self.cluster_instance_num}: called `_respin`, scriptsdir='{scriptsdir}'")
@@ -572,9 +572,9 @@ class ClusterGetter:
             return True
 
         # If a service failed on cluster instance, or the chain stalled.
-        # Check only if we are really able to restart the cluster instance, because the check
+        # Check only if we are really able to respin the cluster instance, because the check
         # is expensive.
-        if not (configuration.FORBID_RESTART or self._is_healthy(instance_num)):  # noqa:SIM103
+        if not (configuration.FORBID_RESPIN or self._is_healthy(instance_num)):  # noqa:SIM103
             return True
 
         return False
@@ -1358,8 +1358,8 @@ class ClusterGetter:
         else:
             available_instances = list(range(self.num_of_instances))
 
-        if configuration.FORBID_RESTART and scriptsdir:
-            msg = "Cannot use custom cluster scripts when 'FORBID_RESTART' is set."
+        if configuration.FORBID_RESPIN and scriptsdir:
+            msg = "Cannot use custom cluster scripts when 'FORBID_RESPIN' is set."
             raise RuntimeError(msg)
 
         if scriptsdir:

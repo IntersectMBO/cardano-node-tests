@@ -59,7 +59,7 @@ CLUSTERS_COUNT = helpers.get_env_int("CLUSTERS_COUNT", 0)
 CLUSTERS_COUNT = CLUSTERS_COUNT or min(XDIST_WORKERS_COUNT, DEFAULT_MAX_CLUSTERS) or 1
 
 DEV_CLUSTER_RUNNING = helpers.is_truthy_env_var("DEV_CLUSTER_RUNNING")
-FORBID_RESTART = helpers.is_truthy_env_var("FORBID_RESTART")
+FORBID_RESPIN = helpers.is_truthy_env_var("FORBID_RESPIN")
 
 # Save cluster artifacts also when running on a dev cluster (has effect only together
 # with DEV_CLUSTER_RUNNING). By default the artifacts are not saved there, as a dev

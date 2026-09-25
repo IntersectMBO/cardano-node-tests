@@ -158,8 +158,8 @@ export TMPDIR="$_tmpdir_cnt"
 unset _tmpdir_cnt
 
 # Point the tests at the externally started dev cluster and forbid the framework from
-# restarting it
-export DEV_CLUSTER_RUNNING=true FORBID_RESTART=true CLUSTERS_COUNT=1
+# respinning it
+export DEV_CLUSTER_RUNNING=true FORBID_RESPIN=true CLUSTERS_COUNT=1
 
 # BOOTSTRAP_DIR must not be set when running against the local dev cluster
 if [ -n "${BOOTSTRAP_DIR:-}" ]; then
