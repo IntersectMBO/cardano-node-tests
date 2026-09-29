@@ -43,7 +43,7 @@ from cardano_node_tests.utils.versions import EraName
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
-DEREG_BUFFER_SEC = 30
+DEREG_BUFFER_SEC = 40
 TWO_HOURS_SEC = 2 * 60 * 60
 
 # The first protocol version that rejects a duplicated VRF key. Below it the ledger
@@ -1554,6 +1554,9 @@ class TestStakePool:
 
         # Check that pool is going to be updated with correct data
         pool_state = cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id)
+        assert cluster.g_query.get_epoch() == update_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
         has_issue_5365 = pool_state.future_pool_params == pool_state.pool_params
         if not has_issue_5365:
             assert not clusterlib_utils.check_pool_data(
@@ -1687,6 +1690,9 @@ class TestStakePool:
 
         # Check that pool is going to be updated with correct data
         pool_state = cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id)
+        assert cluster.g_query.get_epoch() == update_epoch, (
+            "Epoch changed and it would affect other checks"
+        )
         has_issue_5365 = pool_state.future_pool_params == pool_state.pool_params
         if not has_issue_5365:
             assert not clusterlib_utils.check_pool_data(
