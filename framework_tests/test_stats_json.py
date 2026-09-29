@@ -266,6 +266,56 @@ class TestCliCoverage:
 
         assert document["commands"] == {"count": None, "coverage_pct": None}
 
+    def test_reads_the_tool_name_from_the_report(
+        self, results_dir: pl.Path, tmp_path: pl.Path
+    ) -> None:
+        """Do not hard-code the tool, so another tool's report still works."""
+        coverage = tmp_path / "cli_coverage.json"
+        coverage.write_text(
+            json.dumps({"some-tool": {"_count_some-tool": 7, "_coverage_some-tool": 12.5}}),
+            encoding="utf-8",
+        )
+
+        document = stats_json.build_document(
+            results_dir=results_dir, exit_code=0, coverage_file=coverage
+        )
+
+        assert document["commands"] == {"count": 7, "coverage_pct": 12.5}
+
+    @pytest.mark.parametrize("bad", ["31", None, True, float("inf"), float("nan")])
+    def test_a_non_numeric_coverage_value_becomes_none(
+        self, results_dir: pl.Path, tmp_path: pl.Path, bad: tp.Any
+    ) -> None:
+        """The report is written by another script, so its values are checked."""
+        coverage = tmp_path / "cli_coverage.json"
+        coverage.write_text(
+            json.dumps(
+                {"cardano-cli": {"_count_cardano-cli": 5, "_coverage_cardano-cli": bad}},
+                allow_nan=True,
+            ),
+            encoding="utf-8",
+        )
+
+        document = stats_json.build_document(
+            results_dir=results_dir, exit_code=0, coverage_file=coverage
+        )
+
+        assert document["commands"]["coverage_pct"] is None
+        assert document["commands"]["count"] == 5
+
+    def test_a_malformed_coverage_report_is_not_an_error(
+        self, results_dir: pl.Path, tmp_path: pl.Path
+    ) -> None:
+        """A report with an unexpected shape must not stop the upload."""
+        coverage = tmp_path / "cli_coverage.json"
+        coverage.write_text(json.dumps({"cardano-cli": "not-an-object"}), encoding="utf-8")
+
+        document = stats_json.build_document(
+            results_dir=results_dir, exit_code=0, coverage_file=coverage
+        )
+
+        assert document["commands"] == {"count": None, "coverage_pct": None}
+
     def test_a_missing_coverage_file_is_not_an_error(self, results_dir: pl.Path) -> None:
         """The coverage step is best effort, so its output may not exist."""
         document = stats_json.build_document(results_dir=results_dir, exit_code=0)

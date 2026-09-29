@@ -21,6 +21,7 @@ import argparse
 import contextlib
 import datetime
 import json
+import math
 import os
 import pathlib as pl
 import subprocess
@@ -157,6 +158,23 @@ def _versions() -> dict:
     }
 
 
+def _as_number(value: object, kind: type) -> int | float | None:
+    """Return a value only when it really is a finite number.
+
+    Args:
+        value: The value read from the coverage report.
+        kind: `int` or `float`, the type to return it as.
+
+    Returns:
+        The number, or None when the value is not one.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if not math.isfinite(value):
+        return None
+    return kind(value)
+
+
 def _commands(coverage_file: pl.Path | None) -> dict:
     """Read the CLI coverage summary written by `runner/cli_coverage.sh`.
 
@@ -176,12 +194,20 @@ def _commands(coverage_file: pl.Path | None) -> dict:
         return empty
     try:
         report = json.loads(coverage_file.read_text(encoding="utf-8"))
-        cli = report["cardano-cli"]
-    except (OSError, ValueError, TypeError, KeyError):
+        # The report holds one top-level entry, named after the tool it
+        # covers, and repeats that name in its own summary keys. Read the name
+        # from the report instead of hard-coding it, so this keeps working if
+        # the coverage script is ever pointed at another tool.
+        tool, covered = next(iter(report.items()))
+        count = covered[f"_count_{tool}"]
+        coverage = covered[f"_coverage_{tool}"]
+    except (OSError, ValueError, TypeError, KeyError, StopIteration, AttributeError):
         return empty
+    # Coerced rather than passed through: these two values are read from a
+    # file this script does not write, and they go straight into an upload.
     return {
-        "count": cli.get("_count_cardano-cli"),
-        "coverage_pct": cli.get("_coverage_cardano-cli"),
+        "count": _as_number(count, int),
+        "coverage_pct": _as_number(coverage, float),
     }
 
 
