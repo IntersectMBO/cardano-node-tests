@@ -611,10 +611,9 @@ def load_registered_pool_data(
     *, cluster_obj: clusterlib.ClusterLib, pool_name: str, pool_id: str
 ) -> clusterlib.PoolData:
     """Load data of existing registered pool."""
-    if pool_id.startswith("pool"):
-        pool_id = helpers.decode_bech32(pool_id)
-
-    pool_state: dict = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
+    pool_state: dict = cluster_obj.g_query.get_pool_state(
+        stake_pool_id=helpers.get_pool_id_hex(pool_id)
+    ).pool_params
     metadata: dict = helpers.get_pool_param("spsMetadata", pool_params=pool_state) or {}
 
     # TODO: extend to handle more relays records

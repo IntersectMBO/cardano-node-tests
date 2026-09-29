@@ -658,10 +658,7 @@ def _get_vote_key_spo(vote_data: clusterlib.VoteSPO, *, cluster_obj: clusterlib.
         msg = "No stake pool key was specified"
         raise ValueError(msg)
 
-    if pool_id.startswith("pool1"):
-        pool_id = helpers.decode_bech32(bech32=pool_id)
-
-    return f"stakepool-keyHash-{pool_id}"
+    return f"stakepool-keyHash-{helpers.get_pool_id_hex(pool_id)}"
 
 
 def check_vote_view(
