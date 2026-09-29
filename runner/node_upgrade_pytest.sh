@@ -114,6 +114,13 @@ if [ "$1" = "step1" ]; then
   # create results archive for step1
   ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step1
 
+  # Report the step stats to the tcache. `|| :` because `set -Eeuo pipefail`
+  # and the ERR trap are on: a failed upload must not abort the upgrade run,
+  # nor change the $retval this step exits with. No CLI coverage is passed -
+  # `cli_coverage.sh` runs in the `finish` step and its report covers the
+  # whole run, so attributing it to one step would misreport it.
+  ./runner/report_stats.sh "${WORKDIR}/allure-results-step1" "$retval" "" step1 || :
+
   printf "STEP1 finish: %(%H:%M:%S)T\n" -1
 
 #
@@ -278,6 +285,13 @@ elif [ "$1" = "step2" ]; then
 
   [ "$err_retval" -gt "$retval" ] && retval=1
 
+  # Report the step stats to the tcache. `|| :` because `set -Eeuo pipefail`
+  # and the ERR trap are on: a failed upload must not abort the upgrade run,
+  # nor change the $retval this step exits with. No CLI coverage is passed -
+  # `cli_coverage.sh` runs in the `finish` step and its report covers the
+  # whole run, so attributing it to one step would misreport it.
+  ./runner/report_stats.sh "${WORKDIR}/allure-results-step2" "$retval" "" step2 || :
+
   printf "STEP2 finish: %(%H:%M:%S)T\n" -1
 
 
@@ -439,6 +453,13 @@ elif [ "$1" = "step3" ]; then
   ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step3
 
   [ "$err_retval" -gt "$retval" ] && retval=1
+
+  # Report the step stats to the tcache. `|| :` because `set -Eeuo pipefail`
+  # and the ERR trap are on: a failed upload must not abort the upgrade run,
+  # nor change the $retval this step exits with. No CLI coverage is passed -
+  # `cli_coverage.sh` runs in the `finish` step and its report covers the
+  # whole run, so attributing it to one step would misreport it.
+  ./runner/report_stats.sh "${WORKDIR}/allure-results-step3" "$retval" "" step3 || :
 
   printf "STEP3 finish: %(%H:%M:%S)T\n" -1
 

@@ -35,6 +35,10 @@ on:
         required: false
       CLAUDE_CODE_OAUTH_TOKEN:
         required: false
+      TCACHE_BASIC_AUTH:
+        required: false
+      TCACHE_URL:
+        required: false
 
 env:
   PY_COLORS: "1"
@@ -78,6 +82,11 @@ jobs:
         id: testing-step
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # `node_upgrade_pytest.sh` reports each step's stats to the tcache,
+          # so the secrets have to be in scope here. Without them the upload
+          # skips silently and nothing is recorded.
+          TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+          TCACHE_URL: ${{ secrets.TCACHE_URL }}
         run: |
           # env
           echo "::group::Script setup"
