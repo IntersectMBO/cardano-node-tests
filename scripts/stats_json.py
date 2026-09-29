@@ -23,10 +23,10 @@ import datetime
 import json
 import os
 import pathlib as pl
-import secrets
 import subprocess
 import sys
 import typing as tp
+import uuid
 
 # `scripts` is not a package, so the sibling module is imported by path. The
 # two private helpers are reused deliberately: duplicating the grouping rules
@@ -62,11 +62,15 @@ def _local_run_id() -> str:
     Neither the hostname nor the user name goes in, so the id stays safe to
     show on a summary page.
 
+    The suffix only separates two runs started in the same second. `uuid`
+    rather than `secrets`: nothing here is a credential, and drawing it from
+    `secrets` says it is one.
+
     Returns:
         A sortable id, e.g. `local-20260929T120000Z-1a2b3c4d`.
     """
     stamp = _utc_now().strftime("%Y%m%dT%H%M%SZ")
-    return f"local-{stamp}-{secrets.token_hex(4)}"
+    return f"local-{stamp}-{uuid.uuid4().hex[:8]}"
 
 
 def _project() -> str:
