@@ -129,7 +129,9 @@ class TestSECP256k1:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster_obj, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster_obj, tx_raw_output=tx_raw_output_step2
+        )
 
     @allure.link(helpers.get_vcs_link())
     @markers.PARAM_PLUTUS2ONWARDS_VERSION

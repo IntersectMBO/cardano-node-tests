@@ -78,6 +78,7 @@ from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
 from cardano_node_tests.utils import logfiles
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -431,6 +432,9 @@ def create_test_pool(
         pool_owners=pool_owners,
         tx_name=f"{temp_template}_reg",
     )
+    node_consistency.check_tx_on_all_nodes(
+        cluster_obj=cluster_obj, tx_raw_output=pool_creation_out.tx_raw_output
+    )
 
     # The finalizer runs after the test, when the working dir is no longer the one the
     # test ran in, so the dir is captured here for the deregistration artifacts
@@ -620,7 +624,7 @@ def reregister_cluster_pool(
     )
 
     try:
-        cluster_obj.g_stake_pool.register_stake_pool(
+        __, tx_raw_reg = cluster_obj.g_stake_pool.register_stake_pool(
             pool_data=pool_data,
             pool_owners=[clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])],
             vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
@@ -630,6 +634,7 @@ def reregister_cluster_pool(
             bls_signing_key_file=bls_skey_file,
             deposit=0,  # no additional deposit, the pool is already registered
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_reg)
     except clusterlib.CLIError as excinfo:
         if "VRFKeyHashAlreadyRegistered" not in str(excinfo):
             raise
@@ -662,7 +667,7 @@ def rotate_bls_key(
         pool_name=f"{pool_creation_out.pool_data.pool_name}_{cert_suffix}",
     )
 
-    cluster_obj.g_stake_pool.register_stake_pool(
+    __, tx_raw_reg = cluster_obj.g_stake_pool.register_stake_pool(
         pool_data=pool_data,
         pool_owners=pool_creation_out.pool_owners,
         vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
@@ -671,6 +676,7 @@ def rotate_bls_key(
         bls_signing_key_file=bls_skey_file,
         deposit=0,  # no additional deposit, the pool is already registered
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_reg)
 
 
 def report_subtest(
@@ -969,13 +975,16 @@ class TestBlsKeyRotation:
                 pool_creation_out.cold_key_pair.skey_file,
             ],
         )
-        cluster_obj.g_transaction.send_tx(
+        tx_raw_drop_bls = cluster_obj.g_transaction.send_tx(
             src_address=pool_creation_out.pool_owners[0].payment.address,
             tx_name=f"{temp_template}_drop_bls",
             tx_files=tx_files,
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster_obj, tx_raw_output=tx_raw_drop_bls
+        )
         assert cluster_obj.g_query.get_epoch() == reg_epoch, (
             "The pool setup took longer than expected and would affect other checks"
         )

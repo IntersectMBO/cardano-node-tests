@@ -13,6 +13,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import web
 
 LOGGER = logging.getLogger(__name__)
@@ -138,6 +139,7 @@ def submit_vote(
         script_votes=script_votes,
         witness_count_add=witness_count_add,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     assert (
@@ -337,6 +339,7 @@ def resign_ccs(
         build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     cluster_obj.wait_for_new_block(new_blocks=2)
     res_committee_state = cluster_obj.g_query.get_committee_state()
@@ -400,6 +403,7 @@ def propose_change_constitution(
         tx_files=tx_files,
         fee_buffer=2_000_000,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output)
     assert (
@@ -474,6 +478,7 @@ def propose_pparams_update(
         build_method=clusterlib_utils.BuildMethods.BUILD,
         tx_files=tx_files_action,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output_action)
 
     out_utxos_action = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_action)
     assert (

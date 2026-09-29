@@ -18,6 +18,7 @@ from cardano_node_tests.tests import kes
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class TestNoRewards:
 
         # Increase the needed pledge amount - update the pool parameters by resubmitting the pool
         # registration certificate
-        cluster.g_stake_pool.register_stake_pool(
+        __, tx_raw_update_pool = cluster.g_stake_pool.register_stake_pool(
             pool_data=pool_data_updated,
             pool_owners=[pool_owner],
             vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
@@ -125,6 +126,9 @@ class TestNoRewards:
             deposit=0,  # no additional deposit, the pool is already registered
         )
 
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_update_pool
+        )
         assert cluster.g_query.get_epoch() == update_epoch, (
             "Update took longer than expected and would affect other checks"
         )
@@ -171,7 +175,7 @@ class TestNoRewards:
 
             # Update the pool to original parameters by resubmitting
             # the pool registration certificate
-            cluster.g_stake_pool.register_stake_pool(
+            __, tx_raw_update_pool = cluster.g_stake_pool.register_stake_pool(
                 pool_data=loaded_data,
                 pool_owners=[pool_owner],
                 vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
@@ -182,6 +186,9 @@ class TestNoRewards:
                     key_pair=pool_rec.get("bls_key_pair")
                 ),
                 deposit=0,  # no additional deposit, the pool is already registered
+            )
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_raw_update_pool
             )
 
             cluster.wait_for_epoch(epoch_no=return_orig_epoch + 5, padding_seconds=30)
@@ -278,12 +285,13 @@ class TestNoRewards:
             clusterlib.TxOut(address=delegation_out.pool_user.payment.address, amount=pledge_amount)
         ]
         tx_files = clusterlib.TxFiles(signing_key_files=[pool_owner.payment.skey_file])
-        cluster.g_transaction.send_tx(
+        tx_raw_pledge = cluster.g_transaction.send_tx(
             src_address=pool_owner.payment.address,
             tx_name=f"{temp_template}_withdraw_pledge",
             txouts=txouts,
             tx_files=tx_files,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_pledge)
 
         assert (
             cluster.g_query.get_address_balance(pool_owner.payment.address)
@@ -341,11 +349,14 @@ class TestNoRewards:
             tx_files = clusterlib.TxFiles(
                 signing_key_files=[delegation_out.pool_user.payment.skey_file]
             )
-            cluster.g_transaction.send_tx(
+            tx_raw_return_pledge = cluster.g_transaction.send_tx(
                 src_address=delegation_out.pool_user.payment.address,
                 tx_name=f"{temp_template}_return_pledge",
                 txouts=txouts,
                 tx_files=tx_files,
+            )
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_raw_return_pledge
             )
 
             assert (
@@ -433,10 +444,13 @@ class TestNoRewards:
 
         # Withdraw rewards from owner's stake address if there are any
         if cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance:
-            cluster.g_stake_address.withdraw_reward(
+            tx_raw_withdrawal = cluster.g_stake_address.withdraw_reward(
                 stake_addr_record=pool_owner.stake,
                 dst_addr_record=pool_owner.payment,
                 tx_name=temp_template,
+            )
+            node_consistency.check_tx_on_all_nodes(
+                cluster_obj=cluster, tx_raw_output=tx_raw_withdrawal
             )
 
         # Deregister stake address - owner's stake is lower than pledge
@@ -456,6 +470,9 @@ class TestNoRewards:
             src_address=pool_owner.payment.address,
             tx_name=f"{temp_template}_dereg",
             tx_files=tx_files_deregister,
+        )
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
         )
 
         with cluster_manager.respin_on_failure():
@@ -529,6 +546,7 @@ class TestNoRewards:
                 tx_name=f"{temp_template}_rereg_deleg",
                 tx_files=tx_files,
             )
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
             # Check that the balance for source address was correctly updated
             assert (
@@ -630,18 +648,19 @@ class TestNoRewards:
         # Withdraw pool rewards to payment address
         # use `transaction build` if possible
         if markers.BUILD_UNUSABLE:
-            cluster.g_stake_address.withdraw_reward(
+            tx_raw_withdrawal = cluster.g_stake_address.withdraw_reward(
                 stake_addr_record=pool_reward.stake,
                 dst_addr_record=pool_reward.payment,
                 tx_name=temp_template,
             )
         else:
-            clusterlib_utils.withdraw_reward_w_build(
+            tx_raw_withdrawal = clusterlib_utils.withdraw_reward_w_build(
                 cluster_obj=cluster,
                 stake_addr_record=pool_reward.stake,
                 dst_addr_record=pool_reward.payment,
                 tx_name=temp_template,
             )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_withdrawal)
 
         # Deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
@@ -660,6 +679,9 @@ class TestNoRewards:
             src_address=pool_reward.payment.address,
             tx_name=f"{temp_template}_dereg_reward",
             tx_files=tx_files_deregister,
+        )
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
         )
 
         with cluster_manager.respin_on_failure():
@@ -724,6 +746,7 @@ class TestNoRewards:
                 tx_name=f"{temp_template}_rereg_deleg",
                 tx_files=tx_files,
             )
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
             # Check that the balance for source address was correctly updated
             assert (
@@ -815,11 +838,12 @@ class TestNoRewards:
         dereg_reward_epoch = cluster.g_query.get_epoch()
 
         # Withdraw pool rewards to payment address
-        cluster.g_stake_address.withdraw_reward(
+        tx_raw_withdrawal = cluster.g_stake_address.withdraw_reward(
             stake_addr_record=pool_reward.stake,
             dst_addr_record=pool_reward.payment,
             tx_name=temp_template,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_withdrawal)
 
         # Deregister the pool reward address
         stake_addr_dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
@@ -838,6 +862,9 @@ class TestNoRewards:
             src_address=pool_reward.payment.address,
             tx_name=f"{temp_template}_dereg_reward",
             tx_files=tx_files_deregister,
+        )
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_deregister_output
         )
 
         with cluster_manager.respin_on_failure():
@@ -896,6 +923,7 @@ class TestNoRewards:
                 pool_name=pool_name,
                 tx_name=temp_template,
             )
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
             assert cluster.g_query.get_pool_state(stake_pool_id=pool_id).retiring == depoch
 
             cluster.wait_for_epoch(epoch_no=dereg_pool_epoch + 1, padding_seconds=5)
@@ -959,6 +987,7 @@ class TestNoRewards:
                 tx_name=f"{temp_template}_rereg_pool",
                 tx_files=tx_files,
             )
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
             # Check command kes-period-info case: re-register pool, check without
             # waiting to take effect

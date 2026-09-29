@@ -219,7 +219,9 @@ class TestMinting:
             "The 'token b' was not minted"
         )
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_step2
+        )
 
         # Check tx view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -362,7 +364,9 @@ class TestMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_step2
+        )
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -488,7 +492,9 @@ class TestMinting:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_step2
+        )
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -716,7 +722,9 @@ class TestMinting:
             "The 'timerange' token was not minted"
         )
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_step2
+        )
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -873,7 +881,9 @@ class TestMinting:
             f"The '{asset_name_b_dec}' token was not minted"
         )
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_step2
+        )
 
         # Check tx_view
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
@@ -1023,7 +1033,9 @@ class TestMinting:
             f"The '{asset_name_b_dec}' was not minted"
         )
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_step2
+        )
 
         if plutus_costs:
             plutus_common.check_plutus_costs(
@@ -1299,4 +1311,6 @@ class TestCollateralOutput:
         )
         assert token_utxo and token_utxo[0].amount == token_amount, "The token was NOT minted"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(
+            cluster_obj=cluster, tx_raw_output=tx_raw_output_step2
+        )

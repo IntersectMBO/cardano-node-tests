@@ -102,7 +102,7 @@ class TestDatum:
         datum_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=dst_addr.address)[0]
         assert datum_utxo.datum_hash, f"UTxO should have datum hash: {datum_utxo}"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output)
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
@@ -265,7 +265,7 @@ class TestNegativeDatum:
             utxos=out_utxos, txouts=tx_output_fund.txouts
         )
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output_fund)
 
         script_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset)
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)

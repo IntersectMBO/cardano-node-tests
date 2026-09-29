@@ -123,7 +123,7 @@ class TestSECP256k1:
         collateral_utxos = clusterlib.filter_utxos(utxos=out_utxos, utxo_ix=utxo_ix_offset + 1)
         assert collateral_utxos, "No collateral UTxO"
 
-        node_consistency.check_missing_utxos(cluster_obj=cluster, utxos=out_utxos)
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output)
 
         fee_txin = next(
             r

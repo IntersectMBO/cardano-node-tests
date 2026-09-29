@@ -21,6 +21,7 @@ from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -301,11 +302,12 @@ class TestRewards:
             pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
 
         # Withdraw rewards to payment address
-        cluster.g_stake_address.withdraw_reward(
+        tx_raw_withdrawal = cluster.g_stake_address.withdraw_reward(
             stake_addr_record=delegation_out.pool_user.stake,
             dst_addr_record=delegation_out.pool_user.payment,
             tx_name=temp_template,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_withdrawal)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
@@ -578,6 +580,7 @@ class TestRewards:
             dst_addr_record=delegation_out.pool_user.payment,
             tx_name=temp_template,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=withdraw_out)
 
         if native_tokens:
             # Burn native tokens
@@ -819,6 +822,7 @@ class TestRewards:
         )
 
         with cluster_manager.respin_on_failure():
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_deleg)
             # Make sure we managed to finish delegation in the expected epoch
             assert cluster.g_query.get_epoch() == init_epoch, (
                 "Delegation took longer than expected and would affect other checks"
@@ -906,6 +910,9 @@ class TestRewards:
                         withdrawals=[
                             clusterlib.TxOut(address=pool_reward.stake.address, amount=-1)
                         ],
+                    )
+                    node_consistency.check_tx_on_all_nodes(
+                        cluster_obj=cluster, tx_raw_output=tx_raw_undeleg
                     )
                     withdrawal_past_epoch = True
 
@@ -1068,10 +1075,13 @@ class TestRewards:
                     cluster_obj=cluster, state_name=f"{temp_template}_{epoch}"
                 )
                 # Withdraw rewards to destination address
-                cluster.g_stake_address.withdraw_reward(
+                tx_raw_withdrawal = cluster.g_stake_address.withdraw_reward(
                     stake_addr_record=delegation_out.pool_user.stake,
                     dst_addr_record=dst_addr_record,
                     tx_name=f"{temp_template}_ep{epoch}",
+                )
+                node_consistency.check_tx_on_all_nodes(
+                    cluster_obj=cluster, tx_raw_output=tx_raw_withdrawal
                 )
 
         LOGGER.info("Withdrawing new rewards for next 4 epochs.")
@@ -1527,11 +1537,15 @@ class TestRewards:
 
             if this_epoch == init_epoch + 3:
                 # Deregister stake address
-                clusterlib_utils.deregister_stake_address(
+                tx_raw_dereg = clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
                     pool_user=delegation_out.pool_user,
                     name_template=f"{temp_template}_ep3",
                     deposit_amt=address_deposit,
+                )
+                assert tx_raw_dereg, "Stake address was not registered"
+                node_consistency.check_tx_on_all_nodes(
+                    cluster_obj=cluster, tx_raw_output=tx_raw_dereg
                 )
                 withdrawal_past_epoch = True
 
@@ -1550,11 +1564,15 @@ class TestRewards:
                 )
 
                 # Deregister stake address
-                clusterlib_utils.deregister_stake_address(
+                tx_raw_dereg = clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
                     pool_user=delegation_out.pool_user,
                     name_template=f"{temp_template}_ep4",
                     deposit_amt=address_deposit,
+                )
+                assert tx_raw_dereg, "Stake address was not registered"
+                node_consistency.check_tx_on_all_nodes(
+                    cluster_obj=cluster, tx_raw_output=tx_raw_dereg
                 )
                 withdrawal_past_epoch = True
 

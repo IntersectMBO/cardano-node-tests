@@ -31,6 +31,7 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
 from cardano_node_tests.utils import web
@@ -1718,6 +1719,7 @@ class TestDRepActivity:
                 deposit=deposit_address_amt,
             )
 
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_output)
             assert cluster.g_query.get_epoch() == init_epoch, (
                 "Epoch changed and it would affect other checks"
             )

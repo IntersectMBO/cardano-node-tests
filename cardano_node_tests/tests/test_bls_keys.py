@@ -19,6 +19,7 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
@@ -466,6 +467,7 @@ def register_pool_with_mismatched_pop(
         tx_name=f"{temp_template}_reg_pool",
         tx_files=tx_files,
     )
+    node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_output)
 
     def _deregister() -> None:
         with helpers.change_cwd(testfile_temp_dir):

@@ -33,6 +33,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import smash_utils
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils import tx_view
@@ -1347,13 +1348,14 @@ class TestStakePool:
             cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
         )
         depoch = cluster.g_query.get_epoch() + 2
-        cluster.g_stake_pool.deregister_stake_pool(
+        _dereg_cert, tx_raw_dereg = cluster.g_stake_pool.deregister_stake_pool(
             pool_owners=pool_owners,
             cold_key_pair=pool_creation_out.cold_key_pair,
             epoch=depoch,
             pool_name=pool_data.pool_name,
             tx_name=temp_template,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_dereg)
         assert (
             cluster.g_query.get_pool_state(stake_pool_id=pool_creation_out.stake_pool_id).retiring
             == depoch
@@ -1379,6 +1381,7 @@ class TestStakePool:
             tx_files=tx_files,
             deposit=0,  # no additional deposit, the pool is already registered
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # Deregister stake pool
         def _deregister():
@@ -1921,6 +1924,7 @@ class TestStakePool:
             tx_name=f"{temp_template}_conflicting_certs",
             tx_files=tx_files,
         )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # Check that the balance for source address was correctly updated
         assert (
