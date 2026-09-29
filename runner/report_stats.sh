@@ -30,6 +30,16 @@ fi
 
 tests_repo="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine test repo dir, exiting." >&2; exit 1; }
 
+# `regression.sh` applies `PATH_PREPEND` to `PATH` inside the `nix develop`
+# block that runs the tests, and that block has already exited by the time
+# this script runs. Without this, `cardano-node --version` resolves to
+# whatever is on the caller's PATH instead of the binary the testrun actually
+# used, and the reported versions are wrong while looking perfectly fine.
+if [ -n "${PATH_PREPEND:-}" ]; then
+  PATH="${PATH_PREPEND}:${PATH}"
+  export PATH
+fi
+
 # `TCACHE_URL` points at the `/results` prefix, because that is the only
 # endpoint it was created for. The stats endpoint sits at its own top-level
 # prefix, so the suffix is stripped and replaced. Same derivation the nightly
