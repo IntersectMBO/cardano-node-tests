@@ -1,6 +1,8 @@
-# Writing New E2E Tests
+# Writing and Changing E2E Tests
 
 This document applies only to E2E functional tests under `cardano_node_tests/tests/`. Unit tests for the framework itself live under `framework_tests/` and are plain pytest tests.
+
+The guidelines apply to writing new tests and also to larger changes of existing tests (refactoring, extending, moving tests or fixtures). When changing an existing test, bring the parts you touch in line with these guidelines, but don't rewrite unrelated code just to comply.
 
 Organize tests in classes that group related functionality.
 
@@ -48,7 +50,7 @@ Counting the worst-case `N`:
 
 ## Summary Checklist
 
-When writing a new E2E test, ensure:
+When writing a new E2E test, or making larger changes to an existing one, ensure:
 
 - [ ] Test is in a class grouping related functionality
 - [ ] `@allure.link(helpers.get_vcs_link())` decorator is present
