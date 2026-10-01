@@ -13,17 +13,25 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skipif(
+        VERSIONS.cluster_era != VERSIONS.transaction_era,
+        reason="expensive test, skip when cluster era is different from TX era",
+    ),
+    pytest.mark.skipif(
+        configuration.HAS_TX_LOAD_GENERATOR,
+        reason="load sensitive test, skip when Tx load generator is in use",
+    ),
+]
 
-@pytest.mark.skipif(
-    VERSIONS.cluster_era != VERSIONS.transaction_era,
-    reason="expensive test, skip when cluster era is different from TX era",
-)
+
 class TestManyUTXOs:
     """Test transaction with many UTxOs and small amounts of Lovelace."""
 
