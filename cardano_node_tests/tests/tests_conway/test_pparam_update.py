@@ -36,18 +36,58 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-NETWORK_GROUP_PPARAMS = frozenset(
+# The Leios pparams, new in Dijkstra. They are all in the network group and the
+# security group (`PPGroups NetworkGroup SecurityGroup` in the Dijkstra `PParams.hs`),
+# so changing any of them needs the SPO votes too.
+LEIOS_PPARAMS = frozenset(
     {
-        "maxBlockBodySize",
-        "maxTxSize",
-        "maxBlockHeaderSize",
-        "maxValueSize",
-        "maxTxExecutionUnits",
-        "maxBlockExecutionUnits",
-        "maxCollateralInputs",
+        "leiosAnnouncementPeriodLength",
+        "leiosVotePeriodLength",
+        "leiosDiffusionPeriodLength",
+        "leiosCommitteeSize",
+        "leiosQuorumStakeThreshold",
+        "maxEndorserBlockReferencesSize",
+        "maxEndorserBlockTxsSize",
+        "maxEndorserBlockExecutionUnits",
+        "maxRefScriptSizePerEndorserBlock",
     }
 )
 
+# The reference script pparams that were hard-coded constants before Dijkstra. Same groups
+# as the Leios pparams.
+DIJKSTRA_REF_SCRIPT_PPARAMS = frozenset(
+    {
+        "maxRefScriptSizePerBlock",
+        "maxRefScriptSizePerTx",
+        "refScriptCostStride",
+        "refScriptCostMultiplier",
+    }
+)
+
+IS_DIJKSTRA = VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST
+
+# Dijkstra pparams of the network and the security group
+_DIJKSTRA_NETWORK_SECURITY_PPARAMS = (
+    LEIOS_PPARAMS | DIJKSTRA_REF_SCRIPT_PPARAMS if IS_DIJKSTRA else frozenset()
+)
+
+NETWORK_GROUP_PPARAMS = (
+    frozenset(
+        {
+            "maxBlockBodySize",
+            "maxTxSize",
+            "maxBlockHeaderSize",
+            "maxValueSize",
+            "maxTxExecutionUnits",
+            "maxBlockExecutionUnits",
+            "maxCollateralInputs",
+        }
+    )
+    | _DIJKSTRA_NETWORK_SECURITY_PPARAMS
+)
+
+# `minPoolMargin` is new in Dijkstra. cardano-cli has no option for changing it yet, so
+# only `test_pparam_keys` checks it, for its presence - no proposal covers it.
 ECONOMIC_GROUP_PPARAMS = frozenset(
     {
         "txFeePerByte",
@@ -60,8 +100,10 @@ ECONOMIC_GROUP_PPARAMS = frozenset(
         "utxoCostPerByte",
         "executionUnitPrices",
     }
-)
+) | (frozenset({"minPoolMargin"}) if IS_DIJKSTRA else frozenset())
 
+# `maxPledgeLeverage` is new in Dijkstra. cardano-cli has no option for changing it yet,
+# so only `test_pparam_keys` checks it, for its presence - no proposal covers it.
 TECHNICAL_GROUP_PPARAMS = frozenset(
     {
         "poolPledgeInfluence",
@@ -70,7 +112,7 @@ TECHNICAL_GROUP_PPARAMS = frozenset(
         "costModels",
         "collateralPercentage",
     }
-)
+) | (frozenset({"maxPledgeLeverage"}) if IS_DIJKSTRA else frozenset())
 
 GOVERNANCE_GROUP_PPARAMS = frozenset(
     {
@@ -109,19 +151,22 @@ GOVERNANCE_GROUP_PPARAMS_POOL_THRESHOLDS = frozenset(
 )
 
 # Security related pparams that require also SPO approval
-SECURITY_PPARAMS = frozenset(
-    {
-        "maxBlockBodySize",
-        "maxTxSize",
-        "maxBlockHeaderSize",
-        "maxValueSize",
-        "maxBlockExecutionUnits",
-        "txFeePerByte",
-        "txFeeFixed",
-        "utxoCostPerByte",
-        "govActionDeposit",
-        "minFeeRefScriptsCoinsPerByte",  # not in 8.8 release yet
-    }
+SECURITY_PPARAMS = (
+    frozenset(
+        {
+            "maxBlockBodySize",
+            "maxTxSize",
+            "maxBlockHeaderSize",
+            "maxValueSize",
+            "maxBlockExecutionUnits",
+            "txFeePerByte",
+            "txFeeFixed",
+            "utxoCostPerByte",
+            "govActionDeposit",
+            "minFeeRefScriptsCoinsPerByte",  # not in 8.8 release yet
+        }
+    )
+    | _DIJKSTRA_NETWORK_SECURITY_PPARAMS
 )
 
 
@@ -150,6 +195,14 @@ def _check_max_block_execution_units(
     update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
 ) -> bool:
     pparam = protocol_params["maxBlockExecutionUnits"]
+    exp_val = f"({pparam['steps']},{pparam['memory']})"
+    return bool(update_proposal.value == exp_val)
+
+
+def _check_max_eb_execution_units(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    pparam = protocol_params["maxEndorserBlockExecutionUnits"]
     exp_val = f"({pparam['steps']},{pparam['memory']})"
     return bool(update_proposal.value == exp_val)
 
@@ -636,6 +689,84 @@ class TestPParamUpdate:
                 name="govActionDeposit",
             ),
         ]
+
+        # The Dijkstra pparams are all in both the network and the security group. They are
+        # never enacted here, but their values are kept safe anyway - e.g. the committee keeps
+        # room for every pool and the quorum stays reachable.
+        if IS_DIJKSTRA:
+            dijkstra_net_sec_proposals = [
+                clusterlib_utils.UpdateProposal(
+                    arg="--leios-announcement-period-length",
+                    value=random.randint(1001, 1100),
+                    name="leiosAnnouncementPeriodLength",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--leios-vote-period-length",
+                    value=random.randint(4001, 4100),
+                    name="leiosVotePeriodLength",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--leios-diffusion-period-length",
+                    value=random.randint(7001, 7100),
+                    name="leiosDiffusionPeriodLength",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--leios-committee-size",
+                    value=random.randint(901, 1000),
+                    name="leiosCommitteeSize",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--leios-quorum-stake-threshold",
+                    value=_get_rational_str(random.uniform(0.6, 0.74)),
+                    name="leiosQuorumStakeThreshold",
+                    check_func=conway_common.check_rational_pparam,
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-endorser-block-references-size",
+                    value=random.randint(500000, 524287),
+                    name="maxEndorserBlockReferencesSize",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-endorser-block-txs-size",
+                    value=random.randint(12000000, 12582911),
+                    name="maxEndorserBlockTxsSize",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-endorser-block-execution-units",
+                    value=f"({random.randint(2000000000001, 2000000000100)},"
+                    f"{random.randint(7000000001, 7000000100)})",
+                    name="maxEndorserBlockExecutionUnits",
+                    check_func=_check_max_eb_execution_units,
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-ref-script-size-per-endorser-block",
+                    value=random.randint(12000000, 12582911),
+                    name="maxRefScriptSizePerEndorserBlock",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-ref-script-size-per-block",
+                    value=random.randint(1000000, 1048575),
+                    name="maxRefScriptSizePerBlock",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--max-ref-script-size-per-tx",
+                    value=random.randint(200000, 204799),
+                    name="maxRefScriptSizePerTx",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--ref-script-cost-stride",
+                    value=random.randint(25601, 26000),
+                    name="refScriptCostStride",
+                ),
+                clusterlib_utils.UpdateProposal(
+                    arg="--ref-script-cost-multiplier",
+                    value=_get_rational_str(random.uniform(1.21, 1.3)),
+                    name="refScriptCostMultiplier",
+                    check_func=conway_common.check_rational_pparam,
+                ),
+            ]
+            network_g_proposals.extend(dijkstra_net_sec_proposals)
+            security_proposals.extend(dijkstra_net_sec_proposals)
 
         # Hand-picked parameters and values that can stay changed even for other tests
         cur_pparams = cluster.g_query.get_protocol_params()
