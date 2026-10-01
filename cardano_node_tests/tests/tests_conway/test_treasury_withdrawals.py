@@ -50,6 +50,8 @@ def cluster_use_governance_lock_treasury(
     governance_data = governance_setup.get_default_governance(
         cluster_manager=cluster_manager, cluster_obj=cluster_obj
     )
+    # Up to 1 epoch for delayed ratification here, 2 epochs for enactment in the test
+    common.skip_on_long_epochs(cluster_obj=cluster_obj, epochs=3)
     governance_utils.wait_delayed_ratification(cluster_obj=cluster_obj)
     return cluster_obj, governance_data
 
@@ -462,6 +464,10 @@ class TestTreasuryWithdrawals:
         * Check that the actions expire and action deposits are returned
         """
         cluster, governance_data = cluster_use_governance
+        # Wait for expiration (`govActionLifetime` + 1 epochs) and for removal of the proposals
+        common.skip_on_long_epochs(
+            cluster_obj=cluster, epochs=cluster.conway_genesis["govActionLifetime"] + 2
+        )
         temp_template = common.get_test_id(cluster)
         is_in_bootstrap = conway_common.is_in_bootstrap(cluster_obj=cluster)
         actions_num = 3

@@ -361,6 +361,9 @@ class TestKES:
         pool_num = int(pool_name.replace("node-pool", ""))
         node_name = pool_name.replace("node-", "")
         cluster = cluster_singleton
+        # Waits for up to 12 epochs: 4 checks with invalid opcerts, and up to 6 checks for
+        # the pool to forge blocks again (the first check of each takes up to 2 epochs)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=12)
 
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
@@ -613,6 +616,9 @@ class TestKES:
         pool_num = int(pool_name.replace("node-pool", ""))
         node_name = pool_name.replace("node-", "")
         cluster = cluster_singleton
+        # Waits for up to 7 epochs: up to 6 checks for the pool to forge blocks again, the
+        # first one takes up to 2 epochs
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=7)
 
         temp_template = common.get_test_id(cluster)
         pool_rec = cluster_manager.cache.addrs_data[pool_name]

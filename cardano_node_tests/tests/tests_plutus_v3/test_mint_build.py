@@ -385,6 +385,8 @@ class TestPlutusV3Builtins:
         not be practical to update cost model multiple times in separate tests.
         """
         cluster = cluster_plutus
+        # 2 epochs for cost model update, up to 1 epoch for delayed ratification
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=3)
         temp_template = common.get_test_id(cluster)
 
         pparams_init = cluster.g_query.get_protocol_params()

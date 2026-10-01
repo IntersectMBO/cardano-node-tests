@@ -44,7 +44,6 @@ from cardano_node_tests.utils.versions import EraName
 DATA_DIR = pl.Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
 DEREG_BUFFER_SEC = 40
-TWO_HOURS_SEC = 2 * 60 * 60
 
 # The first protocol version that rejects a duplicated VRF key. Below it the ledger
 # doesn't even keep the occurrence map the rule is enforced against - see
@@ -1073,7 +1072,7 @@ class TestStakePool:
             == src_register_balance - tx_raw_output.fee
         )
 
-        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+        if common.is_epochs_wait_ok(cluster_obj=cluster, epochs=1):
             # Check that the pool was deregistered
             cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
             assert not (
@@ -1134,11 +1133,7 @@ class TestStakePool:
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
-        if cluster.epoch_length_sec > TWO_HOURS_SEC:
-            pytest.skip(
-                "Testnet epoch is longer than 2 hours "
-                f"(epoch length: {cluster.epoch_length_sec / 60 / 60} hours)"
-            )
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=1)
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1295,11 +1290,7 @@ class TestStakePool:
         rand_str = clusterlib.get_rand_str(4)
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
 
-        if cluster.epoch_length_sec > TWO_HOURS_SEC:
-            pytest.skip(
-                "Testnet epoch is longer than 2 hours "
-                f"(epoch length: {cluster.epoch_length_sec / 60 / 60} hours)"
-            )
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4, max_wait_sec=8 * 60 * 60)
 
         pool_name = f"pool_{rand_str}"
         pool_metadata = {
@@ -1563,7 +1554,7 @@ class TestStakePool:
                 pool_params=pool_state.future_pool_params, pool_creation_data=pool_data_updated
             )
 
-        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+        if common.is_epochs_wait_ok(cluster_obj=cluster, epochs=1):
             cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
 
             # Check that the pool metadata hash was correctly updated on chain
@@ -1699,7 +1690,7 @@ class TestStakePool:
                 pool_params=pool_state.future_pool_params, pool_creation_data=pool_data_updated
             )
 
-        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+        if common.is_epochs_wait_ok(cluster_obj=cluster, epochs=1):
             cluster.wait_for_epoch(epoch_no=update_epoch + 1, padding_seconds=5)
 
             # Check that the pool parameters were correctly updated on chain
@@ -1938,7 +1929,7 @@ class TestStakePool:
             == src_init_balance - tx_raw_output.fee - cluster.g_query.get_pool_deposit()
         ), f"Incorrect balance for source address `{pool_owner.payment.address}`"
 
-        if cluster.epoch_length_sec <= TWO_HOURS_SEC:
+        if common.is_epochs_wait_ok(cluster_obj=cluster, epochs=3, max_wait_sec=6 * 60 * 60):
             # Check that the pool deposit was NOT returned to reward account as the reward address
             # is not registered (deposit is lost).
             cluster.wait_for_epoch(epoch_no=dereg_epoch + 3, padding_seconds=30)
@@ -1952,7 +1943,6 @@ class TestStakePool:
 
 # The `xdist_group` matches the `mark` passed to `cluster_manager.get()` - the tests are
 # scheduled together on a single pytest worker, so they run back-to-back and reuse the
-        common.skip_unless_local_fast()
 # assigned "marked" cluster instance regardless of the testnet variant.
 @pytest.mark.xdist_group("minPoolCost")
 class TestPoolCost:
@@ -1962,6 +1952,7 @@ class TestPoolCost:
     def cluster_mincost(
         self, cluster_manager: cluster_management.ClusterManager, pool_cost_start_cluster: pl.Path
     ) -> clusterlib.ClusterLib:
+        common.skip_unless_local_fast()
         return cluster_manager.get(
             mark="minPoolCost",
             lock_resources=[cluster_management.Resources.CLUSTER],

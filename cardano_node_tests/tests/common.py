@@ -81,11 +81,14 @@ if cluster_nodes.get_cluster_type().is_local:
     EPOCH_START_SEC_LEDGER_STATE = -19
     # Time buffer at the end of an epoch after getting ledger state info
     EPOCH_STOP_SEC_LEDGER_STATE = -15
+    # Maximal time a test is allowed to spend waiting for epochs
+    MAX_EPOCHS_WAIT_SEC = 90 * 60
 else:
     # We can be more generous on testnets
     EPOCH_STOP_SEC_BUFFER = -200
     EPOCH_START_SEC_LEDGER_STATE = -300
     EPOCH_STOP_SEC_LEDGER_STATE = -200
+    MAX_EPOCHS_WAIT_SEC = 2 * 60 * 60
 
 
 def hypothesis_settings(max_examples: int = 100) -> tp.Any:
@@ -208,6 +211,53 @@ def skip_unless_local_fast() -> None:
             "Runs only on the 'local_fast' testnet variant, "
             f"not on '{configuration.TESTNET_VARIANT}'"
         )
+
+
+def is_epochs_wait_ok(
+    cluster_obj: clusterlib.ClusterLib, epochs: float, max_wait_sec: float | None = None
+) -> bool:
+    """Check if waiting for `epochs` epochs fits into the maximal allowed wait time.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        epochs: Worst-case number of epochs to wait for (including waits for epoch intervals).
+        max_wait_sec: Maximal allowed wait time in seconds (optional, default:
+            `MAX_EPOCHS_WAIT_SEC`).
+
+    Returns:
+        bool: True if the wait is acceptable, False otherwise.
+    """
+    max_wait_sec = MAX_EPOCHS_WAIT_SEC if max_wait_sec is None else max_wait_sec
+    return bool(cluster_obj.epoch_length_sec * epochs <= max_wait_sec)
+
+
+def skip_on_long_epochs(
+    cluster_obj: clusterlib.ClusterLib, epochs: float, max_wait_sec: float | None = None
+) -> None:
+    """Skip the test if waiting for `epochs` epochs would take too long.
+
+    Some testnets (e.g. the "leios_fast" local testnet variant, or public testnets) have epochs
+    too long for tests that need to cross several epoch boundaries. The test is skipped when
+    `epochs` times the epoch length exceeds `max_wait_sec`. The default `MAX_EPOCHS_WAIT_SEC`
+    differs between local testnets and real testnets.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        epochs: Worst-case number of epochs the test needs to wait for (including waits for
+            epoch intervals).
+        max_wait_sec: Maximal allowed wait time in seconds (optional, default:
+            `MAX_EPOCHS_WAIT_SEC`). Use for selected tests where long runtime is tolerated.
+    """
+    max_wait_sec = MAX_EPOCHS_WAIT_SEC if max_wait_sec is None else max_wait_sec
+    if is_epochs_wait_ok(cluster_obj=cluster_obj, epochs=epochs, max_wait_sec=max_wait_sec):
+        return
+
+    max_epoch_length_sec = max_wait_sec / epochs
+    pytest.skip(
+        f"Epoch is too long for waiting {epochs:.3g} epochs "
+        f"(epoch length: {cluster_obj.epoch_length_sec / 60:.1f} min, "
+        f"max allowed: {max_epoch_length_sec / 60:.1f} min)"
+    )
 
 
 @contextlib.contextmanager

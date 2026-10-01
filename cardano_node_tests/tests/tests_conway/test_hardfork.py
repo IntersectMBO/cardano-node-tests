@@ -87,6 +87,7 @@ class TestHardfork:
             is_experimental_enabled = bool(json.load(in_json).get("ExperimentalHardForksEnabled"))
         if not is_experimental_enabled:
             pytest.skip("Experimental hard-forks are not enabled on the cluster.")
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=2)
 
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address

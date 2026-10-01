@@ -65,6 +65,7 @@ class TestNoRewards:
         * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=16)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -241,6 +242,7 @@ class TestNoRewards:
         * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=16)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -410,6 +412,7 @@ class TestNoRewards:
         * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool_use_rewards
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=15)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -613,6 +616,7 @@ class TestNoRewards:
         * Check that pool owner is receiving rewards
         """
         cluster, pool_name = cluster_lock_pool_use_rewards
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=11)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -807,6 +811,11 @@ class TestNoRewards:
         """
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_use_rewards
+        # Till epoch 4 + up to 4 for rewards + 4 + up to 5 for re-registration + 3
+        common.skip_on_long_epochs(
+            cluster_obj=cluster,
+            epochs=clusterlib_utils.get_epochs_to_rewards(cluster_obj=cluster) + 16,
+        )
         pool_num = int(pool_name.replace("node-pool", ""))
 
         kes_period_info_errors_list: list[str] = []

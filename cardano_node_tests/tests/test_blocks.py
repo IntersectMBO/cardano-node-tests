@@ -482,6 +482,9 @@ class TestDynamicBlockProd:
         * Check that nodeX has replaced nodeY and is producing blocks on its behalf
         """
         cluster = cluster_singleton
+        # Waits for up to 5 epochs: up to 1.5 to reach the second half of an epoch in
+        # epoch 1+, the rest of that epoch, and `num_epochs` more epochs
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=5)
         temp_template = common.get_test_id(cluster)
         num_epochs = 3
 

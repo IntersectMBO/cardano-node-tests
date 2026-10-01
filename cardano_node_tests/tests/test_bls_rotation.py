@@ -694,6 +694,9 @@ class TestBlsKeyRotation:
         * Check that the rotation didn't change any other pool parameter
         """
         cluster_obj = cluster
+        # Waits for the epoch after the registration, and then the
+        # `bls.BLS_ACTIVATION_EPOCHS` epochs the rotation needs to get seated
+        common.skip_on_long_epochs(cluster_obj=cluster_obj, epochs=1 + bls.BLS_ACTIVATION_EPOCHS)
         temp_template = common.get_test_id(cluster_obj)
 
         pool_creation_out, reg_epoch, orig_vkey = register_pool_with_bls_key(
@@ -822,6 +825,7 @@ class TestBlsKeyRotation:
           registration epoch was re-stamped with the epoch the update took effect in
         """
         cluster_obj = cluster
+        common.skip_on_long_epochs(cluster_obj=cluster_obj, epochs=2)
         temp_template = common.get_test_id(cluster_obj)
 
         pool_creation_out, reg_epoch, orig_vkey = register_pool_with_bls_key(
@@ -901,6 +905,7 @@ class TestBlsKeyRotation:
         * Check that after the epoch boundary the pool holds the new key again
         """
         cluster_obj = cluster
+        common.skip_on_long_epochs(cluster_obj=cluster_obj, epochs=3)
         temp_template = common.get_test_id(cluster_obj)
 
         # The registration and the certificate that drops the key have to land in the
@@ -1245,6 +1250,9 @@ class TestBlsKeyRotationVoting:
           the rotation is seated - and check that the pool votes again
         """
         cluster = cluster_leios_singleton
+        # Waits for up to 6.5 epochs: up to `leios.VOTING_START_EPOCH` epochs, then
+        # `bls.BLS_ACTIVATION_EPOCHS` epochs, and ~20 min of log searches and node restarts
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=6.5)
         temp_template = common.get_test_id(cluster)
 
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE

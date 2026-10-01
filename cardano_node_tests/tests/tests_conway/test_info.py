@@ -72,6 +72,10 @@ class TestInfo:
         * Check for deposit return
         """
         cluster, governance_data = cluster_use_governance
+        # Wait for action expiry and removal
+        common.skip_on_long_epochs(
+            cluster_obj=cluster, epochs=cluster.conway_genesis["govActionLifetime"] + 2
+        )
         temp_template = common.get_test_id(cluster)
         action_deposit_amt = cluster.g_query.get_gov_action_deposit()
 
