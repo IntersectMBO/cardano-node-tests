@@ -8,6 +8,9 @@ they started looking.
 """
 
 import dataclasses
+import functools
+import hashlib
+import json
 import logging
 import pathlib as pl
 import re
@@ -104,6 +107,41 @@ NOT_VOTED_KEY_MSGS = (
 # it was, e.g. because any of them is wrong in the situation being checked.
 NOT_VOTED_MSGS = (NOT_ON_COMMITTEE_MSG, *NOT_VOTED_KEY_MSGS)
 
+# Regexes that capture the details of the EB life cycle, for tests that follow a particular
+# EB rather than just look for activity. An EB is identified by its point - the slot of the
+# RB that announced it, and the hash of the EB body.
+#
+# The EB forged by the block producer, with the slot of the announcing RB and the list of
+# the endorsed txs as `(tx hash, tx size)` pairs. The tx hash is not the tx id, see
+# `get_eb_tx_ref`.
+EB_FORGED_RE = (
+    r"Consensus\.LeiosKernel\.BlockForged\].*EB forged at slot SlotNo (\d+): "
+    r"MkLeiosEb \{leiosEbTxs = \[(.*)\]\}"
+)
+# A single `(tx hash, tx size)` pair from the list of the endorsed txs
+EB_TX_REF_RE = r"\(([0-9a-f]{64}),(\d+)\)"
+# The point of the EB the block producer announced in the RB it forged
+EB_ANNOUNCED_RE = (
+    r"Consensus\.LeiosKernel\.BlockAnnounced\].*EB announced: \((\d+), ([0-9a-f]{64})\)"
+)
+# The slot of the RB being forged with a certificate for an EB, and the point of that EB
+EB_CERTIFIED_RE = (
+    r"Consensus\.LeiosKernel\.BlockCertified\].*EB certified at slot SlotNo (\d+): "
+    r"\((\d+), ([0-9a-f]{64})\)"
+)
+# A block forged by the node that the node also adopted, with its slot and hash
+BLOCK_ADOPTED_RE = (
+    r"Forge\.Loop\.AdoptedBlock\].*Adopted block forged in slot (\d+): ([0-9a-f]{64})"
+)
+# A switch of the node's chain to a fork. It is the only way for a block to leave the
+# chain of a node, and the message names only the new tip, not where the chains split.
+FORK_SWITCH_RE = r"ChainDB\.AddBlockEvent\.SwitchedToAFork\]"
+# A new tip of the node's chain, with its hash and slot
+NEW_TIP_RE = (
+    r"ChainDB\.AddBlockEvent\.(?:AddedToCurrentChain|SwitchedToAFork)\].*"
+    r"new tip: ([0-9a-f]{64}) at slot (\d+)"
+)
+
 # The first epoch in which a pool registered by a transaction can be a member of the
 # Leios voting committee. The committee is drawn from a stake distribution snapshot
 # that is empty for the whole lifetime of a freshly started cluster instance until this
@@ -169,6 +207,26 @@ def is_committee_seated_in_genesis(*, cluster_obj: clusterlib.ClusterLib) -> boo
         "data"
     ) or genesis.get("staking", {}).get("pools", {})
     return any(p.get("blsKey") for p in pools.values())
+
+
+def get_eb_tx_ref(*, tx_file: pl.Path) -> tuple[str, int]:
+    """Return the reference to a signed tx the way an EB lists it.
+
+    An EB doesn't list its txs by tx id (the hash of the tx body), but by the Blake2b-256
+    hash of the whole serialized tx, witnesses included, together with the size of the
+    serialized tx (`forgeLeiosEb` in ouroboros-consensus `LeiosDemoTypes.hs`). The node
+    serializes a tx it got from the mempool into the bytes it was submitted as, so the
+    reference can be computed from the CBOR of the signed tx file.
+
+    Args:
+        tx_file: A path to the signed tx file (a text envelope).
+
+    Returns:
+        The tx hash as a hex string, and the size of the serialized tx in bytes.
+    """
+    with open(tx_file, encoding="utf-8") as fp_in:
+        tx_cbor = bytes.fromhex(json.load(fp_in)["cborHex"])
+    return hashlib.blake2b(tx_cbor, digest_size=32).hexdigest(), len(tx_cbor)
 
 
 def skip_if_no_ebs_in_genesis(*, genesis: dict) -> None:
@@ -279,6 +337,54 @@ def init_searches(logfiles_list: tp.Iterable[pl.Path]) -> dict[pl.Path, LogSearc
     return searches
 
 
+def _search_one[T](
+    *,
+    logfile: pl.Path,
+    search: LogSearch,
+    search_func: tp.Callable[..., T],
+    log_errors: dict[pl.Path, str],
+) -> T | None:
+    """Search the part of one log file that was appended since the previous search.
+
+    Moves the search position of `search` past the searched part, and records in
+    `log_errors` whether the log file could be searched.
+
+    Args:
+        logfile: Path to the node log file.
+        search: The search state of the log file, updated in place.
+        search_func: Does the actual search. Called with the `logfile`, `seek_offset`,
+            `inode` and `timestamp` keyword arguments, like `find_msgs` and
+            `logfiles.find_msgs_in_logs` take them.
+        log_errors: Only the last outcome per log file, see `search_round`.
+
+    Returns:
+        What `search_func` returned, or `None` when the log file could not be searched.
+    """
+    try:
+        # Record the new search position before the search, so that lines appended
+        # while the search is running are not skipped in the next round
+        next_position = get_log_position(logfile)
+        result = search_func(
+            logfile=logfile,
+            seek_offset=search.seek_offset,
+            inode=search.inode,
+            timestamp=search.timestamp,
+        )
+    except FileNotFoundError as err:
+        # The log file kept getting rotated during the search. Keep the search
+        # position, so that the same part of the log is searched again.
+        msg = f"Cannot search '{logfile}': {err}"
+        LOGGER.warning("%s", msg)
+        log_errors[logfile] = msg
+        return None
+
+    # The search position was kept on failure, so a failure that a later round
+    # recovered from didn't cost any log content
+    log_errors.pop(logfile, None)
+    search.seek_offset, search.inode, search.timestamp = next_position
+    return result
+
+
 def search_round(
     *,
     searches: dict[pl.Path, LogSearch],
@@ -303,29 +409,48 @@ def search_round(
         if not missing:
             continue
 
-        try:
-            # Record the new search position before the search, so that lines appended
-            # while the search is running are not skipped in the next round
-            next_position = get_log_position(logfile)
-            search.found |= find_msgs(
-                regexes=missing,
-                logfile=logfile,
-                seek_offset=search.seek_offset,
-                inode=search.inode,
-                timestamp=search.timestamp,
-            )
-        except FileNotFoundError as err:
-            # The log file kept getting rotated during the search. Keep the search
-            # position, so that the same part of the log is searched again.
-            msg = f"Cannot search '{logfile}': {err}"
-            LOGGER.warning("%s", msg)
-            log_errors[logfile] = msg
-            continue
+        found = _search_one(
+            logfile=logfile,
+            search=search,
+            search_func=functools.partial(find_msgs, regexes=missing),
+            log_errors=log_errors,
+        )
+        if found is not None:
+            search.found |= found
 
-        # The search position was kept on failure, so a failure that a later round
-        # recovered from didn't cost any log content
-        log_errors.pop(logfile, None)
-        search.seek_offset, search.inode, search.timestamp = next_position
+
+def search_lines_round(
+    *,
+    searches: dict[pl.Path, LogSearch],
+    regex: str,
+    log_errors: dict[pl.Path, str],
+) -> dict[pl.Path, list[str]]:
+    """Return the lines matching a regex that were appended since the previous round.
+
+    The counterpart of `search_round` for a caller that needs the matching lines
+    themselves, not just whether a message is there. Updates the search positions in
+    `searches` in place; the `found` sets are left alone.
+
+    Args:
+        searches: The search state per log file.
+        regex: The regex to search for.
+        log_errors: The log files that could not be searched, updated the same way as by
+            `search_round`.
+
+    Returns:
+        The new matching lines per log file.
+    """
+    new_lines: dict[pl.Path, list[str]] = {}
+    for logfile, search in searches.items():
+        lines = _search_one(
+            logfile=logfile,
+            search=search,
+            search_func=functools.partial(logfiles.find_msgs_in_logs, regex=regex),
+            log_errors=log_errors,
+        )
+        new_lines[logfile] = lines or []
+
+    return new_lines
 
 
 def wait_for_msgs(
