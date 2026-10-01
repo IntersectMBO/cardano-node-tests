@@ -19,6 +19,7 @@ certificate into the ledger.
 
 import dataclasses
 import datetime
+import fractions
 import json
 import logging
 import pathlib as pl
@@ -42,6 +43,7 @@ from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import locking
+from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 
 LOGGER = logging.getLogger(__name__)
@@ -97,6 +99,26 @@ SMALL_COMMITTEE_SIZE = configuration.NUM_POOLS - 1
 # and the test only ever reports that. One seat short of every pool leaves it at 2/3 or
 # better, so 0.5 clears it for any pool count the cluster allows.
 SMALL_COMMITTEE_QUORUM = 0.5
+
+# The pool whose node `TestLeiosQuorum` stops. The Tx load generator submits to `pool1`,
+# so stopping that one would also stop the load the EBs are made of.
+QUORUM_STOPPED_POOL = cluster_management.Resources.POOL3
+
+# Seconds to wait after the stop for the votes on the EBs announced before it to be
+# settled. A vote is cast 3 sec after the EB arrives and is accepted for 4 more sec,
+# so 10 sec cover the vote window with a margin.
+QUORUM_VOTE_SETTLE_SEC = 10
+
+# Number of payment Txs to submit while the quorum is lost
+QUORUM_OUTAGE_TXS = 3
+
+# Min number of blocks the running pools must forge while the quorum is lost. With 2/3
+# of the stake left, ~12 blocks are expected in `leios.MAX_SEARCH_SEC` on `leios_fast`.
+QUORUM_OUTAGE_MIN_BLOCKS = 3
+
+# Max number of seconds to wait for a certificate once the stopped pool is back. The
+# node needs to start and catch up with the chain before its votes count again.
+QUORUM_RECOVERY_SEARCH_SEC = 2 * leios.MAX_SEARCH_SEC
 
 # How much of an epoch a log search needs: the window itself plus the margin that keeps
 # its end away from the epoch boundary.
@@ -176,6 +198,20 @@ def cluster_small_committee(
         cleanup=True,
         scriptsdir=small_committee_start_cluster,
     )
+    return cluster_obj
+
+
+@pytest.fixture
+def cluster_leios_lock(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    """Lock the whole cluster instance and skip unless Leios EBs can be observed on it.
+
+    The whole instance is locked because the test stops one of the pool nodes, which
+    takes a part of the stake out of block production and out of the Leios voting.
+    """
+    cluster_obj = cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
+    leios.skip_if_no_ebs(cluster_obj=cluster_obj)
     return cluster_obj
 
 
@@ -455,6 +491,81 @@ def _get_voting_problems(
             )
 
     return errors, skip_reasons
+
+
+def _get_voting_share_without(
+    *, cluster_obj: clusterlib.ClusterLib, pool_id: str
+) -> tuple[fractions.Fraction, int]:
+    """Return the committee weight that is left when a pool stops voting.
+
+    A seat is weighted by the pool's share of the stake the committee was selected
+    from, which the stake snapshot query reports as `stakeSet`.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        pool_id: A hex-encoded ID of the stake pool that stops voting.
+
+    Returns:
+        The summed weight of the committee seats of all the other pools, and the epoch
+        of the committee.
+    """
+    # One query for the committee and for the stake it was selected from, so that an
+    # epoch boundary cannot split the two
+    snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
+    epoch = cluster_obj.g_query.get_epoch()
+
+    pools_stake = {p: int(s["stakeSet"]) for p, s in snapshot["pools"].items()}
+    total_stake = sum(pools_stake.values())
+    assert total_stake, f"The stake snapshot of epoch {epoch} reports no stake: {snapshot}"
+
+    seated_ids = {s["poolId"] for s in snapshot.get("leiosCommittee") or []}
+    assert pool_id in seated_ids, (
+        f"The pool '{pool_id}' holds no seat on the Leios committee of epoch {epoch}, so "
+        f"stopping it cannot take the committee below the quorum: {sorted(seated_ids)}"
+    )
+
+    left_stake = sum(pools_stake.get(p, 0) for p in seated_ids if p != pool_id)
+    return fractions.Fraction(left_stake, total_stake), epoch
+
+
+def _get_outage_errors(
+    *,
+    found_per_pool: dict[pl.Path, set[str]],
+    missing_txs: list[str],
+    outage_blocks: int,
+    left_share: fractions.Fraction,
+    quorum: fractions.Fraction,
+) -> list[str]:
+    """Judge what the running pools did while the stopped pool took the quorum with it.
+
+    Args:
+        found_per_pool: The searched messages found in the log of each running pool.
+        missing_txs: IDs of the Txs submitted meanwhile whose outputs are not in the UTxO.
+        outage_blocks: Number of blocks forged meanwhile.
+        left_share: The committee weight of the running pools.
+        quorum: The quorum the certificates need.
+
+    Returns:
+        The failures. Empty when the chain kept going without certifying any EB.
+    """
+    errors = [
+        f"Found a line matching `{r}` in '{logfile}' while the pool "
+        f"'{QUORUM_STOPPED_POOL}' was stopped and the committee held only "
+        f"{float(left_share):.3f} of the stake, below the quorum {float(quorum):.3f}."
+        for logfile, found in found_per_pool.items()
+        for r in (leios.MSG_CERTIFIED, leios.MSG_BLOCK_CERTIFIED)
+        if r in found
+    ]
+    if missing_txs:
+        errors.append(
+            f"Outputs of Txs submitted while the quorum was lost are not in the UTxO: {missing_txs}"
+        )
+    if outage_blocks < QUORUM_OUTAGE_MIN_BLOCKS:
+        errors.append(
+            f"Only {outage_blocks} blocks were forged while the pool '{QUORUM_STOPPED_POOL}' "
+            f"was stopped, expected at least {QUORUM_OUTAGE_MIN_BLOCKS}."
+        )
+    return errors
 
 
 class TestLeios:
@@ -1250,6 +1361,257 @@ class TestLeiosEbTxs:
                         ),
                         *fork_switches,
                         *log_errors.values(),
+                    ]
+                )
+            )
+
+
+class TestLeiosQuorum:
+    """Tests for a Leios committee that loses and regains its quorum."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
+    @pytest.mark.long
+    def test_quorum_loss_and_recovery(
+        self,
+        cluster_leios_lock: clusterlib.ClusterLib,
+        cluster_manager: cluster_management.ClusterManager,
+    ):
+        """Check that the chain stays live without a quorum, and certifies again after.
+
+        * Wait for the epoch in which the voting committee becomes active
+        * Check that stopping one pool takes the committee below the quorum - the seats
+          of the remaining pools weigh less than `leiosQuorumStakeThreshold`
+        * Search the pool logs until a certificate is assembled, so that the cluster is
+          known to certify EBs before the stop
+        * Stop the pool node, and wait for the votes and certificates of the EBs that
+          were announced before the stop to settle
+        * Record the current end of the logs of the running pools
+        * Submit payment Txs and check that their outputs are in the UTxO
+        * Search the logs of the running pools for the rest of the window
+        * Check that the running pools assembled no certificate and no block certified
+          an EB, while they did see EBs to vote on - skip as inconclusive when they saw
+          none, or when a log could not be searched
+        * Check that the running pools kept forging blocks
+        * Start the pool node again
+        * Check that a certificate is assembled again within a bounded time
+        """
+        cluster = cluster_leios_lock
+        # Waits for up to `leios.VOTING_START_EPOCH` epochs, and then for ~25 min of log
+        # searches and block waits, which is up to 2 epochs on `leios_fast`
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=leios.VOTING_START_EPOCH + 2)
+        temp_template = common.get_test_id(cluster)
+
+        state_dir = cluster_nodes.get_cluster_env().state_dir
+        stopped_node = QUORUM_STOPPED_POOL.replace("node-", "")
+        pool_logs = {
+            pool_name: state_dir / f"{pool_name.replace('node-', '')}.stdout"
+            for pool_name in cluster_management.Resources.ALL_POOLS
+        }
+        missing_logs = sorted(str(f) for f in pool_logs.values() if not f.exists())
+        assert not missing_logs, f"Pool log files not found: {', '.join(missing_logs)}"
+        running_logs = [f for n, f in pool_logs.items() if n != QUORUM_STOPPED_POOL]
+
+        # A pool registered by a transaction is on no committee until this epoch. The
+        # wait is a no-op when the pools come with their BLS key straight from the
+        # genesis, which is the setup this test normally runs on.
+        if not leios.is_committee_seated_in_genesis(cluster_obj=cluster):
+            cluster.wait_for_epoch(epoch_no=leios.VOTING_START_EPOCH, padding_seconds=5)
+
+        # The quorum is read from the current protocol parameters, and the seat weights
+        # from the committee of the current epoch. Neither changes at an epoch boundary
+        # unless the pools or their stake change, which the cluster lock rules out.
+        quorum = fractions.Fraction(
+            cluster.g_query.get_protocol_params()["leiosQuorumStakeThreshold"]
+        ).limit_denominator()
+        stopped_pool_id = helpers.get_pool_id_hex(
+            delegation.get_pool_id(
+                cluster_obj=cluster,
+                addrs_data=cluster_manager.cache.addrs_data,
+                pool_name=QUORUM_STOPPED_POOL,
+            )
+        )
+        left_share, committee_epoch = _get_voting_share_without(
+            cluster_obj=cluster, pool_id=stopped_pool_id
+        )
+        if left_share >= quorum:
+            pytest.skip(
+                f"Without '{QUORUM_STOPPED_POOL}', the Leios committee of epoch "
+                f"{committee_epoch} still holds {float(left_share):.3f} of the stake, which "
+                f"reaches the quorum {float(quorum):.3f}, so stopping it cannot lose the quorum"
+            )
+
+        # Make sure the cluster does certify EBs, otherwise the absence of certificates
+        # while the pool is stopped would say nothing
+        baseline_searches = leios.init_searches(pool_logs.values())
+        baseline_problems = leios.search_logs_until(
+            searches=baseline_searches,
+            regexes=[leios.MSG_CERTIFIED],
+            deadline=time.monotonic() + leios.MAX_SEARCH_SEC,
+            stop_on=[leios.MSG_CERTIFIED],
+        )
+        if not any(leios.MSG_CERTIFIED in s.found for s in baseline_searches.values()):
+            pytest.skip(
+                "; ".join(
+                    [
+                        (
+                            "No pool assembled a Leios certificate before the pool node was "
+                            "stopped, so the absence of certificates without the quorum "
+                            "would be inconclusive"
+                        ),
+                        *baseline_problems,
+                    ]
+                )
+            )
+
+        payment_addrs = addrs_common.get_payment_addrs(
+            name_template=temp_template,
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=2,
+            fund_idx=[0],
+            caching_key=helpers.get_current_line_str(),
+        )
+
+        # Stopping a node drops the connections the other nodes have to it
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="MuxBearerClosed",
+            ignore_file_id=cluster_manager.worker_id,
+        )
+
+        node_stopped = False
+        with cluster_manager.respin_on_failure():
+            try:
+                cluster_nodes.stop_nodes([stopped_node])
+                node_stopped = True
+
+                # A certificate for an EB announced before the stop can still be
+                # assembled from votes cast before the stop, and it can be included in
+                # the very next block, wherever that one falls. Only the EBs announced
+                # after that block depend on the votes of the running pools alone.
+                cluster.wait_for_new_block(new_blocks=2)
+                time.sleep(QUORUM_VOTE_SETTLE_SEC)
+
+                outage_searches = leios.init_searches(running_logs)
+                outage_deadline = time.monotonic() + leios.MAX_SEARCH_SEC
+                outage_start_block = cluster.g_query.get_block_no()
+
+                # No EB can be certified without the quorum, so the Txs can make it to
+                # the chain only in a ranking block
+                dst_address = payment_addrs[1].address
+                tx_outputs = [
+                    cluster.g_transaction.send_tx(
+                        src_address=payment_addrs[0].address,
+                        tx_name=f"{temp_template}_outage_{i}",
+                        txouts=[clusterlib.TxOut(address=dst_address, amount=2_000_000)],
+                        tx_files=clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file]),
+                    )
+                    for i in range(QUORUM_OUTAGE_TXS)
+                ]
+                missing_txs = [
+                    cluster.g_transaction.get_txid(tx_body_file=t.out_file)
+                    for t in tx_outputs
+                    if not clusterlib.filter_utxos(
+                        utxos=cluster.g_query.get_utxo(tx_raw_output=t), address=dst_address
+                    )
+                ]
+
+                outage_problems = leios.search_logs_until(
+                    searches=outage_searches,
+                    regexes=[
+                        leios.MSG_CERTIFIED,
+                        leios.MSG_BLOCK_CERTIFIED,
+                        leios.MSG_VOTED,
+                        leios.MSG_ANNOUNCEMENT_ACCEPTED,
+                    ],
+                    deadline=outage_deadline,
+                )
+                outage_blocks = cluster.g_query.get_block_no() - outage_start_block
+                outage_found = {p: s.found for p, s in outage_searches.items()}
+
+                errors = _get_outage_errors(
+                    found_per_pool=outage_found,
+                    missing_txs=missing_txs,
+                    outage_blocks=outage_blocks,
+                    left_share=left_share,
+                    quorum=quorum,
+                )
+                if errors:
+                    errors.extend(outage_problems)
+                assert not errors, "\n".join(errors)
+
+                # Without an EB to vote on there is nothing to certify, and a log that
+                # could not be searched may hide a certificate. Either way the absence of
+                # certificates says nothing.
+                eb_seen = any(
+                    found & {leios.MSG_VOTED, leios.MSG_ANNOUNCEMENT_ACCEPTED}
+                    for found in outage_found.values()
+                )
+                if not eb_seen or outage_problems:
+                    # A skip is not an `Exception`, so `respin_on_failure` doesn't see it.
+                    # The pool node gets started again, but nothing shows the committee
+                    # certifies again.
+                    cluster_manager.set_needs_respin()
+                    pytest.skip(
+                        "; ".join(
+                            [
+                                (
+                                    "No running pool voted on or accepted an EB announcement "
+                                    "while the quorum was lost, or a log could not be "
+                                    "searched, so the absence of certificates is inconclusive"
+                                ),
+                                *outage_problems,
+                            ]
+                        )
+                    )
+
+                # Search from right before the start, so that a certificate assembled
+                # as soon as the node is back is not missed
+                recovery_searches = leios.init_searches(pool_logs.values())
+                cluster_nodes.start_nodes([stopped_node])
+                node_stopped = False
+
+                recovery_problems = leios.search_logs_until(
+                    searches=recovery_searches,
+                    regexes=[
+                        leios.MSG_CERTIFIED,
+                        leios.MSG_VOTED,
+                        leios.MSG_ANNOUNCEMENT_ACCEPTED,
+                    ],
+                    deadline=time.monotonic() + QUORUM_RECOVERY_SEARCH_SEC,
+                    stop_on=[leios.MSG_CERTIFIED],
+                )
+            finally:
+                # Never hand the instance over with a stopped pool node
+                if node_stopped:
+                    cluster_nodes.start_nodes([stopped_node])
+
+            # Still within the respin context - a committee that doesn't certify again
+            # leaves the instance in a state the next test cannot rely on. A skip is not
+            # an `Exception`, so it has to ask for the respin itself.
+            recovery_found = {m for s in recovery_searches.values() for m in s.found}
+            if leios.MSG_CERTIFIED in recovery_found:
+                return
+
+            if recovery_found & {leios.MSG_VOTED, leios.MSG_ANNOUNCEMENT_ACCEPTED}:
+                error = (
+                    "No pool assembled a Leios certificate within "
+                    f"{QUORUM_RECOVERY_SEARCH_SEC} sec after the pool '{QUORUM_STOPPED_POOL}' "
+                    "was started again, although the pools saw EBs to vote on."
+                )
+                raise AssertionError("\n".join([error, *recovery_problems]))
+
+            cluster_manager.set_needs_respin()
+            pytest.skip(
+                "; ".join(
+                    [
+                        (
+                            "No pool voted on or accepted an EB announcement after the pool "
+                            f"'{QUORUM_STOPPED_POOL}' was started again, so the absence of "
+                            "certificates is inconclusive"
+                        ),
+                        *recovery_problems,
                     ]
                 )
             )
