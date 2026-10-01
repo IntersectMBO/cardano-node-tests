@@ -61,9 +61,9 @@ Before running tests, you must first open `agent_docs/running_tests.md` and foll
 
 ---
 
-## Writing New E2E Tests
+## Writing and Changing E2E Tests
 
-Before writing a new E2E test from scratch, you must first open `agent_docs/new_e2e_tests.md` and follow the instructions.
+Before writing a new E2E test, or making larger changes to existing E2E tests (refactoring, extending, moving tests or fixtures), you must first open `agent_docs/e2e_tests.md` and follow the instructions.
 
 ---
 
