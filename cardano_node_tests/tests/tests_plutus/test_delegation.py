@@ -707,6 +707,8 @@ class TestDelegateAddr:
 
         if plutus_version == "v1" and use_reference_script:
             pytest.skip("PlutusV1 doesn't support reference scripts")
+        # Max over params; scenarios that skip the rewards check wait ~0 epochs
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
 
         collateral_fund_deleg = 1_500_000_000
         collateral_fund_withdraw = 1_500_000_000
@@ -932,6 +934,7 @@ class TestDelegateAddr:
         #  - cardano-cli 299: Cannot de-register Plutus script stake address
 
         cluster, pool_id = cluster_lock_42stake
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
         temp_template = common.get_test_id(cluster)
 
         collateral_fund_reg = 1_500_000_000

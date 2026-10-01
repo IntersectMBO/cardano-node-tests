@@ -295,6 +295,7 @@ class TestPParamUpdate:
           and enacted actions
         """
         cluster, governance_data = cluster_lock_governance_plutus
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=2)
         temp_template = common.get_test_id(cluster)
         cost_proposal_file = common.COST_PROPOSAL_FILE
         db_errors_final = []

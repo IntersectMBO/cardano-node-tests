@@ -191,6 +191,8 @@ def cluster_with_constitution(
                 pytest.skip("Cannot run update constitution during bootstrap period.")
             if not cluster_nodes.get_cluster_type().is_local:
                 pytest.skip("Cannot run update constitution on non-local testnet.")
+            # Possible delayed ratification + ratification + enactment
+            common.skip_on_long_epochs(cluster_obj=cluster, epochs=3)
 
             _url = helpers.get_vcs_link()
             [r.start(url=_url) for r in (reqc.cip015, reqc.cip031c_02)]

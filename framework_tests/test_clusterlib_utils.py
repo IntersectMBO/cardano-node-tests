@@ -250,3 +250,55 @@ class TestLedgerStateSnapshot:
         stake_rec = clusterlib_utils.get_stake_rec(stake_snapshot=self.LEIOS_SNAPSHOT)
         hashes = clusterlib_utils.get_snapshot_rec(ledger_snapshot=stake_rec)
         assert hashes == {KEY_HASH1: 10, KEY_HASH2: 20}
+
+
+class EpochClusterStub:
+    """Minimal stub of `ClusterLib` that provides the current epoch and records epoch waits."""
+
+    def __init__(self, epoch: int) -> None:
+        self.g_query = self
+        self.epoch = epoch
+        self.waited_for: list[int] = []
+
+    def get_epoch(self) -> int:
+        """Return the current epoch."""
+        return self.epoch
+
+    def wait_for_epoch(self, epoch_no: int, padding_seconds: int = 0) -> int:
+        """Record the epoch to wait for and pretend it was reached."""
+        del padding_seconds
+        self.waited_for.append(epoch_no)
+        self.epoch = epoch_no
+        return epoch_no
+
+
+class TestFirstRewards:
+    """Tests for waiting for the first reward distribution."""
+
+    @pytest.mark.parametrize(
+        ("epoch", "expected"),
+        [
+            (0, clusterlib_utils.FIRST_REWARDS_EPOCH),
+            (clusterlib_utils.FIRST_REWARDS_EPOCH - 1, 1),
+            (clusterlib_utils.FIRST_REWARDS_EPOCH, 0),
+            (clusterlib_utils.FIRST_REWARDS_EPOCH + 1, 0),
+        ],
+    )
+    def test_get_epochs_to_rewards(self, epoch: int, expected: int):
+        """Count the epochs left until the first rewards, never a negative number."""
+        cluster_obj: tp.Any = EpochClusterStub(epoch=epoch)
+        assert clusterlib_utils.get_epochs_to_rewards(cluster_obj=cluster_obj) == expected
+
+    @pytest.mark.parametrize(
+        ("epoch", "expected_waits"),
+        [
+            (clusterlib_utils.FIRST_REWARDS_EPOCH - 1, [clusterlib_utils.FIRST_REWARDS_EPOCH]),
+            (clusterlib_utils.FIRST_REWARDS_EPOCH, []),
+            (clusterlib_utils.FIRST_REWARDS_EPOCH + 1, []),
+        ],
+    )
+    def test_wait_for_rewards(self, epoch: int, expected_waits: list[int]):
+        """Wait for the first rewards epoch only when it was not reached yet."""
+        cluster_obj: tp.Any = EpochClusterStub(epoch=epoch)
+        clusterlib_utils.wait_for_rewards(cluster_obj=cluster_obj)
+        assert cluster_obj.waited_for == expected_waits

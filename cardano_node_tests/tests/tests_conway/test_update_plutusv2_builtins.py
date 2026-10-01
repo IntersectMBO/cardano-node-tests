@@ -88,6 +88,7 @@ class TestUpdateBuiltIns:
         * Check again that the Plutus script fails as expected in PV9
         """
         cluster, governance_data = cluster_lock_governance_plutus
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=2)
         temp_template = common.get_test_id(cluster)
 
         if not conway_common.is_in_bootstrap(cluster_obj=cluster):

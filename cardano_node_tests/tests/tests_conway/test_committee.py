@@ -623,6 +623,7 @@ class TestCommittee:
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Cannot run during bootstrap period.")
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
 
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
             pool_user_lg.stake.address
@@ -1409,6 +1410,8 @@ class TestCommittee:
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Cannot run during bootstrap period.")
+        # 3 actions, each needs ratification + enactment epoch
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=6)
 
         deposit_amt = cluster.g_query.get_gov_action_deposit()
 
@@ -1761,6 +1764,8 @@ class TestCommittee:
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Cannot run during bootstrap period.")
+        # 2 actions + reinstating the committee, each needs ratification + enactment epoch
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=6)
 
         def _check_rat_enact_state(
             name_template: str,

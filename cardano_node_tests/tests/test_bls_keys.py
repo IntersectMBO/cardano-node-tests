@@ -588,6 +588,7 @@ class TestBlsProofOfPossession:
         * Check that the key is not past its lifetime, so only the proof can disqualify it
         * Check that the seat is not voting
         """
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=bls.BLS_ACTIVATION_EPOCHS)
         temp_template = common.get_test_id(cluster)
 
         pool = register_pool_with_mismatched_pop(

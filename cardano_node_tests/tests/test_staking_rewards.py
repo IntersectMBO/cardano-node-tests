@@ -272,11 +272,7 @@ class TestRewards:
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
-        if cluster.epoch_length_sec > 2 * 60 * 60:
-            pytest.skip(
-                "Testnet epoch is longer than 2 hours "
-                f"(epoch length: {cluster.epoch_length_sec / 60 / 60} hours)"
-            )
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4, max_wait_sec=8 * 60 * 60)
 
         # Make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
@@ -334,6 +330,11 @@ class TestRewards:
         """
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_use_pool_and_rewards
+        # Till first rewards + 10 till the end of the 9 checked epochs
+        common.skip_on_long_epochs(
+            cluster_obj=cluster,
+            epochs=clusterlib_utils.get_epochs_to_rewards(cluster_obj=cluster) + 10,
+        )
         this_epoch = 0
 
         # Make sure there are rewards already available
@@ -659,6 +660,11 @@ class TestRewards:
         """
         __: tp.Any  # mypy workaround
         cluster, pool_name = cluster_lock_pool_and_pots
+        # Till first rewards + 9 till the end of the 8 checked epochs
+        common.skip_on_long_epochs(
+            cluster_obj=cluster,
+            epochs=clusterlib_utils.get_epochs_to_rewards(cluster_obj=cluster) + 9,
+        )
 
         # Make sure there are rewards already available
         clusterlib_utils.wait_for_rewards(cluster_obj=cluster)
@@ -1002,6 +1008,7 @@ class TestRewards:
         * Check that reward amount is decreasing epoch after epoch
         """
         cluster, pool_name = cluster_use_pool_and_rewards
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=8)
 
         temp_template = common.get_test_id(cluster)
 
@@ -1121,6 +1128,11 @@ class TestRewards:
            - Expected pool ids
         """
         cluster, pool1_name, pool2_name = cluster_lock_two_pools
+        # Till epoch 4 + up to 4 for rewards + 5 epochs of checks
+        common.skip_on_long_epochs(
+            cluster_obj=cluster,
+            epochs=clusterlib_utils.get_epochs_to_rewards(cluster_obj=cluster) + 9,
+        )
 
         temp_template = common.get_test_id(cluster)
 
@@ -1378,6 +1390,8 @@ class TestRewards:
         """
         __: tp.Any  # mypy workaround
         cluster, pool1_name, pool2_name = cluster_use_two_pools_and_rewards
+        # 9 epochs till the end of the 8 checked epochs
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=9)
 
         temp_template = common.get_test_id(cluster)
         address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)

@@ -230,6 +230,11 @@ class TestPoolSaturation:
           saturated and oversaturated
         """
         cluster = cluster_lock_pools
+        # Waits for the first rewards, and then 10 epochs of collecting the rewards data
+        common.skip_on_long_epochs(
+            cluster_obj=cluster,
+            epochs=clusterlib_utils.get_epochs_to_rewards(cluster_obj=cluster) + 10,
+        )
         temp_template = common.get_test_id(cluster)
 
         epoch_saturate = 2

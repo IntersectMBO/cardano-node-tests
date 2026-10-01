@@ -26,6 +26,9 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+# Epoch when first rewards are distributed
+FIRST_REWARDS_EPOCH = 4
+
 
 @dataclasses.dataclass(frozen=True, order=True)
 class UpdateProposal:
@@ -517,15 +520,19 @@ def create_pool_users(
     return pool_users
 
 
+def get_epochs_to_rewards(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Get number of epochs to wait until `FIRST_REWARDS_EPOCH`, for first reward distribution."""
+    return max(0, FIRST_REWARDS_EPOCH - cluster_obj.g_query.get_epoch())
+
+
 def wait_for_rewards(*, cluster_obj: clusterlib.ClusterLib) -> None:
-    """Wait until 4th epoch, if necessary, for first reward distribution."""
-    epoch = cluster_obj.g_query.get_epoch()
-    if epoch >= 4:
+    """Wait until `FIRST_REWARDS_EPOCH`, if necessary, for first reward distribution."""
+    new_epochs = get_epochs_to_rewards(cluster_obj=cluster_obj)
+    if not new_epochs:
         return
 
-    new_epochs = 4 - epoch
     LOGGER.info(f"Waiting {new_epochs} epoch(s) to get first rewards.")
-    cluster_obj.wait_for_epoch(epoch_no=4, padding_seconds=10)
+    cluster_obj.wait_for_epoch(epoch_no=FIRST_REWARDS_EPOCH, padding_seconds=10)
 
 
 def get_chain_account_state(*, ledger_state: dict) -> ChainAccount:

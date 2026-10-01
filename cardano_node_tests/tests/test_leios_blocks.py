@@ -468,6 +468,9 @@ class TestLeios:
           certifying an EB
         """
         cluster = cluster_leios
+        # Waits for up to `leios.VOTING_START_EPOCH` epochs, and then up to
+        # `MAX_WAIT_BLOCKS` blocks (an epoch on `leios_fast`)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=leios.VOTING_START_EPOCH + 1)
         common.get_test_id(cluster)
 
         # Votes and certificates cannot show up in the logs before the voting committee
@@ -642,6 +645,8 @@ class TestLeiosCommitteeRank:
           left still add up to the lowered quorum
         """
         cluster = cluster_small_committee
+        # Waits for up to `leios.VOTING_START_EPOCH` epochs, and then the log search
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=leios.VOTING_START_EPOCH + 1)
         common.get_test_id(cluster)
 
         committee_size = cluster.g_query.get_protocol_params()["leiosCommitteeSize"]

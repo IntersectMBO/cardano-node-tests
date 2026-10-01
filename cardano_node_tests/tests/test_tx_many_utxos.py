@@ -83,6 +83,10 @@ class TestManyUTXOs:
         payment_addrs: list[clusterlib.AddressRecord],
     ) -> tuple[clusterlib.AddressRecord, clusterlib.AddressRecord]:
         """Generate many UTxOs (100000+) with 1-2 ADA."""
+        # The ~500 transactions take ~1000 blocks, convert that to epochs
+        blocks_per_epoch = cluster.genesis["activeSlotsCoeff"] * cluster.epoch_length
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=1000 / blocks_per_epoch)
+
         temp_template = common.get_test_id(cluster)
 
         LOGGER.info("Generating lot of UTxO addresses, it will take a while.")

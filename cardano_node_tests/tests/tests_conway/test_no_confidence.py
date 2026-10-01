@@ -79,6 +79,8 @@ class TestNoConfidence:
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("We can't create a needed 'update committee' previous action in bootstrap.")
+        # Optional initial reinstating of CC, no confidence action, final reinstating of CC
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=6)
 
         # Reinstate CC members first, if needed, so we have a previous action
         prev_action_rec = governance_utils.get_prev_action(
@@ -347,6 +349,10 @@ class TestNoConfidence:
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("We can't have this many CC members resign during bootstrap.")
+        # Wait for action expiry, then reinstating of CC (ratification + enactment)
+        common.skip_on_long_epochs(
+            cluster_obj=cluster, epochs=cluster.conway_genesis["govActionLifetime"] + 3
+        )
 
         # Resign all CC Members but one
 

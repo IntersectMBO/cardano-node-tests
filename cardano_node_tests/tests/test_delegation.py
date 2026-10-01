@@ -264,6 +264,7 @@ class TestDelegateAddr:
         * Check that all stake addresses received rewards from their respective pools
         """
         cluster, pool1_id, pool2_id = cluster_and_two_pools
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
         temp_template = common.get_test_id(cluster)
 
         # Step: Create 1 payment vkey/skey key pair
@@ -424,6 +425,7 @@ class TestDelegateAddr:
         * (optional) Check records in db-sync
         """
         cluster, pool_id = cluster_and_pool_and_rewards
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
         temp_template = common.get_test_id(cluster)
 
         # Create two payment addresses that share single stake address (just to test that
@@ -605,6 +607,7 @@ class TestDelegateAddr:
         * (optional) Check records in db-sync
         """
         cluster, pool_id = cluster_and_pool_and_rewards
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
         temp_template = common.get_test_id(cluster)
 
         stake_key_recs = [
@@ -781,6 +784,7 @@ class TestDelegateAddr:
         * (optional) Check records in db-sync
         """
         cluster, pool_id = cluster_and_pool_and_rewards
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=5)
         temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(

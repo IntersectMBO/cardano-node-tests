@@ -1671,6 +1671,8 @@ class TestDRepActivity:
 
         if conway_common.is_in_bootstrap(cluster_obj=cluster):
             pytest.skip("Cannot run in bootstrap period.")
+        # 2 delegations (1 epoch each), 5 ratifications, 2 enactments, 1 idle epoch
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=10)
 
         deposit_address_amt = cluster.g_query.get_address_deposit()
 

@@ -337,6 +337,7 @@ class TestConstitution:
         """
         __: tp.Any  # mypy workaround
         cluster, __ = cluster_lock_gov_script
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=2)
         rand_str = clusterlib.get_rand_str(4)
         governance_data = governance_w_scripts_lg
         temp_template = f"{common.get_test_id(cluster)}_{rand_str}"
