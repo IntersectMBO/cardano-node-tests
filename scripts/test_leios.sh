@@ -35,10 +35,9 @@ for arg in "$@"; do
   fi
 done
 
-# Not part of `runner/env_leios`, because in CI these are workflow inputs. Unlike
+# Not part of `runner/env_leios`, because in CI it is a workflow input. Unlike
 # the values in the env file, an already exported value wins here, so the node
 # branch can be switched without touching the setup.
 export NODE_REV="${NODE_REV:-leios-prototype}"
-export MARKEXPR="${MARKEXPR:-testnets or leios}"
 
 exec runner/load-gh-env.sh runner/env_leios "$@" -- runner/regression.sh
