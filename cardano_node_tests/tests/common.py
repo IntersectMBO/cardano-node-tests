@@ -5,6 +5,7 @@ import string
 import time
 import typing as tp
 
+import pytest
 from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
@@ -193,6 +194,20 @@ def is_fee_in_interval(fee: float, expected_fee: float, frac: float = 0.1) -> bo
     if cluster_nodes.get_cluster_type().is_testnet:
         return True
     return helpers.is_in_interval(fee, expected_fee, frac=frac)
+
+
+def skip_unless_local_fast() -> None:
+    """Skip the test unless running on the `local_fast` testnet variant.
+
+    Use in cluster fixtures that start a cluster instance from custom startup scripts
+    (custom `scriptsdir`). The custom genesis is derived from the testnet variant scripts,
+    and the tests are designed for the `local_fast` epoch and slot lengths.
+    """
+    if configuration.TESTNET_VARIANT != "local_fast":
+        pytest.skip(
+            "Runs only on the 'local_fast' testnet variant, "
+            f"not on '{configuration.TESTNET_VARIANT}'"
+        )
 
 
 @contextlib.contextmanager

@@ -105,11 +105,6 @@ MAX_KES_EVOLUTIONS = 10
 KES_LIFETIME_EPOCHS = 5
 SHORT_MAX_KEY_AGE = KES_LIFETIME_EPOCHS + 2
 
-# Max wall-clock time the expiration test is willing to spend waiting for epochs. The
-# test has to reach epoch `SHORT_MAX_KEY_AGE`, so a testnet variant with long epochs is
-# skipped instead of running for hours.
-MAX_EXPIRATION_WAIT_SEC = 60 * 60
-
 
 @pytest.fixture(scope="module")
 def short_bls_keyage_start_cluster() -> pl.Path:
@@ -153,42 +148,13 @@ def short_bls_keyage_start_cluster() -> pl.Path:
         return startup_files.start_script.parent
 
 
-def get_startup_epoch_length_sec(*, scriptsdir: pl.Path) -> float:
-    """Return the epoch length, in seconds, of a cluster started from the given scripts.
-
-    Read before a cluster instance exists, so that a test which cannot fit into its
-    wall-clock budget is skipped without first spinning one up.
-
-    Args:
-        scriptsdir: A path to the startup scripts dir.
-
-    Returns:
-        float: The length of an epoch, in seconds.
-    """
-    with open(scriptsdir / "genesis.spec.json", encoding="utf-8") as in_fp:
-        genesis_spec = json.load(in_fp)
-
-    return float(genesis_spec["epochLength"]) * float(genesis_spec["slotLength"])
-
-
 @pytest.fixture
 def cluster_short_bls_keyage(
     cluster_manager: cluster_management.ClusterManager,
     short_bls_keyage_start_cluster: pl.Path,
 ) -> clusterlib.ClusterLib:
-    """Return a cluster instance where the BLS keys of the cluster pools expire soon.
-
-    Spinning the instance up means starting a dedicated cluster from custom genesis, so
-    the wall-clock budget is checked first, off the startup scripts.
-    """
-    epoch_length_sec = get_startup_epoch_length_sec(scriptsdir=short_bls_keyage_start_cluster)
-    wait_sec = SHORT_MAX_KEY_AGE * epoch_length_sec
-    if wait_sec > MAX_EXPIRATION_WAIT_SEC:
-        pytest.skip(
-            f"Reaching epoch {SHORT_MAX_KEY_AGE}, in which the BLS keys expire, takes "
-            f"{wait_sec:.0f} sec on the '{configuration.TESTNET_VARIANT}' testnet variant"
-        )
-
+    """Return a cluster instance where the BLS keys of the cluster pools expire soon."""
+    common.skip_unless_local_fast()
     cluster_obj = cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
@@ -1045,13 +1011,6 @@ class TestBlsKeyExpiration:
     """Tests for the expiration of a registered BLS key."""
 
     @allure.link(helpers.get_vcs_link())
-    # It would be better to use `cluster_nodes.get_cluster_type().uses_shortcut`, but we
-    # would need to get a cluster instance first. That would be too expensive in this test,
-    # as we are using custom startup scripts.
-    @pytest.mark.skipif(
-        "_fast" not in configuration.TESTNET_VARIANT,
-        reason="Runs only on local cluster with HF shortcut.",
-    )
     @pytest.mark.order(5)
     @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.long

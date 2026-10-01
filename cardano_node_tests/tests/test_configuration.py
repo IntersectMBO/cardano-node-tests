@@ -82,6 +82,7 @@ def slot_length_start_cluster() -> pl.Path:
 def cluster_epoch_length(
     cluster_manager: cluster_management.ClusterManager, epoch_length_start_cluster: pl.Path
 ) -> clusterlib.ClusterLib:
+    common.skip_unless_local_fast()
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
@@ -94,6 +95,7 @@ def cluster_epoch_length(
 def cluster_slot_length(
     cluster_manager: cluster_management.ClusterManager, slot_length_start_cluster: pl.Path
 ) -> clusterlib.ClusterLib:
+    common.skip_unless_local_fast()
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
@@ -127,11 +129,6 @@ def check_epoch_length(cluster_obj: clusterlib.ClusterLib) -> None:
 
 
 @markers.SKIPIF_WRONG_ERA
-# It takes long time to setup the cluster instance (when starting from Byron).
-# We mark the tests as "long" and set the highest priority, so the setup is done at the
-# beginning of the testrun, instead of needing to respin a cluster that is already running.
-@markers.ORDER5_BYRON
-@markers.LONG_BYRON
 class TestBasic:
     """Basic tests for node configuration."""
 

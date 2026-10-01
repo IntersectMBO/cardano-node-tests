@@ -6,7 +6,6 @@ import pytest
 
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils.versions import VERSIONS
 from cardano_node_tests.utils.versions import EraName
 
@@ -17,11 +16,6 @@ _COMPAT_ERAS = (
     EraName.ALONZO,
     EraName.BABBAGE,
 )
-
-ORDER5_BYRON = (
-    pytest.mark.order(5) if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop
-)
-LONG_BYRON = pytest.mark.long if "_fast" not in configuration.TESTNET_VARIANT else pytest.mark.noop
 
 
 class XdSplits(enum.StrEnum):

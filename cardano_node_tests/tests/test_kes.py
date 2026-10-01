@@ -20,7 +20,6 @@ from cardano_node_tests.tests import kes
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
-from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import http_client
 from cardano_node_tests.utils import locking
@@ -75,6 +74,7 @@ def short_kes_start_cluster() -> pl.Path:
 def cluster_kes(
     cluster_manager: cluster_management.ClusterManager, short_kes_start_cluster: pl.Path
 ) -> clusterlib.ClusterLib:
+    common.skip_unless_local_fast()
     return cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
@@ -129,13 +129,6 @@ class TestKES:
     """Basic tests for KES period."""
 
     @allure.link(helpers.get_vcs_link())
-    # It would be better to use `cluster_nodes.get_cluster_type().uses_shortcut`, but we
-    # would need to get a cluster instance first. That would be too expensive in this test,
-    # as we are using custom startup scripts.
-    @pytest.mark.skipif(
-        "_fast" not in configuration.TESTNET_VARIANT,
-        reason="Runs only on local cluster with HF shortcut.",
-    )
     @pytest.mark.order(5)
     @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.long
