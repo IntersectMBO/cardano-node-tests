@@ -58,19 +58,6 @@ _ALL_POOLS_MSGS_SET = frozenset(leios.EB_MSGS_ALL_POOLS)
 _ANY_POOL_MSGS_SET = frozenset(leios.EB_MSGS_ANY_POOL)
 _VOTING_MSGS_SET = frozenset(leios.VOTING_MSGS)
 _PRE_VOTING_MSGS_SET = frozenset((*leios.VOTING_MSGS, leios.NOT_ON_COMMITTEE_MSG))
-_NOT_VOTED_MSGS_SET = frozenset(leios.NOT_VOTED_MSGS)
-_NOT_VOTED_KEY_MSGS_SET = frozenset(leios.NOT_VOTED_KEY_MSGS)
-_VOTE_OUTCOME_MSGS_SET = frozenset(
-    (
-        leios.MSG_VOTED,
-        leios.MSG_ANNOUNCEMENT_ACCEPTED,
-        leios.MSG_CERTIFIED,
-        *leios.NOT_VOTED_MSGS,
-    )
-)
-# What makes the absence of votes of a pool mean something: either the pool said it
-# declined to vote, or it accepted an EB announcement it then didn't answer with a vote.
-_NO_VOTE_EVIDENCE_MSGS_SET = _NOT_VOTED_MSGS_SET | {leios.MSG_ANNOUNCEMENT_ACCEPTED}
 
 # Max number of new blocks to wait for while the expected messages are showing up in
 # the logs. Certification of an EB needs a quorum of votes and an RB that announces it,
@@ -331,166 +318,6 @@ def _collect_pre_voting_msgs(
             break
 
     return {p: s.found for p, s in searches.items()}, list(log_errors.values())
-
-
-def _collect_vote_outcome_msgs(
-    *, pool_logs: list[pl.Path], deadline: float
-) -> tuple[dict[pl.Path, set[str]], list[str]]:
-    """Search the pool logs for votes, EB announcements and declined votes.
-
-    The three outcomes together say whether a pool voted, whether there was anything for
-    it to vote on, and whether it reported why it didn't vote. The whole window is
-    searched, with no early exit: a pool that is expected not to vote can report the
-    reason first and vote afterwards, and a search that stopped at the first message
-    would not see that.
-
-    Args:
-        pool_logs: Log files of the block producing nodes.
-        deadline: A `time.monotonic()` value the search must not go past, so that the
-            searched part of the logs stays inside the epoch the search started in.
-
-    Returns:
-        The searched messages found in each pool log, and the problems that got in the
-        way of the search - a log file that could not be searched. They explain a missing
-        message, so they are reported only together with one.
-    """
-    searches = leios.init_searches(pool_logs)
-    log_errors: dict[pl.Path, str] = {}
-
-    while True:
-        time.sleep(min(leios.SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
-
-        leios.search_round(
-            searches=searches,
-            missing_msgs=lambda search: _VOTE_OUTCOME_MSGS_SET - search.found,
-            log_errors=log_errors,
-        )
-
-        if time.monotonic() >= deadline:
-            break
-
-    return {p: s.found for p, s in searches.items()}, list(log_errors.values())
-
-
-def _get_certificate_problems(
-    *, found_per_pool: dict[str, set[str]], epoch: int
-) -> tuple[list[str], list[str]]:
-    """Judge whether the votes of one epoch added up to a certificate.
-
-    The committee lost seats and the quorum was lowered to match, so a certificate is
-    what says the seats that are left still reach it. Without an EB to vote on there is
-    nothing to certify, and then the absence of certificates says nothing.
-
-    Args:
-        found_per_pool: The searched messages found in the log of each pool.
-        epoch: The epoch the logs were searched in, for the reported messages.
-
-    Returns:
-        The failures, and the reasons the outcome is inconclusive. Both empty when a
-        certificate was assembled.
-    """
-    if any(leios.MSG_CERTIFIED in f for f in found_per_pool.values()):
-        return [], []
-
-    if any(leios.MSG_ANNOUNCEMENT_ACCEPTED in f for f in found_per_pool.values()):
-        error = (
-            f"No pool assembled a Leios certificate in epoch {epoch}, so the votes of the "
-            "seats the committee has left don't add up to the quorum."
-        )
-        return [error], []
-
-    skip_reason = (
-        f"No EB announcement reached any pool in epoch {epoch}, so the absence of "
-        "certificates is inconclusive"
-    )
-    return [], [skip_reason]
-
-
-def _get_voting_problems(
-    *, found_per_pool: dict[str, set[str]], out_pool_names: frozenset[str], epoch: int
-) -> tuple[list[str], list[str]]:
-    """Judge what each pool was seen doing about the EBs of one epoch.
-
-    A pool that holds no committee seat must have answered every EB announcement with
-    `NotOnCommittee` and cast no vote, the seated pools must have voted and must not have
-    declined for any of the searched reasons, and their votes must have added up to a
-    certificate - the committee lost seats and the quorum was lowered to match, so a
-    certificate is what says the seats that are left still reach it. A pool that didn't
-    vote *and said nothing about it* is a failure only when there was an EB to vote on;
-    without one the absence of votes says nothing, so it is reported as a reason to skip
-    instead of as an error.
-
-    Args:
-        found_per_pool: The searched messages found in the log of each pool.
-        out_pool_names: Names of the pools that the committee left out.
-        epoch: The epoch the logs were searched in, for the reported messages.
-
-    Returns:
-        The failures, and the reasons the outcome is inconclusive. Both empty when every
-        pool did what it was supposed to.
-    """
-    errors, skip_reasons = _get_certificate_problems(found_per_pool=found_per_pool, epoch=epoch)
-
-    for pool_name, found in found_per_pool.items():
-        voted = leios.MSG_VOTED in found
-        if pool_name in out_pool_names:
-            if voted:
-                errors.append(
-                    f"The pool '{pool_name}' voted in epoch {epoch}, although the Leios "
-                    "committee of that epoch holds no seat for it."
-                )
-            # A key reason is reported only by a pool that does hold a seat, so it says
-            # the ledger and the node disagree about the committee. Checked before the
-            # `NotOnCommittee` branch, which otherwise passes a pool that reported both
-            elif found & _NOT_VOTED_KEY_MSGS_SET:
-                errors.append(
-                    f"The pool '{pool_name}' declined to vote in epoch {epoch} for a reason "
-                    "only a pool that holds a Leios committee seat can report, although the "
-                    "committee of that epoch holds no seat for it: "
-                    f"{sorted(found & _NOT_VOTED_KEY_MSGS_SET)}"
-                )
-            elif leios.NOT_ON_COMMITTEE_MSG in found:
-                pass  # the pool answered every EB announcement the way it should have
-            # Without the pool declining to vote, or at least accepting an EB
-            # announcement, there may have been nothing to vote on
-            elif not found & _NO_VOTE_EVIDENCE_MSGS_SET:
-                skip_reasons.append(
-                    f"The pool '{pool_name}' neither declined to vote nor accepted an EB "
-                    f"announcement in epoch {epoch}, so the absence of votes is inconclusive"
-                )
-            else:
-                # It saw EBs and cast no vote, but didn't name the committee as the
-                # reason - which is the reason, and the only one the ledger gives it
-                errors.append(
-                    f"The pool '{pool_name}' didn't answer the EB announcements of epoch "
-                    f"{epoch} with `NotOnCommittee`, although the Leios committee of that "
-                    f"epoch holds no seat for it: {sorted(found)}"
-                )
-            continue
-
-        # None of the searched reasons can apply to a pool that holds a seat its own key
-        # matches, so this says the seat and the node disagree. Checked even when the pool
-        # did vote, as one vote doesn't make a decline on another EB of the epoch right
-        declined = sorted(found & _NOT_VOTED_MSGS_SET)
-        if declined:
-            errors.append(
-                f"The pool '{pool_name}' declined to vote in epoch {epoch}, although it "
-                f"holds a Leios committee seat: {declined}"
-            )
-        elif voted:
-            continue
-        elif leios.MSG_ANNOUNCEMENT_ACCEPTED in found:
-            errors.append(
-                f"The pool '{pool_name}' didn't vote in epoch {epoch}, although it holds a "
-                "Leios committee seat."
-            )
-        else:
-            skip_reasons.append(
-                f"No EB announcement reached the pool '{pool_name}' in epoch {epoch}, so "
-                "the absence of votes is inconclusive"
-            )
-
-    return errors, skip_reasons
 
 
 def _get_voting_share_without(
@@ -862,7 +689,7 @@ class TestLeiosCommitteeRank:
             f"which rank behind {', '.join(sorted(out_pools))} that it left out: {pools_stake}"
         )
 
-        found_per_pool, search_problems = _collect_vote_outcome_msgs(
+        found_per_pool, search_problems = leios.collect_vote_outcome_msgs(
             pool_logs=list(pool_logs.values()),
             deadline=time.monotonic() + leios.MAX_SEARCH_SEC,
         )
@@ -875,7 +702,7 @@ class TestLeiosCommitteeRank:
                 "which seats a committee of its own, so the result is inconclusive"
             )
 
-        errors, skip_reasons = _get_voting_problems(
+        errors, skip_reasons = leios.get_voting_problems(
             found_per_pool={n: found_per_pool[f] for n, f in pool_logs.items()},
             out_pool_names=frozenset(out_pools),
             epoch=search_epoch,

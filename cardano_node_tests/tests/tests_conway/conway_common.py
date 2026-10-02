@@ -1,6 +1,7 @@
 """Common functionality for Conway governance tests."""
 
 import dataclasses
+import fractions
 import itertools
 import json
 import logging
@@ -33,6 +34,36 @@ def is_in_bootstrap(
 ) -> bool:
     """Check if the cluster is in bootstrap period."""
     return bool(clusterlib_utils.get_protocol_version(cluster_obj=cluster_obj) == 9)
+
+
+def get_rational_pparam(pparam: float | dict) -> fractions.Fraction:
+    """Return a rational pparam as a fraction.
+
+    The ledger can show a rational either as a number or as a dict with numerator and
+    denominator.
+    """
+    if isinstance(pparam, dict):
+        return fractions.Fraction(pparam["numerator"], pparam["denominator"])
+    return fractions.Fraction(str(pparam))
+
+
+def check_rational_pparam(
+    update_proposal: clusterlib_utils.UpdateProposal, protocol_params: dict
+) -> bool:
+    """Compare a rational pparam with the proposed value, as numbers.
+
+    The ledger can show a rational either as a number or as a dict with numerator and
+    denominator, so the proposed value cannot be compared as a string.
+
+    Args:
+        update_proposal: The proposal, with the value as a number or a "n/d" string.
+        protocol_params: The protocol parameters (or the pparams update) to check.
+
+    Returns:
+        bool: True when the pparam has the proposed value.
+    """
+    pparam_val = get_rational_pparam(protocol_params[update_proposal.name])
+    return bool(pparam_val == fractions.Fraction(str(update_proposal.value)))
 
 
 def get_committee_val(data: dict[str, tp.Any]) -> dict[str, tp.Any]:
