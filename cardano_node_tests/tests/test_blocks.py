@@ -74,11 +74,16 @@ class TestLeadershipSchedule:
             # Wait for beginning of an epoch
             queried_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
         else:
-            # Wait for stable stake distribution for next epoch, that is last 300 slots of
-            # current epoch.
+            # Wait for stable stake distribution for next epoch, that is the last `3k/f` slots
+            # of current epoch. The ledger tip (the slot of the last block, checked thanks to
+            # `check_slot`) needs to be inside of that interval, otherwise the next epoch is past
+            # the forecast horizon and the query fails with `PastHorizon`. Start a few blocks
+            # after the interval start to stay clear of its boundary.
+            stability_window = clusterlib_utils.get_stability_window(cluster_obj=cluster)
+            block_time = cluster.slot_length / float(cluster.genesis["activeSlotsCoeff"])
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster,
-                start=-int(300 * cluster.slot_length),
+                start=-int(stability_window * cluster.slot_length - 3 * block_time),
                 stop=-15,
                 check_slot=True,
             )
@@ -220,10 +225,11 @@ class TestLeadershipSchedule:
         Expect failure.
 
         Test that querying leadership schedule fails when stake distribution is not yet stable for
-        next epoch. Stable stake distribution is only available in last 300 slots of current epoch.
+        next epoch. Stable stake distribution is only available in last `3k/f` slots of current
+        epoch.
 
         * Wait for epoch interval where stake distribution for next epoch is unstable (before last
-          300 slots of current epoch)
+          `3k/f` slots of current epoch)
         * Attempt to query leadership schedule for next epoch using pool VRF and cold keys
         * Check that query fails with error message about unstable stake distribution
         """
@@ -233,11 +239,12 @@ class TestLeadershipSchedule:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         # Wait for epoch interval where stake distribution for next epoch is unstable,
-        # that is anytime before last 300 slots of current epoch
+        # that is anytime before last `3k/f` slots of current epoch
+        stability_window = clusterlib_utils.get_stability_window(cluster_obj=cluster)
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster,
             start=5,
-            stop=-int(300 * cluster.slot_length + 5),
+            stop=-int(stability_window * cluster.slot_length + 5),
         )
 
         # It should NOT be possible to query leadership schedule
