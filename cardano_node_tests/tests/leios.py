@@ -481,13 +481,14 @@ def wait_for_msgs(
     log_errors: dict[pl.Path, str] = {}
     all_msgs = frozenset(regexes)
     stop_msgs = frozenset(stop_on)
+    searched_msgs = all_msgs | stop_msgs
 
     while True:
         time.sleep(min(SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
 
         search_round(
             searches=searches,
-            missing_msgs=lambda search: all_msgs - search.found,
+            missing_msgs=lambda search: searched_msgs - search.found,
             log_errors=log_errors,
         )
 
