@@ -354,8 +354,11 @@ class TestCommittee:
                 == governance_utils.ActionTags.UPDATE_COMMITTEE.value
             ), "Incorrect action tag"
 
-        def _auth_hot_keys() -> None:
-            """Authorize the hot keys."""
+        def _auth_hot_keys(attempt: int) -> bool:
+            """Authorize the hot keys.
+
+            Return False if the epoch changed before the authorization could be checked.
+            """
             tx_files_auth = clusterlib.TxFiles(
                 certificate_files=[cc_auth_record.auth_cert],
                 signing_key_files=[
@@ -364,9 +367,10 @@ class TestCommittee:
                 ],
             )
 
+            auth_epoch = cluster.g_query.get_epoch()
             tx_output_auth = clusterlib_utils.build_and_submit_tx(
                 cluster_obj=cluster,
-                name_template=f"{temp_template}_auth",
+                name_template=f"{temp_template}_auth{attempt}",
                 src_address=pool_user_ug.payment.address,
                 build_method=clusterlib_utils.BuildMethods.BUILD,
                 tx_files=tx_files_auth,
@@ -382,17 +386,26 @@ class TestCommittee:
 
             cluster.wait_for_new_block(new_blocks=2)
             auth_committee_state = cluster.g_query.get_committee_state()
-            auth_epoch = cluster.g_query.get_epoch()
+            query_epoch = cluster.g_query.get_epoch()
             conway_common.save_committee_state(
                 committee_state=auth_committee_state,
-                name_template=f"{temp_template}_auth_{auth_epoch}",
+                name_template=f"{temp_template}_auth{attempt}_{query_epoch}",
             )
+            # The hot key authorization of a member that is not in the committee is dropped
+            # at the epoch boundary
+            if query_epoch != auth_epoch:
+                LOGGER.warning(
+                    f"Epoch changed from {auth_epoch} to {query_epoch} after authorizing "
+                    "the hot keys."
+                )
+                return False
             auth_member_rec = auth_committee_state["committee"][cc_member_key]
             assert auth_member_rec["hotCredsAuthStatus"]["tag"] == "MemberAuthorized", (
                 "CC Member was NOT authorized"
             )
             assert not auth_member_rec["expiration"], "CC Member should not be elected"
             assert auth_member_rec["status"] == "Unrecognized", "CC Member should not be recognized"
+            return True
 
         # Make sure we have enough time to submit the proposals and vote in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -400,7 +413,25 @@ class TestCommittee:
         )
 
         _propose_new_member()
-        _auth_hot_keys()
+
+        # At every epoch boundary, the ledger drops hot key authorizations of members that are
+        # not in the committee, e.g. members that are only proposed. Make sure the hot keys are
+        # authorized and the votes are submitted in one epoch, even if the proposal or the
+        # authorization took long to get on chain (e.g. under Tx load). The proposals stay
+        # valid in the next epoch, so the authorization can be retried there.
+        # The buffer of 6 blocks is larger than `EPOCH_STOP_SEC_BUFFER` only on testnets with
+        # long block time (e.g. slot length 1s and f=0.05).
+        block_time = cluster.slot_length / float(cluster.genesis["activeSlotsCoeff"])
+        for attempt in range(1, 3):
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster,
+                start=1,
+                stop=min(common.EPOCH_STOP_SEC_BUFFER, -int(6 * block_time)),
+            )
+            if _auth_hot_keys(attempt=attempt):
+                break
+        else:
+            pytest.fail("Failed to authorize the hot keys and check them in a single epoch.")
 
         reqc.int001.start(url=helpers.get_vcs_link())
         subtest_errors = []

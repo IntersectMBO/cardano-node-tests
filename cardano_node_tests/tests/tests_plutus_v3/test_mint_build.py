@@ -73,14 +73,14 @@ def update_cost_model(
     """Update cost model to include values for new Plutus Core built-in functions."""
     name_template = f"{temp_template}_cost_model_upd"
 
-    if prot_version == BATCH5_PROT_VERSION:
-        if cost_model_len >= BATCH5_COST_MODEL_LEN:
-            return
-        cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
-    elif prot_version == BATCH6_PROT_VERSION:
+    if prot_version >= BATCH6_PROT_VERSION:
         if cost_model_len >= BATCH6_COST_MODEL_LEN:
             return
         cost_proposal_file = DATA_DIR / "cost_models_list_332_350_v2_v3.json"
+    elif prot_version == BATCH5_PROT_VERSION:
+        if cost_model_len >= BATCH5_COST_MODEL_LEN:
+            return
+        cost_proposal_file = DATA_DIR / "cost_models_list_185_297_v2_v3.json"
     else:
         LOGGER.warning(
             "Unsupported protocol version %s for updating cost model, skipping update.",

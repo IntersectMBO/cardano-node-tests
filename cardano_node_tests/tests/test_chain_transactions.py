@@ -18,6 +18,11 @@ from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.skipif(
+    configuration.HAS_TX_LOAD_GENERATOR,
+    reason="load sensitive test, skip when Tx load generator is in use",
+)
+
 
 def _gen_signed_tx(
     cluster_obj: clusterlib.ClusterLib,
