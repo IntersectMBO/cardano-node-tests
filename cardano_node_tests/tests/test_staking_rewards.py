@@ -1745,12 +1745,21 @@ class TestNegativeWithdrawal:
     ):
         """Test that it is not possible to withdraw other amount than the total reward amount.
 
+        Since Dijkstra, partial withdrawals are allowed, so test only that it is not possible
+        to withdraw more than the total reward amount.
+
         Expect failure. Property-based test.
         """
         cluster, __ = cluster_use_pool
         temp_template = f"{common.get_test_id(cluster)}_{common.unique_time_str()}"
 
         pool_owner, pool_reward = pool_users
+
+        if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST:
+            reward_balance = cluster.g_query.get_stake_addr_info(
+                stake_addr=pool_reward.stake.address
+            ).reward_account_balance
+            hypothesis.assume(amount > reward_balance)
 
         tx_files = clusterlib.TxFiles(
             signing_key_files=[
@@ -1775,6 +1784,7 @@ class TestNegativeWithdrawal:
                 "ConwayIncompleteWithdrawals" not in err_str  # In cardano-node >= 10.7.0 and PV11
                 and "WithdrawalsNotInRewardsCERTS" not in err_str  # In cardano-node >= 8.8.0
                 and "WithdrawalsNotInRewardsDELEGS" not in err_str
+                and "WithdrawalAmountsExceedingOriginalBalance" not in err_str  # In Dijkstra
             ):
                 reward_balance = cluster.g_query.get_stake_addr_info(
                     stake_addr=pool_reward.stake.address

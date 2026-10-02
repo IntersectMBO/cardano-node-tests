@@ -332,6 +332,7 @@ class TestConstitution:
         * Check that the action is ratified
         * Try to disapprove the ratified action, this shouldn't have any effect
         * Try and fail to withdraw the deposit from stake address that is not delegated to a DRep
+          (Conway only, allowed since Dijkstra)
         * Check that the action is enacted
         * Check that it's not possible to vote on enacted action
         """
@@ -544,19 +545,21 @@ class TestConstitution:
             "Incorrect return account balance"
         )
 
-        reqc.cip027.start(url=helpers.get_vcs_link())
-        # Try to withdraw the deposit from stake address that is not delegated to a DRep
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            clusterlib_utils.withdraw_reward_w_build(
-                cluster_obj=cluster,
-                stake_addr_record=pool_user_lg.stake,
-                dst_addr_record=pool_user_lg.payment,
-                tx_name=temp_template,
-            )
-        exc_value = str(excinfo.value)
-        with common.allow_unstable_error_messages():
-            assert "ConwayWdrlNotDelegatedToDRep" in exc_value, exc_value
-        reqc.cip027.success()
+        # Try to withdraw the deposit from stake address that is not delegated to a DRep.
+        # Withdrawals without DRep delegation are allowed since Dijkstra.
+        if VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST:
+            reqc.cip027.start(url=helpers.get_vcs_link())
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                clusterlib_utils.withdraw_reward_w_build(
+                    cluster_obj=cluster,
+                    stake_addr_record=pool_user_lg.stake,
+                    dst_addr_record=pool_user_lg.payment,
+                    tx_name=temp_template,
+                )
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "ConwayWdrlNotDelegatedToDRep" in exc_value, exc_value
+            reqc.cip027.success()
 
         # Try to vote on enacted action
         with pytest.raises(clusterlib.CLIError) as excinfo:
