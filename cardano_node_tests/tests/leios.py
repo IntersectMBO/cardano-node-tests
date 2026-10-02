@@ -481,13 +481,14 @@ def wait_for_msgs(
     log_errors: dict[pl.Path, str] = {}
     all_msgs = frozenset(regexes)
     stop_msgs = frozenset(stop_on)
+    searched_msgs = all_msgs | stop_msgs
 
     while True:
         time.sleep(min(SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
 
         search_round(
             searches=searches,
-            missing_msgs=lambda search: all_msgs - search.found,
+            missing_msgs=lambda search: searched_msgs - search.found,
             log_errors=log_errors,
         )
 
@@ -496,3 +497,53 @@ def wait_for_msgs(
             break
 
     return searches[logfile].found, list(log_errors.values())
+
+
+def search_logs_until(
+    *,
+    searches: dict[pl.Path, LogSearch],
+    regexes: tp.Collection[str],
+    deadline: float,
+    stop_on: tp.Collection[str] = (),
+) -> list[str]:
+    """Keep searching several log files for messages until the deadline passes.
+
+    Continues the given searches, so that the caller decides where the searched window
+    starts - e.g. before doing something that takes a while, and whose effects are what
+    the search is for. A last search round is done even when the deadline has already
+    passed, so that the log content appended up to now is always searched.
+
+    Args:
+        searches: The search state per log file, updated in place.
+        regexes: The message regexes to search for in every log file.
+        deadline: A `time.monotonic()` value the search must not go past.
+        stop_on: Messages that end the search as soon as any of them is found in any of
+            the log files, on top of having found all of `regexes` in all of them.
+
+    Returns:
+        The errors of the log files that could not be searched in the last round, see
+        `search_round`.
+    """
+    log_errors: dict[pl.Path, str] = {}
+    all_msgs = frozenset(regexes)
+    stop_msgs = frozenset(stop_on)
+    searched_msgs = all_msgs | stop_msgs
+
+    while True:
+        search_round(
+            searches=searches,
+            missing_msgs=lambda search: searched_msgs - search.found,
+            log_errors=log_errors,
+        )
+
+        found_any = {m for s in searches.values() for m in s.found}
+        if (
+            found_any & stop_msgs
+            or all(all_msgs <= s.found for s in searches.values())
+            or time.monotonic() >= deadline
+        ):
+            break
+
+        time.sleep(min(SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
+
+    return list(log_errors.values())
