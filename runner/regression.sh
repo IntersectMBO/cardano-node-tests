@@ -472,4 +472,9 @@ fi
 # Save testing artifacts
 ./runner/save_artifacts.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
 
+# Report testrun stats to the tcache. After `create_results.sh`, which is what
+# creates "$WORKDIR/allure-results", and `|| :` like its neighbours so a failed
+# upload cannot mask the pytest exit code that `$retval` carries.
+./runner/report_stats.sh "${WORKDIR}/allure-results" "$retval" "${WORKDIR}/cli_coverage.json" || :
+
 exit "$retval"
