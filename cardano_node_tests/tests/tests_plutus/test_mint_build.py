@@ -902,12 +902,22 @@ class TestBuildMinting:
             tx_name=f"{temp_template}_step2_sign1",
         )
 
-        submit_utils.submit_tx(
-            submit_method=submit_method,
-            cluster_obj=cluster,
-            tx_file=tx_signed_step2_inc,
-            txins=mint_utxos,
-        )
+        try:
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=tx_signed_step2_inc,
+                txins=mint_utxos,
+            )
+        except submit_api.SubmitApiError as exc:
+            # cardano-submit-api has no Dijkstra decoder, and the Conway one cannot
+            # decode required signers in the Dijkstra format
+            if (
+                VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST
+                and "DecoderErrorDeserialiseFailure" in str(exc)
+            ):
+                issues.node_6719.finish_test()
+            raise
 
         assert (
             cluster.g_query.get_address_balance(issuer_addr.address)

@@ -281,6 +281,9 @@ node_5245 = blockers.GH(
     message="`MuxError MuxBearerClosed` error.",
 )
 node_5324 = blockers.GH(issue=5324, fixed_in="8.1.1", message="`UnknownVersionInRsp` error.")
+node_6719 = blockers.GH(
+    issue=6719, message="cardano-submit-api cannot decode Dijkstra era transactions."
+)
 
 plutus_apps_583 = blockers.GH(
     issue=583, repo="IntersectMBO/plutus-apps", message="`DeserialiseFailure` error."
