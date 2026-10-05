@@ -501,6 +501,15 @@ class TestCommittee:
             for r in cc_auth_records
         ]
 
+        # Other tests can enact a committee action on epoch boundary. Make sure the epoch
+        # doesn't change between getting the previous action ID and submitting the action,
+        # otherwise the ledger would reject the action with `InvalidPrevGovActionId`.
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster,
+            start=1,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
+        )
+
         deposit_amt = cluster.g_query.get_gov_action_deposit()
         anchor_data = governance_utils.get_default_anchor_data()
         prev_action_rec = governance_utils.get_prev_action(
@@ -1780,6 +1789,7 @@ class TestCommittee:
     @pytest.mark.long
     def test_committee_zero_threshold(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster_lock_governance: governance_utils.GovClusterT,
         pool_user_lg: clusterlib.PoolUser,
     ):
@@ -1792,6 +1802,8 @@ class TestCommittee:
         * Vote to disapprove the action by the CC and approve by the DReps
         * Check that the action is ratified
         * Check that the action is enacted
+        * Reinstate the original CC, respin the cluster instance if the test fails after
+          the zero threshold was voted on
         """
         cluster, governance_data = cluster_lock_governance
         temp_template = common.get_test_id(cluster)
@@ -1894,75 +1906,80 @@ class TestCommittee:
             stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
         )
 
-        conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_threshold",
-            payment_addr=pool_user_lg.payment,
-            action_txid=threshold_action_txid,
-            action_ix=action_ix,
-            approve_drep=True,
-            approve_spo=True,
-        )
-        vote_threshold_epoch = cluster.g_query.get_epoch()
+        # Once the zero threshold is enacted, the CC approves every action. Make sure
+        # the cluster instance is respun if the original CC threshold is not reinstated.
+        with cluster_manager.respin_on_failure():
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_threshold",
+                payment_addr=pool_user_lg.payment,
+                action_txid=threshold_action_txid,
+                action_ix=action_ix,
+                approve_drep=True,
+                approve_spo=True,
+            )
+            vote_threshold_epoch = cluster.g_query.get_epoch()
 
-        _check_rat_enact_state(
-            name_template=f"{temp_template}_threshold",
-            action_txid=threshold_action_txid,
-            action_type=governance_utils.PrevGovActionIds.COMMITTEE,
-            approval_epoch=vote_threshold_epoch,
-        )
+            _check_rat_enact_state(
+                name_template=f"{temp_template}_threshold",
+                action_txid=threshold_action_txid,
+                action_type=governance_utils.PrevGovActionIds.COMMITTEE,
+                approval_epoch=vote_threshold_epoch,
+            )
 
-        # Try to ratify a "create constitution" action that is expecting approval from the CC
-        anchor_data = governance_utils.get_default_anchor_data()
-        constitution_file = pl.Path(f"{temp_template}_constitution.txt")
-        constitution_file.write_text(data="Constitution is here", encoding="utf-8")
-        constitution_url = web.publish(file_path=constitution_file)
-        constitution_hash = cluster.g_governance.get_anchor_data_hash(file_text=constitution_file)
-        (
-            _const_action,
-            const_action_txid,
-            const_action_ix,
-        ) = conway_common.propose_change_constitution(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_constitution",
-            anchor_url=anchor_data.url,
-            anchor_data_hash=anchor_data.hash,
-            constitution_url=constitution_url,
-            constitution_hash=constitution_hash,
-            pool_user=pool_user_lg,
-        )
+            # Try to ratify a "create constitution" action that is expecting approval from the CC
+            anchor_data = governance_utils.get_default_anchor_data()
+            constitution_file = pl.Path(f"{temp_template}_constitution.txt")
+            constitution_file.write_text(data="Constitution is here", encoding="utf-8")
+            constitution_url = web.publish(file_path=constitution_file)
+            constitution_hash = cluster.g_governance.get_anchor_data_hash(
+                file_text=constitution_file
+            )
+            (
+                _const_action,
+                const_action_txid,
+                const_action_ix,
+            ) = conway_common.propose_change_constitution(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_constitution",
+                anchor_url=anchor_data.url,
+                anchor_data_hash=anchor_data.hash,
+                constitution_url=constitution_url,
+                constitution_hash=constitution_hash,
+                pool_user=pool_user_lg,
+            )
 
-        # Make sure the votes don't happen close to epoch boundary
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster,
-            start=10,
-            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
-        )
+            # Make sure the votes don't happen close to epoch boundary
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster,
+                start=10,
+                stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
+            )
 
-        conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_constitution",
-            payment_addr=pool_user_lg.payment,
-            action_txid=const_action_txid,
-            action_ix=const_action_ix,
-            approve_cc=False,
-            approve_drep=True,
-        )
-        vote_const_epoch = cluster.g_query.get_epoch()
+            conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_constitution",
+                payment_addr=pool_user_lg.payment,
+                action_txid=const_action_txid,
+                action_ix=const_action_ix,
+                approve_cc=False,
+                approve_drep=True,
+            )
+            vote_const_epoch = cluster.g_query.get_epoch()
 
-        _check_rat_enact_state(
-            name_template=f"{temp_template}_constitution",
-            action_txid=const_action_txid,
-            action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
-            approval_epoch=vote_const_epoch,
-        )
+            _check_rat_enact_state(
+                name_template=f"{temp_template}_constitution",
+                action_txid=const_action_txid,
+                action_type=governance_utils.PrevGovActionIds.CONSTITUTION,
+                approval_epoch=vote_const_epoch,
+            )
 
-        # Reinstate the original CC data
-        governance_setup.reinstate_committee(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_reinstate",
-            pool_user=pool_user_lg,
-        )
+            # Reinstate the original CC data
+            governance_setup.reinstate_committee(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_reinstate",
+                pool_user=pool_user_lg,
+            )
