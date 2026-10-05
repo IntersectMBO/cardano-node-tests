@@ -51,6 +51,10 @@ on:
         required: false
         type: boolean
         default: false
+      session_timeout:
+        required: false
+        type: string
+        default: ""
     secrets:
       TCACHE_BASIC_AUTH:
         required: false
@@ -78,6 +82,7 @@ env:
   CI_BYRON_CLUSTER: ${{ inputs.byron_cluster }}
   CI_TESTRUN_NAME: ${{ inputs.testrun_name }}
   CI_SKIP_PASSED: ${{ inputs.skip_passed }}
+  SESSION_TIMEOUT: ${{ inputs.session_timeout }}
 
 jobs:
   reusable_run:

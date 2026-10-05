@@ -31,6 +31,7 @@ jobs:
       cluster_era: dijkstra 12
       markexpr: testnets or leios
       allow_unstable_error_msgs: ${{ inputs.allow_unstable_error_msgs }}
+      session_timeout: 4h
       env-path: runner/env_leios
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
