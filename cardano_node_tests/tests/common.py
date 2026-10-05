@@ -14,6 +14,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import artifacts
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import pytest_utils
@@ -78,8 +79,9 @@ PUBLIC_ACTION_ANCHOR_INVALID_URL = (
 if cluster_nodes.get_cluster_type().is_local:
     # Min time buffer at the end of an epoch, see `get_epoch_stop_sec_buffer`
     EPOCH_STOP_SEC_BUFFER_MIN = 40
-    # Time when all ledger state info is available for the current epoch
-    EPOCH_START_SEC_LEDGER_STATE = -19
+    # Min length of the interval for getting ledger state info, see
+    # `get_epoch_start_sec_ledger_state`
+    EPOCH_LEDGER_STATE_WINDOW_SEC_MIN = 4
     # Time buffer at the end of an epoch after getting ledger state info
     EPOCH_STOP_SEC_LEDGER_STATE = -15
     # Maximal time a test is allowed to spend waiting for epochs
@@ -87,13 +89,16 @@ if cluster_nodes.get_cluster_type().is_local:
 else:
     # We can be more generous on testnets
     EPOCH_STOP_SEC_BUFFER_MIN = 200
-    EPOCH_START_SEC_LEDGER_STATE = -300
+    EPOCH_LEDGER_STATE_WINDOW_SEC_MIN = 100
     EPOCH_STOP_SEC_LEDGER_STATE = -200
     MAX_EPOCHS_WAIT_SEC = 2 * 60 * 60
 
 # Number of mean block intervals in the time buffer at the end of an epoch. A tx can miss
 # the next block (e.g. under Tx load), and there can be long gaps with no blocks.
 EPOCH_STOP_BUFFER_BLOCKS = 12
+# Number of mean block intervals in the interval for getting ledger state info, and in the
+# margin after the point where the reward update must be completed
+EPOCH_LEDGER_STATE_BLOCKS = 3
 
 
 def hypothesis_settings(max_examples: int = 100) -> tp.Any:
@@ -232,13 +237,52 @@ def get_epoch_stop_sec_buffer(*, cluster_obj: clusterlib.ClusterLib) -> int:
     Returns:
         int: The buffer in seconds, as a negative number (counted from the end of an epoch).
     """
-    block_interval_sec = float(cluster_obj.slot_length) / float(
-        cluster_obj.genesis["activeSlotsCoeff"]
-    )
+    block_interval_sec = clusterlib_utils.get_block_interval_sec(cluster_obj=cluster_obj)
     buffer_sec = max(
         EPOCH_STOP_SEC_BUFFER_MIN, math.ceil(EPOCH_STOP_BUFFER_BLOCKS * block_interval_sec)
     )
     return -min(buffer_sec, int(cluster_obj.epoch_length_sec // 2))
+
+
+def get_epoch_start_sec_ledger_state(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Return the time when all ledger state info is available for the current epoch.
+
+    Use as the `start` of `wait_for_epoch_interval`, with `EPOCH_STOP_SEC_LEDGER_STATE` as
+    the `stop`. The interval is as late in the epoch as possible, and it is at least
+    `EPOCH_LEDGER_STATE_BLOCKS` mean block intervals long (and at least
+    `EPOCH_LEDGER_STATE_WINDOW_SEC_MIN`). The wait for the interval starts with a wait for
+    a new block, and on testnets that produce blocks slowly the block can arrive only
+    after a too narrow interval has already passed.
+
+    The interval never starts before the reward update of the epoch is complete. The ledger
+    forces the completion in the first block after `2 * 4k/f` slots of the epoch (`slotForce`
+    in `rupdTransition`, cardano-ledger `Cardano/Ledger/Shelley/Rules/Rupd.hs`), so the
+    interval starts at least `EPOCH_LEDGER_STATE_BLOCKS` mean block intervals
+    after that point. The interval is shortened if needed.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        int: The start of the interval in seconds, as a negative number (counted from the
+            end of an epoch).
+    """
+    epoch_length_sec = float(cluster_obj.epoch_length_sec)
+    block_interval_sec = clusterlib_utils.get_block_interval_sec(cluster_obj=cluster_obj)
+    window_sec = max(
+        EPOCH_LEDGER_STATE_WINDOW_SEC_MIN, EPOCH_LEDGER_STATE_BLOCKS * block_interval_sec
+    )
+    stop_sec = epoch_length_sec + EPOCH_STOP_SEC_LEDGER_STATE
+
+    rupd_force_sec = (
+        2
+        * clusterlib_utils.get_randomness_stabilisation_window(cluster_obj=cluster_obj)
+        * float(cluster_obj.slot_length)
+    )
+    rupd_done_sec = rupd_force_sec + EPOCH_LEDGER_STATE_BLOCKS * block_interval_sec
+
+    start_sec = min(max(stop_sec - window_sec, rupd_done_sec), stop_sec)
+    return math.ceil(start_sec - epoch_length_sec)
 
 
 def is_epochs_wait_ok(

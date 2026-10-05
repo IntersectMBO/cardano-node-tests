@@ -105,7 +105,7 @@ def _check_block_production(
     cluster_obj.wait_for_epoch(epoch_no=in_epoch)
     clusterlib_utils.wait_for_epoch_interval(
         cluster_obj=cluster_obj,
-        start=common.EPOCH_START_SEC_LEDGER_STATE,
+        start=common.get_epoch_start_sec_ledger_state(cluster_obj=cluster_obj),
         stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
     )
     epoch = cluster_obj.g_query.get_epoch()

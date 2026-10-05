@@ -11,6 +11,7 @@ import cbor2
 import pytest
 
 from cardano_node_tests.utils import clusterlib_utils
+from framework_tests import stubs
 
 KEY_HASH1 = "9e1156acae8bd72bc1815d0be9fcb64e2d50e61f4204c45b901dad6b"
 KEY_HASH2 = "7c2086ea4ebaa880c6e6c70604c0deb37ffbaa0567aec0bea8564055"
@@ -302,3 +303,64 @@ class TestFirstRewards:
         cluster_obj: tp.Any = EpochClusterStub(epoch=epoch)
         clusterlib_utils.wait_for_rewards(cluster_obj=cluster_obj)
         assert cluster_obj.waited_for == expected_waits
+
+
+class TestGenesisWindows:
+    """Tests for the windows and intervals derived from the genesis."""
+
+    @staticmethod
+    def _get_cluster_obj(*, security_param: int, active_slots_coeff: float) -> tp.Any:
+        return stubs.GenesisClusterStub(
+            security_param=security_param,
+            active_slots_coeff=active_slots_coeff,
+            slot_length=1,
+            epoch_length=1000,
+        )
+
+    @pytest.mark.parametrize(
+        ("security_param", "active_slots_coeff", "expected"),
+        (
+            (10, 0.1, 300),
+            (4, 0.05, 240),
+            # In float arithmetic, `3k/f` is 299.99999999999994 and rounds down to 299
+            (7, 0.07, 300),
+        ),
+    )
+    def test_stability_window(self, security_param: int, active_slots_coeff: float, expected: int):
+        """Compute `3k/f` exactly."""
+        cluster_obj = self._get_cluster_obj(
+            security_param=security_param, active_slots_coeff=active_slots_coeff
+        )
+        assert clusterlib_utils.get_stability_window(cluster_obj=cluster_obj) == expected
+
+    @pytest.mark.parametrize(
+        ("security_param", "active_slots_coeff", "expected"),
+        (
+            (10, 0.1, 400),
+            (4, 0.05, 320),
+            # In float arithmetic, `4k/f` is 240.00000000000003 and rounds up to 241
+            (21, 0.35, 240),
+            # Rounded up like in the ledger
+            (1, 0.3, 14),
+        ),
+    )
+    def test_randomness_stabilisation_window(
+        self, security_param: int, active_slots_coeff: float, expected: int
+    ):
+        """Compute `4k/f` exactly, rounded up."""
+        cluster_obj = self._get_cluster_obj(
+            security_param=security_param, active_slots_coeff=active_slots_coeff
+        )
+        assert (
+            clusterlib_utils.get_randomness_stabilisation_window(cluster_obj=cluster_obj)
+            == expected
+        )
+
+    def test_block_interval_sec(self):
+        """Compute the mean block interval from the slot length and active slot coefficient."""
+        cluster_obj = stubs.GenesisClusterStub(
+            security_param=10, active_slots_coeff=0.1, slot_length=0.2, epoch_length=1000
+        )
+        assert (
+            clusterlib_utils.get_block_interval_sec(cluster_obj=tp.cast(tp.Any, cluster_obj)) == 2
+        )

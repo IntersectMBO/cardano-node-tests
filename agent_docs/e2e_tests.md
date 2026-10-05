@@ -45,7 +45,7 @@ Epoch length differs between testnets - some local testnet variants (e.g. `leios
 Counting the worst-case `N`:
 
 - `cluster.wait_for_new_epoch(new_epochs=k)` and `cluster.wait_for_epoch(epoch_no=current + k)` count as `k`. Loops that wait for an epoch in each iteration count once per iteration.
-- `clusterlib_utils.wait_for_epoch_interval()` waits only when the current time is already past `stop`. A wide window (e.g. `start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)`) costs at most `start` plus the buffer (under a minute on `local_fast`, ~4 minutes on `leios_fast`) and counts as 0. A narrow window near the end of an epoch (e.g. `common.EPOCH_START_SEC_LEDGER_STATE` to `common.EPOCH_STOP_SEC_LEDGER_STATE`) counts as 1.
+- `clusterlib_utils.wait_for_epoch_interval()` waits only when the current time is already past `stop`. A wide window (e.g. `start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)`) costs at most `start` plus the buffer (under a minute on `local_fast`, ~4 minutes on `leios_fast`) and counts as 0. A narrow window near the end of an epoch (e.g. `common.get_epoch_start_sec_ledger_state(cluster_obj=cluster)` to `common.EPOCH_STOP_SEC_LEDGER_STATE`) counts as 1.
 - Include epoch waits in helper functions the test calls (governance ratification and enactment, waiting for rewards, etc.), in test-specific fixtures and in finalizers. Values derived from genesis (e.g. `cluster.conway_genesis["govActionLifetime"]`) or from the current cluster state (e.g. `clusterlib_utils.get_epochs_to_rewards()`) can be used directly.
 
 ## Summary Checklist
