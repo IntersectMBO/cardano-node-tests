@@ -8,7 +8,7 @@ Organize tests in classes that group related functionality.
 
 ## Resource Management
 
-When tests modify or use shared resources (stake pools, treasury, reserves, DReps, Plutus spending scripts), use custom fixtures with proper resource locking. Open `agent_docs/resource_management.md` and follow the instructions.
+Tests run in parallel on shared cluster instances. Every test must declare the shared resources it changes or depends on - also when it only reads them (e.g. queries or delegates to a cluster pool). The plain `cluster` fixture declares none. Before writing a test, open `agent_docs/resource_management.md` and follow the instructions.
 
 ## Fixture Caching
 
@@ -56,6 +56,7 @@ When writing a new E2E test, or making larger changes to an existing one, ensure
 - [ ] `@allure.link(helpers.get_vcs_link())` decorator is present
 - [ ] Test has comprehensive docstring with steps and expectations
 - [ ] Type hints are included for all parameters
+- [ ] Every shared resource the test changes or depends on is locked or used (see `agent_docs/resource_management.md`)
 - [ ] `common.get_test_id(cluster)` is used for unique naming
 - [ ] Appropriate pytest markers are set (see Pytest Markers above)
 - [ ] Tests that wait for epochs call `common.skip_on_long_epochs` (see Epoch Waits above)
